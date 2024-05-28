@@ -35,7 +35,6 @@ logger = logging.get_logger(__name__)
 
 class TimesformerPatchEmbeddings(nn.Cell):
     """Image to Patch Embedding"""
-
     def __init__(self, config):
         """
         Initializes an instance of the TimesformerPatchEmbeddings class.
@@ -103,7 +102,6 @@ class TimesformerEmbeddings(nn.Cell):
     """
     Construct the patch and position embeddings.
     """
-
     def __init__(self, config):
         """
             Initialize the TimesformerEmbeddings instance with the given configuration.
@@ -243,7 +241,6 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
 # Copied from transformers.models.beit.modeling_beit.BeitDropPath with Beit->TimeSformer
 class TimeSformerDropPath(nn.Cell):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
-
     def __init__(self, drop_prob: Optional[float] = None) -> None:
         """
         Initializes an instance of the TimeSformerDropPath class.
@@ -389,7 +386,6 @@ class TimesformerSelfOutput(nn.Cell):
     The residual connection is defined in TimesformerLayer instead of here (as is the case with other models), due to
     the layernorm applied before each block.
     """
-
     def __init__(self, config: TimesformerConfig) -> None:
         """
         Initializes a new instance of the TimesformerSelfOutput class.
@@ -941,7 +937,6 @@ class TimesformerPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = TimesformerConfig
     base_model_prefix = "timesformer"
     main_input_name = "pixel_values"

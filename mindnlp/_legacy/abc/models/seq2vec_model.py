@@ -27,7 +27,6 @@ class Seq2vecModel(BaseModel):
         dropout (float): The drop out rate, greater than 0 and less equal than 1.
             If None, not dropping out input units. Drfault: None.
     """
-
     def __init__(self, encoder, head, dropout: float = None):
         r""" 
         Initializes a Seq2vecModel instance.

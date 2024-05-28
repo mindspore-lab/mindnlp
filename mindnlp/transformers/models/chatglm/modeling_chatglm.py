@@ -85,7 +85,6 @@ class PrefixEncoder(nn.Cell):
     Input shape: (batch-size, prefix-length)
     Output shape: (batch-size, prefix-length, 2*layers*hidden)
     """
-
     def __init__(self, config):
         """
         Initialize a PrefixEncoder object.
@@ -598,7 +597,6 @@ positional information.
         hidden_states: [seq_len, batch, hidden_size]
         attention_mask: [(1, 1), seq_len, seq_len]
         """
-
         # [seq_len, batch, 3 * hidden_size]
         mixed_raw_layer = self.query_key_value(hidden_states)
         # [seq_len, batch, 3 * hidden_size] --> [seq_len, batch, num_attention_heads, 3 * hidden_size_per_attention_head]
@@ -790,7 +788,6 @@ class GLU(nn.Cell):
         """
         hidden_states: [seq_len, batch, hidden_size]
         """
-
         # [seq_len, batch, inner_hidden_size]
         intermediate_parallel = self.dense_h_to_4h(hidden_states)
 
@@ -900,7 +897,6 @@ hidden states through self-attention and MLP layers.
         hidden_states: [seq_len, batch, hidden_size]
         attention_mask: [(1, 1), seq_len, seq_len]
         """
-
         # Layer norm at the begining of the transformer layer.
         # [seq_len, batch, hidden_size]
         attention_input = self.input_layernorm(hidden_states)
@@ -945,7 +941,6 @@ class ChatGLMPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and
     a simple interface for downloading and loading pretrained models.
     """
-
     config_class = ChatGLMConfig
     base_model_prefix = "transformer"
     _no_split_modules = ["GLMBlock"]
@@ -1035,7 +1030,6 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
     argument and `add_cross_attention` set to `True`; an
     `encoder_hidden_states` is then expected as an input to the forward pass.
     """
-
     def __init__(self, config: ChatGLMConfig):
         """
         Initializes a ChatGLMModel object with the provided configuration.
@@ -1223,7 +1217,6 @@ trained on a large corpus of text data to capture relationships between words.
             ValueError: If both input_ids and inputs_embeds are specified.
             ValueError: If neither input_ids nor inputs_embeds are specified.
         '''
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states

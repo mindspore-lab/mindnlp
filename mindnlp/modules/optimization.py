@@ -38,7 +38,6 @@ class LayerWiseDummyOptimizer(Optimizer):
     Initial idea from @hiyouga in LLaMA-Factory:
     https://github.com/hiyouga/LLaMA-Factory/commit/8664262cde3919e10eaecbd66e8c5d356856362e#diff-ebe08ab14496dfb9e06075f0fdd36799ef6d1535cc4dd4715b74c4e3e06fe3ba
     """
-
     def __init__(self, *args, optimizer_dict=None, **kwargs):
         r"""
         __init__
@@ -67,7 +66,6 @@ class LayerWiseDummyScheduler(LRScheduler):
     the trick is to create a dummy scheduler that can take arbitrary
     args and kwargs and return a no-op during training.
     """
-
     def __init__(self, *args, **kwargs):
         r"""
         Initializes a new instance of the LayerWiseDummyScheduler class.
@@ -154,7 +152,6 @@ def get_constant_schedule(optimizer: Optimizer, last_epoch: int = -1):
     Return:
         `torch.optim.lr_scheduler.LambdaLR` with the appropriate schedule.
     """
-
     return LambdaLR(optimizer, _get_constant_lambda, last_epoch=last_epoch)
 
 
@@ -172,7 +169,6 @@ def get_reduce_on_plateau_schedule(optimizer: Optimizer, **kwargs):
     Return:
         `torch.optim.lr_scheduler.ReduceLROnPlateau` with the appropriate schedule.
     """
-
     return ReduceLROnPlateau(optimizer, **kwargs)
 
 
@@ -209,7 +205,6 @@ def get_constant_schedule_with_warmup(optimizer: Optimizer, num_warmup_steps: in
     Return:
         `torch.optim.lr_scheduler.LambdaLR` with the appropriate schedule.
     """
-
     lr_lambda = partial(_get_constant_schedule_with_warmup_lr_lambda, num_warmup_steps=num_warmup_steps)
     return LambdaLR(optimizer, lr_lambda, last_epoch=last_epoch)
 
@@ -250,7 +245,6 @@ def get_linear_schedule_with_warmup(optimizer, num_warmup_steps, num_training_st
     Return:
         `torch.optim.lr_scheduler.LambdaLR` with the appropriate schedule.
     """
-
     lr_lambda = partial(
         _get_linear_schedule_with_warmup_lr_lambda,
         num_warmup_steps=num_warmup_steps,
@@ -275,7 +269,6 @@ def _get_cosine_schedule_with_warmup_lr_lambda(
     Raises:
         None
     """
-    
     if current_step < num_warmup_steps:
         return float(current_step) / float(max(1, num_warmup_steps))
     progress = float(current_step - num_warmup_steps) / float(max(1, num_training_steps - num_warmup_steps))
@@ -306,7 +299,6 @@ def get_cosine_schedule_with_warmup(
     Return:
         `torch.optim.lr_scheduler.LambdaLR` with the appropriate schedule.
     """
-
     lr_lambda = partial(
         _get_cosine_schedule_with_warmup_lr_lambda,
         num_warmup_steps=num_warmup_steps,
@@ -372,7 +364,6 @@ def get_cosine_with_hard_restarts_schedule_with_warmup(
     Return:
         `torch.optim.lr_scheduler.LambdaLR` with the appropriate schedule.
     """
-
     lr_lambda = partial(
         _get_cosine_with_hard_restarts_schedule_with_warmup_lr_lambda,
         num_warmup_steps=num_warmup_steps,
@@ -412,7 +403,6 @@ def _get_polynomial_decay_schedule_with_warmup_lr_lambda(
     Raises:
         ValueError: If the current_step is negative or if the lr_init is zero.
     """
-    
     if current_step < num_warmup_steps:
         return float(current_step) / float(max(1, num_warmup_steps))
     elif current_step > num_training_steps:
@@ -455,7 +445,6 @@ def get_polynomial_decay_schedule_with_warmup(
         `torch.optim.lr_scheduler.LambdaLR` with the appropriate schedule.
 
     """
-
     lr_init = optimizer.defaults["lr"]
     if not (lr_init > lr_end):
         raise ValueError(f"lr_end ({lr_end}) must be be smaller than initial lr ({lr_init})")
@@ -591,7 +580,6 @@ def get_cosine_with_min_lr_schedule_with_warmup(
     Return:
         `torch.optim.lr_scheduler.LambdaLR` with the appropriate schedule.
     """
-
     if min_lr is not None and min_lr_rate is not None:
         raise ValueError("Only one of min_lr or min_lr_rate should be set")
     elif min_lr is not None:
@@ -713,7 +701,6 @@ class AdafactorSchedule(LambdaLR):
 
     It returns `initial_lr` during startup and the actual `lr` during stepping.
     """
-
     def __init__(self, optimizer, initial_lr=0.0):
         r"""
         Initialize the AdafactorSchedule class.

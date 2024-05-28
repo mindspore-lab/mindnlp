@@ -83,7 +83,6 @@ class BitConfig(BackboneConfigMixin, PretrainedConfig):
     >>> configuration = model.config
     ```
     """
-
     model_type = "bit"
     layer_types = ["preactivation", "bottleneck"]
     supported_padding = ["SAME", "VALID"]

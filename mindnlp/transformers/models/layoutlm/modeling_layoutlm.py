@@ -52,7 +52,6 @@ LayoutLMLayerNorm = nn.LayerNorm
 
 class LayoutLMEmbeddings(nn.Cell):
     """forward the embeddings from word, position and token_type embeddings."""
-
     def __init__(self, config):
         """
         Args:
@@ -158,7 +157,6 @@ class LayoutLMEmbeddings(nn.Cell):
 
 class LayoutLMSelfAttention(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertSelfAttention with Bert->LayoutLM"""
-
     def __init__(self, config, position_embedding_type=None):
         """
         Initializes a LayoutLMSelfAttention instance with the provided configuration and optional position embedding type.
@@ -355,7 +353,6 @@ are obtained from the attributes `num_attention_heads` and `attention_head_size`
 
 class LayoutLMSelfOutput(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertSelfOutput with Bert->LayoutLM"""
-
     def __init__(self, config):
         """
         Initializes the LayoutLMSelfOutput class.
@@ -405,7 +402,6 @@ class LayoutLMSelfOutput(nn.Cell):
 
 class LayoutLMAttention(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertAttention with Bert->LayoutLM"""
-
     def __init__(self, config, position_embedding_type=None):
         """
         Initializes an instance of the LayoutLMAttention class.
@@ -519,7 +515,6 @@ attention heads, attention head size, and already pruned heads stored in the ins
 
 class LayoutLMIntermediate(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertIntermediate"""
-
     def __init__(self, config):
         """
         Initializes an instance of the LayoutLMIntermediate class.
@@ -563,7 +558,6 @@ class LayoutLMIntermediate(nn.Cell):
 
 class LayoutLMOutput(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertOutput with Bert->LayoutLM"""
-
     def __init__(self, config):
         """
         Initializes a new instance of the LayoutLMOutput class.
@@ -613,7 +607,6 @@ class LayoutLMOutput(nn.Cell):
 
 class LayoutLMLayer(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertLayer with Bert->LayoutLM"""
-
     def __init__(self, config):
         """
         This method initializes an instance of the LayoutLMLayer class.
@@ -757,7 +750,6 @@ decoder, the tuple also includes the present key-value tensor(s) of shape (2, ba
 
 class LayoutLMEncoder(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertEncoder with Bert->LayoutLM"""
-
     def __init__(self, config):
         """Initializes an instance of the LayoutLMEncoder class.
         
@@ -875,7 +867,6 @@ attentions.
 
 class LayoutLMPooler(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertPooler"""
-
     def __init__(self, config):
         """
         Initializes a LayoutLMPooler instance.
@@ -920,7 +911,6 @@ class LayoutLMPooler(nn.Cell):
 
 class LayoutLMPredictionHeadTransform(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertPredictionHeadTransform with Bert->LayoutLM"""
-
     def __init__(self, config):
         """
         Initialize the LayoutLMPredictionHeadTransform class.
@@ -971,7 +961,6 @@ the input hidden_states.
 
 class LayoutLMLMPredictionHead(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertLMPredictionHead with Bert->LayoutLM"""
-
     def __init__(self, config):
         """
         Initializes an instance of the LayoutLMLMPredictionHead class.
@@ -1020,7 +1009,6 @@ class LayoutLMLMPredictionHead(nn.Cell):
 
 class LayoutLMOnlyMLMHead(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertOnlyMLMHead with Bert->LayoutLM"""
-
     def __init__(self, config):
         """
         Initializes a LayoutLMOnlyMLMHead object.
@@ -1063,7 +1051,6 @@ class LayoutLMPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = LayoutLMConfig
     pretrained_model_archive_map = LAYOUTLM_PRETRAINED_MODEL_ARCHIVE_LIST
     base_model_prefix = "layoutlm"
@@ -1091,7 +1078,6 @@ class LayoutLMPreTrainedModel(PreTrainedModel):
 
 class LayoutLMModel(LayoutLMPreTrainedModel):
     """LayoutLM Model"""
-
     def __init__(self, config):
         """
         Initializes a LayoutLMModel instance.
@@ -1277,7 +1263,6 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
 
 class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
     """LayoutLMForMaskedLM Model"""
-
     _tied_weights_keys = ["cls.predictions.decoder.bias", "cls.predictions.decoder.weight"]
 
     def __init__(self, config):
@@ -1451,7 +1436,6 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
 
 class LayoutLMForSequenceClassification(LayoutLMPreTrainedModel):
     """LayoutLMForSequenceClassification Model"""
-
     def __init__(self, config):
         """
         __init__
@@ -1609,7 +1593,6 @@ class LayoutLMForSequenceClassification(LayoutLMPreTrainedModel):
 
 class LayoutLMForTokenClassification(LayoutLMPreTrainedModel):
     """LayoutLMForTokenClassification Model"""
-
     def __init__(self, config):
         """
         Initializes an instance of the LayoutLMForTokenClassification class.
@@ -1746,7 +1729,6 @@ class LayoutLMForTokenClassification(LayoutLMPreTrainedModel):
 
 class LayoutLMForQuestionAnswering(LayoutLMPreTrainedModel):
     """LayoutLMForQuestionAnswering Model"""
-
     def __init__(self, config, has_visual_segment_embedding=True):
         """
         Initializes an instance of the LayoutLMForQuestionAnswering class.
@@ -1857,7 +1839,6 @@ class LayoutLMForQuestionAnswering(LayoutLMPreTrainedModel):
         >>> print(" ".join(words[start : end + 1]))
         M. Hamann P. Harper, P. Martinez
         ```"""
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.layoutlm(

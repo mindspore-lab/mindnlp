@@ -87,7 +87,6 @@ includes a method to remove the weight bias and a wrapper function for transposi
             - AttributeError: If the specified attributes 'self.name + '_g'' or 'self.name + '_v'' are not found in the module.
             - Exception: Any other unexpected errors during the weight computation process.
         """
-        
         g = getattr(module, self.name + '_g')
         v = getattr(module, self.name + '_v')
         return Parameter(_weight_norm(v, g, self.dim), 'weight')

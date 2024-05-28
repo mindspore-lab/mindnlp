@@ -367,7 +367,6 @@ class PipelineException(Exception):
         model (`str`): The model used by the pipeline.
         reason (`str`): The error message to display.
     """
-
     def __init__(self, task: str, model: str, reason: str):
         """
         Initializes a new instance of PipelineException.
@@ -394,7 +393,6 @@ class ArgumentHandler(ABC):
     """
     Base interface for handling arguments for each [`~pipelines.Pipeline`].
     """
-
     @abstractmethod
     def __call__(self, *args, **kwargs):
         """
@@ -431,7 +429,6 @@ class PipelineDataFormat:
         overwrite (`bool`, *optional*, defaults to `False`):
             Whether or not to overwrite the `output_path`.
     """
-
     SUPPORTED_FORMATS = ["json", "csv", "pipe"]
 
     def __init__(
@@ -567,7 +564,6 @@ class CsvPipelineDataFormat(PipelineDataFormat):
         overwrite (`bool`, *optional*, defaults to `False`):
             Whether or not to overwrite the `output_path`.
     """
-
     def __init__(
         self,
         output_path: Optional[str],
@@ -666,7 +662,6 @@ class JsonPipelineDataFormat(PipelineDataFormat):
         overwrite (`bool`, *optional*, defaults to `False`):
             Whether or not to overwrite the `output_path`.
     """
-
     def __init__(
         self,
         output_path: Optional[str],
@@ -744,7 +739,6 @@ class PipedPipelineDataFormat(PipelineDataFormat):
         overwrite (`bool`, *optional*, defaults to `False`):
             Whether or not to overwrite the `output_path`.
     """
-
     def __iter__(self):
         '''
         Iterates over input lines from the standard input and yields formatted data.
@@ -817,7 +811,6 @@ class _ScikitCompat(ABC):
     """
     Interface layer for the Scikit and Keras compatibility.
     """
-
     @abstractmethod
     def transform(self, X):
         """
@@ -869,7 +862,6 @@ class Pipeline(_ScikitCompat):
     as nested-lists. In order to avoid dumping such large structure as textual data we provide the `binary_output`
     constructor argument. If set to `True`, the output will be stored in the pickle format.
     """
-
     default_input_names = None
 
     def __init__(

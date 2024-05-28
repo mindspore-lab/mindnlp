@@ -59,7 +59,6 @@ class _ConvImpl(BaseConvImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def construct(self,
                   conv_fn: Callable,
                   real: Tensor,
@@ -89,7 +88,6 @@ class _ConvImpl(BaseConvImpl):
         Raises:
             None
         """
-
         u1 = real + double
         u2 = real - double
 
@@ -141,7 +139,6 @@ class _J1J2ConvImpl(BaseConvImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def construct(self,
                   conv_fn: Callable,
                   u1: Tensor,
@@ -171,7 +168,6 @@ class _J1J2ConvImpl(BaseConvImpl):
         Raises:
             None.
         """
-
         out1 = conv_fn(u1, self.weight_x, pad_mode=pad_mode, padding=padding,
                        stride=stride, dilation=dilation, group=group)
         out2 = conv_fn(u2, self.weight_y, pad_mode=pad_mode, padding=padding,

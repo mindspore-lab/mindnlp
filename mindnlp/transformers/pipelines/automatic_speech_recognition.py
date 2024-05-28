@@ -244,7 +244,6 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
             `torch.float16` or `torch.bfloat16` to use half-precision in the respective dtypes.
 
     """
-
     def __init__(
         self,
         model: "PreTrainedModel",

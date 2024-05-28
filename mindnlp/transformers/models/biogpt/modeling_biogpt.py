@@ -54,7 +54,6 @@ class BioGptLearnedPositionalEmbedding(nn.Embedding):
     """
     This module learns positional embeddings up to a fixed maximum size.
     """
-
     def __init__(self, num_embeddings: int, embedding_dim: int):
         """
         Initializes a new instance of BioGptLearnedPositionalEmbedding.
@@ -91,7 +90,6 @@ class BioGptLearnedPositionalEmbedding(nn.Embedding):
 # Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->BioGpt
 class BioGptAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(
         self,
         embed_dim: int,
@@ -171,7 +169,6 @@ class BioGptAttention(nn.Cell):
         output_attentions: bool = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
-
         # if key_value_states are provided this layer is used as a cross-attention layer
         # for the decoder
         is_cross_attention = key_value_states is not None
@@ -414,7 +411,6 @@ class BioGptPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = BioGptConfig
     base_model_prefix = "biogpt"
     supports_gradient_checkpointing = True

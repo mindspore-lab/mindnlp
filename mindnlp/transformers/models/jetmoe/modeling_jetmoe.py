@@ -77,7 +77,6 @@ class JetMoEBaseModelOutputWithPast(BaseModelOutputWithPast):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     last_hidden_state: mindspore.Tensor = None
     past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -113,7 +112,6 @@ class JetMoECausalLMOutputWithPast(CausalLMOutputWithPast):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
@@ -150,7 +148,6 @@ class JetMoESequenceClassifierOutputWithPast(SequenceClassifierOutputWithPast):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
@@ -393,7 +390,6 @@ class JetMoEAttention(nn.Cell):
     """
     Multi-headed attention from 'Attention Is All You Need' paper.
     """
-
     def __init__(self, config: JetMoEConfig, layer_idx: Optional[int] = None):
         """
         Initialize the JetMoEAttention module.
@@ -650,7 +646,6 @@ class JetMoEPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = JetMoEConfig
     base_model_prefix = "transformer"
     supports_gradient_checkpointing = False
@@ -696,7 +691,6 @@ class JetMoEModel(JetMoEPreTrainedModel):
     Args:
         config: JetMoEConfig
     """
-
     def __init__(self, config: JetMoEConfig):
         """
         Initializes a new instance of the JetMoEModel class.
@@ -1097,7 +1091,6 @@ Additionally, the _reorder_cache method is a static method for reordering past k
 
         Returns:
         """
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states

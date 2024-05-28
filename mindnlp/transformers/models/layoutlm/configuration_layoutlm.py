@@ -24,7 +24,6 @@ LAYOUTLM_PRETRAINED_CONFIG_ARCHIVE_MAP = {
 
 class LayoutLMConfig(PretrainedConfig):
     """LayoutLMConfig"""
-
     model_type = "layoutlm"
     keys_to_ignore_at_inference = ["past_key_values"]
 

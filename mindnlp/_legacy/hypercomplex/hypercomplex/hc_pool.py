@@ -78,7 +78,6 @@ class _PoolNd(nn.Cell):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  kernel_size: Tuple[int, ...],
                  stride: Tuple[int, ...],
@@ -251,7 +250,6 @@ class MaxPool2d(_PoolNd):
         >>> print(y.shape)
         (2, 8, 64, 8, 8)
     """
-
     def __init__(self,
                  kernel_size: _size_2_t = 1,
                  stride: _size_2_t = 1,
@@ -372,7 +370,6 @@ class MaxPool1d(_PoolNd):
         >>> print(y.shape)
         (2, 8, 64, 8)
     """
-
     def __init__(self,
                  kernel_size: _size_1_t = 1,
                  stride: _size_1_t = 1,
@@ -526,7 +523,6 @@ class AvgPool2d(_PoolNd):
         >>> print(y.shape)
         (2, 8, 64, 8, 8)
     """
-
     def __init__(self,
                  kernel_size: _size_2_t = 1,
                  stride: _size_2_t = 1,
@@ -642,7 +638,6 @@ class AvgPool1d(_PoolNd):
         >>> print(y.shape)
         (2, 8, 64, 8)
     """
-
     def __init__(self,
                  kernel_size: _size_1_t = 1,
                  stride: _size_1_t = 1,
@@ -763,7 +758,6 @@ class _AdaptivePoolNd(nn.Cell):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self, output_size: Tuple[int, ...]) -> None:
         r"""
         __init__
@@ -897,7 +891,6 @@ class AdaptiveAvgPool1d(_AdaptivePoolNd):
         >>> print(y.shape)
         (2, 8, 64, 16)
     """
-
     def __init__(self, output_size: int) -> None:
         """Initialize AdaptiveAvgPool1d."""
         super(AdaptiveAvgPool1d, self).__init__(output_size)
@@ -1000,7 +993,6 @@ class AdaptiveAvgPool2d(_AdaptivePoolNd):
         >>> print(y.shape)
         (2, 8, 64, 16, 16)
     """
-
     def __init__(self, output_size: _size_2_t) -> None:
         """Initialize AdaptiveAvgPool2d."""
         super(AdaptiveAvgPool2d, self).__init__(output_size)
@@ -1089,7 +1081,6 @@ class AdaptiveAvgPool3d(_AdaptivePoolNd):
         >>> print(y.shape)
         (2, 8, 64, 16, 24, 32)
     """
-
     def __init__(self, output_size: _size_3_t):
         """Initialize AdaptiveAvgPool3d."""
         super(AdaptiveAvgPool3d, self).__init__(output_size)
@@ -1165,7 +1156,6 @@ class AdaptiveMaxPool1d(_AdaptivePoolNd):
         >>> print(y.shape)
         (2, 8, 64, 16)
     """
-
     def __init__(self, output_size: int) -> None:
         """Initialize AdaptiveMaxPool1d."""
         super(AdaptiveMaxPool1d, self).__init__(output_size)
@@ -1286,7 +1276,6 @@ class AdaptiveMaxPool2d(_AdaptivePoolNd):
         >>> print(y.shape)
         (2, 8, 64, 16, 16)
     """
-
     def __init__(self, output_size: _size_2_t) -> None:
         """Initialize AdaptiveAvgPool2d."""
         super(AdaptiveMaxPool2d, self).__init__(output_size)

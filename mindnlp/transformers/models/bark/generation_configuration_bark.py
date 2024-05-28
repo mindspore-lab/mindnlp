@@ -343,8 +343,6 @@ class BarkFineGenerationConfig(GenerationConfig):
         Overrides GenerationConfig.validate because BarkFineGenerationConfig don't use any parameters outside
         temperature.
         """
-
-
 class BarkGenerationConfig(GenerationConfig):
 
     """

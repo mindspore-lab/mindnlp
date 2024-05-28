@@ -82,7 +82,6 @@ class EfficientNetImageProcessor(BaseImageProcessor):
         include_top (`bool`, *optional*, defaults to `True`):
             Whether to rescale the image again. Should be set to True if the inputs are used for image classification.
     """
-
     model_input_names = ["pixel_values"]
 
     def __init__(

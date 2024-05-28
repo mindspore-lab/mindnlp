@@ -80,7 +80,6 @@ class Wav2Vec2CTCTokenizerOutput(ModelOutput):
             Offsets of the decoded words. In combination with sampling rate and model downsampling rate word offsets
             can be used to compute time stamps for each word.
     """
-
     text: Union[List[str], str]
     char_offsets: Union[List[ListOfDict], ListOfDict] = None
     word_offsets: Union[List[ListOfDict], ListOfDict] = None
@@ -117,7 +116,6 @@ class Wav2Vec2CTCTokenizer(PreTrainedTokenizer):
         **kwargs
             Additional keyword arguments passed along to [`PreTrainedTokenizer`]
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -824,7 +822,6 @@ class Wav2Vec2Tokenizer(PreTrainedTokenizer):
         **kwargs
             Additional keyword arguments passed along to [`PreTrainedTokenizer`]
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = {
         "vocab_file": {
@@ -980,7 +977,6 @@ class Wav2Vec2Tokenizer(PreTrainedTokenizer):
                 values, a list of numpy array or a list of list of float values. Must be mono channel audio, not
                 stereo, i.e. single float per timestep.
         """
-
         is_batched_numpy = isinstance(raw_speech, np.ndarray) and len(raw_speech.shape) > 1
         if is_batched_numpy and len(raw_speech.shape) > 2:
             raise ValueError(f"Only mono-channel audio is supported for input to {self}")

@@ -123,7 +123,6 @@ class OpenELMConfig(PretrainedConfig):
         eos_token_id (`int`, *optional*, defaults to 1):
             End of stream token id.
     """
-
     model_type = "openelm"
 
     def __init__(

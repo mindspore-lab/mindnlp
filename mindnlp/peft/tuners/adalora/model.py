@@ -63,7 +63,6 @@ class AdaLoraModel(LoraModel):
 
     >   - **peft_config** ([`AdaLoraConfig`]): The configuration of the AdaLora model. 
     """
-
     # Note: don't redefine prefix here, it should be inherited from LoraModel
 
     def __init__(self, model, config, adapter_name):
@@ -137,7 +136,6 @@ class AdaLoraModel(LoraModel):
         Raises:
             NotImplementedError: If the requested bias configuration is not implemented.
         """
-        
         for n, p in model.parameters_and_names():
             if "lora_" not in n:
                 p.requires_grad = False

@@ -107,7 +107,6 @@ class GPTConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "openai-gpt"
     attribute_map = {
         "max_position_embeddings": "n_positions",

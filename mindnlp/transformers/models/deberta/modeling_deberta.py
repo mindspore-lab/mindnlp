@@ -172,7 +172,6 @@ class XSoftmax(nn.Cell):
 
     >>> y = XSoftmax.apply(x, mask, dim)
     ```"""
-
     def __init__(self, dim=-1):
         """
         Initializes an instance of the XSoftmax class.
@@ -311,7 +310,6 @@ def get_mask(input, local_context):
 
 class XDropout(nn.Cell):
     """Optimized dropout function to save computation and memory by using mask operation instead of multiplication."""
-
     def __init__(self, local_ctx):
         """
         Initialize a new instance of the XDropout class.
@@ -366,7 +364,6 @@ class StableDropout(nn.Cell):
     Args:
         drop_prob (float): the dropout probabilities
     """
-
     def __init__(self, drop_prob):
         """Initialize the StableDropout object.
         
@@ -461,7 +458,6 @@ class StableDropout(nn.Cell):
 
 class DebertaLayerNorm(nn.Cell):
     """LayerNorm module in the TF style (epsilon inside the square root)."""
-
     def __init__(self, size, eps=1e-12):
         """
         Initializes an instance of the DebertaLayerNorm class.
@@ -920,7 +916,6 @@ to perform these operations and return the final layer output.
 
 class DebertaEncoder(nn.Cell):
     """Modified BertEncoder with relative position bias support"""
-
     def __init__(self, config):
         """
         Initialize the DebertaEncoder class with the provided configuration.
@@ -1133,7 +1128,6 @@ def build_relative_position(query_size, key_size):
         `torch.LongTensor`: A tensor with shape [1, query_size, key_size]
 
     """
-
     q_ids = ops.arange(query_size, dtype=mindspore.int64)
     k_ids = ops.arange(key_size, dtype=mindspore.int64)
     rel_pos_ids = q_ids[:, None] - k_ids.view(1, -1).repeat(query_size, 1)
@@ -1205,7 +1199,6 @@ class DisentangledSelfAttention(nn.Cell):
             *BertConfig*, for more details, please refer [`DebertaConfig`]
 
     """
-
     def __init__(self, config):
         """
         Initializes a DisentangledSelfAttention object with the given configuration.
@@ -1452,7 +1445,6 @@ class DisentangledSelfAttention(nn.Cell):
 
 class DebertaEmbeddings(nn.Cell):
     """Construct the embeddings from word, position and token_type embeddings."""
-
     def __init__(self, config):
         """
         Initializes the DebertaEmbeddings class.
@@ -1562,7 +1554,6 @@ class DebertaPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = DebertaConfig
     base_model_prefix = "deberta"
     _keys_to_ignore_on_load_unexpected = ["position_embeddings"]
@@ -1873,7 +1864,6 @@ attentions. It also allows for customization of return types based on the 'retur
             config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
             loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
         """
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.deberta(

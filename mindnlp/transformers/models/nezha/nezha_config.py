@@ -32,7 +32,6 @@ class NezhaConfig(PretrainedConfig):
     """
     Configuration for Nezha
     """
-
     def __init__(
         self,
         vocab_size=21128,

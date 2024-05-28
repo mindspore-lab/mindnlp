@@ -25,7 +25,6 @@ class EncoderBase(nn.Cell):
     Args:
         embedding (Cell): The embedding layer.
     """
-
     def __init__(self, embedding):
         r"""
         Initializes an instance of the EncoderBase class.

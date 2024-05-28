@@ -28,7 +28,6 @@ class _VectorImpl(_MathObjImpl, ABC):
         Note:
             This method is an abstract method and must be implemented by any concrete subclasses of _VectorImpl.
     """
-
     @abstractmethod
     def dot_product(self,
                     a_x: np.ndarray,

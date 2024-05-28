@@ -67,7 +67,6 @@ class RNNDecoder(DecoderBase):
         (8, 16, 1000)
         (8, 16, 16)
     """
-
     def __init__(self, embedding, rnns, dropout_in=0, dropout_out=0, attention=True,
                  encoder_output_units=512, mode="RNN"):
         r"""

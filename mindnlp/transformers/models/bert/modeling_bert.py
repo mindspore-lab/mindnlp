@@ -93,7 +93,6 @@ class BertForPreTrainingOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     prediction_logits: mindspore.Tensor = None
     seq_relationship_logits: mindspore.Tensor = None
@@ -1161,7 +1160,6 @@ class BertPreTrainingHeads(nn.Cell):
 
 class BertPreTrainedModel(PreTrainedModel):
     """BertPretrainedModel"""
-
     config_class = BertConfig
     base_model_prefix = 'bert'
 
@@ -1851,7 +1849,6 @@ with bi-directional self-attention.
             config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
             loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
         """
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.bert(
@@ -2013,7 +2010,6 @@ class BertForNextSentencePrediction(BertPreTrainedModel):
 
 class BertForSequenceClassification(BertPreTrainedModel):
     """Bert Model for classification tasks"""
-
     def __init__(self, config):
         """
         Initializes the BertForSequenceClassification class.
@@ -2662,7 +2658,6 @@ with shape (batch_size, num_attention_heads, sequence_length, sequence_length).
         Raises:
             NotImplementedError: If the functionality for cross-attention or incremental decoding is not implemented.
         """
-
         hidden_states_r = hidden_states[:,:,:self.config.hidden_size//2]
         hidden_states_d = hidden_states[:,:,self.config.hidden_size//2:]
 
@@ -3344,7 +3339,6 @@ class BertDualModel(BertPreTrainedModel):
     to `True`. To be used in a Seq2Seq model, the model needs to initialized with both `is_decoder` argument and
     `add_cross_attention` set to `True`; an `encoder_hidden_states` is then expected as an input to the forward pass.
     """
-
     def __init__(self, config, add_pooling_layer=True):
         """
         Initializes an instance of the BertDualModel class.

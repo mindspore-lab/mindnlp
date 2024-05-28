@@ -338,7 +338,6 @@ output features and indices, accessing feature channels, and serializing the ins
         Raises:
             None. This method does not raise any exceptions.
         """
-
         signature = dict(inspect.signature(self.forward).parameters)
         filtered_kwargs = {k: v for k, v in kwargs.items() if k in signature}
         return self(*args, **filtered_kwargs) # pylint: disable=not-callable
@@ -383,7 +382,6 @@ class BackboneConfigMixin:
     """
     A Mixin to support handling the `out_features` and `out_indices` attributes for the backbone configurations.
     """
-
     @property
     def out_features(self):
         r"""

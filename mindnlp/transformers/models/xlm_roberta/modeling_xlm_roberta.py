@@ -49,7 +49,6 @@ class XLMRobertaEmbeddings(nn.Cell):
     """
     Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
     """
-
     # Copied from transformers.models.bert.modeling_bert.BertEmbeddings.__init__
     def __init__(self, config):
         """
@@ -875,7 +874,6 @@ class XLMRobertaPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = XLMRobertaConfig
     base_model_prefix = "roberta"
     supports_gradient_checkpointing = False
@@ -935,7 +933,6 @@ class XLMRobertaModel(XLMRobertaPreTrainedModel):
     .. _*Attention is all you need*: https://arxiv.org/abs/1706.03762
 
     """
-
     # Copied from transformers.models.bert.modeling_bert.BertModel.__init__ with Bert->XLMRoberta
     def __init__(self, config, add_pooling_layer=True):
         """
@@ -1494,7 +1491,6 @@ class XLMRobertaForMaskedLM(XLMRobertaPreTrainedModel):
 # Copied from transformers.models.roberta.modeling_roberta.RobertaLMHead
 class XLMRobertaLMHead(nn.Cell):
     """Roberta Head for masked language modeling."""
-
     def __init__(self, config):
         """
         This method initializes an instance of the XLMRobertaLMHead class.
@@ -1840,7 +1836,6 @@ class XLMRobertaForTokenClassification(XLMRobertaPreTrainedModel):
 # Copied from transformers.models.roberta.modeling_roberta.RobertaClassificationHead with Roberta->XLMRoberta
 class XLMRobertaClassificationHead(nn.Cell):
     """Head for sentence-level classification tasks."""
-
     def __init__(self, config):
         """
         Initializes an instance of the XLMRobertaClassificationHead class.

@@ -64,7 +64,6 @@ class BatchFeature(UserDict):
             You can give a tensor_type here to convert the lists of integers in PyTorch/TensorFlow/Numpy Tensors at
             initialization.
     """
-
     def __init__(self, data: Optional[Dict[str, Any]] = None, tensor_type: Union[None, str, TensorType] = None):
         """
         Initializes a new instance of the BatchFeature class.
@@ -334,7 +333,6 @@ class FeatureExtractionMixin():
     This is a feature extraction mixin used to provide saving/loading functionality for sequential and image feature
     extractors.
     """
-
     _auto_class = None
 
     def __init__(self, **kwargs):

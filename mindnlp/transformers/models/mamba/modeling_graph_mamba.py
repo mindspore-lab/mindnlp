@@ -90,7 +90,6 @@ class MSMambaMixer(nn.Cell):
     ∆, B, C are input-dependent (this is a key difference between MSMamba and the linear time invariant S4,
     and is why MSMamba is called **selective** state spaces)
     """
-
     def __init__(self, config, layer_idx):
         """
         Initializes an instance of the MSMambaMixer class.
@@ -414,7 +413,6 @@ class MSMambaPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = MambaConfig
     base_model_prefix = "backbone"
     _no_split_modules = ["MSMambaBlock"]

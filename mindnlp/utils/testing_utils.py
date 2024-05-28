@@ -373,7 +373,6 @@ class CaptureStd:
         print("Secret message")
     assert "message" in cs.out
     ```"""
-
     def __init__(self, out=True, err=True, replay=True):
         """Initialize a CaptureStd object.
         
@@ -510,7 +509,6 @@ attribute is not empty, the captured stderr output is added to the message strin
 
 class CaptureStdout(CaptureStd):
     """Same as CaptureStd but captures only stdout"""
-
     def __init__(self, replay=True):
         """
         Initializes an instance of the CaptureStdout class.
@@ -532,7 +530,6 @@ class CaptureStdout(CaptureStd):
 
 class CaptureStderr(CaptureStd):
     """Same as CaptureStd but captures only stderr"""
-
     def __init__(self, replay=True):
         """
         Initializes an instance of the CaptureStderr class.
@@ -676,7 +673,6 @@ def ExtendSysPath(path: Union[str, os.PathLike]) -> Iterator[None]:
         mymodule = importlib.import_module("mymodule")
     ```
     """
-
     path = os.fspath(path)
     try:
         sys.path.insert(0, path)
@@ -763,7 +759,6 @@ class TestCasePlus(unittest.TestCase):
     def test_whatever(self):
         env = self.get_env()
     ```"""
-
     def setUp(self):
         """
         Set up the necessary environment for the TestCasePlus class.
@@ -1145,7 +1140,6 @@ the tests directory.
         max_rss = self.python_one_liner_max_rss(one_liner_str)
         ```
         """
-
         if not cmd_exists("/usr/bin/time"):
             raise ValueError("/usr/bin/time is required, install with `apt install time`")
 
@@ -1265,7 +1259,6 @@ def pytest_terminal_summary_main(tr, ids):
     plugins and interfere.
 
     """
-
     if not ids:
         ids = "tests"
 
@@ -1558,7 +1551,6 @@ def nested_simplify(obj, decimals=3):
     Simplifies an object by rounding float numbers, and downcasting tensors/numpy arrays to get simple equality test
     within tests.
     """
-
     if isinstance(obj, list):
         return [nested_simplify(item, decimals) for item in obj]
     if isinstance(obj, tuple):
@@ -1603,8 +1595,6 @@ def to_2tuple(x):
 # These utils relate to ensuring the right error message is received when running scripts
 class SubprocessCallException(Exception):
     """SubprocessCallException"""
-
-
 def run_command(command: List[str], return_stdout=False):
     """
     Runs `command` with `subprocess.check_output` and will potentially return the `stdout`. Will also properly capture
@@ -1637,7 +1627,6 @@ class RequestCounter:
     assert counter.total_calls == 1
     ```
     """
-
     def __enter__(self):
         """
         __enter__
@@ -1724,7 +1713,6 @@ def is_flaky(max_attempts: int = 5, wait_before_retry: Optional[float] = None, d
             A string to describe the situation (what / where / why is flaky, link to GH issue/PR comments, errors,
             etc.)
     """
-
     def decorator(test_func_ref):
         @functools.wraps(test_func_ref)
         def wrapper(*args, **kwargs):
@@ -1835,7 +1823,6 @@ class HfDocTestParser(doctest.DocTestParser):
 
     Tests involving cuda are skipped base on a naive pattern that should be updated if it is not enough.
     """
-
     # This regular expression is used to find doctest examples in a
     # string.  It defines three groups: `source` is the source code
     # (including leading indentation and prompts); `indent` is the
@@ -1878,7 +1865,6 @@ class HfDoctestModule(Module):
     Overwrites the `DoctestModule` of the pytest package to make sure the HFDocTestParser is used when discovering
     tests.
     """
-
     def collect(self) -> Iterable[DoctestItem]:
         """
         Collects doctests from the specified module.

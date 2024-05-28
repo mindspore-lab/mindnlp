@@ -194,7 +194,6 @@ before accessing the cached values to ensure they are up to date.
 # Copied from transformers.models.llama.modeling_llama.LlamaLinearScalingRotaryEmbedding with Llama->Phi
 class PhiLinearScalingRotaryEmbedding(PhiRotaryEmbedding):
     """PhiRotaryEmbedding extended with linear scaling. Credits to the Reddit user /u/kaiokendev"""
-
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
         """
         Initializes the PhiLinearScalingRotaryEmbedding object.
@@ -246,7 +245,6 @@ maximum sequence length cached is stored in the instance variable max_seq_len_ca
 # Copied from transformers.models.llama.modeling_llama.LlamaDynamicNTKScalingRotaryEmbedding with Llama->Phi
 class PhiDynamicNTKScalingRotaryEmbedding(PhiRotaryEmbedding):
     """PhiRotaryEmbedding extended with Dynamic NTK scaling. Credits to the Reddit users /u/bloc97 and /u/emozilla"""
-
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
         """
         Initializes an instance of PhiDynamicNTKScalingRotaryEmbedding.
@@ -423,7 +421,6 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
 
 class PhiAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(self, config: PhiConfig, layer_idx: Optional[int] = None):
         """
         Initializes an instance of the PhiAttention class.
@@ -722,7 +719,6 @@ method also computes the feed-forward hidden states and returns the final layer 
                 (see `past_key_values`).
             past_key_value (`Tuple(mindspore.Tensor)`, *optional*): cached past key and value projection states
         """
-
         residual = hidden_states
 
         hidden_states = self.input_layernorm(hidden_states)
@@ -808,7 +804,6 @@ class PhiModel(PhiPreTrainedModel):
     Args:
         config: PhiConfig
     """
-
     def __init__(self, config: PhiConfig):
         """
         Initializes an instance of the PhiModel class.
@@ -1220,7 +1215,6 @@ using the model.
         >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         'This is an example script .\n\n\n\nfrom typing import List\n\ndef find_most_common_letter(words: List[str'
         ```"""
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states

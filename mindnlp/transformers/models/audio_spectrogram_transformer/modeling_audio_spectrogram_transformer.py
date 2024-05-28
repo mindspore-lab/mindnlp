@@ -55,7 +55,6 @@ class ASTEmbeddings(nn.Cell):
     """
     Construct the CLS token, position and patch embeddings.
     """
-
     def __init__(self, config: ASTConfig) -> None:
         """
         Initialize the ASTEmbeddings class.
@@ -145,7 +144,6 @@ class ASTPatchEmbeddings(nn.Cell):
     This class turns `input_values` into the initial `hidden_states` (patch embeddings) of shape `(batch_size,
     seq_length, hidden_size)` to be consumed by a Transformer.
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the ASTRPatchEmbeddings class.
@@ -331,7 +329,6 @@ class ASTSelfOutput(nn.Cell):
     The residual connection is defined in ASTLayer instead of here (as is the case with other models), due to the
     layernorm applied before each block.
     """
-
     def __init__(self, config: ASTConfig) -> None:
         """
         Initializes an instance of the ASTSelfOutput class.
@@ -647,7 +644,6 @@ class ASTOutput(nn.Cell):
 # Copied from transformers.models.vit.modeling_vit.ViTLayer with ViT->AST
 class ASTLayer(nn.Cell):
     """This corresponds to the Block class in the timm implementation."""
-
     def __init__(self, config: ASTConfig) -> None:
         """
         Initializes an instance of the ASTLayer class.
@@ -839,7 +835,6 @@ class ASTPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = ASTConfig
     base_model_prefix = "audio_spectrogram_transformer"
     main_input_name = "input_values"

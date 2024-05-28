@@ -34,7 +34,6 @@ class BrosProcessor(ProcessorMixin):
         tokenizer (`BertTokenizerFast`, *optional*):
             An instance of ['BertTokenizerFast`]. The tokenizer is a required input.
     """
-
     attributes = ["tokenizer"]
     tokenizer_class = ("BertTokenizer", "BertTokenizerFast")
 

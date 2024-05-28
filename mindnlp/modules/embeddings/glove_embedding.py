@@ -76,7 +76,6 @@ class Glove(TokenEmbedding):
         Raises:
             TypeError: If the input parameters are not of the expected types.
         """
-        
         super().__init__(init_embed)
         self._embed_len = init_embed.shape[0]
         self.embed = init_embed
@@ -170,7 +169,6 @@ class Glove(TokenEmbedding):
             None
 
         """
-
         folder = os.path.join(root, 'embeddings', 'Glove', 'save', foldername)
         os.makedirs(folder, exist_ok=True)
 
@@ -214,7 +212,6 @@ class Glove(TokenEmbedding):
             None
 
         """
-
         if load_npy:
             load_embed = np.load(npy_path)
 

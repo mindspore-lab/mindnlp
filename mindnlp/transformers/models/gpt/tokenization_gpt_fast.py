@@ -57,7 +57,6 @@ class GPTTokenizerFast(PreTrainedTokenizerFast):
             The unknown token. A token that is not in the vocabulary cannot be converted to an ID and is set to be this
             token instead.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES

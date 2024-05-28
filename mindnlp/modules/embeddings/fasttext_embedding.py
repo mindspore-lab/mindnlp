@@ -212,7 +212,6 @@ class Fasttext(TokenEmbedding):
             None
 
         """
-
         if load_npy:
             load_embed = np.load(npy_path)
 

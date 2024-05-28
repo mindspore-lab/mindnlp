@@ -55,7 +55,6 @@ class _DenseImpl(BaseDenseImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def construct(self,
                   real: Tensor,
                   imag: Tensor) -> Tuple[Tensor, Tensor]:
@@ -124,7 +123,6 @@ class _KaratsubaDenseImpl(BaseDenseImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def construct(self,
                   real: Tensor,
                   imag: Tensor) -> Tuple[Tensor, Tensor]:

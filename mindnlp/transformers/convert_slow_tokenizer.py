@@ -55,7 +55,6 @@ class SentencePieceExtractor:
     """
     Extractor implementation for SentencePiece trained models. https://github.com/google/sentencepiece
     """
-
     def __init__(self, model: str):
         """
         Initializes a new instance of the SentencePieceExtractor class.
@@ -3012,7 +3011,6 @@ def convert_slow_tokenizer(transformer_tokenizer) -> Tokenizer:
         A instance of [`~tokenizers.Tokenizer`] to be used as the backend tokenizer of a
         [`~tokenization_utils_base.PreTrainedTokenizerFast`]
     """
-
     tokenizer_class_name = transformer_tokenizer.__class__.__name__
 
     if tokenizer_class_name not in SLOW_TO_FAST_CONVERTERS:

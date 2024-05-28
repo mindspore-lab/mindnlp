@@ -88,7 +88,6 @@ class PegasusTokenizer(PreTrainedTokenizer):
             - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
               BPE-dropout.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     model_input_names = ["input_ids", "attention_mask"]
 

@@ -284,7 +284,6 @@ class LukeTokenizer(PreTrainedTokenizer):
             Whether or not to add an initial space to the input. This allows to treat the leading word just as any
             other word. (LUKE tokenizer detect beginning of words by the preceding space).
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -1306,7 +1305,6 @@ character indices.
             batch_entity_token_spans_pairs: list of entity spans or entity spans pairs
             max_entity_length: The maximum length of the entity sequence.
         """
-
         batch_outputs = {}
         for input_ids, entity_ids, entity_token_span_pairs in zip(
             batch_ids_pairs, batch_entity_ids_pairs, batch_entity_token_spans_pairs
@@ -1405,7 +1403,6 @@ character indices.
             max_entity_length (`int`, *optional*):
                 The maximum length of the entity sequence.
         """
-
         # Backward compatibility for 'truncation_strategy', 'pad_to_max_length'
         padding_strategy, truncation_strategy, max_length, kwargs = self._get_padding_truncation_strategies(
             padding=padding,

@@ -67,7 +67,6 @@ def _metric_max_over_ground_truths(metric_fn, pred, example):
     Raises:
         None.
     """
-      
     scores_for_ground_truths = []
     for y_eg in example:
         score = metric_fn(pred, y_eg)

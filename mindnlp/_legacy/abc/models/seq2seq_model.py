@@ -24,7 +24,6 @@ class Seq2seqModel(BaseModel):
         encoder (EncoderBase): The encoder.
         decoder (DecoderBase): The decoder.
     """
-
     def __init__(self, encoder, decoder):
         r"""
         Initializes a new Seq2seqModel.

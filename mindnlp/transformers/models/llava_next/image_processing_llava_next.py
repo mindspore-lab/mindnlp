@@ -82,7 +82,6 @@ def expand_to_square(image: np.array, background_color, input_data_format) -> np
     """
     Expands an image to a square by adding a background color.
     """
-
     height, width = get_image_size(image, channel_dim=input_data_format)
     if width == height:
         return image
@@ -171,7 +170,6 @@ class LlavaNextImageProcessor(BaseImageProcessor):
         do_convert_rgb (`bool`, *optional*, defaults to `True`):
             Whether to convert the image to RGB.
     """
-
     model_input_names = ["pixel_values"]
 
     def __init__(

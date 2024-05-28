@@ -48,7 +48,6 @@ class MambaMixer(nn.Cell):
     ∆, B, C are input-dependent (this is a key difference between Mamba and the linear time invariant S4,
     and is why Mamba is called **selective** state spaces)
     """
-
     def __init__(self, config, layer_idx):
         """
         Initializes a MambaMixer instance.
@@ -372,7 +371,6 @@ class MambaPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = MambaConfig
     base_model_prefix = "backbone"
     _no_split_modules = ["MambaBlock"]
@@ -442,7 +440,6 @@ class MambaOutput(ModelOutput):
 
             Hidden-states of the model at the output of each layer plus the optional initial embedding outputs.
     """
-
     last_hidden_state: mindspore.Tensor = None
     cache_params: Optional[List[mindspore.Tensor]] = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -467,7 +464,6 @@ class MambaCausalLMOutput(ModelOutput):
 
             Hidden-states of the model at the output of each layer plus the optional initial embedding outputs.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     cache_params: Optional[List[mindspore.Tensor]] = None

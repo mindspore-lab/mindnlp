@@ -525,7 +525,6 @@ is used to ensure that the input hidden states have the same length as the targe
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2FeatureEncoder with Wav2Vec2->Hubert
 class HubertFeatureEncoder(nn.Cell):
     """Construct the features from raw audio waveform"""
-
     def __init__(self, config: HubertConfig):
         """
         Initializes a new instance of HubertFeatureEncoder.
@@ -664,7 +663,6 @@ class HubertFeatureProjection(nn.Cell):
 # Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->Hubert
 class HubertAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(
         self,
         embed_dim: int,
@@ -742,7 +740,6 @@ class HubertAttention(nn.Cell):
         output_attentions: bool = False,
     ) -> Tuple[Tensor, Optional[Tensor], Optional[Tuple[Tensor]]]:
         """Input shape: Batch x Time x Channel"""
-
         # if key_value_states are provided this layer is used as a cross-attention layer
         # for the decoder
         is_cross_attention = key_value_states is not None
@@ -1445,7 +1442,6 @@ class HubertPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = HubertConfig
     base_model_prefix = "hubert"
     main_input_name = "input_values"
@@ -1468,7 +1464,6 @@ class HubertPreTrainedModel(PreTrainedModel):
         """
         Computes the output length of the convolutional layers
         """
-
         def _conv_out_length(input_length, kernel_size, stride):
             # 1D convolutional layer output length formula taken
             # from https://pytorch.org/docs/stable/generated/ops.nn.Conv1d.html
@@ -1592,7 +1587,6 @@ Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Tuple, BaseM
         Masks extracted features along time axis and/or along feature axis according to
         [SpecAugment](https://arxiv.org/abs/1904.08779).
         """
-
         # `config.apply_spec_augment` can set masking to False
         if not getattr(self.config, "apply_spec_augment", True):
             return hidden_states
@@ -1787,7 +1781,6 @@ None, labels: Optional[Tensor] = None) -> Union[Tuple, CausalLMOutput]: Construc
 
         This method is **not** supposed to be called by the user and is prone to be changed in the future.
         """
-
         # Note that `tie_weights` is usually used to tie input and output embedding weights. The method is re-purposed to
         # correctly load adapter layers for Hubert so that we do not have to introduce a new API to
         # [`PreTrainedModel`]. While slightly hacky, Hubert never has to tie input and output embeddings, so that it is
@@ -1832,7 +1825,6 @@ None, labels: Optional[Tensor] = None) -> Union[Tuple, CausalLMOutput]: Construc
             All labels set to `-100` are ignored (masked), the loss is only computed for labels in `[0, ...,
             config.vocab_size - 1]`.
         """
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.hubert(
@@ -1969,7 +1961,6 @@ class HubertForSequenceClassification(HubertPreTrainedModel):
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         output_hidden_states = True if self.config.use_weighted_layer_sum else output_hidden_states
 

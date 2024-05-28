@@ -124,7 +124,6 @@ class LayoutLMv2ImageProcessor(BaseImageProcessor):
             Any additional custom configuration flags that are forwarded to the `config` parameter when calling
             Tesseract. For example: '--psm 6'. Can be overridden by `tesseract_config` in `preprocess`.
     """
-
     model_input_names = ["pixel_values"]
 
     def __init__(

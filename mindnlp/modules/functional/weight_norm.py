@@ -60,7 +60,6 @@ def recompute_weight(cell:nn.Cell):
     Raises:
         AssertionError: If the weight property specified by the cell's wn_name is not found.
     """
-    
     name: str = cell.wn_name
     g = getattr(cell, f'{name}_g')
     v = getattr(cell, f'{name}_v')

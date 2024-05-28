@@ -82,7 +82,6 @@ class MBartTokenizerFast(PreTrainedTokenizerFast):
     >>> expected_translation_romanian = "Şeful ONU declară că nu există o soluţie militară în Siria"
     >>> inputs = tokenizer(example_english_phrase, text_target=expected_translation_romanian, return_tensors="pt")
     ```"""
-
     vocab_files_names = VOCAB_FILES_NAMES
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
@@ -257,7 +256,6 @@ corresponds to an existing file, the method returns True. Otherwise, it returns 
             `List[int]`: List of zeros.
 
         """
-
         sep = [self.sep_token_id]
         cls = [self.cls_token_id]
 

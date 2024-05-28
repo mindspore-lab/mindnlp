@@ -68,7 +68,6 @@ class BridgeTowerModelOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     text_features: mindspore.Tensor = None
     image_features: mindspore.Tensor = None
     pooler_output: mindspore.Tensor = None
@@ -100,7 +99,6 @@ class BridgeTowerContrastiveOutput(ModelOutput):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     text_embeds: Optional[Tuple[mindspore.Tensor]] = None
@@ -1787,7 +1785,6 @@ class BridgeTowerTextEmbeddings(nn.Cell):
     """
     Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
     """
-
     # Copied from transformers.models.bert.modeling_bert.BertEmbeddings.__init__
     def __init__(self, config):
         """
@@ -1931,7 +1928,6 @@ class BridgeTowerPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = BridgeTowerConfig
     base_model_prefix = "bridgetower"
     supports_gradient_checkpointing = False
@@ -2063,7 +2059,6 @@ class BridgeTowerTextModel(BridgeTowerPreTrainedModel):
     .. _*Attention is all you need*: https://arxiv.org/abs/1706.03762
 
     """
-
     config_class = BridgeTowerTextConfig
 
     def __init__(self, config, add_pooling_layer=True):

@@ -255,7 +255,6 @@ class WhisperTokenizer(PreTrainedTokenizer):
         predict_timestamps (`bool`, *optional*, defaults to `False`):
             Whether to omit the `<|notimestamps|>` token at the start of the sequence.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = MAX_MODEL_INPUT_SIZES
@@ -589,7 +588,6 @@ returned.
         Returns:
             `List[int]`: A list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
         """
-
         if already_has_special_tokens:
             return super().get_special_tokens_mask(
                 token_ids_0=token_ids_0, token_ids_1=token_ids_1, already_has_special_tokens=True
@@ -1113,7 +1111,6 @@ def _decode_asr(tokenizer, model_outputs, *, return_timestamps, return_language,
     Internal method meant to only be used by asr pipeline. Handles all the little quirks specific to whisper to handle
     the various options not allowed in other seq2seq models
     """
-
     # =========== Overview ============
     # - iterate over all outputs
     # - all tokens within output

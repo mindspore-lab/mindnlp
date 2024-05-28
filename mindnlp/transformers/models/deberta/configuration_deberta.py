@@ -98,7 +98,6 @@ class DebertaConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "deberta"
 
     def __init__(

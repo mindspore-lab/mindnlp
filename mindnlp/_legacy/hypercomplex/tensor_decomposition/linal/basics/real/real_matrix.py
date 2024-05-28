@@ -46,7 +46,6 @@ columns.
         _concat_rows: Concatenates another matrix below the current matrix.
         _concat_cols: Concatenates another matrix to the right of the current matrix.
     """
-
     def __init__(self,
                  height: Optional[int] = None,
                  width: Optional[int] = None,
@@ -148,7 +147,6 @@ columns.
             - TypeError: If 'that' is not an instance of Scalar, float, or np.float64.
             - ValueError: If the operation results in an invalid matrix shape or data type.
         """
-          
         num = that.as_number() if isinstance(that, Scalar) else that
         return Matrix(self._height, self._width, np.subtract(self._items, num))
 
@@ -167,7 +165,6 @@ columns.
         Raises:
             None
         """
-        
         num = that.as_number() if isinstance(that, Scalar) else that
         return Matrix(self._height, self._width, np.multiply(self._items, num))
 
@@ -296,7 +293,6 @@ further manipulation and analysis using the powerful NumPy library.
         Raises:
             TypeError: If the input array 'items' is not a valid numpy ndarray.
         """
-        
         if height is None:
             height = items.shape[0]
         if width is None:
@@ -504,7 +500,6 @@ showing the updated values.
         Raises:
             None
         """
-        
         return Matrix(items=[Vector(items=[Scalar.zero()] * self._width)] * self._height)
 
     def _identity_like(self) -> 'Matrix':

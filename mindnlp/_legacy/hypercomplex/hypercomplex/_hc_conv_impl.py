@@ -61,7 +61,6 @@ class _ConvImpl(nn.Cell):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def construct(self,
                   conv_fn: Callable,
                   x: Tensor,
@@ -72,8 +71,6 @@ class _ConvImpl(nn.Cell):
                   dilation: Tuple[int, ...],
                   group: int) -> Tuple[Tensor, Tensor]:
         """pass"""
-
-
 class _BaseConvImpl(_ConvImpl):
     r"""
     The base implementor part of the convolution layer for all the hypercomplex numbers of the second order.
@@ -105,7 +102,6 @@ class _BaseConvImpl(_ConvImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  weight_init: Union[Tensor, str, Initializer, numbers.Number],
                  weight_shape: tuple,
@@ -125,7 +121,6 @@ class _BaseConvImpl(_ConvImpl):
         Raises:
             None: This method does not raise any exceptions.
         """
-        
         super().__init__(weight_init, weight_shape, **factory_kwargs)
 
         if isinstance(weight_init, Tensor):

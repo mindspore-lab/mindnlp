@@ -48,7 +48,6 @@ class ScaledDotAttention(nn.Cell):
         >>> print(att.shape)
         # (2, 1024, 32)
     """
-
     def __init__(self, dropout=0.9):
         r"""
         Initializes an instance of the ScaledDotAttention class.
@@ -405,7 +404,6 @@ class BinaryAttention(nn.Cell):
         >>> print(output_x.shape, output_y.shape)
         (2, 30, 512) (2, 20, 512)
     """
-
     def __init__(self):
         r"""
         Initializes an instance of the BinaryAttention class.
@@ -568,7 +566,6 @@ class LocationAwareAttention(nn.Cell):
         >>> print(cont.shape, attn.shape)
         (2, 1, 20) (2, 40)
     """
-
     def __init__(self, hidden_dim, smoothing=False):
         r"""
         Initializes an instance of the LocationAwareAttention class.

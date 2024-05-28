@@ -64,7 +64,6 @@ class BlenderbotLearnedPositionalEmbedding(nn.Embedding):
     """
     This module learns positional embeddings up to a fixed maximum size.
     """
-
     def construct(self, input_ids_shape, past_key_values_length: int = 0):
         """`input_ids_shape` is expected to be [bsz x seqlen]."""
         bsz, seq_len = input_ids_shape[:2]
@@ -77,7 +76,6 @@ class BlenderbotLearnedPositionalEmbedding(nn.Embedding):
 # Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->Blenderbot
 class BlenderbotAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(
         self,
         embed_dim: int,
@@ -162,7 +160,6 @@ method is called on the reshaped tensor to swap the dimensions at index 1 and in
         output_attentions: bool = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
-
         # if key_value_states are provided this layer is used as a cross-attention layer
         # for the decoder
         is_cross_attention = key_value_states is not None
@@ -647,7 +644,6 @@ class BlenderbotEncoder(BlenderbotPreTrainedModel):
         config: BlenderbotConfig
         embed_tokens (nn.Embedding): output embedding
     """
-
     def __init__(self, config: BlenderbotConfig, embed_tokens: Optional[nn.Embedding] = None):
         """
         Initializes a BlenderbotEncoder instance.
@@ -831,7 +827,6 @@ class BlenderbotDecoder(BlenderbotPreTrainedModel):
         config: BlenderbotConfig
         embed_tokens (nn.Embedding): output embedding
     """
-
     def __init__(self, config: BlenderbotConfig, embed_tokens: Optional[nn.Embedding] = None):
         """
         Initializes a new instance of the BlenderbotDecoder class.
@@ -1707,7 +1702,6 @@ class BlenderbotDecoderWrapper(BlenderbotPreTrainedModel):
     This wrapper class is a helper class to correctly load pretrained checkpoints when the causal language model is
     used in combination with the [`EncoderDecoderModel`] framework.
     """
-
     def __init__(self, config):
         """
         Initializes a new instance of the BlenderbotDecoderWrapper class.
@@ -1999,7 +1993,6 @@ embeddings capture the semantic meaning of the input tokens and are essential fo
         >>> list(logits.shape) == expected_shape
         True
         ```"""
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states

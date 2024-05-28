@@ -107,7 +107,6 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
         use_default_system_prompt (`bool`, *optional*, defaults to `False`):
             Whether or not the default system prompt for Llama should be used.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     slow_tokenizer_class = CodeLlamaTokenizer
     padding_side = "left"

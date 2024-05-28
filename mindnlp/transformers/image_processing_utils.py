@@ -60,15 +60,12 @@ class BatchFeature(BaseBatchFeature):
             You can give a tensor_type here to convert the lists of integers in PyTorch/TensorFlow/Numpy Tensors at
             initialization.
     """
-
-
 # TODO: (Amy) - factor out the common parts of this and the feature extractor
 class ImageProcessingMixin:
     """
     This is an image processor mixin used to provide saving/loading functionality for sequential and image feature
     extractors.
     """
-
     _auto_class = None
 
     def __init__(self, **kwargs):

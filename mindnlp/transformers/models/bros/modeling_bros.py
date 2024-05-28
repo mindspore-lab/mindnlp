@@ -69,7 +69,6 @@ class BrosSpadeOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     initial_token_logits: mindspore.Tensor = None
     subsequent_token_logits: mindspore.Tensor = None
@@ -286,7 +285,6 @@ applies the positional embedding and projection layers to obtain the positional 
 
 class BrosTextEmbeddings(nn.Cell):
     """Construct the embeddings from word, position and token_type embeddings."""
-
     def __init__(self, config):
         """
         Initializes the BrosTextEmbeddings class with the given configuration.
@@ -1452,7 +1450,6 @@ class BrosPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = BrosConfig
     base_model_prefix = "bros"
 
@@ -1801,7 +1798,6 @@ entity recognition or part-of-speech tagging.
 
         >>> outputs = model(**encoding)
         ```"""
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.bros(
@@ -1952,7 +1948,6 @@ logits. Optionally, it can also return hidden states and attentions if specified
 
         >>> outputs = model(**encoding)
         ```"""
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.bros(

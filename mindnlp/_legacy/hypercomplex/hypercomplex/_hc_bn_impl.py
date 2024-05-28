@@ -40,7 +40,6 @@ class _BatchNormImpl(nn.Cell):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     @abstractmethod
     def get_norm(self, u: Tensor) -> Tensor:
         r"""
@@ -57,7 +56,6 @@ class _BatchNormImpl(nn.Cell):
             Tensor of shape (*, ..., *). The count and size of dimensions of the output tensor are the same ones as in
             the input tensor, but without the very first dimension because the output tensor is real-valued.
         """
-
     @abstractmethod
     def get_square_norm(self, u: Tensor) -> Tensor:
         r"""
@@ -74,7 +72,6 @@ class _BatchNormImpl(nn.Cell):
             Tensor of shape (*, ..., *). The count and size of dimensions of the output tensor are the same ones as in
             the input tensor, but without the very first dimension because the output tensor is real-valued.
         """
-
     @abstractmethod
     def scale_and_shift(self,
                         u_x: Tensor,
@@ -109,7 +106,6 @@ class _BatchNormImpl(nn.Cell):
             Tuple of two tensors of shape (C,), which contains the real and the hypercomplex parts of rescaled and
             recentered inputs.
         """
-
     @abstractmethod
     def calculate_bn(self,
                      u_centered_x: Tensor,
@@ -141,7 +137,6 @@ class _BatchNormImpl(nn.Cell):
             Tuple of two tensors of shape (C,), which contains the real and the hypercomplex parts of rescaled and
             recentered normalized inputs.
         """
-
     @abstractmethod
     def calculate_infer_bn(self,
                            moving_mean_x: Tensor,
@@ -180,8 +175,6 @@ class _BatchNormImpl(nn.Cell):
             Tuple of two tensors of shape (C,), which contains the real and the hypercomplex parts of normalized,
             rescaled and recentered inputs.
         """
-
-
 class _BaseBatchNormImpl(_BatchNormImpl):
     r"""
     The base implementor part of the batch normalization layer for all the hypercomplex numbers of the second order.
@@ -204,7 +197,6 @@ class _BaseBatchNormImpl(_BatchNormImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  affine: bool,
                  gamma_init: Union[Tensor, str, Initializer, numbers.Number],

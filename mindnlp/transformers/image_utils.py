@@ -552,7 +552,6 @@ class ImageFeatureExtractionMixin:
     """
     Mixin that contain utilities for preparing image features.
     """
-
     def _ensure_format_supported(self, image):
         """
         This method '_ensure_format_supported' in the class 'ImageFeatureExtractionMixin' ensures that the input image format is supported for further processing.

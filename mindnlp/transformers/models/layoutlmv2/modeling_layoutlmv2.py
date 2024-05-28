@@ -51,7 +51,6 @@ LAYOUTLMV2_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 class LayoutLMv2Embeddings(nn.Cell):
     """Construct the embeddings from word, position and token_type embeddings."""
-
     def __init__(self, config):
         """
         Initializes the LayoutLMv2Embeddings class with the provided configuration.
@@ -139,7 +138,6 @@ class LayoutLMv2SelfAttention(nn.Cell):
     """
     LayoutLMv2SelfAttention is the self-attention layer for LayoutLMv2. It is based on the implementation of
     """
-
     def __init__(self, config):
         """Initializes the LayoutLMv2SelfAttention class.
         
@@ -304,7 +302,6 @@ class LayoutLMv2Attention(nn.Cell):
     """
     LayoutLMv2Attention is the attention layer for LayoutLMv2. It is based on the implementation of
     """
-
     def __init__(self, config):
         """
         Initialize the LayoutLMv2Attention class.
@@ -367,7 +364,6 @@ class LayoutLMv2SelfOutput(nn.Cell):
     """
     LayoutLMv2SelfOutput is the output layer for LayoutLMv2Attention. It is based on the implementation of BertSelfOutput.
     """
-
     def __init__(self, config):
         """
         Initializes the LayoutLMv2SelfOutput class.
@@ -419,7 +415,6 @@ class LayoutLMv2Intermediate(nn.Cell):
     """
     LayoutLMv2Intermediate is a simple feedforward network. It is based on the implementation of BertIntermediate.
     """
-
     def __init__(self, config):
         """
         Initialize the LayoutLMv2Intermediate class.
@@ -475,7 +470,6 @@ class LayoutLMv2Output(nn.Cell):
     """
     LayoutLMv2Output is the output layer for LayoutLMv2Intermediate. It is based on the implementation of BertOutput.
     """
-
     def __init__(self, config):
         """
         Initializes a new instance of the LayoutLMv2Output class.
@@ -525,7 +519,6 @@ class LayoutLMv2Layer(nn.Cell):
     """
     LayoutLMv2Layer is made up of self-attention and feedforward network. It is based on the implementation of BertLayer.
     """
-
     def __init__(self, config):
         """Initialize a LayoutLMv2Layer.
         
@@ -666,7 +659,6 @@ class LayoutLMv2Encoder(nn.Cell):
     """
     LayoutLMv2Encoder is a stack of LayoutLMv2Layer. It is based on the implementation of BertEncoder.
     """
-
     def __init__(self, config):
         '''
         Initializes a LayoutLMv2Encoder object.
@@ -863,7 +855,6 @@ class LayoutLMv2PreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     _keys_to_ignore_on_load_unexpected = ['num_batches_tracked']
     config_class = LayoutLMv2Config
     pretrained_model_archive_map = LAYOUTLMV2_PRETRAINED_MODEL_ARCHIVE_LIST
@@ -890,7 +881,6 @@ class LayoutLMv2VisualBackbone(nn.Cell):
     """
     LayoutLMv2VisualBackbone is a visual backbone for LayoutLMv2. It is based on the implementation of VisualBackboneBase.
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the LayoutLMv2VisualBackbone class.
@@ -994,7 +984,6 @@ class LayoutLMv2Pooler(nn.Cell):
     """
     LayoutLMv2Pooler is a simple feedforward network. It is based on the implementation of BertPooler.
     """
-
     def __init__(self, config):
         """
         Initializes a new instance of the LayoutLMv2Pooler class.
@@ -1046,7 +1035,6 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
     """
     LayoutLMv2Model is a LayoutLMv2 model with a visual backbone. It is based on the implementation of LayoutLMv2Model.
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the LayoutLMv2Model class.
@@ -1415,7 +1403,6 @@ class LayoutLMv2ForSequenceClassification(LayoutLMv2PreTrainedModel):
     LayoutLMv2ForSequenceClassification is a LayoutLMv2 model with a sequence classification head on top (a linear
     layer on top of the pooled output) It is based on the implementation of LayoutLMv2ForSequenceClassification.
     """
-
     def __init__(self, config):
         """
         Initializes a new instance of the LayoutLMv2ForSequenceClassification class.
@@ -1511,7 +1498,6 @@ class LayoutLMv2ForSequenceClassification(LayoutLMv2PreTrainedModel):
         (4, 'advertisement')
         ```
         """
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if input_ids is not None and inputs_embeds is not None:
@@ -1614,7 +1600,6 @@ class LayoutLMv2ForTokenClassification(LayoutLMv2PreTrainedModel):
     """
     LayoutLMv2ForTokenClassification is a LayoutLMv2 model with a token classification head. It is based on the implementation of LayoutLMv2ForTokenClassification.
     """
-
     def __init__(self, config):
         """
         Initializes a LayoutLMv2ForTokenClassification instance.
@@ -1719,7 +1704,6 @@ class LayoutLMv2ForTokenClassification(LayoutLMv2PreTrainedModel):
         ['B-ANSWER', 'B-HEADER', 'B-HEADER', 'B-HEADER', 'B-HEADER']
         ```
         """
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.layoutlmv2(
@@ -1768,7 +1752,6 @@ class LayoutLMv2ForQuestionAnswering(LayoutLMv2PreTrainedModel):
 
     LayoutLMv2ForQuestionAnswering is a LayoutLMv2 model with a question answering head. It is based on the implementation of LayoutLMv2ForQuestionAnswering.
     """
-
     def __init__(self, config, has_visual_segment_embedding=True):
         """
         Initialize the LayoutLMv2ForQuestionAnswering class.
@@ -1882,7 +1865,6 @@ class LayoutLMv2ForQuestionAnswering(LayoutLMv2PreTrainedModel):
         (154, 287)
         ```
         """
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.layoutlmv2(

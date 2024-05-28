@@ -375,7 +375,6 @@ class WhisperPositionalEmbedding(nn.Embedding):
 
 class WhisperAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(
         self,
         embed_dim: int,
@@ -456,7 +455,6 @@ class WhisperAttention(nn.Cell):
         output_attentions: bool = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
-
         # if key_value_states are provided this layer is used as a cross-attention layer
         # for the decoder
         is_cross_attention = key_value_states is not None
@@ -920,7 +918,6 @@ class WhisperEncoder(WhisperPreTrainedModel):
     Args:
         config: WhisperConfig
     """
-
     def __init__(self, config: WhisperConfig):
         """Initialize a WhisperEncoder object.
         
@@ -1122,7 +1119,6 @@ class WhisperDecoder(WhisperPreTrainedModel):
     Args:
         config: WhisperConfig
     """
-
     main_input_name = "input_ids"
 
     def __init__(self, config: WhisperConfig):
@@ -1509,7 +1505,6 @@ and constructing the model with various input parameters.
         Masks extracted features along time axis and/or along feature axis according to
         [SpecAugment](https://arxiv.org/abs/1904.08779).
         """
-
         # `config.apply_spec_augment` can set masking to False
         if not getattr(self.config, "apply_spec_augment", True):
             return input_features
@@ -2275,7 +2270,6 @@ class WhisperDecoderWrapper(WhisperPreTrainedModel):
     This wrapper class is a helper class to correctly load pretrained checkpoints when the causal language model is
     used in combination with the [`EncoderDecoderModel`] framework.
     """
-
     def __init__(self, config):
         """
         Initializes a new instance of the WhisperDecoderWrapper class.
@@ -2897,7 +2891,6 @@ forward pass of the model for audio classification.
         >>> predicted_label
         'Afrikaans'
         ```"""
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states

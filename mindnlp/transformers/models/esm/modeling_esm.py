@@ -117,7 +117,6 @@ class RotaryEmbedding(nn.Cell):
     [RoFormer](https://hf-mirror.com/docs/transformers/model_doc/roformer). Query and keys are transformed by rotation
     matrices which depend on their relative positions.
     """
-
     def __init__(self, dim: int):
         """
         Initializes a new instance of the RotaryEmbedding class.
@@ -208,7 +207,6 @@ class RotaryEmbedding(nn.Cell):
 
 class EsmContactPredictionHead(nn.Cell):
     """Performs symmetrization, apc, and computes a logistic regression on the output features"""
-
     def __init__(
         self,
         in_features: int,
@@ -273,7 +271,6 @@ class EsmEmbeddings(nn.Cell):
     """
     Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
     """
-
     def __init__(self, config):
         """
         __init__
@@ -1302,7 +1299,6 @@ class EsmPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = EsmConfig
     base_model_prefix = "esm"
     supports_gradient_checkpointing = True
@@ -1341,7 +1337,6 @@ class EsmModel(EsmPreTrainedModel):
     to `True`. To be used in a Seq2Seq model, the model needs to initialized with both `is_decoder` argument and
     `add_cross_attention` set to `True`; an `encoder_hidden_states` is then expected as an input to the forward pass.
     """
-
     def __init__(self, config, add_pooling_layer=True):
         """
         Initializes an instance of the EsmModel class.
@@ -1710,7 +1705,6 @@ the tokens with labels in `[0, ..., config.vocab_size]`.
 
 class EsmLMHead(nn.Cell):
     """ESM Head for masked language modeling."""
-
     def __init__(self, config):
         """
         Initializes an instance of the EsmLMHead class.
@@ -1960,7 +1954,6 @@ attentions based on the return_dict parameter.
 
 class EsmClassificationHead(nn.Cell):
     """Head for sentence-level classification tasks."""
-
     def __init__(self, config):
         """
         Initializes an instance of the EsmClassificationHead class.

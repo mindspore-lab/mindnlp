@@ -65,7 +65,6 @@ class CRF(nn.Cell):
 
     .. _Viterbi algorithm: https://en.wikipedia.org/wiki/Viterbi_algorithm
     """
-
     def __init__(self, num_tags: int, batch_first: bool = False, reduction: str = 'sum') -> None:
         r"""
         Initializes an instance of the CRF (Conditional Random Field) class.

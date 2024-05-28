@@ -47,7 +47,6 @@ class TinyBertConfig(PretrainedConfig):
         initializer_range: The sttdev of the truncated_normal_initializer for
             initializing all weight matrices.
     """
-
     def __init__(self,
                  vocab_size=21128,
                  hidden_size=768,

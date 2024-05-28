@@ -208,7 +208,6 @@ outputs.
             output_attentions=False,
     ):
         """Core relative positional attention operations."""
-
         # content based attention score
         ac = ops.einsum("ibnd,jbnd->bnij", q_head + self.r_w_bias, k_head_h)
 
@@ -647,7 +646,6 @@ class XLNetPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = XLNetConfig
     base_model_prefix = "transformer"
 
@@ -714,7 +712,6 @@ class XLNetModelOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     last_hidden_state: mindspore.Tensor
     mems: Optional[List[mindspore.Tensor]] = None
     hidden_states: Optional[Tuple[mindspore.Tensor, ...]] = None
@@ -750,7 +747,6 @@ class XLNetLMHeadModelOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     mems: Optional[List[mindspore.Tensor]] = None
@@ -784,7 +780,6 @@ class XLNetForSequenceClassificationOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     mems: Optional[List[mindspore.Tensor]] = None
@@ -818,7 +813,6 @@ class XLNetForTokenClassificationOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     mems: Optional[List[mindspore.Tensor]] = None
@@ -854,7 +848,6 @@ class XLNetForMultipleChoiceOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     mems: Optional[List[mindspore.Tensor]] = None
@@ -890,7 +883,6 @@ class XLNetForQuestionAnsweringSimpleOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     start_logits: mindspore.Tensor = None
     end_logits: mindspore.Tensor = None
@@ -935,7 +927,6 @@ class XLNetForQuestionAnsweringOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     start_top_log_probs: Optional[mindspore.Tensor] = None
     start_top_index: Optional[mindspore.Tensor] = None

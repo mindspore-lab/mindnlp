@@ -124,7 +124,6 @@ class BasicStem(nn.Cell):
     The standard ResNet stem (layers before the first residual block),
     with a conv, relu and max_pool.
     """
-
     def __init__(self, in_channels=3, out_channels=64, norm="BN"):
         """
         Args:
@@ -176,7 +175,6 @@ class BasicBlock(nn.Cell):
     The basic residual block for ResNet-18 and ResNet-34 defined in :paper:`ResNet`,
     with two 3x3 conv layers and a projection shortcut if needed.
     """
-
     def __init__(self, in_channels, out_channels, *, stride=1, norm="BN"):
         """
         Args:
@@ -260,7 +258,6 @@ class BottleneckBlock(nn.Cell):
     defined in :paper:`ResNet`.  It contains 3 conv layers with kernels
     1x1, 3x3, 1x1, and a projection shortcut if needed.
     """
-
     def __init__(
             self,
             in_channels,
@@ -374,7 +371,6 @@ class ResNet(nn.Cell):
     """
     Implement :paper:`ResNet`.
     """
-
     def __init__(self, stem, stages, num_classes=None, out_features=None):
         """
         Args:

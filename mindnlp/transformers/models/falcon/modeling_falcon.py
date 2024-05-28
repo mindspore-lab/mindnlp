@@ -67,7 +67,6 @@ def rotate_half(x):
 
     Returns:
         Tensor: The rotated tensor."""
-
     x1, x2 = x[..., : x.shape[-1] // 2], x[..., x.shape[-1] // 2 :]
     return ops.cat((-x2, x1), axis=-1)
 
@@ -134,7 +133,6 @@ class FalconRotaryEmbedding(nn.Cell):
     This implementation is designed to operate on queries and keys that are compatible with `[batch_size,
     n_heads_per_partition, seq_len, head_dim]` (e.g. MinGPTAttention format).
     """
-
     def __init__(self, dim: int, max_position_embeddings=2048, base=10000):
         """
         Initializes an instance of the FalconRotaryEmbedding class.
@@ -212,7 +210,6 @@ class FalconRotaryEmbedding(nn.Cell):
 
 class FalconLinearScalingRotaryEmbedding(FalconRotaryEmbedding):
     """FalconRotaryEmbedding extended with linear scaling. Credits to the Reddit user /u/kaiokendev"""
-
     def __init__(
         self, dim: int, max_position_embeddings=2048, base=10000, scaling_factor=1.0
     ):
@@ -265,7 +262,6 @@ class FalconDynamicNTKScalingRotaryEmbedding(FalconRotaryEmbedding):
     """
     FalconRotaryEmbedding extended with Dynamic NTK scaling. Credits to the Reddit users /u/bloc97 and /u/emozilla
     """
-
     def __init__(
         self, dim: int, max_position_embeddings=2048, base=10000, scaling_factor=1.0
     ):
@@ -353,7 +349,6 @@ def build_alibi_tensor(
     Returns:
         mindspore.Tensor: The alibi tensor of shape (batch_size * num_heads, 1, seq_length).
     """
-
     batch_size, seq_length = attention_mask.shape
     closest_power_of_2 = 2 ** math.floor(math.log2(num_heads))
     base = mindspore.tensor(
@@ -427,7 +422,6 @@ class FalconAttention(nn.Cell):
         num_kv_heads (int): The number of key-value attention heads.
 
     """
-
     def __init__(self, config: FalconConfig):
         """
         Initialize the FalconAttention class with the provided configuration.
@@ -785,7 +779,6 @@ class FalconMLP(nn.Cell):
 
     Returns:
         Tensor: The output tensor after applying the MLP transformation."""
-
     def __init__(self, config: FalconConfig):
         """
         Initializes a FalconMLP instance.
@@ -855,7 +848,6 @@ class FalconDecoderLayer(nn.Cell):
     Methods:
         construct: Forward pass of the FalconDecoderLayer.
     """
-
     def __init__(self, config: FalconConfig):
         """
         Initializes a FalconDecoderLayer object.
@@ -991,7 +983,6 @@ class FalconPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     # convert_torch_to_mindspore = torch_to_mindspore
     config_class = FalconConfig
     base_model_prefix = "transformer"
@@ -1054,7 +1045,6 @@ class FalconModel(FalconPreTrainedModel):
         The output of the forward pass, which includes the last hidden state, past key values,
         hidden states, and self-attention matrices.
     """
-
     def __init__(self, config: FalconConfig):
         """
         Initializes a FalconModel instance.
@@ -1312,7 +1302,6 @@ class FalconForCausalLM(FalconPreTrainedModel):
         lm_head (nn.Dense): The linear layer for language modeling.
 
     """
-
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config: FalconConfig):
@@ -1461,7 +1450,6 @@ downstream tasks such as fine-tuning or feature extraction.
             `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
             are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
         """
-
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
         )
@@ -1518,7 +1506,6 @@ downstream tasks such as fine-tuning or feature extraction.
 
         Output shares the same memory storage as `past`.
         """
-
         return tuple(
             (
                 layer_past[0].index_select(0, beam_idx),
@@ -1536,7 +1523,6 @@ class FalconForSequenceClassification(FalconPreTrainedModel):
         config (FalconConfig): The configuration object that defines the model architecture and hyperparameters.
 
     """
-
     def __init__(self, config: FalconConfig):
         """
         Initializes a new instance of the FalconForSequenceClassification class.
@@ -1581,7 +1567,6 @@ class FalconForSequenceClassification(FalconPreTrainedModel):
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
-
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
         )
@@ -1674,7 +1659,6 @@ class FalconForTokenClassification(FalconPreTrainedModel):
         classifier (nn.Dense): The dense layer for classification.
 
     """
-
     def __init__(self, config: FalconConfig):
         """
         Initializes an instance of FalconForTokenClassification.
@@ -1747,7 +1731,6 @@ class FalconForTokenClassification(FalconPreTrainedModel):
             of (logits, hidden_states, attentions). If labels is not None, also returns the loss.
 
         """
-
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
         )
@@ -1800,7 +1783,6 @@ class FalconForQuestionAnswering(FalconPreTrainedModel):
         qa_outputs (nn.Dense): The dense layer for question answering outputs.
 
     """
-
     def __init__(self, config):
         """
         Initializes a new instance of the FalconForQuestionAnswering class.

@@ -19,7 +19,6 @@ vectors using the specified QR algorithm and a specified number of iterations.
     The SVD class provides essential functionality for performing SVD and manipulating the resulting singular value, left singular vectors, and right singular vectors. It serves as a valuable tool for matrix
 analysis and decomposition.
     """
-
     @staticmethod
     def decompose(matrix: Matrix,
                   iterations: int = 10,

@@ -36,7 +36,6 @@ CHATGLM3_6B_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 class ChatGLM3Model(ChatGLM2Model):
     """ChatGLM3Model"""
-
 class ChatGLM3ForConditionalGeneration(ChatGLM2ForConditionalGeneration):
     """ChatGLM3ForConditionalGeneration"""
     def process_response(self, output, history):
@@ -317,7 +316,6 @@ class ChatGLM3ForConditionalGeneration(ChatGLM2ForConditionalGeneration):
 
 class ChatGLM3ForSequenceClassification(ChatGLM2ForSequenceClassification):
     """ChatGLM3ForSequenceClassification"""
-
 __all__ = [
     'CHATGLM3_6B_PRETRAINED_MODEL_ARCHIVE_LIST',
     'ChatGLM3Model',

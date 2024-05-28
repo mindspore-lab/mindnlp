@@ -13,7 +13,6 @@ if the scalar is zero, and getting the real value as a NumPy float64.
     
     Subclasses of 'Scalar' must implement these abstract methods to define the behavior of scalar values in their specific contexts.
     """
-
     _EQUALITY_TOLERANCE: float = 1e-10
 
     @staticmethod

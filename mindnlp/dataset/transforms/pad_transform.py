@@ -36,7 +36,6 @@ class PadTransform(PyTensorOperation):
     Examples:
 
     """
-
     # @check_decode
     def __init__(self, max_length: int, pad_value:int, return_length:bool = False):
         r"""

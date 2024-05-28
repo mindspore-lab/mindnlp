@@ -743,7 +743,6 @@ class LongT5LocalAttention(nn.Cell):
 
     def compute_bias(self, block_length: int):
         """Compute binned relative position bias"""
-
         memory_position = ops.arange(3 * block_length, dtype=mindspore.int64)
         context_position = memory_position[block_length:-block_length]
         # (block_length, 3 * block_length)
@@ -959,7 +958,6 @@ class LongT5TransientGlobalAttention(nn.Cell):
 
     def compute_bias(self, block_length: int):
         """Compute binned relative position bias"""
-
         memory_position = ops.arange(3 * block_length, dtype=mindspore.int64)
         context_position = memory_position[block_length:-block_length]
         # (block_length, 3 * block_length)
@@ -1511,7 +1509,6 @@ class LongT5Block(nn.Cell):
             TypeError: If the input tensors have incompatible data types.
             RuntimeError: If there are issues during the computation process.
         """
-
         if past_key_value is not None:
             if not self.is_decoder:
                 logging.warning("`past_key_values` is passed to the encoder. Please make sure this is intended.")

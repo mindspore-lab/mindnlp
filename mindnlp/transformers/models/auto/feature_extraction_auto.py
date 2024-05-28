@@ -265,7 +265,6 @@ class AutoFeatureExtractor:
 
     This class cannot be instantiated directly using `__init__()` (throws an error).
     """
-
     def __init__(self):
         """
         Initializes an instance of the AutoFeatureExtractor class.

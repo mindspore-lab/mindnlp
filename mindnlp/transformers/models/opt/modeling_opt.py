@@ -54,7 +54,6 @@ class OPTLearnedPositionalEmbedding(nn.Embedding):
     """
     This module learns positional embeddings up to a fixed maximum size.
     """
-
     def __init__(self, num_embeddings: int, embedding_dim: int):
         """
         Initializes an instance of the OPTLearnedPositionalEmbedding class with the given parameters.
@@ -94,7 +93,6 @@ class OPTLearnedPositionalEmbedding(nn.Embedding):
 
 class OPTAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(
         self,
         embed_dim: int,
@@ -166,7 +164,6 @@ class OPTAttention(nn.Cell):
         output_attentions: bool = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
-
         # if key_value_states are provided this layer is used as a cross-attention layer
         # for the decoder
         is_cross_attention = key_value_states is not None
@@ -379,7 +376,6 @@ class OPTDecoderLayer(nn.Cell):
                 (see `past_key_values`).
             past_key_value (`Tuple(mindspore.Tensor)`, *optional*): cached past key and value projection states
         """
-
         residual = hidden_states
 
         # 125m, 1.7B, ..., 175B applies layer norm BEFORE attention
@@ -494,7 +490,6 @@ class OPTDecoder(OPTPreTrainedModel):
     Args:
         config: OPTConfig
     """
-
     def __init__(self, config: OPTConfig):
         """
         Initializes an instance of the OPTDecoder class.
@@ -1165,7 +1160,6 @@ outputs based on the input sequences. The output embeddings capture the learned 
         >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         "Hey, are you conscious? Can you talk to me?\nI'm not conscious. I'm just a little bit of a weirdo."
         ```"""
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states

@@ -74,7 +74,6 @@ class MusicgenMelodyFeatureExtractor(SequenceFeatureExtractor):
         stem_indices (`List[int]`, *optional*, defaults to `[3, 2]`):
             Stem channels to extract if demucs outputs are passed.
     """
-
     model_input_names = ["input_features"]
 
     def __init__(
@@ -138,7 +137,6 @@ class MusicgenMelodyFeatureExtractor(SequenceFeatureExtractor):
         """
         Compute the chroma spectrogram of the provided audio using the spectrogram implementation and the librosa chroma features.
         """
-
         # if wav length is not long enough, pad it
         wav_length = waveform.shape[-1]
         if wav_length < self.n_fft:
@@ -263,7 +261,6 @@ class MusicgenMelodyFeatureExtractor(SequenceFeatureExtractor):
                 `sampling_rate` at the forward call to prevent silent errors.
                 Note that if `audio` is the output of Demucs, `sampling_rate` must be the sampling rate at which Demucs operates.
         """
-
         if sampling_rate is None:
             logger.warning_once(
                 "It is strongly recommended to pass the `sampling_rate` argument to this function. "

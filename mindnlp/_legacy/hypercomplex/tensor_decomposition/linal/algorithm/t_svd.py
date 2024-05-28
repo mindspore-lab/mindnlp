@@ -34,7 +34,6 @@ class with a value of -1, indicating that no truncation is applied.
     Note: The actual implementation of the TSVD class and its inherited methods are not included in this docstring.
     
     """
-
     @staticmethod
     def decompose(matrix: Matrix) -> Tuple[Matrix, Matrix, Matrix]:
         r"""

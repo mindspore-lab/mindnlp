@@ -35,7 +35,6 @@ class LoftQConfig:
             models. weights can't be saved. Recommend to set to True, save the weights and load the saved weights in 4
             bits.
     """
-
     loftq_bits: int = field(default=4, metadata={"help": "Quantization bits for LoftQ"})
     loftq_iter: int = field(default=1, metadata={"help": "Alternating iterations for LoftQ"})
 
@@ -113,7 +112,6 @@ class LoraConfig(PeftConfig):
             allows expanding (or shrinking) the model without duplicating the base model weights. The new layers will
             all have separate LoRA adapters attached to them.
     """
-
     r: int = field(default=8, metadata={"help": "Lora attention dimension"})
     target_cells: Optional[Union[list[str], str]] = field(
         default=None,
@@ -287,7 +285,6 @@ class LoraConfig(PeftConfig):
             ValueError: If `loftq_config` must be specified when `init_lora_weights` is 'loftq'.
             ImportError: If the required package 'scipy' is not installed.
         """
-        
         self.peft_type = PeftType.LORA
         self.target_cells = (
             set(self.target_cells) if isinstance(self.target_cells, list) else self.target_cells

@@ -63,7 +63,6 @@ class PrefixEncoder(nn.Cell):
     Input shape: (batch-size, prefix-length)
     Output shape: (batch-size, prefix-length, 2*layers*hidden)
     """
-
     def __init__(self, config):
         """
         Initializes the PrefixEncoder class.
@@ -212,7 +211,6 @@ class SelfAttention(nn.Cell):
             ValueError: If config.max_sequence_length is not provided or is invalid.
             TypeError: If the data type of the parameters is not supported.
         """
-
         super().__init__()
 
         self.layer_id = layer_id
@@ -290,7 +288,6 @@ class SelfAttention(nn.Cell):
         hidden_states: [seq_len, batch, hidden_size]
         attention_mask: [(1, 1), seq_len, seq_len]
         """
-
         # [seq_len, batch, 3 * hidden_size]
         mixed_raw_layer = self.query_key_value(hidden_states)
         # [seq_len, batch, 3 * hidden_size] --> [seq_len, batch, num_attention_heads, 3 * hidden_size_per_attention_head]
@@ -543,7 +540,6 @@ class GLU(nn.Cell):
         """
         hidden_states: [seq_len, batch, hidden_size]
         """
-
         # [seq_len, batch, inner_hidden_size]
         intermediate_parallel = self.dense_h_to_4h(hidden_states)
 
@@ -643,7 +639,6 @@ class GLMBlock(nn.Cell):
         hidden_states: [seq_len, batch, hidden_size]
         attention_mask: [(1, 1), seq_len, seq_len]
         """
-
         # Layer norm at the begining of the transformer layer.
         # [seq_len, batch, hidden_size]
         attention_input = self.input_layernorm(hidden_states)
@@ -689,7 +684,6 @@ class MSChatGLMPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and
     a simple interface for downloading and loading pretrained models.
     """
-
     is_parallelizable = False
     config_class = ChatGLMConfig
     base_model_prefix = "transformer"
@@ -698,7 +692,6 @@ class MSChatGLMPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell: nn.Cell):
         """Initialize the weights."""
-
     def get_masks(self, input_ids):
         """get masks"""
         batch_size, seq_length = input_ids.shape
@@ -752,7 +745,6 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
     argument and `add_cross_attention` set to `True`; an
     `encoder_hidden_states` is then expected as an input to the forward pass.
     """
-
     def __init__(self, config: ChatGLMConfig):
         """Initializes an instance of the MSChatGLMModel class with the provided configuration.
         
@@ -915,7 +907,6 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
             ValueError: If neither input_ids nor inputs_embeds are specified.
         
         """
-
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
         if input_ids is not None:
@@ -1467,7 +1458,6 @@ language model head. The embeddings are returned as a tensor.
 
     def quantize(self, bits: int, empty_init=False, **kwargs):
         """TODO: support quantize"""
-
 __all__ = [
     'MSChatGLMModel',
     'MSChatGLMPreTrainedModel',

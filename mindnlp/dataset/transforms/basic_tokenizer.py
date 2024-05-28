@@ -52,7 +52,6 @@ class BasicTokenizer(TextTensorOperation, PyTensorOperation):
         >>> tokenized_text = tokenizer_op(text)
 
     """
-
     # @check_decode
     def __init__(self, lower_case=False, py_transform=False):
         r"""
@@ -146,7 +145,6 @@ def _whitespace_tokenize(text):
 
 class _BasicTokenizer():
     """Runs basic tokenization (punctuation splitting, lower casing, etc.)."""
-
     def __init__(self, do_lower_case=True):
         """Constructs a BasicTokenizer.
         Args:

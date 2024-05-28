@@ -127,7 +127,6 @@ class MPNetTokenizer(PreTrainedTokenizer):
             Whether or not to strip all accents. If this option is not specified, then it will be determined by the
             value for `lowercase` (as in the original BERT).
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     pretrained_init_configuration = PRETRAINED_INIT_CONFIGURATION
@@ -444,7 +443,6 @@ class BasicTokenizer(object):
             In some instances we want to skip the basic punctuation splitting so that later tokenization can capture
             the full context of the words, such as contractions.
     """
-
     def __init__(
         self,
         do_lower_case=True,
@@ -603,7 +601,6 @@ class BasicTokenizer(object):
 # Copied from transformers.models.bert.tokenization_bert.WordpieceTokenizer
 class WordpieceTokenizer(object):
     """Runs WordPiece tokenization."""
-
     def __init__(self, vocab, unk_token, max_input_chars_per_word=100):
         """
         Initializes a new instance of the WordpieceTokenizer class.
@@ -639,7 +636,6 @@ class WordpieceTokenizer(object):
         Returns:
             A list of wordpiece tokens.
         """
-
         output_tokens = []
         for token in whitespace_tokenize(text):
             chars = list(token)

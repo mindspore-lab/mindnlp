@@ -35,7 +35,6 @@ class MLP(nn.Cell):
     r"""
     GPT MLP
 	"""
-
     def __init__(self, n_state, config):
         """
         Initializes an instance of the MLP class.
@@ -100,7 +99,6 @@ class Attention(nn.Cell):
     r"""
     GPT Attention
     """
-
     def __init__(self, nx, n_positions, config, scale=False):
         """
         Initializes an instance of the Attention class.
@@ -247,7 +245,6 @@ class Block(nn.Cell):
     r"""
     GPT Block
     """
-
     def __init__(self, n_positions, config, scale=False):
         """
         Initializes a new instance of the Block class.
@@ -304,7 +301,6 @@ class Block(nn.Cell):
 
 class GPTPreTrainedModel(PreTrainedModel):
     """BertPretrainedModel"""
-
     config_class = GPTConfig
     base_model_prefix = 'transformer'
 
@@ -332,7 +328,6 @@ class GPTModel(GPTPreTrainedModel):
     """
     The bare GPT transformer model outputting raw hidden-states without any specific head on top
     """
-
     def __init__(self, config):
         """
         Initializes a GPTModel instance with the specified configuration.

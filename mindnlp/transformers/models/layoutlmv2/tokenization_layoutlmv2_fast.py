@@ -109,7 +109,6 @@ class LayoutLMv2TokenizerFast(PreTrainedTokenizerFast):
             Whether or not to strip all accents. If this option is not specified, then it will be determined by the
             value for `lowercase` (as in the original LayoutLMv2).
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     pretrained_init_configuration = PRETRAINED_INIT_CONFIGURATION
@@ -244,7 +243,6 @@ class LayoutLMv2TokenizerFast(PreTrainedTokenizerFast):
             word_labels (`List[int]`, `List[List[int]]`, *optional*):
                 Word-level integer labels (for token classification tasks such as FUNSD, CORD).
         """
-
         # Input type checking for clearer error
         def _is_valid_text_input(t):
             if isinstance(t, str):
@@ -497,7 +495,6 @@ class LayoutLMv2TokenizerFast(PreTrainedTokenizerFast):
                 Optional second sequence to be encoded. This can be a list of strings (words of a single example) or a
                 list of list of strings (words of a batch of examples).
         """
-
         # Backward compatibility for 'truncation_strategy', 'pad_to_max_length'
         padding_strategy, truncation_strategy, max_length, kwargs = self._get_padding_truncation_strategies(
             padding=padding,

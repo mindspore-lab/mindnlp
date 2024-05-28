@@ -148,7 +148,6 @@ class _ConvNd(Cell):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  conv_impl: Type[TConvImpl],
                  in_channels: int,
@@ -498,7 +497,6 @@ class Conv2d(_ConvNd):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  conv_impl: Type[TConvImpl],
                  in_channels: int,
@@ -661,7 +659,6 @@ class Conv1d(_ConvNd):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  conv_impl: Type[TConvImpl],
                  in_channels: int,
@@ -750,7 +747,6 @@ class Conv1d(_ConvNd):
             ValueError: If the input tensor x is not 3-dimensional.
             ValueError: If the input tensor y is not 3-dimensional.
         """
-        
         x_shape = P.shape(x)
         self._check_input_3d(x_shape)
         x = P.expand_dims(x, 2)
@@ -906,7 +902,6 @@ class Conv3d(_ConvNd):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  conv_impl: Type[TConvImpl],
                  in_channels: int,
@@ -963,7 +958,6 @@ class Conv3d(_ConvNd):
             ValueError: If the input tensor x does not have 5 dimensions.
             RuntimeError: If any runtime error occurs during the convolution operation.
         """
-          
         x_shape = P.shape(x)
         self._check_input_5dims(x_shape)
         out_x, out_y = self.conv_impl(P.conv3d, x, y, pad_mode=self.pad_mode, padding=self.padding,

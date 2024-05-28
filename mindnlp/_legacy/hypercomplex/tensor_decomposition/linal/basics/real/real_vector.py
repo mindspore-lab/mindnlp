@@ -45,7 +45,6 @@ as addition, subtraction, multiplication, and division with scalars and other ve
         ValueError: If the size or contents of the 'items' argument are invalid.
     
     """
-
     def __init__(self,
                  size: Optional[int] = None,
                  items: Union[np.ndarray, List, NoneType] = None) -> None:
@@ -259,7 +258,6 @@ as addition, subtraction, multiplication, and division with scalars and other ve
         Raises:
             ValueError: If size is None, indicating that either 'size' or 'items' must not be None.
         """
-        
         if size is None:
             raise ValueError(f"Either 'items' or 'size' must not be None")
         self._items = np.zeros((size,), dtype=np.float64)

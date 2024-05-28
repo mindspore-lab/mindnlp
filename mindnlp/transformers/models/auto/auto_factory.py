@@ -128,7 +128,6 @@ class _BaseAutoModelClass:
             3. The `_from_config` method is called on the appropriate model class, determined by the `_model_mapping` dictionary,
                to perform the conversion from the configuration object to an instance of the model class.
         """
-
         if type(config) in cls._model_mapping.keys():
             model_class = _get_model_class(config, cls._model_mapping)
             return model_class._from_config(config, **kwargs)
@@ -335,7 +334,6 @@ class _LazyAutoMapping(OrderedDict):
         - config_mapping: The map model type to config class
         - model_mapping: The map model type to model (or tokenizer) class
     """
-
     def __init__(self, config_mapping, model_mapping):
         """
         Initializes a new instance of the _LazyAutoMapping class.

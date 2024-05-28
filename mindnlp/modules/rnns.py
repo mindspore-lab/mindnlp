@@ -42,7 +42,6 @@ def _init_state(shape, dtype, is_lstm):
     Raises:
         None
     """
-    
     hx = Tensor(np.zeros(shape), dtype)
     cx = Tensor(np.zeros(shape), dtype)
     if is_lstm:
@@ -729,7 +728,6 @@ class StaticLSTM(_RNNBase):
         >>> print(output.shape)
         (3, 5, 16)
     """
-
     def __init__(self, *args, **kwargs):
         r"""
         Initializes a StaticLSTM object.

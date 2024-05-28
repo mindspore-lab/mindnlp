@@ -42,7 +42,6 @@ class Chat:
     """This class is intended to just be used internally in this pipeline and not exposed to users. We convert chats
     to this format because the rest of the pipeline code tends to assume that lists of messages are
     actually a batch of samples rather than messages in the same conversation."""
-
     def __init__(self, messages: List[Dict[str, str]]):
         """
         Initializes a new instance of the Chat class.
@@ -81,7 +80,6 @@ class TextGenerationPipeline(Pipeline):
     objective, which includes the uni-directional models in the library (e.g. openai-community/gpt2). See the list of available models
     on [hf-mirror.com/models](https://hf-mirror.com/models?filter=text-generation).
     """
-
     def __init__(self, *args, **kwargs):
         """
         Initializes an instance of the TextGenerationPipeline class.

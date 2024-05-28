@@ -54,7 +54,6 @@ class BestModelCallback(Callback):
             ValueError: If the save_path argument is not a string or a Path object.
             OSError: If the save_path directory cannot be created.
         """
-        
         if isinstance(save_path, str):
             self.save_path = Path(save_path)
         elif isinstance(save_path, Path):

@@ -41,7 +41,6 @@ class ProcessorMixin:
     """
     This is a mixin used to provide saving/loading functionality for all processor classes.
     """
-
     attributes = ["feature_extractor", "tokenizer"]
     # Names need to be attr_class for attr in attributes
     feature_extractor_class = None

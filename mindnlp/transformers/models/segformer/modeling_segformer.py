@@ -64,7 +64,6 @@ class SegFormerImageClassifierOutput(ImageClassifierOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -95,7 +94,6 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
 # Copied from transformers.models.convnext.modeling_convnext.ConvNextDropPath with ConvNext->Segformer
 class SegformerDropPath(nn.Cell):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
-
     def __init__(self, drop_prob: Optional[float] = None) -> None:
         """
         Initialize an instance of SegformerDropPath.
@@ -153,7 +151,6 @@ class SegformerDropPath(nn.Cell):
 
 class SegformerOverlapPatchEmbeddings(nn.Cell):
     """Construct the overlapping patch embeddings."""
-
     def __init__(self, patch_size, stride, num_channels, hidden_size):
         """Initialize the SegformerOverlapPatchEmbeddings class.
         
@@ -216,7 +213,6 @@ class SegformerOverlapPatchEmbeddings(nn.Cell):
 class SegformerEfficientSelfAttention(nn.Cell):
     """SegFormer's efficient self-attention mechanism. Employs the sequence reduction process introduced in the [PvT
     paper](https://arxiv.org/abs/2102.12122)."""
-
     def __init__(self, config, hidden_size, num_attention_heads, sequence_reduction_ratio):
         """Initializes an instance of the SegformerEfficientSelfAttention class.
         
@@ -688,7 +684,6 @@ class SegformerMixFFN(nn.Cell):
 
 class SegformerLayer(nn.Cell):
     """This corresponds to the Block class in the original implementation."""
-
     def __init__(self, config, hidden_size, num_attention_heads, drop_path, sequence_reduction_ratio, mlp_ratio):
         """
         Initializes a new instance of the SegformerLayer class.
@@ -922,7 +917,6 @@ class SegformerPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = SegformerConfig
     base_model_prefix = "segformer"
     main_input_name = "pixel_values"
@@ -1202,7 +1196,6 @@ class SegformerMLP(nn.Cell):
     """
     Linear Embedding.
     """
-
     def __init__(self, config: SegformerConfig, input_dim):
         """
         Initializes the SegformerMLP class.

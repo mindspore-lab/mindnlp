@@ -61,7 +61,6 @@ class Blip2ForConditionalGenerationModelOutput(ModelOutput):
         language_model_outputs (`CausalLMOutputWithPast` or `Seq2SeqLMOutput`):
             Outputs of the language model.
     """
-
     loss: Optional[Tuple[mindspore.Tensor]] = None
     logits: Optional[Tuple[mindspore.Tensor]] = None
     vision_outputs: Optional[mindspore.Tensor] = None
@@ -181,7 +180,6 @@ patch embedding, number of patches, and position embedding.
 
 class Blip2Attention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(self, config):
         """
         Initializes an instance of the Blip2Attention class.
@@ -254,7 +252,6 @@ class Blip2Attention(nn.Cell):
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
-
         bsz, tgt_len, embed_dim = hidden_states.shape
 
         mixed_qkv = self.qkv(hidden_states)
@@ -454,7 +451,6 @@ class Blip2PreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = Blip2Config
     base_model_prefix = "blip"
     supports_gradient_checkpointing = True
@@ -495,7 +491,6 @@ class Blip2Encoder(nn.Cell):
         config (`Blip2Config`):
             The corresponding vision configuration for the `Blip2Encoder`.
     """
-
     def __init__(self, config: Blip2Config):
         """
         Initializes a new instance of the Blip2Encoder class.
@@ -1671,7 +1666,6 @@ class Blip2QFormerModel(Blip2PreTrainedModel):
     """
     Querying Transformer (Q-Former), used in BLIP-2.
     """
-
     def __init__(self, config: Blip2QFormerConfig):
         """
         Initializes a new instance of the Blip2QFormerModel class.

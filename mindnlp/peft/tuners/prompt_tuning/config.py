@@ -137,7 +137,6 @@ class PromptTuningConfig(PromptLearningConfig):
             The keyword arguments to pass to `AutoTokenizer.from_pretrained`. Only used if `prompt_tuning_init` is
             `TEXT`.
     """
-
     prompt_tuning_init: Union[PromptTuningInit, str] = field(
         default=PromptTuningInit.RANDOM,
         metadata={"help": "How to initialize the prompt tuning parameters"},

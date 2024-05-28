@@ -34,7 +34,6 @@ class AttentionMaskConverter:
         sliding_window (`int`, *optional*):
             Optionally, the sliding window masks can be created if `sliding_window` is defined to a positive integer.
     """
-
     def __init__(self, is_causal: bool, sliding_window: Optional[int] = None):
         """
         This method initializes an instance of the AttentionMaskConverter class.

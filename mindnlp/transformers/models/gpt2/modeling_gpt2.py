@@ -631,7 +631,6 @@ class GPT2PreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = GPT2Config
     base_model_prefix = "transformer"
     is_parallelizable = True
@@ -702,7 +701,6 @@ class GPT2DoubleHeadsModelOutput(ModelOutput):
             GPT2Attentions weights after the attention softmax, used to compute the weighted average in the
             self-attention heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     mc_loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None

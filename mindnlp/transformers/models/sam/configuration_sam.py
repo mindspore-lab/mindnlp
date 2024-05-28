@@ -46,7 +46,6 @@ class SamPromptEncoderConfig(PretrainedConfig):
         hidden_act (`str`, *optional*, defaults to `"gelu"`):
             The non-linear activation function in the encoder and pooler.
     """
-
     def __init__(
         self,
         hidden_size=256,
@@ -121,7 +120,6 @@ class SamMaskDecoderConfig(PretrainedConfig):
             The epsilon used by the layer normalization layers.
 
     """
-
     def __init__(
         self,
         hidden_size=256,
@@ -222,7 +220,6 @@ class SamVisionConfig(PretrainedConfig):
             The dimensionality of the MLP layer in the Transformer encoder. If `None`, defaults to `mlp_ratio *
             hidden_size`.
     """
-
     def __init__(
         self,
         hidden_size=768,
@@ -349,7 +346,6 @@ class SamConfig(PretrainedConfig):
 
     >>> config = SamConfig(vision_config, prompt_encoder_config, mask_decoder_config)
     ```"""
-
     model_type = "sam"
 
     def __init__(

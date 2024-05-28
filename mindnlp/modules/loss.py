@@ -46,7 +46,6 @@ class RDropLoss(nn.Cell):
             - "sum": The reduced sum loss is returned.
             - "none": No reduction will be applied.
     """
-
     def __init__(self, reduction='none'):
         r"""
         Initialize an instance of the RDropLoss class.
@@ -94,7 +93,6 @@ class RDropLoss(nn.Cell):
             >>> print(loss)
             0.100136
         """
-
         p_loss = kl_div(_inner_log_softmax(p, axis=-1),
                         softmax(q, axis=-1),
                         reduction=self.reduction)
@@ -123,7 +121,6 @@ class CMRC2018Loss(nn.Cell):
         reduction(str): Indicate how to average the loss, the candicates are "mean" and "sum".
             Default: "mean".
     """
-
     def __init__(self, reduction='mean'):
         r"""
         Initializes an instance of the CMRC2018Loss class.
@@ -181,7 +178,6 @@ class CMRC2018Loss(nn.Cell):
             >>> my_loss = cmrc_loss(tensor_a, tensor_b, my_context_len, tensor_c, tensor_d)
             >>> print(my_loss)
         """
-
         batch_size, max_len = pred_end.shape
 
         zero_tensor = mindspore.Tensor(

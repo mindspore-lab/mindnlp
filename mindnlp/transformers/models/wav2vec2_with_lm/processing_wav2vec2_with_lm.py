@@ -58,7 +58,6 @@ class Wav2Vec2DecoderWithLMOutput(ModelOutput):
             Offsets of the decoded words. In combination with sampling rate and model downsampling rate word offsets
             can be used to compute time stamps for each word.
     """
-
     text: Union[List[List[str]], List[str], str]
     logit_score: Union[List[List[float]], List[float], float] = None
     lm_score: Union[List[List[float]], List[float], float] = None
@@ -78,7 +77,6 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
         decoder (`pyctcdecode.BeamSearchDecoderCTC`):
             An instance of [`pyctcdecode.BeamSearchDecoderCTC`]. The decoder is a required input.
     """
-
     feature_extractor_class = "Wav2Vec2FeatureExtractor"
     tokenizer_class = "Wav2Vec2CTCTokenizer"
 
@@ -442,7 +440,6 @@ exist, or TypeError if the input parameters are not of the expected types.
         Example:
             See [Decoding multiple audios](#decoding-multiple-audios).
         """
-
         from pyctcdecode.constants import (
             DEFAULT_BEAM_WIDTH,
             DEFAULT_HOTWORD_WEIGHT,
@@ -639,7 +636,6 @@ exist, or TypeError if the input parameters are not of the expected types.
          {'word': 'APPEARS', 'start_time': 1.18, 'end_time': 1.66},
          {'word': 'ON', 'start_time': 1.86, 'end_time': 1.92}]
         ```"""
-
         from pyctcdecode.constants import (
             DEFAULT_BEAM_WIDTH,
             DEFAULT_HOTWORD_WEIGHT,

@@ -59,7 +59,6 @@ def llama_compute_query_states(model: nn.Cell, **kwargs) -> Tensor:
     Raises:
         ValueError: If the input parameters do not meet the required constraints.
     """
-    
     hidden_states = kwargs.get("hidden_states")
     position_ids = kwargs.get("position_ids")
     past_key_value = kwargs.get("past_key_value")

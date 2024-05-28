@@ -80,7 +80,6 @@ class MusicgenMelodyDecoderConfig(PretrainedConfig):
         eos_token_id (`int`, *optional*): The id of the *end-of-sequence* token.
         tie_word_embeddings (`bool`, *optional*, defaults to `False`): Whether to tie word embeddings with the text encoder.
     """
-
     model_type = "musicgen_melody_decoder"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -228,7 +227,6 @@ class MusicgenMelodyConfig(PretrainedConfig):
     >>> musicgen_melody_config = MusicgenMelodyConfig.from_pretrained("musicgen_melody-model")
     >>> model = MusicgenMelodyForConditionalGeneration.from_pretrained("musicgen_melody-model", config=musicgen_melody_config)
     ```"""
-
     model_type = "musicgen_melody"
     is_composition = True
 
@@ -287,7 +285,6 @@ class MusicgenMelodyConfig(PretrainedConfig):
         Returns:
             [`MusicgenMelodyConfig`]: An instance of a configuration object
         """
-
         return cls(
             text_encoder=text_encoder_config.to_dict(),
             audio_encoder=audio_encoder_config.to_dict(),

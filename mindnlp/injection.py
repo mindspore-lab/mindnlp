@@ -63,7 +63,6 @@ def _set_context(**kwargs):
     Raises:
         None
     """
-    
     if 'device_target' in kwargs and kwargs['device_target'] != 'Ascend':
         set_global_fp16(False)
     old_set_context(**kwargs)
@@ -155,7 +154,6 @@ def _get_unflatten_size(input_shape, dim, sizes):
         TypeError: If sizes is not a tuple or list.
         ValueError: If sizes is empty, dim is out of range, or sizes do not multiply up to the size of dim in the input tensor.
     """
-    
     input_rank = len(input_shape)
     if not isinstance(sizes, (tuple, list)):
         raise TypeError(f"Type of `sizes` should be `Tuple` or `List`, but got {type(sizes)}")
@@ -319,7 +317,6 @@ def _cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mea
         ValueError: If the reduction parameter has an invalid value.
         ValueError: If the label_smoothing parameter is outside the valid range [0, 1].
     """
-    
     if weight is None:
         weight = ops.ones(input.shape[-1], input.dtype)
     _nll_loss = _get_cache_prim(ops.NLLLoss)(reduction, ignore_index)
@@ -345,7 +342,6 @@ def _get_unfold_indices(input_shape, dimension, size, step):
     Raises:
         ValueError: If the specified dimension is out of range relative to the input_shape.
     """
-    
     if dimension < 0:
         dimension += len(input_shape)
     indices = []
@@ -547,7 +543,6 @@ def _nonzero(self, as_tuple=False):
     Raises:
         TypeError: If the input tensor is not of type mstype.bool_.
     """
-    
     if self.dtype == mstype.bool_:
         self = self.astype(mstype.int64)
     outs = ops.nonzero(self)
@@ -573,7 +568,6 @@ def _expand(self, *size):
     Raises:
         None.
     """
-    
     if len(size) == 1:
         size = size[0]
     return ops.broadcast_to(self, size)
@@ -617,7 +611,6 @@ def _prod(self, axis=None, keep_dims=False):
         ValueError: If the specified axis is out of range or invalid.
         TypeError: If the input tensor is not valid.
     """
-    
     return ops.prod(self, axis, keep_dims)
 Tensor.prod = _prod
 StubTensor.prod = _prod
@@ -695,7 +688,6 @@ def _param_new_init(self, default_input, name=None, requires_grad=True, layerwis
     Raises:
         None.
     """
-    
     old_param_init(self, default_input, name, requires_grad, layerwise_parallel, parallel_optimizer)
     self.uuid = uuid4().hex
 
@@ -1169,7 +1161,6 @@ class LayerNorm(nn.Cell):
     r"""
     Applies Layer Normalization over a mini-batch of inputs.
     """
-
     def __init__(self,
                  normalized_shape,
                  begin_norm_axis=-1,
@@ -1534,7 +1525,6 @@ class GroupNorm_hijack(GroupNorm_original):
     r"""
     Group Normalization over a mini-batch of inputs.
     """
-
     def __init__(self, num_groups, num_channels, eps=0.00001, affine=True, gamma_init='ones', beta_init='zeros', dtype=mstype.float32):
         r"""
         Initializes an instance of the GroupNorm_hijack class.
@@ -1626,7 +1616,6 @@ def state_dict(self):
 
     When saving or loading the scheduler, please make sure to also save or load the state of the optimizer.
     """
-
     state_dict = {key: value for key, value in self.__dict__.items() if key not in ('optimizer', 'lr_lambdas')}
     state_dict['lr_lambdas'] = [None] * len(self.lr_lambdas)
 
@@ -1682,7 +1671,6 @@ def _str(self):
     Raises:
         None
     """
-    
     return f'Parameter ({Tensor_.__str__(self)}, ' \
            f'requires_grad={self.requires_grad})'
 
@@ -1761,7 +1749,6 @@ def dropout(input, p=0.5, training=True, seed=None):
         ValueError: If the probability 'p' is not within the range [0, 1].
         TypeError: If the input tensor is not a valid data type.
     """
-    
     if training is False:
         return input
     mask = ops.rand_like(input) > p

@@ -32,7 +32,6 @@ class AddToken(PyTensorOperation):
     Examples:
 
     """
-
     def __init__(self, token, begin=True):
         r"""
         Initializes an instance of the AddToken class.

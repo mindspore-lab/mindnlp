@@ -68,7 +68,6 @@ class Trainer:
         jit (bool): Whether use Just-In-Time compile.
 
     """
-
     def __init__(self,
                  network,
                  args=None,
@@ -104,7 +103,6 @@ class Trainer:
             The method initializes various attributes and sets the initial values for training-related parameters.
             It also prepares the callbacks, evaluation settings, and callback manager for the 'Trainer' instance.
         """
-
         self.args = args
         epochs = kwargs.pop('epochs', None)
         jit = kwargs.pop('jit', False)
@@ -308,7 +306,6 @@ as gradient checking and automatic mixed precision (AMP) level.
         """
         Training process for non-data sinking mode. The data would be passed to network directly.
         """
-
         # set mindspore mode to GRAPH_MODE, since jit mode with
         # control flow will slow down the training speed.
         if self.jit:
@@ -446,10 +443,8 @@ as gradient checking and automatic mixed precision (AMP) level.
 
     def add_callback(self):
         """add callback"""
-
     def remove_callback(self, name_or_type):
         """remove callback"""
-
     def set_forward_fn(self, forward_fn):
         """set forward function"""
         self.forward_fn = forward_fn
@@ -485,22 +480,16 @@ as gradient checking and automatic mixed precision (AMP) level.
 
     def train_loop(self, train_dataset):
         """train loop"""
-
     def evaluate(self):
         """evalute"""
-
     def evaluate_loop(self):
         """evaluate loop"""
-
     def predict(self, test_dataset):
         """predict"""
-
     def predict_step(self, inputs, return_loss_only=False):
         """predict step"""
-
     def predict_loop(self):
         """predict loop"""
-
     def save_model(self, output_dir, model_name=None):
         """save model to specify dir."""
         assert output_dir, "`output_dir` is None, please input a real path."

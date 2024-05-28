@@ -74,7 +74,6 @@ class MossAttention(nn.Cell):
     """
     Moss attention layer
     """
-
     def __init__(self, config):
         """
         Initializes a MossAttention object.
@@ -348,7 +347,6 @@ class MossMLP(nn.Cell):
     """
     Copied from transformers.models.gptj.modeling_gptj.GPTJMLP with GPTJ->Moss
     """
-
     def __init__(self, intermediate_size, config):  # in MLP: intermediate_size= 4 * embed_dim
         """
         Initializes an instance of the MossMLP class.
@@ -400,7 +398,6 @@ class MossBlock(nn.Cell):
     """
     Copied from transformers.models.gptj.modeling_gptj.GPTJBlock with GPTJ->Moss
     """
-
     def __init__(self, config):
         """
         Initializes a MossBlock instance with the provided configuration.
@@ -487,7 +484,6 @@ class MossPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = MossConfig
     base_model_prefix = "transformer"
     supports_gradient_checkpointing = True
@@ -608,7 +604,6 @@ class MossModel(MossPreTrainedModel):
     """
     Moss model layer
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the MossModel class.
@@ -829,7 +824,6 @@ class MossForCausalLM(MossPreTrainedModel):
     """
     The Moss Model transformer with a language modeling head on top.
     """
-
     _keys_to_ignore_on_load_missing = [r"h\.\d+\.attn\.causal_mask"]
 
     def __init__(self, config):

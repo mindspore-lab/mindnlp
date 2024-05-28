@@ -68,7 +68,6 @@ def masked_softmax(input_x: mindspore.Tensor, mask: mindspore.Tensor, mask_value
 
 class GPTBigCodeAttention(nn.Cell):
     """GPT BigCode Attention"""
-
     def __init__(self, config, is_cross_attention=False, layer_idx=None):
         """
         Initializes the GPTBigCodeAttention class.
@@ -341,7 +340,6 @@ attention scores. Default is None.
 
 class GPTBigCodeMLP(nn.Cell):
     """GPT BigCode MLP"""
-
     def __init__(self, intermediate_size, config):
         """
         Initializes an instance of the GPTBigCodeMLP class.
@@ -388,7 +386,6 @@ If not provided, the method will default to None.
 
 class GPTBigCodeBlock(nn.Cell):
     """GPT BigCode Block"""
-
     def __init__(self, config, layer_idx=None):
         """
         Initializes an instance of the GPTBigCodeBlock class.
@@ -519,7 +516,6 @@ class GPTBigCodePreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = GPTBigCodeConfig
     base_model_prefix = "transformer"
     supports_gradient_checkpointing = True
@@ -614,7 +610,6 @@ class GPTBigCodePreTrainedModel(PreTrainedModel):
 
 class GPTBigCodeModel(GPTBigCodePreTrainedModel):
     """GPT BigCode Model"""
-
     def __init__(self, config):
         """
         __init__
@@ -898,7 +893,6 @@ return_dict.
 
 class GPTBigCodeForCausalLM(GPTBigCodePreTrainedModel):
     """GPT BigCode for CausalLM"""
-
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
@@ -1105,7 +1099,6 @@ class GPTBigCodeForCausalLM(GPTBigCodePreTrainedModel):
 
 class GPTBigCodeForSequenceClassification(GPTBigCodePreTrainedModel):
     """GPT BigCode for Sequence Classification"""
-
     def __init__(self, config):
         """
         Initializes a new instance of the GPTBigCodeForSequenceClassification class.
@@ -1225,7 +1218,6 @@ class GPTBigCodeForSequenceClassification(GPTBigCodePreTrainedModel):
 
 class GPTBigCodeForTokenClassification(GPTBigCodePreTrainedModel):
     """GPT BigCode for Token Classification"""
-
     def __init__(self, config):
         """
         Initializes an instance of the GPTBigCodeForTokenClassification class.

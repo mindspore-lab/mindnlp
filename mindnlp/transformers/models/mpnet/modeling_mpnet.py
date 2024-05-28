@@ -994,7 +994,6 @@ class MPNetForMaskedLM(MPNetPreTrainedModel):
 
 class MPNetLMHead(nn.Cell):
     """MPNet Head for masked and permuted language modeling."""
-
     def __init__(self, config):
         """
         This method initializes an instance of the MPNetLMHead class.
@@ -1091,7 +1090,6 @@ class MPNetForSequenceClassification(MPNetPreTrainedModel):
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.mpnet(
@@ -1183,7 +1181,6 @@ class MPNetForMultipleChoice(MPNetPreTrainedModel):
             num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
             `input_ids` above)
         """
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
 
@@ -1270,7 +1267,6 @@ class MPNetForTokenClassification(MPNetPreTrainedModel):
         labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.mpnet(
@@ -1307,7 +1303,6 @@ class MPNetForTokenClassification(MPNetPreTrainedModel):
 
 class MPNetClassificationHead(nn.Cell):
     """Head for sentence-level classification tasks."""
-
     def __init__(self, config):
         """
         Initializes an instance of the MPNetClassificationHead class.
@@ -1406,7 +1401,6 @@ class MPNetForQuestionAnswering(MPNetPreTrainedModel):
             Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
             are not taken into account for computing the loss.
         """
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.mpnet(

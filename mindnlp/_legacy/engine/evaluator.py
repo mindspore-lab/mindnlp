@@ -39,7 +39,6 @@ class Evaluator:
             while training. Default: None.
         jit (bool): Whether use Just-In-Time compile.
     """
-
     def __init__(self, network, eval_dataset=None, metrics=None, callbacks=None, jit=False):
         r"""
         Initializes an instance of the Evaluator class.

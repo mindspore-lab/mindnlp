@@ -66,7 +66,6 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
 # Copied from transformers.models.marian.modeling_marian.MarianSinusoidalPositionalEmbedding with Marian->Pegasus
 class PegasusSinusoidalPositionalEmbedding(nn.Embedding):
     """This module produces sinusoidal positional embeddings of any length."""
-
     def __init__(self, num_positions: int, embedding_dim: int, padding_idx: Optional[int] = None) -> None:
         """
         Initialize the PegasusSinusoidalPositionalEmbedding object.
@@ -116,7 +115,6 @@ class PegasusSinusoidalPositionalEmbedding(nn.Embedding):
 # Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->Pegasus
 class PegasusAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(
         self,
         embed_dim: int,
@@ -194,7 +192,6 @@ class PegasusAttention(nn.Cell):
         output_attentions: bool = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
-
         # if key_value_states are provided this layer is used as a cross-attention layer
         # for the decoder
         is_cross_attention = key_value_states is not None
@@ -643,7 +640,6 @@ class PegasusEncoder(PegasusPreTrainedModel):
         config: PegasusConfig
         embed_tokens (nn.Embedding): output embedding
     """
-
     def __init__(self, config: PegasusConfig, embed_tokens: Optional[nn.Embedding] = None):
         '''
         Initializes a PegasusEncoder object.
@@ -856,7 +852,6 @@ class PegasusDecoder(PegasusPreTrainedModel):
         config: PegasusConfig
         embed_tokens (nn.Embedding): output embedding
     """
-
     def __init__(self, config: PegasusConfig, embed_tokens: Optional[nn.Embedding] = None):
         """
         Initializes a PegasusDecoder instance.
@@ -1352,7 +1347,6 @@ Pegasus model by encoding the input and decoding it with the provided decoder in
         >>> list(last_hidden_states.shape)
         [1, 4, 1024]
         ```"""
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1800,7 +1794,6 @@ class PegasusDecoderWrapper(PegasusPreTrainedModel):
     This wrapper class is a helper class to correctly load pretrained checkpoints when the causal language model is
     used in combination with the [`EncoderDecoderModel`] framework.
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the PegasusDecoderWrapper class.

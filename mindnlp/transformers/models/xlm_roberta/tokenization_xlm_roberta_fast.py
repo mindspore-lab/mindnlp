@@ -128,7 +128,6 @@ class XLMRobertaTokenizerFast(PreTrainedTokenizerFast):
         additional_special_tokens (`List[str]`, *optional*, defaults to `["<s>NOTUSED", "</s>NOTUSED"]`):
             Additional special tokens used by the tokenizer.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -225,7 +224,6 @@ class XLMRobertaTokenizerFast(PreTrainedTokenizerFast):
         Returns:
             `List[int]`: List of [input IDs](../glossary#input-ids) with the appropriate special tokens.
         """
-
         if token_ids_1 is None:
             return [self.cls_token_id] + token_ids_0 + [self.sep_token_id]
         cls = [self.cls_token_id]
@@ -249,7 +247,6 @@ class XLMRobertaTokenizerFast(PreTrainedTokenizerFast):
             `List[int]`: List of zeros.
 
         """
-
         sep = [self.sep_token_id]
         cls = [self.cls_token_id]
 

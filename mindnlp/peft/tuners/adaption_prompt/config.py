@@ -23,7 +23,6 @@ from .utils import llama_compute_query_states
 @dataclass
 class AdaptionPromptConfig(PeftConfig):
     """Stores the configuration of an [`AdaptionPromptModel`]."""
-
     target_cells: str = field(
         default=None, metadata={"help": "Name of the attention subcells to insert adaption prompts into."}
     )

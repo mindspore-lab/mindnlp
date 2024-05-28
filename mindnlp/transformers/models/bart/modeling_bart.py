@@ -101,7 +101,6 @@ class BartLearnedPositionalEmbedding(nn.Embedding):
     """
     This module learns positional embeddings up to a fixed maximum size.
     """
-
     def __init__(self, num_embeddings: int, embedding_dim: int):
         """
         Initializes a new instance of the BartLearnedPositionalEmbedding class.
@@ -124,7 +123,6 @@ class BartLearnedPositionalEmbedding(nn.Embedding):
 
     def construct(self, input_ids: mindspore.Tensor, past_key_values_length: int = 0):
         """`input_ids' shape is expected to be [bsz x seqlen]."""
-
         bsz, seq_len = input_ids.shape[:2]
         positions = ops.arange(
             past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
@@ -135,7 +133,6 @@ class BartLearnedPositionalEmbedding(nn.Embedding):
 
 class BartAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(
         self,
         embed_dim: int,
@@ -213,7 +210,6 @@ class BartAttention(nn.Cell):
         output_attentions: bool = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
-
         # if key_value_states are provided this layer is used as a cross-attention layer
         # for the decoder
         is_cross_attention = key_value_states is not None
@@ -626,7 +622,6 @@ Transformers) model.
 
 class BartClassificationHead(nn.Cell):
     """Head for sentence-level classification tasks."""
-
     def __init__(
         self,
         input_dim: int,
@@ -763,7 +758,6 @@ class BartEncoder(BartPreTrainedModel):
         config: BartConfig
         embed_tokens (nn.Embedding): output embedding
     """
-
     def __init__(self, config: BartConfig, embed_tokens: Optional[nn.Embedding] = None):
         """Initializes a new instance of the BartEncoder class.
         
@@ -970,7 +964,6 @@ class BartDecoder(BartPreTrainedModel):
         config: BartConfig
         embed_tokens (nn.Embedding): output embedding
     """
-
     def __init__(self, config: BartConfig, embed_tokens: Optional[nn.Embedding] = None):
         """
         Initializes a new instance of the BartDecoder class.
@@ -2161,7 +2154,6 @@ class BartDecoderWrapper(BartPreTrainedModel):
     This wrapper class is a helper class to correctly load pretrained checkpoints when the causal language model is
     used in combination with the [`EncoderDecoderModel`] framework.
     """
-
     def __init__(self, config):
         """
         Initialize the BartDecoderWrapper class with the provided configuration.
@@ -2473,7 +2465,6 @@ dictionary containing the prepared inputs.
         >>> list(logits.shape) == expected_shape
         True
         ```"""
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states

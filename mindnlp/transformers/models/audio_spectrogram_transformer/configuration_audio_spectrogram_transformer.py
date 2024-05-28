@@ -87,7 +87,6 @@ class ASTConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "audio-spectrogram-transformer"
 
     def __init__(

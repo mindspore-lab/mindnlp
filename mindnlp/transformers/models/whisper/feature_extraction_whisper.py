@@ -53,7 +53,6 @@ class WhisperFeatureExtractor(SequenceFeatureExtractor):
         padding_value (`float`, *optional*, defaults to 0.0):
             Padding value used to pad the audio. Should correspond to silences.
     """
-
     model_input_names = ["input_features"]
 
     def __init__(
@@ -208,7 +207,6 @@ class WhisperFeatureExtractor(SequenceFeatureExtractor):
                 Whether or not to zero-mean unit-variance normalize the input. Normalizing can help to significantly
                 improve the performance of the model.
         """
-
         if sampling_rate is not None:
             if sampling_rate != self.sampling_rate:
                 raise ValueError(

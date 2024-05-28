@@ -36,7 +36,6 @@ class MoE(nn.Cell):
         activation: an activation function to apply to expert's outputs
         glu: an boolean - whether to use GLU activation
     """
-
     def __init__(
         self,
         input_size,
@@ -111,7 +110,6 @@ class MoE(nn.Cell):
         Returns:
             float: Accumulated auxiliary loss.
         """
-
         return self.gate.get_aux_loss_and_clear()
 
     def compute_gate(self, x):
@@ -379,7 +377,6 @@ input sequence, and 'self.top_k' is the number of top-k expert indices, and '-1'
         Returns:
             Tensor: Reduced output tensor.
         """
-
         bsz, length, k, emb_size = x.shape
         x = x.reshape(-1, emb_size)
 

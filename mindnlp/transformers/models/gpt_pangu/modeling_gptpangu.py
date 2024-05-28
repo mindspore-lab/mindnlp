@@ -424,7 +424,6 @@ class GPTPanguPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = GPTPanguConfig
     base_model_prefix = "transformer"
     supports_gradient_checkpointing = False

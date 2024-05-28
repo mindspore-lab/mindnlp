@@ -57,7 +57,6 @@ class ByT5Tokenizer(PreTrainedTokenizer):
         additional_special_tokens (`List[str]`, *optional*):
             Additional special tokens used by the tokenizer.
     """
-
     model_input_names = ["input_ids", "attention_mask"]
 
     def __init__(
@@ -250,7 +249,6 @@ class ByT5Tokenizer(PreTrainedTokenizer):
 
     def _convert_token_to_id(self, token):
         """Converts a token (str) in an id using the vocab."""
-
         if len(token) != 1:
             token_id = None
         else:

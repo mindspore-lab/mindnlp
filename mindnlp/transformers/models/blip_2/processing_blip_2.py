@@ -37,7 +37,6 @@ class Blip2Processor(ProcessorMixin):
         tokenizer (`AutoTokenizer`):
             An instance of ['PreTrainedTokenizer`]. The tokenizer is a required input.
     """
-
     attributes = ["image_processor", "tokenizer"]
     image_processor_class = "BlipImageProcessor"
     tokenizer_class = "AutoTokenizer"

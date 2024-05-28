@@ -205,7 +205,6 @@ class MiniCPMRotaryEmbedding(nn.Cell):
 
 class MiniCPMLinearScalingRotaryEmbedding(MiniCPMRotaryEmbedding):
     """MiniCPMRotaryEmbedding extended with linear scaling. Credits to the Reddit user /u/kaiokendev"""
-
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
         """
         Initializes an instance of MiniCPMLinearScalingRotaryEmbedding.
@@ -254,7 +253,6 @@ class MiniCPMLinearScalingRotaryEmbedding(MiniCPMRotaryEmbedding):
 
 class MiniCPMDynamicNTKScalingRotaryEmbedding(MiniCPMRotaryEmbedding):
     """MiniCPMRotaryEmbedding extended with Dynamic NTK scaling. Credits to the Reddit users /u/bloc97 and /u/emozilla"""
-
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
         """
         Initializes a new instance of the MiniCPMDynamicNTKScalingRotaryEmbedding class.
@@ -448,7 +446,6 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
 
 class MiniCPMAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(self, config: MiniCPMConfig, layer_idx: Optional[int] = None):
         """
         Initializes an instance of the MiniCPMAttention class.
@@ -887,7 +884,6 @@ class MiniCPMModel(MiniCPMPreTrainedModel):
     Args:
         config: MiniCPMConfig
     """
-
     def __init__(self, config: MiniCPMConfig):
         """
         Initializes a MiniCPMModel instance with the provided configuration.

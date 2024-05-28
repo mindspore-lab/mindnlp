@@ -107,7 +107,6 @@ class Pop2PianoTokenizer(PreTrainedTokenizer):
         num_bars (`int`, *optional*, defaults to 2):
             Determines cutoff_time_idx in for each token.
     """
-
     model_input_names = ["token_ids", "attention_mask"]
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
@@ -186,7 +185,6 @@ class Pop2PianoTokenizer(PreTrainedTokenizer):
         Returns:
             `List`: A list consists of token_type (`str`) and value (`int`).
         """
-
         token_type_value = self.decoder.get(token_id, f"{self.unk_token}_TOKEN_TIME")
         token_type_value = token_type_value.split("_")
         token_type, value = "_".join(token_type_value[1:]), int(token_type_value[0])
@@ -229,7 +227,6 @@ class Pop2PianoTokenizer(PreTrainedTokenizer):
             cutoff_time_idx (`int`):
                 Denotes the cutoff time index for each note in generated Midi.
         """
-
         notes = None
 
         for index in range(len(tokens)):
@@ -361,7 +358,6 @@ class Pop2PianoTokenizer(PreTrainedTokenizer):
             offset_sec (`int`, *optional*, defaults to 0.0):
                 This represents the offset seconds which is used while creating each Pretty Midi Note.
         """
-
         requires_backends(self, ["pretty_midi"])
 
         new_pm = pretty_midi.PrettyMIDI(resolution=384, initial_tempo=120.0)
@@ -430,7 +426,6 @@ class Pop2PianoTokenizer(PreTrainedTokenizer):
         Returns:
             `BatchEncoding` containing the tokens ids.
         """
-
         requires_backends(self, ["pretty_midi"])
 
         # check if notes is a pretty_midi object or not, if yes then extract the attributes and put them into a numpy
@@ -500,7 +495,6 @@ class Pop2PianoTokenizer(PreTrainedTokenizer):
         Returns:
             `BatchEncoding` containing the tokens ids.
         """
-
         encoded_batch_token_ids = []
         for i in range(len(notes)):
             encoded_batch_token_ids.append(
@@ -591,7 +585,6 @@ class Pop2PianoTokenizer(PreTrainedTokenizer):
         Returns:
             `BatchEncoding` containing the token_ids.
         """
-
         # check if it is batched or not
         # it is batched if its a list containing a list of `pretty_midi.Notes` where the outer list contains all the
         # batches and the inner list contains all Notes for a single batch. Otherwise if np.ndarray is passed it will be
@@ -664,7 +657,6 @@ class Pop2PianoTokenizer(PreTrainedTokenizer):
             If `return_midi` is False:
                 - `BatchEncoding` containing `notes`.
         """
-
         # check if they have attention_masks(attention_mask, attention_mask_beatsteps, attention_mask_extrapolated_beatstep) or not
         attention_masks_present = bool(
             hasattr(feature_extractor_output, "attention_mask")

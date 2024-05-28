@@ -95,7 +95,6 @@ class LongformerBaseModelOutput(ModelOutput):
             self-attention heads. Those are the attention weights from every token with global attention to every token
             in the sequence.
     """
-
     last_hidden_state: mindspore.Tensor
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
     attentions: Optional[Tuple[mindspore.Tensor]] = None
@@ -142,7 +141,6 @@ class LongformerBaseModelOutputWithPooling(ModelOutput):
             self-attention heads. Those are the attention weights from every token with global attention to every token
             in the sequence.
     """
-
     last_hidden_state: mindspore.Tensor
     pooler_output: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -188,7 +186,6 @@ class LongformerMaskedLMOutput(ModelOutput):
             self-attention heads. Those are the attention weights from every token with global attention to every token
             in the sequence.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -236,7 +233,6 @@ class LongformerQuestionAnsweringModelOutput(ModelOutput):
             self-attention heads. Those are the attention weights from every token with global attention to every token
             in the sequence.
     """
-
     loss: Optional[mindspore.Tensor] = None
     start_logits: mindspore.Tensor = None
     end_logits: mindspore.Tensor = None
@@ -283,7 +279,6 @@ class LongformerSequenceClassifierOutput(ModelOutput):
             self-attention heads. Those are the attention weights from every token with global attention to every token
             in the sequence.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -331,7 +326,6 @@ class LongformerMultipleChoiceModelOutput(ModelOutput):
             self-attention heads. Those are the attention weights from every token with global attention to every token
             in the sequence.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -377,7 +371,6 @@ class LongformerTokenClassifierOutput(ModelOutput):
             self-attention heads. Those are the attention weights from every token with global attention to every token
             in the sequence.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -389,7 +382,6 @@ def _get_question_end_index(input_ids, sep_token_id):
     """
     Computes the index of the first occurrence of `sep_token_id`.
     """
-
     sep_token_indices = (input_ids == sep_token_id).nonzero()
     batch_size = input_ids.shape[0]
 
@@ -441,7 +433,6 @@ class LongformerEmbeddings(nn.Cell):
     """
     Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the LongformerEmbeddings class.
@@ -1938,7 +1929,6 @@ class LongformerPooler(nn.Cell):
 # Copied from transformers.models.roberta.modeling_roberta.RobertaLMHead with Roberta->Longformer
 class LongformerLMHead(nn.Cell):
     """Longformer Head for masked language modeling."""
-
     def __init__(self, config):
         """
         Initializes the LongformerLMHead instance.
@@ -2011,7 +2001,6 @@ class LongformerPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = LongformerConfig
     base_model_prefix = "longformer"
     _no_split_modules = ["LongformerSelfAttention"]
@@ -2051,7 +2040,6 @@ class LongformerModel(LongformerPreTrainedModel):
     kernel to be memory and compute efficient.
 
     """
-
     def __init__(self, config, add_pooling_layer=True):
         """
         Initializes a new instance of the LongformerModel class.
@@ -2263,7 +2251,6 @@ global_attention_mask is used.
         >>> sequence_output = outputs.last_hidden_state
         >>> pooled_output = outputs.pooler_output
         ```"""
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -2599,7 +2586,6 @@ LongformerSequenceClassifierOutput object containing detailed classification res
 
 class LongformerClassificationHead(nn.Cell):
     """Head for sentence-level classification tasks."""
-
     def __init__(self, config):
         """
         Initialize the LongformerClassificationHead class.

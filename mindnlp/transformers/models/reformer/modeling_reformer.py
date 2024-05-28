@@ -149,7 +149,6 @@ class AxialPositionEmbeddings(nn.Cell):
     """
     Constructs axial position embeddings. Useful for very long input sequences to save memory and time.
     """
-
     def __init__(self, config):
         """
         This method initializes an instance of the AxialPositionEmbeddings class.
@@ -280,7 +279,6 @@ class AxialPositionEmbeddings(nn.Cell):
 
 class PositionEmbeddings(nn.Cell):
     """Constructs conventional position embeddings of shape `[max_pos_embeddings, hidden_size]`."""
-
     def __init__(self, config):
         """
         Initializes an instance of the PositionEmbeddings class.
@@ -325,7 +323,6 @@ class PositionEmbeddings(nn.Cell):
 
 class ReformerEmbeddings(nn.Cell):
     """Construct the embeddings from word, position and token_type embeddings."""
-
     def __init__(self, config):
         """
         Initializes the ReformerEmbeddings class.
@@ -409,7 +406,6 @@ class EfficientAttentionMixin:
     """
     A few utilities for nn.Cells in Reformer, to be used as a mixin.
     """
-
     def _look_adjacent(self, vectors, num_chunks_before, num_chunks_after):
         """
         Used to implement attention between consecutive chunks.
@@ -1057,8 +1053,7 @@ vectors, and other related operations.
             value_vectors = self._look_adjacent(value_vectors, self.num_chunks_before, self.num_chunks_after)
 
         # get logits and dots
-        # (BS, NumAttn, NumHash x NumChunk, Chunk_L x Hidden),(BS, NumAttn, NumHash x NumChunk, Chunk_L * (Num_bef + Num_aft + 1) x Hidden) -> (BS, NumAttn, NumHash x NumChunk, Chunk_L, Chunk_L * (1 + Num_bef
-+ Num_aft))
+        # (BS, NumAttn, NumHash x NumChunk, Chunk_L x Hidden),(BS, NumAttn, NumHash x NumChunk, Chunk_L * (Num_bef + Num_aft + 1) x Hidden) -> (BS, NumAttn, NumHash x NumChunk, Chunk_L, Chunk_L * (1 + Num_bef+ Num_aft))
         query_key_dots = ops.matmul(query_vectors, key_vectors.swapaxes(-1, -2))
 
         # free memory
@@ -1385,7 +1380,6 @@ class ReverseSort(nn.Cell):
     After chunked attention is applied which sorted clusters, original ordering has to be restored. Since customized
     backward function is used for Reformer, the gradients of the output vectors have to be explicitly sorted here.
     """
-
     def construct(self, out_vectors, logits, sorted_bucket_idx, undo_sorted_bucket_idx):
 
         """
@@ -2308,7 +2302,6 @@ class ReformerLayer(nn.Cell):
         This function sets a new seed for the attention layer to make dropout deterministic for both forward calls: 1
         normal forward call and 1 forward call in backward to recalculate activations.
         """
-
         # randomize seeds
         np.random.seed(None)
         self.attention_seed = int(np.random.randint(0, 100000) % sys.maxsize)
@@ -2475,7 +2468,6 @@ class _ReversibleFunction(nn.Cell):
     This way it is made sure that no memory expensive activations are saved during the forward pass. This function is
     heavily inspired by https://github.com/lucidrains/reformer-pytorch/blob/master/reformer_pytorch/reversible.py
     """
-
     def construct(
         self,
         hidden_states,
@@ -2836,7 +2828,6 @@ class ReformerPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = ReformerConfig
     base_model_prefix = "reformer"
 
@@ -2918,7 +2909,6 @@ class ReformerModelOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     last_hidden_state: mindspore.Tensor
     past_buckets_states: Optional[List[Tuple[mindspore.Tensor, mindspore.Tensor]]] = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -2957,7 +2947,6 @@ class ReformerModelWithLMHeadOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     past_buckets_states: Optional[List[Tuple[mindspore.Tensor, mindspore.Tensor]]] = None
@@ -3960,7 +3949,6 @@ class ReformerForSequenceClassification(ReformerPreTrainedModel):
 
 class ReformerClassificationHead(nn.Cell):
     """Head for sentence-level classification tasks."""
-
     def __init__(self, config):
 
         """

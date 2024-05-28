@@ -709,7 +709,6 @@ class DistilBertPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = DistilBertConfig
     load_tf_weights = None
     base_model_prefix = "distilbert"

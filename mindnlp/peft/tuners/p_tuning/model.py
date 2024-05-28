@@ -68,7 +68,6 @@ class PromptEncoder(nn.Cell):
 
     Output shape: (`batch_size`, `total_virtual_tokens`, `token_dim`)
     """
-
     def __init__(self, config):
         """
         Initializes a PromptEncoder instance.

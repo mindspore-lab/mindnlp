@@ -217,7 +217,6 @@ class JambaAttention(nn.Cell):
     Multi-headed attention from 'Attention Is All You Need' paper. Modified to use sliding window attention: Longformer
     and "Generating Long Sequences with Sparse Transformers".
     """
-
     def __init__(self, config: JambaConfig, layer_idx: Optional[int] = None):
         ''' 
         Initializes a new instance of the JambaAttention class.
@@ -400,7 +399,6 @@ class HybridMambaAttentionDynamicCache(DynamicCache):
     shape[2] is a dummy "seqlen" dimension to match the number of attention cache dimensions. For mamba, the cache
     doesn't grow with seqlen so this dimension is always 1.
     """
-
     def __init__(self) -> None:
         """
         Initializes an instance of the HybridMambaAttentionDynamicCache class.
@@ -532,7 +530,6 @@ class JambaMambaMixer(nn.Cell):
     ∆, B, C are input-dependent (this is a key difference between Mamba and the linear time invariant S4,
     and is why Mamba is called **selective** state spaces)
     """
-
     def __init__(self, config: JambaConfig, layer_idx):
         """
         Initializes an instance of the JambaMambaMixer class.
@@ -868,7 +865,6 @@ class JambaSparseMoeBlock(nn.Cell):
     capacity factor to number of experts and thus waste computation
     and memory on padding.
     """
-
     def __init__(self, config: JambaConfig, num_experts: int, num_experts_per_tok: int):
 
         """
@@ -1382,7 +1378,6 @@ class JambaModel(JambaPreTrainedModel):
     Args:
         config: JambaConfig
     """
-
     def __init__(self, config: JambaConfig):
 
         """
@@ -1847,7 +1842,6 @@ updating the position ids.
 
         Returns:
         ```"""
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_router_logits = (
             output_router_logits if output_router_logits is not None else self.config.output_router_logits

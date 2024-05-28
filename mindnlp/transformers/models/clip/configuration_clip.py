@@ -90,7 +90,6 @@ class CLIPTextConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "clip_text_model"
 
     def __init__(
@@ -242,7 +241,6 @@ class CLIPVisionConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "clip_vision_model"
 
     def __init__(
@@ -397,7 +395,6 @@ class CLIPConfig(PretrainedConfig):
 
     >>> config = CLIPConfig.from_text_vision_configs(config_text, config_vision)
     ```"""
-
     model_type = "clip"
 
     def __init__(
@@ -516,7 +513,6 @@ class CLIPConfig(PretrainedConfig):
         Returns:
             [`CLIPConfig`]: An instance of a configuration object
         """
-
         return cls(text_config=text_config.to_dict(), vision_config=vision_config.to_dict(), **kwargs)
 
 __all__ = [

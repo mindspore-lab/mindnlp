@@ -63,7 +63,6 @@ class ASTFeatureExtractor(SequenceFeatureExtractor):
         return_attention_mask (`bool`, *optional*, defaults to `False`):
             Whether or not [`~ASTFeatureExtractor.__call__`] should return `attention_mask`.
     """
-
     model_input_names = ["input_values", "attention_mask"]
 
     def __init__(
@@ -208,7 +207,6 @@ class ASTFeatureExtractor(SequenceFeatureExtractor):
                 - `'pt'`: Return PyTorch `torch.Tensor` objects.
                 - `'np'`: Return Numpy `np.ndarray` objects.
         """
-
         if sampling_rate is not None:
             if sampling_rate != self.sampling_rate:
                 raise ValueError(

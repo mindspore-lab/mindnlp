@@ -25,7 +25,6 @@ from .dropout import Dropout
 
 class Linear(nn.Dense):
     """inner Linear."""
-
 class MultiheadAttention(nn.Cell):
     r"""
     This is an implementation of multihead attention in the paper `Attention is all you need
@@ -109,7 +108,6 @@ class MultiheadAttention(nn.Cell):
         >>> attn_output, attn_output_weights = multihead_attn(query, key, value)
 
     """
-
     def __init__(self, embed_dim, num_heads, dropout=0., bias=True, add_bias_kv=False, add_zero_attn=False,
                  kdim=None, vdim=None, batch_first=False) -> None:
         r"""Initialize the MultiheadAttention class.
@@ -811,7 +809,6 @@ class TransformerDecoder(nn.Cell):
         Raises:
             None
         """
-
         output = tgt
 
         for mod in self.layers:
@@ -872,7 +869,6 @@ class Transformer(nn.Cell):
         >>> tgt = Tensor(np.random.rand(20, 32, 512), mindspore.float32)
         >>> out = transformer_model(src, tgt)
     """
-
     def __init__(self, d_model: int = 512, nhead: int = 8, num_encoder_layers: int = 6,
                  num_decoder_layers: int = 6, dim_feedforward: int = 2048, dropout: float = 0.1,
                  activation = 'relu',
@@ -958,7 +954,6 @@ class Transformer(nn.Cell):
                 - If the batch number of src and tgt must be equal but is not.
                 - If the feature number of src and tgt is not equal to d_model.
         """
-
         is_batched = src.ndim == 3
         if not self.batch_first and src.shape[1] != tgt.shape[1] and is_batched:
             raise RuntimeError("the batch number of src and tgt must be equal")
@@ -976,7 +971,6 @@ class Transformer(nn.Cell):
 
     def _reset_parameters(self):
         r"""Initiate parameters in the transformer model."""
-
         for _, p in self.parameters_and_names():
             if p.ndim > 1:
                 p.set_data(initializer('xavier_uniform', p.shape, p.dtype))

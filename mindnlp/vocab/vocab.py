@@ -29,7 +29,6 @@ class Vocab:
     r"""
     Creates a vocab object which maps tokens to indices.
     """
-
     def __init__(self, list_or_dict: Union[list, dict],
                  special_tokens: Union[list, tuple] = None,
                  special_first: bool = True):
@@ -48,7 +47,6 @@ values must be integers representing token indices.
         Raises:
         - ValueError: Raised if keys in the dictionary are not strings, values in the dictionary are not integers, or if the input is not a list or dictionary.
         """
-
         self._token_dict = {}
 
         sp_len = len(special_tokens) if special_tokens is not None and special_first else 0
@@ -98,7 +96,6 @@ values must be integers representing token indices.
         Returns:
             - int, The index corresponding to the associated token.
         """
-
         return self._token_dict.get(token, None)
 
     def __call__(self, token_or_id):
@@ -270,7 +267,6 @@ values must be integers representing token indices.
         Returns:
             - Vocab, Returns a vocab generated from the url download.
         """
-
         tokens = []
         url = pretrained_aliases[name]
 

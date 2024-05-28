@@ -43,7 +43,6 @@ one.
     Properties:
         algebra_type (Type[AlgebraFactory]): The type of algebra factory used to create the scalar instance.
     """
-
     def __init__(self,
                  algebra_factory: Type[TAlgebraFactory],
                  x: Union[float, np.float64],
@@ -137,7 +136,6 @@ one.
         Raises:
             TypeError: If the 'that' parameter is not of type 'Scalar'.
         """
-        
         return Scalar(self._alg_factory, self._x - that._x, self._y - that._y)
 
     def __mul__(self, that: 'Scalar') -> 'Scalar':
@@ -175,7 +173,6 @@ one.
             TypeError: If the input parameters are not of type Scalar.
             ZeroDivisionError: If the second Scalar object has a value of zero, causing division by zero.
         """
-        
         div = self._impl.div(self._x, self._y, that._x, that._y)
         return Scalar(self._alg_factory, *div)
 

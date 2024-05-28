@@ -128,7 +128,6 @@ class ResNetEmbeddings(nn.Cell):
     """
     ResNet Embeddings (stem) composed of a single aggressive convolution.
     """
-
     def __init__(self, config: ResNetConfig):
         """
         Initializes an instance of the ResNetEmbeddings class.
@@ -186,7 +185,6 @@ class ResNetShortCut(nn.Cell):
     ResNet shortcut, used to project the residual features to the correct size. If needed, it is also used to
     downsample the input using `stride=2`.
     """
-
     def __init__(self, in_channels: int, out_channels: int, stride: int = 2):
         """
         Initializes a new instance of the ResNetShortCut class.
@@ -236,7 +234,6 @@ class ResNetBasicLayer(nn.Cell):
     """
     A classic ResNet's residual layer composed by two `3x3` convolutions.
     """
-
     def __init__(self, in_channels: int, out_channels: int, stride: int = 1, activation: str = "relu"):
         """
         Initializes a ResNetBasicLayer object with the specified parameters.
@@ -295,7 +292,6 @@ class ResNetBottleNeckLayer(nn.Cell):
     convolution faster. The last `1x1` convolution remaps the reduced features to `out_channels`. If
     `downsample_in_bottleneck` is true, downsample will be in the first layer instead of the second layer.
     """
-
     def __init__(
         self,
         in_channels: int,
@@ -364,7 +360,6 @@ class ResNetStage(nn.Cell):
     """
     A ResNet stage composed by stacked layers.
     """
-
     def __init__(
         self,
         config: ResNetConfig,
@@ -534,7 +529,6 @@ class ResNetPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = ResNetConfig
     base_model_prefix = "resnet"
     main_input_name = "pixel_values"

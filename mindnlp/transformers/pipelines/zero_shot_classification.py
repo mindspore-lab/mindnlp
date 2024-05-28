@@ -32,7 +32,6 @@ class ZeroShotClassificationArgumentHandler(ArgumentHandler):
     by turning each possible label into an NLI
     premise/hypothesis pair.
     """
-
     def _parse_labels(self, labels):
         """
         This method '_parse_labels' is a part of the class 'ZeroShotClassificationArgumentHandler' and is responsible for parsing and processing the input labels.
@@ -134,7 +133,6 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
     See the up-to-date list
     of available models on [hf-mirror.com/models](https://hf-mirror.com/models?search=nli).
     """
-
     def __init__(self, *args, args_parser=ZeroShotClassificationArgumentHandler(), **kwargs):
         """
         Initializes a new instance of the ZeroShotClassificationPipeline class.

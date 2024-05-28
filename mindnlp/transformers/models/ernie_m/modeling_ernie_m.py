@@ -53,7 +53,6 @@ ERNIE_M_PRETRAINED_MODEL_ARCHIVE_LIST = [
 # Adapted from paddlenlp.transformers.ernie_m.modeling.ErnieEmbeddings
 class ErnieMEmbeddings(nn.Cell):
     """Construct the embeddings from word and position embeddings."""
-
     def __init__(self, config):
         """
         Args:
@@ -743,7 +742,6 @@ class ErnieMPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = ErnieMConfig
     base_model_prefix = "ernie_m"
 
@@ -1498,7 +1496,6 @@ class ErnieMForInformationExtraction(ErnieMPreTrainedModel):
             Labels for position (index) for computing the end_positions loss. Position outside of the sequence are not
             taken into account for computing the loss.
         """
-
         result = self.ernie_m(
             input_ids,
             attention_mask=attention_mask,
@@ -1575,7 +1572,6 @@ class UIEM(ErnieMForInformationExtraction):
             Labels for position (index) for computing the end_positions loss. Position outside of the sequence are not
             taken into account for computing the loss.
         """
-
         result = self.ernie_m(
             input_ids,
             # attention_mask=attention_mask,

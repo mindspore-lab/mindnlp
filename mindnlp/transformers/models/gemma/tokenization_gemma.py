@@ -80,7 +80,6 @@ class GemmaTokenizer(PreTrainedTokenizer):
         spaces_between_special_tokens (`bool`, *optional*, defaults to `False`):
             Whether or not to add spaces between special tokens.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     model_input_names = ["input_ids", "attention_mask"]
 

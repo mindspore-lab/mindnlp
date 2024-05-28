@@ -103,7 +103,6 @@ class BigBirdTokenizerFast(PreTrainedTokenizerFast):
             The token used for masking values. This is the token used when training this model with masked language
             modeling. This is the token which the model will try to predict.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -261,7 +260,6 @@ class BigBirdTokenizerFast(PreTrainedTokenizerFast):
         Returns:
             `List[int]`: A list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
         """
-
         if already_has_special_tokens:
             if token_ids_1 is not None:
                 raise ValueError(

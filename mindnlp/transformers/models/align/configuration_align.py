@@ -94,7 +94,6 @@ class AlignTextConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "align_text_model"
 
     def __init__(
@@ -264,7 +263,6 @@ class AlignVisionConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "align_vision_model"
 
     def __init__(
@@ -428,7 +426,6 @@ class AlignConfig(PretrainedConfig):
 
     >>> config = AlignConfig.from_text_vision_configs(config_text, config_vision)
     ```"""
-
     model_type = "align"
 
     def __init__(
@@ -482,7 +479,6 @@ class AlignConfig(PretrainedConfig):
         Returns:
             [`AlignConfig`]: An instance of a configuration object
         """
-
         return cls(text_config=text_config.to_dict(), vision_config=vision_config.to_dict(), **kwargs)
 
 __all__ =  [

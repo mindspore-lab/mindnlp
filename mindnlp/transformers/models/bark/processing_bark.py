@@ -46,7 +46,6 @@ class BarkProcessor(ProcessorMixin):
             a list of `voice_preset_names`.
 
     """
-
     tokenizer_class = "AutoTokenizer"
     attributes = ["tokenizer"]
 
@@ -97,7 +96,6 @@ class BarkProcessor(ProcessorMixin):
                 Additional keyword arguments passed along to both
                 [`~tokenization_utils_base.PreTrainedTokenizer.from_pretrained`].
         """
-
         if speaker_embeddings_dict_path is not None:
             speaker_embeddings_path = cached_file(
                 pretrained_processor_name_or_path,

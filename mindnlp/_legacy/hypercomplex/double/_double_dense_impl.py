@@ -58,7 +58,6 @@ class _DenseImpl(BaseDenseImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def construct(self,
                   real: Tensor,
                   double: Tensor) -> Tuple[Tensor, Tensor]:
@@ -126,7 +125,6 @@ class _J1J2DenseImpl(BaseDenseImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def construct(self,
                   u1: Tensor,
                   u2: Tensor) -> Tuple[Tensor, Tensor]:
@@ -150,7 +148,6 @@ class _J1J2DenseImpl(BaseDenseImpl):
         Raises:
             N/A
         """
-
         out1 = P.matmul(u1, self.weight_x.transpose())
         out2 = P.matmul(u2, self.weight_y.transpose())
 

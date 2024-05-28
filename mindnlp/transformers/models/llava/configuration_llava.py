@@ -71,7 +71,6 @@ class LlavaConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "llava"
     is_composition = False
 

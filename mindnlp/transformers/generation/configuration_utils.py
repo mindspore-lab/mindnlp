@@ -285,7 +285,6 @@ class GenerationConfig:
         Note that some parameters are best validated at generate runtime, as they may depend on other inputs and/or the
         model, such as parameters related to the generation length.
         """
-
         # Validation of individual attributes
         if self.early_stopping not in {True, False, "never"}:
             raise ValueError(f"`early_stopping` must be a boolean or 'never', but is {self.early_stopping}.")
@@ -601,7 +600,6 @@ class GenerationConfig:
             kwargs (`Dict[str, Any]`, *optional*):
                 Additional key word arguments passed along to the [`~utils.PushToHubMixin.push_to_hub`] method.
         """
-
         # At save time, validate the instance -- if any warning/exception is thrown, we refuse to save the instance
         try:
             with warnings.catch_warnings(record=True) as caught_warnings:

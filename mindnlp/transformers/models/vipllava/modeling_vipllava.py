@@ -70,7 +70,6 @@ class VipLlavaCausalLMOutputWithPast(ModelOutput):
 
             image_hidden_states of the model produced by the vision encoder, and optionally by the perceiver
     """
-
     loss: Optional[Tensor] = None
     logits: Tensor = None
     past_key_values: Optional[List[Tensor]] = None
@@ -644,7 +643,6 @@ token embeddings as an instance of nn.Embedding.
         >>> processor.decode(generate_ids[0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
         The image features a brown and white cat sitting on a green surface, with a red ball in its
         ```"""
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states

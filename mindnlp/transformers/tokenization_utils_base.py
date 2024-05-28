@@ -82,7 +82,6 @@ class TruncationStrategy(ExplicitEnum):
     Possible values for the `truncation` argument in [`PreTrainedTokenizerBase.__call__`]. Useful for tab-completion in
     an IDE.
     """
-
     ONLY_FIRST = "only_first"
     ONLY_SECOND = "only_second"
     LONGEST_FIRST = "longest_first"
@@ -97,7 +96,6 @@ class CharSpan(NamedTuple):
         start (`int`): Index of the first character in the original string.
         end (`int`): Index of the character following the last character in the original string.
     """
-
     start: int
     end: int
 
@@ -110,7 +108,6 @@ class TokenSpan(NamedTuple):
         start (`int`): Index of the first token in the span.
         end (`int`): Index of the token following the last token in the span.
     """
-
     start: int
     end: int
 
@@ -141,7 +138,6 @@ class BatchEncoding(UserDict):
             You can give a tensor_type here to convert the lists of integers in PyTorch/TensorFlow/Numpy Tensors at
             initialization.
     """
-
     def __init__(
         self,
         data: Optional[Dict[str, Any]] = None,
@@ -454,7 +450,6 @@ class BatchEncoding(UserDict):
         Returns:
             `int`: Index of the word in the input sequence.
         """
-
         if not self._encodings:
             raise ValueError("token_to_sequence() is not available when using Python based tokenizers")
         if token_index is not None:
@@ -492,7 +487,6 @@ class BatchEncoding(UserDict):
         Returns:
             `int`: Index of the word in the input sequence.
         """
-
         if not self._encodings:
             raise ValueError("token_to_word() is not available when using Python based tokenizers")
         if token_index is not None:
@@ -544,7 +538,6 @@ class BatchEncoding(UserDict):
             that has been used to format the tokenization. For example when we add a class token at the very beginning
             of the tokenization.
         """
-
         if not self._encodings:
             raise ValueError("word_to_tokens() is not available when using Python based tokenizers")
         if word_index is not None:
@@ -586,7 +579,6 @@ class BatchEncoding(UserDict):
             [`~tokenization_utils_base.CharSpan`]: Span of characters in the original string, or None, if the token
             (e.g. <s>, </s>) doesn't correspond to any chars in the origin string.
         """
-
         if not self._encodings:
             raise ValueError("token_to_chars() is not available when using Python based tokenizers")
         if token_index is not None:
@@ -629,7 +621,6 @@ class BatchEncoding(UserDict):
         Returns:
             `int`: Index of the token.
         """
-
         if not self._encodings:
             raise ValueError("char_to_token() is not available when using Python based tokenizers")
         if char_index is not None:
@@ -674,7 +665,6 @@ class BatchEncoding(UserDict):
                 - end: index of the character following the last character associated to the token in the original
                   string
         """
-
         if not self._encodings:
             raise ValueError("word_to_chars() is not available when using Python based tokenizers")
         if word_index is not None:
@@ -713,7 +703,6 @@ class BatchEncoding(UserDict):
         Returns:
             `int` or `List[int]`: Index or indices of the associated encoded token(s).
         """
-
         if not self._encodings:
             raise ValueError("char_to_word() is not available when using Python based tokenizers")
         if char_index is not None:
@@ -826,7 +815,6 @@ class SpecialTokensMixin:
             A tuple or a list of additional tokens, which will be marked as `special`, meaning that they will be
             skipped when decoding if `skip_special_tokens` is set to `True`.
     """
-
     SPECIAL_TOKENS_ATTRIBUTES = [
         "bos_token",
         "eos_token",
@@ -1609,7 +1597,6 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
 
     Handles shared (mostly boiler plate) methods for those two classes.
     """
-
     vocab_files_names: Dict[str, str] = {}
     pretrained_vocab_files_map: Dict[str, Dict[str, str]] = {}
     pretrained_init_configuration: Dict[str, Dict[str, Any]] = {}
@@ -1870,7 +1857,6 @@ clean_up_tokenization_spaces, and added_tokens_decoder. The added_tokens_decoder
             `List[int]`: A list of token ids representing the tokenized chat so far, including control tokens. This
             output is ready to pass to the model, either directly or via methods like `generate()`.
         """
-
         if hasattr(conversation, "messages"):
             # Indicates it's a Conversation object
             conversation = conversation.messages
@@ -3181,7 +3167,6 @@ name 'raise_exception'. This allows the template to raise an error by calling th
                 the `tokenize` method) or a list of integers (tokenized string ids using the `convert_tokens_to_ids`
                 method).
         """
-
         # Backward compatibility for 'truncation_strategy', 'pad_to_max_length'
         padding_strategy, truncation_strategy, max_length, kwargs = self._get_padding_truncation_strategies(
             padding=padding,
@@ -3308,7 +3293,6 @@ name 'raise_exception'. This allows the template to raise an error by calling th
                 string/string-sequences/int-sequences or a list of pair of string/string-sequences/int-sequence (see
                 details in `encode_plus`).
         """
-
         # Backward compatibility for 'truncation_strategy', 'pad_to_max_length'
         padding_strategy, truncation_strategy, max_length, kwargs = self._get_padding_truncation_strategies(
             padding=padding,
@@ -3646,7 +3630,6 @@ name 'raise_exception'. This allows the template to raise an error by calling th
                 Tokenized input ids of the second sequence. Can be obtained from a string by chaining the `tokenize`
                 and `convert_tokens_to_ids` methods.
         """
-
         # Backward compatibility for 'truncation_strategy', 'pad_to_max_length'
         padding_strategy, truncation_strategy, max_length, kwargs = self._get_padding_truncation_strategies(
             padding=padding,
@@ -4133,12 +4116,10 @@ name 'raise_exception'. This allows the template to raise an error by calling th
         """
         Private method to put the tokenizer in input mode (when it has different modes for input/outputs)
         """
-
     def _switch_to_target_mode(self):
         """
         Private method to put the tokenizer in target mode (when it has different modes for input/outputs)
         """
-
     @contextmanager
     def as_target_tokenizer(self):
         """

@@ -68,7 +68,6 @@ class BigBirdPegasusLearnedPositionalEmbedding(nn.Embedding):
     """
     This module learns positional embeddings up to a fixed maximum size.
     """
-
     def __init__(self, num_embeddings: int, embedding_dim: int):
         """Initialize the BigBirdPegasusLearnedPositionalEmbedding class.
         
@@ -1037,7 +1036,6 @@ specified permutation order (0, 2, 1, 3).
             plan_from_length: ending location of from block plan_num_rand_blocks: number of random ending location for
             each block
         """
-
         plan_from_length = []
         plan_num_rand_blocks = []
         if (2 * num_rand_blocks + 5) < (from_seq_length // from_block_size):
@@ -1464,7 +1462,6 @@ class BigBirdPegasusEncoderAttention(nn.Cell):
 # Copied from transformers.models.bart.modeling_bart.BartAttention with BartConfig->BigBirdPegasusConfig, Bart->BigBirdPegasusDecoder
 class BigBirdPegasusDecoderAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(
         self,
         embed_dim: int,
@@ -1543,7 +1540,6 @@ class BigBirdPegasusDecoderAttention(nn.Cell):
         output_attentions: bool = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
-
         # if key_value_states are provided this layer is used as a cross-attention layer
         # for the decoder
         is_cross_attention = key_value_states is not None
@@ -1960,7 +1956,6 @@ config.is_decoder, and config.use_bias parameters.
 # Copied from transformers.models.bart.modeling_bart.BartClassificationHead with Bart->BigBirdPegasus
 class BigBirdPegasusClassificationHead(nn.Cell):
     """Head for sentence-level classification tasks."""
-
     def __init__(
         self,
         input_dim: int,
@@ -2082,7 +2077,6 @@ class BigBirdPegasusEncoder(BigBirdPegasusPreTrainedModel):
         config: BigBirdPegasusConfig
         embed_tokens (nn.Embedding): output embedding
     """
-
     def __init__(self, config: BigBirdPegasusConfig, embed_tokens: Optional[nn.Embedding] = None):
         """
         Initializes a new instance of the BigBirdPegasusEncoder class.
@@ -2428,7 +2422,6 @@ class BigBirdPegasusDecoder(BigBirdPegasusPreTrainedModel):
         config: BigBirdPegasusConfig
         embed_tokens (nn.Embedding): output embedding
     """
-
     def __init__(self, config: BigBirdPegasusConfig, embed_tokens: Optional[nn.Embedding] = None):
         """
         Initializes an instance of the BigBirdPegasusDecoder class.
@@ -3592,7 +3585,6 @@ class BigBirdPegasusDecoderWrapper(BigBirdPegasusPreTrainedModel):
     This wrapper class is a helper class to correctly load pretrained checkpoints when the causal language model is
     used in combination with the [`EncoderDecoderModel`] framework.
     """
-
     def __init__(self, config):
         """
         Initialize the BigBirdPegasusDecoderWrapper class.
@@ -3883,7 +3875,6 @@ for initializing the model. The 'is_decoder' and 'is_encoder_decoder' attributes
 
         >>> logits = outputs.logits
         ```"""
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states

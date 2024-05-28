@@ -33,7 +33,6 @@ class Conv1D(nn.Cell):
         n_out (`int`): The number of output features.
         n_in (`int`): The number of input features.
     """
-
     def __init__(self, n_out, n_in):
         """
         Initialize the Conv1D class with the specified number of output channels and input channels.

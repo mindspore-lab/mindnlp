@@ -15,7 +15,6 @@ class StarSVD(DualSVD):
     This class inherits functionality from the DualSVD class and provides a method to decompose a given matrix using a specific approach. 
     The decompose method within StarSVD returns three matrices that represent the decomposition result. 
     """
-
     @staticmethod
     def decompose(matrix: Matrix) -> Tuple[Matrix, Matrix, Matrix]:
         r"""

@@ -20,7 +20,6 @@ class QR:
     
     The _gram_schmidt method is a private method that performs QR decomposition using the Gram-Schmidt method.
     """
-
     class _HouseholderAlphaCalculator(ScalarVisitor):
 
         def visit_real(self, s: RealScalar, *args, **kwargs) -> None:

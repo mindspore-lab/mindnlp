@@ -671,7 +671,6 @@ class PaddingMode(ExplicitEnum):
     """
     Enum class for the different padding modes to use when padding images.
     """
-
     CONSTANT = "constant"
     REFLECT = "reflect"
     REPLICATE = "replicate"

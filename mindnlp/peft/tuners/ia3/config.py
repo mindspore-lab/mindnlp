@@ -48,7 +48,6 @@ class IA3Config(PeftConfig):
             Whether to initialize the vectors in the (IA)³ layers, defaults to `True`. Setting this to `False` is
             discouraged.
     """
-
     target_cells: Optional[Union[List[str], str]] = field(
         default=None,
         metadata={

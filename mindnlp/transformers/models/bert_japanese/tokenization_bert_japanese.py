@@ -89,7 +89,6 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
         jumanpp_kwargs (`dict`, *optional*):
             Dictionary passed to the `JumanppTokenizer` constructor.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
 
     def __init__(
@@ -425,7 +424,6 @@ added_tokens_encoder.
         Returns:
             `List[int]`: A list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
         """
-
         if already_has_special_tokens:
             return super().get_special_tokens_mask(
                 token_ids_0=token_ids_0, token_ids_1=token_ids_1, already_has_special_tokens=True
@@ -516,7 +514,6 @@ added_tokens_encoder.
 
 class MecabTokenizer:
     """Runs basic tokenization with MeCab morphological parser."""
-
     def __init__(
         self,
         do_lower_case=False,
@@ -624,7 +621,6 @@ class MecabTokenizer:
 
 class SudachiTokenizer:
     """Runs basic tokenization with Sudachi morphological parser."""
-
     def __init__(
         self,
         do_lower_case=False,
@@ -659,7 +655,6 @@ class SudachiTokenizer:
             **sudachi_projection**: (*optional*) string
                 Word projection mode of sudachi, choose from `["surface", "normalized", "reading", "dictionary", "dictionary_and_surface", "normalized_and_surface", "normalized_nouns"]`.
         """
-
         self.do_lower_case = do_lower_case
         self.never_split = never_split if never_split is not None else []
         self.normalize_text = normalize_text
@@ -720,7 +715,6 @@ class SudachiTokenizer:
 
 class JumanppTokenizer:
     """Runs basic tokenization with jumanpp morphological parser."""
-
     def __init__(
         self,
         do_lower_case=False,
@@ -742,7 +736,6 @@ class JumanppTokenizer:
             **trim_whitespace**: (*optional*) boolean (default False)
                 Whether to trim all whitespace, tab, newline from tokens.
         """
-
         self.do_lower_case = do_lower_case
         self.never_split = never_split if never_split is not None else []
         self.normalize_text = normalize_text
@@ -786,7 +779,6 @@ class JumanppTokenizer:
 
 class CharacterTokenizer:
     """Runs Character tokenization."""
-
     def __init__(self, vocab, unk_token, normalize_text=True):
         """
         Constructs a CharacterTokenizer.
@@ -853,7 +845,6 @@ class BasicTokenizer:
             In some instances we want to skip the basic punctuation splitting so that later tokenization can capture
             the full context of the words, such as contractions.
     """
-
     def __init__(
         self,
         do_lower_case=True,
@@ -1012,7 +1003,6 @@ class BasicTokenizer:
 # Copied from transformers.models.bert.tokenization_bert.WordpieceTokenizer
 class WordpieceTokenizer:
     """Runs WordPiece tokenization."""
-
     def __init__(self, vocab, unk_token, max_input_chars_per_word=100):
         """
         Initializes a new instance of the WordpieceTokenizer class.
@@ -1048,7 +1038,6 @@ class WordpieceTokenizer:
         Returns:
             A list of wordpiece tokens.
         """
-
         output_tokens = []
         for token in whitespace_tokenize(text):
             chars = list(token)
@@ -1087,7 +1076,6 @@ class SentencepieceTokenizer:
     """
     Runs sentencepiece tokenization. Based on transformers.models.albert.tokenization_albert.AlbertTokenizer.
     """
-
     def __init__(
         self,
         vocab,

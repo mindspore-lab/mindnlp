@@ -70,7 +70,6 @@ class MptAttention(nn.Cell):
     """Multi-head self attention.
     Using torch or triton attention implemetation enables user to also use additive bias.
     """
-
     def __init__(self, config: MptConfig):
         """
         Initializes an instance of the MptAttention class.

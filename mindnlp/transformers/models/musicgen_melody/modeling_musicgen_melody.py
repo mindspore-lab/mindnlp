@@ -86,7 +86,6 @@ class MusicgenMelodyOutputWithPast(ModelOutput):
             Sequence of conditional hidden-states representing the concatenation of the projeted text encoder output and the projeted audio encoder output.
             Used as a conditional signal.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
@@ -117,7 +116,6 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
 # Copied from transformers.models.musicgen.modeling_musicgen.MusicgenSinusoidalPositionalEmbedding with Musicgen->MusicgenMelody
 class MusicgenMelodySinusoidalPositionalEmbedding(nn.Cell):
     """This module produces sinusoidal positional embeddings of any length."""
-
     def __init__(self, num_positions: int, embedding_dim: int):
         """
         Initializes an instance of the MusicgenMelodySinusoidalPositionalEmbedding class.
@@ -210,7 +208,6 @@ class MusicgenMelodySinusoidalPositionalEmbedding(nn.Cell):
 # Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->MusicgenMelody
 class MusicgenMelodyAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(
         self,
         embed_dim: int,
@@ -291,7 +288,6 @@ the second and third dimensions using the swapaxes function to match the expecte
         output_attentions: bool = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
-
         # if key_value_states are provided this layer is used as a cross-attention layer
         # for the decoder
         is_cross_attention = key_value_states is not None
@@ -535,7 +531,6 @@ class MusicgenMelodyPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = MusicgenMelodyDecoderConfig
     base_model_prefix = "model"
     supports_gradient_checkpointing = True
@@ -575,7 +570,6 @@ class MusicgenMelodyDecoder(MusicgenMelodyPreTrainedModel):
     """
     Transformer decoder consisting of *config.num_hidden_layers* layers. Each layer is a [`MusicgenMelodyDecoderLayer`]
     """
-
     def __init__(self, config: MusicgenMelodyDecoderConfig):
         """
         Initializes the MusicgenMelodyDecoder class.
@@ -1146,7 +1140,6 @@ sequences.
             are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
         Returns:
         """
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.model(
@@ -1948,7 +1941,6 @@ or default values.
         >>> # load fine-tuned model
         >>> model = MusicgenMelodyForConditionalGeneration.from_pretrained("./musicgen-ft")
         ```"""
-
         kwargs_text_encoder = {
             argument[len("text_encoder_") :]: value
             for argument, value in kwargs.items()
@@ -2317,7 +2309,6 @@ use_cache.
         bos_token_id: int = None,
     ) -> Tuple[mindspore.Tensor, Dict[str, mindspore.Tensor]]:
         """Prepares `decoder_input_ids` for generation with encoder-decoder models"""
-
         # 1. Check whether the user has defined `decoder_input_ids` manually. To facilitate in terms of input naming,
         # we also allow the user to pass it under `input_ids`, if the encoder does not use it as the main input.
         if model_kwargs is not None and "decoder_input_ids" in model_kwargs:

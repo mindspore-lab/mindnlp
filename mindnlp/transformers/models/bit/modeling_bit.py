@@ -97,7 +97,6 @@ class WeightStandardizedConv2d(nn.Conv2d):
     Paper: [Micro-Batch Training with Batch-Channel Normalization and Weight
     Standardization](https://arxiv.org/abs/1903.10520v2)
     """
-
     def __init__(
         self,
         in_channel,
@@ -183,7 +182,6 @@ class BitGroupNormActivation(nn.GroupNorm):
     r"""
     A module that combines group normalization with an activation function.
     """
-
     def __init__(self, config, num_channels, eps=1e-5, affine=True, apply_activation=True):
         """
         Initializes an instance of the BitGroupNormActivation class.
@@ -233,7 +231,6 @@ class DynamicPad2d(nn.Cell):
     A module that wraps dynamic padding of any input, given the parameters of the convolutional layer and the input
     hidden states.
     """
-
     def __init__(self, kernel_size, stride, dilation, value=0):
         """Initializes an instance of the DynamicPad2d class.
         
@@ -311,7 +308,6 @@ in the class instance.
 
 class BitMaxPool2d(nn.Cell):
     """Tensorflow like 'SAME' wrapper for 2D max pooling"""
-
     def __init__(
         self,
         kernel_size: int,
@@ -387,7 +383,6 @@ class BitEmbeddings(nn.Cell):
     """
     BiT Embeddings (stem) composed of a single aggressive convolution.
     """
-
     def __init__(self, config: BitConfig):
         """
         Initializes an instance of the BitEmbeddings class.
@@ -492,7 +487,6 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
 # Copied from transformers.models.beit.modeling_beit.BeitDropPath with Beit->Bit
 class BitDropPath(nn.Cell):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
-
     def __init__(self, drop_prob: Optional[float] = None) -> None:
         """
         Initializes a new instance of the BitDropPath class.
@@ -585,7 +579,6 @@ class BitPreActivationBottleneckLayer(nn.Cell):
 
     Except it puts the stride on 3x3 conv when available.
     """
-
     def __init__(
         self,
         config,
@@ -685,7 +678,6 @@ class BitPreActivationBottleneckLayer(nn.Cell):
 
 class BitBottleneckLayer(nn.Cell):
     """Non Pre-activation bottleneck block, equivalent to V1.5/V1b bottleneck. Used for ViT Hybrid."""
-
     def __init__(
         self,
         config,
@@ -880,7 +872,6 @@ class BitStage(nn.Cell):
     """
     A ResNet v2 stage composed by stacked layers.
     """
-
     def __init__(
         self,
         config,
@@ -1132,7 +1123,6 @@ class BitPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = BitConfig
     base_model_prefix = "bit"
     main_input_name = "pixel_values"

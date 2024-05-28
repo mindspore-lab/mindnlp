@@ -28,7 +28,6 @@ class Scalar(AbstractScalar):
     - _zero_like(self) -> 'Scalar': Creates a Scalar object with a value of zero.
     - _one_like(self) -> 'Scalar': Creates a Scalar object with a value of one.
     """
-
     def __init__(self, x: Union[float, np.float64]) -> None:
         r"""
         Initializes a new instance of the Scalar class.

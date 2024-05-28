@@ -456,7 +456,6 @@ def multi_head_attention_forward(
           :math:`S` is the source sequence length. If ``average_attn_weights=False``, returns attention weights per
           head of shape :math:`(num_heads, L, S)` when input is unbatched or :math:`(N, num_heads, L, S)`.
     """
-
     is_batched = _mha_shape_check(
         query, key, value, key_padding_mask, attn_mask, num_heads)
 
@@ -1383,7 +1382,6 @@ def einsum_label_to_index(label):
     Raises:
         None.
     """
-    
     if label == '.':
         return 52
     NUM_OF_LETTERS = ord('z') - ord('a') + 1
@@ -1460,7 +1458,6 @@ def sumproduct_pair(left_, right_, sum_dims_, keep_dim_):
         AssertionError: If the number of dimensions of the input arrays do not match,
                        or if non-broadcast dimensions do not match.
     """
-    
     assert left_.ndim == right_.ndim, "number of dimensions must match"
     if len(sum_dims_) == 0:
         return ops.mul(left_, right_)
@@ -1568,7 +1565,6 @@ def einsum(equation, *operands):
         AssertionError: If more operands are provided than specified in the equation.
         RuntimeError: If operands do not broadcast with remapped shapes [original->remapped].
     """
-    
     assert operands, "einsum(): must provide at least one operand"
     if isinstance(operands[0], tuple):
         operands = operands[0]

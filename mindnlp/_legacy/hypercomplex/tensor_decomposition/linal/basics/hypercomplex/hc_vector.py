@@ -44,7 +44,6 @@ given algebra factory, size, and items.
         - `_ones_like(self) -> 'Vector'`: Creates a new vector with all elements set to one.
         - `_zeros_like(self) -> 'Vector'`: Creates a new vector with all elements set to zero.
     """
-
     def __init__(self,
                  algebra_factory: Type[TAlgebraFactory],
                  size: Optional[int] = None,
@@ -468,7 +467,6 @@ the current vector's algebra type.
         Raises:
             TypeError: If the data type of the current Vector and the input Vector are different.
         """
-        
         if self._alg_factory != that._alg_factory:
             raise TypeError(
                 f'It is only possible to multiply by a vector of the same data type {self._alg_factory}, '

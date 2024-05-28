@@ -45,7 +45,6 @@ class EvalPrediction:
         label_ids (`np.ndarray`): Targets to be matched.
         inputs (`np.ndarray`, *optional*):
     """
-
     def __init__(
         self,
         predictions: Union[np.ndarray, Tuple[np.ndarray]],
@@ -188,7 +187,6 @@ class BestRun(NamedTuple):
         run_summary (`Optional[Any]`):
             A summary of tuning experiments. `ray.tune.ExperimentAnalysis` object for Ray backend.
     """
-
     run_id: str
     objective: Union[float, List[float]]
     hyperparameters: Dict[str, Any]
@@ -239,7 +237,6 @@ class LabelSmoother:
         ignore_index (`int`, *optional*, defaults to -100):
             The index in the labels to ignore when computing the loss.
     """
-
     epsilon: float = 0.1
     ignore_index: int = -100
 
@@ -767,7 +764,6 @@ def check_input_output_count(fn):
         <Exception Type>: <Description of when this exception might be raised>
         ...
     """
-    
     num_input_params = len(inspect.signature(fn).parameters)
     return_annotation = inspect.signature(fn).return_annotation
     num_output_params = 1 if isinstance(return_annotation, type) else len(return_annotation.__args__) \

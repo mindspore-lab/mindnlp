@@ -45,7 +45,6 @@ class ReLU(nn.Cell):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self):
         """Initialize ReLU."""
         super().__init__()

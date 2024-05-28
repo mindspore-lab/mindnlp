@@ -107,7 +107,6 @@ class MptAttentionConfig(PretrainedConfig):
         alibi_bias_max (`int`, *optional*, defaults to 8):
             The maximum value of the alibi bias.
     """
-
     def __init__(
         self,
         attn_type="multihead_attention",
@@ -264,7 +263,6 @@ class MptConfig(PretrainedConfig):
     >>> configuration = model.config
     ```
     """
-
     model_type = "mpt"
     attribute_map = {
         "num_attention_heads": "n_heads",

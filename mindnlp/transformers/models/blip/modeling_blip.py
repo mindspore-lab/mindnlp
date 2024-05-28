@@ -118,7 +118,6 @@ class BlipForConditionalGenerationModelOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[Tuple[mindspore.Tensor]] = None
     logits: Optional[Tuple[mindspore.Tensor]] = None
     image_embeds: Optional[mindspore.Tensor] = None
@@ -177,7 +176,6 @@ class BlipTextVisionModelOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     image_embeds: Optional[mindspore.Tensor] = None
     last_hidden_state: mindspore.Tensor = None
@@ -217,7 +215,6 @@ class BlipImageTextMatchingModelOutput(ModelOutput):
         question_embeds (`mindspore.Tensor`):
             The question embeddings obtained by the text projection layer.
     """
-
     itm_score: Optional[mindspore.Tensor] = None
     loss: Optional[mindspore.Tensor] = None
     image_embeds: Optional[mindspore.Tensor] = None
@@ -249,7 +246,6 @@ class BlipOutput(ModelOutput):
         vision_model_output(`BaseModelOutputWithPooling`):
             The output of the [`BlipVisionModel`].
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits_per_image: mindspore.Tensor = None
     logits_per_text: mindspore.Tensor = None
@@ -440,7 +436,6 @@ information.
 
 class BlipAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(self, config):
         """
         Initializes the BlipAttention class with the provided configuration.
@@ -500,7 +495,6 @@ class BlipAttention(nn.Cell):
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
-
         bsz, tgt_len, embed_dim = hidden_states.shape
 
         mixed_qkv = (
@@ -702,7 +696,6 @@ class BlipPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = BlipConfig
     base_model_prefix = "blip"
     supports_gradient_checkpointing = True
@@ -739,7 +732,6 @@ class BlipEncoder(nn.Cell):
         config (`BlipConfig`):
             The corresponding vision configuration for the `BlipEncoder`.
     """
-
     def __init__(self, config: BlipConfig):
         """
         Initializes a BlipEncoder object with the provided configuration.
@@ -1322,7 +1314,6 @@ generate function to enable the model to be used as a conditional generator.
 
         >>> outputs = model(**inputs)
         ```"""
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1398,7 +1389,6 @@ generate function to enable the model to be used as a conditional generator.
         two cats sleeping on a couch
         ```
         """
-
         batch_size = pixel_values.shape[0]
         vision_outputs = self.vision_model(pixel_values=pixel_values)
 

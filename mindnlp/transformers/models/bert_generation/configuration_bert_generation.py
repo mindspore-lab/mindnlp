@@ -84,7 +84,6 @@ class BertGenerationConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "bert-generation"
 
     def __init__(

@@ -109,7 +109,6 @@ class Phi3Config(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "phi3"
     keys_to_ignore_at_inference = ["past_key_values"]
 

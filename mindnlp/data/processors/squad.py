@@ -437,7 +437,6 @@ class SquadExample:
         answers: None by default, this is used during evaluation. Holds answers as well as their start positions.
         is_impossible: False by default, set to True if the example has no possible answer.
     """
-
     def __init__(
         self,
         qas_id,
@@ -532,7 +531,6 @@ class SquadFeatures:
         end_position: end of the answer token index
         encoding: optionally store the BatchEncoding with the fast-tokenizer alignment methods.
     """
-
     def __init__(
         self,
         input_ids,

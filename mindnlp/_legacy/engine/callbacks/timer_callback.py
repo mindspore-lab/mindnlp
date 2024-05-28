@@ -20,7 +20,6 @@ from mindnlp._legacy.abc import Callback
 
 class _Timer:
     """Timer."""
-
     def __init__(self, name):
         r"""
         Initializes a new instance of the `_Timer` class.
@@ -71,7 +70,6 @@ class _Timer:
 
 class Timers:
     """Group of timers."""
-
     def __init__(self):
         r"""
         Initializes a Timers object.

@@ -366,7 +366,6 @@ class BarkConfig(PretrainedConfig):
     >>> configuration = model.config
     ```
     """
-
     model_type = "bark"
 
     def __init__(

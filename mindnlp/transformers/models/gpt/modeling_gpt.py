@@ -451,7 +451,6 @@ class GPTPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = GPTConfig
     base_model_prefix = "transformer"
     _keys_to_ignore_on_load_unexpected = [r'attn.bias']
@@ -503,7 +502,6 @@ class GPTDoubleHeadsModelOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     mc_loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None

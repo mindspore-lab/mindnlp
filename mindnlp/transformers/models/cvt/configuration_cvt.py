@@ -91,7 +91,6 @@ class CvtConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "cvt"
 
     def __init__(

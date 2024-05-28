@@ -117,7 +117,6 @@ class JambaConfig(PretrainedConfig):
         mamba_inner_layernorms (`bool`, *optional*, defaults to `True`):
             Flag indicating whether or not to apply layernorms to internal mamba activations
     """
-
     model_type = "jamba"
     keys_to_ignore_at_inference = ["past_key_values"]
 

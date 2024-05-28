@@ -154,7 +154,6 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
             Whether or not to add an initial space to the input. This allows to treat the leading word just as any
             other word. (Blenderbot tokenizer detect beginning of words by the preceding space).
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     model_input_names = ["input_ids", "attention_mask"]
 

@@ -60,7 +60,6 @@ class SamVisionEncoderOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     image_embeds: Optional[mindspore.Tensor] = None
     last_hidden_state: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor, ...]] = None
@@ -95,7 +94,6 @@ class SamImageSegmentationOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     iou_scores: mindspore.Tensor = None
     pred_masks: mindspore.Tensor = None
     vision_hidden_states: Optional[Tuple[mindspore.Tensor, ...]] = None
@@ -109,7 +107,6 @@ class SamPatchEmbeddings(nn.Cell):
     `hidden_states` (patch embeddings) of shape `(batch_size, seq_length, hidden_size)` to be consumed by a
     Transformer.
     """
-
     def __init__(self, config):
         """Initializes an instance of the SamPatchEmbeddings class.
         
@@ -239,7 +236,6 @@ class SamLayerNorm(nn.Cell):
     The ordering of the dimensions in the inputs. channels_last corresponds to inputs with shape (batch_size, height,
     width, channels) while channels_first corresponds to inputs with shape (batch_size, channels, height, width).
     """
-
     def __init__(self, normalized_shape, eps=1e-6, data_format="channels_last"):
         """
         Initializes a new instance of the SamLayerNorm class.
@@ -306,7 +302,6 @@ class SamAttention(nn.Cell):
     SAM's attention layer that allows for downscaling the size of the embedding after projection to queries, keys, and
     values.
     """
-
     def __init__(self, config, downsample_rate=None):
         """
         Initializes a new instance of the SamAttention class.
@@ -1258,7 +1253,6 @@ class SamPromptEncoder(nn.Cell):
 
 class SamVisionAttention(nn.Cell):
     """Multi-head Attention block with relative position embeddings."""
-
     def __init__(self, config, window_size):
         """
         Initializes a SamVisionAttention object.

@@ -60,7 +60,6 @@ MEGATRON_BERT_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 class MegatronBertEmbeddings(nn.Cell):
     """Construct the embeddings from word, position and token_type embeddings."""
-
     def __init__(self, config):
         """
         Initialize the MegatronBertEmbeddings class.
@@ -1410,7 +1409,6 @@ class MegatronBertPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = MegatronBertConfig
     base_model_prefix = "bert"
     supports_gradient_checkpointing = True
@@ -1462,7 +1460,6 @@ class MegatronBertForPreTrainingOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     prediction_logits: mindspore.Tensor = None
     seq_relationship_logits: mindspore.Tensor = None
@@ -1482,7 +1479,6 @@ class MegatronBertModel(MegatronBertPreTrainedModel):
     to `True`. To be used in a Seq2Seq model, the model needs to initialized with both `is_decoder` argument and
     `add_cross_attention` set to `True`; an `encoder_hidden_states` is then expected as an input to the forward pass.
     """
-
     def __init__(self, config, add_pooling_layer=True):
         """
         __init__ method in the MegatronBertModel class.
@@ -2166,7 +2162,6 @@ responsible for generating output embeddings during inference. The method does n
             config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
             loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
         """
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.bert(
@@ -2341,7 +2336,6 @@ class MegatronBertForNextSentencePrediction(MegatronBertPreTrainedModel):
         >>> logits = outputs.logits
         >>> assert logits[0, 0] < logits[0, 1]  # next sentence was random
         ```"""
-
         if "next_sentence_label" in kwargs:
             warnings.warn(
                 "The `next_sentence_label` argument is deprecated and will be removed in a future version, use"

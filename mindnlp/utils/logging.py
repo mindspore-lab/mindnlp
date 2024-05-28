@@ -194,7 +194,6 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
 
     This function is not supposed to be directly accessed unless you are writing a custom transformers module.
     """
-
     if name is None:
         name = _get_library_name()
 
@@ -220,7 +219,6 @@ def get_verbosity() -> int:
     - 10: `transformers.logging.DEBUG`
 
     </Tip>"""
-
     _configure_library_root_logger()
     return _get_library_root_logger().getEffectiveLevel()
 
@@ -239,7 +237,6 @@ def set_verbosity(verbosity: int) -> None:
             - `transformers.logging.INFO`
             - `transformers.logging.DEBUG`
     """
-
     _configure_library_root_logger()
     _get_library_root_logger().setLevel(verbosity)
 
@@ -266,7 +263,6 @@ def set_verbosity_error():
 
 def disable_default_handler() -> None:
     """Disable the default handler of the HuggingFace Transformers's root logger."""
-
     _configure_library_root_logger()
 
     assert _default_handler is not None
@@ -275,7 +271,6 @@ def disable_default_handler() -> None:
 
 def enable_default_handler() -> None:
     """Enable the default handler of the HuggingFace Transformers's root logger."""
-
     _configure_library_root_logger()
 
     assert _default_handler is not None
@@ -284,7 +279,6 @@ def enable_default_handler() -> None:
 
 def add_handler(handler: logging.Handler) -> None:
     """adds a handler to the HuggingFace Transformers's root logger."""
-
     _configure_library_root_logger()
 
     assert handler is not None
@@ -293,7 +287,6 @@ def add_handler(handler: logging.Handler) -> None:
 
 def remove_handler(handler: logging.Handler) -> None:
     """removes given handler from the HuggingFace Transformers's root logger."""
-
     _configure_library_root_logger()
 
     assert handler is not None and handler not in _get_library_root_logger().handlers
@@ -304,7 +297,6 @@ def disable_propagation() -> None:
     """
     Disable propagation of the library log outputs. Note that log propagation is disabled by default.
     """
-
     _configure_library_root_logger()
     _get_library_root_logger().propagate = False
 
@@ -314,7 +306,6 @@ def enable_propagation() -> None:
     Enable propagation of the library log outputs. Please disable the HuggingFace Transformers's default handler to
     prevent double logging if the root logger has been configured.
     """
-
     _configure_library_root_logger()
     _get_library_root_logger().propagate = True
 
@@ -377,7 +368,6 @@ logging.Logger.warning_once = warning_once
 
 class EmptyTqdm:
     """Dummy tqdm which doesn't do anything."""
-
     def __init__(self, *args, **kwargs):
         """
         Initializes an instance of the EmptyTqdm class.
@@ -410,7 +400,6 @@ class EmptyTqdm:
 
     def __getattr__(self, _):
         """Return empty function."""
-
         def empty_fn(*args, **kwargs):
             return
         return empty_fn

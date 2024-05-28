@@ -67,7 +67,6 @@ class AlbertEmbeddings(nn.Cell):
     """
     Construct the embeddings from word, position and token_type embeddings.
     """
-
     def __init__(self, config: AlbertConfig):
         """
         Initializes an instance of the `AlbertEmbeddings` class.
@@ -690,7 +689,6 @@ class AlbertPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = AlbertConfig
     base_model_prefix = "albert"
 
@@ -740,7 +738,6 @@ class AlbertForPreTrainingOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     prediction_logits: mindspore.Tensor = None
     sop_logits: mindspore.Tensor = None

@@ -38,7 +38,6 @@ class SequenceFeatureExtractor(FeatureExtractionMixin):
         padding_value (`float`):
             The value that is used to fill the padding values / vectors.
     """
-
     def __init__(self, feature_size: int, sampling_rate: int, padding_value: float, **kwargs):
         """
         Initializes a SequenceFeatureExtractor object.
@@ -358,7 +357,6 @@ class SequenceFeatureExtractor(FeatureExtractionMixin):
         """
         Find the correct padding strategy
         """
-
         # Get padding strategy
         if padding is not False:
             if padding is True:

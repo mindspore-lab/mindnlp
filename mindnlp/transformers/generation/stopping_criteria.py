@@ -26,7 +26,6 @@ import mindspore
 
 class StoppingCriteria():
     """Abstract base class for all stopping criteria that can be applied during generation."""
-
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor, **kwargs) -> bool:
         """
         This method is the call method for the StoppingCriteria class.
@@ -54,7 +53,6 @@ class MaxLengthCriteria(StoppingCriteria):
         max_length (`int`):
             The maximum length that the output sequence can have in number of tokens.
     """
-
     def __init__(self, max_length: int):
         """
         Initializes a MaxLengthCriteria object with the specified maximum length.
@@ -103,7 +101,6 @@ class MaxNewTokensCriteria(StoppingCriteria):
         max_new_tokens (`int`):
             The maximum number of tokens to generate.
     """
-
     def __init__(self, start_length: int, max_new_tokens: int):
         """
         Initializes an instance of the MaxNewTokensCriteria class.
@@ -160,7 +157,6 @@ class MaxTimeCriteria(StoppingCriteria):
         initial_time (`float`, *optional*, defaults to `time.time()`):
             The start of the generation allowed time.
     """
-
     def __init__(self, max_time: float, initial_timestamp: Optional[float] = None):
         """
         Initialize a MaxTimeCriteria object.

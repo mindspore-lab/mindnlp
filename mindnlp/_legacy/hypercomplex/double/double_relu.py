@@ -60,7 +60,6 @@ class J1J2ReLU(nn.Cell):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def construct(self, u: Tensor) -> Tensor:
         r"""
         Constructs a new tensor based on the input tensor 'u' using a specific calculation.

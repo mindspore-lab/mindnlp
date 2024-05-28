@@ -71,7 +71,6 @@ class MBartLearnedPositionalEmbedding(nn.Embedding):
     """
     This module learns positional embeddings up to a fixed maximum size.
     """
-
     def __init__(self, num_embeddings: int, embedding_dim: int):
         """
         Initializes a new instance of the MBartLearnedPositionalEmbedding class.
@@ -94,7 +93,6 @@ class MBartLearnedPositionalEmbedding(nn.Embedding):
 
     def construct(self, input_ids: Tensor, past_key_values_length: int = 0):
         """`ids' shape is expected to be [bsz x seqlen]."""
-
         bsz, seq_len = input_ids.shape[:2]
         positions = ops.arange(
             past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
@@ -105,7 +103,6 @@ class MBartLearnedPositionalEmbedding(nn.Embedding):
 
 class MBartAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(
             self,
             embed_dim: int,
@@ -179,7 +176,6 @@ class MBartAttention(nn.Cell):
         output_attentions: bool = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
-
         # if key_value_states are provided this layer is used as a cross-attention layer
         # for the decoder
         is_cross_attention = key_value_states is not None
@@ -292,7 +288,6 @@ class MBartAttention(nn.Cell):
 
 class MBartEncoderLayer(nn.Cell):
     """MBartEncoderLayer"""
-
     def __init__(self, config: MBartConfig):
         """
         Initializes an instance of the MBartEncoderLayer class.
@@ -347,7 +342,6 @@ class MBartEncoderLayer(nn.Cell):
         Raises:
             None.
         """
-
         residual = hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
         hidden_states, attn_weights, _ = self.self_attn(
@@ -383,7 +377,6 @@ class MBartEncoderLayer(nn.Cell):
 
 class MBartDecoderLayer(nn.Cell):
     """MBartDecoderLayer"""
-
     def __init__(self, config: MBartConfig):
         """
         Initializes an instance of the MBartDecoderLayer class.
@@ -461,7 +454,6 @@ to None.
         Raises:
             None
         """
-
         residual = hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
@@ -524,7 +516,6 @@ to None.
 
 class MBartClassificationHead(nn.Cell):
     """Head for sentence-level classification tasks."""
-
     def __init__(
             self,
             input_dim: int,
@@ -630,7 +621,6 @@ class MBartEncoder(MBartPreTrainedModel):
         config: MBartConfig
         embed_tokens (nn.Embedding): output embedding
     """
-
     def __init__(self, config: MBartConfig, embed_tokens: Optional[nn.Embedding] = None):
         """
         Initializes a new instance of the MBartEncoder class.
@@ -718,7 +708,6 @@ class MBartEncoder(MBartPreTrainedModel):
             TypeError
                 If the input_ids and inputs_embeds are not of type Tensor.
         '''
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -800,7 +789,6 @@ class MBartDecoder(MBartPreTrainedModel):
         config: MBartConfig
         embed_tokens (nn.Embedding): output embedding
     """
-
     def __init__(self, config: MBartConfig, embed_tokens: Optional[nn.Embedding] = None):
         """Initialize the MBartDecoder class.
         
@@ -915,7 +903,6 @@ class MBartDecoder(MBartPreTrainedModel):
         - ValueError: If the specified head_mask or cross_attn_head_mask does not match the number of layers in the model.
         - Warning: If `use_cache=True` is used with gradient checkpointing, as it is incompatible.
         """
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1042,7 +1029,6 @@ class MBartDecoder(MBartPreTrainedModel):
 
 class MBartModel(MBartPreTrainedModel):
     """MBartModel"""
-
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
     def __init__(self, config: MBartConfig):
@@ -1365,7 +1351,6 @@ True, returns a Seq2SeqLMOutput object containing various model outputs.
             None.
         
         """
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if labels is not None:
@@ -1499,7 +1484,6 @@ True, returns a Seq2SeqLMOutput object containing various model outputs.
 
 class MBartForSequenceClassification(MBartPreTrainedModel):
     """MBartForSequenceClassification"""
-
     _tied_weights_keys = ["model.encoder.embed_tokens.weight", "model.decoder.embed_tokens.weight"]
 
     def __init__(self, config: MBartConfig):
@@ -1576,7 +1560,6 @@ class MBartForSequenceClassification(MBartPreTrainedModel):
             ValueError: If all examples do not have the same number of <eos> tokens.
         
         """
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if labels is not None:
             use_cache = False
@@ -1651,7 +1634,6 @@ class MBartForSequenceClassification(MBartPreTrainedModel):
 
 class MBartForQuestionAnswering(MBartPreTrainedModel):
     """MBartForQuestionAnswering"""
-
     _tied_weights_keys = ["model.encoder.embed_tokens.weight", "model.decoder.embed_tokens.weight"]
 
     def __init__(self, config):
@@ -1725,7 +1707,6 @@ encoder last hidden state, encoder hidden states, and encoder attentions.
             Raises:
                 None
         """
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if start_positions is not None and end_positions is not None:
             use_cache = False
@@ -1796,7 +1777,6 @@ class MBartDecoderWrapper(MBartPreTrainedModel):
     This wrapper class is a helper class to correctly load pretrained checkpoints when the causal language model is
     used in combination with the [`EncoderDecoderModel`] framework.
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the MBartDecoderWrapper class.
@@ -1844,7 +1824,6 @@ the instance by calling the decoder method with the provided arguments and keywo
 
 class MBartForCausalLM(MBartPreTrainedModel):
     """MBartForCausalLM"""
-
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
@@ -1942,7 +1921,6 @@ class MBartForCausalLM(MBartPreTrainedModel):
         Raises:
             None.
         '''
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states

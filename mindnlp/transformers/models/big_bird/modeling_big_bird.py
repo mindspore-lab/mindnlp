@@ -57,7 +57,6 @@ BIG_BIRD_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 class BigBirdEmbeddings(nn.Cell):
     """Construct the embeddings from word, position and token_type embeddings."""
-
     # Copied from transformers.models.bert.modeling_bert.BertEmbeddings.__init__
     def __init__(self, config):
         """
@@ -1110,7 +1109,6 @@ class BigBirdBlockSparseAttention(nn.Cell):
             plan_from_length: ending location of from block plan_num_rand_blocks: number of random ending location for
             each block
         """
-
         plan_from_length = []
         plan_num_rand_blocks = []
         if (2 * num_rand_blocks + 5) < (from_seq_length // from_block_size):
@@ -2473,7 +2471,6 @@ class BigBirdPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = BigBirdConfig
     base_model_prefix = "bert"
     supports_gradient_checkpointing = True
@@ -2585,7 +2582,6 @@ class BigBirdForPreTrainingOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     prediction_logits: mindspore.Tensor = None
     seq_relationship_logits: mindspore.Tensor = None
@@ -2619,7 +2615,6 @@ class BigBirdForQuestionAnsweringModelOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     start_logits: mindspore.Tensor = None
     end_logits: mindspore.Tensor = None
@@ -2640,7 +2635,6 @@ class BigBirdModel(BigBirdPreTrainedModel):
     to `True`. To be used in a Seq2Seq model, the model needs to initialized with both `is_decoder` argument and
     `add_cross_attention` set to `True`; an `encoder_hidden_states` is then expected as an input to the forward pass.
     """
-
     def __init__(self, config, add_pooling_layer=True):
         """
         Initializes a new instance of the BigBirdModel class.
@@ -3678,7 +3672,6 @@ output_attentions, output_hidden_states, return_dict): Constructs the model for 
 
 class BigBirdClassificationHead(nn.Cell):
     """Head for sentence-level classification tasks."""
-
     def __init__(self, config):
         """
         Initializes a BigBirdClassificationHead instance.
@@ -4087,7 +4080,6 @@ loss, logits, hidden states, and attentions.
 
 class BigBirdForQuestionAnsweringHead(nn.Cell):
     """Head for question answering tasks."""
-
     def __init__(self, config):
         """
         Initializes an instance of the BigBirdForQuestionAnsweringHead class.

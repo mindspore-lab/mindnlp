@@ -51,7 +51,6 @@ class Seq2SeqTrainingArguments(TrainingArguments):
               [`~GenerationConfig.save_pretrained`] method, e.g., `./my_model_directory/`.
             - a [`~generation.GenerationConfig`] object.
     """
-
     sortish_sampler: bool = field(default=False, metadata={"help": "Whether to use SortishSampler or not."})
     predict_with_generate: bool = field(
         default=False, metadata={"help": "Whether to use generate to calculate generative metrics (ROUGE, BLEU)."}

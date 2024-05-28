@@ -790,7 +790,6 @@ class T5Block(nn.Cell):
 
 class T5ClassificationHead(nn.Cell):
     """Head for sentence-level classification tasks."""
-
     def __init__(self, config: T5Config):
         """
         Initializes a T5ClassificationHead instance.

@@ -101,7 +101,6 @@ class SamImageProcessor(BaseImageProcessor):
         do_convert_rgb (`bool`, *optional*, defaults to `True`):
             Whether to convert the image to RGB.
     """
-
     model_input_names = ["pixel_values"]
 
     def __init__(
@@ -1088,7 +1087,6 @@ def _generate_crop_boxes(
         input_data_format (`str` or `ChannelDimension`, *optional*):
             The channel dimension format of the input image. If not provided, it will be inferred.
     """
-
     if isinstance(image, list):
         raise ValueError("Only one image is allowed for crop generation.")
     image = to_numpy_array(image)

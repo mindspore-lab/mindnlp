@@ -93,7 +93,6 @@ class LoKrModel(BaseTuner):
     >   - **peft_config** ([`LoKrConfig`]): The configuration of the LoKr  model. 
 
     """
-
     prefix: str = "lokr_"
     layers_mapping: Dict[Type[nn.Cell], Type[LoKrLayer]] = {
         nn.Conv2d: Conv2d,
@@ -114,7 +113,6 @@ class LoKrModel(BaseTuner):
         """
         A private method to create and replace the target cell with the adapter cell.
         """
-
         # Regexp matching - Find key which matches current target_name in patterns provided
         pattern_keys = list(
             chain(config.rank_pattern.keys(), config.alpha_pattern.keys())
@@ -303,7 +301,6 @@ containing the specified prefix.
             "Cannot merge LOHA layers when the model is gptq quantized".
             AttributeError: If an attribute error occurs during the method execution.
         """
-        
         if merge:
             if getattr(self.model, "quantization_method", None) == "gptq":
                 raise ValueError(

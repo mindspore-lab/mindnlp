@@ -45,7 +45,6 @@ ERNIE_M_PRETRAINED_MODEL_ARCHIVE_LIST = [
 # Adapted from paddlenlp.transformers.ernie_m.modeling.ErnieEmbeddings
 class MSErnieMEmbeddings(nn.Cell):
     """Construct the embeddings from word and position embeddings."""
-
     def __init__(self, config):
         """
         Initializes an instance of the MSErnieMEmbeddings class.
@@ -728,7 +727,6 @@ class MSErnieMPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = ErnieMConfig
     base_model_prefix = "ernie_m"
 
@@ -1008,7 +1006,6 @@ loss and logits for the given input.
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
-
         outputs = self.ernie_m(
             input_ids,
             attention_mask=attention_mask,
@@ -1217,7 +1214,6 @@ the range `[0, ..., config.num_labels - 1]`.
         labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
-
         outputs = self.ernie_m(
             input_ids,
             attention_mask=attention_mask,
@@ -1313,7 +1309,6 @@ class MSErnieMForQuestionAnswering(MSErnieMPreTrainedModel):
             Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
             are not taken into account for computing the loss.
         """
-
         outputs = self.ernie_m(
             input_ids,
             attention_mask=attention_mask,
@@ -1411,7 +1406,6 @@ predicted.
             Labels for position (index) for computing the end_positions loss. Position outside of the sequence are not
             taken into account for computing the loss.
         """
-
         result = self.ernie_m(
             input_ids,
             attention_mask=attention_mask,
@@ -1472,7 +1466,6 @@ class MSUIEM(MSErnieMForInformationExtraction):
             Labels for position (index) for computing the end_positions loss. Position outside of the sequence are not
             taken into account for computing the loss.
         """
-
         result = self.ernie_m(
             input_ids,
             attention_mask=attention_mask,

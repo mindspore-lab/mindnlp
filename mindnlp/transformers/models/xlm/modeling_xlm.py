@@ -357,7 +357,6 @@ class XLMPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = XLMConfig
     load_tf_weights = None
     base_model_prefix = "transformer"
@@ -443,7 +442,6 @@ class XLMForQuestionAnsweringOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     start_top_log_probs: Optional[mindspore.Tensor] = None
     start_top_index: Optional[mindspore.Tensor] = None
@@ -772,7 +770,6 @@ class XLMPredLayer(nn.Cell):
     """
     Prediction layer (cross_entropy or adaptive_softmax).
     """
-
     def __init__(self, config):
         """
         Initialize the XLMPredLayer class.

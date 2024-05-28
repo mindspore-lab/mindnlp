@@ -371,7 +371,6 @@ class RankAllocator:
         model: the model that we apply AdaLoRA to.
 
     """
-
     def __init__(self, model, peft_config, adapter_name):
         """
         Initializes a RankAllocator instance.
@@ -388,7 +387,6 @@ class RankAllocator:
         Raises:
             AssertionError: If the beta1 or beta2 values in peft_config are not within the range (0, 1).
         """
-        
         self.peft_config = peft_config
         self.adapter_name = adapter_name
         self.beta1 = peft_config.beta1
@@ -682,7 +680,6 @@ applied.
             Raises:
                 None.
         """
-
         def mask_using_rank_pattern(self, model, rank_pattern):
             """
             Applies a mask to the model parameters based on the provided rank pattern.

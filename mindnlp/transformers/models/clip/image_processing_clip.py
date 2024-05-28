@@ -87,7 +87,6 @@ class CLIPImageProcessor(BaseImageProcessor):
         do_convert_rgb (`bool`, *optional*, defaults to `True`):
             Whether to convert the image to RGB.
     """
-
     model_input_names = ["pixel_values"]
 
     def __init__(

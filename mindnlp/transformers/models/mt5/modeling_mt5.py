@@ -1034,7 +1034,6 @@ outputs, such as present key-value states and attention outputs, depending on th
 # Copied from transformers.models.t5.modeling_t5.T5ClassificationHead with T5->MT5
 class MT5ClassificationHead(nn.Cell):
     """Head for sentence-level classification tasks."""
-
     def __init__(self, config: MT5Config):
         """
         Initializes the MT5ClassificationHead class with the provided configuration.
@@ -1086,7 +1085,6 @@ class MT5PreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = MT5Config
     base_model_prefix = "transformer"
     is_parallelizable = True
@@ -1546,7 +1544,6 @@ class MT5Model(MT5PreTrainedModel):
     >>> outputs = model(input_ids=inputs["input_ids"], decoder_input_ids=labels["input_ids"])
     >>> hidden_states = outputs.last_hidden_state
     ```"""
-
     model_type = "mt5"
     config_class = MT5Config
     _keys_to_ignore_on_load_missing = ["decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.weight"]
@@ -1782,7 +1779,6 @@ class MT5ForConditionalGeneration(MT5PreTrainedModel):
     >>> outputs = model(**inputs)
     >>> loss = outputs.loss
     ```"""
-
     model_type = "mt5"
     config_class = MT5Config
     _keys_to_ignore_on_load_unexpected = ["decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.weight"]
@@ -2209,7 +2205,6 @@ class MT5EncoderModel(MT5PreTrainedModel):
     >>> outputs = model(input_ids)
     >>> hidden_state = outputs.last_hidden_state
     ```"""
-
     model_type = "mt5"
     config_class = MT5Config
     _tied_weights_keys = ["encoder.embed_tokens.weight"]

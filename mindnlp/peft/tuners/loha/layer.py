@@ -93,7 +93,6 @@ adapter parameters, as well as to calculate delta weights and apply the adaptati
         Raises:
             No specific exceptions are raised by this method.
         """
-        
         return {
             *self.hada_w1_a,
             *self.hada_w1_b,
@@ -455,7 +454,6 @@ adapter parameters, as well as to calculate delta weights and apply the adaptati
 
 class Linear(LoHaLayer):
     """LoHa implemented in Linear layer"""
-
     def __init__(
         self,
         base_layer: nn.Cell,
@@ -538,7 +536,6 @@ class Linear(LoHaLayer):
 
 class Conv2d(LoHaLayer):
     """LoHa implemented in Conv2d layer"""
-
     def __init__(
         self,
         base_layer: nn.Cell,
@@ -655,7 +652,6 @@ input weights.
         diff_weight = hw.construct(w1a, w1b, w2a, w2b, scale)
         grad_w1a, grad_w1b, grad_w2a, grad_w2b, scale = hw.bprop(w1a, w1b, w2a, w2b, scale, out, dout)
     """
-
     def __init__(self):
         r"""
         Initializes an instance of the HadaWeight class.
@@ -853,7 +849,6 @@ def make_weight(w1a, w1b, w2a, w2b, scale):
     Raises:
         None: This function does not explicitly raise any exceptions.
     """
-    
     hadaweight = HadaWeight()
     return hadaweight(w1a, w1b, w2a, w2b, scale)
 

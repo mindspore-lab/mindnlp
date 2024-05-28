@@ -100,7 +100,6 @@ class UIEWork(Work):
     """
     UIE Work
     """
-
     resource_files_names = {
         "model_state": "mindspore.ckpt",
         "vocab": "vocab.txt",
@@ -284,7 +283,6 @@ class UIEWork(Work):
         """
         Check whether the input meet the requirement.
         """
-
         inputs = inputs[0]
         if isinstance(inputs, (dict, str)):
             inputs = [inputs]

@@ -138,7 +138,6 @@ class Matrix(ABC):
         _concat_cols(self, that: 'Matrix') -> 'Matrix':
             Abstract method for concatenating another matrix to the current matrix along the columns.
     """
-
     def __init__(self, height: int, width: int) -> None:
         r"""
         Initializes a Matrix object with the given height and width.
@@ -193,7 +192,6 @@ class Matrix(ABC):
             - TypeError: If 'that' is not a Matrix or a Scalar.
             - ValueError: If the dimensions of the matrices are not compatible for multiplication.
         """
-        
         if isinstance(that, Matrix):
             return self.mul(that)
         else:

@@ -126,7 +126,6 @@ class Trainer:
     """
     Trainer is a simple but feature-complete training and eval loop for MindSpore, optimized for 🤗 Transformers.
     """
-
     from ..utils import _get_learning_rate
     def __init__(
         self,
@@ -168,7 +167,6 @@ class Trainer:
             ValueError: If `train_dataset` does not implement __len__ and `max_steps` is not specified.
             RuntimeError: If there is a conflict between `model_init` and `optimizers` arguments.
         """
-        
         if args is None:
             output_dir = "tmp_trainer"
             logger.info(f"No `TrainingArguments` passed, using `output_dir={output_dir}`.")
@@ -504,7 +502,6 @@ class Trainer:
                 The training arguments for the training session.
 
         """
-
         # parse args.optim_args
         optim_args = {}
         if args.optim_args:
@@ -1543,7 +1540,6 @@ indicating whether to prefer safe tensors.
 
         Will only save from the main process.
         """
-
         if output_dir is None:
             output_dir = self.args.output_dir
 
@@ -1566,7 +1562,6 @@ indicating whether to prefer safe tensors.
             ValueError: If the model is not an instance of PreTrainedModel.
             RuntimeError: If an error occurs during the saving process.
         """
-        
         # If we are executing this function, we are the process zero, so we don't check for that.
         output_dir = output_dir if output_dir is not None else self.args.output_dir
         os.makedirs(output_dir, exist_ok=True)

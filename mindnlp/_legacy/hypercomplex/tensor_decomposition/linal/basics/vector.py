@@ -14,7 +14,6 @@ class Vector(ABC):
     Instances of this class should have a positive integer size representing the length of the vector.
     Subclasses must implement the abstract methods to define specific behavior for vector operations.
     """
-
     def __init__(self, size: int) -> None:
         r"""
         Initialize a new instance of the Vector class.
@@ -503,7 +502,6 @@ converted to the appropriate type before the addition takes place.
         Raises:
             ValueError: If the size of the provided 'that' Vector is different from the size of the 'self' Vector, a ValueError is raised.
         """
-        
         if self._size != that._size:
             raise ValueError(
                 'It is only possible to calculate dot product with a vector'

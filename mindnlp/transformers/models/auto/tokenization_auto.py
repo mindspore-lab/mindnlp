@@ -607,7 +607,6 @@ def get_tokenizer_config(
     tokenizer.save_pretrained("tokenizer-test")
     tokenizer_config = get_tokenizer_config("tokenizer-test")
     ```"""
-
     _ = kwargs.get('from_pt', False)
     resolved_config_file = cached_file(
         pretrained_model_name_or_path,
@@ -639,7 +638,6 @@ class AutoTokenizer:
 
     This class cannot be instantiated directly using `__init__()` (throws an error).
     """
-
     def __init__(self):
         """
         This method initializes an instance of the AutoTokenizer class.

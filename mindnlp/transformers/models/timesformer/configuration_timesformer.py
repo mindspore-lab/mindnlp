@@ -92,7 +92,6 @@ class TimesformerConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "timesformer"
 
     def __init__(

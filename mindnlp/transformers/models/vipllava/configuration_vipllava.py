@@ -71,7 +71,6 @@ class VipLlavaConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "vipllava"
     is_composition = False
 

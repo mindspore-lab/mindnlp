@@ -113,7 +113,6 @@ class LayoutLMTokenizer(PreTrainedTokenizer):
             Whether or not to strip all accents. If this option is not specified, then it will be determined by the
             value for `lowercase` (as in the original LayoutLM).
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     pretrained_init_configuration = PRETRAINED_INIT_CONFIGURATION
@@ -320,7 +319,6 @@ class LayoutLMTokenizer(PreTrainedTokenizer):
         Returns:
             `List[int]`: A list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
         """
-
         if already_has_special_tokens:
             return super().get_special_tokens_mask(
                 token_ids_0=token_ids_0, token_ids_1=token_ids_1, already_has_special_tokens=True
@@ -418,7 +416,6 @@ class BasicTokenizer:
             In some instances we want to skip the basic punctuation splitting so that later tokenization can capture
             the full context of the words, such as contractions.
     """
-
     def __init__(
             self,
             do_lower_case=True,
@@ -579,7 +576,6 @@ class BasicTokenizer:
 # Copied from transformers.models.bert.tokenization_bert.WordpieceTokenizer
 class WordpieceTokenizer:
     """Runs WordPiece tokenization."""
-
     def __init__(self, vocab, unk_token, max_input_chars_per_word=100):
         """
         Initializes a new instance of the WordpieceTokenizer class.
@@ -615,7 +611,6 @@ class WordpieceTokenizer:
         Returns:
             A list of wordpiece tokens.
         """
-
         output_tokens = []
         for token in whitespace_tokenize(text):
             chars = list(token)

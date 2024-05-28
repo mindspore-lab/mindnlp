@@ -37,7 +37,6 @@ def rot_matmul(a: mindspore.Tensor, b: mindspore.Tensor) -> mindspore.Tensor:
     Returns:
         The product ab
     """
-
     def row_mul(i: int) -> mindspore.Tensor:
         return ops.stack(
             [
@@ -366,7 +365,6 @@ class Rotation:
     underlying format of the rotation cannot be changed in-place. Like Rigid, the class is designed to mimic the
     behavior of a torch Tensor, almost as if each Rotation object were a tensor of rotations, in one format or another.
     """
-
     def __init__(
         self,
         rot_mats: Optional[mindspore.Tensor] = None,
@@ -802,7 +800,6 @@ class Rigid:
     [*, 3] translation Designed to behave approximately like a single torch tensor with the shape of the shared batch
     dimensions of its component parts.
     """
-
     def __init__(self, rots: Optional[Rotation], trans: Optional[mindspore.Tensor]):
         """
         Args:

@@ -31,7 +31,6 @@ class XLNetConfig(PretrainedConfig):
     """
     Configuration for XLNet
     """
-
     model_type = "xlnet"
     keys_to_ignore_at_inference = ["mems"]
     attribute_map = {

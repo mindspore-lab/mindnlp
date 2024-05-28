@@ -36,7 +36,6 @@ class LukeEmbeddings(nn.Cell):
     """
     LukeEmbeddings
     """
-
     def __init__(self, config: LukeConfig):
         """
         Initializes an instance of the LukeEmbeddings class.
@@ -138,7 +137,6 @@ class LukeEntityEmbeddings(nn.Cell):
     """
     LukeEntityEmbeddings
     """
-
     def __init__(self, config: LukeConfig):
         """
         Initializes the LukeEntityEmbeddings class.
@@ -215,7 +213,6 @@ class LukeSelfAttention(nn.Cell):
     """
     LukeSelfAttention
     """
-
     def __init__(self, config):
         """
         Initializes a new instance of the LukeSelfAttention class.
@@ -384,7 +381,6 @@ class LukeSelfOutput(nn.Cell):
     """
     LukeSelfOutput
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the LukeSelfOutput class.
@@ -435,7 +431,6 @@ class LukeAttention(nn.Cell):
     """
     LukeAttention
     """
-
     def __init__(self, config):
         """
         Initializes a new instance of the LukeAttention class.
@@ -524,7 +519,6 @@ class LukeIntermediate(nn.Cell):
     """
     LukeIntermediate
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the LukeIntermediate class.
@@ -578,7 +572,6 @@ class LukeOutput(nn.Cell):
     """
     LukeOutput
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the LukeOutput class.
@@ -641,7 +634,6 @@ class LukeLayer(nn.Cell):
     """
     LukeOutput
     """
-
     def __init__(self, config):
         """
         Initializes a new instance of the LukeLayer class.
@@ -736,7 +728,6 @@ class LukeEncoder(nn.Cell):
     """
     LukeEncoder
     """
-
     def __init__(self, config):
         """Initialize a LukeEncoder object.
         
@@ -856,7 +847,6 @@ class LukePooler(nn.Cell):
     """
     LukePooler
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the LukePooler class.
@@ -906,7 +896,6 @@ class EntityPredictionHeadTransform(nn.Cell):
     """
     EntityPredictionHeadTransform
     """
-
     def __init__(self, config):
         """
         Initializes the EntityPredictionHeadTransform class.
@@ -961,7 +950,6 @@ class EntityPredictionHead(nn.Cell):
     """
     EntityPredictionHead
     """
-
     def __init__(self, config):
         """
         Initialize the EntityPredictionHead instance.
@@ -1012,7 +1000,6 @@ class LukePreTrainedModel(PreTrainedModel):
     """
     LukePreTrainedModel
     """
-
     config_class = LukeConfig
     base_model_prefix = "luke"
     supports_gradient_checkpointing = True
@@ -1362,7 +1349,6 @@ def create_position_ids_from_input_ids(input_ids, padding_idx):
 
 class LukeLMHead(nn.Cell):
     """LukeLMead"""
-
     def __init__(self, config):
         """
         Initializes the LukeLMHead class.
@@ -1593,7 +1579,6 @@ class LukeForEntityClassification(LukePreTrainedModel):
     """
     LukeForEntityClassification
     """
-
     def __init__(self, config):
         """
         Initializes a new instance of the LukeForEntityClassification class.
@@ -1704,7 +1689,6 @@ class LukeForEntityPairClassification(LukePreTrainedModel):
     """
     LukeForEntityPairClassification
     """
-
     def __init__(self, config):
         """
         Initializes a new instance of LukeForEntityPairClassification.
@@ -1816,7 +1800,6 @@ class LukeForEntitySpanClassification(LukePreTrainedModel):
     """
     LukeForEntitySpanClassification
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the LukeForEntitySpanClassification class.
@@ -1934,7 +1917,6 @@ class LukeForSequenceClassification(LukePreTrainedModel):
     """
     LukeForSequenceClassification
     """
-
     def __init__(self, config):
         """
         Initializes a LukeForSequenceClassification instance.
@@ -2065,7 +2047,6 @@ class LukeForTokenClassification(LukePreTrainedModel):
     """
     LukeForTokenClassification
     """
-
     def __init__(self, config):
         """
         Initializes a new instance of the LukeForTokenClassification class.
@@ -2173,7 +2154,6 @@ class LukeForQuestionAnswering(LukePreTrainedModel):
     """
     LukeForQuestionAnswering
     """
-
     def __init__(self, config):
         """
         Initializes the LukeForQuestionAnswering class.
@@ -2309,7 +2289,6 @@ class LukeForMultipleChoice(LukePreTrainedModel):
     """
     LukeForMultipleChoice
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the LukeForMultipleChoice class.
@@ -2460,7 +2439,6 @@ def apply_chunking_to_forward(
     of size `chunk_size` over the dimension
     `chunk_dim`. It then applies a layer `forward_fn` to each chunk independently to save memory.
     """
-
     assert len(input_tensors) > 0, f"{input_tensors} has to be a tuple/list of tensors"
 
     # inspect.signature exist since python 3.5 and is a python method

@@ -50,7 +50,6 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
     Args:
         model ([`PeftModel`]): The Peft model.
     """
-
     config = model.peft_config[adapter_name]
     if state_dict is None:
         # NOTE: state_dict = model.state_dict()

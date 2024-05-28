@@ -34,7 +34,6 @@ class AlignProcessor(ProcessorMixin):
         tokenizer ([`BertTokenizer`, `BertTokenizerFast`]):
             The tokenizer is a required input.
     """
-
     attributes = ["image_processor", "tokenizer"]
     image_processor_class = "EfficientNetImageProcessor"
     tokenizer_class = ("BertTokenizer", "BertTokenizerFast")

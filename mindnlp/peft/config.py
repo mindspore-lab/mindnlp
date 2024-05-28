@@ -32,7 +32,6 @@ class PeftConfigMixin():
     Args:
         peft_type (Union[[`~peft.utils.config.PeftType`], `str`]): The type of Peft method to use.
     """
-
     peft_type: Optional[PeftType] = field(default=None, metadata={"help": "The type of PEFT model."})
 
     @property
@@ -146,7 +145,6 @@ class PeftConfig(PeftConfigMixin):
         task_type (Union[[`~peft.utils.config.TaskType`], `str`]): The type of task to perform.
         inference_mode (`bool`, defaults to `False`): Whether to use the Peft model in inference mode.
     """
-
     base_model_name_or_path: str = field(default=None, metadata={"help": "The name of the base model to use."})
     peft_type: Union[str, PeftType] = field(default=None, metadata={"help": "Peft type"})
     task_type: Union[str, TaskType] = field(default=None, metadata={"help": "Task type"})
@@ -167,7 +165,6 @@ class PromptLearningConfig(PeftConfig):
         num_attention_heads (`int`): The number of attention heads in the base transformer model.
         num_layers (`int`): The number of layers in the base transformer model.
     """
-
     num_virtual_tokens: int = field(default=None, metadata={"help": "Number of virtual tokens"})
     token_dim: int = field(
         default=None, metadata={"help": "The hidden embedding dimension of the base transformer model"}

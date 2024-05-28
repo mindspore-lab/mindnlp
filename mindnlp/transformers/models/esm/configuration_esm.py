@@ -98,7 +98,6 @@ class EsmConfig(PretrainedConfig):
 
     >>> # Accessing the model configuration >>> configuration = model.config
     ```"""
-
     model_type = "esm"
 
     def __init__(
@@ -432,7 +431,6 @@ class StructureModuleConfig:
         inf:
             Large number used for attention masking
     """
-
     sequence_dim: int = 384
     pairwise_dim: int = 128
     ipa_dim: int = 16

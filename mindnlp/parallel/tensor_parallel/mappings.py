@@ -171,7 +171,6 @@ class _ScatterToModelParallelRegion(nn.Cell):
 
 class _GatherFromModelParallelRegion(nn.Cell):
     """Gather the input from model parallel region and concatinate."""
-
     def construct(self, input_):
         r"""
         This method constructs a gather operation from the input.

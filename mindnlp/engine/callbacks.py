@@ -84,7 +84,6 @@ class TrainerState:
             Whether we are in the process of a hyper parameter search using Trainer.hyperparameter_search. This will
             impact the way data will be logged in TensorBoard.
     """
-
     epoch: Optional[float] = None
     global_step: int = 0
     max_steps: int = 0
@@ -162,7 +161,6 @@ class TrainerControl:
 
             If `True`, this variable will be set back to `False` at the beginning of the next step.
     """
-
     should_training_stop: bool = False
     should_epoch_stop: bool = False
     should_save: bool = False
@@ -234,78 +232,62 @@ class TrainerCallback:
             if state.is_local_process_zero:
                 print(logs)
     ```"""
-
     def on_init_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
         """
         Event called at the end of the initialization of the [`Trainer`].
         """
-
     def on_train_begin(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
         """
         Event called at the beginning of training.
         """
-
     def on_train_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
         """
         Event called at the end of training.
         """
-
     def on_epoch_begin(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
         """
         Event called at the beginning of an epoch.
         """
-
     def on_epoch_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
         """
         Event called at the end of an epoch.
         """
-
     def on_step_begin(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
         """
         Event called at the beginning of a training step. If using gradient accumulation, one training step might take
         several inputs.
         """
-
     def on_substep_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
         """
         Event called at the end of an substep during gradient accumulation.
         """
-
     def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
         """
         Event called at the end of a training step. If using gradient accumulation, one training step might take
         several inputs.
         """
-
     def on_evaluate(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
         """
         Event called after an evaluation phase.
         """
-
     def on_predict(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, metrics, **kwargs):
         """
         Event called after a successful prediction.
         """
-
     def on_save(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
         """
         Event called after a checkpoint save.
         """
-
     def on_log(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
         """
         Event called after logging the last logs.
         """
-
     def on_prediction_step(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
         """
         Event called after a prediction step.
         """
-
-
 class CallbackHandler(TrainerCallback):
     """Internal class that just calls the list of callbacks in order."""
-
     def __init__(self, callbacks, model, tokenizer, optimizer, lr_scheduler):
         r"""
         Initializes a new instance of the CallbackHandler class.
@@ -715,7 +697,6 @@ process.
         Raises:
             No specific exceptions are raised within this method.
         """
-        
         return self.call_event("on_prediction_step", args, state, control)
 
     def call_event(self, event, args, state, control, **kwargs):
@@ -761,7 +742,6 @@ class DefaultFlowCallback(TrainerCallback):
     """
     A [`TrainerCallback`] that handles the default flow of the training loop for logs, evaluation and checkpoints.
     """
-
     def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
         r"""
         This method is called at the end of each training step in the 'DefaultFlowCallback' class.
@@ -858,7 +838,6 @@ class ProgressCallback(TrainerCallback):
     """
     A [`TrainerCallback`] that displays the progress of training or evaluation.
     """
-
     def __init__(self):
         r"""
         Initializes a ProgressCallback object.
@@ -1039,7 +1018,6 @@ class PrinterCallback(TrainerCallback):
     """
     A bare [`TrainerCallback`] that just prints the logs.
     """
-
     def on_log(self, args, state, control, logs=None, **kwargs):
         r"""
         This method 'on_log' is defined within the class 'PrinterCallback' and is used to handle logging events.
@@ -1078,7 +1056,6 @@ class EarlyStoppingCallback(TrainerCallback):
     in [`TrainerState`]. Note that if the [`TrainingArguments`] argument *save_steps* differs from *eval_steps*, the
     early stopping will not occur until the next save step.
     """
-
     def __init__(self, early_stopping_patience: int = 1, early_stopping_threshold: Optional[float] = 0.0):
         r"""
         Initializes an instance of the EarlyStoppingCallback class.

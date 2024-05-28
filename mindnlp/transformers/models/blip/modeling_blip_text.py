@@ -43,7 +43,6 @@ logger = logging.get_logger(__name__)
 # Adapted from https://github.com/salesforce/BLIP/blob/main/models/med.py#L52
 class BlipTextEmbeddings(nn.Cell):
     """Construct the embeddings from word and position embeddings."""
-
     def __init__(self, config):
         """
         Initializes a BlipTextEmbeddings instance.
@@ -1321,7 +1320,6 @@ class BlipTextPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = BlipTextConfig
     base_model_prefix = "bert"
 
@@ -1349,7 +1347,6 @@ class BlipTextModel(BlipTextPreTrainedModel):
     Llion Jones, Aidan N. Gomez, Lukasz Kaiser and Illia Polosukhin. argument and `is_decoder` set to `True`; an
     `encoder_hidden_states` is then expected as an input to the forward pass.
     """
-
     def __init__(self, config, add_pooling_layer=True):
         """
         Initializes a BlipTextModel object.

@@ -480,7 +480,6 @@ class RwkvPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = RwkvConfig
     base_model_prefix = "rwkv"
     _no_split_modules = ["RwkvBlock"]
@@ -562,7 +561,6 @@ class RwkvOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     last_hidden_state: mindspore.Tensor = None
     state: Optional[List[mindspore.Tensor]] = None
     hidden_states: Optional[Tuple[mindspore.Tensor, ...]] = None
@@ -594,7 +592,6 @@ class RwkvCausalLMOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     state: Optional[List[mindspore.Tensor]] = None

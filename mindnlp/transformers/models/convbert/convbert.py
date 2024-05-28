@@ -47,7 +47,6 @@ CONVBERT_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 class ConvBertEmbeddings(nn.Cell):
     """Construct the embeddings from word, position and token_type embeddings."""
-
     def __init__(self, config):
         """
         Initializes the ConvBertEmbeddings object.
@@ -155,7 +154,6 @@ class ConvBertPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = ConvBertConfig
     base_model_prefix = "convbert"
     supports_gradient_checkpointing = True
@@ -199,7 +197,6 @@ class ConvBertPreTrainedModel(PreTrainedModel):
 
 class SeparableConv1D(nn.Cell):
     """This class implements separable convolution, i.e. a depthwise and a pointwise layer"""
-
     def __init__(self, config, input_filters, output_filters, kernel_size):
         """
         Initializes a SeparableConv1D instance.
@@ -279,7 +276,6 @@ class ConvBertSelfAttention(nn.Cell):
     """
     ConvBertSelfAttention
     """
-
     def __init__(self, config):
         '''
         Initializes a new instance of the ConvBertSelfAttention class.
@@ -465,7 +461,6 @@ class ConvBertSelfOutput(nn.Cell):
     """
     ConvBertSelfOutput
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the ConvBertSelfOutput class.
@@ -513,7 +508,6 @@ class ConvBertAttention(nn.Cell):
     """
     ConvBertAttention
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the ConvBertAttention class.
@@ -599,7 +593,6 @@ class GroupedLinearLayer(nn.Cell):
     """
     GroupedLinearLayer
     """
-
     def __init__(self, input_size, output_size, num_groups):
         """
         Initializes a GroupedLinearLayer object.
@@ -673,7 +666,6 @@ class ConvBertIntermediate(nn.Cell):
     """
     ConvBertIntermediate
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the ConvBertIntermediate class with the provided configuration.
@@ -736,7 +728,6 @@ class ConvBertOutput(nn.Cell):
     """
     ConvBertOutput
     """
-
     def __init__(self, config):
         """
         Initializes a new instance of the ConvBertOutput class.
@@ -794,7 +785,6 @@ class ConvBertLayer(nn.Cell):
     """
     ConvBertLayer
     """
-
     def __init__(self, config):
         """
         Initializes a new instance of the ConvBertLayer class.
@@ -900,7 +890,6 @@ class ConvBertEncoder(nn.Cell):
     """
     ConvBertEncoder
     """
-
     def __init__(self, config):
         """
         __init__(self, config)
@@ -1020,7 +1009,6 @@ class ConvBertPredictionHeadTransform(nn.Cell):
     """
     ConvBertPredictionHeadTransform
     """
-
     def __init__(self, config):
         """
         Initializes a ConvBertPredictionHeadTransform object.
@@ -1074,7 +1062,6 @@ class ConvBertModel(ConvBertPreTrainedModel):
     """
     ConvBertModel
     """
-
     def __init__(self, config):
         """
         Initializes the ConvBertModel class.
@@ -1246,7 +1233,6 @@ class ConvBertModel(ConvBertPreTrainedModel):
 
 class ConvBertGeneratorPredictions(nn.Cell):
     """Prediction cell for the generator, made up of two dense layers."""
-
     def __init__(self, config):
         """
         Initializes an instance of the ConvBertGeneratorPredictions class.
@@ -1298,7 +1284,6 @@ class ConvBertForMaskedLM(ConvBertPreTrainedModel):
     """
     ConvBertForMaskedLM
     """
-
     _tied_weights_keys = ["generator.lm_head.weight"]
 
     def __init__(self, config):
@@ -1416,7 +1401,6 @@ class ConvBertForMaskedLM(ConvBertPreTrainedModel):
 
 class ConvBertClassificationHead(nn.Cell):
     """Head for sentence-level classification tasks."""
-
     def __init__(self, config):
         """
         Initializes an instance of the ConvBertClassificationHead class.
@@ -1470,7 +1454,6 @@ class ConvBertForSequenceClassification(ConvBertPreTrainedModel):
     """
     ConvBertForSequenceClassification
     """
-
     def __init__(self, config):
         """
             Initializes a new instance of ConvBertForSequenceClassification.
@@ -1571,7 +1554,6 @@ class ConvBertForMultipleChoice(ConvBertPreTrainedModel):
     """
     ConvBertForMultipleChoice
     """
-
     def __init__(self, config):
         """
         Initialize the ConvBertForMultipleChoice class.
@@ -1684,7 +1666,6 @@ class ConvBertForTokenClassification(ConvBertPreTrainedModel):
     """
     ConvBertForTokenClassification
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the ConvBertForTokenClassification class.
@@ -1773,7 +1754,6 @@ class ConvBertForQuestionAnswering(ConvBertPreTrainedModel):
     """
     ConvBertForQuestionAnswering
     """
-
     def __init__(self, config):
         """
         Initializes an instance of ConvBertForQuestionAnswering.

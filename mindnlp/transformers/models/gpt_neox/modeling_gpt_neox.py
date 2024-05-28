@@ -79,7 +79,6 @@ class GPTNeoXPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = GPTNeoXConfig
     base_model_prefix = "gpt_neox"
     supports_gradient_checkpointing = True
@@ -506,7 +505,6 @@ class GPTNeoXRotaryEmbedding(nn.Cell):
 # copied from transformers.models.llama.modeling_llama.LlamaLinearScalingRotaryEmbedding.__init__
 class GPTNeoXLinearScalingRotaryEmbedding(GPTNeoXRotaryEmbedding):
     """GPTNeoXRotaryEmbedding extended with linear scaling. Credits to the Reddit user /u/kaiokendev"""
-
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
         """
         Initializes an instance of GPTNeoXLinearScalingRotaryEmbedding.
@@ -583,7 +581,6 @@ self.sin_cached.
 
 class GPTNeoXDynamicNTKScalingRotaryEmbedding(GPTNeoXRotaryEmbedding):
     """GPTNeoXRotaryEmbedding extended with Dynamic NTK scaling. Credits to the Reddit users /u/bloc97 and /u/emozilla"""
-
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
         """
         __init__

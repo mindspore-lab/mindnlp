@@ -74,7 +74,6 @@ class SeamlessM4Tv2GenerationOutput(ModelOutput):
             dimension (unit_sequence_length) is either equal to `t2u_max_length` or shorter if all batches finished
             early due to the `t2u_eos_token_id`.
     """
-
     waveform: Optional[mindspore.Tensor] = None
     waveform_lengths: Optional[mindspore.Tensor] = None
     sequences: Optional[Tuple[mindspore.Tensor]] = None
@@ -104,7 +103,6 @@ class SeamlessM4Tv2TextToUnitDecoderOutput(ModelOutput):
             Indicates which inputs are to be ignored due to padding, where elements are either 1 for *not masked* or 0
             for *masked*
     """
-
     last_hidden_state: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
     attentions: Optional[Tuple[mindspore.Tensor]] = None
@@ -153,7 +151,6 @@ class SeamlessM4Tv2TextToUnitOutput(ModelOutput):
         loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `labels` is provided):
             Language modeling loss.
     """
-
     last_hidden_state: mindspore.Tensor = None
     padding_mask: Optional[mindspore.Tensor] = None
     decoder_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -486,7 +483,6 @@ If act_fn is a custom function, it is directly assigned.
 class SeamlessM4Tv2ConformerConvolutionModule(nn.Cell):
     """Convolution block used in the conformer block. Uses a causal depthwise convolution similar to that
     described in Section 2.1 of `https://doi.org/10.48550/arxiv.1609.03499"""
-
     def __init__(self, config):
         """
         Initializes the SeamlessM4Tv2ConformerConvolutionModule.
@@ -590,7 +586,6 @@ class SeamlessM4Tv2ConformerSelfAttention(nn.Cell):
     """Construct a SeamlessM4Tv2ConformerSelfAttention object.
     Can be enhanced with relative position embeddings.
     """
-
     def __init__(self, config, use_position_embeddings=True):
         """
         Initializes a new instance of the SeamlessM4Tv2ConformerSelfAttention class.
@@ -705,7 +700,6 @@ class SeamlessM4Tv2ConformerSelfAttention(nn.Cell):
 
 class SeamlessM4Tv2ConformerEncoderLayer(nn.Cell):
     """Conformer block based on https://arxiv.org/abs/2005.08100."""
-
     # Copied from transformers.models.wav2vec2_conformer.modeling_wav2vec2_conformer.Wav2Vec2ConformerEncoderLayer.__init__ with Wav2Vec2->SeamlessM4Tv2, attention_dropout->speech_encoder_dropout, torch.nn->nn
     def __init__(self, config):
         """
@@ -1194,7 +1188,6 @@ the 'num_adapter_layers' parameter in the configuration.
 # Copied from transformers.models.m2m_100.modeling_m2m_100.M2M100SinusoidalPositionalEmbedding
 class SeamlessM4Tv2SinusoidalPositionalEmbedding(nn.Cell):
     """This module produces sinusoidal positional embeddings of any length."""
-
     def __init__(self, num_positions: int, embedding_dim: int, padding_idx: Optional[int] = None):
         """
         Initialize the SeamlessM4Tv2SinusoidalPositionalEmbedding class.
@@ -1312,7 +1305,6 @@ class SeamlessM4Tv2SinusoidalPositionalEmbedding(nn.Cell):
 
 class SeamlessM4Tv2Attention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     # Copied from transformers.models.bart.modeling_bart.BartAttention.__init__ with Bart->SeamlessM4Tv2
     def __init__(
         self,
@@ -1391,7 +1383,6 @@ class SeamlessM4Tv2Attention(nn.Cell):
         output_attentions: bool = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
-
         is_cross_attention = encoder_hidden_states is not None
         batch_size, seq_length = hidden_states.shape[:2]
 
@@ -1930,7 +1921,6 @@ class SeamlessM4Tv2PreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = SeamlessM4Tv2Config
     base_model_prefix = "seamless_m4t_v2"
     _no_split_modules = [
@@ -3773,7 +3763,6 @@ resblock_kernel_sizes, upsample_rates, upsample_kernel_sizes, upsample_initial_c
             `mindspore.Tensor`: Tensor containing the speech waveform. If the input spectrogram is batched, will be of
             shape `(batch_size, num_frames,)`. If un-batched, will be of shape `(num_frames,)`.
         """
-
         hidden_states = self.conv_pre(input_embeds)
         for i in range(self.num_upsamples):
             hidden_states = ops.leaky_relu(hidden_states, self.leaky_relu_slope)
@@ -3880,7 +3869,6 @@ class SeamlessM4Tv2CodeHifiGan(PreTrainedModel):
         """
         Computes the output length of the hifigan convolutional layers
         """
-
         def _conv_out_length(input_length, kernel_size, stride, pad, dilation=1):
             # 1D convolutional layer output length formula taken
             # from https://pytorch.org/docs/stable/generated/torch.nn.Conv1d.html
@@ -4040,8 +4028,7 @@ class SeamlessM4Tv2CodeHifiGan(PreTrainedModel):
 
 
 ############ WHOLE MODEL related code ################
-# Copied from transformers.models.seamless_m4t.modeling_seamless_m4t.SeamlessM4TForTextToText with SeamlessM4T->SeamlessM4Tv2,SeamlessM4Tv2Tokenizer->SeamlessM4TTokenizer,
-SeamlessM4Tv2Processor->SeamlessM4TProcessor
+# Copied from transformers.models.seamless_m4t.modeling_seamless_m4t.SeamlessM4TForTextToText with SeamlessM4T->SeamlessM4Tv2,SeamlessM4Tv2Tokenizer->SeamlessM4TTokenizer,SeamlessM4Tv2Processor->SeamlessM4TProcessor
 class SeamlessM4Tv2ForTextToText(SeamlessM4Tv2PreTrainedModel):
 
     """

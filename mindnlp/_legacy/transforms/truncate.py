@@ -34,7 +34,6 @@ class Truncate(PyTensorOperation):
     Examples:
 
     """
-
     def __init__(self, max_seq_length):
         r"""
         Initializes a new instance of the Truncate class.

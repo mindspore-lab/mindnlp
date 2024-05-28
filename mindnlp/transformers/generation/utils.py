@@ -111,7 +111,6 @@ class GenerateDecoderOnlyOutput(ModelOutput):
             `config.is_encoder_decoder=True` 2 additional tensors of shape `(batch_size, num_heads,
             encoder_sequence_length, embed_size_per_head)`.
     """
-
     sequences: mindspore.Tensor = None
     scores: Optional[Tuple[mindspore.Tensor]] = None
     logits: Optional[Tuple[mindspore.Tensor]] = None
@@ -160,7 +159,6 @@ class GenerateEncoderDecoderOutput(ModelOutput):
             `config.is_encoder_decoder=True` 2 additional tensors of shape `(batch_size, num_heads,
             encoder_sequence_length, embed_size_per_head)`.
     """
-
     sequences: mindspore.Tensor = None
     scores: Optional[Tuple[mindspore.Tensor]] = None
     logits: Optional[Tuple[mindspore.Tensor]] = None
@@ -194,7 +192,6 @@ class SampleDecoderOnlyOutput(ModelOutput):
             Tuple (one element for each generated token) of tuples (one element for each layer of the decoder) of
             `mindspore.Tensor` of shape `(num_return_sequences*batch_size, generated_length, hidden_size)`.
     """
-
     sequences: mindspore.Tensor = None
     scores: Optional[Tuple[mindspore.Tensor]] = None
     attentions: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
@@ -234,7 +231,6 @@ class SampleEncoderDecoderOutput(ModelOutput):
             Tuple (one element for each generated token) of tuples (one element for each layer of the decoder) of
             `mindspore.Tensor` of shape `(batch_size*num_return_sequences, generated_length, hidden_size)`.
     """
-
     sequences: mindspore.Tensor = None
     scores: Optional[Tuple[mindspore.Tensor]] = None
     encoder_attentions: Optional[Tuple[mindspore.Tensor]] = None
@@ -269,7 +265,6 @@ class BeamSampleDecoderOnlyOutput(ModelOutput):
             Tuple (one element for each generated token) of tuples (one element for each layer of the decoder) of
             `mindspore.Tensor` of shape `(batch_size*num_beams, generated_length, hidden_size)`.
     """
-
     sequences: mindspore.Tensor = None
     sequences_scores: Optional[mindspore.Tensor] = None
     scores: Optional[Tuple[mindspore.Tensor]] = None
@@ -315,7 +310,6 @@ class BeamSampleEncoderDecoderOutput(ModelOutput):
             Tuple (one element for each generated token) of tuples (one element for each layer of the decoder) of
             `mindspore.Tensor` of shape `(batch_size*num_beams, generated_length, hidden_size)`.
     """
-
     sequences: mindspore.Tensor = None
     sequences_scores: Optional[mindspore.Tensor] = None
     scores: Optional[Tuple[mindspore.Tensor]] = None
@@ -353,7 +347,6 @@ class BeamSearchDecoderOnlyOutput(ModelOutput):
             Tuple (one element for each generated token) of tuples (one element for each layer of the decoder) of
             `mindspore.Tensor` of shape `(batch_size*num_beams*num_return_sequences, generated_length, hidden_size)`.
     """
-
     sequences: mindspore.Tensor = None
     sequences_scores: Optional[mindspore.Tensor] = None
     scores: Optional[Tuple[mindspore.Tensor]] = None
@@ -400,7 +393,6 @@ class BeamSearchEncoderDecoderOutput(ModelOutput):
             Tuple (one element for each generated token) of tuples (one element for each layer of the decoder) of
             `mindspore.Tensor` of shape `(batch_size*num_beams*num_return_sequences, generated_length, hidden_size)`.
     """
-
     sequences: mindspore.Tensor = None
     sequences_scores: Optional[mindspore.Tensor] = None
     scores: Optional[Tuple[mindspore.Tensor]] = None
@@ -432,7 +424,6 @@ class GreedySearchDecoderOnlyOutput(ModelOutput):
             Tuple (one element for each generated token) of tuples (one element for each layer of the decoder) of
             `mindspore.Tensor` of shape `(batch_size, generated_length, hidden_size)`.
     """
-
     sequences: mindspore.Tensor = None
     scores: Optional[Tuple[mindspore.Tensor]] = None
     attentions: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
@@ -470,7 +461,6 @@ class GreedySearchEncoderDecoderOutput(ModelOutput):
             Tuple (one element for each generated token) of tuples (one element for each layer of the decoder) of
             `mindspore.Tensor` of shape `(batch_size, generated_length, hidden_size)`.
     """
-
     sequences: mindspore.Tensor = None
     scores: Optional[Tuple[mindspore.Tensor]] = None
     encoder_attentions: Optional[Tuple[mindspore.Tensor]] = None
@@ -508,7 +498,6 @@ class ContrastiveSearchEncoderDecoderOutput(ModelOutput):
             Tuple (one element for each generated token) of tuples (one element for each layer of the decoder) of
             `mindspore.Tensor` of shape `(batch_size, generated_length, hidden_size)`.
     """
-
     sequences: mindspore.Tensor = None
     scores: Optional[Tuple[mindspore.Tensor]] = None
     encoder_attentions: Optional[Tuple[mindspore.Tensor]] = None
@@ -540,7 +529,6 @@ class ContrastiveSearchDecoderOnlyOutput(ModelOutput):
             Tuple (one element for each generated token) of tuples (one element for each layer of the decoder) of
             `mindspore.Tensor` of shape `(batch_size, generated_length, hidden_size)`.
     """
-
     sequences: mindspore.Tensor = None
     scores: Optional[Tuple[mindspore.Tensor]] = None
     attentions: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
@@ -558,7 +546,6 @@ class GenerationMode(ExplicitEnum):
     """
     Possible generation modes, downstream of the [`~generation.GenerationMixin.generate`] method.
     """
-
     # Non-beam methods
     CONTRASTIVE_SEARCH = "contrastive_search"
     GREEDY_SEARCH = "greedy_search"
@@ -908,7 +895,6 @@ raised.
         **model_kwargs,
     ) -> Tuple[mindspore.Tensor, Dict[str, Any]]:
         """Expands tensors from [batch_size, ...] to [batch_size * expand_size, ...]"""
-
         def _expand_dict_for_generation(dict_to_expand):
             for key in dict_to_expand:
                 if dict_to_expand[key] is not None and isinstance(dict_to_expand[key], mindspore.Tensor):
@@ -1040,7 +1026,6 @@ raised.
         This class returns a [`LogitsProcessorList`] list object that contains all relevant [`LogitsWarper`] instances
         used for multinomial sampling.
         """
-
         # instantiate warpers list
         warpers = LogitsProcessorList()
 
@@ -1307,7 +1292,6 @@ the conflict.
 
     def _validate_generated_length(self, generation_config, input_ids_length, has_default_max_length):
         """Performs validation related to the resulting generated length"""
-
         # 1. Max length warnings related to poor parameterization
         if has_default_max_length and generation_config.max_new_tokens is None and generation_config.max_length == 20:
             # 20 is the default max_length of the generation config

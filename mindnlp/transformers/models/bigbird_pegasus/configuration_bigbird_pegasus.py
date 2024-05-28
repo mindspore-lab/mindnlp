@@ -100,7 +100,6 @@ class BigBirdPegasusConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "bigbird_pegasus"
     keys_to_ignore_at_inference = ["past_key_values"]
     attribute_map = {

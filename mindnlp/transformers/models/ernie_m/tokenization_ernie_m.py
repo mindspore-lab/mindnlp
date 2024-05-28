@@ -86,7 +86,6 @@ class ErnieMTokenizer(PreTrainedTokenizer):
             A special token representing a masked token. This is the token used in the masked language modeling task
             which the model tries to predict the original unmasked ones.
     """
-
     # Ernie-M model doesn't have token_type embedding.
     model_input_names: List[str] = ["input_ids"]
 
@@ -313,7 +312,6 @@ class ErnieMTokenizer(PreTrainedTokenizer):
 
     def _tokenize(self, text, enable_sampling=False, nbest_size=64, alpha=0.1):
         """Tokenize a string."""
-
         if self.sp_model_kwargs.get("enable_sampling") is True:
             enable_sampling = True
         if self.sp_model_kwargs.get("alpha") is not None:
@@ -447,7 +445,6 @@ class ErnieMTokenizer(PreTrainedTokenizer):
             `List[int]`:
                 The list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
         """
-
         if already_has_special_tokens:
             if token_ids_1 is not None:
                 raise ValueError(

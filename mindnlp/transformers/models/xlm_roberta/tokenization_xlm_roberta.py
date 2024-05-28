@@ -127,7 +127,6 @@ class XLMRobertaTokenizer(PreTrainedTokenizer):
         sp_model (`SentencePieceProcessor`):
             The *SentencePiece* processor that is used for every conversion (string, tokens and IDs).
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -271,7 +270,6 @@ The 'sp_model' attribute is set to None, and the 'sp_model_proto' attribute is s
         Returns:
             `List[int]`: List of [input IDs](../glossary#input-ids) with the appropriate special tokens.
         """
-
         if token_ids_1 is None:
             return [self.cls_token_id] + token_ids_0 + [self.sep_token_id]
         cls = [self.cls_token_id]
@@ -296,7 +294,6 @@ The 'sp_model' attribute is set to None, and the 'sp_model_proto' attribute is s
         Returns:
             `List[int]`: A list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
         """
-
         if already_has_special_tokens:
             return super().get_special_tokens_mask(
                 token_ids_0=token_ids_0, token_ids_1=token_ids_1, already_has_special_tokens=True
@@ -323,7 +320,6 @@ The 'sp_model' attribute is set to None, and the 'sp_model_proto' attribute is s
             `List[int]`: List of zeros.
 
         """
-
         sep = [self.sep_token_id]
         cls = [self.cls_token_id]
 

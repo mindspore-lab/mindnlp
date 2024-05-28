@@ -23,7 +23,6 @@ class QuickGELUActivation(nn.Cell):
     """
     Applies GELU approximation that is fast but somewhat inaccurate. See: https://github.com/hendrycks/GELUs
     """
-
     def construct(self, input: Tensor) -> Tensor:
         r"""
         Constructs the QuickGELU activation function.
@@ -53,7 +52,6 @@ class ClippedGELUActivation(nn.Cell):
     For information: OpenAI GPT's gelu is slightly different (and gives slightly different results): 0.5 * x * (1 +
     torch.tanh(math.sqrt(2 / math.pi) * (x + 0.044715 * torch.pow(x, 3)))). See https://arxiv.org/abs/1606.08415
     """
-
     def __init__(self, min: float, max: float):
         r"""
         Initializes an instance of the ClippedGELUActivation class.
@@ -106,7 +104,6 @@ class AccurateGELUActivation(nn.Cell):
 
     Implemented along with MEGA (Moving Average Equipped Gated Attention)
     """
-
     def __init__(self):
         r"""
         Initializes an instance of the AccurateGELUActivation class.
@@ -149,7 +146,6 @@ class MishActivation(nn.Cell):
     See Mish: A Self-Regularized Non-Monotonic Activation Function (Misra., https://arxiv.org/abs/1908.08681). Also
     visit the official repository for the paper: https://github.com/digantamisra98/Mish
     """
-
     def construct(self, input: Tensor) -> Tensor:
         r"""
         Constructs a Mish activation function on the input tensor.
@@ -177,7 +173,6 @@ class LinearActivation(nn.Cell):
     """
     Applies the linear activation function, i.e. forwarding input directly to output.
     """
-
     def construct(self, input: Tensor) -> Tensor:
         r"""
         Construct method in the LinearActivation class.
@@ -202,7 +197,6 @@ class LaplaceActivation(nn.Cell):
 
     Inspired by squared relu, but with bounded range and gradient for better stability
     """
-
     def construct(self, input, mu=0.707107, sigma=0.282095):
         r"""
         This method 'construct' in the class 'LaplaceActivation' performs a Laplace activation function transformation on the input data.
@@ -229,7 +223,6 @@ class ReLUSquaredActivation(nn.Cell):
     """
     Applies the relu^2 activation introduced in https://arxiv.org/abs/2109.08668v2
     """
-
     def construct(self, input):
         r"""
         Constructs the ReLU squared activation of the input.
@@ -253,7 +246,6 @@ class ClassInstantier(OrderedDict):
     r"""
     Class Instantier
     """
-
     def __getitem__(self, key):
         r"""
         Retrieve an item from the ClassInstantier object using the specified key.

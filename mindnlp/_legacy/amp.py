@@ -54,7 +54,6 @@ AMP_BLACK_LIST = (
 
 class _OutputTo32(nn.Cell):
     "Wrap cell for amp. Cast network output back to float32"
-
     def __init__(self, op):
         r"""
         Initializes an instance of the '_OutputTo32' class.
@@ -90,7 +89,6 @@ class _OutputTo32(nn.Cell):
 
 class _OutputTo16(nn.Cell):
     "Wrap cell for amp. Cast network output back to float32"
-
     def __init__(self, op):
         r"""
         Initialize an instance of the _OutputTo16 class.
@@ -348,7 +346,6 @@ class NoLossScaler(LossScaler):
             N/A
                 - This method does not raise any exceptions.
         """
-
         def unscale(self, inputs):
             """
             Unscales the given inputs.
@@ -479,7 +476,6 @@ class DynamicLossScaler(LossScaler):
             - TypeError: If the inputs are not provided in a list format.
             - ValueError: If there is an issue with the scaling process.
         """
-        
         return _hypermap(_partial(_grad_scale, self.scale_value), inputs)
 
     def unscale(self, inputs):
@@ -514,7 +510,6 @@ class DynamicLossScaler(LossScaler):
         Raises:
             None: This method does not raise any exceptions.
         """
-        
         one = ops.ones((), self.scale_value.dtype)
         scale_mul_factor = self.scale_value * self.scale_factor
         scale_value = ops.select(

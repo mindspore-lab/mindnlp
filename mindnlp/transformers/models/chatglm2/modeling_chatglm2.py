@@ -131,7 +131,6 @@ class PrefixEncoder(nn.Cell):
     Input shape: (batch-size, prefix-length)
     Output shape: (batch-size, prefix-length, 2*layers*hidden)
     """
-
     def __init__(self, config: ChatGLM2Config):
         """Initialize the PrefixEncoder object.
         
@@ -667,7 +666,6 @@ class SelfAttention(nn.Cell):
     Self-attention layer takes input with size [s, b, h]
     and returns output of the same size.
     """
-
     def __init__(self, config: ChatGLM2Config, layer_number):
         """
         Initializes a new instance of the SelfAttention class.
@@ -854,7 +852,6 @@ class MLP(nn.Cell):
     hidden dimension, perform nonlinear transformation, and project the
     state back into h hidden dimension.
     """
-
     def __init__(self, config: ChatGLM2Config):
         """
         Initializes an instance of the MLP class.
@@ -925,7 +922,6 @@ class GLMBlock(nn.Cell):
     Transformer layer takes input with size [s, b, h] and returns an
     output of the same size.
     """
-
     def __init__(self, config: ChatGLM2Config, layer_number):
         """
         Initializes a new instance of the GLMBlock class.
@@ -1040,7 +1036,6 @@ class GLMBlock(nn.Cell):
 
 class GLMTransformer(nn.Cell):
     """Transformer class."""
-
     def __init__(self, config: ChatGLM2Config):
         '''
         Initializes a GLMTransformer object.
@@ -1162,7 +1157,6 @@ class ChatGLM2PreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and
     a simple interface for downloading and loading pretrained models.
     """
-
     is_parallelizable = False
     config_class = ChatGLM2Config
     base_model_prefix = "transformer"
@@ -1227,7 +1221,6 @@ tokens and 1's for padding tokens. Defaults to None.
 
 class Embedding(nn.Cell):
     """Language model embeddings."""
-
     def __init__(self, config: ChatGLM2Config):
         """
         Initializes an Embedding object.

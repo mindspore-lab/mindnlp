@@ -366,7 +366,6 @@ class MixtralAttention(nn.Cell):
     Multi-headed attention from 'Attention Is All You Need' paper. Modified to use sliding window attention: Longformer
     and "Generating Long Sequences with Sparse Transformers".
     """
-
     def __init__(self, config: MixtralConfig, layer_idx: Optional[int] = None):
         """
         Initializes an instance of the MixtralAttention class.
@@ -613,7 +612,6 @@ class MixtralSparseMoeBlock(nn.Cell):
     capacity factor to number of experts and thus waste computation
     and memory on padding.
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the MixtralSparseMoeBlock class.
@@ -783,7 +781,6 @@ class MixtralDecoderLayer(nn.Cell):
                 If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding
                 (see `past_key_values`).
         """
-
         residual = hidden_states
 
         hidden_states = self.input_layernorm(hidden_states)
@@ -864,7 +861,6 @@ class MixtralModel(MixtralPreTrainedModel):
     Args:
         config: MixtralConfig
     """
-
     def __init__(self, config: MixtralConfig):
         """
         Initializes an instance of the MixtralModel class.
@@ -1264,7 +1260,6 @@ downstream tasks such as fine-tuning or further analysis.
         >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
         ```"""
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_router_logits = (
             output_router_logits if output_router_logits is not None else self.config.output_router_logits

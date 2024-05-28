@@ -19,7 +19,6 @@ properties such as ones, zeros, and identity matrices, as well as concatenating 
     This class inherits from the AbstractMatrix class and provides an implementation for the matrix-specific functionality.
     
     """
-
     def __init__(self,
                  algebra_factory: Type[TAlgebraFactory],
                  height: Optional[int] = None,
@@ -71,7 +70,6 @@ properties such as ones, zeros, and identity matrices, as well as concatenating 
             ValueError: If the key is not valid or if the shape of the accessed elements is not supported.
             TypeError: If the accessed elements are not compatible with the Matrix, Vector, or Scalar types.
         """
-        
         x = self._items_x.__getitem__(key)
         y = self._items_y.__getitem__(key)
         if len(x.shape) == 2:
@@ -186,7 +184,6 @@ type are allowed for addition.
         Raises:
             TypeError: If 'that' is a Scalar instance with a different data type than the Matrix object's algebra type (self._alg_factory).
         """
-        
         if isinstance(that, Scalar) and that.get_algebra_type() != self._alg_factory:
             raise TypeError(
                 f'It is only possible to multiply by a scalar of the same data type {self._alg_factory}, '

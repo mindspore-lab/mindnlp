@@ -105,7 +105,6 @@ class AltCLIPOutput(ModelOutput):
         vision_model_output(`BaseModelOutputWithPooling`):
             The output of the [`AltCLIPVisionModel`].
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits_per_image: mindspore.Tensor = None
     logits_per_text: mindspore.Tensor = None
@@ -140,7 +139,6 @@ class AltRobertaEmbeddings(nn.Cell):
     """
     Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
     """
-
     # Copied from transformers.models.bert.modeling_bert.BertEmbeddings.__init__
     def __init__(self, config):
         """
@@ -1148,7 +1146,6 @@ method takes hidden_states as input, extracts the first token tensor, applies th
 # Copied from transformers.models.clip.modeling_clip.CLIPAttention with CLIP->AltCLIP
 class AltCLIPAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(self, config):
         """
         Initializes an instance of the AltCLIPAttention class.
@@ -1211,7 +1208,6 @@ class AltCLIPAttention(nn.Cell):
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
-
         bsz, tgt_len, embed_dim = hidden_states.shape
 
         # get query proj
@@ -1457,7 +1453,6 @@ class AltCLIPEncoder(nn.Cell):
     Args:
         config: AltCLIPConfig
     """
-
     def __init__(self, config: AltCLIPConfig):
         """
         __init__
@@ -1663,7 +1658,6 @@ class AltCLIPPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = AltCLIPConfig
     base_model_prefix = "altclip"
     supports_gradient_checkpointing = True
@@ -1917,7 +1911,6 @@ class AltRobertaModel(AltCLIPPreTrainedModel):
     .. _*Attention is all you need*: https://arxiv.org/abs/1706.03762
 
     """
-
     config_class = AltCLIPTextConfig
 
     # Copied from transformers.models.bert.modeling_bert.BertModel.__init__ with Bert->AltRoberta
@@ -2249,7 +2242,6 @@ and returns the model's output, including the last hidden state and the pooled C
         >>> last_hidden_state = outputs.last_hidden_state
         >>> pooled_output = outputs.pooler_output  # pooled CLS states
         ```"""
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.roberta(

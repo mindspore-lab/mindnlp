@@ -12,7 +12,6 @@ class ComplexAlgebraFactory(AlgebraFactory):
     It provides methods to retrieve implementations for creating complex algebra objects. 
     The class inherits from AlgebraFactory and utilizes a common implementation for all types of complex algebra objects.
     """
-
     def get_matrix_impl(self) -> _MatrixImpl:
         r"""
         Retrieves the implementation of the matrix for complex algebra operations.

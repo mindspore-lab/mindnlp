@@ -81,7 +81,6 @@ class PegasusTokenizerFast(PreTrainedTokenizerFast):
             tokenizer](https://github.com/google-research/pegasus/blob/939830367bcf411193d2b5eca2f2f90f3f9260ca/pegasus/ops/pretrain_parsing_ops.cc#L66)
             that uses the tokens 2 - 104 only for pretraining
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     slow_tokenizer_class = PegasusTokenizer
     model_input_names = ["input_ids", "attention_mask"]

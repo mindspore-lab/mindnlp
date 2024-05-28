@@ -71,7 +71,6 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
 # Copied from transformers.models.beit.modeling_beit.BeitDropPath with Beit->ConvNext
 class ConvNextDropPath(nn.Cell):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
-
     def __init__(self, drop_prob: Optional[float] = None) -> None:
         """
         Initializes an instance of the ConvNextDropPath class.
@@ -129,7 +128,6 @@ class ConvNextLayerNorm(nn.Cell):
     The ordering of the dimensions in the inputs. channels_last corresponds to inputs with shape (batch_size, height,
     width, channels) while channels_first corresponds to inputs with shape (batch_size, channels, height, width).
     """
-
     def __init__(self, normalized_shape, eps=1e-6, data_format="channels_last"):
         """
         Initializes an instance of the ConvNextLayerNorm class.
@@ -193,7 +191,6 @@ class ConvNextEmbeddings(nn.Cell):
     """This class is comparable to (and inspired by) the SwinEmbeddings class
     found in src/transformers/models/swin/modeling_swin.py.
     """
-
     def __init__(self, config):
         """
         Initializes the ConvNextEmbeddings class.
@@ -255,7 +252,6 @@ class ConvNextLayer(nn.Cell):
         dim (`int`): Number of input channels.
         drop_path (`float`): Stochastic depth rate. Default: 0.0.
     """
-
     def __init__(self, config, dim, drop_path=0):
         ''' 
         Initializes the ConvNextLayer.
@@ -325,7 +321,6 @@ class ConvNextStage(nn.Cell):
         depth (`int`): Number of residual blocks.
         drop_path_rates(`List[float]`): Stochastic depth rates for each layer.
     """
-
     def __init__(self, config, in_channels, out_channels, kernel_size=2, stride=2, depth=2, drop_path_rates=None):
         """ 
         Initializes a ConvNextStage object with the provided configuration.
@@ -479,7 +474,6 @@ class ConvNextPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = ConvNextConfig
     base_model_prefix = "convnext"
     main_input_name = "pixel_values"

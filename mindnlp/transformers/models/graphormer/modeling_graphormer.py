@@ -72,7 +72,6 @@ def quant_noise(module: nn.Cell, q_noise: float, block_size: int):
         - We implement the simplest form of noise here as stated in the paper which consists in randomly dropping
           blocks
     """
-
     # if no quantization noise, don't register hook
     if q_noise <= 0:
         return module
@@ -165,7 +164,6 @@ class LayerDropModuleList(nn.CellList):
         p_drop (float): probability of dropping out each layer
         modules (iterable, optional): an iterable of modules to add
     """
-
     def __init__(self, p_drop: float, modules: Optional[Iterable[nn.Cell]] = None):
         """
         Initialize a LayerDropModuleList object with the provided parameters.
@@ -208,7 +206,6 @@ class GraphormerGraphNodeFeature(nn.Cell):
     """
     Compute node features for each node in the graph.
     """
-
     def __init__(self, config: GraphormerConfig):
         """
         Initialize the GraphormerGraphNodeFeature class.
@@ -287,7 +284,6 @@ class GraphormerGraphAttnBias(nn.Cell):
     """
     Compute attention bias for each head.
     """
-
     def __init__(self, config: GraphormerConfig):
         """
         This method initializes the GraphormerGraphAttnBias class with the provided configuration.
@@ -401,7 +397,6 @@ class GraphormerMultiheadAttention(nn.Cell):
 
     See "Attention Is All You Need" for more details.
     """
-
     def __init__(self, config: GraphormerConfig):
         """
         Initializes an instance of the GraphormerMultiheadAttention class.
@@ -948,7 +943,6 @@ class GraphormerPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = GraphormerConfig
     base_model_prefix = "graphormer"
     supports_gradient_checkpointing = True
@@ -1032,7 +1026,6 @@ class GraphormerModel(GraphormerPreTrainedModel):
     GraphormerForGraphClassification instead. For any other downstream task, feel free to add a new class, or combine
     this model with a downstream model of your choice, following the example in GraphormerForGraphClassification.
     """
-
     def __init__(self, config: GraphormerConfig):
         """
         Initializes a new instance of the GraphormerModel class.
@@ -1143,7 +1136,6 @@ class GraphormerForGraphClassification(GraphormerPreTrainedModel):
     - binary multi-task classification (by setting config.num_classes to the number of labels); there should be a list
       of integer labels for each graph.
     """
-
     def __init__(self, config: GraphormerConfig):
         """
         Initializes a new instance of GraphormerForGraphClassification.

@@ -434,7 +434,6 @@ class Conv1D(mindspore.nn.Cell):
         n_out (`int`): The number of output features.
         n_in (`int`): The number of input features.
     """
-
     def __init__(self, n_out, n_in):
         r"""
         Initializes an instance of the Conv1D class.

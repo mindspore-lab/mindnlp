@@ -648,7 +648,6 @@ class _LazyConfigMapping(OrderedDict):
     """
     A dictionary that lazily load its values when they are requested.
     """
-
     def __init__(self, mapping):
         """
         Initializes a new instance of the _LazyConfigMapping class.
@@ -810,7 +809,6 @@ class _LazyLoadAllMappings(OrderedDict):
     Args:
         mapping: The mapping to load.
     """
-
     def __init__(self, mapping):
         """
         Initializes an instance of the '_LazyLoadAllMappings' class.
@@ -1103,7 +1101,6 @@ class AutoConfig:
 
     This class cannot be instantiated directly using `__init__()` (throws an error).
     """
-
     def __init__(self):
         """
         Initialize AutoConfig.

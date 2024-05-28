@@ -61,7 +61,6 @@ class _ConvImpl(BaseConvImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def construct(self,
                   conv_fn: Callable,
                   real: Tensor,
@@ -91,7 +90,6 @@ class _ConvImpl(BaseConvImpl):
         Raises:
             None.
         """
-
         out_rr = conv_fn(real, self.weight_x, pad_mode=pad_mode, padding=padding,
                          stride=stride, dilation=dilation, group=group)
         out_ii = conv_fn(imag, self.weight_y, pad_mode=pad_mode, padding=padding,
@@ -147,7 +145,6 @@ class _KaratsubaConvImpl(BaseConvImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def construct(self,
                   conv_fn: Callable,
                   real: Tensor,
@@ -179,7 +176,6 @@ class _KaratsubaConvImpl(BaseConvImpl):
             - TypeError: If the input parameters are of incorrect types.
             - RuntimeError: If there is an issue during the convolution operation.
         """
-
         c1 = conv_fn(real, self.weight_x, pad_mode=pad_mode, padding=padding,
                      stride=stride, dilation=dilation, group=group)
         c2 = conv_fn(imag, self.weight_y, pad_mode=pad_mode, padding=padding,
@@ -235,7 +231,6 @@ class _ReImConvImpl(BaseConvImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  weight_init: Union[Tensor, str, Initializer, numbers.Number],
                  weight_shape: tuple,
@@ -290,7 +285,6 @@ class _ReImConvImpl(BaseConvImpl):
         Raises:
             (Any exceptions that the function may raise should be documented here.)
         """
-        
         inp = P.concat([real, imag], axis=self.c_idx)
         weight_y_neg = P.neg(self.weight_y)
         w1 = P.concat([self.weight_x, weight_y_neg], axis=self.c_idx)

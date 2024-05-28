@@ -134,7 +134,6 @@ class LlavaNextCausalLMOutputWithPast(ModelOutput):
 
             image_hidden_states of the model produced by the vision encoder, and optionally by the perceiver
     """
-
     loss: Optional[Tensor] = None
     logits: Tensor = None
     past_key_values: Optional[List[Tensor]] = None
@@ -579,7 +578,6 @@ need to be learned.
         >>> processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         "[INST]  \nWhat is shown in this image? [/INST] The image appears to be a radar chart, which is a type of multi-dimensional plot (...)"
         ```"""
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states

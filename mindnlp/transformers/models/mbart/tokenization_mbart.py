@@ -57,7 +57,6 @@ class MBartTokenizer(PreTrainedTokenizer):
     """
     Tokenizer for MBart
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
@@ -270,7 +269,6 @@ class MBartTokenizer(PreTrainedTokenizer):
         Returns:
             `List[int]`: A list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
         """
-
         if already_has_special_tokens:
             return super().get_special_tokens_mask(
                 token_ids_0=token_ids_0, token_ids_1=token_ids_1, already_has_special_tokens=True
@@ -326,7 +324,6 @@ class MBartTokenizer(PreTrainedTokenizer):
             `List[int]`: List of zeros.
 
         """
-
         sep = [self.sep_token_id]
         cls = [self.cls_token_id]
 

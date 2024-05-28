@@ -30,7 +30,6 @@ class TinyBertEmbeddings(nn.Cell):
     """
     Construct the embeddings from word, position and token_type embeddings.
     """
-
     def __init__(self, config):
         """
         init BertEmbeddings
@@ -70,7 +69,6 @@ class TinyBertSelfAttention(nn.Cell):
     r"""
     TinyBertSelfAttention
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the TinyBertSelfAttention class.
@@ -165,7 +163,6 @@ class TinyBertAttention(nn.Cell):
     """
     TinyBertAttention
     """
-
     def __init__(self, config):
         """
         Initializes a new instance of the TinyBertAttention class.
@@ -210,7 +207,6 @@ class TinyBertSelfOutput(nn.Cell):
     """
     TinyBertSelfOutput
     """
-
     def __init__(self, config):
         """
         Initialize the TinyBertSelfOutput class.
@@ -263,7 +259,6 @@ class TinyBertIntermediate(nn.Cell):
     """
     TinyBertIntermediate
     """
-
     def __init__(self, config, intermediate_size=-1):
         """
         This method initializes a TinyBertIntermediate instance.
@@ -322,7 +317,6 @@ class TinyBertOutput(nn.Cell):
     """
     TinyBertOutput
     """
-
     def __init__(self, config, intermediate_size=-1):
         """
         Initializes an instance of the TinyBertOutput class.
@@ -378,7 +372,6 @@ class TinyBertLayer(nn.Cell):
     """
     TinyBertLayer
     """
-
     def __init__(self, config):
         """
         Initializes a new instance of the TinyBertLayer class.
@@ -428,7 +421,6 @@ class TinyBertEncoder(nn.Cell):
     """
     TinyBertEncoder
     """
-
     def __init__(self, config):
         """
         Initializes a TinyBertEncoder object with the given configuration.
@@ -483,7 +475,6 @@ class TinyBertPooler(nn.Cell):
     """
     TinyBertPooler
     """
-
     def __init__(self, config):
         """
         Initialize the TinyBertPooler class.
@@ -534,7 +525,6 @@ class TinyBertPredictionHeadTransform(nn.Cell):
     """
     TinyBertPredictionHeadTransform
     """
-
     def __init__(self, config):
         """
         Initializes a TinyBertPredictionHeadTransform object.
@@ -589,7 +579,6 @@ class TinyBertLMPredictionHead(nn.Cell):
     """
     TinyBertLMPredictionHead
     """
-
     def __init__(self, config, bert_model_embedding_weights):
         """
         Initializes the TinyBertLMPredictionHead.
@@ -642,7 +631,6 @@ class TinyBertOnlyMLMHead(nn.Cell):
     """
     TinyBertOnlyMLMHead
     """
-
     def __init__(self, config, bert_model_embedding_weights):
         """
         Initializes an instance of the TinyBertOnlyMLMHead class.
@@ -686,7 +674,6 @@ class TinyBertOnlyNSPHead(nn.Cell):
     """
     TinyBertOnlyNSPHead
     """
-
     def __init__(self, config):
         """
         Initializes the TinyBertOnlyNSPHead class.
@@ -729,7 +716,6 @@ class TinyBertPreTrainingHeads(nn.Cell):
     """
     TinyBertPreTrainingHeads
     """
-
     def __init__(self, config, bert_model_embedding_weights):
         """
         Initializes the TinyBertPreTrainingHeads class.
@@ -836,7 +822,6 @@ class TinyBertPreTrainedModel(PreTrainedModel):
         Returns:
             :obj:`nn.Cell`: A mindspore cell mapping vocabulary to hidden states.
         """
-
     def set_input_embeddings(self, new_embeddings: "nn.Cell"):
         """
         Set model's input embeddings.
@@ -844,30 +829,23 @@ class TinyBertPreTrainedModel(PreTrainedModel):
         Args:
             value (:obj:`nn.Cell`): A mindspore cell mapping vocabulary to hidden states.
         """
-
     def resize_position_embeddings(self, new_num_position_embeddings: int):
         """
         resize the model position embeddings if necessary
         """
-
     def get_position_embeddings(self):
         """
         get the model position embeddings if necessary
         """
-
     def save(self, save_dir: Union[str, os.PathLike]):
         "save pretrain model"
-
     #TODO
     def post_init(self):
         """post init."""
-
-
 class TinyBertModel(TinyBertPreTrainedModel):
     """
     TinyBERT model
     """
-
     def __init__(self, config):
         """
         Initializes a new instance of the TinyBertModel class.
@@ -939,7 +917,6 @@ class TinyBertForPreTraining(TinyBertPreTrainedModel):
         - the masked language modeling head, and
         - the next sentence classification head.
     """
-
     def __init__(self, config):
         """
         Initialize the TinyBertForPreTraining class.
@@ -989,7 +966,6 @@ class TinyBertFitForPreTraining(TinyBertPreTrainedModel):
     """
     TinyBertForPreTraining with fit dense
     """
-
     def __init__(self, config, fit_size=768):
         """
         Initialize a TinyBertFitForPreTraining object.
@@ -1029,7 +1005,6 @@ class TinyBertForMaskedLM(TinyBertPreTrainedModel):
     BERT model with the masked language modeling head.
     This module comprises the BERT model followed by the masked language modeling head.
     """
-
     def __init__(self, config):
         """
         Initializes a new instance of the TinyBertForMaskedLM class.
@@ -1079,7 +1054,6 @@ class TinyBertForNextSentencePrediction(TinyBertPreTrainedModel):
     BERT model with next sentence prediction head.
     This module comprises the BERT model followed by the next sentence classification head.
     """
-
     def __init__(self, config):
         """
         Initializes the TinyBertForNextSentencePrediction class.
@@ -1121,7 +1095,6 @@ class TinyBertForSentencePairClassification(TinyBertPreTrainedModel):
     """
     TinyBertForSentencePairClassification
     """
-
     def __init__(self, config, num_labels):
         """
         Initializes a new instance of the TinyBertForSentencePairClassification class.
@@ -1171,7 +1144,6 @@ class TinyBertForSequenceClassification(TinyBertPreTrainedModel):
     """
     TinyBertForSequenceClassification
     """
-
     def __init__(self, config, num_labels, fit_size=768):
         """
         Initializes a TinyBertForSequenceClassification instance.

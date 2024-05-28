@@ -102,7 +102,6 @@ class CLIPVisionModelOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     image_embeds: Optional[mindspore.Tensor] = None
     last_hidden_state: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor, ...]] = None
@@ -131,7 +130,6 @@ class CLIPTextModelOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     text_embeds: Optional[mindspore.Tensor] = None
     last_hidden_state: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor, ...]] = None
@@ -159,7 +157,6 @@ class CLIPOutput(ModelOutput):
         vision_model_output(`BaseModelOutputWithPooling`):
             The output of the [`CLIPVisionModel`].
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits_per_image: mindspore.Tensor = None
     logits_per_text: mindspore.Tensor = None
@@ -366,7 +363,6 @@ embeddings.
 
 class CLIPAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(self, config):
         """
         __init__(self, config)
@@ -438,7 +434,6 @@ class CLIPAttention(nn.Cell):
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
-
         bsz, tgt_len, embed_dim = hidden_states.shape
 
         # get query proj
@@ -671,7 +666,6 @@ class CLIPPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = CLIPConfig
     base_model_prefix = "clip"
     supports_gradient_checkpointing = True
@@ -746,7 +740,6 @@ class CLIPEncoder(nn.Cell):
     Args:
         config: CLIPConfig
     """
-
     def __init__(self, config: CLIPConfig):
         """
         Initializes an instance of the CLIPEncoder class.

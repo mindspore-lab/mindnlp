@@ -218,7 +218,6 @@ class Conv2d(_UniformOperator):
         >>> print(out.shape)
         (2, 16, 128, 112, 112)
     """
-
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
@@ -435,7 +434,6 @@ class Conv1d(_UniformOperator):
         >>> print(out.shape)
         (2, 8, 16, 2048)
     """
-
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
@@ -474,7 +472,6 @@ class Conv1d(_UniformOperator):
             - ValueError: If an invalid value is provided for any parameter.
             - TypeError: If the type of any parameter is incorrect.
         """
-        
         if use_karatsuba:
             super(Conv1d, self).__init__(HConv1d,
                                          KaratsubaConvImpl,
@@ -688,7 +685,6 @@ class Conv3d(_UniformOperator):
         >>> print(out.shape)
         (2, 64, 128, 32, 32, 32)
     """
-
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
@@ -728,7 +724,6 @@ class Conv3d(_UniformOperator):
         Raises:
             <Document any exceptions that the function may raise here>
         """
-        
         if use_karatsuba:
             super(Conv3d, self).__init__(HConv3d,
                                          KaratsubaConvImpl,
@@ -843,7 +838,6 @@ class BatchNorm1d(_UniformOperator):
         >>> print(y.shape)
         (2, 8, 64, 32)
     """
-
     def __init__(self,
                  num_features: int,
                  eps: float = 1e-5,
@@ -879,7 +873,6 @@ class BatchNorm1d(_UniformOperator):
         Raises:
             None
         """
-
         def __init__(self, num_features: int, eps: float = 1e-05, momentum: float = 0.9, affine: bool = True, gamma_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones', beta_init: Union[Tensor, str,
 Initializer, numbers.Number] = 'zeros', moving_mean_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros', moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones',
 use_batch_statistics: bool = True) -> None:
@@ -1006,7 +999,6 @@ class BatchNorm2d(_UniformOperator):
         >>> print(y.shape)
         (2, 8, 64, 32, 32)
     """
-
     def __init__(self,
                  num_features: int,
                  eps: float = 1e-5,
@@ -1042,7 +1034,6 @@ class BatchNorm2d(_UniformOperator):
             TypeError: If num_features is not an integer or if eps, momentum, gamma_init, beta_init, moving_mean_init, or moving_var_init is not a float or a valid initializer value.
             ValueError: If num_features is less than or equal to 0 or if data_format is not supported.
         """
-        
         super(BatchNorm2d, self).__init__(HBatchNorm2d,
                                           BatchNormImpl,
                                           num_features=num_features,
@@ -1138,7 +1129,6 @@ class BatchNorm3d(_UniformOperator):
         >>> print(y.shape)
         (2, 8, 64, 32, 32, 32)
     """
-
     def __init__(self,
                  num_features: int,
                  eps: float = 1e-5,
@@ -1268,7 +1258,6 @@ class Dense(_UniformOperator):
         >>> print(out.shape)
         (2, 34, 1, 7)
     """
-
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
@@ -1294,7 +1283,6 @@ class Dense(_UniformOperator):
         Raises:
             None
         """
-        
         if use_karatsuba:
             super(Dense, self).__init__(HDense,
                                         KaratsubaDenseImpl,

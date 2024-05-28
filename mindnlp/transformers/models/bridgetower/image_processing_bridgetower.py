@@ -182,7 +182,6 @@ class BridgeTowerImageProcessor(BaseImageProcessor):
             Whether to pad the image to the `(max_height, max_width)` of the images in the batch. Can be overridden by
             the `do_pad` parameter in the `preprocess` method.
     """
-
     model_input_names = ["pixel_values"]
 
     def __init__(

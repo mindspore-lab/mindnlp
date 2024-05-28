@@ -100,7 +100,6 @@ class TextClassificationPipeline(Pipeline):
     the up-to-date list of available models on
     [hf-mirror.com/models](https://hf-mirror.com/models?filter=text-classification).
     """
-
     return_all_scores = False
     function_to_apply = ClassificationFunction.NONE
 

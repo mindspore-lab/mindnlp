@@ -74,7 +74,6 @@ def _get_unpad_data(attention_mask):
 
 class OlmoLayerNorm(nn.Cell):
     """LayerNorm but with no learnable weight or bias."""
-
     def __init__(self, hidden_size: int) -> None:
         """
         Initializes a new instance of the OlmoLayerNorm class.
@@ -249,7 +248,6 @@ class OlmoRotaryEmbedding(nn.Cell):
 # Copied from transformers.models.llama.modeling_llama.LlamaLinearScalingRotaryEmbedding with Llama->Olmo
 class OlmoLinearScalingRotaryEmbedding(OlmoRotaryEmbedding):
     """OlmoRotaryEmbedding extended with linear scaling. Credits to the Reddit user /u/kaiokendev"""
-
     def construct(self, x, position_ids):
         """
         Constructs the cosine and sine embeddings for the given input tensor 'x' with positional encoding.
@@ -276,7 +274,6 @@ class OlmoLinearScalingRotaryEmbedding(OlmoRotaryEmbedding):
 # Copied from transformers.models.llama.modeling_llama.LlamaDynamicNTKScalingRotaryEmbedding with Llama->Olmo
 class OlmoDynamicNTKScalingRotaryEmbedding(OlmoRotaryEmbedding):
     """OlmoRotaryEmbedding extended with Dynamic NTK scaling. Credits to the Reddit users /u/bloc97 and /u/emozilla"""
-
     def construct(self, x, position_ids):
         """Constructs the OlmoDynamicNTKScalingRotaryEmbedding.
         
@@ -435,7 +432,6 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
 
 class OlmoAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     # Copied from transformers.models.llama.modeling_llama.LlamaAttention.__init__ with Llama->Olmo
     def __init__(self, config: OlmoConfig, layer_idx: Optional[int] = None):
         """
@@ -882,7 +878,6 @@ class OlmoModel(OlmoPreTrainedModel):
     Args:
         config: OlmoConfig
     """
-
     def __init__(self, config: OlmoConfig):
         """
         Initializes an instance of the `OlmoModel` class.

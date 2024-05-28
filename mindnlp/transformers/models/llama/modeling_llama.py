@@ -220,7 +220,6 @@ where frequency_dim is the dimension of the 'inv_freq' tensor.
 
 class LlamaLinearScalingRotaryEmbedding(LlamaRotaryEmbedding):
     """LlamaRotaryEmbedding extended with linear scaling. Credits to the Reddit user /u/kaiokendev"""
-
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
         """
         Initializes a new instance of the LlamaLinearScalingRotaryEmbedding class.
@@ -269,7 +268,6 @@ class LlamaLinearScalingRotaryEmbedding(LlamaRotaryEmbedding):
 
 class LlamaDynamicNTKScalingRotaryEmbedding(LlamaRotaryEmbedding):
     """LlamaRotaryEmbedding extended with Dynamic NTK scaling. Credits to the Reddit users /u/bloc97 and /u/emozilla"""
-
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
         """
         Initializes an instance of the LlamaDynamicNTKScalingRotaryEmbedding class.
@@ -469,7 +467,6 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
 
 class LlamaAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(self, config: LlamaConfig):
         """
         Initializes an instance of the LlamaAttention class.
@@ -607,7 +604,6 @@ class LlamaAttention(nn.Cell):
         Raises:
             ValueError: If the shape of attention weights or attention mask is not as expected.
         """
-
         bsz, q_len, _ = hidden_states.shape
 
         if self.config.pretraining_tp > 1:
@@ -864,7 +860,6 @@ class LlamaModel(LlamaPreTrainedModel):
     Args:
         config: LlamaConfig
     """
-
     def __init__(self, config: LlamaConfig):
         """
         Initializes a new instance of the LlamaModel class.
@@ -1262,7 +1257,6 @@ embeddings.
         >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
         ```"""
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states

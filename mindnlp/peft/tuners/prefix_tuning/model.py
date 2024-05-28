@@ -53,7 +53,6 @@ class PrefixEncoder(nn.Cell):
 
     Output shape: (`batch_size`, `num_virtual_tokens`, `2*layers*hidden`)
     """
-
     def __init__(self, config):
         """
         Initializes the PrefixEncoder class.

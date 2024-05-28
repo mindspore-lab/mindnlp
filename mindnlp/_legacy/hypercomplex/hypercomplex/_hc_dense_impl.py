@@ -57,13 +57,10 @@ class _DenseImpl(nn.Cell):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def construct(self,
                   x: Tensor,
                   y: Tensor) -> Tuple[Tensor, Tensor]:
         """construct"""
-
-
 class _BaseDenseImpl(_DenseImpl):
     r"""
     The base implementor part of the dense connected layer for all the hypercomplex numbers of the second order.
@@ -91,7 +88,6 @@ class _BaseDenseImpl(_DenseImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  weight_init: Union[Tensor, str, Initializer, numbers.Number],
                  weight_shape: tuple,

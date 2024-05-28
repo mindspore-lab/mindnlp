@@ -192,7 +192,6 @@ class Conv2d(_UniformOperator):
         >>> print(out.shape)
         (2, 16, 128, 112, 112)
     """
-
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
@@ -370,7 +369,6 @@ class Conv1d(_UniformOperator):
         >>> print(out.shape)
         (2, 8, 16, 2048)
     """
-
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
@@ -584,7 +582,6 @@ class Conv3d(_UniformOperator):
         >>> print(out.shape)
         (2, 64, 128, 32, 32, 32)
     """
-
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
@@ -716,7 +713,6 @@ class BatchNorm1d(_UniformOperator):
         >>> print(y.shape)
         (2, 8, 64, 32)
     """
-
     def __init__(self,
                  num_features: int,
                  eps: float = 1e-5,
@@ -841,7 +837,6 @@ class BatchNorm2d(_UniformOperator):
         >>> print(y.shape)
         (2, 8, 64, 32, 32)
     """
-
     def __init__(self,
                  num_features: int,
                  eps: float = 1e-5,
@@ -969,7 +964,6 @@ class BatchNorm3d(_UniformOperator):
         >>> print(y.shape)
         (2, 8, 64, 32, 32, 32)
     """
-
     def __init__(self,
                  num_features: int,
                  eps: float = 1e-5,
@@ -1003,7 +997,6 @@ class BatchNorm3d(_UniformOperator):
         Raises:
             None.
         """
-        
         super(BatchNorm3d, self).__init__(HBatchNorm3d,
                                           BatchNormImpl,
                                           num_features=num_features,
@@ -1080,7 +1073,6 @@ class Dense(_UniformOperator):
         >>> print(out.shape)
         (2, 34, 1, 7)
     """
-
     def __init__(self,
                  in_channels: int,
                  out_channels: int,

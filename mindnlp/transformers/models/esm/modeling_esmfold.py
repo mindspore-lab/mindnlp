@@ -108,7 +108,6 @@ class EsmForProteinFoldingOutput(ModelOutput):
         max_predicted_aligned_error (`mindspore.Tensor`):
             Per-sample maximum predicted error.
     """
-
     frames: mindspore.Tensor = None
     sidechain_frames: mindspore.Tensor = None
     unnormalized_angles: mindspore.Tensor = None
@@ -277,7 +276,6 @@ class EsmFoldLinear(nn.Dense):
 
     Implements the initializers in 1.11.4, plus some additional ones found in the code.
     """
-
     def __init__(
         self,
         in_dim: int,
@@ -396,7 +394,6 @@ class EsmFoldAttention(nn.Cell):
     """
     Standard multi-head attention using AlphaFold's default layer initialization. Allows multiple bias vectors.
     """
-
     def __init__(
         self,
         c_q: int,
@@ -727,7 +724,6 @@ class EsmFoldTriangleMultiplicativeUpdate(nn.Cell):
     """
     Implements Algorithms 11 and 12.
     """
-
     def __init__(self, config, _outgoing=True):
         """
         Initializes an instance of the EsmFoldTriangleMultiplicativeUpdate class.
@@ -1084,7 +1080,6 @@ class EsmFoldPreTrainedModel(EsmPreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     # Subclass `EsMPreTrainedModel` to deal with special init
     def _init_weights(self, cell):
         """Initialize the weights"""
@@ -1215,7 +1210,6 @@ class EsmFoldSelfAttention(nn.Cell):
         Outputs:
           sequence projection (B x L x embed_dim), attention maps (B x L x L x num_heads)
         """
-
         t = self.proj(x).view(*x.shape[:2], self.num_heads, -1)
         t = t.permute(0, 2, 1, 3)
         q, k, v = t.chunk(3, axis=-1)
@@ -1248,7 +1242,6 @@ class EsmFoldDropout(nn.Cell):
     """
     Implementation of dropout with the ability to share the dropout mask along a particular dimension.
     """
-
     def __init__(self, r: float, batch_dim: Union[int, List[int]]):
         """
         Initializes an instance of the EsmFoldDropout class.
@@ -1366,7 +1359,6 @@ class EsmFoldSequenceToPair(nn.Cell):
         Intermediate state:
           B x L x L x 2*inner_dim
         """
-
         assert len(sequence_state.shape) == 3
 
         s = self.layernorm(sequence_state)
@@ -1796,7 +1788,6 @@ def get_axial_mask(mask):
     Output:
       mask: B x L x L tensor of booleans
     """
-
     if mask is None:
         return None
 
@@ -1950,7 +1941,6 @@ class EsmFoldAngleResnet(nn.Cell):
     """
     Implements Algorithm 20, lines 11-14
     """
-
     def __init__(self, config):
         '''
         Initializes the EsmFoldAngleResnet class.
@@ -2032,7 +2022,6 @@ class EsmFoldInvariantPointAttention(nn.Cell):
     """
     Implements Algorithm 22.
     """
-
     def __init__(self, config):
         '''Initializes an instance of the EsmFoldInvariantPointAttention class.
         
@@ -2254,7 +2243,6 @@ class EsmFoldBackboneUpdate(nn.Cell):
     """
     Implements part of Algorithm 23.
     """
-
     def __init__(self, config):
         """
         Initializes the EsmFoldBackboneUpdate class.
@@ -2777,7 +2765,6 @@ a Coordinates object.
         Output:
           predicted_structure: B x L x (num_atoms_per_residue * 3) tensor wrapped in a Coordinates object
         """
-
         s_s_0 = seq_feats
         s_z_0 = pair_feats
 

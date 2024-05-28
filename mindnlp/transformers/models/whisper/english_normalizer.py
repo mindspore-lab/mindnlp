@@ -48,7 +48,6 @@ def remove_symbols_and_diacritics(s: str, keep=""):
     Replace any other markers, symbols, and punctuations with a space, and drop any diacritics (category 'Mn' and some
     manual mappings)
     """
-
     def replace_character(char):
         if char in keep:
             return char
@@ -148,7 +147,6 @@ class EnglishNumberNormalizer:
     - spell out `one` and `ones`
     - interpret successive single-digit numbers as nominal: `one oh one` -> `101`
     """
-
     def __init__(self):
         """Initializes an instance of the EnglishNumberNormalizer class.
         
@@ -643,7 +641,6 @@ class EnglishSpellingNormalizer:
 
     [1] https://www.tysto.com/uk-us-spelling-list.html
     """
-
     def __init__(self, english_spelling_mapping):
         """
         Initialize a new instance of the EnglishSpellingNormalizer class.

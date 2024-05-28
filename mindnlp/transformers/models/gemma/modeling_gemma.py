@@ -352,7 +352,6 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
 
 class GemmaAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     # Ignore copy
     def __init__(self, config: GemmaConfig, layer_idx: Optional[int] = None):
         """
@@ -758,7 +757,6 @@ class GemmaModel(GemmaPreTrainedModel):
     Args:
         config: GemmaConfig
     """
-
     def __init__(self, config: GemmaConfig):
         """
         Initializes a GemmaModel instance.

@@ -233,7 +233,6 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
     See the up-to-date list of available models on
     [hf-mirror.com/models](https://hf-mirror.com/models?filter=document-question-answering).
     """
-
     def __init__(self, *args, **kwargs):
         """
         Initializes a new instance of the DocumentQuestionAnsweringPipeline class.

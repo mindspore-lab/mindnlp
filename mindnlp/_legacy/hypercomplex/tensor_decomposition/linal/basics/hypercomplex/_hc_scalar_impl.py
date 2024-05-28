@@ -25,7 +25,6 @@ perform certain operations using the provided 'visitor' object.
     
     Note: This class does not provide any implementation details for the abstract methods, as they are meant to be implemented by the subclasses.
     """
-
     @abstractmethod
     def sqrt(self, x: np.float64, y: np.float64) -> Tuple[np.float64, np.float64]:
         r"""

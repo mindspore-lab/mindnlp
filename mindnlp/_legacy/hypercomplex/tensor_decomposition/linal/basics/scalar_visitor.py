@@ -44,7 +44,6 @@ visit_complex, and visit_dual methods.
     visitor.visit_dual(dual_scalar)
     
     """
-
     @abstractmethod
     def visit_real(self, s: RealScalar, *args, **kwargs) -> None:
         r"""

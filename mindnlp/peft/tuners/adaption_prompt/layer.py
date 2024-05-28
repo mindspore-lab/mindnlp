@@ -22,7 +22,6 @@ from .config import TRANSFORMERS_MODEL_CONFIG
 
 class AdaptedAttention(nn.Cell):
     """This cell wraps a LLamaAttention cell and injects adaption prompts."""
-
     def __init__(self, model_type: str, adapter_len: int, model):
         """
         Initialize object.

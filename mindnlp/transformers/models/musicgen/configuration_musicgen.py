@@ -74,7 +74,6 @@ class MusicgenDecoderConfig(PretrainedConfig):
             Number of channels in the audio data. Either 1 for mono or 2 for stereo. Stereo models generate a separate
             audio stream for the left/right output channels. Mono models generate a single audio stream output.
     """
-
     model_type = "musicgen_decoder"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -219,7 +218,6 @@ class MusicgenConfig(PretrainedConfig):
     >>> musicgen_config = MusicgenConfig.from_pretrained("musicgen-model")
     >>> model = MusicgenForConditionalGeneration.from_pretrained("musicgen-model", config=musicgen_config)
     ```"""
-
     model_type = "musicgen"
     is_composition = True
 
@@ -269,7 +267,6 @@ class MusicgenConfig(PretrainedConfig):
         Returns:
             [`MusicgenConfig`]: An instance of a configuration object
         """
-
         return cls(
             text_encoder=text_encoder_config.to_dict(),
             audio_encoder=audio_encoder_config.to_dict(),

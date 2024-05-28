@@ -76,7 +76,6 @@ class IA3Model(BaseTuner):
 
     >   - **peft_config** ([`IA3Config`]): The configuration of the (IA)^3  model. 
     """
-
     prefix: str = "ia3_"
 
     def __init__(self, model, config, adapter_name):
@@ -256,7 +255,6 @@ class IA3Model(BaseTuner):
         Raises:
             None
         """
-
         def _create_and_replace(self, ia3_config, adapter_name, target, target_name, parent):
             """
             Creates a new cell and replaces the target cell with it.

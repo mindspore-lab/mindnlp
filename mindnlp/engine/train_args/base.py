@@ -79,7 +79,6 @@ class OptimizerNames(ExplicitEnum):
     """
     Stores the acceptable string identifiers for optimizers.
     """
-
     ADAMW = "adamw"
     SGD = "sgd"
 
@@ -589,7 +588,6 @@ class TrainingArguments:
             [original code](https://github.com/neelsjain/NEFTune). Support transformers `PreTrainedModel` and also
             `PeftModel` from peft.
     """
-
     output_dir: str = field(
         metadata={"help": "The output directory where the model predictions and checkpoints will be written."},
     )
@@ -1228,7 +1226,6 @@ class TrainingArguments:
           `nn.DistributedDataParallel`).
         - `ParallelMode.TPU`: several TPU cores.
         """
-
     @property
     def world_size(self):
         """
@@ -1248,7 +1245,6 @@ class TrainingArguments:
         """
         The index of the local process used.
         """
-
         return 0
 
     @property
@@ -1284,7 +1280,6 @@ class TrainingArguments:
 
         The choice between the main and replica process settings is made according to the return value of `should_log`.
         """
-
         # convert to int
         log_level = trainer_log_levels[self.log_level]
         log_level_replica = trainer_log_levels[self.log_level_replica]

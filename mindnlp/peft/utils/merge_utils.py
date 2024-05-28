@@ -114,7 +114,6 @@ def calculate_majority_sign_mask(
     Returns:
         `mindspore.Tensor`: The majority sign mask.
     """
-
     sign = tensor.sign()
     if method == "total":
         sign_magnitude = tensor.sum(dim=0)

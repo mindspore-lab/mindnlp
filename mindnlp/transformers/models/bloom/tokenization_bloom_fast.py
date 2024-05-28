@@ -94,7 +94,6 @@ class BloomTokenizerFast(PreTrainedTokenizerFast):
         trim_offsets (`bool`, *optional*, defaults to `True`):
             Whether or not the post-processing step should trim offsets to avoid including whitespaces.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     model_input_names = ["input_ids", "attention_mask"]

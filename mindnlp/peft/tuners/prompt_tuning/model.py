@@ -56,7 +56,6 @@ class PromptEmbedding(nn.Cell):
 
     Output Shape: (`batch_size`, `total_virtual_tokens`, `token_dim`)
     """
-
     def __init__(self, config, word_embeddings):
         r"""
         Initialize the PromptEmbedding class.

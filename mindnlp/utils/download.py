@@ -817,7 +817,6 @@ def get_checkpoint_shard_files(
     For the description of each arg, see [`PreTrainedModel.from_pretrained`]. `index_filename` is the full path to the
     index (downloaded and cached if `pretrained_model_name_or_path` is a model ID on the Hub).
     """
-
     if not os.path.isfile(index_filename):
         raise ValueError(f"Can't find a checkpoint index ({index_filename}) in {pretrained_model_name_or_path}.")
 

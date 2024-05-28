@@ -32,7 +32,6 @@ class AllGather(msAllGather):
         Raises:
             No specific exceptions are raised within this method. However, exceptions may be raised within the called methods like check_elim, arg.init_data(), and _run_op.
         """
-        
         should_elim, output = self.check_elim(*args)
         for arg in args:
             if isinstance(arg, Parameter) and arg.has_init:

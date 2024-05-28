@@ -37,7 +37,6 @@ class BertConfig(PretrainedConfig):
     """
     Configuration for BERT-base
     """
-
     model_type = "bert"
 
     def __init__(

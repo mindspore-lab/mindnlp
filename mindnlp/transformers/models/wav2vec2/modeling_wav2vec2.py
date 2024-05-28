@@ -105,7 +105,6 @@ class Wav2Vec2ForPreTrainingOutput(ModelOutput):
         diversity_loss (*optional*, returned when `sample_negative_indices` are passed, `Tensor` of shape `(1,)`):
             The diversity loss (L_d) as stated in the [official paper](https://arxiv.org/pdf/2006.11477.pdf) .
     """
-
     loss: Optional[Tensor] = None
     projected_states: Tensor = None
     projected_quantized_states: Tensor = None
@@ -619,7 +618,6 @@ class Wav2Vec2SamePadLayer(nn.Cell):
 
 class Wav2Vec2FeatureEncoder(nn.Cell):
     """Construct the features from raw audio waveform"""
-
     def __init__(self, config: Wav2Vec2Config):
         """
         Initializes a new instance of the Wav2Vec2FeatureEncoder class.
@@ -786,7 +784,6 @@ normalization, projection, and dropout layers.
 # Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->Wav2Vec2
 class Wav2Vec2Attention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(
         self,
         embed_dim: int,
@@ -863,7 +860,6 @@ class Wav2Vec2Attention(nn.Cell):
         output_attentions: bool = False,
     ) -> Tuple[Tensor, Optional[Tensor], Optional[Tuple[Tensor]]]:
         """Input shape: Batch x Time x Channel"""
-
         # if key_value_states are provided this layer is used as a cross-attention layer
         # for the decoder
         is_cross_attention = key_value_states is not None
@@ -1494,7 +1490,6 @@ class Wav2Vec2GumbelVectorQuantizer(nn.Cell):
     Vector quantization using gumbel softmax. See `[CATEGORICAL REPARAMETERIZATION WITH
     GUMBEL-SOFTMAX](https://arxiv.org/pdf/1611.01144.pdf) for more information.
     """
-
     def __init__(self, config: Wav2Vec2Config):
         """
         Initializes a new instance of the Wav2Vec2GumbelVectorQuantizer class.
@@ -1815,7 +1810,6 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = Wav2Vec2Config
     base_model_prefix = "wav2vec2"
     main_input_name = "input_values"
@@ -1861,7 +1855,6 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
         """
         Computes the output length of the convolutional layers
         """
-
         add_adapter = self.config.add_adapter if add_adapter is None else add_adapter
 
         def _conv_out_length(input_length, kernel_size, stride):
@@ -2233,7 +2226,6 @@ returns the model outputs.
         Masks extracted features along time axis and/or along feature axis according to
         [SpecAugment](https://arxiv.org/abs/1904.08779).
         """
-
         # `config.apply_spec_augment` can set masking to False
         if not getattr(self.config, "apply_spec_augment", True):
             return hidden_states
@@ -2501,7 +2493,6 @@ class Wav2Vec2ForPreTraining(Wav2Vec2PreTrainedModel):
         ...     input_values, mask_time_indices=mask_time_indices, sampled_negative_indices=sampled_negative_indices
         ... ).loss
         ```"""
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if mask_time_indices is not None:
@@ -2770,7 +2761,6 @@ tasks.
 
         This method is **not** supposed to be called by the user and is prone to be changed in the future.
         """
-
         # Note that `tie_weights` is usually used to tie input and output embedding weights. The method is re-purposed to
         # correctly load adapter layers for Wav2Vec2 so that we do not have to introduce a new API to
         # [`PreTrainedModel`]. While slightly hacky, Wav2Vec2 never has to tie input and output embeddings, so that it is
@@ -2827,7 +2817,6 @@ tasks.
             All labels set to `-100` are ignored (masked), the loss is only computed for labels in `[0, ...,
             config.vocab_size - 1]`.
         """
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.wav2vec2(
@@ -2968,7 +2957,6 @@ providing flexibility in handling different components and parameters.
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         output_hidden_states = True if self.config.use_weighted_layer_sum else output_hidden_states
 
@@ -3104,7 +3092,6 @@ and attentions.
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         output_hidden_states = True if self.config.use_weighted_layer_sum else output_hidden_states
 
@@ -3371,7 +3358,6 @@ outputting hidden states and attentions based on the configuration settings.
         """
         Computes the output length of the TDNN layers
         """
-
         def _conv_out_length(input_length, kernel_size, stride):
             # 1D convolutional layer output length formula taken
             # from https://pyops.org/docs/stable/generated/ops.nn.Conv1d.html
@@ -3397,7 +3383,6 @@ outputting hidden states and attentions based on the configuration settings.
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         output_hidden_states = True if self.config.use_weighted_layer_sum else output_hidden_states
 

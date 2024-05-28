@@ -32,7 +32,6 @@ PICO_TO_ANGSTROM = 0.01
 @dataclasses.dataclass(frozen=True)
 class Protein:
     """Protein structure representation."""
-
     # Cartesian coordinates of atoms in angstroms. The atom types correspond to
     # residue_constants.atom_types, i.e. the first three are N, CA, CB.
     atom_positions: np.ndarray  # [num_res, num_atom_type, 3]

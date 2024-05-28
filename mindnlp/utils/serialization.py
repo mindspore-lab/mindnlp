@@ -80,7 +80,6 @@ class PyTorchFileReader:
     N.B.: ScriptObjects are not depickleable or accessible via this DirectoryReader
     class due to ScriptObjects requiring an actual PyTorchFileReader instance.
     """
-
     def __init__(self, file):
         """
         Initializes a new instance of PyTorchFileReader.
@@ -321,7 +320,6 @@ def _check_seekable(f) -> bool:
         UnsupportedOperation: If the file object does not support seek or tell operations.
         AttributeError: If the file object does not have the seek or tell attribute.
     """
-
     def raise_err_msg(patterns, e):
         for p in patterns:
             if p in str(e):

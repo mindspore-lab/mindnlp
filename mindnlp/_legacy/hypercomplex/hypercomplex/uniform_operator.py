@@ -37,7 +37,6 @@ class _UniformOperator(Cell):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  hc_op,
                  hc_impl,

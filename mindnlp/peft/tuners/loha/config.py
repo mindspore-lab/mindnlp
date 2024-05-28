@@ -62,7 +62,6 @@ class LoHaConfig(LycorisConfig):
         modules_to_save (`Optional[List[str]]`):
             List of modules apart from adapter layers to be set as trainable and saved in the final checkpoint.
     """
-
     r: int = field(default=8, metadata={"help": "LoHa rank"})
     alpha: int = field(default=8, metadata={"help": "LoHa alpha"})
     rank_dropout: float = field(

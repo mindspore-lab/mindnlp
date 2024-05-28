@@ -25,7 +25,6 @@ class Cache:
     """
     Base, abstract class for all caches. The actual data structure is specific to each subclass.
     """
-
     def update(
         self,
         key_states: mindspore.Tensor,
@@ -79,7 +78,6 @@ class DynamicCache(Cache):
     It stores the Key and Value states as a list of tensors, one for each layer. The expected shape for each tensor is
     `[batch_size, num_heads, seq_len, head_dim]`.
     """
-
     def __init__(self) -> None:
         r"""
         Initializes an instance of the 'DynamicCache' class.
@@ -221,7 +219,6 @@ class SinkCache(Cache):
         num_sink_tokens (`int`):
             The number of sink tokens. See the original paper for more information.
     """
-
     def __init__(self, window_length: int, num_sink_tokens: int) -> None:
         r"""
         Initializes an instance of the SinkCache class.
@@ -452,7 +449,6 @@ class StaticCache(Cache):
         dtype (*optional*, defaults to `torch.float32`):
             The default `dtype` to use when initializing the layer.
     """
-
     def __init__(self, config: PretrainedConfig, max_batch_size: int, max_cache_len: int, dtype=None) -> None:
         r"""
         Initializes a StaticCache object.

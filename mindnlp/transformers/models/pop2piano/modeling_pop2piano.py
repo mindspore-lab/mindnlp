@@ -964,7 +964,6 @@ class Pop2PianoPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = Pop2PianoConfig
     base_model_prefix = "transformer"
     is_parallelizable = False
@@ -1391,7 +1390,6 @@ options for hidden states and attentions.
 
 class Pop2PianoConcatEmbeddingToMel(nn.Cell):
     """Embedding Matrix for `composer` tokens."""
-
     def __init__(self, config):
         """
         Initializes the Pop2PianoConcatEmbeddingToMel class.
@@ -1820,7 +1818,6 @@ composer name, generation config, and attention mask as inputs.
                     - [`~generation.GenerateEncoderDecoderOutput`],
                     - [`~generation.GenerateBeamEncoderDecoderOutput`]
         """
-
         if generation_config is None:
             generation_config = self.generation_config
         generation_config.update(**kwargs)

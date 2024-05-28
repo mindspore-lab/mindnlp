@@ -45,7 +45,6 @@ __all__ = [
 
 class NezhaRelativePositionsEncoding(nn.Cell):
     """Implement the Functional Relative Position Encoding"""
-
     def __init__(self, length, depth, max_relative_position=127):
         """
         Initializes the NezhaRelativePositionsEncoding object with the specified parameters.
@@ -111,7 +110,6 @@ class NezhaRelativePositionsEncoding(nn.Cell):
 
 class NezhaEmbeddings(nn.Cell):
     """Construct the embeddings from word and token_type embeddings."""
-
     def __init__(self, config):
         """
         Initialize the NezhaEmbeddings class.
@@ -198,7 +196,6 @@ class NezhaEmbeddings(nn.Cell):
 
 class NezhaSelfAttention(nn.Cell):
     """Self attention layer for NEZHA"""
-
     def __init__(self, config):
         '''
         This method initializes the NezhaSelfAttention class.
@@ -244,7 +241,6 @@ class NezhaSelfAttention(nn.Cell):
 
     def transpose_for_scores(self, input_x: Tensor) -> Tensor:
         """transpose for scores"""
-
         new_x_shape = input_x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
         input_x = input_x.view(tuple(new_x_shape))
         return input_x.permute(0, 2, 1, 3)
@@ -358,7 +354,6 @@ attention_probs. If self.is_decoder is True, the output also includes the past_k
 
 class NezhaSelfOutput(nn.Cell):
     """NezhaSelfOutput"""
-
     def __init__(self, config):
         """
         Initializes a new instance of the NezhaSelfOutput class.
@@ -412,7 +407,6 @@ class NezhaSelfOutput(nn.Cell):
 
 class NezhaAttention(nn.Cell):
     """Nezha Attention"""
-
     def __init__(self, config):
         """
         Initializes an instance of the NezhaAttention class.
@@ -498,7 +492,6 @@ set to True.
 
 class NezhaIntermediate(nn.Cell):
     """Nezha Intermediate"""
-
     def __init__(self, config):
         """
         Initializes a NezhaIntermediate object with the provided configuration.
@@ -546,7 +539,6 @@ class NezhaIntermediate(nn.Cell):
 
 class NezhaOutput(nn.Cell):
     """Nezha Output"""
-
     def __init__(self, config):
         """
         Initializes a new instance of the NezhaOutput class.
@@ -592,7 +584,6 @@ class NezhaOutput(nn.Cell):
 
 class NezhaLayer(nn.Cell):
     """Nezha Layer"""
-
     def __init__(self, config):
         """
         Initializes a NezhaLayer object with the provided configuration.
@@ -713,7 +704,6 @@ class NezhaLayer(nn.Cell):
 
 class NezhaEncoder(nn.Cell):
     """Nezha Encoder"""
-
     def __init__(self, config):
         """
         Initializes a NezhaEncoder instance with the provided configuration.
@@ -839,7 +829,6 @@ class NezhaEncoder(nn.Cell):
 
 class NezhaPooler(nn.Cell):
     """Nezha Pooler"""
-
     def __init__(self, config):
         """
         Initializes the NezhaPooler class.
@@ -886,7 +875,6 @@ class NezhaPooler(nn.Cell):
 
 class NezhaPredictionHeadTransform(nn.Cell):
     """Nezha Predicton Head Transform"""
-
     def __init__(self, config):
         """
         Initializes the NezhaPredictionHeadTransform class.
@@ -938,7 +926,6 @@ class NezhaPredictionHeadTransform(nn.Cell):
 
 class NezhaLMPredictionHead(nn.Cell):
     """Nezha LMLMPredictionHead"""
-
     def __init__(self, config):
         """Initializes the NezhaLMPredictionHead class.
         
@@ -988,7 +975,6 @@ class NezhaLMPredictionHead(nn.Cell):
 
 class NezhaOnlyMLMHead(nn.Cell):
     """Nezha OnlyMLMHead"""
-
     def __init__(self, config):
         """Initializes a new instance of the NezhaOnlyMLMHead class.
         
@@ -1026,7 +1012,6 @@ class NezhaOnlyMLMHead(nn.Cell):
 
 class NezhaOnlyNSPHead(nn.Cell):
     """Nezha OnlyNSPHead"""
-
     def __init__(self, config):
         """
         Initializes a new instance of the NezhaOnlyNSPHead class.
@@ -1074,7 +1059,6 @@ class NezhaOnlyNSPHead(nn.Cell):
 
 class NezhaPreTrainingHeads(nn.Cell):
     """Nezha PreTrainingHeads"""
-
     def __init__(self, config):
         """
         Initializes the NezhaPreTrainingHeads class.
@@ -1121,7 +1105,6 @@ class NezhaPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = NezhaConfig
     base_model_prefix = "nezha"
     supports_gradient_checkpointing = True
@@ -1238,7 +1221,6 @@ child classes to add custom initialization logic or perform additional setup ste
 
 class NezhaModel(NezhaPreTrainedModel):
     """Nezha Model"""
-
     def __init__(self, config, add_pooling_layer=True):
         """
         Initializes a new instance of the NezhaModel class.
@@ -1407,7 +1389,6 @@ class NezhaModel(NezhaPreTrainedModel):
 
 class NezhaForPreTraining(NezhaPreTrainedModel):
     """NezhaForPreTraining"""
-
     _keys_to_ignore_on_load_missing = ["cls.predictions.decoder"]
     def __init__(self, config):
         """
@@ -1653,7 +1634,6 @@ class NezhaForNextSentencePrediction(NezhaPreTrainedModel):
             ValueError: If the input tensors do not have the correct shape.
         
         """
-
         if "next_sentence_label" in kwargs:
             #warnings.warn(
             #     "The `next_sentence_label` argument is deprecated and will be removed in a future version, use"
@@ -1886,7 +1866,6 @@ class NezhaForTokenClassification(NezhaPreTrainedModel):
         labels (`mindspore.Tensor[int64]` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
-
         outputs = self.nezha(
             input_ids,
             attention_mask=attention_mask,
@@ -1953,7 +1932,6 @@ class NezhaForQuestionAnswering(NezhaPreTrainedModel):
             Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
             are not taken into account for computing the loss.
         """
-
         outputs = self.nezha(
             input_ids,
             attention_mask=attention_mask,

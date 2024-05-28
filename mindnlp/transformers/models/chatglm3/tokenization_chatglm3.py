@@ -244,7 +244,6 @@ Additionally, it offers properties for accessing special tokens and their IDs, a
     
     The 'ChatGLM3Tokenizer' class provides a comprehensive set of methods for tokenization and model input construction, making it suitable for use in chat model applications.
     """
-
     vocab_files_names = {"vocab_file": "tokenizer.model"}
     model_input_names = ["input_ids", "attention_mask", "position_ids"]
 

@@ -79,7 +79,6 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
     This class also contains the added tokens in a unified way on top of all tokenizers so we don't have to handle the
     specific vocabulary augmentation methods of the various underlying dictionary structures (BPE, sentencepiece...).
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     slow_tokenizer_class: PreTrainedTokenizer = None
 

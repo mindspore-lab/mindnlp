@@ -98,7 +98,6 @@ class CpmBeeLayerNorm(nn.Cell):
     """
     We use Root Mean Square (RMS) Layer Normalization, please see https://arxiv.org/abs/1910.07467 for details."
     """
-
     def __init__(self, config: CpmBeeConfig):
         """
         Initializes a CpmBeeLayerNorm object with the provided configuration.
@@ -1011,7 +1010,6 @@ class CpmBeeRotaryEmbedding(nn.Cell):
     to "...<mask_0>...<mask_1>...<unk_0>...<unk_1>..."" to help model to specify different special tokens and unk
     tokens.
     """
-
     def __init__(self, config: CpmBeeConfig):
         '''
         Initializes a new instance of the CpmBeeRotaryEmbedding class.
@@ -1067,7 +1065,6 @@ class CpmBeeEmbeddingExt(nn.Embedding):
     """
     Contains a RotaryEmbedding.
     """
-
     def __init__(self, config: CpmBeeConfig):
         """
         Initialize the CpmBeeEmbeddingExt object.
@@ -1142,7 +1139,6 @@ class CpmBeePreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = CpmBeeConfig
     base_model_prefix = "cpmbee"
     supports_gradient_checkpointing = True
@@ -1587,7 +1583,6 @@ class CpmBeeBeamSearchScorer(BeamSearchScorer):
     2. The `process` will update the beam_states
     3. The `finalize` will just return the best hypotheses as a list.
     """
-
     def __init__(
         self,
         batch_size: int,
@@ -2357,7 +2352,6 @@ returns a dictionary or a list of dictionaries with the '<ans>' field filled wit
         """
         Concatenate the history input and current input.
         """
-
         old_past_states = model_kwargs["past_states"]
         model_kwargs["past_states"] = {
             "buffer_position": ops.cat([old_past_states["buffer_position"], model_inputs["position"]], axis=-1),
@@ -2437,7 +2431,6 @@ returns a dictionary or a list of dictionaries with the '<ans>' field filled wit
         **model_kwargs,
     ) -> Tuple[mindspore.Tensor, Dict[str, Any]]:
         """Expands tensors from [batch_size, ...] to [batch_size * expand_size, ...]"""
-
         # do not expand ext_table_ids and ext_table_sub
         def _expand_dict_for_generation(dict_to_expand):
             for key in dict_to_expand:

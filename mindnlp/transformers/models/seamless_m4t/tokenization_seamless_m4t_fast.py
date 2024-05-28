@@ -119,7 +119,6 @@ class SeamlessM4TTokenizerFast(PreTrainedTokenizerFast):
         additional_special_tokens (tuple or list of `str` or `tokenizers.AddedToken`, *optional*):
             A tuple or a list of additional special tokens.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -328,7 +327,6 @@ class SeamlessM4TTokenizerFast(PreTrainedTokenizerFast):
             `List[int]`: List of zeros.
 
         """
-
         sep = [self.sep_token_id]
         cls = [self.cls_token_id]
 

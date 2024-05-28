@@ -64,7 +64,6 @@ class Wav2Vec2FeatureExtractor(SequenceFeatureExtractor):
             passed for batched inference.
 
             </Tip>"""
-
     model_input_names = ["input_values", "attention_mask"]
 
     def __init__(
@@ -189,7 +188,6 @@ class Wav2Vec2FeatureExtractor(SequenceFeatureExtractor):
                 `sampling_rate` at the forward call to prevent silent errors.
             padding_value (`float`, defaults to 0.0):
         """
-
         if sampling_rate is not None:
             if sampling_rate != self.sampling_rate:
                 raise ValueError(

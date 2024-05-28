@@ -60,7 +60,6 @@ def _is_mindspore(x):
     Raises:
         None: This function does not raise any exceptions.
     """
-
     return isinstance(x, mindspore.Tensor)
 
 
@@ -74,7 +73,6 @@ class ExplicitEnum(str, Enum):
     """
     Enum with more explicit error message for missing values.
     """
-
     @classmethod
     def _missing_(cls, value):
         """
@@ -99,7 +97,6 @@ class TensorType(ExplicitEnum):
     Possible values for the `return_tensors` argument in [`PreTrainedTokenizerBase.__call__`]. Useful for
     tab-completion in an IDE.
     """
-
     MINDSPORE = "ms"
     NUMPY = "np"
 
@@ -108,7 +105,6 @@ class PaddingStrategy(ExplicitEnum):
     Possible values for the `padding` argument in [`PreTrainedTokenizerBase.__call__`]. Useful for tab-completion in an
     IDE.
     """
-
     LONGEST = "longest"
     MAX_LENGTH = "max_length"
     DO_NOT_PAD = "do_not_pad"
@@ -127,7 +123,6 @@ class ModelOutput(OrderedDict):
 
     </Tip>
     """
-
     def __post_init__(self):
         """Perform post-initialization actions for the ModelOutput class.
         
@@ -360,7 +355,6 @@ class cached_property(property):
 
     Built-in in functools from Python 3.8.
     """
-
     def __get__(self, obj, objtype=None):
         """ 
         Method '__get__' in the class 'cached_property'.
@@ -443,7 +437,6 @@ def to_py_obj(obj):
     """
     Convert a TensorFlow tensor, PyTorch tensor, Numpy array or python list to a python list.
     """
-
     framework_to_py_obj = {
         "ms": lambda obj: obj.asnumpy().tolist(),
         "np": lambda obj: obj.tolist(),
@@ -469,7 +462,6 @@ def to_numpy(obj):
     """
     Convert a TensorFlow tensor, PyTorch tensor, Numpy array or python list to a Numpy array.
     """
-
     framework_to_numpy = {
         "ms": lambda obj: obj.asnumpy(),
         "np": lambda obj: obj,
@@ -493,7 +485,6 @@ class ContextManagers:
     Wrapper for `contextlib.ExitStack` which enters a collection of context managers. Adaptation of `ContextManagers`
     in the `fastcore` library.
     """
-
     def __init__(self, context_managers: List[ContextManager]):
         """
         __init__

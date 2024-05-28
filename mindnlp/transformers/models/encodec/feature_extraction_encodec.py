@@ -48,7 +48,6 @@ class EncodecFeatureExtractor(SequenceFeatureExtractor):
             Defines the overlap between each chunk. It is used to compute the `chunk_stride` using the following
             formulae : `int((1.0 - self.overlap) * self.chunk_length)`.
     """
-
     model_input_names = ["input_values", "padding_mask"]
 
     def __init__(

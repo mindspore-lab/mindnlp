@@ -85,8 +85,6 @@ class BeitModelOutputWithPooling(BaseModelOutputWithPooling):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
-
 def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = False) -> mindspore.Tensor:
     """
     Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
@@ -109,7 +107,6 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
 
 class BeitDropPath(nn.Cell):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
-
     def __init__(self, drop_prob: Optional[float] = None) -> None:
         """
         Initializes an instance of the BeitDropPath class.
@@ -172,7 +169,6 @@ class BeitEmbeddings(nn.Cell):
     Construct the CLS token, position and patch embeddings. Optionally, also the mask token.
 
     """
-
     def __init__(self, config: BeitConfig) -> None:
         """
         Initialize the BeitEmbeddings class.
@@ -249,7 +245,6 @@ class BeitPatchEmbeddings(nn.Cell):
     `hidden_states` (patch embeddings) of shape `(batch_size, seq_length, hidden_size)` to be consumed by a
     Transformer.
     """
-
     def __init__(self, config):
         """
         Args:
@@ -480,7 +475,6 @@ class BeitSelfOutput(nn.Cell):
     The residual connection is defined in BeitLayer instead of here (as is the case with other models), due to the
     layernorm applied before each block.
     """
-
     def __init__(self, config: BeitConfig) -> None:
         """
         Initializes a BeitSelfOutput object with the provided configuration.
@@ -766,7 +760,6 @@ class BeitOutput(nn.Cell):
 
 class BeitLayer(nn.Cell):
     """This corresponds to the Block class in the timm implementation."""
-
     def __init__(self, config: BeitConfig, window_size: Optional[tuple] = None, drop_path_rate: float = 0.0) -> None:
         """
         Initializes a BeitLayer object.
@@ -1064,7 +1057,6 @@ class BeitPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = BeitConfig
     base_model_prefix = "beit"
     main_input_name = "pixel_values"
@@ -1559,7 +1551,6 @@ class BeitConvModule(nn.Cell):
 
     Based on OpenMMLab's implementation, found in https://github.com/open-mmlab/mmsegmentation.
     """
-
     def __init__(
         self,
         in_channels: int,
@@ -1708,7 +1699,6 @@ class BeitPyramidPoolingModule(nn.Cell):
 
     Based on OpenMMLab's implementation, found in https://github.com/open-mmlab/mmsegmentation.
     """
-
     def __init__(self, pool_scales: Tuple[int, ...], in_channels: int, channels: int, align_corners: bool) -> None:
         """
         Initializes an instance of the BeitPyramidPoolingModule class.
@@ -1769,7 +1759,6 @@ class BeitUperHead(nn.Cell):
 
     Based on OpenMMLab's implementation, found in https://github.com/open-mmlab/mmsegmentation.
     """
-
     def __init__(self, config: BeitConfig) -> None:
         """
         The __init__ method initializes an instance of the BeitUperHead class.
@@ -1904,7 +1893,6 @@ class BeitFCNHead(nn.Cell):
 
     Based on OpenMMLab's implementation, found in https://github.com/open-mmlab/mmsegmentation.
     """
-
     def __init__(
         self, config: BeitConfig, in_index: int = 2, kernel_size: int = 3, dilation: Union[int, Tuple[int, int]] = 1
     ) -> None:

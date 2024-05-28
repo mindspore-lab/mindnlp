@@ -163,7 +163,6 @@ class HubertConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "hubert"
 
     def __init__(

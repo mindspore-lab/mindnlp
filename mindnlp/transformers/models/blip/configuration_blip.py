@@ -94,7 +94,6 @@ class BlipTextConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "blip_text_model"
 
     def __init__(
@@ -260,7 +259,6 @@ class BlipVisionConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "blip_vision_model"
 
     def __init__(
@@ -401,7 +399,6 @@ class BlipConfig(PretrainedConfig):
 
     >>> config = BlipConfig.from_text_vision_configs(config_text, config_vision)
     ```"""
-
     model_type = "blip"
 
     def __init__(
@@ -463,7 +460,6 @@ class BlipConfig(PretrainedConfig):
         Returns:
             [`BlipConfig`]: An instance of a configuration object
         """
-
         return cls(text_config=text_config.to_dict(), vision_config=vision_config.to_dict(), **kwargs)
 
 __all__ = ['BlipConfig', 'BlipVisionConfig', 'BlipTextConfig']

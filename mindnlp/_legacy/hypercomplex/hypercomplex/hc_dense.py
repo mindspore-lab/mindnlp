@@ -87,7 +87,6 @@ class Dense(nn.Cell):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  dense_impl: Type[TDenseImpl],
                  in_channels: int,

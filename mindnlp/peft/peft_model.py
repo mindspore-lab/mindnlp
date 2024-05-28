@@ -74,7 +74,6 @@ class PeftModel(nn.Cell):
         model ([`~mindnlp.models.PreTrainedModel`]): The base transformer model used for Peft.
         peft_config ([`PeftConfig`]): The configuration of the Peft model.
     """
-
     def __init__(self, model, peft_config: PeftConfig, adapter_name="default"):
         r"""
         __init__
@@ -420,7 +419,6 @@ class PeftModelForSequenceClassification(PeftModel):
         peft_config ([`PeftConfig`]): Peft config.
 
     """
-
     def __init__(self, model, peft_config: PeftConfig, adapter_name="default"):
         """
         Initializes a new instance of the PeftModelForSequenceClassification class.
@@ -437,7 +435,6 @@ class PeftModelForSequenceClassification(PeftModel):
         Raises:
             None.
         """
-        
         super().__init__(model, peft_config, adapter_name)
         if self.cells_to_save is None:
             self.cells_to_save = {"classifier", "score"}
@@ -525,7 +522,6 @@ class PeftModelForCausalLM(PeftModel):
         model ([`~mindnlp.models.PreTrainedModel`]): Base transformer model.
         peft_config ([`PeftConfig`]): Peft config.
     """
-
     def __init__(self, model, peft_config: PeftConfig, adapter_name="default"):
         r"""
         Initializes a new instance of the PeftModelForCausalLM class.
@@ -681,7 +677,6 @@ class PeftModelForSeq2SeqLM(PeftModel):
         peft_config ([`PeftConfig`]): Peft config.
 
     """
-
     def __init__(self, model, peft_config: PeftConfig, adapter_name="default"):
         r"""
         Initialize a new PeftModelForSeq2SeqLM object.
@@ -903,7 +898,6 @@ class PeftModelForTokenClassification(PeftModel):
         model ([`~transformers.PreTrainedModel`]): Base transformer model.
         peft_config ([`PeftConfig`]): Peft config.
     """
-
     def __init__(self, model, peft_config: PeftConfig = None, adapter_name="default"):
         r"""
         Initializes a new instance of the PeftModelForTokenClassification class.

@@ -78,7 +78,6 @@ class LoHaModel(LycorisTuner):
         - **model** ([`~torch.nn.Module`]) -- The model to be adapted.
         - **peft_config** ([`LoHaConfig`]): The configuration of the LoHa model.
     """
-
     prefix: str = "hada_"
     layers_mapping: Dict[Type[nn.Cell], Type[LoHaLayer]] = {
         nn.Conv2d: Conv2d,
@@ -97,7 +96,6 @@ class LoHaModel(LycorisTuner):
         """
         A private method to create and replace the target module with the adapter module.
         """
-
         # Regexp matching - Find key which matches current target_name in patterns provided
         pattern_keys = list(
             chain(config.rank_pattern.keys(), config.alpha_pattern.keys())

@@ -27,7 +27,6 @@ class PrefixTuningConfig(PromptLearningConfig):
         encoder_hidden_size (`int`): The hidden size of the prompt encoder.
         prefix_projection (`bool`): Whether to project the prefix embeddings.
     """
-
     encoder_hidden_size: int = field(
         default=None,
         metadata={"help": "The hidden size of the encoder"},

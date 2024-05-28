@@ -70,7 +70,6 @@ class PromptEncoderConfig(PromptLearningConfig):
         encoder_num_layers (`int`): The number of layers of the prompt encoder.
         encoder_dropout (`float`): The dropout probability of the prompt encoder.
     """
-
     encoder_reparameterization_type: Union[str, PromptEncoderReparameterizationType] = field(
         default=PromptEncoderReparameterizationType.MLP,
         metadata={"help": "How to reparameterize the prompt encoder"},

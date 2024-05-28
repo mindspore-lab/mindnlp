@@ -100,7 +100,6 @@ class AltCLIPTextConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "altclip_text_model"
 
     def __init__(
@@ -231,7 +230,6 @@ class AltCLIPVisionConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "altclip_vision_model"
 
     def __init__(
@@ -366,7 +364,6 @@ class AltCLIPConfig(PretrainedConfig):
 
     >>> config = AltCLIPConfig.from_text_vision_configs(config_text, config_vision)
     ```"""
-
     model_type = "altclip"
 
     def __init__(
@@ -482,7 +479,6 @@ class AltCLIPConfig(PretrainedConfig):
         Returns:
             [`AltCLIPConfig`]: An instance of a configuration object
         """
-
         return cls(text_config=text_config.to_dict(), vision_config=vision_config.to_dict(), **kwargs)
 
 __all__ = [

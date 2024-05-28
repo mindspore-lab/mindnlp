@@ -66,7 +66,6 @@ class BridgeTowerVisionConfig(PretrainedConfig):
     >>> # Accessing the configuration
     >>> configuration
     ```"""
-
     model_type = "bridgetower_vision_model"
 
     def __init__(
@@ -211,7 +210,6 @@ class BridgeTowerTextConfig(PretrainedConfig):
     >>> # Accessing the configuration
     >>> configuration
     ```"""
-
     model_type = "bridgetower_text_model"
 
     def __init__(
@@ -364,7 +362,6 @@ class BridgeTowerConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "bridgetower"
 
     def __init__(
@@ -447,7 +444,6 @@ class BridgeTowerConfig(PretrainedConfig):
         Instantiate a [`BridgeTowerConfig`] (or a derived class) from BridgeTower text model configuration. Returns:
             [`BridgeTowerConfig`]: An instance of a configuration object
         """
-
         return cls(text_config=text_config.to_dict(), vision_config=vision_config.to_dict(), **kwargs)
 
 __all__ = ['BridgeTowerConfig', 'BridgeTowerTextConfig', 'BridgeTowerVisionConfig']

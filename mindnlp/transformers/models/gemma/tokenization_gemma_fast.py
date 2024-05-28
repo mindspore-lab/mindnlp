@@ -80,7 +80,6 @@ class GemmaTokenizerFast(PreTrainedTokenizerFast):
         add_eos_token (`bool`, *optional*, defaults to `False`):
             Whether or not to add an `eos_token` at the end of sequences.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     slow_tokenizer_class = GemmaTokenizer
     padding_side = "left"

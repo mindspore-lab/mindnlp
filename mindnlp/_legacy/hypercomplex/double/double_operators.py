@@ -225,7 +225,6 @@ class Conv2d(_UniformOperator):
         >>> print(out.shape)
         (2, 16, 128, 112, 112)
     """
-
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
@@ -446,7 +445,6 @@ class Conv1d(_UniformOperator):
         >>> print(out.shape)
         (2, 8, 16, 2048)
     """
-
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
@@ -703,7 +701,6 @@ class Conv3d(_UniformOperator):
         >>> print(out.shape)
         (2, 64, 128, 32, 32, 32)
     """
-
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
@@ -743,7 +740,6 @@ class Conv3d(_UniformOperator):
         Raises:
             N/A
         """
-        
         if has_diagonal_form:
             super(Conv3d, self).__init__(HConv3d,
                                          J1J2ConvImpl,
@@ -883,7 +879,6 @@ class BatchNorm1d(_UniformOperator):
         >>> print(y.shape)
         (2, 8, 64, 32)
     """
-
     def __init__(self,
                  num_features: int,
                  eps: float = 1e-5,
@@ -1054,7 +1049,6 @@ class BatchNorm2d(_UniformOperator):
         >>> print(y.shape)
         (2, 8, 64, 32, 32)
     """
-
     def __init__(self,
                  num_features: int,
                  eps: float = 1e-5,
@@ -1090,7 +1084,6 @@ class BatchNorm2d(_UniformOperator):
         Raises:
             None
         """
-
         def __init__(self, num_features: int, eps: float = 1e-05, momentum: float = 0.9, affine: bool = True, gamma_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones', beta_init: Union[Tensor, str,
 Initializer, numbers.Number] = 'zeros', moving_mean_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros', moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones',
 use_batch_statistics: bool = True, has_diagonal_form: bool = False, data_format='NCHW') -> None:
@@ -1260,7 +1253,6 @@ class BatchNorm3d(_UniformOperator):
         >>> print(y.shape)
         (2, 8, 64, 32, 32, 32)
     """
-
     def __init__(self,
                  num_features: int,
                  eps: float = 1e-5,
@@ -1416,7 +1408,6 @@ class Dense(_UniformOperator):
         >>> print(out.shape)
         (2, 34, 1, 7)
     """
-
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
@@ -1518,7 +1509,6 @@ class ReLU(nn.Cell):
         [[0. 2. 0]
          [0. 0. 1.]]
     """
-
     def __init__(self, has_diagonal_form: bool = False) -> None:
         r"""
         Initializes an instance of the ReLU class.

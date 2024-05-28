@@ -516,7 +516,6 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
 
 class Phi3Attention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(self, config: Phi3Config, layer_idx: Optional[int] = None):
         """
         Initializes an instance of the `Phi3Attention` class.
@@ -976,7 +975,6 @@ class Phi3Model(Phi3PreTrainedModel):
     Args:
         config: Phi3Config
     """
-
     def __init__(self, config: Phi3Config):
         """
         Initializes a new instance of the Phi3Model class.
@@ -1425,7 +1423,6 @@ and preparing inputs for generation.
         >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         'This is an example script .\n Certainly! Below is a sample script that demonstrates a simple task, such as calculating the sum'
         ```"""
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states

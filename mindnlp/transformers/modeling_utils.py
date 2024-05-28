@@ -116,7 +116,6 @@ class CellUtilMixin:
     """
     A few utilities to be used as a mixin.
     """
-
     @property
     def dtype(self) -> mindspore.TensorType:
         """
@@ -398,7 +397,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
         using `from_pretrained`. Any attempt to initialize outside of this function
         will be useless as the torch.nn.init function are all replaced with skip.
         """
-
     def _initialize_weights(self, module):
         """
         Initialize the weights if they are not already initialized.
@@ -1493,7 +1491,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
             kwargs (`Dict[str, Any]`, *optional*):
                 Additional key word arguments passed along to the [`~utils.PushToHubMixin.push_to_hub`] method.
         """
-
         if os.path.isfile(save_directory):
             logger.error(f"Provided path ({save_directory}) should be a directory, not a file")
             return
@@ -1745,7 +1742,6 @@ class PoolerStartLogits(nn.Cell):
         config ([`PretrainedConfig`]):
             The config used by the model, will be used to grab the `hidden_size` of the model.
     """
-
     def __init__(self, config: PretrainedConfig):
         """
         Initializes an instance of the PoolerStartLogits class.
@@ -1799,7 +1795,6 @@ class PoolerEndLogits(nn.Cell):
             The config used by the model, will be used to grab the `hidden_size` of the model and the `layer_norm_eps`
             to use.
     """
-
     def __init__(self, config: PretrainedConfig):
         """
         Initializes the PoolerEndLogits class.
@@ -1882,7 +1877,6 @@ class PoolerAnswerClass(nn.Cell):
         config ([`PretrainedConfig`]):
             The config used by the model, will be used to grab the `hidden_size` of the model.
     """
-
     def __init__(self, config):
         """
         Initializes the PoolerAnswerClass.
@@ -1976,7 +1970,6 @@ class SquadHeadOutput(ModelOutput):
             Log probabilities for the `is_impossible` label of the answers.
 
     """
-
     loss: Optional[mindspore.Tensor] = None
     start_top_log_probs: Optional[mindspore.Tensor] = None
     start_top_index: Optional[mindspore.Tensor] = None
@@ -1994,7 +1987,6 @@ class SQuADHead(nn.Cell):
             The config used by the model, will be used to grab the `hidden_size` of the model and the `layer_norm_eps`
             to use.
     """
-
     def __init__(self, config):
         """
         Initializes a new instance of the SQuADHead class.
@@ -2114,7 +2106,6 @@ class SequenceSummary(nn.Cell):
     """
     GPTDoubleHeadsModel and GPT2DoubleHeadsModel class that self.multiple_choice_head
     """
-
     def __init__(self, config):
         """
         Initialize the SequenceSummary class.

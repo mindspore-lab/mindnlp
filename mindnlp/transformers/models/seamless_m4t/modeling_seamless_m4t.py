@@ -70,7 +70,6 @@ class SeamlessM4TGenerationOutput(ModelOutput):
             dimension (unit_sequence_length) is either equal to `t2u_max_length` or shorter if all batches finished
             early due to the `t2u_eos_token_id`.
     """
-
     waveform: Optional[mindspore.Tensor] = None
     waveform_lengths: Optional[mindspore.Tensor] = None
     sequences: Optional[Tuple[mindspore.Tensor]] = None
@@ -269,7 +268,6 @@ class SeamlessM4TConformerRotaryPositionalEmbedding(nn.Cell):
     """Rotary positional embedding
     Reference : https://blog.eleuther.ai/rotary-embeddings/ Paper: https://arxiv.org/pdf/2104.09864.pdf
     """
-
     def __init__(self, config):
         """
         __init__(self, config)
@@ -331,7 +329,6 @@ used for calculating the inverse frequency. It is expected to be a valid configu
 # Copied from transformers.models.wav2vec2_conformer.modeling_wav2vec2_conformer.Wav2Vec2ConformerRelPositionalEmbedding with Wav2Vec2->SeamlessM4T
 class SeamlessM4TConformerRelPositionalEmbedding(nn.Cell):
     """Relative positional encoding module."""
-
     def __init__(self, config):
         """
         Initializes an instance of the SeamlessM4TConformerRelPositionalEmbedding class.
@@ -646,7 +643,6 @@ class SeamlessM4TConformerFeedForward(nn.Cell):
 
 class SeamlessM4TConformerConvolutionModule(nn.Cell):
     """Convolution block used in the conformer block"""
-
     def __init__(self, config):
         """
         Initializes the SeamlessM4TConformerConvolutionModule.
@@ -749,7 +745,6 @@ class SeamlessM4TConformerSelfAttention(nn.Cell):
     """Construct a SeamlessM4TConformerSelfAttention object.
     Can be enhanced with rotary or relative position embeddings.
     """
-
     def __init__(self, config, use_position_embeddings=True):
         """
         Initializes a new instance of the SeamlessM4TConformerSelfAttention class.
@@ -965,7 +960,6 @@ output_attentions is True.
 
 class SeamlessM4TConformerEncoderLayer(nn.Cell):
     """Conformer block based on https://arxiv.org/abs/2005.08100."""
-
     # Copied from transformers.models.wav2vec2_conformer.modeling_wav2vec2_conformer.Wav2Vec2ConformerEncoderLayer.__init__ with Wav2Vec2->SeamlessM4T, attention_dropout->speech_encoder_dropout, ops.nn->nn
     def __init__(self, config):
         """
@@ -1493,7 +1487,6 @@ stacked on top of each other to adapt the model's hidden states for different ta
 # Copied from transformers.models.m2m_100.modeling_m2m_100.M2M100SinusoidalPositionalEmbedding
 class SeamlessM4TSinusoidalPositionalEmbedding(nn.Cell):
     """This module produces sinusoidal positional embeddings of any length."""
-
     def __init__(self, num_positions: int, embedding_dim: int, padding_idx: Optional[int] = None):
         """
         Initializes an instance of the SeamlessM4TSinusoidalPositionalEmbedding class.
@@ -1615,7 +1608,6 @@ generated weights is converted to match the existing weights. Finally, the gener
 
 class SeamlessM4TAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     # Copied from transformers.models.bart.modeling_bart.BartAttention.__init__ with Bart->SeamlessM4T
     def __init__(
         self,
@@ -1693,7 +1685,6 @@ class SeamlessM4TAttention(nn.Cell):
         output_attentions: bool = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
-
         # if encoder_hidden_states are provided this layer is used as a cross-attention layer
         # for the decoder
         is_cross_attention = encoder_hidden_states is not None
@@ -2140,7 +2131,6 @@ class SeamlessM4TPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = SeamlessM4TConfig
     base_model_prefix = "seamless_m4t"
     supports_gradient_checkpointing = True
@@ -3846,7 +3836,6 @@ class SeamlessM4THifiGan(nn.Cell):
             `mindspore.Tensor`: Tensor containing the speech waveform. If the input spectrogram is batched, will be of
             shape `(batch_size, num_frames,)`. If un-batched, will be of shape `(num_frames,)`.
         """
-
         hidden_states = self.conv_pre(input_embeds)
         for i in range(self.num_upsamples):
             hidden_states = ops.leaky_relu(hidden_states, self.leaky_relu_slope)
@@ -3930,7 +3919,6 @@ includes utility functions for weight normalization operations.
         """
         Computes the output length of the hifigan convolutional layers
         """
-
         def _conv_out_length(input_length, kernel_size, stride, pad, dilation=1):
             # 1D convolutional layer output length formula taken
             # from https://pyops.org/docs/stable/generated/ops.nn.Conv1d.html

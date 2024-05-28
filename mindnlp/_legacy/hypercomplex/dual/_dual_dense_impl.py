@@ -56,7 +56,6 @@ class _DenseImpl(BaseDenseImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def construct(self,
                   real: Tensor,
                   dual: Tensor) -> Tuple[Tensor, Tensor]:
@@ -74,7 +73,6 @@ class _DenseImpl(BaseDenseImpl):
         Raises:
             None.
         """
-
         out_r = P.matmul(real, self.weight_x.transpose())
         out_rd = P.matmul(real, self.weight_y.transpose())
         out_dr = P.matmul(dual, self.weight_x.transpose())

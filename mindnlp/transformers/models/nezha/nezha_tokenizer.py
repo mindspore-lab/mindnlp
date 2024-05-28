@@ -37,7 +37,6 @@ class NezhaTokenizer(PreTrainedTokenizer):
         vocab (Vocab): Vocabulary used to look up words.
         return_token (bool): Whether to return token. If True: return tokens. False: return ids. Default: True.
     """
-
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
 
     def __init__(self, vocab: str, **kwargs):

@@ -39,7 +39,6 @@ class BlenderbotSmallTokenizerFast(PreTrainedTokenizerFast):
         vocab_file (`str`):
             Path to the vocabulary file.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     slow_tokenizer_class = BlenderbotSmallTokenizer
 

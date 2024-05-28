@@ -26,7 +26,6 @@ class BaseStreamer:
     """
     Base class from which `.generate()` streamers should inherit.
     """
-
     def put(self, value):
         """Function that is called by `.generate()` to push new tokens"""
         raise NotImplementedError()
@@ -69,7 +68,6 @@ class TextStreamer(BaseStreamer):
         An increasing sequence: one, two, three, four, five, six, seven, eight, nine, ten, eleven,
         ```
     """
-
     def __init__(self, tokenizer: "AutoTokenizer", skip_prompt: bool = False, **decode_kwargs):
         """
         Initializes an instance of the TextStreamer class.
@@ -217,7 +215,6 @@ class TextIteratorStreamer(TextStreamer):
         'An increasing sequence: one, two, three, four, five, six, seven, eight, nine, ten, eleven,'
         ```
     """
-
     def __init__(
         self, tokenizer: "AutoTokenizer", skip_prompt: bool = False, timeout: Optional[float] = None, **decode_kwargs
     ):

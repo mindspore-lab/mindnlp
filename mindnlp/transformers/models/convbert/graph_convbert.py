@@ -40,7 +40,6 @@ MSCONVBERT_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 class MSConvBertEmbeddings(nn.Cell):
     """Construct the embeddings from word, position and token_type embeddings."""
-
     def __init__(self, config):
         """
         Initialize the MSConvBertEmbeddings class with the provided configuration.
@@ -100,7 +99,6 @@ class MSConvBertEmbeddings(nn.Cell):
             TypeError: If the input_ids or token_type_ids are not of type ms.Tensor.
             ValueError: If the sequence length derived from input_ids.shape is not valid.
         '''
-
         input_shape = input_ids.shape
         seq_length = input_shape[1]
 
@@ -120,7 +118,6 @@ class ConvBertPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = ConvBertConfig
     base_model_prefix = "convbert"
     supports_gradient_checkpointing = True
@@ -164,7 +161,6 @@ class ConvBertPreTrainedModel(PreTrainedModel):
 
 class SeparableConv1D(nn.Cell):
     """This class implements separable convolution, i.e. a depthwise and a pointwise layer"""
-
     def __init__(self, config, input_filters, output_filters, kernel_size):
         """
         Initializes a separable 1D convolutional layer.
@@ -239,7 +235,6 @@ class MSConvBertSelfAttention(nn.Cell):
     """
     MSConvBertSelfAttention
     """
-
     def __init__(self, config):
         """Initialize the MSConvBertSelfAttention class.
         
@@ -422,7 +417,6 @@ class MSConvBertSelfOutput(nn.Cell):
     """
     MSConvBertSelfOutput
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the MSConvBertSelfOutput class.
@@ -472,7 +466,6 @@ class MSConvBertAttention(nn.Cell):
     """
     MSConvBertAttention
     """
-
     def __init__(self, config):
         """
         Initializes a new instance of the MSConvBertAttention class.
@@ -553,7 +546,6 @@ class MSConvBertIntermediate(nn.Cell):
     """
     MSConvBertIntermediate
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the MSConvBertIntermediate class.
@@ -598,7 +590,6 @@ class MSConvBertOutput(nn.Cell):
     """
     MSConvBertOutput
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the MSConvBertOutput class.
@@ -657,7 +648,6 @@ class MSConvBertLayer(nn.Cell):
     """
     MSConvBertLayer
     """
-
     def __init__(self, config):
         """
         Initializes an instance of MSConvBertLayer.
@@ -715,7 +705,6 @@ class MSConvBertEncoder(nn.Cell):
     """
     MSConvBertEncoder
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the MSConvBertEncoder class.
@@ -769,7 +758,6 @@ class MSConvBertModel(ConvBertPreTrainedModel):
     """
     MSConvBertModel
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the MSConvBertModel class.
@@ -868,7 +856,6 @@ of the model, otherwise unexpected behavior may occur.
         Raises:
             N/A
         """
-
         self.warn_if_padding_and_no_attention_mask(input_ids, attention_mask)
         input_shape = input_ids.shape
 
@@ -893,7 +880,6 @@ class MSConvBertForQuestionAnswering(ConvBertPreTrainedModel):
     """
     MSConvBertForQuestionAnswering
     """
-
     def __init__(self, config):
         """
         Initialize the MSConvBertForQuestionAnswering class.
@@ -943,7 +929,6 @@ class MSConvBertForQuestionAnswering(ConvBertPreTrainedModel):
         Raises:
             N/A
         """
-
         outputs = self.convbert(
             input_ids=input_ids,
             attention_mask=attention_mask,

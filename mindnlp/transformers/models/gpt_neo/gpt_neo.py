@@ -35,7 +35,6 @@ class GPTNeoSelfAttention(nn.Cell):
     """
     GPTNeo SelfAttention.
     """
-
     def __init__(self, config, attention_type):
         """
         Initializes the GPTNeoSelfAttention class.
@@ -223,7 +222,6 @@ class GPTNeoAttention(nn.Cell):
     """
     GPTNEO Attention.
     """
-
     def __init__(self, config, layer_id=0):
         """
         Initialize the GPTNeoAttention class.
@@ -295,7 +293,6 @@ class GPTNeoMLP(nn.Cell):
     """
     GPTNeo MLP.
     """
-
     # in MLP: intermediate_size= 4 * hidden_size
     def __init__(self, intermediate_size, config):
         """
@@ -344,7 +341,6 @@ class GPTNeoBlock(nn.Cell):
     """
     GPTNeo Block.
     """
-
     def __init__(self, config, layer_id):
         """Initializes a GPTNeoBlock instance.
         
@@ -431,7 +427,6 @@ class GPTNeoPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = GPTNeoConfig
     base_model_prefix = "transformer"
     supports_gradient_checkpointing = True
@@ -441,7 +436,6 @@ class GPTNeoPreTrainedModel(PreTrainedModel):
         """
         initialize model weights.
         """
-
     def _init_weights(self, cell):
         """Initialize the weights."""
         if isinstance(cell, (nn.Dense,)):
@@ -475,25 +469,20 @@ class GPTNeoPreTrainedModel(PreTrainedModel):
         """
         Returns the model's input embeddings.
         """
-
     def set_input_embeddings(self, new_embeddings: "nn.Cell"):
         """
         Set model's input embeddings.
         """
-
     def resize_position_embeddings(self, new_num_position_embeddings: int):
         """
         resize the model position embeddings if necessary
         """
-
     def get_position_embeddings(self):
         """
         get the model position embeddings if necessary
         """
-
     def save(self, save_dir: Union[str, os.PathLike]):
         "save pretrain model"
-
     def _set_gradient_checkpointing(self, module, value=False):
         """
         Sets the gradient checkpointing flag for the specified module in a GPTNeoPreTrainedModel.
@@ -518,7 +507,6 @@ class GPTNeoPreTrainedModel(PreTrainedModel):
         If needed prunes and maybe initializes weights. If using a custom `PreTrainedModel`, you need to implement any
         initialization logic in `_init_weights`.
         """
-
     def _backward_compatibility_gradient_checkpointing(self):
         """
         Support gradient_checkpointing.
@@ -544,7 +532,6 @@ class GPTNeoModel(GPTNeoPreTrainedModel):
     """
     GPTNeo Model
     """
-
     def __init__(self, config):
         """
         Initializes a new instance of the GPTNeoModel class.
@@ -963,7 +950,6 @@ class GPTNeoForSequenceClassification(GPTNeoPreTrainedModel):
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
-
         transformer_outputs = self.transformer(
             input_ids,
             past_key_values=past_key_values,

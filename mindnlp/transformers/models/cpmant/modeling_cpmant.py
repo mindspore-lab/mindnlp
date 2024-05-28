@@ -46,7 +46,6 @@ class CpmAntLayerNorm(nn.Cell):
     """
     We use Root Mean Square (RMS) Layer Normalization, please see https://arxiv.org/abs/1910.07467 for details."
     """
-
     def __init__(self, config: CpmAntConfig):
         """
         Initializes a new instance of the CpmAntLayerNorm class.
@@ -1049,7 +1048,6 @@ class CpmAntPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = CpmAntConfig
     base_model_prefix = "cpmant"
 

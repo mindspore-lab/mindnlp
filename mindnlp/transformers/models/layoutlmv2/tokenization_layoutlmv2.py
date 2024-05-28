@@ -223,7 +223,6 @@ class LayoutLMv2Tokenizer(PreTrainedTokenizer):
     word-level bounding boxes into token-level bounding boxes.
 
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -452,7 +451,6 @@ class LayoutLMv2Tokenizer(PreTrainedTokenizer):
         Returns:
             `List[int]`: A list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
         """
-
         if already_has_special_tokens:
             return super().get_special_tokens_mask(
                 token_ids_0=token_ids_0, token_ids_1=token_ids_1, already_has_special_tokens=True
@@ -560,7 +558,6 @@ class LayoutLMv2Tokenizer(PreTrainedTokenizer):
             word_labels (`List[int]`, `List[List[int]]`, *optional*):
                 Word-level integer labels (for token classification tasks such as FUNSD, CORD).
         """
-
         # Input type checking for clearer error
         def _is_valid_text_input(t):
             if isinstance(t, str):
@@ -878,7 +875,6 @@ pair, or a pre-tokenized input.
         Args:
             batch_ids_pairs: list of tokenized input ids or input ids pairs
         """
-
         batch_outputs = {}
         for idx, example in enumerate(zip(batch_text_or_text_pairs, boxes)):
             batch_text_or_text_pair, boxes_example = example
@@ -1030,7 +1026,6 @@ pair, or a pre-tokenized input.
                 Optional second sequence to be encoded. This can be a list of strings (words of a single example) or a
                 list of list of strings (words of a batch of examples).
         """
-
         # Backward compatibility for 'truncation_strategy', 'pad_to_max_length'
         padding_strategy, truncation_strategy, max_length, kwargs = self._get_padding_truncation_strategies(
             padding=padding,
@@ -1187,7 +1182,6 @@ transformers.PreTrainedTokenizerFast. More information on available tokenizers c
                 Optional second sequence to be encoded. This can be a list of strings (words of a single example) or a
                 list of list of strings (words of a batch of examples).
         """
-
         # Backward compatibility for 'truncation_strategy', 'pad_to_max_length'
         padding_strategy, truncation_strategy, max_length, kwargs = self._get_padding_truncation_strategies(
             padding=padding,
@@ -1589,7 +1583,6 @@ class BasicTokenizer:
             In some instances we want to skip the basic punctuation splitting so that later tokenization can capture
             the full context of the words, such as contractions.
     """
-
     def __init__(
             self,
             do_lower_case=True,
@@ -1748,7 +1741,6 @@ class BasicTokenizer:
 # Copied from transformers.models.bert.tokenization_bert.WordpieceTokenizer
 class WordpieceTokenizer:
     """Runs WordPiece tokenization."""
-
     def __init__(self, vocab, unk_token, max_input_chars_per_word=100):
         """
         Initializes a new instance of the WordpieceTokenizer class.
@@ -1784,7 +1776,6 @@ class WordpieceTokenizer:
         Returns:
             A list of wordpiece tokens.
         """
-
         output_tokens = []
         for token in whitespace_tokenize(text):
             chars = list(token)

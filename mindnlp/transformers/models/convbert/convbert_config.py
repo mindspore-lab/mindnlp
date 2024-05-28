@@ -36,7 +36,6 @@ class ConvBertConfig(PretrainedConfig):
     r"""
     ConvBert Config
     """
-
     model_type = "convbert"
 
     def __init__(

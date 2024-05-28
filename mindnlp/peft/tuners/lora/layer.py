@@ -780,7 +780,6 @@ adaptation and specialization.
         Raises:
             ValueError: If the value of `r` is not a positive integer.
         """
-        
         if r <= 0:
             raise ValueError(f"`r` should be a positive integer value but the value passed is {r}")
 

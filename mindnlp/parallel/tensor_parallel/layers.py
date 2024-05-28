@@ -42,7 +42,6 @@ class VocabParallelEmbedding(nn.Cell):
         embedding_size: size of hidden state.
         init_method: method to initialize weights.
     """
-
     def __init__(
         self,
         vocab_size: int,
@@ -147,7 +146,6 @@ class ParallelEmbedding(nn.Cell):
         embedding_size: size of hidden state.
         init_method: method to initialize weights.
     """
-
     def __init__(
         self,
         vocab_size: int,
@@ -234,7 +232,6 @@ class ColumnParallelLinear(nn.Cell):
                                      set to False. It returns the master weights
                                      used for initialization.
     """
-
     def __init__(
         self,
         in_features: int,
@@ -352,7 +349,6 @@ class RowParallelLinear(nn.Cell):
                                      set to False. It returns the master weights
                                      used for initialization.
     """
-
     def __init__(
         self,
         in_features: int,

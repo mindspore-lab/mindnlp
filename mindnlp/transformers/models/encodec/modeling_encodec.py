@@ -45,7 +45,6 @@ class EncodecOutput(ModelOutput):
         audio_values (`torch.FlaotTensor` of shape `(batch_size, sequence_length)`, *optional*)
             Decoded audio values, obtained using the decoder part of Encodec.
     """
-
     audio_codes: mindspore.Tensor = None
     audio_values: mindspore.Tensor = None
 
@@ -59,7 +58,6 @@ class EncodecEncoderOutput(ModelOutput):
         audio_scales (`mindspore.Tensor` of shape `(batch_size, nb_chunks)`, *optional*):
             Scaling factor for each `audio_codes` input. This is used to unscale each chunk of audio when decoding.
     """
-
     audio_codes: mindspore.Tensor = None
     audio_scales: mindspore.Tensor = None
 
@@ -71,13 +69,11 @@ class EncodecDecoderOutput(ModelOutput):
         audio_values (`mindspore.Tensor`  of shape `(batch_size, segment_length)`, *optional*):
             Decoded audio values, obtained using the decoder part of Encodec.
     """
-
     audio_values: mindspore.Tensor = None
 
 
 class EncodecConv1d(nn.Cell):
     """Conv1d with asymmetric or causal padding and normalization."""
-
     def __init__(
         self, config, in_channels: int, out_channels: int, kernel_size: int, stride: int = 1, dilation: int = 1
     ):
@@ -198,7 +194,6 @@ class EncodecConv1d(nn.Cell):
 
 class EncodecConvTranspose1d(nn.Cell):
     """ConvTranspose1d with asymmetric or causal padding and normalization."""
-
     def __init__(self, config, in_channels: int, out_channels: int, kernel_size: int, stride: int = 1):
         """
         Args:
@@ -283,7 +278,6 @@ class EncodecLSTM(nn.Cell):
     """
     LSTM without worrying about the hidden state, nor the layout of the data. Expects input as convolutional layout.
     """
-
     def __init__(self, config, dimension):
         """
         Initializes an instance of the EncodecLSTM class.
@@ -332,7 +326,6 @@ class EncodecResnetBlock(nn.Cell):
     """
     Residual block from SEANet model as used by EnCodec.
     """
-
     def __init__(self, config: EncodecConfig, dim: int, dilations: List[int]):
         """
         Initialize the EncodecResnetBlock.
@@ -393,7 +386,6 @@ class EncodecResnetBlock(nn.Cell):
 
 class EncodecEncoder(nn.Cell):
     """SEANet encoder as used by EnCodec."""
-
     def __init__(self, config: EncodecConfig):
         """
         This method initializes an instance of the EncodecEncoder class.
@@ -461,7 +453,6 @@ class EncodecEncoder(nn.Cell):
 
 class EncodecDecoder(nn.Cell):
     """SEANet decoder as used by EnCodec."""
-
     def __init__(self, config: EncodecConfig):
         """
         __init__
@@ -528,7 +519,6 @@ class EncodecDecoder(nn.Cell):
 
 class EncodecEuclideanCodebook(nn.Cell):
     """Codebook with Euclidean distance."""
-
     def __init__(self, config: EncodecConfig):
         """
         Initializes an instance of the EncodecEuclideanCodebook class.
@@ -619,7 +609,6 @@ class EncodecVectorQuantization(nn.Cell):
     """
     Vector quantization implementation. Currently supports only euclidean distance.
     """
-
     def __init__(self, config: EncodecConfig):
         """
         Initializes an instance of the EncodecVectorQuantization class.
@@ -677,7 +666,6 @@ class EncodecVectorQuantization(nn.Cell):
 
 class EncodecResidualVectorQuantizer(nn.Cell):
     """Residual Vector Quantizer."""
-
     def __init__(self, config: EncodecConfig):
         """
         Initializes an instance of the EncodecResidualVectorQuantizer class.
@@ -740,7 +728,6 @@ class EncodecPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = EncodecConfig
     base_model_prefix = "encodec"
     main_input_name = "input_values"

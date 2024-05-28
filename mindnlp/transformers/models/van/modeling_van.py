@@ -70,7 +70,6 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
 # Copied from transformers.models.convnext.modeling_convnext.ConvNextDropPath with ConvNext->Van
 class VanDropPath(nn.Cell):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
-
     def __init__(self, drop_prob: Optional[float] = None) -> None:
         """
         Initialize a new instance of the VanDropPath class.
@@ -144,7 +143,6 @@ class VanOverlappingPatchEmbedder(nn.Cell):
     half of the area. From [PVTv2: Improved Baselines with Pyramid Vision
     Transformer](https://arxiv.org/abs/2106.13797).
     """
-
     def __init__(self, in_channels: int, hidden_size: int, patch_size: int = 7, stride: int = 4):
         """
         Initializes a VanOverlappingPatchEmbedder object.
@@ -197,7 +195,6 @@ class VanMlpLayer(nn.Cell):
     MLP with depth-wise convolution, from [PVTv2: Improved Baselines with Pyramid Vision
     Transformer](https://arxiv.org/abs/2106.13797).
     """
-
     def __init__(
         self,
         in_channels: int,
@@ -264,7 +261,6 @@ class VanLargeKernelAttention(nn.Cell):
     """
     Basic Large Kernel Attention (LKA).
     """
-
     def __init__(self, hidden_size: int):
         """
         Initializes an instance of the VanLargeKernelAttention class.
@@ -311,7 +307,6 @@ class VanLargeKernelAttentionLayer(nn.Cell):
     """
     Computes attention using Large Kernel Attention (LKA) and attends the input.
     """
-
     def __init__(self, hidden_size: int):
         """
         Initializes a VanLargeKernelAttentionLayer instance with the specified hidden size.
@@ -353,7 +348,6 @@ class VanSpatialAttentionLayer(nn.Cell):
     Van spatial attention layer composed by projection (via conv) -> act -> Large Kernel Attention (LKA) attention ->
     projection (via conv) + residual connection.
     """
-
     def __init__(self, hidden_size: int, hidden_act: str = "gelu"):
         """
         Initializes an instance of the VanSpatialAttentionLayer class.
@@ -407,7 +401,6 @@ class VanLayerScaling(nn.Cell):
     """
     Scales the inputs by a learnable parameter initialized by `initial_value`.
     """
-
     def __init__(self, hidden_size: int, initial_value: float = 1e-2):
         """
         Initializes a new instance of the VanLayerScaling class.
@@ -449,7 +442,6 @@ class VanLayer(nn.Cell):
     """
     Van layer composed by normalization layers, large kernel attention (LKA) and a multi layer perceptron (MLP).
     """
-
     def __init__(
         self,
         config: VanConfig,
@@ -523,7 +515,6 @@ class VanStage(nn.Cell):
     """
     VanStage, consisting of multiple layers.
     """
-
     def __init__(
         self,
         config: VanConfig,
@@ -604,7 +595,6 @@ class VanEncoder(nn.Cell):
     """
     VanEncoder, consisting of multiple stages.
     """
-
     def __init__(self, config: VanConfig):
         """
         Initializes a VanEncoder object.
@@ -696,7 +686,6 @@ class VanPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = VanConfig
     base_model_prefix = "van"
     main_input_name = "pixel_values"

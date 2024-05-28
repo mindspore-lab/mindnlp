@@ -73,7 +73,6 @@ class Blip2VisionConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "blip_2_vision_model"
 
     def __init__(
@@ -221,7 +220,6 @@ class Blip2QFormerConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "blip_2_qformer"
 
     def __init__(
@@ -371,7 +369,6 @@ class Blip2Config(PretrainedConfig):
 
     >>> config = Blip2Config.from_text_vision_configs(vision_config, qformer_config, text_config)
     ```"""
-
     model_type = "blip-2"
 
     def __init__(self, vision_config=None, qformer_config=None, text_config=None, num_query_tokens=32, **kwargs):
@@ -434,7 +431,6 @@ class Blip2Config(PretrainedConfig):
         Returns:
             [`Blip2Config`]: An instance of a configuration object
         """
-
         return cls(
             vision_config=vision_config.to_dict(),
             qformer_config=qformer_config.to_dict(),

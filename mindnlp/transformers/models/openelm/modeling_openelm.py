@@ -188,7 +188,6 @@ class OpenELMRotaryEmbedding(nn.Cell):
         max_seq_length: Maximum sequence length.
         freq_constant: A constant used for computing frequencies.
     """
-
     def __init__(
         self, model_dim: int, max_seq_length: int, freq_constant: int = 10000
     ) -> None:
@@ -460,7 +459,6 @@ output projection and returns the attention output along with optional attention
         Returns:
             The output of the same shape as the input, optionally with a tensor containing cached keys and values.
         """
-
         # scaled_dot_product_attention does not return attention weights, set output_attentions to False
         output_attentions = False
         batch_size, seq_length, d_model = hidden_states.shape

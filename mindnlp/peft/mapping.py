@@ -81,7 +81,6 @@ def get_peft_config(config_dict: Dict[str, Any]):
     Args:
         config_dict (`Dict[str, Any]`): Dictionary containing the configuration parameters.
     """
-
     return PEFT_TYPE_TO_CONFIG_MAPPING[config_dict["peft_type"]](**config_dict)
 
 

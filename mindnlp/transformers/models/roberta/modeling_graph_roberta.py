@@ -28,7 +28,6 @@ class MSRobertaEmbeddings(nn.Cell):
     """
     Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
     """
-
     # Copied from transformers.models.bert.modeling_bert.BertEmbeddings.__init__
     def __init__(self, config):
         """
@@ -155,13 +154,11 @@ class MSRobertaEmbeddings(nn.Cell):
 
 class MSRobertaPreTrainedModel(BertPreTrainedModel):
     """Roberta Pretrained Model."""
-
     config_class = RobertaConfig
     base_model_prefix = "roberta"
 
 class MSRobertaModel(BertModel):
     """Roberta Model"""
-
     config_class = RobertaConfig
     base_model_prefix = "roberta"
 

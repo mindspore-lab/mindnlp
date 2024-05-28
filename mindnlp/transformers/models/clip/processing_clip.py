@@ -36,7 +36,6 @@ class CLIPProcessor(ProcessorMixin):
         tokenizer ([`CLIPTokenizerFast`], *optional*):
             The tokenizer is a required input.
     """
-
     attributes = ["image_processor", "tokenizer"]
     image_processor_class = "CLIPImageProcessor"
     tokenizer_class = ("CLIPTokenizer", "CLIPTokenizerFast")
@@ -110,7 +109,6 @@ class CLIPProcessor(ProcessorMixin):
               `None`).
             - **pixel_values** -- Pixel values to be fed to a model. Returned when `images` is not `None`.
         """
-
         if text is None and images is None:
             raise ValueError("You have to specify either text or images. Both cannot be none.")
 

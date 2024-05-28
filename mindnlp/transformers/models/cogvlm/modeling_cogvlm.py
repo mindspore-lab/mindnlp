@@ -575,7 +575,6 @@ def apply_rotary_pos_emb_index_bhs(q, k, cos, sin, position_id,unsqueeze_dim=1):
         >>> apply_rotary_pos_emb_index_bhs(q, k, cos, sin, position_id, unsqueeze_dim)
         (tensor([1.0000, 3.5000, 3.0000]), tensor([4.0000, 6.5000, 6.0000]))
     """
-
     cos = cos.squeeze()
     sin = sin.squeeze()
     cos = cos[position_id].unsqueeze(unsqueeze_dim)
@@ -906,7 +905,6 @@ def build_position_ids(x:"mindspore.Tensor(B, L)", attention_mask: Optional["min
     Raises:
         None.
     """
-
     if attention_mask is not None:
         tmp = x.copy()
         bool_a = attention_mask.bool()

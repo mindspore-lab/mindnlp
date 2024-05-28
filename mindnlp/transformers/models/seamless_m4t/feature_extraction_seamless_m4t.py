@@ -51,7 +51,6 @@ class SeamlessM4TFeatureExtractor(SequenceFeatureExtractor):
             Stride used to reshape audios from shape (batch_size,num_frames,num_mel_bins) to
             (batch_size,num_frames//stride,num_mel_bins*stride).
     """
-
     model_input_names = ["input_features", "attention_mask"]
 
     def __init__(

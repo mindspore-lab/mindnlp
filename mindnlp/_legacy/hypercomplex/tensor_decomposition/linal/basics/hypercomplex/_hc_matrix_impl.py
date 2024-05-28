@@ -16,7 +16,6 @@ representing the result of the matrix multiplication operation.
     
     Note: This docstring does not include signatures or any other code to maintain consistency.
     """
-
     @abstractmethod
     def matmul(self,
                a_x: np.ndarray,

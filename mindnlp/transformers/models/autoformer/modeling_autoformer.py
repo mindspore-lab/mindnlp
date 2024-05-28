@@ -79,7 +79,6 @@ class AutoFormerDecoderOutput(ModelOutput):
             Attentions weights of the decoder's cross-attention layer, after the attention softmax, used to compute the
             weighted average in the cross-attention heads.
     """
-
     last_hidden_state: mindspore.Tensor = None
     trend: mindspore.Tensor = None
     past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
@@ -147,7 +146,6 @@ class AutoformerModelOutput(ModelOutput):
         static_features: (`torch.FloatTensor` of shape `(batch_size, feature size)`, *optional*):
             Static features of each time series' in a batch which are copied to the covariates at inference time.
     """
-
     last_hidden_state: mindspore.Tensor = None
     trend: mindspore.Tensor = None
     past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
@@ -179,7 +177,6 @@ class AutoformerFeatureEmbedder(nn.Cell):
         embedding_dims (`list[int]`):
             List of embedding dimensions of the categorical features.
     """
-
     def __init__(self, cardinalities: List[int], embedding_dims: List[int]) -> None:
         """
         Initializes the AutoformerFeatureEmbedder.
@@ -249,7 +246,6 @@ class AutoformerStdScaler(nn.Cell):
         minimum_scale (`float`, *optional*, defaults to 1e-5):
             Default scale that is used for elements that are constantly zero along dimension `dim`.
     """
-
     def __init__(self, config: AutoformerConfig):
         """
         Initializes an instance of AutoformerStdScaler.
@@ -318,7 +314,6 @@ class AutoformerMeanScaler(nn.Cell):
         minimum_scale (`float`, *optional*, defaults to 1e-10):
             Default minimum possible scale that is used for any item.
     """
-
     def __init__(self, config: AutoformerConfig):
         """
         Initializes an instance of the AutoformerMeanScaler class.
@@ -413,7 +408,6 @@ class AutoformerNOPScaler(nn.Cell):
         keepdim (`bool`, *optional*, defaults to `False`):
             Controls whether to retain dimension `dim` (of length 1) in the scale tensor, or suppress it.
     """
-
     def __init__(self, config: AutoformerConfig):
         """
         Initializes an instance of the AutoformerNOPScaler class.
@@ -489,7 +483,6 @@ def nll(input: nn.probability.distribution.distribution, target: mindspore.Tenso
 # Copied from transformers.models.marian.modeling_marian.MarianSinusoidalPositionalEmbedding with Marian->Autoformer
 class AutoformerSinusoidalPositionalEmbedding(nn.Embedding):
     """This module produces sinusoidal positional embeddings of any length."""
-
     def __init__(self, num_positions: int, embedding_dim: int, padding_idx: Optional[int] = None) -> None:
         """
         Initializes an instance of AutoformerSinusoidalPositionalEmbedding.
@@ -586,7 +579,6 @@ class AutoformerSeriesDecompositionLayer(nn.Cell):
 
         x_trend = AvgPool(Padding(X)) and x_seasonal = X - x_trend
     """
-
     def __init__(self, config: AutoformerConfig):
         """
         Initializes an instance of the AutoformerSeriesDecompositionLayer class.
@@ -628,7 +620,6 @@ class AutoformerLayernorm(nn.Cell):
     Special designed layer normalization for the seasonal part, calculated as: AutoformerLayernorm(x) = nn.LayerNorm(x)
     - torch.mean(nn.LayerNorm(x))
     """
-
     def __init__(self, config: AutoformerConfig):
         """
         Initializes a new instance of the AutoformerLayernorm class.
@@ -672,7 +663,6 @@ class AutoformerAttention(nn.Cell):
         (1) period-based dependencies discovery (2) time delay aggregation
     This block replace the canonical self-attention mechanism.
     """
-
     def __init__(
         self,
         embed_dim: int,
@@ -765,7 +755,6 @@ along the second and third axes.
         output_attentions: bool = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
-
         # if key_value_states are provided this layer is used as a cross-attention layer
         # for the decoder
         is_cross_attention = key_value_states is not None
@@ -1273,7 +1262,6 @@ class AutoformerEncoder(AutoformerPreTrainedModel):
     Args:
         config: AutoformerConfig
     """
-
     def __init__(self, config: AutoformerConfig):
         """
         Initializes the AutoformerEncoder.
@@ -1420,7 +1408,6 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
     Args:
         config: AutoformerConfig
     """
-
     def __init__(self, config: AutoformerConfig):
         """
         Initializes an instance of the AutoformerDecoder class.
@@ -1744,7 +1731,6 @@ initialized.
             shift (`int`, *optional* defaults to 0):
                 Shift the lags by this amount back in the time index.
         """
-
         # calculates the indices of the lags by subtracting the shift value from the given lags_sequence
         indices = [lag - shift for lag in self.config.lags_sequence]
 
@@ -2171,7 +2157,6 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
 
         >>> mean_prediction = outputs.sequences.mean(dim=1)
         ```"""
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if future_values is not None:
             use_cache = False

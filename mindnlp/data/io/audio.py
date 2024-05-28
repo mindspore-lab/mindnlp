@@ -35,7 +35,6 @@ class WaveFormat(IntEnum):
     Complete list is in mmreg.h in Windows 10 SDK.  ALAC and OPUS are the
     newest additions, in v10.0.14393 2016-07
     """
-
     UNKNOWN = 0x0000  # Microsoft Corporation
     PCM = 0x0001  # Microsoft Corporation
     ADPCM = 0x0002  # Microsoft Corporation
@@ -389,7 +388,6 @@ def _fmt_chunk(file_to_read, endian):
         ValueError: If the binary structure of the wave file is not compliant with the expected format.
         ValueError: If the wave file format is unknown or not supported.
     """
-    
     if endian == Endian.big_endian:
         fmt = ">"
     else:
@@ -606,7 +604,6 @@ def _skip_unknown_chunk(file_to_read, endian):
         IOError: If an I/O error occurs while reading the file.
         struct.error: If there is an error in unpacking the data.
     """
-    
     if endian == Endian.big_endian:
         fmt = ">I"
     else:

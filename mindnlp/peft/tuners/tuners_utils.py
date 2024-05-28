@@ -45,7 +45,6 @@ def onload_layer(layer):
         layer ('mindspore.nn.Cell'):
             layer with tuners to be merged
     """
-
     offloaded_cells = []
     for name, cell in layer.cells_and_names():
         if name in ["", "base_layer"]:
@@ -132,7 +131,6 @@ class BaseTuner(nn.Cell):
         config (`dict[str, Any]`):
             The model configuration object, it should be a dictionary of `str` to `Any` objects.
     """
-
     def __init__(self, model, peft_config: Union[PeftConfig, dict[str, PeftConfig]], adapter_name: str) -> None:
         r"""
         __init__
@@ -247,7 +245,6 @@ class BaseTuner(nn.Cell):
             key (`str`):
                 The cell's key name.
         """
-
     def _create_and_replace(
         self,
         peft_config: PeftConfig,
@@ -277,7 +274,6 @@ class BaseTuner(nn.Cell):
             **optionnal_kwargs (`dict`):
                 The optional keyword arguments to pass to deal with particular cases (e.g. 8bit, 4bit quantization)
         """
-
     def _mark_only_adapters_as_trainable(self, model):
         r"""
         A helper method to mark only the adapter layers as trainable (i.e. cell.requires_grad = False) This needs to
@@ -285,7 +281,6 @@ class BaseTuner(nn.Cell):
 
         Check `peft.tuners.lora.LoraModel._mark_only_adapters_as_trainable` for an example.
         """
-
     def _check_new_adapter_config(self, config: PeftConfig) -> None:
         """
         A helper method to check the config when a new adapter is being added.
@@ -293,7 +288,6 @@ class BaseTuner(nn.Cell):
         Raise a ValueError if there is something wrong with the config or if it conflicts with existing adapters.
 
         """
-
     # def add_adapter(self, adapter_name, config=None):
     #     """add adapter"""
     #     if config is not None:
@@ -395,7 +389,6 @@ class BaseTunerLayer(ABC):
         active_adapters (Union[List[`str`], `str`], *optional*):
             The name of the active adapter.
     """
-
     # All names of layers that may contain adapter (trainable) weights
     adapter_layer_names: tuple[str] = ()
     # All names of other parameters that may contain adapter-related parameters

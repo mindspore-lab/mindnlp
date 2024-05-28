@@ -178,7 +178,6 @@ parameters and returns the outputs.
         """
         Merges attn_head_size dim and num_attn_heads dim into hidden_size
         """
-
         # re-assemble all head outputs side by side
         # (batch, num_heads, seq_len, attn_head_size) -> (batch, seq_len, num_heads*attn_head_size)
         tensor = tensor.swapaxes(1, 2)
@@ -302,7 +301,6 @@ BARK_ATTENTION_CLASSES = {
 
 class BarkLayerNorm(nn.Cell):
     """LayerNorm but with an optional bias. PyTorch doesn't support simply bias=False."""
-
     def __init__(self, hidden_size, bias=True):
         """
         The __init__ method initializes an instance of the BarkLayerNorm class.
@@ -524,7 +522,6 @@ class BarkPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = BarkConfig
     supports_gradient_checkpointing = False
 
@@ -1179,7 +1176,6 @@ class BarkCoarseModel(BarkCausalModel):
                 `Tuple(mindspore.Tensor, mindspore.Tensor): The output coarse acoustics tokens, and the length of each sample
                 of the batch.
         """
-
         if semantic_generation_config is None:
             raise ValueError("`semantic_generation_config` has to be provided")
 
@@ -1898,7 +1894,6 @@ Generates audio from an input prompt and an optional speaker prompt.
 
     def codec_decode(self, fine_output, output_lengths=None):
         """Turn quantized audio codes into audio array using encodec."""
-
         fine_output = fine_output.swapaxes(0, 1)
         emb = self.codec_model.quantizer.decode(fine_output)
 

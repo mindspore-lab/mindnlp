@@ -107,7 +107,6 @@ class VideoMAEImageProcessor(BaseImageProcessor):
             Standard deviation to use if normalizing the image. This is a float or list of floats the length of the
             number of channels in the image. Can be overridden by the `image_std` parameter in the `preprocess` method.
     """
-
     model_input_names = ["pixel_values"]
 
     def __init__(

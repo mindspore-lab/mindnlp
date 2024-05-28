@@ -141,7 +141,6 @@ class BasicTokenizer:
             In some instances we want to skip the basic punctuation splitting so that later tokenization can capture
             the full context of the words, such as contractions.
     """
-
     def __init__(
         self,
         do_lower_case=True,
@@ -322,7 +321,6 @@ class CLIPTokenizer(PreTrainedTokenizer):
         pad_token (`str`, *optional*, defaults to `"<|endoftext|>"`):
             The token used for padding, for example when batching sequences of different lengths.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -476,7 +474,6 @@ class CLIPTokenizer(PreTrainedTokenizer):
         Returns:
             `List[int]`: A list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
         """
-
         if already_has_special_tokens:
             return super().get_special_tokens_mask(
                 token_ids_0=token_ids_0, token_ids_1=token_ids_1, already_has_special_tokens=True

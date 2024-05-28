@@ -109,7 +109,6 @@ class _BatchNorm(nn.Cell):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  bn_impl: Type[TBatchNormImpl],
                  num_features: int,
@@ -361,7 +360,6 @@ class BatchNorm1d(_BatchNorm):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  bn_impl: Type[TBatchNormImpl],
                  num_features: int,
@@ -374,7 +372,6 @@ class BatchNorm1d(_BatchNorm):
                  moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones',
                  use_batch_statistics: bool = None) -> None:
         """Initialize _BatchNorm."""
-
         super().__init__(bn_impl,
                         num_features,
                         eps,
@@ -495,7 +492,6 @@ class BatchNorm2d(_BatchNorm):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def _check_input_dim(self, shape: tuple, dtype: Any):
         r"""
         This method '_check_input_dim' in the class 'BatchNorm2d' is used to validate the input dimensions of the shape based on the data type provided.
@@ -604,7 +600,6 @@ class BatchNorm3d(nn.Cell):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  bn_impl: Type[TBatchNormImpl],
                  num_features: int,

@@ -53,7 +53,6 @@ class RobertaEmbeddings(nn.Cell):
     """
     Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
     """
-
     # Copied from transformers.models.bert.modeling_bert.BertEmbeddings.__init__
     def __init__(self, config):
         """
@@ -1080,7 +1079,6 @@ class RobertaPooler(nn.Cell):
 
 class RobertaPreTrainedModel(BertPreTrainedModel):
     """Roberta Pretrained Model."""
-
     config_class = RobertaConfig
     base_model_prefix = "roberta"
 
@@ -1100,7 +1098,6 @@ class RobertaModel(RobertaPreTrainedModel):
     .. _*Attention is all you need*: https://arxiv.org/abs/1706.03762
 
     """
-
     # Copied from transformers.models.bert.modeling_bert.BertModel.__init__ with Bert->Roberta
     def __init__(self, config, add_pooling_layer=True):
         """
@@ -1756,7 +1753,6 @@ output attentions, output hidden states, and return dictionary. It also includes
 
 class RobertaLMHead(nn.Cell):
     """Roberta Head for masked language modeling."""
-
     def __init__(self, config):
         """
         Initialize the RobertaLMHead class.
@@ -2213,7 +2209,6 @@ and returns the output.
 
 class RobertaClassificationHead(nn.Cell):
     """Head for sentence-level classification tasks."""
-
     def __init__(self, config):
         """
         Initialize the RobertaClassificationHead class.

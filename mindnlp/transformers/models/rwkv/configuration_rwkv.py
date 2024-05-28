@@ -91,7 +91,6 @@ class RwkvConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "rwkv"
     attribute_map = {"max_position_embeddings": "context_length"}
     pretrained_config_archive_map = RWKV_PRETRAINED_CONFIG_ARCHIVE_MAP

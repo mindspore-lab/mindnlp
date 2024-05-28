@@ -12,7 +12,6 @@ class _DualAlgebraImpl(_MatrixImpl, _VectorImpl, _ScalarImpl):
     These operations include multiplication, division, matrix multiplication, dot product, square root, handling special elements, visiting elements, and performing scalar operations. 
     This class inherits from _MatrixImpl, _VectorImpl, _ScalarImpl, and provides an implementation for each method to handle dual numbers and perform the corresponding algebraic operations on them.
     """
-
     def mul(self,
             a_x: np.ndarray,
             a_y: np.ndarray,

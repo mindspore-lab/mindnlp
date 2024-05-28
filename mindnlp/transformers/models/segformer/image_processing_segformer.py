@@ -82,7 +82,6 @@ class SegformerImageProcessor(BaseImageProcessor):
             background label will be replaced by 255. Can be overridden by the `do_reduce_labels` parameter in the
             `preprocess` method.
     """
-
     model_input_names = ["pixel_values"]
 
     def __init__(

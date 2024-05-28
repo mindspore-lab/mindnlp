@@ -472,7 +472,6 @@ class Qwen2MoeAttention(nn.Cell):
     Multi-headed attention from 'Attention Is All You Need' paper. Modified to use sliding window attention: Longformer
     and "Generating Long Sequences with Sparse Transformers".
     """
-
     def __init__(self, config: Qwen2MoeConfig, layer_idx: Optional[int] = None):
         """
         Initialize a Qwen2MoeAttention instance.
@@ -855,7 +854,6 @@ representations.
                 (see `past_key_values`).
             past_key_value (`Tuple(mindspore.Tensor)`, *optional*): cached past key and value projection states
         """
-
         residual = hidden_states
 
         hidden_states = self.input_layernorm(hidden_states)
@@ -943,7 +941,6 @@ class Qwen2MoeModel(Qwen2MoePreTrainedModel):
     Args:
         config: Qwen2MoeConfig
     """
-
     def __init__(self, config: Qwen2MoeConfig):
         """
         Initializes a new instance of the Qwen2MoeModel class.
@@ -1370,7 +1367,6 @@ with the given inputs and returns the output logits. Optionally computes the mas
         >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
         ```"""
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_router_logits = (
             output_router_logits if output_router_logits is not None else self.config.output_router_logits

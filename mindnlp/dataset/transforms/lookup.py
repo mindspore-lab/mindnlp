@@ -49,7 +49,6 @@ class Lookup(TextTensorOperation):
         >>> lookup = Lookup(vocab)
         >>> text_file_dataset = text_file_dataset.map(operations=[lookup])
     """
-
     def __init__(self, vocab, unk_token, return_dtype=mstype.int32):
         r"""
         Initializes a Lookup object.

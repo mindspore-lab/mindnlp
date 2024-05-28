@@ -190,7 +190,6 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
         padding_side (`str`, *optional*, defaults to `"left"`):
             The padding side. CPM-Bee will use left padding by default.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -994,7 +993,6 @@ list of strings representing individual tokens.
                 Tokenized input ids of the second sequence. Can be obtained from a string by chaining the `tokenize`
                 and `convert_tokens_to_ids` methods.
         """
-
         # Backward compatibility for 'truncation_strategy', 'pad_to_max_length'
         padding_strategy, truncation_strategy, max_length, kwargs = self._get_padding_truncation_strategies(
             padding=padding,

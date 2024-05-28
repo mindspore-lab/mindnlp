@@ -77,7 +77,6 @@ class Pop2PianoFeatureExtractor(SequenceFeatureExtractor):
         num_bars (`int`, *optional*, defaults to 2):
             Determines interval between each sequence.
     """
-
     model_input_names = ["input_features", "beatsteps", "extrapolated_beatstep"]
 
     def __init__(
@@ -191,7 +190,6 @@ class Pop2PianoFeatureExtractor(SequenceFeatureExtractor):
             n_extend (`int`):
                 used as an parameter to control the interpolation.
         """
-
         requires_backends(self, ["scipy"])
         beat_times_function = scipy.interpolate.interp1d(
             np.arange(beat_times.size),
@@ -217,7 +215,6 @@ class Pop2PianoFeatureExtractor(SequenceFeatureExtractor):
                 Interpolated values of the raw audio. If beatstep[0] is greater than 0.0, then it will be shifted by
                 the value at beatstep[0].
         """
-
         if audio is not None and len(audio.shape) != 1:
             raise ValueError(
                 f"Expected `audio` to be a single channel audio input of shape `(n, )` but found shape {audio.shape}."
@@ -357,7 +354,6 @@ np.ndarray and have been concatenated along the 0th axis.
             - **attention_mask_extrapolated_beatstep** numpy.ndarray of shape `(batch_size,
               max_extrapolated_beatstep_seq_length)`
         """
-
         processed_features_dict = {}
         for feature_name, feature_value in inputs.items():
             if feature_name == "input_features":
@@ -414,7 +410,6 @@ np.ndarray and have been concatenated along the 0th axis.
                 - `'np'`: Return Numpy `np.ndarray` objects.
                 If nothing is specified, it will return list of `np.ndarray` arrays.
         """
-
         requires_backends(self, ["librosa"])
         is_batched = bool(isinstance(audio, (list, tuple)) and isinstance(audio[0], (np.ndarray, tuple, list)))
         if is_batched:

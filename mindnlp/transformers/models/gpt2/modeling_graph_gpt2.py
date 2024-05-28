@@ -43,7 +43,6 @@ class GPT2Attention(nn.Cell):
     r"""
     gpt2 Attention
     """
-
     def __init__(self, config, is_cross_attention=False, layer_idx=None):
         """
         Initialize the GPT2Attention class.
@@ -338,7 +337,6 @@ class GPT2MLP(nn.Cell):
     r"""
     gpt2 MLP
     """
-
     def __init__(self, intermediate_size, config):
         """
         Initializes an instance of the GPT2MLP class.
@@ -386,7 +384,6 @@ class GPT2Block(nn.Cell):
     r"""
     gpt2 Block
     """
-
     def __init__(self, config, layer_idx=None):
         """
         Initializes a GPT2Block object.
@@ -576,7 +573,6 @@ class GPT2Model(GPT2PreTrainedModel):
     r"""
     gpt2 Model
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the GPT2Model class.
@@ -782,7 +778,6 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
     r"""
     gpt2 LMHead Model
     """
-
     def __init__(self, config, **kwargs):
         """
         Initializes a GPT2LMHeadModel instance.
@@ -886,7 +881,6 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
         Raises:
         - None
         """
-
         transformer_outputs = self.transformer(
             input_ids,
             past_key_values=past_key_values,
@@ -1025,7 +1019,6 @@ hidden states of the transformer.
         Raises:
             None.
         """
-
         transformer_outputs = self.transformer(
             input_ids,
             past_key_values=past_key_values,
@@ -1085,7 +1078,6 @@ class GPT2ForSequenceClassification(GPT2PreTrainedModel):
     r"""
     gpt2 For Sequence Classification
     """
-
     def __init__(self, config):
         """
         Initializes a new instance of the GPT2ForSequenceClassification class.
@@ -1142,7 +1134,6 @@ class GPT2ForSequenceClassification(GPT2PreTrainedModel):
         - AssertionError: Raised if batch size is greater than 1 and no padding token is defined.
         - Warning: Raised if padding tokens are not detected in 'inputs_embeds', which may lead to unexpected results.
         """
-
         transformer_outputs = self.transformer(
             input_ids,
             past_key_values=past_key_values,
@@ -1207,7 +1198,6 @@ class GPT2ForTokenClassification(GPT2PreTrainedModel):
     r"""
     GPT2 For Token Classification
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the GPT2ForTokenClassification class.
@@ -1263,7 +1253,6 @@ class GPT2ForTokenClassification(GPT2PreTrainedModel):
             ValueError: If the length of past_key_values tuple is not 2.
             ValueError: If the length of transformer_outputs is not as expected.
         """
-
         transformer_outputs = self.transformer(
             input_ids,
             past_key_values=past_key_values,

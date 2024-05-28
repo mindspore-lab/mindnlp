@@ -39,7 +39,6 @@ class AdaptionPromptModel(nn.Cell):
       dictionary.
     - Disabling the adapter would also result in the cells being removed from the model.
     """
-
     def __init__(self, model, configs: Dict, adapter_name: str):
         r"""
         Initializes an instance of the AdaptionPromptModel class.

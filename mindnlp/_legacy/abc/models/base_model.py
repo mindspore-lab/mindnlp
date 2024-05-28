@@ -20,7 +20,6 @@ from mindspore import nn
 
 class BaseModel(nn.Cell):
     r"""Basic class for models"""
-
     @classmethod
     def add_attrs(cls, parser):
         """Add model-specific arguments to the parser."""

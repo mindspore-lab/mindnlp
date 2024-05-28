@@ -62,7 +62,6 @@ def _adapter_names_pre_forward_hook(target, args, kwargs, adapter_names):
     Raises:
         None
     """
-    
     # pre-forward hook to inject the adapter_names argument when using mixed adapter batches inference
     kwargs["adapter_names"] = adapter_names
     return args, kwargs
@@ -140,7 +139,6 @@ class LoraModel(BaseTuner):
 
     >   - **peft_config** ([`LoraConfig`]): The configuration of the Lora model.
     """
-
     prefix: str = "lora_"
 
     def _check_new_adapter_config(self, config: LoraConfig) -> None:
@@ -748,7 +746,6 @@ class LoraModel(BaseTuner):
                 The method, should be one of ["total", "frequency"], to use to get the magnitude of the sign values.
                 Should be used with [`ties`, `ties_svd`, `dare_ties`, `dare_ties_svd`]
         """
-
         if adapter_name in list(self.peft_config.keys()):
             return
         for adapter in adapters:

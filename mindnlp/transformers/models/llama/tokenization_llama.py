@@ -128,7 +128,6 @@ class LlamaTokenizer(PreTrainedTokenizer):
             Checkout the [pull request](https://github.com/huggingface/transformers/pull/24565) for more details.
 
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES

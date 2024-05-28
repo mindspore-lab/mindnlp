@@ -39,7 +39,6 @@ class LlavaNextProcessor(ProcessorMixin):
         tokenizer ([`LlamaTokenizerFast`], *optional*):
             The tokenizer is a required input.
     """
-
     attributes = ["image_processor", "tokenizer"]
     image_processor_class = "LlavaNextImageProcessor"
     tokenizer_class = ("LlamaTokenizer", "LlamaTokenizerFast")

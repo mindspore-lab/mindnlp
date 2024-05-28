@@ -110,7 +110,6 @@ provides a method for returning an extra representation string for the module.
             gates: a Tensor with shape [batch_size, num_experts]
             load: a Tensor with shape [num_experts]
         """
-
         logits = self.layer(x).float()
         top_k_logits, top_k_indices = ops.topk(logits, self.top_k, dim=1)
         top_k_gates = ops.softmax(top_k_logits, axis=1).type_as(x)

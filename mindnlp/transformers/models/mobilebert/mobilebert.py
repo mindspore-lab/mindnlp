@@ -51,7 +51,6 @@ MOBILEBERT_PRETRAINED_MODEL_ARCHIVE_LIST = ["google/mobilebert-uncased"]
 
 class NoNorm(nn.Cell):
     """NoNorm"""
-
     def __init__(self, feat_size):
         """
         Initializes an instance of the NoNorm class.
@@ -92,7 +91,6 @@ NORM2FN = {"layer_norm": nn.LayerNorm, "no_norm": NoNorm}
 
 class MobileBertEmbeddings(nn.Cell):
     """Construct the embeddings from word, position and token_type embeddings."""
-
     def __init__(self, config):
         """
         Initializes an instance of the MobileBertEmbeddings class.
@@ -195,7 +193,6 @@ class MobileBertEmbeddings(nn.Cell):
 
 class MobileBertSelfAttention(nn.Cell):
     """MobileBertSelfAttention"""
-
     def __init__(self, config):
         """
         Initializes the MobileBertSelfAttention object.
@@ -286,7 +283,6 @@ class MobileBertSelfAttention(nn.Cell):
 
 class MobileBertSelfOutput(nn.Cell):
     """MobileBertSelfOutput"""
-
     def __init__(self, config):
         """
         Initializes a new instance of the MobileBertSelfOutput class.
@@ -340,7 +336,6 @@ class MobileBertSelfOutput(nn.Cell):
 
 class MobileBertAttention(nn.Cell):
     """MobileBertAttention"""
-
     def __init__(self, config):
         """
         Initializes an instance of MobileBertAttention.
@@ -430,7 +425,6 @@ attention_mask and head_mask can be optionally provided to control the attention
 
 class MobileBertIntermediate(nn.Cell):
     """MobileBertIntermediate"""
-
     def __init__(self, config):
         """
         Initialize the MobileBertIntermediate class.
@@ -480,7 +474,6 @@ class MobileBertIntermediate(nn.Cell):
 
 class OutputBottleneck(nn.Cell):
     """OutputBottleneck"""
-
     def __init__(self, config):
         """
         Initializes an instance of the OutputBottleneck class.
@@ -535,7 +528,6 @@ class OutputBottleneck(nn.Cell):
 
 class MobileBertOutput(nn.Cell):
     """MobileBertOutput"""
-
     def __init__(self, config):
         """
         Initializes the MobileBertOutput class.
@@ -596,7 +588,6 @@ class MobileBertOutput(nn.Cell):
 
 class BottleneckLayer(nn.Cell):
     """BottleneckLayer"""
-
     def __init__(self, config):
         """
         Initializes a BottleneckLayer instance.
@@ -645,7 +636,6 @@ returned as the output of the bottleneck layer.
 
 class Bottleneck(nn.Cell):
     """Bottleneck"""
-
     def __init__(self, config):
         """
         Initializes an instance of the 'Bottleneck' class.
@@ -712,7 +702,6 @@ class Bottleneck(nn.Cell):
 
 class FFNOutput(nn.Cell):
     """FFNOutput"""
-
     def __init__(self, config):
         """
         Initializes an instance of the FFNOutput class.
@@ -758,7 +747,6 @@ class FFNOutput(nn.Cell):
 
 class FFNLayer(nn.Cell):
     """FFNLayer"""
-
     def __init__(self, config):
         """
         Initialize the FFNLayer class with the provided configuration.
@@ -800,7 +788,6 @@ class FFNLayer(nn.Cell):
 
 class MobileBertLayer(nn.Cell):
     """MobileBertLayer"""
-
     def __init__(self, config):
         """
         Initializes a MobileBertLayer instance.
@@ -896,7 +883,6 @@ class MobileBertLayer(nn.Cell):
 
 class MobileBertEncoder(nn.Cell):
     """MobileBertEncoder"""
-
     def __init__(self, config):
         """
         Initialize the MobileBertEncoder.
@@ -974,7 +960,6 @@ class MobileBertEncoder(nn.Cell):
 
 class MobileBertPooler(nn.Cell):
     """MobileBertPooler"""
-
     def __init__(self, config):
         """
         Initializes the MobileBertPooler class.
@@ -1029,7 +1014,6 @@ class MobileBertPooler(nn.Cell):
 
 class MobileBertPredictionHeadTransform(nn.Cell):
     """MobileBertPredictionHeadTransform"""
-
     def __init__(self, config):
         """
         Initializes an instance of the MobileBertPredictionHeadTransform class.
@@ -1080,7 +1064,6 @@ class MobileBertPredictionHeadTransform(nn.Cell):
 
 class MobileBertLMPredictionHead(nn.Cell):
     """MobileBertLMPredictionHead"""
-
     def __init__(self, config):
         """
         Initializes the MobileBertLMPredictionHead.
@@ -1129,7 +1112,6 @@ class MobileBertLMPredictionHead(nn.Cell):
 
 class MobileBertOnlyMLMHead(nn.Cell):
     """MobileBertOnlyMLMHead"""
-
     def __init__(self, config):
         """
         Initialize the MobileBertOnlyMLMHead.
@@ -1169,7 +1151,6 @@ sequence_length, hidden_size).
 
 class MobileBertPreTrainingHeads(nn.Cell):
     """MobileBertPreTrainingHeads"""
-
     def __init__(self, config):
         """
         This method initializes an instance of the MobileBertPreTrainingHeads class.
@@ -1213,7 +1194,6 @@ class MobileBertPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = MobileBertConfig
     pretrained_model_archive_map = MOBILEBERT_PRETRAINED_MODEL_ARCHIVE_LIST
     base_model_prefix = "mobilebert"
@@ -1318,7 +1298,6 @@ class MobileBertModel(MobileBertPreTrainedModel):
     """
     https://arxiv.org/pdf/2004.02984.pdf
     """
-
     def __init__(self, config, add_pooling_layer=True):
         """
         Initializes a new instance of the MobileBertModel class.
@@ -1496,7 +1475,6 @@ class MobileBertForPreTrainingOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     prediction_logits: mindspore.Tensor = None
     seq_relationship_logits: mindspore.Tensor = None
@@ -1722,7 +1700,6 @@ class MobileBertForMaskedLM(MobileBertPreTrainedModel):
 
 class MobileBertOnlyNSPHead(nn.Cell):
     """MobileBertOnlyNSPHead"""
-
     def __init__(self, config):
         """
         Initializes the MobileBertOnlyNSPHead class.
@@ -1762,7 +1739,6 @@ class MobileBertOnlyNSPHead(nn.Cell):
 
 class MobileBertForNextSentencePrediction(MobileBertPreTrainedModel):
     """MobileBertForNextSentencePrediction"""
-
     def __init__(self, config):
         """
         Initializes an instance of the MobileBertForNextSentencePrediction class.
@@ -1821,7 +1797,6 @@ class MobileBertForNextSentencePrediction(MobileBertPreTrainedModel):
         >>> loss = outputs.loss
         >>> logits = outputs.logits
         ```"""
-
         if "next_sentence_label" in kwargs:
             warnings.warn(
                 "The `next_sentence_label` argument is deprecated and will be removed in a future version, use"
@@ -1866,7 +1841,6 @@ class MobileBertForNextSentencePrediction(MobileBertPreTrainedModel):
 
 class MobileBertForSequenceClassification(MobileBertPreTrainedModel):
     """MobileBertForSequenceClassification"""
-
     def __init__(self, config):
         """
         Initializes an instance of the MobileBertForSequenceClassification class.
@@ -2062,7 +2036,6 @@ class MobileBertForQuestionAnswering(MobileBertPreTrainedModel):
 
 class MobileBertForMultipleChoice(MobileBertPreTrainedModel):
     """MobileBertForMultipleChoice"""
-
     def __init__(self, config):
         """
         Initialize the MobileBertForMultipleChoice class.

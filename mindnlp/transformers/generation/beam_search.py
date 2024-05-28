@@ -31,7 +31,6 @@ class BeamScorer(ABC):
     Abstract base class for all beam scorers that are used for [`~PreTrainedModel.beam_search`] and
     [`~PreTrainedModel.beam_sample`].
     """
-
     def process(
         self,
         input_ids: mindspore.Tensor,
@@ -125,7 +124,6 @@ class BeamSearchScorer(BeamScorer):
         max_length (`int`, *optional*):
             The maximum length of the sequence to be generated.
     """
-
     def __init__(
         self,
         batch_size: int,
@@ -488,7 +486,6 @@ class ConstrainedBeamSearchScorer(BeamScorer):
         max_length (`int`, *optional*):
             The maximum length of the sequence to be generated.
     """
-
     def __init__(
         self,
         batch_size: int,
@@ -662,7 +659,6 @@ class ConstrainedBeamSearchScorer(BeamScorer):
                 - **next_beam_indices** (`mindspore.Tensor` of shape `(batch_size * num_beams)`) -- Beam indices
                 indicating to which beam the next tokens shall be added.
         """
-
         cur_len = input_ids.shape[-1] + 1  # add up to the length which the next_scores is calculated on
         batch_size = len(self._beam_hyps)
         if batch_size != (input_ids.shape[0] // self.group_size):
@@ -1099,7 +1095,6 @@ class BeamHypotheses:
         If there are enough hypotheses and that none of the hypotheses being generated can become better than the worst
         one in the heap, then we are done with this sentence.
         """
-
         if len(self) < self.num_beams:
             return False
 

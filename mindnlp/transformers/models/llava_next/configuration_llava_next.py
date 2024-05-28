@@ -73,7 +73,6 @@ class LlavaNextConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "llava_next"
     is_composition = False
 

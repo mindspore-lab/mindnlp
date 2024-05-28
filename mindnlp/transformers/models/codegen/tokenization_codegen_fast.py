@@ -104,7 +104,6 @@ class CodeGenTokenizerFast(PreTrainedTokenizerFast):
             Whether or not to add an initial space to the input. This allows to treat the leading word just as any
             other word. (CodeGen tokenizer detect beginning of words by the preceding space).
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -274,7 +273,6 @@ with 'add_prefix_space=True' for using it with pretokenized inputs.
         Returns:
             `str`: The decoded sentence.
         """
-
         decoded_text = super().decode(
             token_ids=token_ids,
             skip_special_tokens=skip_special_tokens,

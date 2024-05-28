@@ -357,7 +357,6 @@ class RMSNorm(nn.Cell):
     """
     RMSNorm
     """
-
     def __init__(self, hidden_size, epsilon=1e-6):
         """
         RMSNorm is equivalent to T5LayerNorm
@@ -395,7 +394,6 @@ class RotaryEmbedding(nn.Cell):
     """
     RotaryEmbedding
     """
-
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
         """
         __init__(self, dim, max_position_embeddings=2048, base=10000)
@@ -499,7 +497,6 @@ class MLP(nn.Cell):
     """
     MLP
     """
-
     def __init__(
             self,
             hidden_size: int,
@@ -549,7 +546,6 @@ class MLP(nn.Cell):
 
 class Attention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(self, config: BaiChuanConfig):
         """
         Initializes an instance of the Attention class.
@@ -823,7 +819,6 @@ caching is enabled).
         Raises:
             None.
         '''
-
         bsz, q_len, _ = hidden_states.shape
 
         proj = self.W_pack(hidden_states)
@@ -872,7 +867,6 @@ class DecoderLayer(nn.Cell):
     """
     DecoderLayer
     """
-
     def __init__(self, config: BaiChuanConfig):
         """
         Initializes an instance of the DecoderLayer class.
@@ -924,7 +918,6 @@ class DecoderLayer(nn.Cell):
                 (see `past_key_values`).
             past_key_value (`Tuple(Tensor)`, *optional*): cached past key and value projection states
         """
-
         residual = hidden_states
 
         hidden_states = self.input_layernorm(hidden_states)
@@ -1038,7 +1031,6 @@ optional present key value computed during attention.
             None.
         
         """
-
         residual = hidden_states
 
         hidden_states = self.input_layernorm(hidden_states)
@@ -1110,7 +1102,6 @@ class BaiChuan7bModel(BaiChuanPreTrainedModel):
     Args:
         config: BaiChuanConfig
     """
-
     def __init__(self, config: BaiChuanConfig):
         """
         Initializes a new instance of the BaiChuan7bModel class.
@@ -1495,7 +1486,6 @@ num_attention_heads, hidden_size, num_hidden_layers, rms_norm_eps, and model_max
             ValueError: If both input_ids and inputs_embeds are provided simultaneously.
             ValueError: If neither input_ids nor inputs_embeds are provided.
         """
-
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("You cannot provide both input_ids and inputs_embeds simultaneously")
         if input_ids is not None:
@@ -1589,7 +1579,6 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
     """
     BaiChuanForCausalLM
     """
-
     def __init__(self, config, size=None):
         """
         Initializes a new instance of BaiChuanForCausalLM.

@@ -122,7 +122,6 @@ class Workflow:
         the defalut value is 0.
         kwargs (dict, optional): Additional keyword arguments passed along to the specific work.
     """
-
     def __init__(
         self, work, model=None, mode=None, device_id=0, from_hf_hub=False, **kwargs
     ):

@@ -146,7 +146,6 @@ the base layer's output. The class provides methods for creating, updating, merg
         self, adapter_name: str, x: ms.Tensor, *args: Any, **kwargs: Any
     ) -> ms.Tensor:
         """Activations added on top of the base layer output (i.e. after the base layer forward pass)"""
-
     @property
     def _available_adapters(self) -> Set[str]:
         r"""
@@ -727,7 +726,6 @@ initialization.
             TypeError: If the input tensor x is not of type ms.Tensor.
             ValueError: If the input tensor x has an unsupported dtype.
         """
-        
         previous_dtype = x.dtype
 
         if self.disable_adapters:
@@ -760,7 +758,6 @@ initialization.
 
 class Dense(LoKrLayer):
     """LoKr implemented in Dense layer"""
-
     def __init__(
         self,
         base_layer: nn.Cell,
@@ -792,7 +789,6 @@ class Dense(LoKrLayer):
         Raises:
             <List of exceptions that the function may raise, if any>
         """
-        
         super().__init__(base_layer)
 
         # Create adapter and set it active
@@ -820,7 +816,6 @@ class Dense(LoKrLayer):
         Raises:
             (Exception): If there is an error in retrieving the delta weight or in performing the dense operation.
         """
-        
         delta_weight = self.get_delta_weight(
             adapter_name
         )  # Forced synchronization of parameter types, dangerous operation
@@ -846,7 +841,6 @@ class Dense(LoKrLayer):
 
 class Conv2d(LoKrLayer):
     """LoKr implemented in Conv2d layer"""
-
     def __init__(
         self,
         base_layer: nn.Cell,
@@ -977,7 +971,6 @@ def factorization(dimension: int, factor: int = -1) -> Tuple[int, int]:
         (4, 32)
         ```
     """
-
     if factor > 0 and (dimension % factor) == 0:
         m = factor
         n = dimension // factor

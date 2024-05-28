@@ -26,7 +26,6 @@ class _ComplexAlgebraImpl(_MatrixImpl, _VectorImpl, _ScalarImpl):
     
     For detailed information on each method's parameters and return values, refer to the method docstrings within the class.
     """
-      
     def mul(self,
             a_x: np.ndarray,
             a_y: np.ndarray,
@@ -234,7 +233,6 @@ class _ComplexAlgebraImpl(_MatrixImpl, _VectorImpl, _ScalarImpl):
         Raises:
             None
         """
-        
         return (
             np.float64(x1 * x2 - y1 * y2),
             np.float64(x1 * y2 + y1 * x2)

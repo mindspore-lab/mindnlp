@@ -59,7 +59,6 @@ class BaseModelOutputWithCLSToken(ModelOutput):
             shape `(batch_size, sequence_length, hidden_size)`. Hidden-states of the model at the output of each layer
             plus the initial embedding outputs.
     """
-
     last_hidden_state: mindspore.Tensor = None
     cls_token_value: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor, ...]] = None
@@ -89,7 +88,6 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
 # Copied from transformers.models.beit.modeling_beit.BeitDropPath
 class CvtDropPath(nn.Cell):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
-
     def __init__(self, drop_prob: Optional[float] = None) -> None:
         """
         Initializes an instance of the CvtDropPath class.
@@ -145,7 +143,6 @@ class CvtEmbeddings(nn.Cell):
     """
     Construct the CvT embeddings.
     """
-
     def __init__(self, patch_size, num_channels, embed_dim, stride, padding, dropout_rate):
         """
         Initializes an instance of the CvtEmbeddings class.
@@ -197,7 +194,6 @@ class CvtConvEmbeddings(nn.Cell):
     """
     Image to Conv Embedding.
     """
-
     def __init__(self, patch_size, num_channels, embed_dim, stride, padding):
         """
         __init__
@@ -612,7 +608,6 @@ class CvtSelfOutput(nn.Cell):
     The residual connection is defined in CvtLayer instead of here (as is the case with other models), due to the
     layernorm applied before each block.
     """
-
     def __init__(self, embed_dim, drop_rate):
         """
         Initializes an instance of the CvtSelfOutput class.
@@ -942,7 +937,6 @@ class CvtLayer(nn.Cell):
     """
     CvtLayer composed by attention layers, normalization and multi-layer perceptrons (mlps).
     """
-
     def __init__(
         self,
         num_heads,
@@ -1248,7 +1242,6 @@ class CvtPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = CvtConfig
     base_model_prefix = "cvt"
     main_input_name = "pixel_values"

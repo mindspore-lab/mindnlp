@@ -68,7 +68,6 @@ ERNIE_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 class ErnieEmbeddings(nn.Cell):
     """Construct the embeddings from word, position and token_type embeddings."""
-
     def __init__(self, config):
         """
         Initializes an instance of the ErnieEmbeddings class.
@@ -1348,7 +1347,6 @@ class ErniePreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = ErnieConfig
     base_model_prefix = "ernie"
     supports_gradient_checkpointing = True
@@ -1400,7 +1398,6 @@ class ErnieForPreTrainingOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     prediction_logits: mindspore.Tensor = None
     seq_relationship_logits: mindspore.Tensor = None
@@ -1420,7 +1417,6 @@ class ErnieModel(ErniePreTrainedModel):
     to `True`. To be used in a Seq2Seq model, the model needs to initialized with both `is_decoder` argument and
     `add_cross_attention` set to `True`; an `encoder_hidden_states` is then expected as an input to the forward pass.
     """
-
     # Copied from transformers.models.bert.modeling_bert.BertModel.__init__ with Bert->Ernie
     def __init__(self, config, add_pooling_layer=True):
         """
@@ -2140,7 +2136,6 @@ output_hidden_states, return_dict): Constructs the model for training or inferen
             config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
             loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
         """
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.ernie(
@@ -2315,7 +2310,6 @@ next sequence prediction loss if labels are provided.
         >>> assert logits[0, 0] < logits[0, 1]  # next sentence was random
         ```
         """
-
         if "next_sentence_label" in kwargs:
             warnings.warn(
                 "The `next_sentence_label` argument is deprecated and will be removed in a future version, use"
@@ -2880,7 +2874,6 @@ class UIE(ErniePreTrainedModel):
         config (:class:`ErnieConfig`):
             An instance of ErnieConfig used to construct UIE
     """
-
     def __init__(self, config: ErnieConfig):
         """
         Initializes an instance of the UIE class.

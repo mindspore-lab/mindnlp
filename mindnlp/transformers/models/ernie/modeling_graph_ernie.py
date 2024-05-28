@@ -53,7 +53,6 @@ ERNIE_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 class MSErnieEmbeddings(nn.Cell):
     """Construct the embeddings from word, position and token_type embeddings."""
-
     def __init__(self, config):
         """
         Initializes an instance of the `MSErnieEmbeddings` class.
@@ -1411,7 +1410,6 @@ class MSErniePreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = ErnieConfig
     base_model_prefix = "ernie"
     supports_gradient_checkpointing = True
@@ -1448,7 +1446,6 @@ class MSErnieModel(MSErniePreTrainedModel):
     to `True`. To be used in a Seq2Seq model, the model needs to initialized with both `is_decoder` argument and
     `add_cross_attention` set to `True`; an `encoder_hidden_states` is then expected as an input to the forward pass.
     """
-
     # Copied from transformers.models.bert.modeling_bert.BertModel.__init__ with Bert->Ernie
     def __init__(self, config, add_pooling_layer=True):
         """
@@ -2337,7 +2334,6 @@ indicates that sequence B is a continuation of sequence A, while a label of 1 in
         >>> assert logits[0, 0] < logits[0, 1]  # next sentence was random
         ```
         """
-
         if "next_sentence_label" in kwargs:
             warnings.warn(
                 "The `next_sentence_label` argument is deprecated and will be removed in a future version, use"
@@ -2435,7 +2431,6 @@ class MSErnieForSequenceClassification(MSErniePreTrainedModel):
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
-
         outputs = self.ernie(
             input_ids,
             attention_mask=attention_mask,
@@ -2656,7 +2651,6 @@ training and computes token classification loss if labels are provided.
         labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
-
         outputs = self.ernie(
             input_ids,
             attention_mask=attention_mask,
@@ -2769,7 +2763,6 @@ Tuple[mindspore.Tensor, ...]:
             Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
             are not taken into account for computing the loss.
         """
-
         outputs = self.ernie(
             input_ids,
             attention_mask=attention_mask,
@@ -2818,7 +2811,6 @@ class MSUIE(MSErniePreTrainedModel):
         config (:class:`ErnieConfig`):
             An instance of ErnieConfig used to construct UIE
     """
-
     def __init__(self, config: ErnieConfig):
         """
         Initializes an instance of the MSUIE class.

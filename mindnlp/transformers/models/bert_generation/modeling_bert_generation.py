@@ -853,7 +853,6 @@ BaseModelOutputWithPastAndCrossAttentions object containing the last hidden stat
 
 class BertGenerationEmbeddings(nn.Cell):
     """Construct the embeddings from word and position embeddings."""
-
     def __init__(self, config):
         """
         Initializes the BertGenerationEmbeddings class.
@@ -937,7 +936,6 @@ class BertGenerationPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = BertGenerationConfig
     base_model_prefix = "bert"
     supports_gradient_checkpointing = True
@@ -978,7 +976,6 @@ class BertGenerationEncoder(BertGenerationPreTrainedModel):
     to `True`. To be used in a Seq2Seq model, the model needs to initialized with both `is_decoder` argument and
     `add_cross_attention` set to `True`; an `encoder_hidden_states` is then expected as an input to the forward pass.
     """
-
     def __init__(self, config):
         """
         Initializes a BertGenerationEncoder instance.

@@ -98,7 +98,6 @@ class LlamaTokenizerFast(PreTrainedTokenizerFast):
         use_default_system_prompt (`bool`, *optional*, defaults to `False`):
             Whether or not the default system prompt for Llama should be used.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     slow_tokenizer_class = LlamaTokenizer

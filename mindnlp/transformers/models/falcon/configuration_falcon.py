@@ -33,7 +33,6 @@ class FalconConfig(PretrainedConfig):
     r"""
     Falcon config
     """
-
     model_type = "falcon"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -129,7 +128,6 @@ class FalconConfig(PretrainedConfig):
 
         Returns:
             int: The dimension of each attention head."""
-
         return self.hidden_size // self.num_attention_heads
 
     @property
@@ -139,7 +137,6 @@ class FalconConfig(PretrainedConfig):
 
         Returns:
             bool: True if the rotary property is enabled, False otherwise."""
-
         return not self.alibi
 
     def _rope_scaling_validation(self):

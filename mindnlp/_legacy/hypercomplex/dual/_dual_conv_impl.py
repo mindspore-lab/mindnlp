@@ -60,7 +60,6 @@ class _ConvImpl(BaseConvImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def construct(self,
                   conv_fn: Callable,
                   real: Tensor,
@@ -90,7 +89,6 @@ class _ConvImpl(BaseConvImpl):
         Raises:
             - Any exceptions raised by the convolution function 'conv_fn' when applied to the input tensors 'real' and 'dual'.
         """
-        
         out_r = conv_fn(real, self.weight_x, pad_mode=pad_mode, padding=padding,
                         stride=stride, dilation=dilation, group=group)
         out_rd = conv_fn(real, self.weight_y, pad_mode=pad_mode, padding=padding,
@@ -142,7 +140,6 @@ class _ReDuConvImpl(BaseConvImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  weight_init: Union[Tensor, str, Initializer, numbers.Number],
                  weight_shape: tuple,
@@ -215,7 +212,6 @@ Initializer object, or a number.
             >>> _ReDuConvImpl.construct(self, conv_fn, real_tensor, dual_tensor, pad_mode, padding, stride, dilation, group)
             (tensor([...]), tensor([...]))
         """
-
         out_r = conv_fn(real, self.weight_x, pad_mode=pad_mode, padding=padding,
                         stride=stride, dilation=dilation, group=group)
         inp = P.concat([real, dual], axis=self.c_idx)

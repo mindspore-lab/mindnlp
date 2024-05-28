@@ -65,7 +65,6 @@ class SchemaTree:
     """
     Implementataion of SchemaTree
     """
-
     def __init__(self, name="root", children=None):
         """
         Initializes an instance of the SchemaTree class.

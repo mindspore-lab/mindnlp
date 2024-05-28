@@ -36,7 +36,6 @@ class Work(metaclass=abc.ABCMeta):
         model(string): The model name in the work.
         kwargs (dict, optional): Additional keyword arguments passed along to the specific work.
     """
-
     def __init__(self, model, work, **kwargs):
         """
         The __init__ method initializes an instance of the Work class.
@@ -90,13 +89,11 @@ class Work(metaclass=abc.ABCMeta):
         """
         Construct the inference model for the predictor.
         """
-
     @abstractmethod
     def _construct_tokenizer(self, model):
         """
         Construct the tokenizer for the predictor.
         """
-
     @abstractmethod
     def _preprocess(self, inputs, padding=True, add_special_tokens=True):
         """
@@ -104,20 +101,17 @@ class Work(metaclass=abc.ABCMeta):
            1) Transform the raw text to token ids.
            2) Generate the other model inputs from the raw text and token ids.
         """
-
     @abstractmethod
     def _run_model(self, inputs):
         """
         Run the work model from the outputs of the `_tokenize` function.
         """
-
     @abstractmethod
     def _postprocess(self, inputs):
         """
         The model output is the logits and pros,
         this function will convert the model output to raw text.
         """
-
     def _get_graph_model_name(self):
         """
         Get the graph model name.
@@ -142,22 +136,18 @@ class Work(metaclass=abc.ABCMeta):
         """
         Check the predictor type.
         """
-
     def _prepare_graph_mode(self):
         """
         Construct the input data and predictor in the MindSpore graph mode.
         """
-
     def _prepare_onnx_mode(self):
         """
         Prepare the onnx model.
         """
-
     def _get_inference_model(self):
         """
         Return the inference program, inputs and outputs in graph mode.
         """
-
     def _check_input_text(self, inputs):
         """
         Check whether the input text meet the requirement.
@@ -229,7 +219,6 @@ class Work(metaclass=abc.ABCMeta):
         Join the short results automatically and generate
         the final results to match with the user inputs.
         """
-
     def help(self):
         """
         Return the usage message of the current work.

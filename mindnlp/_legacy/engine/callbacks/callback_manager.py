@@ -25,7 +25,6 @@ def _transfer(func):
     Args:
         func: callback function.
     """
-
     def wrapper(manager, *arg):
         returns = []
         for callback in manager.callbacks:
@@ -43,7 +42,6 @@ class CallbackManager(Callback):
             while training. Default: None.
 
     """
-
     def __init__(self, callbacks):
         r"""
         Initializes an instance of the 'CallbackManager' class.
@@ -65,79 +63,60 @@ class CallbackManager(Callback):
     @_transfer
     def train_begin(self, run_context):
         """Called once before the network executing."""
-
     @_transfer
     def train_end(self, run_context):
         """Called once after network training."""
-
     @_transfer
     def train_epoch_begin(self, run_context):
         """Called before each epoch beginning."""
-
     @_transfer
     def train_epoch_end(self, run_context):
         """Called after each epoch finished."""
-
     @_transfer
     def fetch_data_begin(self, run_context):
         """Called before fetch each batch/ds_sink_size data."""
-
     @_transfer
     def fetch_data_end(self, run_context):
         """Called after fetch each batch/ds_sink_size data."""
-
     @_transfer
     def train_step_begin(self, run_context):
         """Called before each train step beginning."""
-
     @_transfer
     def train_step_end(self, run_context):
         """Called after each train step finished."""
-
     @_transfer
     def forward_begin(self, run_context):
         """Called before each forward beginning."""
-
     @_transfer
     def forward_end(self, run_context):
         """Called after each step finished."""
-
     @_transfer
     def backward_begin(self, run_context):
         """Called before each forward beginning."""
-
     @_transfer
     def backward_end(self, run_context):
         """Called after each backward finished."""
-
     @_transfer
     def ds_sink_begin(self, run_context):
         """Called before each data_sink beginning."""
-
     @_transfer
     def ds_sink_end(self, run_context):
         """Called after each data_sink finished."""
-
     @_transfer
     def load_model(self, run_context):
         """Called before loading model."""
-
     @_transfer
     def save_model(self, run_context):
         """Called before saving model."""
-
     @_transfer
     def evaluate_begin(self, run_context):
         """Called before evaluating."""
-
     @_transfer
     def evaluate_end(self, run_context):
         """Called after evaluating."""
-
     @_transfer
     def exception(self, run_context):
         """Called if having exceptions."""
-
 class RunContext:
     """
         Provide information about the model.

@@ -63,7 +63,6 @@ class MobileBertTokenizer(PreTrainedTokenizer):
         >>> tokens_offset = tokens.offsets
 
     """
-
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
 
     def __init__(

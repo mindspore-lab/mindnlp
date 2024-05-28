@@ -69,7 +69,6 @@ class AlignVisionModelOutput(ModelOutput):
 
             Hidden-states of the model at the output of each layer plus the optional initial embedding outputs.
     """
-
     image_embeds: Optional[mindspore.Tensor] = None
     last_hidden_state: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -97,7 +96,6 @@ class AlignTextModelOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     text_embeds: Optional[mindspore.Tensor] = None
     last_hidden_state: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -125,7 +123,6 @@ class AlignOutput(ModelOutput):
         vision_model_output(`BaseModelOutputWithPoolingAndNoAttention`):
             The output of the [`AlignVisionModel`].
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits_per_image: mindspore.Tensor = None
     logits_per_text: mindspore.Tensor = None
@@ -231,7 +228,6 @@ class AlignVisionEmbeddings(nn.Cell):
     r"""
     A module that corresponds to the stem module of the original work.
     """
-
     def __init__(self, config: AlignVisionConfig):
         """
         Initializes an instance of the AlignVisionEmbeddings class.
@@ -380,7 +376,6 @@ class AlignVisionExpansionLayer(nn.Cell):
     r"""
     This corresponds to the expansion phase of each block in the original implementation.
     """
-
     def __init__(self, config: AlignVisionConfig, in_dim: int, out_dim: int):
         """
         Initialize the AlignVisionExpansionLayer.
@@ -439,7 +434,6 @@ class AlignVisionDepthwiseLayer(nn.Cell):
     r"""
     This corresponds to the depthwise convolution phase of each block in the original implementation.
     """
-
     def __init__(
         self,
         config: AlignVisionConfig,
@@ -508,7 +502,6 @@ class AlignVisionSqueezeExciteLayer(nn.Cell):
     r"""
     This corresponds to the Squeeze and Excitement phase of each block in the original implementation.
     """
-
     def __init__(self, config: AlignVisionConfig, in_dim: int, expand_dim: int, expand: bool = False):
         """
         Initialize the AlignVisionSqueezeExciteLayer.
@@ -581,7 +574,6 @@ class AlignVisionFinalBlockLayer(nn.Cell):
     r"""
     This corresponds to the final phase of each block in the original implementation.
     """
-
     def __init__(
         self, config: AlignVisionConfig, in_dim: int, out_dim: int, stride: int, drop_rate: float, id_skip: bool
     ):
@@ -668,7 +660,6 @@ class AlignVisionBlock(nn.Cell):
             Whether to apply padding to only right and bottom side of the input kernel before the depthwise convolution
             operation, set to `True` for inputs with odd input sizes.
     """
-
     def __init__(
         self,
         config: AlignVisionConfig,
@@ -770,7 +761,6 @@ class AlignVisionEncoder(nn.Cell):
         config ([`AlignVisionConfig`]):
             Model configuration class.
     """
-
     def __init__(self, config: AlignVisionConfig):
         """
         Initializes an instance of the AlignVisionEncoder class with the provided configuration.
@@ -877,7 +867,6 @@ class AlignVisionEncoder(nn.Cell):
 # Copied from transformers.models.bert.modeling_bert.BertEmbeddings with Bert->AlignText
 class AlignTextEmbeddings(nn.Cell):
     """Construct the embeddings from word, position and token_type embeddings."""
-
     def __init__(self, config):
         """
         Initializes an instance of the AlignTextEmbeddings class.
@@ -1942,7 +1931,6 @@ class AlignPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = AlignConfig
     base_model_prefix = "align"
     supports_gradient_checkpointing = True

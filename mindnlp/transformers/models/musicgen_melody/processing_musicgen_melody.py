@@ -37,7 +37,6 @@ class MusicgenMelodyProcessor(ProcessorMixin):
         tokenizer (`T5Tokenizer`):
             An instance of [`T5Tokenizer`]. The tokenizer is a required input.
     """
-
     feature_extractor_class = "MusicgenMelodyFeatureExtractor"
     tokenizer_class = ("T5Tokenizer", "T5TokenizerFast")
 
@@ -102,7 +101,6 @@ class MusicgenMelodyProcessor(ProcessorMixin):
             - **attention_mask** -- List of token indices specifying which tokens should be attended to by the model when `text` is not `None`.
             When only `audio` is specified, returns the timestamps attention mask.
         """
-
         sampling_rate = kwargs.pop("sampling_rate", None)
 
         if audio is None and text is None:

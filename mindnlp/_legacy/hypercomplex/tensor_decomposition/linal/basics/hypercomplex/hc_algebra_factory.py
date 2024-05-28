@@ -23,7 +23,6 @@ class AlgebraFactory(ABC):
         - Implementing classes must provide concrete implementations for the abstract methods to instantiate specific implementations of matrices, vectors, and scalars.
     
     """
-
     @abstractmethod
     def get_matrix_impl(self) -> _MatrixImpl:
         r"""

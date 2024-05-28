@@ -39,7 +39,6 @@ class Pop2PianoProcessor(ProcessorMixin):
         tokenizer (`Pop2PianoTokenizer`):
             An instance of ['Pop2PianoTokenizer`]. The tokenizer is a required input.
     """
-
     attributes = ["feature_extractor", "tokenizer"]
     feature_extractor_class = "Pop2PianoFeatureExtractor"
     tokenizer_class = "Pop2PianoTokenizer"
@@ -64,7 +63,6 @@ class Pop2PianoProcessor(ProcessorMixin):
 
         Please refer to the docstring of the above two methods for more information.
         """
-
         # Since Feature Extractor needs both audio and sampling_rate and tokenizer needs both token_ids and
         # feature_extractor_output, we must check for both.
         if (audio is None and sampling_rate is None) and (notes is None):
@@ -113,7 +111,6 @@ class Pop2PianoProcessor(ProcessorMixin):
 
         Please refer to the docstring of the above two methods for more information.
         """
-
         return self.tokenizer.batch_decode(
             token_ids=token_ids, feature_extractor_output=feature_extractor_output, return_midi=return_midi
         )

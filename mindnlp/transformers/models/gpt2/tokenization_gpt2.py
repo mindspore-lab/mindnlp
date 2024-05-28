@@ -152,7 +152,6 @@ class GPT2Tokenizer(PreTrainedTokenizer):
             Whether or not to add an initial beginning of sentence token to the input. This allows to treat the leading
             word just as any other word.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES

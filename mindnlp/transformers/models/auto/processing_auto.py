@@ -146,7 +146,6 @@ class AutoProcessor:
 
     This class cannot be instantiated directly using `__init__()` (throws an error).
     """
-
     def __init__(self):
         """
         Class: AutoProcessor

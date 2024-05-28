@@ -74,7 +74,6 @@ class Pop2PianoConfig(PretrainedConfig):
         dense_act_fn (`string`, *optional*, defaults to `"relu"`):
             Type of Activation Function to be used in `Pop2PianoDenseActDense` and in `Pop2PianoDenseGatedActDense`.
     """
-
     model_type = "pop2piano"
     keys_to_ignore_at_inference = ["past_key_values"]
 

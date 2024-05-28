@@ -52,7 +52,6 @@ class Trie:
     Trie in Python. Creates a Trie out of a list of words. The trie is used to split on `added_tokens` in one pass
     Loose reference https://en.wikipedia.org/wiki/Trie
     """
-
     def __init__(self):
         """
         Initializes an instance of the Trie class.
@@ -367,7 +366,6 @@ class PreTrainedTokenizer(PreTrainedTokenizerBase):
     This class also contain the added tokens in a unified way on top of all tokenizers so we don't have to handle the
     specific vocabulary augmentation methods of the various underlying dictionary structures (BPE, sentencepiece...).
     """
-
     def __init__(self, **kwargs):
         """
         Initialize the PreTrainedTokenizer class.
@@ -1009,7 +1007,6 @@ transformers.PreTrainedTokenizerFast.
         Args:
             batch_ids_pairs: list of tokenized input ids or input ids pairs
         """
-
         batch_outputs = {}
         for first_ids, second_ids in batch_ids_pairs:
             outputs = self.prepare_for_model(

@@ -36,7 +36,6 @@ class AffineTransformed(TransformedDistribution):
     '''
     # todo 
     '''
-
     def __init__(self, base_distribution: Distribution, loc=None, scale=None, event_dim=0):
         """
         Initializes an instance of the AffineTransformed class.
@@ -307,7 +306,6 @@ class StudentTOutput(DistributionOutput):
     """
     Student-T distribution output class.
     """
-
     args_dim: Dict[str, int] = {"df": 1, "loc": 1, "scale": 1}
     distribution_class: type = StudentT
 
@@ -343,7 +341,6 @@ class NormalOutput(DistributionOutput):
     """
     Normal distribution output class.
     """
-
     args_dim: Dict[str, int] = {"loc": 1, "scale": 1}
     distribution_class: type = Normal
 

@@ -43,7 +43,6 @@ class LycorisConfig(PeftConfig):
     r"""
     A base config for LyCORIS like adapters
     """
-
     rank_pattern: Optional[dict] = field(
         default_factory=dict,
         metadata={
@@ -68,7 +67,6 @@ class LycorisLayer(BaseTunerLayer):
     r"""
     A base layer for LyCORIS like adapters
     """
-
     # adapter_layer_names needs to be defined on the child class
     other_param_names = ("r", "alpha", "scaling", "rank_dropout", "module_dropout")
 
@@ -109,7 +107,6 @@ class LycorisLayer(BaseTunerLayer):
         self, adapter_name: str, x: mindspore.Tensor, *args: Any, **kwargs: Any
     ) -> mindspore.Tensor:
         """Activations added on top of the base layer output (i.e. after the base layer forward pass)"""
-
     @abstractmethod
     def get_delta_weight(self, adapter_name: str) -> mindspore.Tensor: ...
 
@@ -203,7 +200,6 @@ class LycorisTuner(BaseTuner):
     r"""
     A base tuner for LyCORIS like adapters
     """
-
     prefix: str
     layers_mapping: dict[type[nn.Cell], type[LycorisLayer]]
 
@@ -441,7 +437,6 @@ class LycorisTuner(BaseTuner):
         Args:
             adapter_name (`str`): Name of the adapter to be deleted.
         """
-
         if adapter_name not in list(self.peft_config.keys()):
             raise ValueError(f"Adapter {adapter_name} does not exist")
         del self.peft_config[adapter_name]

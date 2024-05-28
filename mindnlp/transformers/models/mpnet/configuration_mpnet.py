@@ -33,7 +33,6 @@ class MPNetConfig(PretrainedConfig):
     configuration with the defaults will yield a similar configuration to that of the MPNet
     [microsoft/mpnet-base](https://huggingface.co/microsoft/mpnet-base) architecture.
     ```"""
-
     model_type = "mpnet"
 
     def __init__(

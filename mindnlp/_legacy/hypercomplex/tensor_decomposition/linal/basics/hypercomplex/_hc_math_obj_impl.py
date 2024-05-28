@@ -13,7 +13,6 @@ class _MathObjImpl(ABC):
     
     Inherits from ABC (Abstract Base Class) to define abstract methods that subclasses must implement.
     """
-
     @abstractmethod
     def mul(self,
             a_x: np.ndarray,

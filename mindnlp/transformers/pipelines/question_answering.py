@@ -154,7 +154,6 @@ class QuestionAnsweringArgumentHandler(ArgumentHandler):
     QuestionAnsweringArgumentHandler manages all the possible to create a [`SquadExample`] from the command-line
     supplied arguments.
     """
-
     def normalize(self, item):
         """
         Method: normalize
@@ -264,7 +263,6 @@ class QuestionAnsweringPipeline(ChunkPipeline):
     up-to-date list of available models on
     [hf-mirror.com/models](https://hf-mirror.com/models?filter=question-answering).
     """
-
     default_input_names = "question,context"
     handle_impossible_answer = False
 
@@ -438,7 +436,6 @@ class QuestionAnsweringPipeline(ChunkPipeline):
             - **end** (`int`) -- The character end index of the answer (in the tokenized version of the input).
             - **answer** (`str`) -- The answer to the question.
         """
-
         # Convert inputs to features
 
         examples = self._args_parser(*args, **kwargs)

@@ -480,7 +480,6 @@ class ChatGLMTokenizer(PreTrainedTokenizer):
         vocab_file (`str`):
             Path to the vocabulary file.
     """
-
     vocab_files_names = {"vocab_file": "ice_text.model"}
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
     model_input_names = ["input_ids", "attention_mask", "position_ids"]

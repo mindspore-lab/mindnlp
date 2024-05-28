@@ -89,7 +89,6 @@ def _get_minimal_slice_set(
 
     end is INCLUSIVE.
     """
-
     # start_edges and end_edges both indicate whether, starting from any given
     # dimension, the start/end index is at the top/bottom edge of the
     # corresponding tensor, modeled as a tree
@@ -199,7 +198,6 @@ def _chunk_slice(t: mindspore.Tensor, flat_start: int, flat_end: int, no_batch_d
     reshape operations in this function are performed on sub-tensors that scale with (flat_end - flat_start), the chunk
     size.
     """
-
     batch_dims = t.shape[:no_batch_dims]
     start_idx = list(_flat_idx_to_idx(flat_start, batch_dims))
     # _get_minimal_slice_set is inclusive

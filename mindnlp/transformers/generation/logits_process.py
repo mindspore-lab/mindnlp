@@ -28,7 +28,6 @@ import numpy as np
 
 class LogitsProcessor:
     """Abstract base class for all logit processors that can be applied during generation."""
-
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
         """Torch method for processing logits."""
         raise NotImplementedError(
@@ -38,7 +37,6 @@ class LogitsProcessor:
 
 class LogitsWarper:
     """Abstract base class for all logit warpers that can be applied during generation with multinomial sampling."""
-
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
         """Torch method for warping logits."""
         raise NotImplementedError(
@@ -52,7 +50,6 @@ class LogitsProcessorList(list):
     `scores` input tensor. This class inherits from list and adds a specific *__call__* method to apply each
     [`LogitsProcessor`] or [`LogitsWarper`] to the inputs.
     """
-
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor, **kwargs) -> mindspore.Tensor:
         """
         This method processes input_ids and scores using a list of processors.
@@ -99,7 +96,6 @@ class HammingDiversityLogitsProcessor(LogitsProcessor):
             Number of groups to divide `num_beams` into in order to ensure diversity among different groups of beams.
             See [this paper](https://arxiv.org/pdf/1610.02424.pdf) for more details.
     """
-
     def __init__(self, diversity_penalty: float, num_beams: int, num_beam_groups: int):
         """
         Initializes a new instance of the HammingDiversityLogitsProcessor class.
@@ -188,7 +184,6 @@ class EncoderRepetitionPenaltyLogitsProcessor(LogitsProcessor):
         encoder_input_ids (`mindspore.Tensor`):
             The encoder_input_ids that should not be repeated within the decoder ids.
     """
-
     def __init__(self, penalty: float, encoder_input_ids: mindspore.Tensor):
         """
         Initializes an instance of the EncoderRepetitionPenaltyLogitsProcessor class.
@@ -246,7 +241,6 @@ class RepetitionPenaltyLogitsProcessor(LogitsProcessor):
             The parameter for repetition penalty. 1.0 means no penalty. See [this
             paper](https://arxiv.org/pdf/1909.05858.pdf) for more details.
     """
-
     def __init__(self, penalty: float):
         """
         Initializes a new RepetitionPenaltyLogitsProcessor with the specified penalty.
@@ -364,7 +358,6 @@ class NoRepeatNGramLogitsProcessor(LogitsProcessor):
         ngram_size (`int`):
             All ngrams of size `ngram_size` can only occur once.
     """
-
     def __init__(self, ngram_size: int):
         """
         Initializes a NoRepeatNGramLogitsProcessor object with the specified ngram size.
@@ -423,7 +416,6 @@ class EncoderNoRepeatNGramLogitsProcessor(LogitsProcessor):
         encoder_input_ids (`int`):
             The encoder_input_ids that should not be repeated within the decoder ids.
     """
-
     def __init__(self, encoder_ngram_size: int, encoder_input_ids: mindspore.Tensor):
         """
         Initializes the EncoderNoRepeatNGramLogitsProcessor.
@@ -496,7 +488,6 @@ class NoBadWordsLogitsProcessor(LogitsProcessor):
         eos_token_id (`Union[int, List[int]]`):
             The id of the *end-of-sequence* token. Optionally, use a list to set multiple *end-of-sequence* tokens.
     """
-
     def __init__(self, bad_words_ids: List[List[int]], eos_token_id: Union[int, List[int]]):
         """
         This method initializes an instance of the NoBadWordsLogitsProcessor class.
@@ -722,7 +713,6 @@ class MinLengthLogitsProcessor(LogitsProcessor):
         eos_token_id (`Union[int, List[int]]`):
             The id of the *end-of-sequence* token. Optionally, use a list to set multiple *end-of-sequence* tokens.
     """
-
     def __init__(self, min_length: int, eos_token_id: Union[int, List[int]]):
         """
         Initializes an instance of the MinLengthLogitsProcessor class.
@@ -787,7 +777,6 @@ class MinNewTokensLengthLogitsProcessor(LogitsProcessor):
         eos_token_id (`int`):
             The id of the *end-of-sequence* token.
     """
-
     def __init__(self, prompt_length_to_skip: int, min_new_tokens: int, eos_token_id: int):
         """
         __init__
@@ -849,7 +838,6 @@ class PrefixConstrainedLogitsProcessor(LogitsProcessor):
             next generation step conditioned on the previously generated tokens `inputs_ids` and the batch ID
             `batch_id`.
     """
-
     def __init__(self, prefix_allowed_tokens_fn: Callable[[int, mindspore.Tensor], List[int]], num_beams: int):
         """
         Initialize the PrefixConstrainedLogitsProcessor object.
@@ -902,7 +890,6 @@ class ForcedBOSTokenLogitsProcessor(LogitsProcessor):
         bos_token_id (`int`):
             The id of the token to force as the first generated token.
     """
-
     def __init__(self, bos_token_id: int):
         """
         Initializes a new instance of the ForcedBOSTokenLogitsProcessor class.
@@ -956,7 +943,6 @@ class ForcedEOSTokenLogitsProcessor(LogitsProcessor):
             The id of the token to force as the last generated token when `max_length` is reached. Optionally, use a
             list to set multiple *end-of-sequence* tokens.
     """
-
     def __init__(self, max_length: int, eos_token_id: Union[int, List[int]]):
         """
         Initializes a ForcedEOSTokenLogitsProcessor object with the specified parameters.
@@ -1007,7 +993,6 @@ class InfNanRemoveLogitsProcessor(LogitsProcessor):
     the logits processor should only be used if necessary since it can slow down the generation method. `max_length` is
     reached.
     """
-
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
         """
         This method '__call__' in the class 'InfNanRemoveLogitsProcessor' processes input scores by replacing infinite and NaN values.
@@ -1046,7 +1031,6 @@ class ExponentialDecayLengthPenalty(LogitsProcessor):
         input_ids_seq_length (`int`):
             The length of the input sequence.
     """
-
     def __init__(
             self, exponential_decay_length_penalty: Tuple, eos_token_id: Union[int, List[int]],
             input_ids_seq_length: int
@@ -1106,7 +1090,6 @@ class ExponentialDecayLengthPenalty(LogitsProcessor):
 class SuppressTokensLogitsProcessor(LogitsProcessor):
     r"""This processor can be used to suppress a list of tokens. The processor will set their log probs to `-inf` so that they
     are not sampled."""
-
     def __init__(self, suppress_tokens):
         """
         Initializes an instance of the SuppressTokensLogitsProcessor class.
@@ -1149,7 +1132,6 @@ class SuppressTokensAtBeginLogitsProcessor(LogitsProcessor):
     generating using `begin_index` tokens. This should ensure that the tokens defined by `begin_suppress_tokens` at not
     sampled at the begining of the generation.
     """
-
     def __init__(self, begin_suppress_tokens, begin_index):
         """
         Initializes a new instance of the SuppressTokensAtBeginLogitsProcessor class.
@@ -1193,7 +1175,6 @@ class ForceTokensLogitsProcessor(LogitsProcessor):
     r"""This processor takes a list of pairs of integers which indicates a mapping from generation indices to token
     indices that will be forced before sampling. The processor will set their log probs to `inf` so that they are
     sampled at their corresponding index."""
-
     def __init__(self, force_token_map: List[List[int]]):
         """
         Initializes a new instance of the ForceTokensLogitsProcessor class.
@@ -1240,7 +1221,6 @@ class LogitNormalization(LogitsProcessor, LogitsWarper):
     this library doesn't do it (it only does it before, but they may need re-normalization) but it still supposes that
     the scores are normalized when comparing the hypotheses.
     """
-
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
         """
         Class: LogitNormalization
@@ -1275,7 +1255,6 @@ class TemperatureLogitsWarper(LogitsWarper):
         temperature (:obj:`float`):
             The value used to module the logits distribution.
     """
-
     def __init__(self, temperature: float):
         """
         Initializes a TemperatureLogitsWarper object with the provided temperature.
@@ -1328,7 +1307,6 @@ class TopPLogitsWarper(LogitsWarper):
             min_tokens_to_keep (`int`, *optional*, defaults to 1):
                 Minimum number of tokens that cannot be filtered.
     """
-
     def __init__(self, top_p: float, filter_value: float = -float("Inf"), min_tokens_to_keep: int = 1):
         """
         Initializes an instance of the TopPLogitsWarper class.
@@ -1404,7 +1382,6 @@ class TopKLogitsWarper(LogitsWarper):
         min_tokens_to_keep (`int`, *optional*, defaults to 1):
             Minimum number of tokens that cannot be filtered.
     """
-
     def __init__(self, top_k: int, filter_value: float = -float("Inf"), min_tokens_to_keep: int = 1):
         """Initialize the TopKLogitsWarper object.
         
@@ -1463,7 +1440,6 @@ class TypicalLogitsWarper(LogitsWarper):
         min_tokens_to_keep (`int`, *optional*, defaults to 1):
             Minimum number of tokens that cannot be filtered.
     """
-
     def __init__(self, mass: float = 0.9, filter_value: float = -float("Inf"), min_tokens_to_keep: int = 1):
         """
         Initializes an instance of TypicalLogitsWarper.
@@ -1570,7 +1546,6 @@ class EpsilonLogitsWarper(LogitsWarper):
     A sequence: 1, 2, 3, 4, 5, 6, 7, 8, 9
     ```
     """
-
     def __init__(self, epsilon: float, filter_value: float = -float("Inf"), min_tokens_to_keep: int = 1):
         """
         Initializes an instance of the EpsilonLogitsWarper class.
@@ -1677,7 +1652,6 @@ class EtaLogitsWarper(LogitsWarper):
     A sequence: 1, 2, 3, 4, 5, 6, 7, 8, 9
     ```
     """
-
     def __init__(self, epsilon: float, filter_value: float = -float("Inf"), min_tokens_to_keep: int = 1):
         """Initialize a new instance of the EtaLogitsWarper class.
         
@@ -1797,7 +1771,6 @@ class SequenceBiasLogitsProcessor(LogitsProcessor):
     The full name of Donald is Donald Duck.
     ```
     """
-
     def __init__(self, sequence_bias: Dict[Tuple[int], float]):
         """
         Initializes an instance of the SequenceBiasLogitsProcessor class.
@@ -1883,7 +1856,6 @@ class AlternatingCodebooksLogitsProcessor(LogitsProcessor):
         codebook_size (`int`):
             Number of tokens associated to the codebook.
     """
-
     def __init__(self, input_start_len: int, semantic_vocab_size: int, codebook_size: int):
         """
         Initializes an instance of the AlternatingCodebooksLogitsProcessor class.
@@ -1993,7 +1965,6 @@ class UnbatchedClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
     "Today, a dragon flew over Paris, France, and I'm very happy to be here. I"
     ```
     """
-
     def __init__(
         self,
         guidance_scale: float,
@@ -2143,7 +2114,6 @@ Ithaca.<|9.44|><|endoftext|>
     Transcription:  He has grave doubts whether Sir Frederick Layton's work is really Greek after all and can
     ```
     """
-
     def __init__(self, generate_config):  # support for the kwargs
         """
         This method initializes an instance of the WhisperTimeStampLogitsProcessor class.
@@ -2245,7 +2215,6 @@ class BarkEosPrioritizerLogitsProcessor(LogitsProcessor):
         min_eos_p (`float`, *optional*):
             Minimum end of speech threshold.
     """
-
     def __init__(self, eos_token_id: Union[int, List[int]], min_eos_p: float):
         """
         Initializes an instance of the BarkEosPrioritizerLogitsProcessor class.
@@ -2336,7 +2305,6 @@ class ClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
     >>> audio_values = model.generate(**inputs, do_sample=True, guidance_scale=3, max_new_tokens=256)
     ```
     """
-
     def __init__(self, guidance_scale):
         """
         Initializes a new instance of the ClassifierFreeGuidanceLogitsProcessor class.

@@ -83,7 +83,6 @@ class InternLMRMSNorm(nn.Cell):
     """
     RMSNorm
     """
-
     def __init__(self, hidden_size, epsilon=1e-6):
         """
         RMSNorm is equivalent to T5LayerNorm
@@ -120,7 +119,6 @@ class InternLMRotaryEmbedding(nn.Cell):
     """
     RotaryEmbedding
     """
-
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
         """
         __init__ method in the InternLMRotaryEmbedding class.
@@ -215,7 +213,6 @@ the cosine and sine values necessary for the rotary embeddings.
         # Call the _set_cos_sin_cache method
         embedding._set_cos_sin_cache(seq_len=512, dtype=torch.float32)
     """
-
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
         """
         Initializes an instance of the InternLMDynamicNTKScalingRotaryEmbedding class.
@@ -294,7 +291,6 @@ class InternLMMLP(nn.Cell):
     """
     MLP
     """
-
     def __init__(
             self,
             hidden_size: int,
@@ -341,7 +337,6 @@ class InternLMMLP(nn.Cell):
 
 class InternLMAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(self, config: InternLMConfig):
         """
         Initializes an instance of the InternLMAttention class.
@@ -479,7 +474,6 @@ class InternLMAttention(nn.Cell):
             ValueError: If the shape of attention mask is not (batch_size, 1, sequence_length, sequence_length).
         
         """
-
         bsz, q_len, _ = hidden_states.shape
         query_states = self.q_proj(hidden_states).view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1, 2)
         key_states = self.k_proj(hidden_states).view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1, 2)
@@ -535,7 +529,6 @@ class InternLMDecoderLayer(nn.Cell):
     """
     DecoderLayer
     """
-
     def __init__(self, config: InternLMConfig):
         """Initialize an instance of the InternLMDecoderLayer class.
         
@@ -588,7 +581,6 @@ class InternLMDecoderLayer(nn.Cell):
                 (see `past_key_values`).
             past_key_value (`Tuple(Tensor)`, *optional*): cached past key and value projection states
         """
-
         residual = hidden_states
 
         hidden_states = self.input_layernorm(hidden_states)

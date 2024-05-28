@@ -28,7 +28,6 @@ class MSBertEmbeddings(nn.Cell):
     """
     Embeddings for BERT, include word, position and token_type
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the MSBertEmbeddings class.
@@ -112,7 +111,6 @@ class MSBertSelfAttention(nn.Cell):
     """
     Self attention layer for BERT.
     """
-
     def __init__(self, config, causal, init_cache=False):
         """Initializes an instance of the MSBertSelfAttention class.
         
@@ -377,7 +375,6 @@ class MSBertSelfOutput(nn.Cell):
     r"""
     Bert Self Output
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the MSBertSelfOutput class.
@@ -429,7 +426,6 @@ class MSBertAttention(nn.Cell):
     r"""
     Bert Attention
     """
-
     def __init__(self, config, causal, init_cache=False):
         """
         Initializes an instance of MSBertAttention.
@@ -485,7 +481,6 @@ class MSBertIntermediate(nn.Cell):
     r"""
     Bert Intermediate
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the MSBertIntermediate class.
@@ -537,7 +532,6 @@ class MSBertOutput(nn.Cell):
     r"""
     Bert Output
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the MSBertOutput class.
@@ -588,7 +582,6 @@ class MSBertLayer(nn.Cell):
     r"""
     Bert Layer
     """
-
     def __init__(self, config, init_cache=False):
         """
         Initializes an instance of the MSBertLayer class.
@@ -653,7 +646,6 @@ class MSBertEncoder(nn.Cell):
     r"""
     Bert Encoder
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the MSBertEncoder class.
@@ -778,7 +770,6 @@ class MSBertPooler(nn.Cell):
     r"""
     Bert Pooler
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the MSBertPooler class.
@@ -830,7 +821,6 @@ class MSBertPredictionHeadTransform(nn.Cell):
     r"""
     Bert Prediction Head Transform
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the MSBertPredictionHeadTransform class.
@@ -893,7 +883,6 @@ class MSBertLMPredictionHead(nn.Cell):
     r"""
     Bert LM Prediction Head
     """
-
     def __init__(self, config):
         """
         Initializes an instance of the MSBertLMPredictionHead class.
@@ -959,7 +948,6 @@ class MSBertPreTrainingHeads(nn.Cell):
     r"""
     Bert PreTraining Heads
     """
-
     def __init__(self, config):
         """
         Initialize the MSBertPreTrainingHeads class.
@@ -1042,7 +1030,6 @@ class MSBertModel(MSBertPreTrainedModel):
     r"""
     Bert Model
     """
-
     def __init__(self, config, add_pooling_layer=True):
         """
         Initializes the MSBertModel class with the provided configuration and optional pooling layer.
@@ -1177,7 +1164,6 @@ class MSBertForPretraining(MSBertPreTrainedModel):
     r"""
     Bert For Pretraining
     """
-
     def __init__(self, config, *args, **kwargs):
         """
         __init__
@@ -1256,7 +1242,6 @@ MSBertForPretraining model.
 
 class MSBertForSequenceClassification(MSBertPreTrainedModel):
     """Bert Model for classification tasks"""
-
     def __init__(self, config):
         """
         Initializes an instance of the MSBertForSequenceClassification class.
