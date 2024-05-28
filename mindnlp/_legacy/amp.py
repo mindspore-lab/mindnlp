@@ -360,7 +360,6 @@ class NoLossScaler(LossScaler):
             Raises:
                 N/A
             """
-        
         return inputs
 
     def adjust(self, grads_finite):
