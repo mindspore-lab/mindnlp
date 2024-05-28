@@ -40,7 +40,6 @@ class Metric(metaclass=ABCMeta):
         Raises:
             No specific exceptions are raised by this method.
         """
-        pass
 
     @abstractmethod
     def clear(self):
