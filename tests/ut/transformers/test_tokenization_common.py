@@ -85,7 +85,6 @@ def merge_model_tokenizer_mappings(
     for configuration in configurations:
         if configuration in model_mapping and configuration in tokenizer_mapping:
             model = model_mapping[configuration]
-            print(tokenizer_mapping, configuration)
             tokenizer = tokenizer_mapping[configuration][0]
             tokenizer_fast = tokenizer_mapping[configuration][1]
 
