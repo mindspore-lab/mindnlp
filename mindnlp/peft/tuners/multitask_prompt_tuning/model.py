@@ -26,7 +26,32 @@ from .config import MultitaskPromptTuningConfig, MultitaskPromptTuningInit
 
 
 class MultitaskPromptEmbedding(PromptEmbedding):
+
+    """
+    Represents a multitask prompt embedding for natural language processing tasks.
+    
+    This class inherits from PromptEmbedding and provides functionality for constructing multitask prompt embeddings using task-specific prefix embeddings.
+    
+    The class includes methods for initializing the multitask prompt embedding and constructing the prompt embeddings for specific tasks.
+    
+    """
     def __init__(self, config: MultitaskPromptTuningConfig, word_embeddings):
+        """
+        Initializes an instance of the MultitaskPromptEmbedding class.
+        
+        Args:
+            self: The instance of the class.
+            config (MultitaskPromptTuningConfig): The configuration object containing various settings for the prompt embedding.
+            word_embeddings: The word embeddings used for the prompt embedding.
+        
+        Returns:
+            None
+        
+        Raises:
+            ValueError: If the `prompt_tuning_init_state_dict_path` is not specified when using certain initialization methods.
+            FileNotFoundError: If the specified `prompt_tuning_init_state_dict_path` file is not found.
+            KeyError: If the required keys are not present in the state_dict.
+        """
         super().__init__(config, word_embeddings)
 
         self.num_tasks = config.num_tasks
@@ -108,6 +133,20 @@ class MultitaskPromptEmbedding(PromptEmbedding):
             self.load_state_dict(state_dict, strict=False)
 
     def construct(self, indices, task_ids):
+        """
+        Construct prompt embeddings for multiple tasks.
+        
+        Args:
+            self (MultitaskPromptEmbedding): The instance of the MultitaskPromptEmbedding class.
+            indices (Tensor): A tensor containing indices for prompt embeddings.
+            task_ids (Tensor): A tensor containing task IDs for selecting specific tasks.
+        
+        Returns:
+            None. The method modifies the prompt_embeddings in-place.
+        
+        Raises:
+            ValueError: If task_ids is None.
+        """
         if task_ids is None:
             raise ValueError("task_ids cannot be None")
 

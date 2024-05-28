@@ -21,6 +21,39 @@ from ...utils import PeftType
 
 
 class PromptEncoderReparameterizationType(str, enum.Enum):
+
+    """
+    Represents a reparameterization type for prompt encoders in Python.
+    
+    This class, 'PromptEncoderReparameterizationType', is a subclass of both 'str' and 'enum.Enum', and it provides a way to define the reparameterization type for prompt encoders in Python.
+    
+    Attributes:
+        - LINEAR: Represents a linear reparameterization type.
+        - LOG: Represents a logarithmic reparameterization type.
+        - EXPONENTIAL: Represents an exponential reparameterization type.
+    
+    Usage:
+        To use this class, create an instance of 'PromptEncoderReparameterizationType' and specify the desired reparameterization type. The available reparameterization types are defined as class attributes:
+        
+            - PromptEncoderReparameterizationType.LINEAR
+            - PromptEncoderReparameterizationType.LOG
+            - PromptEncoderReparameterizationType.EXPONENTIAL
+        
+        Example usage:
+            reparam_type = PromptEncoderReparameterizationType.LINEAR
+            print(reparam_type)  # Output: 'LINEAR'
+            
+            reparam_type = PromptEncoderReparameterizationType.LOG
+            print(reparam_type)  # Output: 'LOG'
+            
+            reparam_type = PromptEncoderReparameterizationType.EXPONENTIAL
+            print(reparam_type)  # Output: 'EXPONENTIAL'
+    
+    Notes:
+        - This class inherits from 'str' and 'enum.Enum', providing all the functionalities of these base classes.
+        - The available reparameterization types are defined as class attributes and can be accessed using dot notation.
+        - The reparameterization type can be used to configure prompt encoders in various natural language processing tasks.
+    """
     MLP = "MLP"
     LSTM = "LSTM"
 
@@ -37,7 +70,6 @@ class PromptEncoderConfig(PromptLearningConfig):
         encoder_num_layers (`int`): The number of layers of the prompt encoder.
         encoder_dropout (`float`): The dropout probability of the prompt encoder.
     """
-
     encoder_reparameterization_type: Union[str, PromptEncoderReparameterizationType] = field(
         default=PromptEncoderReparameterizationType.MLP,
         metadata={"help": "How to reparameterize the prompt encoder"},
@@ -56,4 +88,17 @@ class PromptEncoderConfig(PromptLearningConfig):
     )
 
     def __post_init__(self):
+        """
+        Method for initializing PromptEncoderConfig instances after creation.
+        
+        Args:
+            self: PromptEncoderConfig instance.
+                The instance of PromptEncoderConfig class to be initialized.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         self.peft_type = PeftType.P_TUNING

@@ -21,6 +21,103 @@ from ...utils import PeftType
 
 
 class PromptTuningInit(str, enum.Enum):
+
+    r"""
+    Represents an initialization state for prompt tuning in a Python class named 'PromptTuningInit'. 
+    This class inherits from the 'str' class and the 'enum.Enum' class.
+    
+    PromptTuningInit is used to define and manage the initialization state for prompt tuning. 
+    It provides functionality to set and retrieve the initialization state, and inherits 
+    all the methods and attributes of the 'str' class and the 'enum.Enum' class.
+    
+    Attributes:
+        - None
+    
+    Methods:
+        - None
+    
+    Inherited Attributes from the 'str' class:
+        - capitalize()
+        - casefold()
+        - center()
+        - count()
+        - encode()
+        - endswith()
+        - expandtabs()
+        - find()
+        - format()
+        - format_map()
+        - index()
+        - isalnum()
+        - isalpha()
+        - isascii()
+        - isdecimal()
+        - isdigit()
+        - isidentifier()
+        - islower()
+        - isnumeric()
+        - isprintable()
+        - isspace()
+        - istitle()
+        - isupper()
+        - join()
+        - ljust()
+        - lower()
+        - lstrip()
+        - maketrans()
+        - partition()
+        - replace()
+        - rfind()
+        - rindex()
+        - rjust()
+        - rpartition()
+        - rsplit()
+        - rstrip()
+        - split()
+        - splitlines()
+        - startswith()
+        - strip()
+        - swapcase()
+        - title()
+        - translate()
+        - upper()
+        - zfill()
+    
+    Inherited Attributes from the 'enum.Enum' class:
+        - name
+        - value
+    
+    Inherited Methods from the 'enum.Enum' class:
+        - __class__
+        - __contains__
+        - __delattr__
+        - __dir__
+        - __eq__
+        - __format__
+        - __ge__
+        - __getattribute__
+        - __getitem__
+        - __gt__
+        - __hash__
+        - __init__
+        - __init_subclass__
+        - __iter__
+        - __le__
+        - __len__
+        - __lt__
+        - __members__
+        - __module__
+        - __ne__
+        - __new__
+        - __reduce__
+        - __reduce_ex__
+        - __repr__
+        - __setattr__
+        - __sizeof__
+        - __str__
+        - __subclasshook__
+    
+    """
     TEXT = "TEXT"
     RANDOM = "RANDOM"
 
@@ -40,7 +137,6 @@ class PromptTuningConfig(PromptLearningConfig):
             The keyword arguments to pass to `AutoTokenizer.from_pretrained`. Only used if `prompt_tuning_init` is
             `TEXT`.
     """
-
     prompt_tuning_init: Union[PromptTuningInit, str] = field(
         default=PromptTuningInit.RANDOM,
         metadata={"help": "How to initialize the prompt tuning parameters"},
@@ -69,6 +165,20 @@ class PromptTuningConfig(PromptLearningConfig):
     )
 
     def __post_init__(self):
+        r"""
+        This method initializes the PromptTuningConfig object after its creation.
+        
+        Args:
+            self: The instance of the PromptTuningConfig class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            - ValueError: If the prompt_tuning_init is set to TEXT and tokenizer_name_or_path is not provided.
+            - ValueError: If the prompt_tuning_init is set to TEXT and prompt_tuning_init_text is not provided.
+            - ValueError: If tokenizer_kwargs is provided but prompt_tuning_init is not set to TEXT.
+        """
         self.peft_type = PeftType.PROMPT_TUNING
         if (self.prompt_tuning_init == PromptTuningInit.TEXT) and not self.tokenizer_name_or_path:
             raise ValueError(

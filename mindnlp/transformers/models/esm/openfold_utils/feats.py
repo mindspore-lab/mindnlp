@@ -27,17 +27,58 @@ from .tensor_utils import batched_gather
 
 @overload
 def pseudo_beta_fn(aatype: mindspore.Tensor, all_atom_positions: mindspore.Tensor, all_atom_masks: None) -> mindspore.Tensor:
-    ...
+    """
+    This function calculates the pseudo beta value using the given input parameters.
+    
+    Args:
+        aatype (mindspore.Tensor): A tensor containing the amino acid type information.
+        all_atom_positions (mindspore.Tensor): A tensor containing the positions of all atoms.
+        all_atom_masks (None): This parameter is not used in the function and is optional.
+    
+    Returns:
+        mindspore.Tensor: A tensor containing the calculated pseudo beta value.
+    
+    Raises:
+        None
+    """
 
 
 @overload
 def pseudo_beta_fn(
     aatype: mindspore.Tensor, all_atom_positions: mindspore.Tensor, all_atom_masks: mindspore.Tensor
 ) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
-    ...
+    '''
+    This function calculates pseudo beta values based on the provided amino acid type, atom positions, and atom masks.
+    
+    Args:
+        aatype (mindspore.Tensor): A tensor containing the amino acid type information.
+        all_atom_positions (mindspore.Tensor): A tensor containing positions of all atoms.
+        all_atom_masks (mindspore.Tensor): A tensor containing masks for all atoms.
+    
+    Returns:
+        Tuple[mindspore.Tensor, mindspore.Tensor]: A tuple containing the calculated pseudo beta values.
+    
+    Raises:
+        None
+    '''
 
 
 def pseudo_beta_fn(aatype, all_atom_positions, all_atom_masks):
+    """
+    Args:
+        aatype (ndarray): An array representing the amino acid type.
+        all_atom_positions (ndarray): An array containing the positions of all atoms.
+        all_atom_masks (ndarray): An array containing masks for all atoms.
+    
+    Returns:
+        If all_atom_masks is not None:
+            tuple: A tuple containing pseudo_beta and pseudo_beta_mask represented as ndarrays.
+        Otherwise:
+            ndarray: An array representing the pseudo beta value.
+    
+    Raises:
+        None
+    """
     is_gly = aatype == rc.restype_order["G"]
     ca_idx = rc.atom_order["CA"]
     cb_idx = rc.atom_order["CB"]
@@ -58,6 +99,17 @@ def pseudo_beta_fn(aatype, all_atom_positions, all_atom_masks):
 
 
 def atom14_to_atom37(atom14: mindspore.Tensor, batch: Dict[str, mindspore.Tensor]) -> mindspore.Tensor:
+    """
+    Args:
+        atom14 (mindspore.Tensor): The input tensor representing the atom data in a 14-dimensional space.
+        batch (Dict[str, mindspore.Tensor]): A dictionary containing batched data, including 'residx_atom37_to_atom14' and 'atom37_atom_exists' for gathering atom37 data.
+    
+    Returns:
+        mindspore.Tensor: A tensor representing the atom data in a 37-dimensional space, based on the input atom14 and batch data.
+    
+    Raises:
+        None
+    """
     atom37_data = batched_gather(
         atom14,
         batch["residx_atom37_to_atom14"],
@@ -71,6 +123,23 @@ def atom14_to_atom37(atom14: mindspore.Tensor, batch: Dict[str, mindspore.Tensor
 
 
 def build_template_angle_feat(template_feats: Dict[str, mindspore.Tensor]) -> mindspore.Tensor:
+    '''
+    This function builds a template angle feature tensor based on the input template features.
+    
+    Args:
+        template_feats (Dict[str, mindspore.Tensor]): A dictionary containing the following keys:
+            - 'template_aatype': A tensor representing the template amino acid types.
+            - 'template_torsion_angles_sin_cos': A tensor representing the sin and cosine of the template torsion angles.
+            - 'template_alt_torsion_angles_sin_cos': A tensor representing the sin and cosine of the alternative template torsion angles.
+            - 'template_torsion_angles_mask': A tensor representing the mask for template torsion angles.
+    
+    Returns:
+        mindspore.Tensor: The template angle feature tensor constructed by concatenating one-hot encoded template amino acid types, template torsion angles sin and cosine, alternative template torsion angles
+sin and cosine, and template torsion angles mask.
+    
+    Raises:
+        None
+    '''
     template_aatype = template_feats["template_aatype"]
     torsion_angles_sin_cos = template_feats["template_torsion_angles_sin_cos"]
     alt_torsion_angles_sin_cos = template_feats["template_alt_torsion_angles_sin_cos"]
@@ -97,6 +166,24 @@ def build_template_pair_feat(
     eps: float = 1e-20,
     inf: float = 1e8,
 ) -> mindspore.Tensor:
+    """
+    Builds a template pair feature tensor based on the input batch data.
+    
+    Args:
+        batch (Dict[str, mindspore.Tensor]): A dictionary containing the input data tensors.
+        min_bin (int): The minimum bin value for the histogram calculation.
+        max_bin (int): The maximum bin value for the histogram calculation.
+        no_bins (int): The number of bins for the histogram calculation.
+        use_unit_vector (bool, optional): A flag indicating whether to use unit vectors. Defaults to False.
+        eps (float, optional): A small value to prevent division by zero. Defaults to 1e-20.
+        inf (float, optional): A large value representing infinity. Defaults to 100000000.0.
+    
+    Returns:
+        mindspore.Tensor: A tensor representing the calculated template pair feature.
+    
+    Raises:
+        None
+    """
     template_mask = batch["template_pseudo_beta_mask"]
     template_mask_2d = template_mask[..., None] * template_mask[..., None, :]
 
@@ -150,6 +237,21 @@ def build_template_pair_feat(
 
 
 def build_extra_msa_feat(batch: Dict[str, mindspore.Tensor]) -> mindspore.Tensor:
+    """
+    This function builds additional features using the input batch data for multiple sequence alignment (MSA).
+    
+    Args:
+        batch (Dict[str, mindspore.Tensor]): A dictionary containing input tensors for MSA processing.
+            - 'extra_msa': Tensor representing the MSA data encoded as integers.
+            - 'extra_has_deletion': Tensor indicating the presence of deletions in MSA sequences.
+            - 'extra_deletion_value': Tensor containing values of deletions in MSA sequences.
+    
+    Returns:
+        mindspore.Tensor: A concatenated tensor containing additional MSA features constructed from the input batch data.
+    
+    Raises:
+        None
+    """
     msa_1hot: mindspore.Tensor = ops.one_hot(batch["extra_msa"], 23)
     msa_feat = [
         msa_1hot,
@@ -165,6 +267,21 @@ def torsion_angles_to_frames(
     aatype: mindspore.Tensor,
     rrgdf: mindspore.Tensor,
 ) -> Rigid:
+    """
+    Converts torsion angles to frames in a Rigid object.
+    
+    Args:
+        r (Rigid): The original Rigid object to base the transformation on.
+        alpha (mindspore.Tensor): Tensor representing the torsion angles.
+        aatype (mindspore.Tensor): Tensor representing the amino acid type.
+        rrgdf (mindspore.Tensor): Tensor containing the default 4x4 transformation matrix.
+    
+    Returns:
+        Rigid: A new Rigid object representing the frames converted from the torsion angles.
+    
+    Raises:
+        None
+    """
     # [*, N, 8, 4, 4]
     default_4x4 = rrgdf[aatype, ...]
 
@@ -229,6 +346,23 @@ def frames_and_literature_positions_to_atom14_pos(
     atom_mask: mindspore.Tensor,
     lit_positions: mindspore.Tensor,
 ) -> mindspore.Tensor:
+    """
+    Converts frames and literature positions to atom14 positions.
+    
+    Args:
+        r (Rigid): The rigid transformation matrix.
+        aatype (mindspore.Tensor): The tensor representing the amino acid type.
+        default_frames (mindspore.Tensor): The tensor representing the default frames.
+        group_idx (mindspore.Tensor): The tensor representing the group index.
+        atom_mask (mindspore.Tensor): The tensor representing the atom mask.
+        lit_positions (mindspore.Tensor): The tensor representing the literature positions.
+    
+    Returns:
+        mindspore.Tensor: The tensor representing the predicted atom14 positions.
+    
+    Raises:
+        None.
+    """
     # [*, N, 14]
     group_mask = group_idx[aatype, ...]
 

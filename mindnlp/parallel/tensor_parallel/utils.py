@@ -60,7 +60,6 @@ class VocabUtility:
     """Split the vocabulary into `rank_size` chunks amd return the
     first and last index of the vocabulary belonging to the `rank_id`
     partition: Note that indices in [first, last)"""
-
     @staticmethod
     def vocab_range_from_per_partition_vocab_size(
         per_partition_vocab_size: int, rank_id: int

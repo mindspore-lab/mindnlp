@@ -48,7 +48,6 @@ class EncodecFeatureExtractor(SequenceFeatureExtractor):
             Defines the overlap between each chunk. It is used to compute the `chunk_stride` using the following
             formulae : `int((1.0 - self.overlap) * self.chunk_length)`.
     """
-
     model_input_names = ["input_values", "padding_mask"]
 
     def __init__(
@@ -60,10 +59,27 @@ class EncodecFeatureExtractor(SequenceFeatureExtractor):
         overlap: float = None,
         **kwargs,
     ):
+        """
+        Initialize the EncodecFeatureExtractor class with the given parameters.
+        
+        Args:
+            self: The instance of the class.
+            feature_size (int): The size of the feature. Default is 1.
+            sampling_rate (int): The sampling rate in Hz. Default is 24000.
+            padding_value (float): The value used for padding. Default is 0.0.
+            chunk_length_s (float): The length of each chunk in seconds. Default is None.
+            overlap (float): The overlap between chunks in seconds. Default is None.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(feature_size=feature_size, sampling_rate=sampling_rate, padding_value=padding_value, **kwargs)
         self.chunk_length_s = chunk_length_s
         self.overlap = overlap
-
 
     @property
     def chunk_length(self) -> Optional[int]:
@@ -73,7 +89,6 @@ class EncodecFeatureExtractor(SequenceFeatureExtractor):
         if self.chunk_length_s is None:
             return None
         return int(self.chunk_length_s * self.sampling_rate)
-
 
     @property
     def chunk_stride(self) -> Optional[int]:

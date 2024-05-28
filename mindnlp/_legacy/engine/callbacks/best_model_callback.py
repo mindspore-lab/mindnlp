@@ -36,6 +36,24 @@ class BestModelCallback(Callback):
     """
     def __init__(self, save_path, ckpt_name=None, larger_better=True,
                  auto_load=False, save_on_exception=False):
+        """
+        Initializes a new instance of the BestModelCallback class.
+        
+        Args:
+            self: The instance of the BestModelCallback class.
+            save_path (str or Path): The path where the model checkpoints will be saved.
+            ckpt_name (str, optional): The name of the checkpoint file. If not provided, the default name is 'best_so_far.ckpt'.
+            larger_better (bool, optional): A flag indicating whether larger metric values are considered better. Default is True.
+            auto_load (bool, optional): A flag indicating whether to automatically load the best model checkpoint. Default is False.
+            save_on_exception (bool, optional): A flag indicating whether to save the model on exception. Default is False.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If the save_path argument is not a string or a Path object.
+            OSError: If the save_path directory cannot be created.
+        """
         if isinstance(save_path, str):
             self.save_path = Path(save_path)
         elif isinstance(save_path, Path):
@@ -83,7 +101,6 @@ class BestModelCallback(Callback):
             print(f"Loading best model from '{self.save_path}' with '{run_context.metrics_names}': "
                   f"{self.best_metrics_values}...")
             self._load_model(run_context)
-
 
     def exception(self, run_context):
         """Called if having exceptions."""

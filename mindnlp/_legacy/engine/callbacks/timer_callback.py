@@ -20,8 +20,20 @@ from mindnlp._legacy.abc import Callback
 
 class _Timer:
     """Timer."""
-
     def __init__(self, name):
+        r"""
+        Initializes a new instance of the `_Timer` class.
+        
+        Args:
+            self: The instance of the `_Timer` class.
+            name (str): The name of the timer.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         self.name_ = name
         self.elapsed_ = 0.0
         self.started_ = False
@@ -58,16 +70,53 @@ class _Timer:
 
 class Timers:
     """Group of timers."""
-
     def __init__(self):
+        r"""
+        Initializes a Timers object.
+        
+        Args:
+            self: The object instance itself.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         self.timers = {}
 
     def __call__(self, name):
+        r"""
+        This method __call__ in the Timers class allows for creating or retrieving a timer object by name.
+        
+        Args:
+            self (object): The instance of the Timers class.
+            name (str): The name of the timer to be created or retrieved. It should be a string representing the unique identifier of the timer.
+        
+        Returns:
+            None. The method does not return any value explicitly, but it either creates a new timer object or returns an existing timer object based on the provided name.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
         if name not in self.timers:
             self.timers[name] = _Timer(name)
         return self.timers[name]
 
     def __contains__(self, item):
+        r"""
+        Checks if the given item is present in the Timers object.
+        
+        Args:
+            self (Timers): An instance of the Timers class.
+            item: The item to be checked for presence in the Timers object.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None.
+        """
         return item in self.timers
 
     def reset(self):
@@ -89,6 +138,22 @@ class TimerCallback(Callback):
         time_ndigit (int): Number of decimal places to keep. Default:3
     """
     def __init__(self, print_steps=0, time_ndigit=3):
+        r"""
+        Initializes an instance of the TimerCallback class.
+        
+        Args:
+            self: The instance of the TimerCallback class.
+            print_steps (int): Specifies the frequency of printing steps. Default is 0.
+                Must be an integer value.
+            time_ndigit (int): Specifies the number of digits to display for time values. Default is 3.
+                Must be an integer value.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            AssertionError: If the 'print_steps' parameter is not an integer.
+        """
         assert isinstance(print_steps, int), "print_every must be an int number."
         self.timers = Timers()
         self.print_steps = print_steps

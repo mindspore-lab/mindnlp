@@ -95,7 +95,6 @@ class BloomConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "bloom"
     keys_to_ignore_at_inference = ["past_key_values"]
     attribute_map = {
@@ -121,6 +120,33 @@ class BloomConfig(PretrainedConfig):
         slow_but_exact=False,
         **kwargs,
     ):
+        """
+        Initializes a new instance of the BloomConfig class.
+        
+        Args:
+            self: The object itself.
+            vocab_size (int): The size of the vocabulary. Default is 250880.
+            hidden_size (int): The size of the hidden layer. Default is 64.
+            n_layer (int): The number of layers. Default is 2.
+            n_head (int): The number of attention heads. Default is 8.
+            layer_norm_epsilon (float): The epsilon value for layer normalization. Default is 1e-05.
+            initializer_range (float): The range for the initializer. Default is 0.02.
+            use_cache (bool): Determines if caching is used. Default is True.
+            bos_token_id (int): The ID of the beginning-of-sentence token. Default is 1.
+            eos_token_id (int): The ID of the end-of-sentence token. Default is 2.
+            apply_residual_connection_post_layernorm (bool): Determines if residual connection is applied after layer normalization. Default is False.
+            hidden_dropout (float): The dropout rate for hidden layers. Default is 0.0.
+            attention_dropout (float): The dropout rate for attention layers. Default is 0.0.
+            pretraining_tp (int): The pretraining TP value. Default is 1.
+            slow_but_exact (bool): Determines if the method should prioritize accuracy over speed. Default is False.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. The method does not return a value.
+        
+        Raises:
+            None.
+        """
         self.vocab_size = vocab_size
         # Backward compatibility with n_embed kwarg
         n_embed = kwargs.pop("n_embed", None)

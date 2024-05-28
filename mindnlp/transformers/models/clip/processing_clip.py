@@ -36,12 +36,27 @@ class CLIPProcessor(ProcessorMixin):
         tokenizer ([`CLIPTokenizerFast`], *optional*):
             The tokenizer is a required input.
     """
-
     attributes = ["image_processor", "tokenizer"]
     image_processor_class = "CLIPImageProcessor"
     tokenizer_class = ("CLIPTokenizer", "CLIPTokenizerFast")
 
     def __init__(self, image_processor=None, tokenizer=None, **kwargs):
+        """
+        Initialize a CLIPProcessor object.
+        
+        Args:
+            self (object): The instance of the class.
+            image_processor (object, optional): An image processor object used for processing images. 
+                If not provided, it can be passed as part of the kwargs parameter.
+            tokenizer (object): A tokenizer object used for tokenizing text inputs.
+        
+        Returns:
+            None. This method initializes a CLIPProcessor object.
+        
+        Raises:
+            ValueError: If either `image_processor` or `tokenizer` is not specified.
+            FutureWarning: If the deprecated argument `feature_extractor` is used, a warning is issued recommending to use `image_processor` instead.
+        """
         feature_extractor = None
         if "feature_extractor" in kwargs:
             warnings.warn(
@@ -94,7 +109,6 @@ class CLIPProcessor(ProcessorMixin):
               `None`).
             - **pixel_values** -- Pixel values to be fed to a model. Returned when `images` is not `None`.
         """
-
         if text is None and images is None:
             raise ValueError("You have to specify either text or images. Both cannot be none.")
 
@@ -128,12 +142,45 @@ class CLIPProcessor(ProcessorMixin):
 
     @property
     def model_input_names(self):
+        """
+        This method, 'model_input_names', is a property of the 'CLIPProcessor' class. It returns a list of unique model input names derived from the tokenizer and image processor model input names.
+        
+        Args:
+            self: An instance of the 'CLIPProcessor' class.
+        
+        Returns:
+            The method returns a list of unique model input names derived from the tokenizer and image processor model input names.
+        
+        Raises:
+            No exceptions are explicitly raised by this method.
+        """
         tokenizer_input_names = self.tokenizer.model_input_names
         image_processor_input_names = self.image_processor.model_input_names
         return list(dict.fromkeys(tokenizer_input_names + image_processor_input_names))
 
     @property
     def feature_extractor_class(self):
+        """
+        This method returns the image processor class used for extracting features in the CLIPProcessor class.
+        
+        Args:
+            self: An instance of the CLIPProcessor class.
+        
+        Returns:
+            None
+        
+        Raises:
+            FutureWarning: If the method is called, a FutureWarning will be raised to inform the user that `feature_extractor_class` is deprecated and will be removed in v5. It is recommended to use
+`image_processor_class` instead.
+        
+        Note:
+            The returned image processor class is responsible for extracting features from images in the CLIPProcessor.
+        
+        Example:
+            >>> clip_processor = CLIPProcessor()
+            >>> clip_processor.feature_extractor_class
+            <class 'image_processor.ImageProcessor'>
+        """
         warnings.warn(
             "`feature_extractor_class` is deprecated and will be removed in v5. Use `image_processor_class` instead.",
             FutureWarning,
@@ -142,6 +189,18 @@ class CLIPProcessor(ProcessorMixin):
 
     @property
     def feature_extractor(self):
+        """
+        This method is deprecated and will be removed in v5. Use `image_processor` instead.
+        
+        Args:
+            self: An instance of the CLIPProcessor class.
+        
+        Returns:
+            None. This method returns None.
+        
+        Raises:
+            FutureWarning: This method raises a FutureWarning to alert users that it is deprecated and will be removed in v5.
+        """
         warnings.warn(
             "`feature_extractor` is deprecated and will be removed in v5. Use `image_processor` instead.",
             FutureWarning,

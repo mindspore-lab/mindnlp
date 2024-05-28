@@ -145,6 +145,20 @@ class Perplexity(Metric):
 
     """
     def __init__(self, ignore_label=None, name='Perplexity'):
+        r"""
+        Initializes an instance of the Perplexity class.
+        
+        Args:
+            self: The instance of the class.
+            ignore_label (int): The label to ignore during the perplexity calculation. Defaults to None.
+            name (str): The name of the perplexity calculation. Defaults to 'Perplexity'.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         super().__init__()
         self._name = name
 

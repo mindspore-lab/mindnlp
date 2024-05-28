@@ -82,7 +82,6 @@ class JetMoEConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "jetmoe"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -110,6 +109,40 @@ class JetMoEConfig(PretrainedConfig):
         initializer_range=0.01,
         **kwargs,
     ):
+        """
+        __init__
+        
+        Initializes a new instance of JetMoEConfig.
+        
+        Args:
+            self: The instance of the class.
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 32000.
+            hidden_size (int, optional): The size of the hidden layers. Defaults to 2048.
+            num_hidden_layers (int, optional): The number of hidden layers. Defaults to 12.
+            num_attention_heads (int, optional): The number of attention heads. Defaults to 32.
+            num_key_value_heads (int, optional): The number of key-value heads. Defaults to 16.
+            kv_channels (int, optional): The number of channels for key and value computation. Defaults to 128.
+            ffn_hidden_size (int, optional): The size of the feed-forward network hidden layers. Defaults to 5632.
+            max_position_embeddings (int, optional): The maximum position for positional embeddings. Defaults to 4096.
+            activation_function (str, optional): The activation function to be used. Defaults to 'silu'.
+            glu (bool, optional): Whether to use Gated Linear Unit (GLU). Defaults to True.
+            moe_num_experts (int, optional): The number of experts for Mixture of Experts (MoE). Defaults to 8.
+            moe_top_k (int, optional): The top K experts to be used in MoE. Defaults to 2.
+            use_cache (bool, optional): Whether to use cache for decoding. Defaults to True.
+            bos_token_id (int, optional): The ID of the beginning of sequence token. Defaults to 1.
+            eos_token_id (int, optional): The ID of the end of sequence token. Defaults to 2.
+            tie_word_embeddings (bool, optional): Whether to tie word embeddings. Defaults to True.
+            bias (bool, optional): Whether to use bias. Defaults to True.
+            rope_theta (float, optional): The theta value for Relative Positional Embeddings (RoPE). Defaults to 10000.0.
+            rms_norm_eps (float, optional): The epsilon value for RMSNorm. Defaults to 1e-06.
+            initializer_range (float, optional): The range for weight initialization. Defaults to 0.01.
+        
+        Returns:
+            None. The method sets the configuration parameters for the JetMoEConfig instance.
+        
+        Raises:
+            None.
+        """
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size
         self.num_hidden_layers = num_hidden_layers

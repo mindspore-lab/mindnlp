@@ -130,6 +130,18 @@ IMAGE_PROCESSOR_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, IMAGE_PROCESSOR
 
 
 def image_processor_class_from_name(class_name: str):
+    """
+    Args:
+        class_name (str): The name of the image processor class to retrieve.
+            It is used to locate and import the corresponding class based on the provided name.
+    
+    Returns:
+        None: If the class with the given name is not found, None is returned.
+    
+    Raises:
+        AttributeError: If an attribute error occurs while attempting to retrieve the class from the imported module.
+        ImportError: If an import error occurs while attempting to import the module.
+    """
     for module_name, extractors in IMAGE_PROCESSOR_MAPPING_NAMES.items():
         if class_name in extractors:
             module_name = model_type_to_module_name(module_name)
@@ -259,8 +271,20 @@ class AutoImageProcessor:
 
     This class cannot be instantiated directly using `__init__()` (throws an error).
     """
-
     def __init__(self):
+        """
+        Initializes an instance of AutoImageProcessor.
+        
+        Args:
+            self: The object itself.
+            
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            EnvironmentError: Raised when attempting to directly instantiate an AutoImageProcessor object. AutoImageProcessor is designed to be instantiated using the
+`AutoImageProcessor.from_pretrained(pretrained_model_name_or_path)` method.
+        """
         raise EnvironmentError(
             "AutoImageProcessor is designed to be instantiated "
             "using the `AutoImageProcessor.from_pretrained(pretrained_model_name_or_path)` method."

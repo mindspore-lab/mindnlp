@@ -64,12 +64,10 @@ class Dropout(nn.Cell):
         >>> print(output.shape)
         (2, 2, 3)
     """
-
     def __init__(self, p=0.5):
         """
         Initialize Dropout.
         """
-
         super().__init__()
         if p < 0 or p >= 1:
             raise ValueError(f"For '{self.cls_name}', the 'p' must be a number in range [0, 1), "
@@ -82,7 +80,6 @@ class Dropout(nn.Cell):
         """
         Compute Dropout.
         """
-
         if not self.training or self.p == 0:
             return x
 

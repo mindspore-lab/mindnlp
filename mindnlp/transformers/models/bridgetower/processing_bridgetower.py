@@ -38,12 +38,25 @@ class BridgeTowerProcessor(ProcessorMixin):
         tokenizer (`RobertaTokenizerFast`):
             An instance of ['RobertaTokenizerFast`]. The tokenizer is a required input.
     """
-
     attributes = ["image_processor", "tokenizer"]
     image_processor_class = "BridgeTowerImageProcessor"
     tokenizer_class = ("RobertaTokenizer", "RobertaTokenizerFast")
 
     def __init__(self, image_processor, tokenizer):
+        """
+        This method initializes an instance of the BridgeTowerProcessor class.
+        
+        Args:
+            self (object): The instance of the BridgeTowerProcessor class.
+            image_processor (object): An object representing the image processor to be used for processing images.
+            tokenizer (object): An object representing the tokenizer to be used for tokenizing text.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            This method does not raise any exceptions.
+        """
         super().__init__(image_processor, tokenizer)
 
     def __call__(
@@ -114,6 +127,18 @@ class BridgeTowerProcessor(ProcessorMixin):
 
     @property
     def model_input_names(self):
+        """
+        Returns a list of model input names for the 'BridgeTowerProcessor' class.
+        
+        Args:
+            self (BridgeTowerProcessor): An instance of the 'BridgeTowerProcessor' class.
+        
+        Returns:
+            list: A list containing the model input names for the tokenizer and the image processor.
+        
+        Raises:
+            None.
+        """
         tokenizer_input_names = self.tokenizer.model_input_names
         image_processor_input_names = self.image_processor.model_input_names
         return list(dict.fromkeys(tokenizer_input_names + image_processor_input_names))

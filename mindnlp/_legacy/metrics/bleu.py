@@ -62,6 +62,25 @@ class BleuScore(Metric):
 
     """
     def __init__(self, n_size=4, weights=None, name='BleuScore'):
+        r""" 
+        Initializes an instance of the BleuScore class.
+        
+        Args:
+            self: The instance of the BleuScore class.
+            n_size (int, optional): The size of n-grams used for calculating BLEU score. Defaults to 4.
+                Must be an integer between 1 and 4, inclusive.
+            weights (list, optional): The weights for each n-gram. If None, default weights are calculated. 
+                The length of the weights list must be equal to n_size.
+            name (str, optional): Name of the BleuScore instance. Defaults to 'BleuScore'.
+            
+        Returns:
+            None. This method initializes various attributes of the BleuScore instance.
+        
+        Raises:
+            ValueError: 
+                - If n_size is outside the range of 1 to 4.
+                - If the length of weights list is not equal to n_size.
+        """
         super().__init__()
         self._name = name
         self.n_size = _check_value_type("n_size", n_size, [int])

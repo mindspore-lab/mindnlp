@@ -171,7 +171,6 @@ class DebertaTokenizer(PreTrainedTokenizer):
             Whether or not to add an initial <|endoftext|> to the input. This allows to treat the leading word just as
             any other word.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -193,6 +192,31 @@ class DebertaTokenizer(PreTrainedTokenizer):
         add_bos_token=False,
         **kwargs,
     ):
+        """
+        Initialize a DebertaTokenizer object.
+        
+        Args:
+        - self: The instance of the class.
+        - vocab_file (str): The path to the vocabulary file.
+        - merges_file (str): The path to the merges file.
+        - errors (str, optional): The error handling strategy. Default is 'replace'.
+        - bos_token (str, optional): Beginning of sentence token. Default is '[CLS]'.
+        - eos_token (str, optional): End of sentence token. Default is '[SEP]'.
+        - sep_token (str, optional): Separator token. Default is '[SEP]'.
+        - cls_token (str, optional): Classification token. Default is '[CLS]'.
+        - unk_token (str, optional): Token for unknown words. Default is '[UNK]'.
+        - pad_token (str, optional): Token for padding. Default is '[PAD]'.
+        - mask_token (str, optional): Token for masking. Default is '[MASK]'.
+        - add_prefix_space (bool, optional): Whether to add prefix space. Default is False.
+        - add_bos_token (bool, optional): Whether to add beginning of sentence token. Default is False.
+        
+        Returns:
+        - None: This method does not return any value.
+        
+        Raises:
+        - IOError: If there is an issue with opening the vocab_file or merges_file.
+        - Exception: Any other unexpected error that may occur during initialization.
+        """
         bos_token = AddedToken(bos_token, special=True) if isinstance(bos_token, str) else bos_token
         eos_token = AddedToken(eos_token, special=True) if isinstance(eos_token, str) else eos_token
         sep_token = AddedToken(sep_token, special=True) if isinstance(sep_token, str) else sep_token
@@ -237,14 +261,71 @@ class DebertaTokenizer(PreTrainedTokenizer):
     @property
     # Copied from transformers.models.gpt2.tokenization_gpt2.GPT2Tokenizer.vocab_size
     def vocab_size(self):
+        """
+        Returns the size of the vocabulary used by the DebertaTokenizer.
+        
+        Args:
+            self (DebertaTokenizer): The instance of the DebertaTokenizer class.
+        
+        Returns:
+            int: The number of unique tokens in the vocabulary.
+        
+        Raises:
+            None.
+        """
         return len(self.encoder)
 
     # Copied from transformers.models.gpt2.tokenization_gpt2.GPT2Tokenizer.get_vocab
     def get_vocab(self):
+        """
+        Returns the vocabulary of the DebertaTokenizer.
+        
+        Args:
+            self (DebertaTokenizer): An instance of the DebertaTokenizer class.
+        
+        Returns:
+            dict: The vocabulary of the tokenizer, which is a dictionary containing the encoder mappings of the tokenizer's tokens and any added tokens.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         return dict(self.encoder, **self.added_tokens_encoder)
 
     # Copied from transformers.models.gpt2.tokenization_gpt2.GPT2Tokenizer.bpe
     def bpe(self, token):
+        """
+        Performs Byte Pair Encoding (BPE) on the given token.
+        
+        Args:
+            self (DebertaTokenizer): An instance of the DebertaTokenizer class.
+            token (str): The token to be encoded using BPE.
+        
+        Returns:
+            str: The encoded token after applying BPE.
+        
+        Raises:
+            None.
+        
+        This method applies BPE to the given token by iteratively replacing the most frequent pairs of characters in the token with a single character. If the token is already present in the cache, the cached
+value is returned. Otherwise, the token is converted to a tuple of characters. Pairs of characters in the tuple are obtained using the 'get_pairs' function. If no pairs are found, the original token is
+returned. 
+        
+        The method then enters a loop where it selects the most frequent pair from the pairs obtained. If the selected pair is not present in the 'bpe_ranks' dictionary, the loop is terminated. Otherwise, the
+first and second characters of the pair are extracted. 
+        
+        A new word list, 'new_word', is created to store the modified characters of the token. The method iterates over the characters of the token and checks if the current character matches the first
+character of the selected pair. If it does, and the next character is the second character of the pair, the pair is replaced with a single character by appending it to 'new_word' and incrementing the index by
+2. Otherwise, the current character is appended to 'new_word' and the index is incremented by 1. 
+        
+        The modified 'new_word' is converted back to a tuple and assigned to 'word'. If the length of 'word' becomes 1, indicating that the BPE process is complete, the loop is terminated. Otherwise, new pairs
+are obtained from 'word' and the process is repeated until 'word' is of length 1. 
+        
+        Finally, 'word' is converted to a string by joining the characters with spaces. The encoded token is stored in the cache for future use and returned.
+        
+        Note:
+        - This method assumes the presence of the 'get_pairs' function and the 'bpe_ranks' dictionary.
+        
+        """
         if token in self.cache:
             return self.cache[token]
         word = tuple(token)
@@ -397,6 +478,22 @@ class DebertaTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.gpt2.tokenization_gpt2.GPT2Tokenizer.save_vocabulary
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """
+        Save the vocabulary to files in the specified directory with an optional filename prefix.
+        
+        Args:
+            self (DebertaTokenizer): The instance of the DebertaTokenizer class.
+            save_directory (str): The directory path where the vocabulary files will be saved.
+            filename_prefix (Optional[str]): An optional prefix to be added to the filenames. Defaults to None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the paths to the saved vocabulary file and merge file.
+        
+        Raises:
+            - FileNotFoundError: If the specified save_directory does not exist.
+            - IOError: If there is an issue encountered while writing to the vocabulary or merge files.
+            - RuntimeError: If the BPE merge indices are not consecutive, indicating a potential corruption in the tokenizer.
+        """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return
@@ -426,6 +523,20 @@ class DebertaTokenizer(PreTrainedTokenizer):
         return vocab_file, merge_file
 
     def prepare_for_tokenization(self, text, is_split_into_words=False, **kwargs):
+        """
+        This method prepares the input text for tokenization by potentially adding a prefix space based on the provided parameters.
+        
+        Args:
+        - self: The instance of the DebertaTokenizer class.
+        - text (str): The input text to be tokenized.
+        - is_split_into_words (bool): A flag indicating whether the text is already split into words. Default is False.
+        
+        Returns:
+        - None: This method modifies the input text in place and does not return any value.
+        
+        Raises:
+        - No specific exceptions are raised within this method.
+        """
         add_prefix_space = kwargs.pop("add_prefix_space", self.add_prefix_space)
         if (is_split_into_words or add_prefix_space) and (len(text) > 0 and not text[0].isspace()):
             text = " " + text

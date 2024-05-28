@@ -90,7 +90,6 @@ class BeitImageProcessor(BaseImageProcessor):
             background label will be replaced by 255. Can be overridden by the `do_reduce_labels` parameter in the
             `preprocess` method.
     """
-
     model_input_names = ["pixel_values"]
 
     def __init__(
@@ -108,6 +107,30 @@ class BeitImageProcessor(BaseImageProcessor):
         do_reduce_labels: bool = False,
         **kwargs,
     ) -> None:
+        """
+        Initializes an instance of the BeitImageProcessor class.
+        
+        Args:
+            self: The instance of the class.
+            do_resize (bool, optional): Flag indicating whether to resize the image. Defaults to True.
+            size (Dict[str, int], optional): The target size of the image as a dictionary with 'height' and 'width' keys. Defaults to {'height': 256, 'width': 256}.
+            resample (PILImageResampling, optional): The resampling algorithm to be used during resizing. Defaults to PILImageResampling.BICUBIC.
+            do_center_crop (bool, optional): Flag indicating whether to perform center cropping. Defaults to True.
+            crop_size (Dict[str, int], optional): The size of the center crop as a dictionary with 'height' and 'width' keys. Defaults to {'height': 224, 'width': 224}.
+            rescale_factor (Union[int, float], optional): The factor by which to rescale the image. Defaults to 1 / 255.
+            do_rescale (bool, optional): Flag indicating whether to rescale the image. Defaults to True.
+            do_normalize (bool, optional): Flag indicating whether to normalize the image. Defaults to True.
+            image_mean (Optional[Union[float, List[float]]], optional): The mean values for image normalization. Defaults to None.
+            image_std (Optional[Union[float, List[float]]], optional): The standard deviation values for image normalization. Defaults to None.
+            do_reduce_labels (bool, optional): Flag indicating whether to reduce labels. Defaults to False.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None
+        
+        Raises:
+            FutureWarning: If the 'reduce_labels' parameter is used. This parameter is deprecated and will be removed in a future version. Please use 'do_reduce_labels' instead.
+        """
         if "reduce_labels" in kwargs:
             warnings.warn(
                 "The `reduce_labels` parameter is deprecated and will be removed in a future version. Please use"
@@ -198,6 +221,27 @@ class BeitImageProcessor(BaseImageProcessor):
         )
 
     def reduce_label(self, label: ImageInput) -> np.ndarray:
+        """
+        Reduce the label values in the input image.
+        
+        Args:
+            self: BeitImageProcessor
+                The instance of the BeitImageProcessor class.
+            label: ImageInput
+                The input label image to be processed. It should be a valid ImageInput object.
+        
+        Returns:
+            np.ndarray
+                Returns a numpy array representing the reduced label image.
+        
+        Raises:
+            ValueError
+                If the input label is not a valid ImageInput object.
+            TypeError
+                If the input label cannot be converted to a numpy array.
+            IndexError
+                If the label array indexing operation fails due to invalid indices.
+        """
         label = to_numpy_array(label)
         # Avoid using underflow conversion
         label[label == 0] = 255
@@ -221,6 +265,31 @@ class BeitImageProcessor(BaseImageProcessor):
         image_std: Optional[Union[float, List[float]]] = None,
         input_data_format: Optional[Union[str, ChannelDimension]] = None,
     ):
+        """
+        _preprocess method processes the input image based on the provided parameters.
+        
+        Args:
+            self: The instance of the BeitImageProcessor class.
+            image (ImageInput): The input image to be processed.
+            do_reduce_labels (bool, optional): If True, reduces the labels of the input image. Defaults to None.
+            do_resize (bool, optional): If True, resizes the input image. Defaults to None.
+            size (Dict[str, int], optional): A dictionary specifying the target size for resizing the image. Defaults to None.
+            resample (PILImageResampling, optional): The resampling filter to use when resizing the image. Defaults to None.
+            do_center_crop (bool, optional): If True, performs a center crop on the input image. Defaults to None.
+            crop_size (Dict[str, int], optional): A dictionary specifying the size of the center crop. Defaults to None.
+            do_rescale (bool, optional): If True, rescales the input image. Defaults to None.
+            rescale_factor (float, optional): The factor by which the image will be rescaled. Defaults to None.
+            do_normalize (bool, optional): If True, normalizes the input image. Defaults to None.
+            image_mean (Optional[Union[float, List[float]]], optional): The mean value used for normalization. Defaults to None.
+            image_std (Optional[Union[float, List[float]]], optional): The standard deviation used for normalization. Defaults to None.
+            input_data_format (Optional[Union[str, ChannelDimension]], optional): The format of the input data. Defaults to None.
+        
+        Returns:
+            None. The processed image is returned as the output.
+        
+        Raises:
+            None.
+        """
         if do_reduce_labels:
             image = self.reduce_label(image)
 
@@ -325,6 +394,23 @@ class BeitImageProcessor(BaseImageProcessor):
         return segmentation_map
 
     def __call__(self, images, segmentation_maps=None, **kwargs):
+        """
+        __call__
+        
+        This method processes images and segmentation maps using the BeitImageProcessor.
+        
+        Args:
+            self (object): The instance of the BeitImageProcessor class.
+            images (array-like): The input images to be processed.
+            segmentation_maps (array-like, optional): The segmentation maps corresponding to the input images. 
+                Defaults to None.
+        
+        Returns:
+            None: This method does not return any value. The processing is done in place.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         # Overrides the `__call__` method of the `Preprocessor` class such that the images and segmentation maps can both
         # be passed in as positional arguments.
         return super().__call__(images, segmentation_maps=segmentation_maps, **kwargs)

@@ -83,7 +83,6 @@ class BitConfig(BackboneConfigMixin, PretrainedConfig):
     >>> configuration = model.config
     ```
     """
-
     model_type = "bit"
     layer_types = ["preactivation", "bottleneck"]
     supported_padding = ["SAME", "VALID"]
@@ -106,6 +105,33 @@ class BitConfig(BackboneConfigMixin, PretrainedConfig):
         out_indices=None,
         **kwargs,
     ):
+        """
+        Initialize the BitConfig class with the provided configuration parameters.
+        
+        Args:
+            self: Reference to the current instance of the class.
+            num_channels (int): Number of input channels for the model. Defaults to 3.
+            embedding_size (int): Dimensionality of the embedding space. Defaults to 64.
+            hidden_sizes (list): List of integers specifying the sizes of hidden layers in the model.
+            depths (list): List of integers representing the depths of each stage in the model.
+            layer_type (str): Type of layer architecture to use in the model.
+            hidden_act (str): Activation function to apply in the hidden layers. Default is 'relu'.
+            global_padding (str): Strategy for padding. Must be one of the supported padding strategies.
+            num_groups (int): Number of groups for group normalization.
+            drop_path_rate (float): Probability of dropping a path during training. Default is 0.0.
+            embedding_dynamic_padding (bool): Flag indicating whether dynamic padding should be applied to embeddings.
+            output_stride (int): Stride value for output computation.
+            width_factor (int): Factor to scale the width of the model.
+            out_features (list): List of output features to align with stage names.
+            out_indices (list): List of output indices to align with stage names.
+        
+        Returns:
+            None. This method initializes the BitConfig instance with the provided configuration.
+        
+        Raises:
+            ValueError: If the provided layer_type is not supported.
+            ValueError: If the global_padding strategy is not supported.
+        """
         super().__init__(**kwargs)
         if layer_type not in self.layer_types:
             raise ValueError(f"layer_type={layer_type} is not one of {','.join(self.layer_types)}")

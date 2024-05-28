@@ -133,6 +133,19 @@ class MatthewsCorrelation(Metric):
 
     """
     def __init__(self, name='MatthewsCorrelation'):
+        r"""
+        Initialize the MatthewsCorrelation object.
+        
+        Args:
+            self (object): The object instance itself.
+            name (str): The name of the MatthewsCorrelation object. Defaults to 'MatthewsCorrelation'.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         super().__init__()
         self._name = name
         self.t_p = 0

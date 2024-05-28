@@ -45,12 +45,33 @@ class ReLU(nn.Cell):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self):
         """Initialize ReLU."""
         super().__init__()
 
     def construct(self, u: Tensor) -> Tensor:
+        r"""
+        Constructs a Tensor using the ReLU activation function.
+        
+        Args:
+            self: The instance of the ReLU class.
+            u (Tensor): The input Tensor to apply the ReLU activation function on.
+        
+        Returns:
+            Tensor: The output Tensor after applying the ReLU activation function.
+        
+        Raises:
+            None.
+        
+        The `construct` method applies the ReLU activation function on the input Tensor `u`. 
+        If the data type of `u` is `mindspore.complex64`, the method splits the complex numbers into their real and imaginary parts using the `get_real_and_imag` function. 
+        Then, the ReLU function is applied separately on the real and imaginary parts using the `P.relu` function.
+        Finally, the real and imaginary parts are combined back into a complex number using the `to_complex` function and the original data type of `u`.
+        
+        If the data type of `u` is not `mindspore.complex64`, the ReLU function is directly applied on `u` using the `P.relu` function.
+        
+        The method returns the output Tensor after applying the ReLU activation function.
+        """
         if u.dtype == mindspore.complex64:
             real, imag = get_real_and_imag(u)
             real = P.relu(real)

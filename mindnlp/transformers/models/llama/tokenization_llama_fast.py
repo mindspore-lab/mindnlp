@@ -98,7 +98,6 @@ class LlamaTokenizerFast(PreTrainedTokenizerFast):
         use_default_system_prompt (`bool`, *optional*, defaults to `False`):
             Whether or not the default system prompt for Llama should be used.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     slow_tokenizer_class = LlamaTokenizer
@@ -118,6 +117,28 @@ class LlamaTokenizerFast(PreTrainedTokenizerFast):
         use_default_system_prompt=False,
         **kwargs,
     ):
+        """
+        Initializes a new instance of the LlamaTokenizerFast class.
+        
+        Args:
+            self: The current instance of the class.
+            vocab_file (str): The path to the vocabulary file. Default is None.
+            tokenizer_file (str): The path to the tokenizer file. Default is None.
+            clean_up_tokenization_spaces (bool): Whether to clean up tokenization spaces. Default is False.
+            unk_token (str): The unknown token. Default is '<unk>'.
+            bos_token (str): The beginning of sentence token. Default is '<s>'.
+            eos_token (str): The end of sentence token. Default is '</s>'.
+            add_bos_token (bool): Whether to add the beginning of sentence token. Default is True.
+            add_eos_token (bool): Whether to add the end of sentence token. Default is False.
+            use_default_system_prompt (bool): Whether to use the default system prompt. Default is False.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(
             vocab_file=vocab_file,
             tokenizer_file=tokenizer_file,
@@ -138,6 +159,18 @@ class LlamaTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def can_save_slow_tokenizer(self) -> bool:
+        """
+        This method checks whether the slow tokenizer can be saved based on the existence of a vocabulary file.
+        
+        Args:
+            self (LlamaTokenizerFast): The instance of the LlamaTokenizerFast class.
+            
+        Returns:
+            bool: Returns True if the vocabulary file exists, otherwise False.
+        
+        Raises:
+            None
+        """
         return os.path.isfile(self.vocab_file) if self.vocab_file else False
 
     def update_post_processor(self):
@@ -168,23 +201,97 @@ class LlamaTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def add_eos_token(self):
+        """
+        Adds an end-of-sentence (EOS) token to the tokenizer.
+        
+        Args:
+            self: An instance of the LlamaTokenizerFast class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
         return self._add_eos_token
 
     @property
     def add_bos_token(self):
+        """
+        Method to add a beginning of sequence (BOS) token to the tokenizer.
+        
+        Args:
+            self (LlamaTokenizerFast): The instance of the LlamaTokenizerFast class.
+                This parameter is mandatory as the method is an instance method.
+                
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised by this method under normal circumstances.
+        """
         return self._add_bos_token
 
     @add_eos_token.setter
     def add_eos_token(self, value):
+        """
+        Sets the value of the 'add_eos_token' attribute in the LlamaTokenizerFast class.
+        
+        Args:
+            self (LlamaTokenizerFast): The instance of the LlamaTokenizerFast class.
+            value: The new value for the 'add_eos_token' attribute.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
         self._add_eos_token = value
         self.update_post_processor()
 
     @add_bos_token.setter
     def add_bos_token(self, value):
+        """
+        Adds a beginning-of-sequence (BOS) token to the LlamaTokenizerFast object.
+        
+        Args:
+            self (LlamaTokenizerFast): The instance of the LlamaTokenizerFast class.
+            value: The value to set for the add_bos_token attribute.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
         self._add_bos_token = value
         self.update_post_processor()
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """
+        Saves the vocabulary for a slow tokenizer.
+        
+        Args:
+            self (LlamaTokenizerFast): An instance of the LlamaTokenizerFast class.
+            save_directory (str): The directory where the vocabulary will be saved.
+            filename_prefix (Optional[str]): An optional prefix to be added to the filename. 
+                Defaults to None if not provided.
+        
+        Returns:
+            Tuple[str]: A tuple containing the path to the saved vocabulary file.
+        
+        Raises:
+            ValueError: If the fast tokenizer does not have the necessary information to save the vocabulary 
+                for a slow tokenizer.
+            FileNotFoundError: If the save_directory does not exist.
+            
+        Note:
+            The fast tokenizer must have the necessary information to save the vocabulary for a slow tokenizer.
+            The save_directory must be a valid directory.
+            The function will raise a ValueError if the fast tokenizer does not meet the requirements.
+            The function will raise a FileNotFoundError if the save_directory does not exist.
+        """
         if not self.can_save_slow_tokenizer:
             raise ValueError(
                 "Your fast tokenizer does not have the necessary information to save the vocabulary for a slow "
@@ -267,6 +374,20 @@ class LlamaTokenizerFast(PreTrainedTokenizerFast):
     # TODO ArthurZ let's rely on the template processor instead, refactor all fast tokenizers
     # Copied from transformers.models.llama.tokenization_llama.LlamaTokenizer.build_inputs_with_special_tokens
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
+        """
+        This method builds inputs with special tokens for the LlamaTokenizerFast class.
+        
+        Args:
+            self: The instance of the LlamaTokenizerFast class.
+            token_ids_0 (list): The list of token IDs for the first sequence.
+            token_ids_1 (list, optional): The list of token IDs for the second sequence. Defaults to None.
+        
+        Returns:
+            list: The list of token IDs representing the input sequences with special tokens added.
+        
+        Raises:
+            None
+        """
         bos_token_id = [self.bos_token_id] if self.add_bos_token else []
         eos_token_id = [self.eos_token_id] if self.add_eos_token else []
 

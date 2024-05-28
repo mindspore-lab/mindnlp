@@ -82,7 +82,6 @@ def expand_to_square(image: np.array, background_color, input_data_format) -> np
     """
     Expands an image to a square by adding a background color.
     """
-
     height, width = get_image_size(image, channel_dim=input_data_format)
     if width == height:
         return image
@@ -99,6 +98,18 @@ def expand_to_square(image: np.array, background_color, input_data_format) -> np
 
 
 def _get_patch_output_size(image, target_resolution, input_data_format):
+    """
+    Args:
+        image (object): The input image for which the patch output size needs to be calculated.
+        target_resolution (tuple): A tuple containing the target height and width for the output patch.
+        input_data_format (str): Specifies the data format of the input image, for example, 'channels_last' or 'channels_first'.
+    
+    Returns:
+        tuple: A tuple containing the calculated height and width of the output patch.
+    
+    Raises:
+        None.
+    """
     original_height, original_width = get_image_size(
         image, channel_dim=input_data_format)
     target_height, target_width = target_resolution
@@ -159,7 +170,6 @@ class LlavaNextImageProcessor(BaseImageProcessor):
         do_convert_rgb (`bool`, *optional*, defaults to `True`):
             Whether to convert the image to RGB.
     """
-
     model_input_names = ["pixel_values"]
 
     def __init__(
@@ -178,6 +188,33 @@ class LlavaNextImageProcessor(BaseImageProcessor):
         do_convert_rgb: bool = True,
         **kwargs,
     ) -> None:
+        """
+        __init__
+        
+        Initializes an instance of the LlavaNextImageProcessor class.
+        
+        Args:
+        - self: The instance of the class.
+        - do_resize (bool, optional): Flag to indicate whether resizing should be performed. Defaults to True.
+        - size (Dict[str, int], optional): Dictionary specifying the size of the image. Defaults to None.
+        - image_grid_pinpoints (List, optional): List of points for image grid pinpoints. Defaults to None.
+        - resample (PILImageResampling): Resampling method for image resizing. Defaults to PILImageResampling.BICUBIC.
+        - do_center_crop (bool): Flag to indicate whether center cropping should be performed. Defaults to True.
+        - crop_size (Dict[str, int], optional): Dictionary specifying the crop size. Defaults to None.
+        - do_rescale (bool): Flag to indicate whether rescaling should be performed. Defaults to True.
+        - rescale_factor (Union[int, float]): Factor used for rescaling the image. Defaults to 1/255.
+        - do_normalize (bool): Flag to indicate whether normalization should be performed. Defaults to True.
+        - image_mean (Optional[Union[float, List[float]]], optional): Mean value for image normalization. Defaults to None or OPENAI_CLIP_MEAN.
+        - image_std (Optional[Union[float, List[float]]], optional): Standard deviation value for image normalization. Defaults to None or OPENAI_CLIP_STD.
+        - do_convert_rgb (bool): Flag to indicate whether RGB conversion should be performed.
+        
+        Returns:
+        None: This method does not return any value.
+        
+        Raises:
+        - ValueError: If invalid parameters are provided or if the rescale_factor is not a valid number.
+        - TypeError: If the types of input parameters are incorrect.
+        """
         super().__init__(**kwargs)
         size = size if size is not None else {"shortest_edge": 224}
         size = get_size_dict(size, default_to_square=False)

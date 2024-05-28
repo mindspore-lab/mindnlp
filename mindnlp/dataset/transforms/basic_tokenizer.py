@@ -52,9 +52,24 @@ class BasicTokenizer(TextTensorOperation, PyTensorOperation):
         >>> tokenized_text = tokenizer_op(text)
 
     """
-
     # @check_decode
     def __init__(self, lower_case=False, py_transform=False):
+        r"""
+        Initializes an instance of the BasicTokenizer class.
+        
+        Args:
+            self: The instance of the class.
+            lower_case (bool): Specifies whether the tokens should be converted to lowercase. Defaults to False.
+            py_transform (bool): Specifies whether the Python implementation should be used or not. Defaults to False.
+                If py_transform is set to True or the current operating system is Windows, the Python implementation is used.
+                Otherwise, the C implementation is used.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__()
         if py_transform or platform.system().lower() == 'windows':
             self.tokenizer = _BasicTokenizer(lower_case)
@@ -89,6 +104,19 @@ class BasicTokenizer(TextTensorOperation, PyTensorOperation):
         return np.array(tokens)
 
     def parse(self):
+        r"""Parse the input using the BasicTokenizerOperation.
+        
+        This method applies the BasicTokenizerOperation to the input data, which tokenizes the input text into a list of tokens.
+        
+        Args:
+            self: An instance of the BasicTokenizer class.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         from mindspore.dataset.text.transforms import DE_C_INTER_NORMALIZE_FORM, NormalizeForm
         normalization_form = DE_C_INTER_NORMALIZE_FORM.get(NormalizeForm.NFD)
         return cde.BasicTokenizerOperation(self.lower_case, False, normalization_form,
@@ -117,7 +145,6 @@ def _whitespace_tokenize(text):
 
 class _BasicTokenizer():
     """Runs basic tokenization (punctuation splitting, lower casing, etc.)."""
-
     def __init__(self, do_lower_case=True):
         """Constructs a BasicTokenizer.
         Args:

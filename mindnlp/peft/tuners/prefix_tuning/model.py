@@ -53,8 +53,25 @@ class PrefixEncoder(nn.Cell):
 
     Output shape: (`batch_size`, `num_virtual_tokens`, `2*layers*hidden`)
     """
-
     def __init__(self, config):
+        """
+        Initializes the PrefixEncoder class.
+        
+        Args:
+            self: The object instance.
+            config (object): A configuration object containing the following attributes:
+                - prefix_projection (bool): Indicates whether prefix projection should be applied.
+                - token_dim (int): The dimension of the token embedding.
+                - num_layers (int): The number of layers in the encoder.
+                - encoder_hidden_size (int): The size of the hidden state in the encoder.
+                - num_virtual_tokens (int): The number of virtual tokens.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If the prefix_projection attribute is True and the inference_mode attribute in the config object is not set.
+        """
         super().__init__()
         self.prefix_projection = config.prefix_projection
         token_dim = config.token_dim
@@ -73,6 +90,21 @@ class PrefixEncoder(nn.Cell):
             self.embedding = nn.Embedding(num_virtual_tokens, num_layers * 2 * token_dim)
 
     def construct(self, prefix: mindspore.Tensor):
+        """
+        This method constructs the past key values based on the provided prefix for the PrefixEncoder.
+        
+        Args:
+            self (PrefixEncoder): The instance of the PrefixEncoder class.
+            prefix (mindspore.Tensor): The input prefix tensor used for constructing past key values.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            - TypeError: If the prefix is not of type mindspore.Tensor.
+            - ValueError: If the prefix projection is enabled and the prefix_tokens cannot be obtained or transformed.
+            - RuntimeError: If there is an issue with the embedding or transformation process.
+        """
         if self.prefix_projection:
             prefix_tokens = self.embedding(prefix)
             past_key_values = self.transform(prefix_tokens)

@@ -36,12 +36,29 @@ class AltCLIPProcessor(ProcessorMixin):
         tokenizer ([`XLMRobertaTokenizerFast`], *optional*):
             The tokenizer is a required input.
     """
-
     attributes = ["image_processor", "tokenizer"]
     image_processor_class = "CLIPImageProcessor"
     tokenizer_class = ("XLMRobertaTokenizer", "XLMRobertaTokenizerFast")
 
     def __init__(self, image_processor=None, tokenizer=None, **kwargs):
+        """
+        Initializes an instance of AltCLIPProcessor.
+        
+        Args:
+            self (object): The instance of the class AltCLIPProcessor.
+            image_processor (object, optional): An object responsible for processing images. 
+                If not provided explicitly, it can be extracted from the 'feature_extractor' argument.
+                Default is None.
+            tokenizer (object, required): An object responsible for tokenizing input data.
+        
+        Returns:
+            None. This method initializes the AltCLIPProcessor instance.
+        
+        Raises:
+            ValueError: If 'image_processor' is not specified.
+            ValueError: If 'tokenizer' is not specified.
+            FutureWarning: If 'feature_extractor' argument is used (deprecated).
+        """
         feature_extractor = None
         if "feature_extractor" in kwargs:
             warnings.warn(
@@ -94,7 +111,6 @@ class AltCLIPProcessor(ProcessorMixin):
               `None`).
             - **pixel_values** -- Pixel values to be fed to a model. Returned when `images` is not `None`.
         """
-
         if text is None and images is None:
             raise ValueError("You have to specify either text or images. Both cannot be none.")
 
@@ -127,6 +143,18 @@ class AltCLIPProcessor(ProcessorMixin):
 
     @property
     def model_input_names(self):
+        """
+        Retrieve the input names required for the model from the tokenizer and image processor.
+        
+        Args:
+            self: An instance of the AltCLIPProcessor class.
+        
+        Returns:
+            list: A list of unique input names required for the model, obtained by combining the input names from the tokenizer and image processor.
+        
+        Raises:
+            None
+        """
         tokenizer_input_names = self.tokenizer.model_input_names
         image_processor_input_names = self.image_processor.model_input_names
         return list(dict.fromkeys(tokenizer_input_names + image_processor_input_names))

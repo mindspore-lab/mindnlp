@@ -76,7 +76,6 @@ class T5Config(PretrainedConfig):
         use_cache (`bool`, *optional*, defaults to `True`):
             Whether or not the model should return the last key/values attentions (not used by all models).
     """
-
     model_type = "t5"
     keys_to_ignore_at_inference = ["past_key_values"]
     attribute_map = {"hidden_size": "d_model", "num_attention_heads": "num_heads", "num_hidden_layers": "num_layers"}
@@ -103,6 +102,35 @@ class T5Config(PretrainedConfig):
         classifier_dropout=0.0,
         **kwargs,
     ):
+        """
+        Initializes a new instance of the T5Config class.
+        
+        Args:
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 32128.
+            d_model (int, optional): The dimension of the model. Defaults to 512.
+            d_kv (int, optional): The dimension of the key and value. Defaults to 64.
+            d_ff (int, optional): The dimension of the feed forward layer. Defaults to 2048.
+            num_layers (int, optional): The number of layers. Defaults to 6.
+            num_decoder_layers (int, optional): The number of decoder layers. Defaults to the value of num_layers if not provided.
+            num_heads (int, optional): The number of attention heads. Defaults to 8.
+            relative_attention_num_buckets (int, optional): The number of buckets for relative attention. Defaults to 32.
+            relative_attention_max_distance (int, optional): The maximum distance for relative attention. Defaults to 128.
+            dropout_rate (float, optional): The dropout rate. Defaults to 0.1.
+            layer_norm_epsilon (float, optional): The epsilon value for layer normalization. Defaults to 1e-06.
+            initializer_factor (float, optional): The factor for initializer. Defaults to 1.0.
+            feed_forward_proj (str, optional): The type of feed forward projection. Defaults to 'relu'.
+            is_encoder_decoder (bool, optional): Indicates if the model is an encoder-decoder. Defaults to True.
+            use_cache (bool, optional): Indicates if cache is used. Defaults to True.
+            pad_token_id (int, optional): The token id for padding. Defaults to 0.
+            eos_token_id (int, optional): The token id for end of sequence. Defaults to 1.
+            classifier_dropout (float, optional): The dropout rate for the classifier. Defaults to 0.0.
+        
+        Returns:
+            None. This method does not return a value.
+        
+        Raises:
+            ValueError: If the feed_forward_proj is not a valid activation function of the dense layer.
+        """
         self.vocab_size = vocab_size
         self.d_model = d_model
         self.d_kv = d_kv

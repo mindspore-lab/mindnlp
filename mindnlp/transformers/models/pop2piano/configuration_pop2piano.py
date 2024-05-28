@@ -74,7 +74,6 @@ class Pop2PianoConfig(PretrainedConfig):
         dense_act_fn (`string`, *optional*, defaults to `"relu"`):
             Type of Activation Function to be used in `Pop2PianoDenseActDense` and in `Pop2PianoDenseGatedActDense`.
     """
-
     model_type = "pop2piano"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -101,6 +100,37 @@ class Pop2PianoConfig(PretrainedConfig):
         dense_act_fn="relu",
         **kwargs,
     ):
+        """
+        Initializes a Pop2PianoConfig object.
+        
+        Args:
+            self (Pop2PianoConfig): The instance of the Pop2PianoConfig class.
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 2400.
+            composer_vocab_size (int, optional): The size of the composer vocabulary. Defaults to 21.
+            d_model (int, optional): The dimensionality of the model. Defaults to 512.
+            d_kv (int, optional): The dimensionality of the key and value matrices. Defaults to 64.
+            d_ff (int, optional): The dimensionality of the feed-forward network. Defaults to 2048.
+            num_layers (int, optional): The number of layers in the model. Defaults to 6.
+            num_decoder_layers (int, optional): The number of decoder layers in the model. If not provided, it defaults to the same value as num_layers.
+            num_heads (int, optional): The number of attention heads. Defaults to 8.
+            relative_attention_num_buckets (int, optional): The number of buckets for relative attention. Defaults to 32.
+            relative_attention_max_distance (int, optional): The maximum distance for relative attention. Defaults to 128.
+            dropout_rate (float, optional): The dropout rate. Defaults to 0.1.
+            layer_norm_epsilon (float, optional): The epsilon value for layer normalization. Defaults to 1e-06.
+            initializer_factor (float, optional): The factor for initializing the model weights. Defaults to 1.0.
+            feed_forward_proj (str, optional): The type of feed-forward projection. Defaults to 'gated-gelu'.
+            is_encoder_decoder (bool, optional): Specifies if the model is an encoder-decoder model. Defaults to True.
+            use_cache (bool, optional): Specifies if the cache should be used. Defaults to True.
+            pad_token_id (int, optional): The id of the padding token. Defaults to 0.
+            eos_token_id (int, optional): The id of the end-of-sequence token. Defaults to 1.
+            dense_act_fn (str, optional): The activation function for the dense layer. Defaults to 'relu'.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         self.vocab_size = vocab_size
         self.composer_vocab_size = composer_vocab_size
         self.d_model = d_model

@@ -113,7 +113,6 @@ class LayoutLMTokenizer(PreTrainedTokenizer):
             Whether or not to strip all accents. If this option is not specified, then it will be determined by the
             value for `lowercase` (as in the original LayoutLM).
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     pretrained_init_configuration = PRETRAINED_INIT_CONFIGURATION
@@ -134,6 +133,34 @@ class LayoutLMTokenizer(PreTrainedTokenizer):
             strip_accents=None,
             **kwargs,
     ):
+        """
+        Initializes an instance of the LayoutLMTokenizer class.
+        
+        Args:
+            self: The instance of the class.
+            vocab_file (str): Path to the vocabulary file. This file should contain the tokens and their corresponding IDs.
+            do_lower_case (bool, optional): Whether to convert all tokens to lowercase. Defaults to True.
+            do_basic_tokenize (bool, optional): Whether to apply basic tokenization. Defaults to True.
+            never_split (list, optional): List of tokens that should never be split. Defaults to None.
+            unk_token (str, optional): The token to be used for unknown tokens. Defaults to '[UNK]'.
+            sep_token (str, optional): The token to be used for separating segments. Defaults to '[SEP]'.
+            pad_token (str, optional): The token to be used for padding. Defaults to '[PAD]'.
+            cls_token (str, optional): The token to be used for classification. Defaults to '[CLS]'.
+            mask_token (str, optional): The token to be used for masking. Defaults to '[MASK]'.
+            tokenize_chinese_chars (bool, optional): Whether to tokenize Chinese characters. Defaults to True.
+            strip_accents (bool, optional): Whether to strip accents from the tokens. Defaults to None.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None
+        
+        Raises:
+            ValueError: If the vocabulary file specified by 'vocab_file' does not exist.
+            
+        Note:
+            To load the vocabulary from a Google pretrained model, use the following line of code:
+            tokenizer = LayoutLMTokenizer.from_pretrained(PRETRAINED_MODEL_NAME)
+        """
         if not os.path.isfile(vocab_file):
             raise ValueError(
                 f"Can't find a vocabulary file at path '{vocab_file}'. To load the vocabulary from a Google pretrained"
@@ -175,12 +202,52 @@ class LayoutLMTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
+        """
+        Method to retrieve the size of the vocabulary in the LayoutLMTokenizer class.
+        
+        Args:
+            self (LayoutLMTokenizer): An instance of the LayoutLMTokenizer class.
+                The tokenizer instance for which the vocabulary size is being calculated.
+        
+        Returns:
+            int: The size of the vocabulary in the LayoutLMTokenizer instance.
+                This value represents the total number of unique tokens in the vocabulary.
+        
+        Raises:
+            None
+        """
         return len(self.vocab)
 
     def get_vocab(self):
+        """
+        This method retrieves the vocabulary of the LayoutLMTokenizer object.
+        
+        Args:
+            self (LayoutLMTokenizer): The LayoutLMTokenizer instance.
+            
+        Returns:
+            dict: A dictionary containing the vocabulary of the LayoutLMTokenizer merged with any added tokens.
+        
+        Raises:
+            None.
+        """
         return dict(self.vocab, **self.added_tokens_encoder)
 
     def _tokenize(self, text, split_special_tokens=False):
+        '''
+        This method '_tokenize' is defined within the 'LayoutLMTokenizer' class and is responsible for tokenizing the input text.
+        
+        Args:
+        - self: The instance of the LayoutLMTokenizer class.
+        - text (str): The input text to be tokenized.
+        - split_special_tokens (bool): A flag indicating whether special tokens should be split. If set to True, special tokens will be split; otherwise, they will not be split.
+        
+        Returns:
+        None: This method does not return any value.
+        
+        Raises:
+        None
+        '''
         split_tokens = []
         if self.do_basic_tokenize:
             for token in self.basic_tokenizer.tokenize(
@@ -252,7 +319,6 @@ class LayoutLMTokenizer(PreTrainedTokenizer):
         Returns:
             `List[int]`: A list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
         """
-
         if already_has_special_tokens:
             return super().get_special_tokens_mask(
                 token_ids_0=token_ids_0, token_ids_1=token_ids_1, already_has_special_tokens=True
@@ -292,6 +358,21 @@ class LayoutLMTokenizer(PreTrainedTokenizer):
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """
+        Save the vocabulary to a file.
+        
+        Args:
+            self (LayoutLMTokenizer): The instance of LayoutLMTokenizer.
+            save_directory (str): The directory where the vocabulary file will be saved.
+            filename_prefix (Optional[str]): The prefix to be added to the filename. Defaults to None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the path to the saved vocabulary file.
+        
+        Raises:
+            OSError: If an error occurs while accessing the save_directory.
+            IOError: If an error occurs while writing the vocabulary file.
+        """
         index = 0
         if os.path.isdir(save_directory):
             vocab_file = os.path.join(
@@ -335,7 +416,6 @@ class BasicTokenizer:
             In some instances we want to skip the basic punctuation splitting so that later tokenization can capture
             the full context of the words, such as contractions.
     """
-
     def __init__(
             self,
             do_lower_case=True,
@@ -344,6 +424,25 @@ class BasicTokenizer:
             strip_accents=None,
             do_split_on_punc=True,
     ):
+        """
+        __init__()
+        
+        Initializes an instance of the BasicTokenizer class.
+        
+        Args:
+            self: The instance of the BasicTokenizer class.
+            do_lower_case (bool, optional): Indicates whether the input should be converted to lowercase. Default is True.
+            never_split (list, optional): A list of tokens that should never be split. Default is None.
+            tokenize_chinese_chars (bool, optional): Indicates whether to tokenize Chinese characters. Default is True.
+            strip_accents (str, optional): Indicates the type of accents to be stripped. Default is None.
+            do_split_on_punc (bool, optional): Indicates whether to split on punctuation. Default is True.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         if never_split is None:
             never_split = []
         self.do_lower_case = do_lower_case
@@ -477,8 +576,23 @@ class BasicTokenizer:
 # Copied from transformers.models.bert.tokenization_bert.WordpieceTokenizer
 class WordpieceTokenizer:
     """Runs WordPiece tokenization."""
-
     def __init__(self, vocab, unk_token, max_input_chars_per_word=100):
+        """
+        Initializes a new instance of the WordpieceTokenizer class.
+        
+        Args:
+            self: The instance of the WordpieceTokenizer class.
+            vocab (dict): A dictionary containing the vocabulary for tokenization.
+            unk_token (str): The token to be used for unknown words.
+            max_input_chars_per_word (int, optional): The maximum number of characters per word. Defaults to 100.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If max_input_chars_per_word is not a positive integer.
+            TypeError: If vocab is not a dictionary or unk_token is not a string.
+        """
         self.vocab = vocab
         self.unk_token = unk_token
         self.max_input_chars_per_word = max_input_chars_per_word
@@ -497,7 +611,6 @@ class WordpieceTokenizer:
         Returns:
             A list of wordpiece tokens.
         """
-
         output_tokens = []
         for token in whitespace_tokenize(text):
             chars = list(token)

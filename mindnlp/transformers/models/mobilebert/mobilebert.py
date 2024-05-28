@@ -51,13 +51,38 @@ MOBILEBERT_PRETRAINED_MODEL_ARCHIVE_LIST = ["google/mobilebert-uncased"]
 
 class NoNorm(nn.Cell):
     """NoNorm"""
-
     def __init__(self, feat_size):
+        """
+        Initializes an instance of the NoNorm class.
+        
+        Args:
+            self (NoNorm): The instance of the NoNorm class.
+            feat_size (int): The size of the feature.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         super().__init__()
         self.bias = Parameter(ops.zeros(feat_size))
         self.weight = Parameter(ops.ones(feat_size))
 
     def construct(self, input_tensor: Tensor) -> Tensor:
+        """
+        Constructs a normalized tensor by applying weight and bias to the input tensor.
+        
+        Args:
+            self (NoNorm): An instance of the NoNorm class.
+            input_tensor (Tensor): The input tensor to be normalized. It should have the same shape as the weight and bias tensors.
+        
+        Returns:
+            Tensor: A normalized tensor obtained by multiplying the input tensor with the weight and adding the bias.
+        
+        Raises:
+            None.
+        """
         return input_tensor * self.weight + self.bias
 
 
@@ -66,8 +91,20 @@ NORM2FN = {"layer_norm": nn.LayerNorm, "no_norm": NoNorm}
 
 class MobileBertEmbeddings(nn.Cell):
     """Construct the embeddings from word, position and token_type embeddings."""
-
     def __init__(self, config):
+        """
+        Initializes an instance of the MobileBertEmbeddings class.
+        
+        Args:
+            self (MobileBertEmbeddings): The current instance of the MobileBertEmbeddings class.
+            config: An object containing configuration parameters for the embeddings layer.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         super().__init__()
         self.config=config
         self.trigram_input = config.trigram_input
@@ -93,6 +130,23 @@ class MobileBertEmbeddings(nn.Cell):
         position_ids: Optional[Tensor] = None,
         inputs_embeds: Optional[Tensor] = None,
     ) -> Tensor:
+        """
+        Constructs the embeddings for MobileBERT model.
+        
+        Args:
+            self (MobileBertEmbeddings): The instance of the MobileBertEmbeddings class.
+            input_ids (Optional[Tensor]): The input tensor containing the token IDs. Default is None.
+            token_type_ids (Optional[Tensor]): The input tensor containing the token type IDs. Default is None.
+            position_ids (Optional[Tensor]): The input tensor containing the position IDs. Default is None.
+            inputs_embeds (Optional[Tensor]): The input tensor containing pre-computed embeddings. Default is None.
+        
+        Returns:
+            Tensor: The constructed embeddings tensor for the MobileBERT model.
+        
+        Raises:
+            - ValueError: If the input_ids shape is invalid or if there are shape mismatches during concatenation.
+            - IndexError: If there are indexing errors during embeddings calculation.
+        """
         if input_ids is not None:
             input_shape = input_ids.shape
         else:
@@ -139,8 +193,20 @@ class MobileBertEmbeddings(nn.Cell):
 
 class MobileBertSelfAttention(nn.Cell):
     """MobileBertSelfAttention"""
-
     def __init__(self, config):
+        """
+        Initializes the MobileBertSelfAttention object.
+        
+        Args:
+            self (MobileBertSelfAttention): The instance of the MobileBertSelfAttention class.
+            config (object): Configuration object containing various parameters.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         super().__init__()
         self.num_attention_heads = config.num_attention_heads
         self.attention_head_size = int(config.true_hidden_size / config.num_attention_heads)
@@ -168,6 +234,23 @@ class MobileBertSelfAttention(nn.Cell):
         head_mask: Optional[Tensor] = None,
         output_attentions: Optional[bool] = None,
     ) -> Tuple[Tensor]:
+        """Constructs the self-attention mechanism in the MobileBert model.
+        
+        Args:
+            self (MobileBertSelfAttention): An instance of the MobileBertSelfAttention class.
+            query_tensor (Tensor): The input tensor representing the query.
+            key_tensor (Tensor): The input tensor representing the key.
+            value_tensor (Tensor): The input tensor representing the value.
+            attention_mask (Optional[Tensor]): An optional tensor representing the attention mask. Defaults to None.
+            head_mask (Optional[Tensor]): An optional tensor representing the head mask. Defaults to None.
+            output_attentions (Optional[bool]): An optional boolean indicating whether to output attentions. Defaults to None.
+        
+        Returns:
+            Tuple[Tensor]: A tuple containing the context layer tensor. If output_attentions is set to True, the tuple also includes the attention probabilities tensor.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         mixed_query_layer = self.query(query_tensor)
         mixed_key_layer = self.key(key_tensor)
         mixed_value_layer = self.value(value_tensor)
@@ -200,8 +283,25 @@ class MobileBertSelfAttention(nn.Cell):
 
 class MobileBertSelfOutput(nn.Cell):
     """MobileBertSelfOutput"""
-
     def __init__(self, config):
+        """
+        Initializes a new instance of the MobileBertSelfOutput class.
+        
+        Args:
+            self: The instance of the class.
+            config: An object containing configuration settings for the MobileBertSelfOutput. It must have the following attributes:
+                - use_bottleneck (bool): A flag indicating whether to use bottleneck layer.
+                - true_hidden_size (int): The true hidden size for the dense layer.
+                - normalization_type (str): The type of normalization to be used.
+                - hidden_dropout_prob (float): The dropout probability for the layer.
+        
+        Returns:
+            None. This method initializes the MobileBertSelfOutput instance with the specified configuration settings.
+        
+        Raises:
+            - TypeError: If the config parameter is not of the expected type.
+            - ValueError: If the config parameter is missing any required attributes.
+        """
         super().__init__()
         self.use_bottleneck = config.use_bottleneck
         self.dense = nn.Dense(config.true_hidden_size, config.true_hidden_size)
@@ -210,6 +310,23 @@ class MobileBertSelfOutput(nn.Cell):
             self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: Tensor, residual_tensor: Tensor) -> Tensor:
+        """
+        Constructs the output of the MobileBERT self-attention layer.
+        
+        Args:
+            self (MobileBertSelfOutput): An instance of the MobileBertSelfOutput class.
+            hidden_states (Tensor): The input hidden states tensor of shape (batch_size, sequence_length, hidden_size).
+                This tensor represents the output of the self-attention layer.
+            residual_tensor (Tensor): The residual tensor of shape (batch_size, sequence_length, hidden_size).
+                This tensor represents the original input hidden states, which are added to the layer outputs after normalization.
+        
+        Returns:
+            Tensor: The output tensor of shape (batch_size, sequence_length, hidden_size).
+                This tensor represents the constructed output of the MobileBERT self-attention layer.
+        
+        Raises:
+            None.
+        """
         layer_outputs = self.dense(hidden_states)
         if not self.use_bottleneck:
             layer_outputs = self.dropout(layer_outputs)
@@ -219,8 +336,21 @@ class MobileBertSelfOutput(nn.Cell):
 
 class MobileBertAttention(nn.Cell):
     """MobileBertAttention"""
-
     def __init__(self, config):
+        """
+        Initializes an instance of MobileBertAttention.
+        
+        Args:
+            self: The instance of the class.
+            config (dict): A dictionary containing configuration parameters for the attention mechanism.
+                This dictionary should include the necessary settings for configuring the MobileBertSelfAttention and MobileBertSelfOutput components.
+                
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         super().__init__()
         self.self = MobileBertSelfAttention(config)
         self.output = MobileBertSelfOutput(config)
@@ -255,6 +385,29 @@ class MobileBertAttention(nn.Cell):
         head_mask: Optional[Tensor] = None,
         output_attentions: Optional[bool] = None,
     ) -> Tuple[Tensor]:
+        """
+        Constructs the attention mechanism for the MobileBert model.
+        
+        Args:
+            self (MobileBertAttention): The instance of the MobileBertAttention class.
+            query_tensor (Tensor): The input tensor representing the queries for attention calculation.
+            key_tensor (Tensor): The input tensor representing the keys for attention calculation.
+            value_tensor (Tensor): The input tensor representing the values for attention calculation.
+            layer_input (Tensor): The input tensor representing the previous layer's output.
+            attention_mask (Optional[Tensor], optional): A tensor representing the attention mask to be applied during attention calculation. Defaults to None.
+            head_mask (Optional[Tensor], optional): A tensor representing a mask to be applied to the heads of the attention mechanism. Defaults to None.
+            output_attentions (Optional[bool], optional): A flag indicating whether to output the attentions. Defaults to None.
+        
+        Returns:
+            Tuple[Tensor]: A tuple containing the attention output tensor and any additional outputs from the attention mechanism.
+        
+        Raises:
+            None
+        
+        This method constructs the attention mechanism for the MobileBert model. It takes the query_tensor, key_tensor, and value_tensor as inputs and performs self-attention calculation. The attention_output
+is then computed using the attention mechanism and the layer_input. The method returns a tuple containing the attention_output and any additional outputs obtained from the attention mechanism. The
+attention_mask and head_mask can be optionally provided to control the attention calculation, and output_attentions can be set to True to obtain the attention values.
+        """
         self_outputs = self.self(
             query_tensor,
             key_tensor,
@@ -272,8 +425,24 @@ class MobileBertAttention(nn.Cell):
 
 class MobileBertIntermediate(nn.Cell):
     """MobileBertIntermediate"""
-
     def __init__(self, config):
+        """
+        Initialize the MobileBertIntermediate class.
+        
+        Args:
+            self: The instance of the MobileBertIntermediate class.
+            config: An object containing configuration parameters.
+                - Type: Any
+                - Purpose: Configuration settings for the intermediate layer.
+                - Restrictions: Must be a valid configuration object.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            - KeyError: If the 'hidden_act' parameter in the config object is not recognized.
+            - TypeError: If the 'hidden_act' parameter is not a string or callable function.
+        """
         super().__init__()
         self.dense = nn.Dense(config.true_hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
@@ -282,6 +451,22 @@ class MobileBertIntermediate(nn.Cell):
             self.intermediate_act_fn = config.hidden_act
 
     def construct(self, hidden_states: Tensor) -> Tensor:
+        """ 
+        Method 'construct' in the class 'MobileBertIntermediate'.
+        
+        This method constructs the intermediate hidden states using the provided input tensor.
+        
+        Args:
+            hidden_states (Tensor): The input tensor containing hidden states.
+                This tensor will be processed to generate intermediate hidden states.
+            
+        Returns:
+            Tensor: A tensor containing the intermediate hidden states after processing.
+                The output tensor represents the intermediate hidden states obtained from the input tensor.
+        
+        Raises:
+            None.
+        """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
@@ -289,14 +474,52 @@ class MobileBertIntermediate(nn.Cell):
 
 class OutputBottleneck(nn.Cell):
     """OutputBottleneck"""
-
     def __init__(self, config):
+        """
+        Initializes an instance of the OutputBottleneck class.
+        
+        Args:
+            self (object): The instance of the class.
+            config (object): An object containing configuration settings.
+                - Type: Custom class
+                - Purpose: Contains configuration parameters for the OutputBottleneck.
+                - Restrictions: Must be properly initialized with required attributes.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            AttributeError: If the config object is missing required attributes.
+            TypeError: If the config object is not of the expected type.
+            ValueError: If there are issues with the configuration parameters provided.
+        """
         super().__init__()
         self.dense = nn.Dense(config.true_hidden_size, config.hidden_size)
         self.LayerNorm = NORM2FN[config.normalization_type](config.hidden_size)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: Tensor, residual_tensor: Tensor) -> Tensor:
+        """
+        Constructs the output of the OutputBottleneck layer.
+        
+        Args:
+            self: The instance of the OutputBottleneck class.
+            hidden_states (Tensor): The input hidden states tensor.
+                It is a tensor of shape (batch_size, sequence_length, hidden_size).
+                This tensor represents the hidden states of the previous layer.
+            residual_tensor (Tensor): The residual tensor.
+                It is a tensor of shape (batch_size, sequence_length, hidden_size).
+                This tensor represents the residual connection from the previous layer.
+                The hidden states and the residual tensor are element-wise added together.
+        
+        Returns:
+            Tensor: The output tensor.
+                It is a tensor of shape (batch_size, sequence_length, hidden_size).
+                This tensor represents the output of the OutputBottleneck layer.
+        
+        Raises:
+            None.
+        """
         layer_outputs = self.dense(hidden_states)
         layer_outputs = self.dropout(layer_outputs)
         layer_outputs = self.LayerNorm(layer_outputs + residual_tensor)
@@ -305,8 +528,27 @@ class OutputBottleneck(nn.Cell):
 
 class MobileBertOutput(nn.Cell):
     """MobileBertOutput"""
-
     def __init__(self, config):
+        """
+        Initializes the MobileBertOutput class.
+        
+        Args:
+            self (object): The instance of the class.
+            config (object): An object containing configuration parameters for the MobileBertOutput.
+                Parameters:
+                    use_bottleneck (bool): A boolean indicating whether to use bottleneck.
+                    intermediate_size (int): The intermediate size for the dense layer.
+                    true_hidden_size (int): The true hidden size for the dense layer.
+                    normalization_type (str): The type of normalization to be used.
+                    hidden_dropout_prob (float): The dropout probability for the dense layer.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If the configuration parameters are invalid or missing.
+            TypeError: If the data type of the configuration parameters is incorrect.
+        """
         super().__init__()
         self.use_bottleneck = config.use_bottleneck
         self.dense = nn.Dense(config.intermediate_size, config.true_hidden_size)
@@ -319,6 +561,21 @@ class MobileBertOutput(nn.Cell):
     def construct(
         self, intermediate_states: Tensor, residual_tensor_1: Tensor, residual_tensor_2: Tensor
     ) -> Tensor:
+        ''' 
+        Constructs the output layer of the MobileBert model.
+        
+        Args:
+            self (object): The instance of the MobileBertOutput class.
+            intermediate_states (Tensor): The tensor representing the intermediate states of the model.
+            residual_tensor_1 (Tensor): The tensor representing the first residual connection.
+            residual_tensor_2 (Tensor): The tensor representing the second residual connection.
+        
+        Returns:
+            Tensor: The output tensor representing the constructed layer.
+        
+        Raises:
+            None
+        '''
         layer_output = self.dense(intermediate_states)
         if not self.use_bottleneck:
             layer_output = self.dropout(layer_output)
@@ -331,13 +588,47 @@ class MobileBertOutput(nn.Cell):
 
 class BottleneckLayer(nn.Cell):
     """BottleneckLayer"""
-
     def __init__(self, config):
+        """
+        Initializes a BottleneckLayer instance.
+        
+        Args:
+            self: The instance itself.
+            config (object): An object containing configuration parameters for the bottleneck layer.
+                It should have the following attributes:
+                    - hidden_size (int): The size of the hidden layer.
+                    - intra_bottleneck_size (int): The size of the bottleneck layer.
+                    - normalization_type (str): The type of normalization to be used.
+        
+        Returns:
+            None. This method initializes the BottleneckLayer instance with the provided configuration.
+        
+        Raises:
+            - TypeError: If the config parameter is not an instance of the expected object type.
+            - ValueError: If the config object is missing any of the required attributes.
+        """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.intra_bottleneck_size)
         self.LayerNorm = NORM2FN[config.normalization_type](config.intra_bottleneck_size)
 
     def construct(self, hidden_states: Tensor) -> Tensor:
+        """
+        Constructs a bottleneck layer.
+        
+        Args:
+            self: An instance of the BottleneckLayer class.
+            hidden_states (Tensor): The input hidden states. A tensor of shape (batch_size, input_size).
+        
+        Returns:
+            Tensor: The output layer after applying the bottleneck transformation. A tensor of shape (batch_size, output_size).
+        
+        Raises:
+            TypeError: If the input hidden_states is not a tensor.
+            ValueError: If the input hidden_states is not of the expected shape.
+        
+        This method applies the bottleneck transformation to the input hidden states. It first applies a linear transformation using a dense layer, followed by layer normalization. The resulting tensor is then
+returned as the output of the bottleneck layer.
+        """
         layer_input = self.dense(hidden_states)
         layer_input = self.LayerNorm(layer_input)
         return layer_input
@@ -345,8 +636,24 @@ class BottleneckLayer(nn.Cell):
 
 class Bottleneck(nn.Cell):
     """Bottleneck"""
-
     def __init__(self, config):
+        """
+        Initializes an instance of the 'Bottleneck' class.
+        
+        Args:
+            self: The instance of the class.
+            config (object): The configuration object containing the settings for the 'Bottleneck' instance.
+                - key_query_shared_bottleneck (bool): A flag indicating whether to use a shared bottleneck for key and query.
+                    Set to True to enable the shared bottleneck, and False otherwise.
+                - use_bottleneck_attention (bool): A flag indicating whether to use bottleneck attention.
+                    Set to True to enable bottleneck attention, and False otherwise.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__()
         self.key_query_shared_bottleneck = config.key_query_shared_bottleneck
         self.use_bottleneck_attention = config.use_bottleneck_attention
@@ -355,6 +662,19 @@ class Bottleneck(nn.Cell):
             self.attention = BottleneckLayer(config)
 
     def construct(self, hidden_states: Tensor) -> Tuple[Tensor]:
+        """
+        This method constructs the bottlenecked hidden states based on the input hidden states.
+        
+        Args:
+            self (Bottleneck): The instance of the Bottleneck class.
+            hidden_states (Tensor): The input hidden states tensor.
+        
+        Returns:
+            Tuple[Tensor]: A tuple containing the constructed bottlenecked hidden states tensor(s).
+        
+        Raises:
+            None.
+        """
         # This method can return three different tuples of values. These different values make use of bottlenecks,
         # which are linear layers used to project the hidden states to a lower-dimensional vector, reducing memory
         # usage. These linear layer have weights that are learned during training.
@@ -382,13 +702,44 @@ class Bottleneck(nn.Cell):
 
 class FFNOutput(nn.Cell):
     """FFNOutput"""
-
     def __init__(self, config):
+        """
+        Initializes an instance of the FFNOutput class.
+        
+        Args:
+            self: The object instance.
+            config: An object of type 'Config' containing configuration settings for the FFNOutput.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         super().__init__()
         self.dense = nn.Dense(config.intermediate_size, config.true_hidden_size)
         self.LayerNorm = NORM2FN[config.normalization_type](config.true_hidden_size)
 
     def construct(self, hidden_states: Tensor, residual_tensor: Tensor) -> Tensor:
+        """
+        Method 'construct' in class 'FFNOutput'.
+        
+        Args:
+        - self: The instance of the class.
+        - hidden_states (Tensor): The input tensor containing hidden states.
+            Purpose: Represents the hidden states to be processed by the method.
+            Restrictions: Should be a valid tensor object.
+        - residual_tensor (Tensor): The input tensor containing residual values.
+            Purpose: Represents the residual tensor to be added to the processed output.
+            Restrictions: Should be a valid tensor object.
+        
+        Returns:
+        - Tensor: The output tensor after processing the hidden states and adding the residual tensor.
+            Purpose: Represents the final processed output tensor.
+        
+        Raises:
+        - None.
+        """
         layer_outputs = self.dense(hidden_states)
         layer_outputs = self.LayerNorm(layer_outputs + residual_tensor)
         return layer_outputs
@@ -396,13 +747,40 @@ class FFNOutput(nn.Cell):
 
 class FFNLayer(nn.Cell):
     """FFNLayer"""
-
     def __init__(self, config):
+        """
+        Initialize the FFNLayer class with the provided configuration.
+        
+        Args:
+            self (object): The instance of the FFNLayer class.
+            config (object): An object containing configuration settings for the FFNLayer.
+                This configuration is used to initialize the MobileBertIntermediate and FFNOutput components within the FFNLayer.
+                It should include all necessary parameters required for the proper functioning of the FFNLayer.
+        
+        Returns:
+            None: This method does not return any value explicitly.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         super().__init__()
         self.intermediate = MobileBertIntermediate(config)
         self.output = FFNOutput(config)
 
     def construct(self, hidden_states: Tensor) -> Tensor:
+        """
+        This method constructs the output of the feedforward neural network layer.
+        
+        Args:
+            self (FFNLayer): The instance of the FFNLayer class.
+            hidden_states (Tensor): The input tensor representing the hidden states of the layer.
+        
+        Returns:
+            Tensor: A tensor containing the output of the feedforward neural network layer.
+        
+        Raises:
+            None
+        """
         intermediate_output = self.intermediate(hidden_states)
         layer_outputs = self.output(intermediate_output, hidden_states)
         return layer_outputs
@@ -410,8 +788,22 @@ class FFNLayer(nn.Cell):
 
 class MobileBertLayer(nn.Cell):
     """MobileBertLayer"""
-
     def __init__(self, config):
+        """
+        Initializes a MobileBertLayer instance.
+        
+        Args:
+            self (MobileBertLayer): The MobileBertLayer instance to be initialized.
+            config: An object containing configuration parameters for the MobileBertLayer.
+                - use_bottleneck (bool): Indicates whether to use bottleneck layer.
+                - num_feedforward_networks (int): Number of feedforward networks to be used.
+                
+        Returns:
+            None. This method initializes the MobileBertLayer instance with the provided configuration.
+        
+        Raises:
+            None.
+        """
         super().__init__()
         self.use_bottleneck = config.use_bottleneck
         self.num_feedforward_networks = config.num_feedforward_networks
@@ -431,6 +823,22 @@ class MobileBertLayer(nn.Cell):
         head_mask: Optional[Tensor] = None,
         output_attentions: Optional[bool] = None,
     ) -> Tuple[Tensor]:
+        """
+        The 'construct' method constructs the MobileBERT layer using the provided input parameters.
+        
+        Args:
+            self: The object instance of the MobileBertLayer class.
+            hidden_states (Tensor): The input tensor representing the hidden states.
+            attention_mask (Optional[Tensor]): An optional tensor representing the attention mask. Defaults to None.
+            head_mask (Optional[Tensor]): An optional tensor representing the head mask. Defaults to None.
+            output_attentions (Optional[bool]): An optional boolean indicating whether to output attentions. Defaults to None.
+        
+        Returns:
+            Tuple[Tensor]: A tuple containing the constructed MobileBERT layer output tensor.
+        
+        Raises:
+            None
+        """
         if self.use_bottleneck:
             query_tensor, key_tensor, value_tensor, layer_input = self.bottleneck(hidden_states)
         else:
@@ -475,8 +883,21 @@ class MobileBertLayer(nn.Cell):
 
 class MobileBertEncoder(nn.Cell):
     """MobileBertEncoder"""
-
     def __init__(self, config):
+        """
+        Initialize the MobileBertEncoder.
+        
+        Args:
+            self (object): The instance of the class.
+            config (object): An object containing configuration parameters for the MobileBertEncoder. It is used to initialize the MobileBertLayer instances in the encoder. 
+                            This object should have the attribute 'num_hidden_layers' which specifies the number of hidden layers to be created.
+        
+        Returns:
+            None. This method initializes the MobileBertEncoder and does not return any value.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         super().__init__()
         self.layer = nn.CellList([MobileBertLayer(config) for _ in range(config.num_hidden_layers)])
 
@@ -489,6 +910,27 @@ class MobileBertEncoder(nn.Cell):
         output_hidden_states: Optional[bool] = False,
         return_dict: Optional[bool] = True,
     ) -> Tuple:
+        """
+        Constructs the MobileBertEncoder.
+        
+        Args:
+            self: The MobileBertEncoder instance.
+            hidden_states (Tensor): The input hidden states of shape (batch_size, sequence_length, hidden_size).
+            attention_mask (Optional[Tensor]): The attention mask of shape (batch_size, sequence_length) indicating which tokens should be attended to. Defaults to None.
+            head_mask (Optional[Tensor]): The head mask of shape (num_hidden_layers, num_attention_heads) indicating which heads should be masked out. Defaults to None.
+            output_attentions (Optional[bool]): Whether to output attentions tensor. Defaults to False.
+            output_hidden_states (Optional[bool]): Whether to output hidden states tensor. Defaults to False.
+            return_dict (Optional[bool]): Whether to return the output as a dictionary. Defaults to True.
+        
+        Returns:
+            Tuple: A tuple containing:
+                - last_hidden_state (Tensor): The last layer hidden states of shape (batch_size, sequence_length, hidden_size).
+                - hidden_states (Tuple): A tuple of hidden states from all layers, each of shape (batch_size, sequence_length, hidden_size). Only included if output_hidden_states is True.
+                - attentions (Tuple): A tuple of attention tensors from all layers, each of shape (batch_size, num_attention_heads, sequence_length, sequence_length). Only included if output_attentions is True.
+        
+        Raises:
+            None.
+        """
         all_hidden_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
         for i, layer_module in enumerate(self.layer):
@@ -518,14 +960,48 @@ class MobileBertEncoder(nn.Cell):
 
 class MobileBertPooler(nn.Cell):
     """MobileBertPooler"""
-
     def __init__(self, config):
+        """
+        Initializes the MobileBertPooler class.
+        
+        Args:
+            self (MobileBertPooler): The instance of the MobileBertPooler class.
+            config (object): An object containing configuration parameters.
+                - classifier_activation (bool): A boolean indicating whether to activate the classifier.
+                - hidden_size (int): The size of the hidden layer.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If the config parameter is missing or does not contain the required attributes.
+            TypeError: If the config parameter is not of the expected type.
+        """
         super().__init__()
         self.do_activate = config.classifier_activation
         if self.do_activate:
             self.dense = nn.Dense(config.hidden_size, config.hidden_size)
 
     def construct(self, hidden_states: Tensor) -> Tensor:
+        """
+        Constructs a pooled output tensor from the given hidden states using the MobileBERT pooling algorithm.
+        
+        Args:
+            self: An instance of the MobileBertPooler class.
+            hidden_states (Tensor): A tensor containing the hidden states. Its shape should be (batch_size, sequence_length, hidden_size).
+        
+        Returns:
+            Tensor: A tensor representing the pooled output. Its shape is (batch_size, hidden_size).
+        
+        Raises:
+            None.
+        
+        Notes:
+            - The 'hidden_states' tensor should have the first token as the token representing the entire sequence.
+            - If the 'do_activate' flag is set to False, the function returns the first token tensor directly.
+            - If the 'do_activate' flag is set to True, the function applies a dense layer followed by a hyperbolic tangent (tanh) activation function to the first token tensor.
+            - The returned pooled output tensor can be used as input to downstream tasks such as classification or regression.
+        """
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -538,8 +1014,24 @@ class MobileBertPooler(nn.Cell):
 
 class MobileBertPredictionHeadTransform(nn.Cell):
     """MobileBertPredictionHeadTransform"""
-
     def __init__(self, config):
+        """
+        Initializes an instance of the MobileBertPredictionHeadTransform class.
+        
+        Args:
+            self (MobileBertPredictionHeadTransform): The instance of the class itself.
+            config: The configuration object for the MobileBertPredictionHeadTransform instance.
+                It contains the following attributes:
+                - hidden_size (int): The size of the hidden layers.
+                - hidden_act (str or callable): The activation function for the hidden layers.
+                    Can be either a string specifying a pre-defined activation function or a callable function.
+                
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
         if isinstance(config.hidden_act, str):
@@ -549,6 +1041,21 @@ class MobileBertPredictionHeadTransform(nn.Cell):
         self.LayerNorm = NORM2FN["layer_norm"]([config.hidden_size])
 
     def construct(self, hidden_states: Tensor) -> Tensor:
+        """
+        Constructs a MobileBert prediction head transformation.
+        
+        Args:
+            self (MobileBertPredictionHeadTransform): An instance of the MobileBertPredictionHeadTransform class.
+            hidden_states (Tensor): The input tensor of shape (batch_size, sequence_length, hidden_size).
+                                    It represents the hidden states from the previous layer.
+        
+        Returns:
+            Tensor: The transformed tensor of shape (batch_size, sequence_length, hidden_size).
+                    It represents the hidden states after applying the transformation.
+        
+        Raises:
+            None.
+        """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.transform_act_fn(hidden_states)
         hidden_states = self.LayerNorm(hidden_states)
@@ -557,8 +1064,22 @@ class MobileBertPredictionHeadTransform(nn.Cell):
 
 class MobileBertLMPredictionHead(nn.Cell):
     """MobileBertLMPredictionHead"""
-
     def __init__(self, config):
+        """
+        Initializes the MobileBertLMPredictionHead.
+        
+        Args:
+            self (MobileBertLMPredictionHead): The instance of the MobileBertLMPredictionHead class.
+            config (MobileBertConfig): The configuration object containing the model hyperparameters.
+                This parameter specifies the configuration for the prediction head.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If the configuration object 'config' is not of type MobileBertConfig.
+            TypeError: If the configuration object 'config' is missing required attributes.
+        """
         super().__init__()
         self.transform = MobileBertPredictionHeadTransform(config)
         # The output weights are the same as the input embeddings, but there is
@@ -570,6 +1091,19 @@ class MobileBertLMPredictionHead(nn.Cell):
         self.decoder.bias = self.bias
 
     def construct(self, hidden_states: Tensor) -> Tensor:
+        """
+        Constructs the mobileBERT language model prediction head.
+        
+        Args:
+            self (MobileBertLMPredictionHead): An instance of the MobileBertLMPredictionHead class.
+            hidden_states (Tensor): The input hidden states to be processed. Expected shape is (batch_size, sequence_length, hidden_size).
+        
+        Returns:
+            Tensor: The output tensor after processing the hidden states. The shape of the output tensor is (batch_size, sequence_length, hidden_size).
+        
+        Raises:
+            None.
+        """
         hidden_states = self.transform(hidden_states)
         hidden_states = hidden_states.matmul(ops.cat([self.decoder.weight.t(), self.dense.weight], axis=0))
         hidden_states += self.decoder.bias
@@ -578,25 +1112,78 @@ class MobileBertLMPredictionHead(nn.Cell):
 
 class MobileBertOnlyMLMHead(nn.Cell):
     """MobileBertOnlyMLMHead"""
-
     def __init__(self, config):
+        """
+        Initialize the MobileBertOnlyMLMHead.
+        
+        Args:
+            self (object): The instance of the class.
+            config (object): The configuration object for MobileBertLMPredictionHead.
+        
+        Returns:
+            None. This method initializes the MobileBertOnlyMLMHead and does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__()
         self.predictions = MobileBertLMPredictionHead(config)
 
     def construct(self, sequence_output: Tensor) -> Tensor:
+        """
+        Constructs the masked language model head for MobileBERT.
+        
+        Args:
+            self (MobileBertOnlyMLMHead): The instance of the MobileBertOnlyMLMHead class.
+            sequence_output (Tensor): The output tensor from the MobileBERT model, representing the sequence of hidden-states for each input token. The shape of the tensor should be (batch_size,
+sequence_length, hidden_size).
+        
+        Returns:
+            Tensor: The prediction scores for the masked tokens. The shape of the tensor is (batch_size, sequence_length, vocab_size).
+        
+        Raises:
+            - ValueError: If the sequence_output tensor does not have the expected shape.
+            - TypeError: If the sequence_output parameter is not of type Tensor.
+        """
         prediction_scores = self.predictions(sequence_output)
         return prediction_scores
 
 
 class MobileBertPreTrainingHeads(nn.Cell):
     """MobileBertPreTrainingHeads"""
-
     def __init__(self, config):
+        """
+        This method initializes an instance of the MobileBertPreTrainingHeads class.
+        
+        Args:
+            self (object): The instance of the class.
+            config (object): An object containing configuration parameters for the model.
+        
+        Returns:
+            None. This method initializes the predictions and seq_relationship attributes of the class instance.
+        
+        Raises:
+            None.
+        """
         super().__init__()
         self.predictions = MobileBertLMPredictionHead(config)
         self.seq_relationship = nn.Dense(config.hidden_size, 2)
 
     def construct(self, sequence_output: Tensor, pooled_output: Tensor) -> Tuple[Tensor]:
+        """
+        This method constructs the pre-training heads for MobileBERT model.
+        
+        Args:
+            self (MobileBertPreTrainingHeads): Instance of the MobileBertPreTrainingHeads class.
+            sequence_output (Tensor): The output tensor from the model's sequence output.
+            pooled_output (Tensor): The output tensor from the model's pooled output.
+        
+        Returns:
+            Tuple[Tensor]: A tuple containing the prediction scores and sequence relationship score.
+        
+        Raises:
+            None
+        """
         prediction_scores = self.predictions(sequence_output)
         seq_relationship_score = self.seq_relationship(pooled_output)
         return prediction_scores, seq_relationship_score
@@ -607,7 +1194,6 @@ class MobileBertPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = MobileBertConfig
     pretrained_model_archive_map = MOBILEBERT_PRETRAINED_MODEL_ARCHIVE_LIST
     base_model_prefix = "mobilebert"
@@ -630,24 +1216,114 @@ class MobileBertPreTrainedModel(PreTrainedModel):
             cell.weight.data.fill_(1.0)
 
     def get_input_embeddings(self):
-        pass
+        """
+        Returns the input embeddings of the MobileBertPreTrainedModel.
+        
+        Args:
+            self: An instance of the MobileBertPreTrainedModel class.
+        
+        Returns:
+            None. The method modifies the instance by updating its input embeddings.
+        
+        Raises:
+            None.
+        
+        This method retrieves the input embeddings of the MobileBertPreTrainedModel instance. The input embeddings are used as the initial embeddings for the model's input tokens. The method does not return
+any value but updates the instance by setting the input embeddings.
+        
+        Note:
+            The MobileBertPreTrainedModel class should be initialized before calling this method.
+        """
 
     def set_input_embeddings(self):
-        pass
+        """
+        Method to set input embeddings for the MobileBertPreTrainedModel.
+        
+        Args:
+            self: MobileBertPreTrainedModel object. Represents the instance of the MobileBertPreTrainedModel class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            This method does not raise any exceptions.
+        """
 
     def resize_position_embeddings(self):
-        pass
+        """
+        This method resizes the position embeddings in the MobileBertPreTrainedModel.
+        
+        Args:
+            self (MobileBertPreTrainedModel): The instance of the MobileBertPreTrainedModel class.
+                It represents the current instance of the class to operate on.
+        
+        Returns:
+            None: This method does not return any value. It modifies the position embeddings within the MobileBertPreTrainedModel instance.
+        
+        Raises:
+            This method does not raise any exceptions.
+        """
 
     def get_position_embeddings(self):
-        pass
-
+        """
+        Returns the position embeddings for the MobileBertPreTrainedModel.
+        
+        Args:
+            self: An instance of the MobileBertPreTrainedModel class.
+        
+        Returns:
+            None. The method does not return a value.
+        
+        Raises:
+            None.
+        
+        This method is responsible for retrieving the position embeddings for the MobileBertPreTrainedModel. Position embeddings are used in natural language processing models to capture the positional
+information of words or tokens in a sequence.
+        
+        The 'self' parameter represents an instance of the MobileBertPreTrainedModel class, which is required to access the position embeddings specific to that instance.
+        
+        Note that this method does not return any value. Instead, it updates the position embeddings within the MobileBertPreTrainedModel instance directly.
+        
+        Example usage:
+            model = MobileBertPreTrainedModel()
+            model.get_position_embeddings()
+        """
 
 class MobileBertModel(MobileBertPreTrainedModel):
     """
     https://arxiv.org/pdf/2004.02984.pdf
     """
-
     def __init__(self, config, add_pooling_layer=True):
+        """
+        Initializes a new instance of the MobileBertModel class.
+        
+        Args:
+            self (MobileBertModel): The instance of the MobileBertModel class.
+            config (object): The configuration object containing model hyperparameters.
+            add_pooling_layer (bool): Flag indicating whether to add a pooling layer. Defaults to True.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        
+        Description:
+        This method initializes a MobileBertModel object with the provided configuration and optionally adds a pooling layer. The MobileBertModel is a deep learning model for natural language processing tasks.
+        
+        The 'self' parameter refers to the instance of the MobileBertModel class that is being initialized.
+        
+        The 'config' parameter is an object that contains hyperparameters and settings for the model. It is used to configure the MobileBertEmbeddings, MobileBertEncoder, and MobileBertPooler components of the
+MobileBertModel.
+        
+        The 'add_pooling_layer' parameter is a boolean flag that determines whether a pooling layer should be added to the MobileBertModel. If set to True, a MobileBertPooler component will be added to the
+model. If set to False, no pooling layer will be added.
+        
+        The method does not return any value.
+        
+        Note: The MobileBertModel consists of three main components: MobileBertEmbeddings, MobileBertEncoder, and MobileBertPooler. These components are initialized within this method and can be accessed using
+the respective instance variables: 'self.embeddings', 'self.encoder', and 'self.pooler'. The number of hidden layers in the model can be accessed using the 'self.num_hidden_layers' instance variable.
+        """
         super().__init__(config)
         self.embeddings = MobileBertEmbeddings(config)
         self.encoder = MobileBertEncoder(config)
@@ -683,6 +1359,28 @@ class MobileBertModel(MobileBertPreTrainedModel):
         output_attentions: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Tuple:
+        """
+        This method 'construct' in the class 'MobileBertModel' takes 10 parameters:
+        
+        Args:
+        - self: The instance of the class.
+        - input_ids (Optional[Tensor]): The input tensor containing the token ids. Default is None.
+        - attention_mask (Optional[Tensor]): The attention mask tensor. Default is None.
+        - token_type_ids (Optional[Tensor]): The token type ids tensor. Default is None.
+        - position_ids (Optional[Tensor]): The position ids tensor. Default is None.
+        - head_mask (Optional[Tensor]): The head mask tensor. Default is None.
+        - inputs_embeds (Optional[Tensor]): The input embeddings tensor. Default is None.
+        - output_hidden_states (Optional[bool]): Flag to output hidden states. Default is None.
+        - output_attentions (Optional[bool]): Flag to output attentions. Default is None.
+        - return_dict (Optional[bool]): Flag to return a dictionary. Default is None.
+        
+        Returns:
+        A Tuple containing the model outputs, including the sequence output, pooled output, hidden states, and attentions.
+        
+        Raises:
+        - ValueError: Raised if both 'input_ids' and 'inputs_embeds' are provided simultaneously.
+        - ValueError: Raised if neither 'input_ids' nor 'inputs_embeds' are specified.
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -772,7 +1470,6 @@ class MobileBertForPreTrainingOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     prediction_logits: mindspore.Tensor = None
     seq_relationship_logits: mindspore.Tensor = None
@@ -789,6 +1486,19 @@ class MobileBertForPreTraining(MobileBertPreTrainedModel):
     ]
 
     def __init__(self, config):
+        """
+        Initializes a new instance of MobileBertForPreTraining.
+        
+        Args:
+            self (object): The instance of the class.
+            config (object): The configuration object for MobileBertForPreTraining. It contains the settings and hyperparameters for the model.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(config)
         self.mobilebert = MobileBertModel(config)
         self.cls = MobileBertPreTrainingHeads(config)
@@ -898,6 +1608,19 @@ class MobileBertForMaskedLM(MobileBertPreTrainedModel):
     ]
 
     def __init__(self, config):
+        """
+        Initializes a MobileBertForMaskedLM instance.
+        
+        Args:
+            self (MobileBertForMaskedLM): The instance of the MobileBertForMaskedLM class.
+            config (MobileBertConfig): The configuration for the MobileBert model.
+        
+        Returns:
+            None. This method initializes the MobileBertForMaskedLM instance with the provided configuration.
+        
+        Raises:
+            None.
+        """
         super().__init__(config)
         self.mobilebert = MobileBertModel(config, add_pooling_layer=False)
         self.cls = MobileBertOnlyMLMHead(config)
@@ -972,20 +1695,59 @@ class MobileBertForMaskedLM(MobileBertPreTrainedModel):
 
 class MobileBertOnlyNSPHead(nn.Cell):
     """MobileBertOnlyNSPHead"""
-
     def __init__(self, config):
+        """
+        Initializes the MobileBertOnlyNSPHead class.
+        
+        Args:
+            self: The instance of the MobileBertOnlyNSPHead class.
+            config: A configuration object containing the hidden size parameter for the neural network.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__()
         self.seq_relationship = nn.Dense(config.hidden_size, 2)
 
     def construct(self, pooled_output: Tensor) -> Tensor:
+        """
+        This method constructs the next sentence prediction (NSP) head for MobileBERT models.
+        
+        Args:
+            self (MobileBertOnlyNSPHead): The instance of the MobileBertOnlyNSPHead class.
+            pooled_output (Tensor): The pooled output tensor obtained from the MobileBERT model. It represents the contextualized
+                aggregated representation of the input sequence and is used to predict the relationship between two sequences.
+                
+        Returns:
+            Tensor: A tensor representing the score for the sequence relationship prediction task. The higher the score, the more
+                likely the two input sequences are to be consecutive in the original text.
+        
+        Raises:
+            None
+        """
         seq_relationship_score = self.seq_relationship(pooled_output)
         return seq_relationship_score
 
 
 class MobileBertForNextSentencePrediction(MobileBertPreTrainedModel):
     """MobileBertForNextSentencePrediction"""
-
     def __init__(self, config):
+        """
+        Initializes an instance of the MobileBertForNextSentencePrediction class.
+        
+        Args:
+            self: The object instance.
+            config: A dictionary containing the configuration parameters for the MobileBert model.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         super().__init__(config)
         self.mobilebert = MobileBertModel(config)
         self.cls = MobileBertOnlyNSPHead(config)
@@ -1030,7 +1792,6 @@ class MobileBertForNextSentencePrediction(MobileBertPreTrainedModel):
         >>> loss = outputs.loss
         >>> logits = outputs.logits
         ```"""
-
         if "next_sentence_label" in kwargs:
             warnings.warn(
                 "The `next_sentence_label` argument is deprecated and will be removed in a future version, use"
@@ -1075,8 +1836,20 @@ class MobileBertForNextSentencePrediction(MobileBertPreTrainedModel):
 
 class MobileBertForSequenceClassification(MobileBertPreTrainedModel):
     """MobileBertForSequenceClassification"""
-
     def __init__(self, config):
+        """
+        Initializes an instance of the MobileBertForSequenceClassification class.
+        
+        Args:
+            self: The object instance.
+            config: An instance of the MobileBertConfig class containing the configuration parameters for MobileBERT.
+            
+        Returns:
+            None
+            
+        Raises:
+            None
+        """
         super().__init__(config)
         self.num_labels = config.num_labels
 
@@ -1164,6 +1937,19 @@ class MobileBertForQuestionAnswering(MobileBertPreTrainedModel):
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
 
     def __init__(self, config):
+        """
+        Initializes a new instance of the MobileBertForQuestionAnswering class.
+        
+        Args:
+            self (MobileBertForQuestionAnswering): An instance of the MobileBertForQuestionAnswering class.
+            config: The configuration object for the MobileBert model.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         super().__init__(config)
         self.num_labels = config.num_labels
         self.mobilebert = MobileBertModel(config, add_pooling_layer=False)
@@ -1245,8 +2031,21 @@ class MobileBertForQuestionAnswering(MobileBertPreTrainedModel):
 
 class MobileBertForMultipleChoice(MobileBertPreTrainedModel):
     """MobileBertForMultipleChoice"""
-
     def __init__(self, config):
+        """
+        Initialize the MobileBertForMultipleChoice class.
+        
+        Args:
+            self (MobileBertForMultipleChoice): The instance of the MobileBertForMultipleChoice class.
+            config (MobileBertConfig): The configuration for the MobileBert model.
+        
+        Returns:
+            None. This method initializes the MobileBertForMultipleChoice class and does not return any value.
+        
+        Raises:
+            AttributeError: If the config parameter is missing required attributes.
+            ValueError: If the config parameter contains invalid values.
+        """
         super().__init__(config)
         self.mobilebert = MobileBertModel(config)
         classifier_dropout = (
@@ -1327,6 +2126,22 @@ class MobileBertForTokenClassification(MobileBertPreTrainedModel):
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
 
     def __init__(self, config):
+        """
+        Initializes a new instance of MobileBertForTokenClassification.
+        
+        Args:
+            self: The object itself.
+            config (MobileBertConfig): The configuration for the MobileBertForTokenClassification model.
+                It contains various parameters for model initialization and behavior.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            TypeError: If the config parameter is not of type MobileBertConfig.
+            ValueError: If the num_labels attribute in the config is not defined or is invalid.
+            AttributeError: If the required attributes are not found in the config.
+        """
         super().__init__(config)
         self.num_labels = config.num_labels
         self.config = config

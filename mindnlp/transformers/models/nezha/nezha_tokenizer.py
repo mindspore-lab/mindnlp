@@ -37,10 +37,24 @@ class NezhaTokenizer(PreTrainedTokenizer):
         vocab (Vocab): Vocabulary used to look up words.
         return_token (bool): Whether to return token. If True: return tokens. False: return ids. Default: True.
     """
-
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
 
     def __init__(self, vocab: str, **kwargs):
+        """
+        Initialize the NezhaTokenizer class with the provided vocabulary.
+        
+        Args:
+            self: The instance of the NezhaTokenizer class.
+            vocab (str): The path to the vocabulary file or the vocabulary as a string. If a string is provided, the method initializes the tokenizer with the vocabulary. Otherwise, it raises a ValueError.
+            **kwargs: Additional keyword arguments.
+                return_token (bool): Optional. If True, the method will return the token. Default is False.
+        
+        Returns:
+            None. The method initializes the NezhaTokenizer object with the specified vocabulary and settings.
+        
+        Raises:
+            ValueError: If the 'vocab' parameter is not a string.
+        """
         super().__init__()
         return_token = kwargs.pop('return_token', False)
 
@@ -80,6 +94,20 @@ class NezhaTokenizer(PreTrainedTokenizer):
         raise ValueError(f"Unsupported string type: {type(text_input)}, {text_input.dtype}")
 
     def _convert_token_to_id(self, token):
+        """
+        Converts a given token to its corresponding ID using the NezhaTokenizer.
+        
+        Args:
+            self (NezhaTokenizer): The instance of the NezhaTokenizer class.
+            token (str): The token to be converted into its corresponding ID.
+        
+        Returns:
+            None. This method returns the ID of the token.
+        
+        Raises:
+            - TypeError: If the token provided is not a string.
+            - ValueError: If the token does not exist in the tokenizer's vocabulary.
+        """
         return self._tokenizer.token_to_id(token)
 
 __all__ = ['NezhaTokenizer']

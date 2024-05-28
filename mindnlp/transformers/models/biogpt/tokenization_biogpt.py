@@ -96,7 +96,6 @@ class BioGptTokenizer(PreTrainedTokenizer):
         pad_token (`str`, *optional*, defaults to `"<pad>"`):
             The token used for padding, for example when batching sequences of different lengths.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -113,6 +112,27 @@ class BioGptTokenizer(PreTrainedTokenizer):
         pad_token="<pad>",
         **kwargs,
     ):
+        """
+        Initializes a new instance of the BioGptTokenizer class.
+        
+        Args:
+            self: The instance of the class.
+            vocab_file (str): The path to the vocabulary file.
+            merges_file (str): The path to the merges file.
+            unk_token (str, optional): The token to represent unknown words. Defaults to '<unk>'.
+            bos_token (str, optional): The token to represent the beginning of a sentence. Defaults to '<s>'.
+            eos_token (str, optional): The token to represent the end of a sentence. Defaults to '</s>'.
+            sep_token (str, optional): The token to represent sentence separation. Defaults to '</s>'.
+            pad_token (str, optional): The token to represent padding. Defaults to '<pad>'.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None
+        
+        Raises:
+            ImportError: If sacremoses library is not installed.
+            IOError: If the vocabulary or merges file cannot be read.
+        """
         try:
             import sacremoses
         except ImportError as e:
@@ -152,9 +172,46 @@ class BioGptTokenizer(PreTrainedTokenizer):
         return len(self.encoder)
 
     def get_vocab(self):
+        """
+        Method to retrieve the vocabulary dictionary consisting of tokens and their corresponding encodings.
+        
+        Args:
+            self (BioGptTokenizer): The instance of the BioGptTokenizer class.
+                It represents the tokenizer object.
+                
+        Returns:
+            None. The method returns a vocabulary dictionary that contains tokens and their respective encodings.
+        
+        Raises:
+            No specific exceptions are raised within this method.
+        """
         return dict(self.encoder, **self.added_tokens_encoder)
 
     def moses_tokenize(self, text, lang):
+        """
+        Perform Moses tokenization on the given text.
+        
+        Args:
+            self (BioGptTokenizer): An instance of the BioGptTokenizer class.
+            text (str): The text to be tokenized.
+            lang (str): The language code for tokenization.
+            
+        Returns:
+            None
+            
+        Raises:
+            KeyError: If the language code is not found in the cache_moses_tokenizer dictionary.
+            ValueError: If the language code is invalid or unsupported.
+            Exception: If any other error occurs during tokenization.
+        
+        This method utilizes the MosesTokenizer from the nltk.translate.moses package to tokenize the input text. It first checks if the MosesTokenizer for the specified language is already cached. If not, it
+creates a new MosesTokenizer instance for the language and adds it to the cache. The tokenization is then performed using the cached MosesTokenizer object.
+        
+        The 'aggressive_dash_splits', 'return_str', and 'escape' parameters are passed to the tokenize method of the MosesTokenizer. 'aggressive_dash_splits' determines whether to perform aggressive dash
+splitting, 'return_str' specifies whether to return a string or a list of tokens, and 'escape' determines whether to escape XML/HTML characters in the text before tokenization.
+        
+        Note: This method assumes that the BioGptTokenizer instance has been properly initialized with the necessary resources for tokenization.
+        """
         if lang not in self.cache_moses_tokenizer:
             moses_tokenizer = self.sm.MosesTokenizer(lang=lang)
             self.cache_moses_tokenizer[lang] = moses_tokenizer
@@ -163,12 +220,60 @@ class BioGptTokenizer(PreTrainedTokenizer):
         )
 
     def moses_detokenize(self, tokens, lang):
+        """
+        Performs Moses detokenization on a list of tokens for a specified language.
+        
+        Args:
+            self (BioGptTokenizer): An instance of the BioGptTokenizer class.
+            tokens (list): A list of tokens to be detokenized.
+            lang (str): The language of the tokens. Must be a supported language.
+        
+        Returns:
+            None. The method modifies the cache_moses_detokenizer attribute of the BioGptTokenizer instance.
+        
+        Raises:
+            KeyError: If the specified language is not supported.
+            TypeError: If the tokens parameter is not a list.
+        
+        Note: This method utilizes a cache to store MosesDetokenizer objects for each language, 
+        ensuring efficient detokenization by reusing previously created instances.
+        """
         if lang not in self.cache_moses_detokenizer:
             moses_detokenizer = self.sm.MosesDetokenizer(lang=lang)
             self.cache_moses_detokenizer[lang] = moses_detokenizer
         return self.cache_moses_detokenizer[lang].detokenize(tokens)
 
     def bpe(self, token):
+        """
+        Performs Byte Pair Encoding (BPE) on a given token.
+        
+        Args:
+            self: An instance of the BioGptTokenizer class.
+            token (str): The token to be encoded using BPE.
+        
+        Returns:
+            str: The BPE-encoded representation of the token.
+        
+        Raises:
+            None.
+        
+        Description:
+        This method takes a token and applies Byte Pair Encoding (BPE) to it. BPE is a subword tokenization technique that breaks down a token into a sequence of subword units. The BPE algorithm iteratively
+merges the most frequent pairs of subword units to create a vocabulary of subword units.
+        
+        The token parameter is the input token to be encoded using BPE. The token is expected to be a string.
+        
+        The method returns the BPE-encoded representation of the token as a string. The encoded representation is obtained by iteratively merging the most frequent pairs of subword units until no more merges
+can be made. The resulting subword units are then joined together to form the encoded token.
+        
+        Note that the method may use a cache to store previously encoded tokens for efficiency.
+        
+        Example:
+            tokenizer = BioGptTokenizer()
+            encoded_token = tokenizer.bpe('sequence')
+            print(encoded_token)
+            # Output: 'seq uence'</w>'
+        """
         word = tuple(token[:-1]) + (token[-1] + "</w>",)
         if token in self.cache:
             return self.cache[token]
@@ -324,6 +429,23 @@ class BioGptTokenizer(PreTrainedTokenizer):
         return len(token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """
+        Save the vocabulary to the specified directory with the given filename prefix.
+        
+        Args:
+            self: Instance of the BioGptTokenizer class.
+            save_directory (str): The directory path where the vocabulary files will be saved.
+                It should already exist, and the method will raise an error if the directory does not exist.
+            filename_prefix (Optional[str]): An optional prefix to be added to the filenames of the vocabulary files.
+                If provided, the filenames will be prefixed with this value. Default is None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the paths to the saved vocabulary file and merge file.
+        
+        Raises:
+            - OSError: If the specified save_directory is not a valid directory.
+            - IOError: If there is an issue writing the vocabulary files to the disk.
+        """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return
@@ -352,11 +474,37 @@ class BioGptTokenizer(PreTrainedTokenizer):
         return vocab_file, merge_file
 
     def __getstate__(self):
+        """
+        The '__getstate__' method in the 'BioGptTokenizer' class is used to retrieve the state of the object for pickling.
+        
+        Args:
+            self: An instance of the 'BioGptTokenizer' class.
+        
+        Returns:
+            None. This method does not explicitly return a value, but modifies the state of the object.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
         state = self.__dict__.copy()
         state["sm"] = None
         return state
 
     def __setstate__(self, d):
+        """
+        Sets the state of the BioGptTokenizer object.
+        
+        Args:
+            self (BioGptTokenizer): The instance of the BioGptTokenizer class.
+            d (dict): The dictionary containing the state information to be set. 
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ImportError: If the sacremoses module is not installed, an ImportError is raised. 
+                The error message specifies that sacremoses needs to be installed and provides a link to the installation page.
+        """
         self.__dict__ = d
 
         try:

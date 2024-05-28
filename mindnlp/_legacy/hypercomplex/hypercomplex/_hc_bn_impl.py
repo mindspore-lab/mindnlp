@@ -40,7 +40,6 @@ class _BatchNormImpl(nn.Cell):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     @abstractmethod
     def get_norm(self, u: Tensor) -> Tensor:
         r"""
@@ -57,7 +56,6 @@ class _BatchNormImpl(nn.Cell):
             Tensor of shape (*, ..., *). The count and size of dimensions of the output tensor are the same ones as in
             the input tensor, but without the very first dimension because the output tensor is real-valued.
         """
-
     @abstractmethod
     def get_square_norm(self, u: Tensor) -> Tensor:
         r"""
@@ -74,7 +72,6 @@ class _BatchNormImpl(nn.Cell):
             Tensor of shape (*, ..., *). The count and size of dimensions of the output tensor are the same ones as in
             the input tensor, but without the very first dimension because the output tensor is real-valued.
         """
-
     @abstractmethod
     def scale_and_shift(self,
                         u_x: Tensor,
@@ -109,7 +106,6 @@ class _BatchNormImpl(nn.Cell):
             Tuple of two tensors of shape (C,), which contains the real and the hypercomplex parts of rescaled and
             recentered inputs.
         """
-
     @abstractmethod
     def calculate_bn(self,
                      u_centered_x: Tensor,
@@ -141,7 +137,6 @@ class _BatchNormImpl(nn.Cell):
             Tuple of two tensors of shape (C,), which contains the real and the hypercomplex parts of rescaled and
             recentered normalized inputs.
         """
-
     @abstractmethod
     def calculate_infer_bn(self,
                            moving_mean_x: Tensor,
@@ -180,8 +175,6 @@ class _BatchNormImpl(nn.Cell):
             Tuple of two tensors of shape (C,), which contains the real and the hypercomplex parts of normalized,
             rescaled and recentered inputs.
         """
-
-
 class _BaseBatchNormImpl(_BatchNormImpl):
     r"""
     The base implementor part of the batch normalization layer for all the hypercomplex numbers of the second order.
@@ -204,12 +197,27 @@ class _BaseBatchNormImpl(_BatchNormImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  affine: bool,
                  gamma_init: Union[Tensor, str, Initializer, numbers.Number],
                  beta_init: Union[Tensor, str, Initializer, numbers.Number],
                  num_features: int) -> None:
+        r"""
+        Initializes a new instance of the _BaseBatchNormImpl class.
+        
+        Args:
+            self: The instance of the _BaseBatchNormImpl class.
+            affine (bool): A boolean flag indicating whether to include learnable parameters for scaling and shifting.
+            gamma_init (Union[Tensor, str, Initializer, numbers.Number]): The initialization value for the scaling parameters.
+            beta_init (Union[Tensor, str, Initializer, numbers.Number]): The initialization value for the shifting parameters.
+            num_features (int): The number of features in the input data.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__()
         self.scale_x = Parameter(initializer(gamma_init, num_features), name="scale_x", requires_grad=affine)
         self.scale_y = Parameter(initializer(gamma_init, num_features), name="scale_y", requires_grad=affine)
@@ -313,11 +321,35 @@ class _BaseBatchNormImpl(_BatchNormImpl):
 
     @abstractmethod
     def get_norm(self, u: Tensor) -> Tensor:
-        pass
+        r"""
+        This method calculates the norm of the input tensor 'u' in the '_BaseBatchNormImpl' class.
+        
+        Args:
+            self (_BaseBatchNormImpl): The instance of the '_BaseBatchNormImpl' class.
+            u (Tensor): The input tensor for which the norm is to be calculated.
+        
+        Returns:
+            Tensor: A tensor representing the norm of the input tensor 'u'.
+        
+        Raises:
+            NotImplementedError: If the method is not implemented in the derived class.
+        """
 
     @abstractmethod
     def get_square_norm(self, u: Tensor) -> Tensor:
-        pass
+        r"""
+        Calculates the square norm of a given tensor.
+        
+        Args:
+            self: An instance of the '_BaseBatchNormImpl' class.
+            u (Tensor): The input tensor for which the square norm is to be calculated.
+        
+        Returns:
+            Tensor: The square norm of the input tensor.
+        
+        Raises:
+            None.
+        """
 
     @abstractmethod
     def scale_and_shift(self,
@@ -327,4 +359,29 @@ class _BaseBatchNormImpl(_BatchNormImpl):
                         scale_y: Tensor,
                         shift_x: Tensor,
                         shift_y: Tensor) -> Tuple[Tensor, Tensor]:
-        pass
+        r"""
+        The 'scale_and_shift' method in the '_BaseBatchNormImpl' class performs scaling and shifting operations on input tensors.
+        
+        Args:
+            self (object): The instance of the class.
+            u_x (Tensor): The input tensor for the x-axis.
+            u_y (Tensor): The input tensor for the y-axis.
+            scale_x (Tensor): The scaling factor tensor for the x-axis.
+            scale_y (Tensor): The scaling factor tensor for the y-axis.
+            shift_x (Tensor): The shifting factor tensor for the x-axis.
+            shift_y (Tensor): The shifting factor tensor for the y-axis.
+        
+        Returns:
+            Tuple[Tensor, Tensor]: A tuple containing two tensors. The first tensor represents the scaled and shifted tensor for the x-axis, while the second tensor represents the scaled and shifted tensor for
+the y-axis.
+        
+        Raises:
+            None.
+        
+        Note:
+            - The 'u_x' and 'u_y' tensors represent the input data to be scaled and shifted.
+            - The 'scale_x' and 'scale_y' tensors represent the scaling factors to be applied to the input data.
+            - The 'shift_x' and 'shift_y' tensors represent the shifting factors to be applied to the input data.
+            - The scaling operation scales the input data by multiplying it with the corresponding scaling factor.
+            - The shifting operation shifts the scaled data by adding the corresponding shifting factor.
+        """

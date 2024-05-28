@@ -16,6 +16,7 @@
 # ============================================================================
 # pylint: disable=expression-not-assigned
 # pylint: disable=assignment-from-no-return
+# pylint: disable=used-before-assignment
 """Trainer class, to easily train a 🤗 Transformers from scratch or finetune it on a new task."""
 import os
 import re
@@ -105,6 +106,18 @@ SCHEDULER_NAME = "scheduler.json"
 SCALER_NAME = "scaler.json"
 
 def _is_peft_model(model):
+    r"""
+    Checks if the input model is an instance of the PeftModel class.
+    
+    Args:
+        model (object): The model to be checked for being an instance of PeftModel class.
+    
+    Returns:
+        None: Returns None if the input model is an instance of PeftModel class, otherwise returns False.
+    
+    Raises:
+        None
+    """
     classes_to_check = (PeftModel,)
     # Here we also check if the model is an instance of `PeftMixedModel` introduced in peft>=0.7.0: https://github.com/huggingface/transformers/pull/28321
     return isinstance(model, classes_to_check)
@@ -114,7 +127,6 @@ class Trainer:
     """
     Trainer is a simple but feature-complete training and eval loop for MindSpore, optimized for 🤗 Transformers.
     """
-
     from ..utils import _get_learning_rate
     def __init__(
         self,
@@ -130,6 +142,32 @@ class Trainer:
         optimizers: Tuple[nn.Optimizer, LearningRateSchedule] = (None, None),
         preprocess_logits_for_metrics: Optional[Callable[[mindspore.Tensor, mindspore.Tensor], mindspore.Tensor]] = None,
     ):
+        """
+        Initializes the Trainer class.
+        
+        Args:
+            self (Trainer): The Trainer object itself.
+            model (Union[PreTrainedModel, nn.Cell]): The pre-trained model or neural network cell to be trained.
+            args (TrainingArguments): The training arguments including hyperparameters and output directory.
+            map_fn (Optional[Union[Callable, BaseMapFunction]]): Optional map function for data preprocessing.
+            train_dataset (Optional[Dataset]): The training dataset.
+            eval_dataset (Optional[Union[Dataset, Dict[str, Dataset]]]): The evaluation dataset.
+            tokenizer (Optional[PreTrainedTokenizerBase]): The pre-trained tokenizer for tokenizing inputs.
+            model_init (Optional[Callable[[], PreTrainedModel]]): Optional model initialization function.
+            compute_metrics (Optional[Callable[[EvalPrediction], Dict]]): Optional function to compute evaluation metrics.
+            callbacks (Optional[List[TrainerCallback]]): Optional list of trainer callbacks.
+            optimizers (Tuple[nn.Optimizer, LearningRateSchedule]): Tuple of optimizer and learning rate scheduler.
+            preprocess_logits_for_metrics (Optional[Callable[[mindspore.Tensor, mindspore.Tensor], mindspore.Tensor]]): Optional function to preprocess logits for metrics.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            RuntimeError: If `model` or `model_init` is not provided.
+            ValueError: If the provided model cannot be used for training, or if there is an issue with the map function.
+            ValueError: If `train_dataset` does not implement __len__ and `max_steps` is not specified.
+            RuntimeError: If there is a conflict between `model_init` and `optimizers` arguments.
+        """
         if args is None:
             output_dir = "tmp_trainer"
             logger.info(f"No `TrainingArguments` passed, using `output_dir={output_dir}`.")
@@ -204,7 +242,6 @@ class Trainer:
             callbacks, self.model, self.tokenizer, self.optimizer, self.lr_scheduler
         )
         self.add_callback(PrinterCallback if self.args.disable_tqdm else DEFAULT_PROGRESS_CALLBACK)
-
 
         # Will be set to True by `self._setup_loggers()` on first call to `self.log()`.
         self._loggers_initialized = False
@@ -328,6 +365,18 @@ class Trainer:
         self.callback_handler.remove_callback(callback)
 
     def _set_signature_columns_if_needed(self):
+        r"""
+        Method to set signature columns if they are not already set.
+        
+        Args:
+            self (Trainer): The instance of the Trainer class.
+            
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            NotImplementedError: If the model does not have a 'construct' method.
+        """
         if self._signature_columns is None:
             # Inspect model forward signature to keep only the arguments it accepts.
             model_to_inspect = self.model
@@ -344,6 +393,20 @@ class Trainer:
             self._signature_columns += list(set(["label", "label_ids"] + self.label_names))
 
     def _remove_unused_columns(self, dataset: "mindspore.dataset.Dataset", description: Optional[str] = None):
+        r""" 
+        Method _remove_unused_columns in the class Trainer removes unused columns from the input dataset if the corresponding argument is set to True.
+        
+        Args:
+            self: The instance of the Trainer class.
+            dataset (mindspore.dataset.Dataset): The input dataset from which the unused columns need to be removed.
+            description (Optional[str]): An optional description of the dataset. Defaults to None.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None
+        """
         if not self.args.remove_unused_columns:
             return dataset
         self._set_signature_columns_if_needed()
@@ -440,7 +503,6 @@ class Trainer:
                 The training arguments for the training session.
 
         """
-
         # parse args.optim_args
         optim_args = {}
         if args.optim_args:
@@ -479,7 +541,6 @@ class Trainer:
         else:
             raise ValueError(f"Trainer cannot instantiate unsupported optimizer: {args.optim}")
         return optimizer_cls, optimizer_kwargs
-
 
     def create_scheduler(self, num_training_steps: int, optimizer = None):
         """
@@ -525,6 +586,22 @@ class Trainer:
             return train_tokens
 
     def call_model_init(self):
+        r"""
+        Method to call the model initialization function and validate its output.
+        
+        Args:
+            self (Trainer): Instance of the Trainer class.
+                This parameter represents the current instance of the Trainer class.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            RuntimeError: If the model_init method does not have 0 or 1 arguments.
+                This exception is raised when the number of arguments in the model_init method is not 0 or 1.
+            RuntimeError: If the model_init method returns None.
+                This exception is raised when the model_init method returns None.
+        """
         model_init_argcount = number_of_arguments(self.model_init)
         if model_init_argcount == 0:
             model = self.model_init()
@@ -616,7 +693,6 @@ class Trainer:
         # We use the same batch_size as for eval.
         return eval_dataset
 
-
     def train(
         self,
         resume_from_checkpoint: Optional[Union[str, bool]] = None,
@@ -691,6 +767,31 @@ class Trainer:
         )
 
     def _load_best_model(self):
+        r"""Load the best model checkpoint.
+        
+        This method loads the best model checkpoint based on the provided state. The best model checkpoint is determined by the highest score achieved during training.
+        
+        Args:
+            self: An instance of the Trainer class.
+        
+        Returns:
+            None. The method only loads the best model checkpoint.
+        
+        Raises:
+            None.
+        
+        Note:
+            This method assumes that the best model checkpoint is saved in the specified checkpoint directory. If the best model checkpoint is not found, a warning message will be logged.
+        
+            If the model is a PEFT model, the method checks if the active adapter is available and loads the adapter model if it exists. Otherwise, a warning message is logged.
+        
+            If `save_safetensors` flag is enabled and the best safe model checkpoint is available, the method loads the safe model state dictionary. Otherwise, it loads the model state dictionary using
+MindSpore's `load_checkpoint` function.
+        
+            If the best model checkpoint is not found, but the weights index file exists, the method attempts to load the sharded checkpoint using the `load_sharded_checkpoint` function.
+        
+            If the best model checkpoint is not found and `save_on_each_node` is not activated during distributed training, a warning message is logged.
+        """
         logger.info(f"Loading best model from {self.state.best_model_checkpoint} (score: {self.state.best_metric}).")
         best_model_path = os.path.join(self.state.best_model_checkpoint, WEIGHTS_NAME)
         best_safe_model_path = os.path.join(self.state.best_model_checkpoint, SAFE_WEIGHTS_NAME)
@@ -749,14 +850,43 @@ class Trainer:
                 "on multiple nodes, you should activate `--save_on_each_node`."
             )
 
-
     def _get_output_dir(self):
+        r"""
+        This method retrieves the output directory from the Trainer object.
+        
+        Args:
+            self: Trainer object instance.
+            
+        Returns:
+            None. Returns the output directory path specified in the Trainer object.
+        
+        Raises:
+            This method does not raise any exceptions.
+        """
         run_dir = self.args.output_dir
         return run_dir
 
     def _inner_training_loop(
         self, batch_size=None, args=None, resume_from_checkpoint=None, ignore_keys_for_eval=None
     ):
+        r"""
+        Method _inner_training_loop in the class Trainer.
+        
+        Args:
+            self (Trainer): The Trainer object.
+            batch_size (int): The batch size for training.
+            args (dict): Additional arguments for training configuration.
+            resume_from_checkpoint (str): Path to a checkpoint to resume training from.
+            ignore_keys_for_eval (list): List of keys to ignore during evaluation.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If args.max_steps must be set to a positive value if dataloader does not have a length.
+            Warning: If there are no samples in the epoch_iterator during training.
+            Exception: Any unexpected exceptions raised during the training process.
+        """
         self._train_batch_size = batch_size
         if self.args.auto_find_batch_size:
             self.state.train_batch_size = self._train_batch_size
@@ -1081,8 +1211,45 @@ class Trainer:
 
         return TrainOutput(self.state.global_step, train_loss, metrics)
 
-
     def _load_from_checkpoint(self, resume_from_checkpoint, model=None):
+        r"""
+        Loads the model from a checkpoint directory.
+        
+        Args:
+            self (Trainer): The Trainer instance.
+            resume_from_checkpoint (str): The path to the checkpoint directory.
+            model (Optional[object]): The model to load. If not provided, the model specified in the Trainer instance will be used.
+        
+        Returns:
+            None
+        
+        Raises:
+            ValueError: If a valid checkpoint cannot be found at the given directory.
+        
+        '''
+        
+        The method `_load_from_checkpoint` is responsible for loading the model from a checkpoint directory. It takes three parameters: `self`, `resume_from_checkpoint`, and an optional parameter `model`. The
+method does not return any value (`None`).
+        
+        - `self` (Trainer): The `Trainer` instance on which the method is called.
+        - `resume_from_checkpoint` (str): The path to the checkpoint directory from which the model will be loaded.
+        - `model` (Optional[object]): An optional parameter that specifies the model to be loaded. If not provided, the model specified in the `Trainer` instance will be used.
+        
+        The method first checks if a valid checkpoint can be found at the given `resume_from_checkpoint` directory. If no valid checkpoint is found, a `ValueError` is raised.
+        
+        If a valid checkpoint is found, the method proceeds to load the model. It first checks if a configuration file (`CONFIG_NAME`) is present in the checkpoint directory. If a configuration file is found,
+it loads the configuration using the `PretrainedConfig.from_json_file` method.
+        
+        Next, the method checks if either the weights file (`weights_file`) or the safe weights file (`safe_weights_file`) is present in the checkpoint directory. If either of these files is found, the method
+checks if the `save_safetensors` flag is enabled. If the flag is enabled and the safe weights file is present, it loads the model's state dictionary using the `safe_load_file` method. Otherwise, it uses the
+`mindspore.load_checkpoint` method to load the model's state dictionary. The method then loads the state dictionary into the model using the `model.load_state_dict` method, with the `False` argument indicating
+that strict loading should be disabled. After loading the state dictionary, any temporary variables are deleted and any warnings are issued using the `_issue_warnings_after_load` method.
+        
+        If neither the weights file nor the safe weights file is found, the method calls the `load_sharded_checkpoint` method to load the model from the checkpoint directory, with the `prefer_safe` parameter
+indicating whether to prefer safe tensors.
+        
+        Note: The method assumes that the necessary imports and variables are already defined.
+        """
         if model is None:
             model = self.model
 
@@ -1152,12 +1319,10 @@ class Trainer:
             )
             self._issue_warnings_after_load(load_result)
 
-
     def _load_optimizer_and_scheduler(self, checkpoint):
         """If optimizer and scheduler states exist, load them."""
         if checkpoint is None:
             return
-
 
         checkpoint_file_exists = (
             os.path.isfile(os.path.join(checkpoint, OPTIMIZER_NAME))
@@ -1253,7 +1418,6 @@ class Trainer:
 
         return (loss, outputs) if return_outputs else loss
 
-
     def is_local_process_zero(self) -> bool:
         """
         Whether or not this process is the local (e.g., on one machine if training in a distributed fashion on several
@@ -1289,6 +1453,19 @@ class Trainer:
             return 0
 
     def _issue_warnings_after_load(self, load_result):
+        r"""Issues warnings after loading a checkpoint model.
+        
+        Args:
+            self (Trainer): The current instance of the Trainer class.
+            load_result (tuple): A tuple containing two lists. The first list represents the missing keys in the loaded checkpoint model, 
+                while the second list represents the unexpected keys in the loaded checkpoint model.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
         if len(load_result[0]) != 0:
             if self.model._keys_to_ignore_on_save is not None and set(load_result[0]) == set(
                 self.model._keys_to_ignore_on_save
@@ -1302,6 +1479,25 @@ class Trainer:
             )
 
     def _maybe_log_save_evaluate(self, tr_loss, grad_norm, model, epoch, ignore_keys_for_eval):
+        r""" 
+        This method '_maybe_log_save_evaluate' is a part of the 'Trainer' class. It takes 6 parameters:
+        
+        Args:
+        - self (object): The instance of the Trainer class.
+        - tr_loss (Tensor): The training loss value.
+        - grad_norm (float or None): The gradient norm value, or None if not available.
+        - model (object): The model being trained.
+        - epoch (int): The current epoch number.
+        - ignore_keys_for_eval (list or None): A list of keys to ignore during evaluation, or None if not applicable.
+        
+        Returns:
+        None: This method does not return any value.
+        
+        Raises:
+        - ValueError: If an invalid input is provided.
+        - RuntimeError: If any runtime error occurs during execution.
+        - KeyError: If a key error occurs while accessing dictionaries.
+        """
         if self.control.should_log and self.state.global_step > self._globalstep_last_logged:
             logs: Dict[str, float] = {}
 
@@ -1345,7 +1541,6 @@ class Trainer:
 
         Will only save from the main process.
         """
-
         if output_dir is None:
             output_dir = self.args.output_dir
 
@@ -1353,6 +1548,21 @@ class Trainer:
             self._save(output_dir)
 
     def _save(self, output_dir: Optional[str] = None, state_dict=None):
+        """
+        Save the model checkpoint to the specified output directory.
+        
+        Args:
+            self (Trainer): The instance of the Trainer class.
+            output_dir (Optional[str], optional): The directory path where the model checkpoint will be saved. If not provided, it defaults to self.args.output_dir. Defaults to None.
+            state_dict (optional): The state dictionary of the model. Defaults to None.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If the model is not an instance of PreTrainedModel.
+            RuntimeError: If an error occurs during the saving process.
+        """
         # If we are executing this function, we are the process zero, so we don't check for that.
         output_dir = output_dir if output_dir is not None else self.args.output_dir
         os.makedirs(output_dir, exist_ok=True)
@@ -1389,6 +1599,19 @@ class Trainer:
         # mindspore.save_checkpoint(save_obj, ckpt_file_name, integrated_save=True, async_save=False, append_dict=None, enc_key=None, enc_mode='AES-GCM', choice_func=None, **kwargs)
 
     def _save_optimizer_and_scheduler(self, output_dir):
+        r"""
+        Save the optimizer and scheduler states to the specified output directory.
+        
+        Args:
+            self (Trainer): The Trainer object instance.
+            output_dir (str): The directory path where the optimizer and scheduler states will be saved.
+            
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         if self.args.should_save:
             # deepspeed.save_checkpoint above saves model/optim/sched
             mindspore.save_checkpoint(self.optimizer, os.path.join(output_dir, OPTIMIZER_NAME))
@@ -1402,6 +1625,22 @@ class Trainer:
             # reissue_pt_warnings(caught_warnings)
 
     def _save_checkpoint(self, model, metrics=None):
+        r"""
+        Save the model checkpoint along with relevant metrics and state information.
+        
+        Args:
+            self (Trainer): The Trainer instance.
+            model: The model to be saved.
+            metrics (dict): A dictionary containing evaluation metrics. Defaults to None if metrics are not available.
+            
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If the metric for the best model is not specified correctly.
+            FileNotFoundError: If the specified output directory does not exist.
+            OSError: If there are any issues with file operations while saving the checkpoint.
+        """
         # In all cases, including ddp/dp/deepspeed, self.model is always a reference to the model we
         # want to save except FullyShardedDDP.
         # assert unwrap_model(model) is self.model, "internal model should be a reference to self.model"
@@ -1448,6 +1687,21 @@ class Trainer:
             self._rotate_checkpoints(use_mtime=False, output_dir=run_dir)
 
     def _rotate_checkpoints(self, use_mtime=False, output_dir=None) -> None:
+        r"""
+        Rotate the checkpoints to limit the total number of saved checkpoints.
+        
+        Args:
+            self (Trainer): The instance of the Trainer class.
+            use_mtime (bool, optional): If True, sorts the checkpoints based on modification time. Defaults to False.
+            output_dir (str, optional): The directory where the checkpoints are stored. Defaults to None.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            - OSError: If an error occurs while deleting the older checkpoints using shutil.rmtree.
+            - TypeError: If the input parameters are of incorrect types.
+        """
         if self.args.save_total_limit is None or self.args.save_total_limit <= 0:
             return
 
@@ -1472,8 +1726,19 @@ class Trainer:
             logger.info(f"Deleting older checkpoint [{checkpoint}] due to args.save_total_limit")
             shutil.rmtree(checkpoint, ignore_errors=True)
 
-
     def store_flos(self):
+        r"""
+        Stores the current number of floating point operations (FLOs) and updates the total FLOs count.
+        
+        Args:
+            self (Trainer): The Trainer object itself.
+            
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         # Storing the number of floating-point operations that went into the model
         # if self.args.parallel_mode == ParallelMode.DISTRIBUTED:
         #     self.state.total_flos += (
@@ -1542,7 +1807,6 @@ class Trainer:
             return metrics
 
         eval_dataset = self.get_eval_dataset(eval_dataset)
-
 
         start_time = time.time()
 
@@ -1905,7 +2169,6 @@ class Trainer:
 
         return (loss, logits, labels)
 
-
     def log(self, logs: Dict[str, float]) -> None:
         """
         Log `logs` on the various objects watching training.
@@ -1928,6 +2191,21 @@ class Trainer:
     def _sorted_checkpoints(
         self, output_dir=None, checkpoint_prefix=PREFIX_CHECKPOINT_DIR, use_mtime=False
     ) -> List[str]:
+        r"""
+        Method to retrieve and sort checkpoints based on specific criteria.
+        
+        Args:
+            self: Trainer object, the instance invoking the method.
+            output_dir (str, optional): Directory path to search for checkpoints. Defaults to None.
+            checkpoint_prefix (str): Prefix for identifying checkpoint files.
+            use_mtime (bool): Flag to indicate whether to use modification time for sorting.
+        
+        Returns:
+            List[str]: A list of sorted checkpoint file paths.
+        
+        Raises:
+            N/A
+        """
         ordering_and_checkpoint_path = []
 
         glob_checkpoints = [str(x) for x in Path(output_dir).glob(f"{checkpoint_prefix}-*") if os.path.isdir(x)]

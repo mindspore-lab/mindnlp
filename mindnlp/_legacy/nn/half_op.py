@@ -21,6 +21,21 @@ class Matmul(nn.Cell):
     Matmul Operation
     """
     def construct(self, a, b):
+        r"""
+        This method constructs a new matrix by performing matrix multiplication between the input matrices 'a' and 'b'.
+        
+        Args:
+            self (object): The instance of the Matmul class.
+            a (matrix): The first input matrix for the matrix multiplication operation.
+            b (matrix): The second input matrix for the matrix multiplication operation.
+        
+        Returns:
+            None: This method does not return any value directly, but the result of the matrix multiplication operation can be obtained using the 'ops.matmul' method.
+        
+        Raises:
+            - TypeError: If the input 'a' or 'b' is not a valid matrix object.
+            - ValueError: If the dimensions of the input matrices are not compatible for matrix multiplication.
+        """
         return ops.matmul(a, b)
 
 __all__ = ['Matmul']

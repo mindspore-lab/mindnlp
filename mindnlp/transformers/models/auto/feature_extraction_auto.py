@@ -114,6 +114,28 @@ FEATURE_EXTRACTOR_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, FEATURE_EXTRA
 
 
 def feature_extractor_class_from_name(class_name: str):
+    """
+    Retrieves the feature extractor class based on the given class name.
+    
+    Args:
+        class_name (str): The name of the feature extractor class to retrieve.
+    
+    Returns:
+        The feature extractor class corresponding to the given class name.
+        If no matching class is found, returns None.
+    
+    Raises:
+        AttributeError: If an attribute error occurs while retrieving the feature extractor class.
+    
+    Note:
+        This function searches for the feature extractor class in the following places:
+        1. In the mapping of feature extractor names to their corresponding module names.
+           If a match is found, the class is imported from the respective module.
+        2. In the additional content of the feature extractor mapping.
+           If a match is found based on the class name, the corresponding extractor is returned.
+        3. In the main 'mindnlp.transformers' module.
+           If the class name exists as an attribute in the main module, it is returned.
+    """
     for module_name, extractors in FEATURE_EXTRACTOR_MAPPING_NAMES.items():
         if class_name in extractors:
             module_name = model_type_to_module_name(module_name)
@@ -243,8 +265,20 @@ class AutoFeatureExtractor:
 
     This class cannot be instantiated directly using `__init__()` (throws an error).
     """
-
     def __init__(self):
+        """
+        Initializes an instance of the AutoFeatureExtractor class.
+        
+        Args:
+            self: An instance of the AutoFeatureExtractor class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            EnvironmentError: This exception is raised with the message 'AutoFeatureExtractor is designed to be instantiated using the `AutoFeatureExtractor.from_pretrained(pretrained_model_name_or_path)`
+method.' 
+        """
         raise EnvironmentError(
             "AutoFeatureExtractor is designed to be instantiated "
             "using the `AutoFeatureExtractor.from_pretrained(pretrained_model_name_or_path)` method."

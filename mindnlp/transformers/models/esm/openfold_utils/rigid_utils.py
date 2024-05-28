@@ -37,7 +37,6 @@ def rot_matmul(a: mindspore.Tensor, b: mindspore.Tensor) -> mindspore.Tensor:
     Returns:
         The product ab
     """
-
     def row_mul(i: int) -> mindspore.Tensor:
         return ops.stack(
             [
@@ -84,6 +83,19 @@ def identity_rot_mats(
     batch_dims: Tuple[int, ...],
     dtype = None,
 ) -> mindspore.Tensor:
+    """
+    Creates identity rotation matrices with batch dimensions.
+    
+    Args:
+        batch_dims (Tuple[int, ...]): A tuple of integers representing the batch dimensions of the rotation matrices.
+        dtype (str, optional): The data type of the rotation matrices. Defaults to None.
+    
+    Returns:
+        mindspore.Tensor: A tensor containing the identity rotation matrices with the specified batch dimensions.
+    
+    Raises:
+        None
+    """
     rots = ops.eye(3, dtype=dtype)
     rots = rots.view(*((1,) * len(batch_dims)), 3, 3)
     rots = rots.expand(*batch_dims, -1, -1)
@@ -96,6 +108,17 @@ def identity_trans(
     batch_dims: Tuple[int, ...],
     dtype = None,
 ) -> mindspore.Tensor:
+    """
+    Args:
+        batch_dims (Tuple[int, ...]): A tuple representing the dimensions of the batch for the identity transformation.
+        dtype (Union[str, None]): Optional. The data type of the elements in the output tensor. Default is None.
+    
+    Returns:
+        mindspore.Tensor: A tensor filled with zeros of shape (*batch_dims, 3).
+    
+    Raises:
+        None
+    """
     trans = ops.zeros((*batch_dims, 3), dtype=dtype)
     return trans
 
@@ -105,6 +128,19 @@ def identity_quats(
     batch_dims: Tuple[int, ...],
     dtype = None,
 ) -> mindspore.Tensor:
+    """
+    This function returns a tensor of identity quaternions.
+    
+    Args:
+        batch_dims (Tuple[int, ...]): The dimensions of the batch. Each dimension represents the number of quaternions in that batch dimension.
+        dtype (optional): The data type of the tensor. Defaults to None.
+    
+    Returns:
+        mindspore.Tensor: A tensor of identity quaternions with shape (*batch_dims, 4).
+    
+    Raises:
+        None.
+    """
     quat = ops.zeros((*batch_dims, 4), dtype=dtype)
 
     quat[..., 0] = 1
@@ -118,6 +154,19 @@ _qtr_ind_dict: Dict[str, int] = {key: ind for ind, key in enumerate(_qtr_keys)}
 
 
 def _to_mat(pairs: List[Tuple[str, int]]) -> np.ndarray:
+    """
+    This function creates a 4x4 numpy array from a list of key-value pairs.
+    
+    Args:
+        pairs (List[Tuple[str, int]]): A list of tuples where each tuple consists of a string key and an integer value. The keys represent indices in the resulting 4x4 numpy array, and the values are assigned
+to those indices.
+    
+    Returns:
+        np.ndarray: A 4x4 numpy array where the values from the input pairs are placed at the corresponding indices based on the keys.
+    
+    Raises:
+        KeyError: If a key in the pairs list does not match any index in the 4x4 array.
+    """
     mat = np.zeros((4, 4))
     for key, value in pairs:
         ind = _qtr_ind_dict[key]
@@ -162,6 +211,26 @@ def quat_to_rot(quat: mindspore.Tensor) -> mindspore.Tensor:
 
 
 def rot_to_quat(rot: mindspore.Tensor) -> mindspore.Tensor:
+    """Converts a rotation matrix to a quaternion.
+    
+    Args:
+        rot (mindspore.Tensor): Input rotation matrix of shape (..., 3, 3).
+    
+    Returns:
+        mindspore.Tensor: Quaternion representing the rotation. The shape of the tensor is (..., 4).
+    
+    Raises:
+        ValueError: If the input rotation matrix is incorrectly shaped.
+    
+    Note:
+        The rotation matrix must be of shape (..., 3, 3) where the last two dimensions represent the rotation matrix. 
+    
+    Example:
+        rot = mindspore.Tensor([[[1, 0, 0], [0, 1, 0], [0, 0, 1]]])
+        quat = rot_to_quat(rot)
+        print(quat)
+        # Output: [[0.0, 0.0, 0.0, 1.0]]
+    """
     if rot.shape[-2:] != (3, 3):
         raise ValueError("Input rotation is incorrectly shaped")
 
@@ -222,6 +291,20 @@ _CACHED_QUATS: Dict[str, np.ndarray] = {
 
 @lru_cache(maxsize=None)
 def _get_quat(quat_key: str, dtype) -> mindspore.Tensor:
+    """
+    Function to retrieve a quaternion tensor based on the given quat_key and dtype.
+    
+    Args:
+        quat_key (str): The key used to retrieve the desired quaternion.
+        dtype: The desired data type of the quaternion tensor.
+    
+    Returns:
+        mindspore.Tensor: The quaternion tensor retrieved from the cache.
+    
+    Raises:
+        None.
+    
+    """
     return mindspore.tensor(_CACHED_QUATS[quat_key], dtype=dtype)
 
 
@@ -240,10 +323,35 @@ def quat_multiply_by_vec(quat: mindspore.Tensor, vec: mindspore.Tensor) -> minds
 
 
 def invert_rot_mat(rot_mat: mindspore.Tensor) -> mindspore.Tensor:
+    """
+    Inverts the given rotation matrix by swapping the last two dimensions.
+    
+    Args:
+        rot_mat (mindspore.Tensor): The input rotation matrix to be inverted.
+    
+    Returns:
+        mindspore.Tensor: The inverted rotation matrix.
+    
+    Raises:
+        None.
+    """
     return rot_mat.swapaxes(-1, -2)
 
 
 def invert_quat(quat: mindspore.Tensor) -> mindspore.Tensor:
+    """
+    Inverts the given quaternion tensor.
+    
+    Args:
+        quat (mindspore.Tensor): A tensor representing a quaternion.
+    
+    Returns:
+        mindspore.Tensor: A tensor of the same shape as the input quaternion, representing the inverted quaternion.
+    
+    Raises:
+        None.
+    
+    """
     quat_prime = quat.copy()
     quat_prime[..., 1:] *= -1
     inv = quat_prime / ops.sum(quat**2, dim=-1, keepdim=True)
@@ -257,7 +365,6 @@ class Rotation:
     underlying format of the rotation cannot be changed in-place. Like Rigid, the class is designed to mimic the
     behavior of a torch Tensor, almost as if each Rotation object were a tensor of rotations, in one format or another.
     """
-
     def __init__(
         self,
         rot_mats: Optional[mindspore.Tensor] = None,
@@ -693,7 +800,6 @@ class Rigid:
     [*, 3] translation Designed to behave approximately like a single torch tensor with the shape of the shared batch
     dimensions of its component parts.
     """
-
     def __init__(self, rots: Optional[Rotation], trans: Optional[mindspore.Tensor]):
         """
         Args:
@@ -971,6 +1077,19 @@ class Rigid:
 
     @staticmethod
     def from_tensor_7(t: mindspore.Tensor, normalize_quats: bool = False) -> Rigid:
+        """
+        Converts a 7-dimensional tensor into a Rigid object.
+        
+        Args:
+            t (mindspore.Tensor): The input tensor of shape (..., 7) representing quaternions and translations.
+            normalize_quats (bool, optional): A flag indicating whether to normalize quaternions. Defaults to False.
+        
+        Returns:
+            Rigid: A Rigid object containing the rotations and translations extracted from the input tensor.
+        
+        Raises:
+            ValueError: If the input tensor does not have the correct shape of (..., 7).
+        """
         if t.shape[-1] != 7:
             raise ValueError("Incorrectly shaped input tensor")
 

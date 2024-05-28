@@ -40,7 +40,39 @@ def _get_batch_size(input_ids: Optional[Tensor], inputs_embeds: Optional[Tensor]
     return batch_size
 
 class ModulesToSaveWrapper(nn.Cell):
+
+    r"""
+    This class represents a wrapper for saving and managing modules in a neural network. It provides functionality to save and switch between different modules, known as adapters, while also maintaining the
+original module for reference. The class includes methods for enabling and disabling adapters, setting the active adapter, updating the saved modules, and constructing the model with the appropriate adapter.
+    
+    The class inherits from nn.Cell and includes the following methods:
+    - __init__: Initializes the ModulesToSaveWrapper instance with the original cell to save and the initial adapter name.
+    - check_cell: Performs sanity checks on the original cell to ensure compatibility with the saving mechanism.
+    - disable_adapters: Toggles the enabling and disabling of adapters, managing the requires_grad flag for adapter weights.
+    - active_adapter: Returns the name of the currently active adapter.
+    - weight: Retrieves the weight of the original cell or the active adapter's cell if available.
+    - update: Updates the saved cells with a new adapter, creating a deep copy of the original cell.
+    - construct: Constructs the model using the original cell or the active adapter's cell based on the adapter status.
+    - enable_adapters: Toggles the enabling and disabling of adapters, managing the requires_grad flag for adapter weights.
+    - set_adapter: Sets the active adapter, making it trainable and updating the requires_grad flag for the cells.
+    
+    The class provides a flexible way to manage and switch between different modules within a neural network.
+    """
     def __init__(self, cell_to_save, adapter_name):
+        r"""
+        Initializes an instance of the ModulesToSaveWrapper class.
+        
+        Args:
+            self (ModulesToSaveWrapper): The current instance of the class.
+            cell_to_save (Any): The cell to be saved.
+            adapter_name (str): The name of the adapter.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__()
         self.original_cell = cell_to_save
         self.cells_to_save = nn.CellDict({})
@@ -61,21 +93,74 @@ class ModulesToSaveWrapper(nn.Cell):
 
     @property
     def disable_adapters(self) -> bool:
+        r"""
+        Method to retrieve the status of whether adapters are disabled in the ModulesToSaveWrapper class.
+        
+        Args:
+            self (ModulesToSaveWrapper): The instance of the ModulesToSaveWrapper class.
+                This parameter is always required as it refers to the instance calling this method.
+        
+        Returns:
+            bool: A boolean value indicating whether adapters are disabled.
+                Returns True if adapters are disabled, False otherwise. 
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         # use a property to ensure that disable_adapters is not set directly, instead use the enable_adapters method
         return self._disable_adapters
 
     @property
     def active_adapter(self) -> str:
+        r"""
+        This method retrieves the active adapter from the ModulesToSaveWrapper class.
+        
+        Args:
+            self: The instance of the ModulesToSaveWrapper class.
+        
+        Returns:
+            str: The active adapter as a string.
+        
+        Raises:
+            None
+        """
         # use a property to ensure that active_adapter is not set directly, instead use the set_adapter method
         return self._active_adapter
 
     @property
     def weight(self):
+        r"""
+        This method 'weight' is a property method within the 'ModulesToSaveWrapper' class.
+        
+        Args:
+            - self: (object) The instance of the 'ModulesToSaveWrapper' class.
+        
+        Returns:
+            - None: This method returns a value of type None.
+        
+        Raises:
+            - None: This method does not raise any exceptions.
+        """
         if self.active_adapter not in self.cells_to_save:
             return self.original_cell.weight
         return self.cells_to_save[self.active_adapter].weight
 
     def update(self, adapter_name):
+        r"""
+        Updates the ModulesToSaveWrapper with a new adapter.
+        
+        Args:
+            self (ModulesToSaveWrapper): The instance of ModulesToSaveWrapper.
+            adapter_name (str): The name of the adapter to update.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            - AttributeError: If the 'cells_to_save' attribute does not contain the specified 'adapter_name'.
+            - RuntimeError: If an error occurs during the update process.
+            - ValueError: If the 'adapter_name' parameter is not a string.
+        """
         context_manager = nullcontext()
         for _, param in self.original_cell.parameters_and_names():
             num_params = param.numel()
@@ -108,6 +193,18 @@ class ModulesToSaveWrapper(nn.Cell):
     #     return new_hook
 
     def construct(self, *args, **kwargs):
+        r"""
+        This method constructs and returns the appropriate cell based on the active adapter within the ModulesToSaveWrapper class.
+        
+        Args:
+            self: An instance of the ModulesToSaveWrapper class.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            - N/A
+        """
         if self.disable_adapters or (self.active_adapter not in self.cells_to_save):
             return self.original_cell(*args, **kwargs)
         return self.cells_to_save[self.active_adapter](*args, **kwargs)
@@ -230,12 +327,36 @@ def _freeze_adapter(model, adapter_name):
 
 
 def _set_adapter(model, adapter_name):
+    r"""
+    Sets the active adapter for the given model.
+    
+    Args:
+        model (object): The model for which the active adapter needs to be set.
+        adapter_name (str): The name of the adapter to be set as active.
+    
+    Returns:
+        None. This function does not return any value.
+    
+    Raises:
+        None. This function does not raise any exceptions.
+    """
     for cell in model.cells():
         if isinstance(cell, ModulesToSaveWrapper):
             cell.active_adapter = adapter_name
 
 
 def _prepare_prompt_learning_config(peft_config, model_config):
+    r"""
+    Args:
+        peft_config (object): The PEFT configuration object containing the parameters for prompt learning.
+        model_config (dict): The model configuration dictionary containing the parameters for the underlying model.
+    
+    Returns:
+        None. The function modifies the peft_config object in place.
+    
+    Raises:
+        ValueError: If 'num_layers', 'token_dim', or 'num_attention_heads' is not specified in peft_config or model_config.
+    """
     if peft_config.num_layers is None:
         if "num_hidden_layers" in model_config:
             num_layers = model_config["num_hidden_layers"]
@@ -313,8 +434,21 @@ class Conv1D(mindspore.nn.Cell):
         n_out (`int`): The number of output features.
         n_in (`int`): The number of input features.
     """
-
     def __init__(self, n_out, n_in):
+        r"""
+        Initializes an instance of the Conv1D class.
+        
+        Args:
+            self (Conv1D): The instance of the Conv1D class.
+            n_out (int): The number of output channels or filters.
+            n_in (int): The number of input channels or filters.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__()
         self.n_out = n_out
         self.weight = Parameter(initializer(Normal(sigma=0.02), (n_in, n_out), mindspore.float32))
@@ -322,6 +456,20 @@ class Conv1D(mindspore.nn.Cell):
         self.matmul = Matmul()
 
     def construct(self, x):
+        r"""
+        Constructs the output of a 1D convolutional layer.
+        
+        Args:
+            self (Conv1D): The instance of the Conv1D class.
+            x (torch.Tensor): The input tensor of shape (batch_size, sequence_length, input_features) representing the input data.
+        
+        Returns:
+            torch.Tensor: The output tensor of shape (batch_size, sequence_length, n_out) representing the result of the 1D convolution operation.
+        
+        Raises:
+            - ValueError: If the input tensor 'x' does not have the expected shape.
+            - RuntimeError: If an error occurs during the matrix multiplication or bias addition operations.
+        """
         size_out = x.shape[:-1] + (self.n_out,)
         x = self.matmul(x.view(-1, x.shape[-1]), self.weight) + self.bias
         x = x.view(size_out)

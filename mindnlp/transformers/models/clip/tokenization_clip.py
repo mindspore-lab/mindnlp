@@ -93,6 +93,16 @@ def get_pairs(word):
 
 
 def whitespace_clean(text):
+    """
+    Args:
+        text (str): The input text to be cleaned from extra whitespace.
+        
+    Returns:
+        None: The function does not return any value, it modifies 'text' in place by removing extra whitespace.
+    
+    Raises:
+        None
+    """
     text = re.sub(r"\s+", " ", text)
     text = text.strip()
     return text
@@ -131,7 +141,6 @@ class BasicTokenizer:
             In some instances we want to skip the basic punctuation splitting so that later tokenization can capture
             the full context of the words, such as contractions.
     """
-
     def __init__(
         self,
         do_lower_case=True,
@@ -140,6 +149,23 @@ class BasicTokenizer:
         strip_accents=None,
         do_split_on_punc=True,
     ):
+        """
+        Initializes an instance of the BasicTokenizer class.
+        
+        Args:
+            self: The instance of the BasicTokenizer class.
+            do_lower_case (bool): A flag indicating whether the text should be converted to lowercase. Defaults to True.
+            never_split (list): A list of strings that should never be split during tokenization. Defaults to an empty list.
+            tokenize_chinese_chars (bool): A flag indicating whether Chinese characters should be tokenized. Defaults to True.
+            strip_accents (None or str): Determines if accents should be stripped. If None, no action is taken; if 'unicode', accents are stripped using Unicode normalization. Defaults to None.
+            do_split_on_punc (bool): A flag indicating whether the tokenizer should split on punctuation. Defaults to True.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         if never_split is None:
             never_split = []
         self.do_lower_case = do_lower_case
@@ -295,7 +321,6 @@ class CLIPTokenizer(PreTrainedTokenizer):
         pad_token (`str`, *optional*, defaults to `"<|endoftext|>"`):
             The token used for padding, for example when batching sequences of different lengths.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -312,6 +337,25 @@ class CLIPTokenizer(PreTrainedTokenizer):
         pad_token="<|endoftext|>",  # hack to enable padding
         **kwargs,
     ):
+        """
+        Initializes a CLIPTokenizer object.
+        
+        Args:
+            self (object): The instance of the CLIPTokenizer class.
+            vocab_file (str): The path to the vocabulary file containing token encodings.
+            merges_file (str): The path to the file containing BPE merges for tokenization.
+            errors (str, optional): The error handling strategy for text decoding. Defaults to 'replace'.
+            unk_token (str, optional): The token to represent unknown words. Defaults to an empty string.
+            bos_token (str, optional): The beginning of sequence token. Defaults to '<|startoftext|>'.
+            eos_token (str, optional): The end of sequence token. Defaults to an empty string.
+            pad_token (str, optional): The padding token. Defaults to an empty string.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ImportError: If the 'ftfy' package is not installed.
+        """
         bos_token = AddedToken(bos_token, lstrip=False, rstrip=False) if isinstance(bos_token, str) else bos_token
         eos_token = AddedToken(eos_token, lstrip=False, rstrip=False) if isinstance(eos_token, str) else eos_token
         unk_token = AddedToken(unk_token, lstrip=False, rstrip=False) if isinstance(unk_token, str) else unk_token
@@ -352,9 +396,37 @@ class CLIPTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
+        """
+        Method to return the vocabulary size of the CLIPTokenizer instance.
+        
+        Args:
+            self (CLIPTokenizer): The instance of the CLIPTokenizer class.
+                This parameter refers to the current instance of the CLIPTokenizer for which the vocabulary size is to be calculated.
+        
+        Returns:
+            int: The number of unique tokens in the vocabulary.
+                The method returns an integer value representing the size of the vocabulary as the count of unique tokens stored in the encoder.
+        
+        Raises:
+            None.
+        """
         return len(self.encoder)
 
     def get_vocab(self):
+        """
+        Method to retrieve the vocabulary of the CLIPTokenizer instance.
+        
+        Args:
+            self (CLIPTokenizer): The instance of the CLIPTokenizer class.
+                Represents the current instance of the CLIPTokenizer.
+                
+        Returns:
+            dict: A dictionary containing the combined vocabulary of the encoder and added_tokens_encoder.
+                The vocabulary includes both the original encoder tokens and any additional tokens added to the tokenizer.
+        
+        Raises:
+            None
+        """
         return dict(self.encoder, **self.added_tokens_encoder)
 
     def build_inputs_with_special_tokens(
@@ -402,7 +474,6 @@ class CLIPTokenizer(PreTrainedTokenizer):
         Returns:
             `List[int]`: A list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
         """
-
         if already_has_special_tokens:
             return super().get_special_tokens_mask(
                 token_ids_0=token_ids_0, token_ids_1=token_ids_1, already_has_special_tokens=True
@@ -436,6 +507,19 @@ class CLIPTokenizer(PreTrainedTokenizer):
         return len(bos_token + token_ids_0 + eos_token + eos_token + token_ids_1 + eos_token) * [0]
 
     def bpe(self, token):
+        """
+        This method 'bpe' is defined in the class 'CLIPTokenizer'. It processes a given token using Byte Pair Encoding (BPE).
+        
+        Args:
+            self: This parameter represents the instance of the class 'CLIPTokenizer'. It is used to access the attributes and methods of the class.
+            token (str): The input token to be processed using Byte Pair Encoding (BPE). It should be a string representing a single token.
+        
+        Returns:
+            str: The processed token after applying Byte Pair Encoding (BPE) algorithm. The token is modified based on the algorithm rules.
+        
+        Raises:
+            N/A
+        """
         if token in self.cache:
             return self.cache[token]
         word = tuple(token[:-1]) + (token[-1] + "</w>",)
@@ -507,6 +591,22 @@ class CLIPTokenizer(PreTrainedTokenizer):
         return text
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """
+        Save the vocabulary to the specified directory with an optional filename prefix.
+        
+        Args:
+            self (CLIPTokenizer): The instance of the CLIPTokenizer class.
+            save_directory (str): The directory where the vocabulary files will be saved.
+            filename_prefix (Optional[str], optional): An optional prefix to be added to the filename. Defaults to None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the paths to the saved vocabulary file and merge file.
+        
+        Raises:
+            OSError: If the specified save_directory is not a valid directory.
+            IOError: If there is an issue with writing the vocabulary or merge files.
+            Exception: If any other unexpected error occurs during the saving process.
+        """
         if not os.path.isdir(save_directory):
             logger.error("Vocabulary path ({}) should be a directory".format(save_directory))
             return

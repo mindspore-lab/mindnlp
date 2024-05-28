@@ -54,8 +54,21 @@ class BioGptLearnedPositionalEmbedding(nn.Embedding):
     """
     This module learns positional embeddings up to a fixed maximum size.
     """
-
     def __init__(self, num_embeddings: int, embedding_dim: int):
+        """
+        Initializes a new instance of BioGptLearnedPositionalEmbedding.
+        
+        Args:
+            self: The instance of the class.
+            num_embeddings (int): The number of embeddings to be created.
+            embedding_dim (int): The dimension of the embeddings.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         # BioGpt is set up so that if padding_idx is specified then offset the embedding ids by 2
         # and adjust num_embeddings appropriately. Other models don't have this hack
         self.offset = 2
@@ -77,7 +90,6 @@ class BioGptLearnedPositionalEmbedding(nn.Embedding):
 # Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->BioGpt
 class BioGptAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(
         self,
         embed_dim: int,
@@ -88,6 +100,26 @@ class BioGptAttention(nn.Cell):
         is_causal: bool = False,
         config: Optional[BioGptConfig] = None,
     ):
+        """
+        Initializes an instance of the BioGptAttention class.
+        
+        Args:
+            self: The instance of the class.
+            embed_dim (int): The dimensionality of the input embeddings.
+            num_heads (int): The number of attention heads.
+            dropout (float, optional): The dropout probability (default: 0.0).
+            is_decoder (bool, optional): Specifies if the attention is used in a decoder (default: False).
+            bias (bool, optional): Specifies whether to include bias in the linear projections (default: True).
+            is_causal (bool, optional): Specifies if the attention is causal or not (default: False).
+            config (Optional[BioGptConfig], optional): The configuration object (default: None).
+        
+        Returns:
+            None. This method does not return anything.
+        
+        Raises:
+            ValueError: If embed_dim is not divisible by num_heads.
+        
+        """
         super().__init__()
         self.embed_dim = embed_dim
         self.num_heads = num_heads
@@ -110,6 +142,21 @@ class BioGptAttention(nn.Cell):
         self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
+        """
+        This method '_shape' in the class 'BioGptAttention' reshapes the input tensor to match the desired shape for multi-head attention computation.
+        
+        Args:
+            self (BioGptAttention): The instance of the BioGptAttention class.
+            tensor (mindspore.Tensor): The input tensor to be reshaped.
+            seq_len (int): The length of the sequence in the tensor.
+            bsz (int): The batch size of the tensor.
+        
+        Returns:
+            None. The method reshapes the input tensor and returns None.
+        
+        Raises:
+            No specific exceptions are raised within this method.
+        """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
     def construct(
@@ -122,7 +169,6 @@ class BioGptAttention(nn.Cell):
         output_attentions: bool = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
-
         # if key_value_states are provided this layer is used as a cross-attention layer
         # for the decoder
         is_cross_attention = key_value_states is not None
@@ -234,7 +280,50 @@ class BioGptAttention(nn.Cell):
 
 
 class BioGptDecoderLayer(nn.Cell):
+
+    """
+    This class represents a BioGptDecoderLayer, which is a component of a BioGptDecoder in a Transformer-based model. It performs the decoding operation on the input hidden states.
+    
+    Attributes:
+    - embed_dim (int): The dimension of the hidden states.
+    - self_attn (BioGptAttention): The self-attention mechanism.
+    - dropout (float): The dropout rate.
+    - activation_fn (function): The activation function.
+    - activation_dropout (float): The dropout rate for the activation function.
+    - self_attn_layer_norm (nn.LayerNorm): The layer normalization for the self-attention output.
+    - fc1 (nn.Dense): The first fully connected layer.
+    - fc2 (nn.Dense): The second fully connected layer.
+    - final_layer_norm (nn.LayerNorm): The final layer normalization.
+    
+    Methods:
+    - construct(hidden_states, attention_mask, layer_head_mask, past_key_value, output_attentions, use_cache): Performs the decoding operation on the input hidden states.
+    
+    """
     def __init__(self, config: BioGptConfig):
+        """
+        Initializes a BioGptDecoderLayer object.
+        
+        Args:
+            self (BioGptDecoderLayer): The instance of the BioGptDecoderLayer class.
+            config (BioGptConfig): An instance of BioGptConfig containing configuration parameters.
+                - config.hidden_size (int): The size of the hidden layer.
+                - config.num_attention_heads (int): The number of attention heads.
+                - config.attention_probs_dropout_prob (float): Dropout probability for attention weights.
+                - config.hidden_dropout_prob (float): Dropout probability for hidden layers.
+                - config.hidden_act (str): The activation function for hidden layers.
+                - config.activation_dropout (float): Dropout probability for activation functions.
+        
+        Returns:
+            None. This method initializes the BioGptDecoderLayer object with the provided configuration.
+        
+        Raises:
+            ValueError: If config.hidden_size is not an integer.
+            ValueError: If config.num_attention_heads is not an integer.
+            ValueError: If config.attention_probs_dropout_prob is not a float.
+            ValueError: If config.hidden_dropout_prob is not a float.
+            KeyError: If config.hidden_act is not a valid activation function.
+            ValueError: If config.activation_dropout is not a float.
+        """
         super().__init__()
         self.embed_dim = config.hidden_size
 
@@ -322,7 +411,6 @@ class BioGptPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = BioGptConfig
     base_model_prefix = "biogpt"
     supports_gradient_checkpointing = True
@@ -348,7 +436,31 @@ class BioGptPreTrainedModel(PreTrainedModel):
 
 
 class BioGptModel(BioGptPreTrainedModel):
+
+    """
+    BioGptModel represents a GPT (Generative Pre-trained Transformer) model customized for bioinformatics tasks. 
+    This class inherits from BioGptPreTrainedModel and implements methods for initializing the model, setting input embeddings, and constructing the model for inference or training. 
+    The model includes parameters for layer dropout, hidden dropout probability, embedding dimensions, padding index, and layer normalization. 
+    The construct method processes input data, applies attention masks, computes positional embeddings, and iterates through decoder layers to generate model output. 
+    Additionally, the class supports gradient checkpointing and caching for efficient training. 
+    """
     def __init__(self, config: BioGptConfig):
+        """
+        Initializes a BioGptModel instance with the provided configuration.
+        
+        Args:
+            self: The instance of the BioGptModel class.
+            config (BioGptConfig): An instance of BioGptConfig containing the configuration parameters for the model.
+                - BioGptConfig is a data class that holds various settings for the BioGptModel.
+                - It must be provided to properly configure the model.
+                - The config parameter is required and should not be None.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         super().__init__(config)
         self.config = config
         self.layerdrop = config.layerdrop
@@ -368,9 +480,37 @@ class BioGptModel(BioGptPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
+        """
+        Method: get_input_embeddings
+        
+        Description:
+        This method retrieves the input embeddings from the BioGptModel instance.
+        
+        Args:
+            self (BioGptModel): The current instance of the BioGptModel class.
+        
+        Returns:
+            None: This method returns the input embeddings associated with the BioGptModel instance.
+        
+        Raises:
+            None
+        """
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
+        """
+        Set the input embeddings for the BioGptModel.
+        
+        Args:
+            self (BioGptModel): The instance of the BioGptModel class.
+            value (Any): The input embeddings to be set for the model.
+        
+        Returns:
+            None. This method updates the 'embed_tokens' attribute of the BioGptModel instance with the provided input embeddings.
+        
+        Raises:
+            None.
+        """
         self.embed_tokens = value
 
     def construct(
@@ -385,6 +525,31 @@ class BioGptModel(BioGptPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]:
+        """
+        Constructs the BioGptModel.
+        
+        Args:
+            self (BioGptModel): The instance of the BioGptModel class.
+            input_ids (Optional[mindspore.Tensor]): The input token IDs. Defaults to None.
+            attention_mask (Optional[mindspore.Tensor]): The attention mask. Defaults to None.
+            head_mask (Optional[mindspore.Tensor]): The head mask. Defaults to None.
+            inputs_embeds (Optional[mindspore.Tensor]): The embedded inputs. Defaults to None.
+            past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]]): The past key values. Defaults to None.
+            use_cache (Optional[bool]): Whether to use cache. Defaults to None.
+            output_attentions (Optional[bool]): Whether to output attentions. Defaults to None.
+            output_hidden_states (Optional[bool]): Whether to output hidden states. Defaults to None.
+            return_dict (Optional[bool]): Whether to return a dictionary. Defaults to None.
+        
+        Returns:
+            Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]: The output of the BioGptModel. It can either be a tuple or an instance of BaseModelOutputWithPastAndCrossAttentions.
+        
+        Raises:
+            ValueError: If both input_ids and inputs_embeds are specified.
+            ValueError: If neither input_ids nor inputs_embeds are specified.
+            ValueError: If the length of the provided attention mask is incorrect.
+            Warning: If use_cache is set to True and gradient checkpointing is enabled.
+        
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -507,9 +672,43 @@ class BioGptModel(BioGptPreTrainedModel):
 
 
 class BioGptForCausalLM(BioGptPreTrainedModel):
+
+    """
+    BioGptForCausalLM represents a BioGpt model for Causal Language Modeling. This class inherits from BioGptPreTrainedModel and provides methods for initializing the model, constructing the model, and
+preparing inputs for generation.
+    
+    Attributes:
+        config: The configuration for the BioGptForCausalLM model.
+    
+    Methods:
+        __init__(config): Initializes the BioGptForCausalLM model with the given configuration.
+        get_output_embeddings(): Returns the output projection layer for the model.
+        set_output_embeddings(new_embeddings): Sets the output projection layer to the new embeddings.
+        construct(input_ids, attention_mask, head_mask, inputs_embeds, past_key_values, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the BioGptForCausalLM model with the
+given input parameters and returns the model output.
+        prepare_inputs_for_generation(input_ids, attention_mask, inputs_embeds, past_key_values, **kwargs): Prepares the inputs for generation based on the given parameters.
+        _reorder_cache(past_key_values, beam_idx): Reorders the past key values based on the given beam index.
+    
+    Note:
+        Labels for language modeling are shifted inside the model, and the loss is only computed for valid labels within the vocabulary size.
+    """
     _tied_weights_keys = ["output_projection.weight"]
 
     def __init__(self, config):
+        """
+        Initializes a new instance of the BioGptForCausalLM class.
+        
+        Args:
+            self: The instance of the BioGptForCausalLM class.
+            config: An object containing configuration settings for the model.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            - TypeError: If the config parameter is not provided or is not of the expected type.
+            - ValueError: If the config parameter does not contain the required settings for initializing the model.
+        """
         super().__init__(config)
 
         self.biogpt = BioGptModel(config)
@@ -519,9 +718,36 @@ class BioGptForCausalLM(BioGptPreTrainedModel):
         self.post_init()
 
     def get_output_embeddings(self):
+        """
+        This method retrieves the output embeddings from the BioGptForCausalLM model.
+        
+        Args:
+            self: An instance of the BioGptForCausalLM class.
+        
+        Returns:
+            None: This method returns the output projection of the model as a value of type 'None'.
+        
+        Raises:
+            This method does not raise any exceptions.
+        """
         return self.output_projection
 
     def set_output_embeddings(self, new_embeddings):
+        """
+        Method to set new output embeddings for the BioGptForCausalLM model.
+        
+        Args:
+            self (BioGptForCausalLM): The instance of the BioGptForCausalLM class.
+                This parameter is automatically passed and refers to the current instance.
+            new_embeddings (object): New embeddings to be set as the output projections.
+                This parameter should be an object representing the new embeddings to be used.
+        
+        Returns:
+            None. This method does not return any value explicitly.
+        
+        Raises:
+            None.
+        """
         self.output_projection = new_embeddings
 
     def construct(
@@ -583,6 +809,25 @@ class BioGptForCausalLM(BioGptPreTrainedModel):
     def prepare_inputs_for_generation(
         self, input_ids, attention_mask, inputs_embeds=None, past_key_values=None, **kwargs
     ):
+        '''
+        This method prepares inputs for generation in the BioGptForCausalLM class.
+        
+        Args:
+            self (object): The instance of the class.
+            input_ids (torch.Tensor): The input tensor containing the tokenized input IDs.
+            attention_mask (torch.Tensor): The tensor containing the attention mask to avoid attending to padding tokens.
+            inputs_embeds (torch.Tensor, optional): The tensor containing the embeddings for the input tokens. Defaults to None.
+            past_key_values (tuple, optional): The tuple containing past key values for fast decoding. Defaults to None.
+        
+        Returns:
+            dict: A dictionary containing the model inputs, including 'input_ids', 'attention_mask', 'past_key_values', and 'use_cache' (if provided). Returns None if past_key_values is provided and the
+input_ids shape is greater than the past_length.
+        
+        Raises:
+            ValueError: If the input_ids shape is less than or equal to zero.
+            TypeError: If the input_ids, attention_mask, or inputs_embeds are not of type torch.Tensor.
+            IndexError: If the past_key_values tuple does not have the expected shape.
+        '''
         # only last tokens for inputs_ids if past is defined in kwargs
         if past_key_values is not None:
             past_length = past_key_values[0][0].shape[2]
@@ -613,6 +858,20 @@ class BioGptForCausalLM(BioGptPreTrainedModel):
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
+        """
+        Reorders the cache of past key values based on the given beam index.
+        
+        Args:
+            past_key_values (tuple): A tuple containing the past key values for each layer. Each element in the tuple is a tensor
+            representing the past states for the corresponding layer.
+            beam_idx (tensor): A tensor containing the indices of the beams to reorder the past key values.
+        
+        Returns:
+            None: This method does not return any value, as it modifies the 'past_key_values' in place.
+        
+        Raises:
+            None: This method does not raise any specific exceptions.
+        """
         reordered_past = ()
         for layer_past in past_key_values:
             reordered_past += (
@@ -622,7 +881,31 @@ class BioGptForCausalLM(BioGptPreTrainedModel):
 
 
 class BioGptForTokenClassification(BioGptPreTrainedModel):
+
+    """
+    This class represents a BioGpt model for token classification, inheriting from BioGptPreTrainedModel. It includes methods for initializing the model and constructing token classification outputs based on
+input data. The model utilizes a transformer architecture for processing input sequences and generating classification predictions. The class provides functionality for computing loss based on predicted logits
+and actual labels, as well as handling optional parameters for caching, attention masks, and return dictionary configurations.
+    """
     def __init__(self, config):
+        """
+        Initializes an instance of the BioGptForTokenClassification class.
+        
+        Args:
+            self: The instance of the BioGptForTokenClassification class.
+            config: An object containing configuration parameters for the model.
+                Type: object
+                Purpose: Configuration object that specifies model settings.
+                Restrictions: Must contain at least the 'num_labels' attribute.
+        
+        Returns:
+            None
+        
+        Raises:
+            - TypeError: If the 'config' parameter is not provided or is invalid.
+            - AttributeError: If the 'config' object does not have the required 'num_labels' attribute.
+            - ValueError: If the 'classifier_dropout' or 'hidden_dropout_prob' attributes are invalid in the 'config' object.
+        """
         super().__init__(config)
         self.num_labels = config.num_labels
 
@@ -700,7 +983,40 @@ class BioGptForTokenClassification(BioGptPreTrainedModel):
 
 
 class BioGptForSequenceClassification(BioGptPreTrainedModel):
+
+    '''
+    This class represents a BioGpt model for sequence classification tasks. It inherits from the BioGptPreTrainedModel and includes methods for initialization, constructing the model, getting input embeddings,
+and setting input embeddings.
+    
+    The __init__ method initializes the BioGptForSequenceClassification instance with a BioGptConfig and sets the number of labels, BioGptModel, and score.
+    
+    The construct method takes input tensors for the model and returns the sequence classifier output with past key values. It also handles labels for computing the sequence classification/regression loss and
+handles different problem types such as regression, single-label classification, and multi-label classification.
+    
+    The get_input_embeddings method returns the input embeddings of the BioGpt model.
+    
+    The set_input_embeddings method sets the input embeddings of the BioGpt model.
+    
+    Note: The class inherits from BioGptPreTrainedModel and includes additional methods not provided in the given code snippet.
+    '''
     def __init__(self, config: BioGptConfig):
+        """
+        Initializes a BioGptForSequenceClassification instance.
+        
+        Args:
+            self: The instance of the BioGptForSequenceClassification class.
+            config (BioGptConfig): An instance of BioGptConfig containing configuration settings for the model.
+                This parameter is required for initializing the BioGptForSequenceClassification instance.
+                It specifies the configuration details such as the number of labels and hidden size.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            - TypeError: If the config parameter is not of type BioGptConfig.
+            - ValueError: If the num_labels attribute is not present in the config parameter.
+            - ValueError: If an error occurs during the initialization of the BioGptModel or Dense layers.
+        """
         super().__init__(config)
         self.num_labels = config.num_labels
         self.biogpt = BioGptModel(config)
@@ -795,9 +1111,35 @@ class BioGptForSequenceClassification(BioGptPreTrainedModel):
         )
 
     def get_input_embeddings(self):
+        """
+        Method to retrieve the input embeddings from BioGptForSequenceClassification.
+        
+        Args:
+            self (BioGptForSequenceClassification): The instance of the BioGptForSequenceClassification class.
+                Represents the object itself.
+        
+        Returns:
+            None. This method returns the embeddings obtained from the BioGpt model.
+        
+        Raises:
+            None.
+        """
         return self.biogpt.embed_tokens
 
     def set_input_embeddings(self, value):
+        """
+        Set the input embeddings for the BioGptForSequenceClassification model.
+        
+        Args:
+            self (BioGptForSequenceClassification): The instance of the BioGptForSequenceClassification class.
+            value (Tensor): The input embeddings to be set for the model. It should be a 2D tensor.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         self.biogpt.embed_tokens = value
 
 __all__ = [

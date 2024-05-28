@@ -36,7 +36,6 @@ class ConvBertConfig(PretrainedConfig):
     r"""
     ConvBert Config
     """
-
     model_type = "convbert"
 
     def __init__(
@@ -63,6 +62,38 @@ class ConvBertConfig(PretrainedConfig):
         classifier_dropout=None,
         **kwargs,
     ):
+        """
+        Initializes a new instance of the ConvBertConfig class.
+        
+        Args:
+            self: The current instance of the class.
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 30522.
+            hidden_size (int, optional): The size of the hidden layers. Defaults to 768.
+            num_hidden_layers (int, optional): The number of hidden layers. Defaults to 12.
+            num_attention_heads (int, optional): The number of attention heads. Defaults to 12.
+            intermediate_size (int, optional): The size of the intermediate layers. Defaults to 3072.
+            hidden_act (str, optional): The activation function for the hidden layers. Defaults to 'gelu'.
+            hidden_dropout_prob (float, optional): The dropout probability for the hidden layers. Defaults to 0.1.
+            attention_probs_dropout_prob (float, optional): The dropout probability for the attention layers. Defaults to 0.1.
+            max_position_embeddings (int, optional): The maximum position embeddings. Defaults to 512.
+            type_vocab_size (int, optional): The size of the type vocabulary. Defaults to 2.
+            initializer_range (float, optional): The range for the weight initializer. Defaults to 0.02.
+            layer_norm_eps (float, optional): The epsilon value for layer normalization. Defaults to 1e-12.
+            pad_token_id (int, optional): The ID of the padding token. Defaults to 1.
+            bos_token_id (int, optional): The ID of the beginning-of-sequence token. Defaults to 0.
+            eos_token_id (int, optional): The ID of the end-of-sequence token. Defaults to 2.
+            embedding_size (int, optional): The size of the embeddings. Defaults to 768.
+            head_ratio (int, optional): The ratio of heads to hidden size. Defaults to 2.
+            conv_kernel_size (int, optional): The size of the convolutional kernel. Defaults to 9.
+            num_groups (int, optional): The number of groups for grouped convolution. Defaults to 1.
+            classifier_dropout (float, optional): The dropout probability for the classifier layer. Defaults to None.
+        
+        Returns:
+            None. This method initializes the instance of the ConvBertConfig class.
+        
+        Raises:
+            None.
+        """
         super().__init__(
             pad_token_id=pad_token_id,
             bos_token_id=bos_token_id,

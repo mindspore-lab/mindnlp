@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-
 """image utils"""
 import base64
 import os
@@ -58,16 +57,79 @@ ImageInput = Union[
 
 
 class ChannelDimension(ExplicitEnum):
+
+    """
+    Represents a channel dimension for data analysis and visualization.
+    
+    This class inherits from ExplicitEnum and provides a set of predefined channel dimensions. It allows for easy management and manipulation of channel dimensions within a data processing or visualization
+context.
+    
+    Attributes:
+        - TODO: List any attributes specific to the ChannelDimension class.
+    
+    Methods:
+        - TODO: List any methods specific to the ChannelDimension class.
+    
+    """
     FIRST = "channels_first"
     LAST = "channels_last"
 
 
 class AnnotationFormat(ExplicitEnum):
+
+    """
+    Represents an annotation format for storing and manipulating data.
+    
+    This class is a subclass of ExplicitEnum, which allows for the creation of enumerated types with explicit values. The AnnotationFormat class provides a way to define and manage different annotation formats
+used in data processing and analysis.
+    
+    Attributes:
+        name (str): The name of the annotation format.
+        description (str): A brief description of the annotation format.
+        file_extension (str): The file extension associated with the annotation format.
+    
+    Methods:
+        load(file_path): Loads an annotation file in the specified format.
+        save(file_path): Saves an annotation file in the specified format.
+        validate(): Validates the current annotation format.
+    
+    Example usage:
+        >>> format = AnnotationFormat(name="XML", description="Annotation data stored in XML format", file_extension=".xml")
+        >>> format.load("annotations.xml")
+        >>> format.save("annotations.xml")
+        >>> format.validate()
+    
+    """
     COCO_DETECTION = "coco_detection"
     COCO_PANOPTIC = "coco_panoptic"
 
 
 class AnnotionFormat(ExplicitEnum):
+
+    """
+    Represents a class for defining annotation formats. This class inherits from ExplicitEnum.
+    
+    AnnotionFormat provides a way to define and manage different annotation formats. It inherits properties and methods from the ExplicitEnum class, allowing for easy management and manipulation of annotation
+formats within a Python application.
+    
+    Attributes:
+        ExplicitEnum: The base class from which AnnotionFormat inherits.
+    
+    Usage:
+        AnnotionFormat instances can be used to define and manage annotation formats within a Python application. The class provides methods and properties for working with annotation formats in a structured
+and consistent manner.
+    
+    Example:
+        
+        # Define a new annotation format
+        class MyAnnotationFormat(AnnotionFormat):
+            JSON = 'json'
+            XML = 'xml'
+        
+    
+    Note:
+        It is recommended to use AnnotionFormat for defining annotation formats to ensure consistent usage and management within the application.
+    """
     COCO_DETECTION = AnnotationFormat.COCO_DETECTION.value
     COCO_PANOPTIC = AnnotationFormat.COCO_PANOPTIC.value
 
@@ -76,10 +138,34 @@ AnnotationType = Dict[str, Union[int, str, List[Dict]]]
 
 
 def is_pil_image(img):
+    """
+    This function checks if the input 'img' is a PIL Image. 
+    
+    Args:
+        img (PIL.Image.Image): The input image to be checked.
+    
+    Returns:
+        None: This function does not return any value.
+    
+    Raises:
+        None
+    """
     return is_vision_available() and isinstance(img, PIL.Image.Image)
 
 
 def is_valid_image(img):
+    """
+    Checks if the provided image is valid.
+    
+    Args:
+        img (object): The image to be checked for validity. It can be an instance of PIL.Image.Image, np.ndarray, or a MindSpore tensor.
+    
+    Returns:
+        None: This function does not return any value.
+    
+    Raises:
+        None: This function does not raise any exceptions.
+    """
     return (
         (is_vision_available() and isinstance(img, PIL.Image.Image))
         or isinstance(img, np.ndarray)
@@ -88,6 +174,18 @@ def is_valid_image(img):
 
 
 def valid_images(imgs):
+    """Validate a list of images.
+    
+    Args:
+        imgs (list or tuple): A list of image objects to be validated.
+    
+    Returns:
+        None: This function does not return any value.
+    
+    Raises:
+        TypeError: If the input parameter is not a list or tuple.
+        ValueError: If any of the images in the list are invalid.
+    """
     # If we have an list of images, make sure every image is valid
     if isinstance(imgs, (list, tuple)):
         for img in imgs:
@@ -100,6 +198,18 @@ def valid_images(imgs):
 
 
 def is_batched(img):
+    """
+    Checks if the input is a batch of images.
+    
+    Args:
+        img (list or tuple): The input image or a batch of images to be checked.
+        
+    Returns:
+        None: Returns None if the input is not a batch of images.
+    
+    Raises:
+        None
+    """
     if isinstance(img, (list, tuple)):
         return is_valid_image(img[0])
     return False
@@ -156,6 +266,19 @@ def make_list_of_images(images, expected_ndims: int = 3) -> List[ImageInput]:
 
 
 def to_numpy_array(img) -> np.ndarray:
+    """
+    Converts an image to a NumPy array.
+    
+    Args:
+        img (object): The image to be converted. It should be a valid image object.
+        
+    Returns:
+        np.ndarray: A NumPy array representation of the image.
+        
+    Raises:
+        ValueError: If the image type is invalid.
+        Exception: If any exceptions occur during the conversion process.
+    """
     if not is_valid_image(img):
         raise ValueError(f"Invalid image type: {type(img)}")
 
@@ -245,6 +368,16 @@ def get_image_size(image: np.ndarray, channel_dim: ChannelDimension = None) -> T
 
 
 def is_valid_annotation_coco_detection(annotation: Dict[str, Union[List, Tuple]]) -> bool:
+    """
+    Args:
+        annotation (dict): A dictionary representing an annotation with the following keys:
+            - 'image_id': An identifier for the image associated with the annotation.
+            - 'annotations': A list or tuple of annotations associated with the image.
+    Returns:
+        bool: Returns True if the annotation is valid for COCO detection, False otherwise.
+    Raises:
+        None
+    """
     if (
         isinstance(annotation, dict)
         and "image_id" in annotation
@@ -260,6 +393,19 @@ def is_valid_annotation_coco_detection(annotation: Dict[str, Union[List, Tuple]]
 
 
 def is_valid_annotation_coco_panoptic(annotation: Dict[str, Union[List, Tuple]]) -> bool:
+    """
+    Checks if the given COCO Panoptic annotation is valid.
+    
+    Args:
+        annotation (Dict[str, Union[List, Tuple]]): A dictionary representing a COCO Panoptic annotation containing the keys 'image_id', 'segments_info', and 'file_name'. The value associated with the key
+'segments_info' must be a list or tuple, and if it is not empty, the first element must be a dictionary.
+    
+    Returns:
+        bool: True if the annotation is valid, otherwise False.
+    
+    Raises:
+        None
+    """
     if (
         isinstance(annotation, dict)
         and "image_id" in annotation
@@ -276,10 +422,42 @@ def is_valid_annotation_coco_panoptic(annotation: Dict[str, Union[List, Tuple]])
 
 
 def valid_coco_detection_annotations(annotations: Iterable[Dict[str, Union[List, Tuple]]]) -> bool:
+    """
+    Check if a collection of COCO-style annotation dictionaries for object detection is valid.
+    
+    Args:
+        annotations (Iterable[Dict[str, Union[List, Tuple]]]): A collection of COCO-style annotation dictionaries.
+            Each dictionary should contain information about the annotations for a single object or image.
+            The annotations should follow the COCO annotation format, which includes keys such as 'image_id',
+            'category_id', 'bbox', etc.
+    
+    Returns:
+        bool: True if all the annotations are valid according to the COCO detection annotation format,
+        False otherwise.
+    
+    Raises:
+        None.
+    
+    Note:
+        The function uses the 'is_valid_annotation_coco_detection' function to check the validity of each annotation.
+        This function should be implemented separately and should return True or False based on the validity of an individual annotation.
+    """
     return all(is_valid_annotation_coco_detection(ann) for ann in annotations)
 
 
 def valid_coco_panoptic_annotations(annotations: Iterable[Dict[str, Union[List, Tuple]]]) -> bool:
+    """
+    Checks if the given Coco Panoptic annotations are valid.
+    
+    Args:
+        annotations (Iterable[Dict[str, Union[List, Tuple]]]): A collection of Coco Panoptic annotations to be validated.
+    
+    Returns:
+        bool: True if all annotations are valid, False otherwise.
+    
+    Raises:
+        None.
+    """
     return all(is_valid_annotation_coco_panoptic(ann) for ann in annotations)
 
 
@@ -373,8 +551,21 @@ class ImageFeatureExtractionMixin:
     """
     Mixin that contain utilities for preparing image features.
     """
-
     def _ensure_format_supported(self, image):
+        """
+        This method '_ensure_format_supported' in the class 'ImageFeatureExtractionMixin' ensures that the input image format is supported for further processing.
+        
+        Args:
+            self: The instance of the class.
+            image: The input image to be checked for supported format. It can be either a PIL image object of type 'PIL.Image.Image', a numpy array of type 'np.ndarray', or a mindspore tensor. 
+                If the input image is not of any of these types, a ValueError will be raised.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: Raised when the input image is not of type 'PIL.Image.Image', 'np.ndarray', or 'mindspore.Tensor'.
+        """
         if not isinstance(image, (PIL.Image.Image, np.ndarray)) and not is_mindspore_tensor(image):
             raise ValueError(
                 f"Got type {type(image)} which is not supported, only `PIL.Image.Image`, `np.array` and "
@@ -641,32 +832,32 @@ class ImageFeatureExtractionMixin:
                 image = image.transpose(2, 0, 1)
             if is_mindspore_tensor(image):
                 image = image.permute(2, 0, 1)
+        new_image = None
 
-        # Check if cropped area is within image boundaries
         if top >= 0 and bottom <= image_shape[0] and left >= 0 and right <= image_shape[1]:
-            return image[..., top:bottom, left:right]
+            new_image = image[..., top:bottom, left:right]
+        else:
+            new_shape = image.shape[:-2] + (max(size[0], image_shape[0]), max(size[1], image_shape[1]))
+            if isinstance(image, np.ndarray):
+                new_image = np.zeros_like(image, shape=new_shape)
+            elif is_mindspore_tensor(image):
+                new_image = image.new_zeros(new_shape)
 
-        # Otherwise, we may need to pad if the image is too small. Oh joy...
-        new_shape = image.shape[:-2] + (max(size[0], image_shape[0]), max(size[1], image_shape[1]))
-        if isinstance(image, np.ndarray):
-            new_image = np.zeros_like(image, shape=new_shape)
-        elif is_mindspore_tensor(image):
-            new_image = image.new_zeros(new_shape)
+            top_pad = (new_shape[-2] - image_shape[0]) // 2
+            bottom_pad = top_pad + image_shape[0]
+            left_pad = (new_shape[-1] - image_shape[1]) // 2
+            right_pad = left_pad + image_shape[1]
+            new_image[..., top_pad:bottom_pad, left_pad:right_pad] = image
 
-        top_pad = (new_shape[-2] - image_shape[0]) // 2
-        bottom_pad = top_pad + image_shape[0]
-        left_pad = (new_shape[-1] - image_shape[1]) // 2
-        right_pad = left_pad + image_shape[1]
-        new_image[..., top_pad:bottom_pad, left_pad:right_pad] = image
+            top += top_pad
+            bottom += top_pad
+            left += left_pad
+            right += left_pad
 
-        top += top_pad
-        bottom += top_pad
-        left += left_pad
-        right += left_pad
-
-        new_image = new_image[
-            ..., max(0, top) : min(new_image.shape[-2], bottom), max(0, left) : min(new_image.shape[-1], right)
-        ]
+            new_image = new_image[
+                        ..., max(0, top): min(new_image.shape[-2], bottom),
+                        max(0, left): min(new_image.shape[-1], right)
+                        ]
 
         return new_image
 
@@ -713,6 +904,19 @@ class ImageFeatureExtractionMixin:
 
 
 def promote_annotation_format(annotation_format: Union[AnnotionFormat, AnnotationFormat]) -> AnnotationFormat:
+    """
+    Promotes the given annotation format to a higher level.
+    
+    Args:
+        annotation_format (Union[AnnotionFormat, AnnotationFormat]): The annotation format to be promoted. It can be either an instance of AnnotionFormat or AnnotationFormat.
+    
+    Returns:
+        AnnotationFormat: The promoted annotation format.
+    
+    Raises:
+        None.
+    
+    """
     # can be removed when `AnnotionFormat` is fully deprecated
     return AnnotationFormat(annotation_format.value)
 
@@ -722,6 +926,21 @@ def validate_annotations(
     supported_annotation_formats: Tuple[AnnotationFormat, ...],
     annotations: List[Dict],
 ) -> None:
+    """
+    Validate the given annotations against the specified annotation format and supported formats.
+    
+    Args:
+        annotation_format (AnnotationFormat): The format of the annotations to be validated.
+        supported_annotation_formats (Tuple[AnnotationFormat, ...]): A tuple of supported annotation formats.
+        annotations (List[Dict]): The annotations to be validated.
+    
+    Returns:
+        None: This function does not return any value.
+    
+    Raises:
+        ValueError: If the annotation format is not supported or if the annotations are invalid for the specified format.
+        DeprecatedWarning: If the annotation format is deprecated and will be removed in the future version.
+    """
     if isinstance(annotation_format, AnnotionFormat):
         logger.warning_once(
             f"`{annotation_format.__class__.__name__}` is deprecated and will be removed in v4.38. "
@@ -750,6 +969,19 @@ def validate_annotations(
 
 
 def validate_kwargs(valid_processor_keys: List[str], captured_kwargs: List[str]):
+    """
+    Validate the captured keyword arguments against the valid processor keys.
+    
+    Args:
+        valid_processor_keys (List[str]): A list of valid keys that the captured kwargs should match against.
+        captured_kwargs (List[str]): A list of captured keyword arguments to be validated.
+    
+    Returns:
+        None: This function does not return anything.
+    
+    Raises:
+        None
+    """
     unused_keys = set(captured_kwargs).difference(set(valid_processor_keys))
     if unused_keys:
         unused_key_str = ", ".join(unused_keys)

@@ -78,7 +78,6 @@ class _PoolNd(nn.Cell):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  kernel_size: Tuple[int, ...],
                  stride: Tuple[int, ...],
@@ -119,19 +118,65 @@ class _PoolNd(nn.Cell):
         self.stride = _check_int_or_tuple('stride', stride)
 
     def construct(self, u: Tensor) -> Tensor:
+        r"""
+        Constructs a tensor based on the input tensor 'u'.
+        
+        Args:
+            self (_PoolNd): The instance of the _PoolNd class.
+            u (Tensor): The input tensor to be processed.
+        
+        Returns:
+            Tensor: A tensor resulting from the construction process.
+        
+        Raises:
+            None.
+        """
         x, y = get_x_and_y(u)
         x, y = self._construct(x, y)
         out = to_2channel(x, y, u.dtype)
         return out
 
     def extend_repr(self):
+        r"""
+        Method to extend the representation output for the _PoolNd class.
+        
+        Args:
+            self: The instance of the _PoolNd class.
+                This parameter represents the current instance of the _PoolNd class.
+        
+        Returns:
+            None.
+            This method does not return any value explicitly. It modifies the representation output for the _PoolNd class.
+        
+        Raises:
+            No specific exceptions are raised within this method.
+        """
         return 'kernel_size={kernel_size}, stride={stride}, pad_mode={pad_mode}'.format(**self.__dict__)
 
     @abstractmethod
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
-        pass
+        r"""
+        Constructs and returns a tuple of tensors based on the given inputs.
+        
+        Args:
+            self (object): An instance of the '_PoolNd' class.
+            x (Tensor): The first input tensor.
+                - Type: Tensor
+                - Purpose: Represents the input data.
+            y (Tensor): The second input tensor.
+                - Type: Tensor
+                - Purpose: Represents additional input data.
+        
+        Returns:
+            Tuple[Tensor, Tensor]: A tuple of tensors representing the constructed outputs.
+                - Type: Tuple[Tensor, Tensor]
+                - Purpose: Contains the constructed output tensors.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
 
 
 class MaxPool2d(_PoolNd):
@@ -204,12 +249,29 @@ class MaxPool2d(_PoolNd):
         >>> print(y.shape)
         (2, 8, 64, 8, 8)
     """
-
     def __init__(self,
                  kernel_size: _size_2_t = 1,
                  stride: _size_2_t = 1,
                  pad_mode: str = "valid",
                  data_format: str = "NCHW") -> None:
+        r"""
+        Initializes a MaxPool2d layer.
+        
+        Args:
+            self: The instance of the class.
+            kernel_size (_size_2_t): The size of the kernel for pooling. Defaults to 1.
+            stride (_size_2_t): The stride of the pooling operation. Defaults to 1.
+            pad_mode (str): The padding mode. Can be either 'valid' or 'same'. Defaults to 'valid'.
+            data_format (str): The format of the input data. Can be either 'NCHW' or 'NHWC'. Defaults to 'NCHW'.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If kernel_size or stride is not a positive integer.
+            ValueError: If pad_mode is not 'valid' or 'same'.
+            ValueError: If data_format is not 'NCHW' or 'NHWC'.
+        """
         super(MaxPool2d, self).__init__(kernel_size, stride, pad_mode, data_format)
         self.max_pool = P.MaxPool(kernel_size=self.kernel_size,
                                   strides=self.stride,
@@ -219,6 +281,27 @@ class MaxPool2d(_PoolNd):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
+        r"""
+        Constructs a tuple of max-pooled tensors from input tensors using the MaxPool2d algorithm.
+        
+        Args:
+            self (MaxPool2d): An instance of the MaxPool2d class.
+            x (Tensor): Input tensor 'x' to be max-pooled.
+            y (Tensor): Input tensor 'y' to be max-pooled.
+        
+        Returns:
+            Tuple[Tensor, Tensor]: A tuple of two tensors containing the max-pooled values of 'x' and 'y', respectively.
+        
+        Raises:
+            None.
+        
+        Note:
+            - The 'x' and 'y' tensors should have the same dimensions.
+            - The max-pooling operation reduces the spatial dimensions of the input tensors by taking the maximum value within
+              each pooling window.
+            - The output tensors will have the same dimensions as the input tensors, except for the spatial dimensions which
+              will be reduced based on the pool size and stride parameters used during initialization of the MaxPool2d class.
+        """
         out_x = self.max_pool(x)
         out_y = self.max_pool(y)
         return out_x, out_y
@@ -286,7 +369,6 @@ class MaxPool1d(_PoolNd):
         >>> print(y.shape)
         (2, 8, 64, 8)
     """
-
     def __init__(self,
                  kernel_size: _size_1_t = 1,
                  stride: _size_1_t = 1,
@@ -309,6 +391,20 @@ class MaxPool1d(_PoolNd):
                                   pad_mode=self.pad_mode)
 
     def _shape_check(self, in_shape: tuple):
+        r"""
+        Checks the shape of the input tensor in the MaxPool1d class.
+        
+        Args:
+            self (MaxPool1d): An instance of the MaxPool1d class.
+            in_shape (tuple): The shape of the input tensor.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If the length of the input shape tuple is not equal to 3.
+        
+        """
         msg_prefix = f"For '{self.cls_name}', the" if self.cls_name else "The"
         if len(in_shape) != 3:
             raise ValueError(f"{msg_prefix} input must has 3 dim, but got {len(in_shape)}")
@@ -316,6 +412,34 @@ class MaxPool1d(_PoolNd):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
+        r"""
+        Construct function for the MaxPool1d class.
+        
+        Args:
+            self (MaxPool1d): An instance of the MaxPool1d class.
+            x (Tensor): The input tensor of shape (batch_size, channels, length), where
+                        batch_size is the number of input samples, channels is the number
+                        of input channels, and length is the length of the input sequence.
+            y (Tensor): The input tensor of shape (batch_size, channels, length), where
+                        batch_size is the number of input samples, channels is the number
+                        of input channels, and length is the length of the input sequence.
+        
+        Returns:
+            Tuple[Tensor, Tensor]: A tuple containing two tensors, out_x and out_y. Both
+            tensors have the shape (batch_size, channels), where batch_size is the number
+            of input samples and channels is the number of input channels.
+        
+        Raises:
+            ShapeError: If the shape of the input tensors x or y does not match the expected
+                        shape (batch_size, channels, length).
+        
+        This method constructs and applies max pooling to the input tensors x and y. It first
+        checks the shape of the input tensors and then expands their dimensions along the
+        third axis. The expanded tensors are then passed through the max_pool function to
+        apply max pooling, and the resulting tensors are squeezed along the third axis to
+        remove the dimension added during expansion. The final output tensors out_x and out_y
+        are returned as a tuple.
+        """
         self._shape_check(P.shape(x))
         self._shape_check(P.shape(y))
         x = P.expand_dims(x, 2)
@@ -398,12 +522,27 @@ class AvgPool2d(_PoolNd):
         >>> print(y.shape)
         (2, 8, 64, 8, 8)
     """
-
     def __init__(self,
                  kernel_size: _size_2_t = 1,
                  stride: _size_2_t = 1,
                  pad_mode: str = "valid",
                  data_format: str = "NCHW") -> None:
+        r"""
+        Initializes an instance of AvgPool2d.
+        
+        Args:
+            self: The instance of the class.
+            kernel_size (_size_2_t): The size of the kernel for pooling. Default is 1.
+            stride (_size_2_t): The stride value for pooling. Default is 1.
+            pad_mode (str): The padding mode to use during pooling. Default is 'valid'.
+            data_format (str): The format of the input data. Default is 'NCHW'.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         super(AvgPool2d, self).__init__(kernel_size,
                                         stride,
                                         pad_mode,
@@ -416,6 +555,20 @@ class AvgPool2d(_PoolNd):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
+        r"""
+        This method constructs the average pooled representation of input tensors x and y.
+        
+        Args:
+            self (AvgPool2d): The instance of the AvgPool2d class.
+            x (Tensor): The input tensor x on which the average pooling operation will be performed.
+            y (Tensor): The input tensor y on which the average pooling operation will be performed.
+        
+        Returns:
+            Tuple[Tensor, Tensor]: A tuple containing the average pooled representation of input tensors x and y.
+        
+        Raises:
+            None.
+        """
         out_x = self.avg_pool(x)
         out_y = self.avg_pool(y)
         return out_x, out_y
@@ -484,7 +637,6 @@ class AvgPool1d(_PoolNd):
         >>> print(y.shape)
         (2, 8, 64, 8)
     """
-
     def __init__(self,
                  kernel_size: _size_1_t = 1,
                  stride: _size_1_t = 1,
@@ -506,8 +658,31 @@ class AvgPool1d(_PoolNd):
                                   strides=self.stride,
                                   pad_mode=self.pad_mode)
 
-
     def _shape_check(self, in_shape: tuple):
+        r"""
+        Checks the shape of the input for the 'AvgPool1d' class.
+        
+        Args:
+            self (AvgPool1d): An instance of the 'AvgPool1d' class.
+            in_shape (tuple): The shape of the input to be checked.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If the length of 'in_shape' is not equal to 3, a ValueError is raised.
+        
+        Note:
+            This method is used internally by the 'AvgPool1d' class to validate the shape of the input before performing the average pooling operation. It ensures that the input has exactly 3 dimensions.
+        
+        Example:
+            >>> pool = AvgPool1d()
+            >>> in_shape = (32, 64, 10)
+            >>> pool._shape_check(in_shape)
+            None
+        
+            In the above example, the input shape is checked and no exception is raised.
+        """
         msg_prefix = f"For '{self.cls_name}', the" if self.cls_name else "The"
         if len(in_shape) != 3:
             raise ValueError(f"{msg_prefix} input must has 3 dim, but got {len(in_shape)}")
@@ -515,6 +690,20 @@ class AvgPool1d(_PoolNd):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
+        r"""
+        Constructs the output tensor of the AvgPool1d layer.
+        
+        Args:
+            self (AvgPool1d): The instance of AvgPool1d class.
+            x (Tensor): The input tensor of shape (batch, channel, width).
+            y (Tensor): The input tensor of shape (batch, channel, width).
+        
+        Returns:
+            Tuple[Tensor, Tensor]: A tuple containing the constructed output tensors x and y.
+            
+        Raises:
+            None.
+        """
         x = F.depend(x, self._shape_check(P.shape(x)))
         y = F.depend(y, self._shape_check(P.shape(y)))
         batch, channel, width = P.shape(x)
@@ -568,12 +757,46 @@ class _AdaptivePoolNd(nn.Cell):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self, output_size: Tuple[int, ...]) -> None:
+        r"""
+        __init__
+        
+        Initializes an instance of the _AdaptivePoolNd class.
+        
+        Args:
+            self: The instance of the _AdaptivePoolNd class.
+            output_size (Tuple[int, ...]): A tuple specifying the desired output size of the adaptive pooling operation. 
+                It should contain integer values representing the dimensions of the output. For example, for a 2D pooling operation, 
+                the tuple should be in the format (height, width). For a 3D pooling operation, the tuple should be in the format 
+                (depth, height, width).
+        
+        Returns:
+            None. This method initializes the _AdaptivePoolNd instance and does not return any value.
+        
+        Raises:
+            None.
+        """
         super(_AdaptivePoolNd, self).__init__()
         self.output_size = output_size
 
     def construct(self, u: Tensor) -> Tensor:
+        r"""
+        Constructs a tensor with adaptive pooling based on the input tensor.
+        
+        Args:
+            self (_AdaptivePoolNd): An instance of the _AdaptivePoolNd class.
+            u (Tensor): The input tensor on which to perform adaptive pooling. This tensor should have at least two dimensions.
+        
+        Returns:
+            Tensor: The resulting tensor after applying adaptive pooling. The shape and dimensions of the output tensor depend on the input tensor.
+        
+        Raises:
+            ValueError: If the input tensor is not at least 2-dimensional.
+        
+        This method takes an input tensor and performs adaptive pooling on it. Adaptive pooling is a technique that dynamically adapts the pooling operation according to the input tensor's shape and
+dimensions. The method first extracts the x and y dimensions from the input tensor using the 'get_x_and_y' function. Then, the '_construct' method is called with the extracted x and y dimensions. The output
+from '_construct' is then converted to a 2-channel tensor using the 'to_2channel' function. Finally, the resulting tensor is returned as the output of the 'construct' method.
+        """
         x, y = get_x_and_y(u)
         out_x, out_y = self._construct(x, y)
         out = to_2channel(out_x, out_y, u.dtype)
@@ -584,8 +807,20 @@ class _AdaptivePoolNd(nn.Cell):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
-        pass
-
+        r"""
+        This method '_construct' in the class '_AdaptivePoolNd' constructs and processes the input tensors 'x' and 'y' to produce a tuple of tensors.
+        
+        Args:
+            self: An instance of the '_AdaptivePoolNd' class.
+            x: A Tensor representing the input data for processing.
+            y: A Tensor representing additional input data for processing.
+        
+        Returns:
+            A tuple of Tensors containing the processed results of the input data 'x' and 'y'.
+        
+        Raises:
+            This method does not explicitly raise any exceptions.
+        """
     def _adaptive_shape_check(self, in_shape):
         """Check shape."""
         msg_prefix = "For {}, the".format(self.cls_name)
@@ -653,7 +888,6 @@ class AdaptiveAvgPool1d(_AdaptivePoolNd):
         >>> print(y.shape)
         (2, 8, 64, 16)
     """
-
     def __init__(self, output_size: int) -> None:
         """Initialize AdaptiveAvgPool1d."""
         super(AdaptiveAvgPool1d, self).__init__(output_size)
@@ -662,6 +896,21 @@ class AdaptiveAvgPool1d(_AdaptivePoolNd):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
+        r"""
+        Method for constructing an adaptive average pooling operation for 1D tensors.
+        
+        Args:
+            self (object): The instance of the AdaptiveAvgPool1d class.
+            x (Tensor): The input tensor x of shape (batch_size, channels, width).
+            y (Tensor): The input tensor y of shape (batch_size, channels, width).
+            
+        Returns:
+            Tuple[Tensor, Tensor]: Returns a tuple containing two output tensors out_x and out_y, both of shape (batch_size, channels, output_size).
+        
+        Raises:
+            ValueError: If the shapes of input tensors x and y are not compatible for adaptive average pooling.
+            TypeError: If the data types of input tensors x and y are not supported for adaptive average pooling.
+        """
         self._adaptive_shape_check(P.shape(x))
         self._adaptive_shape_check(P.shape(y))
         self._adaptive_dtype_check(x.dtype)
@@ -741,7 +990,6 @@ class AdaptiveAvgPool2d(_AdaptivePoolNd):
         >>> print(y.shape)
         (2, 8, 64, 16, 16)
     """
-
     def __init__(self, output_size: _size_2_t) -> None:
         """Initialize AdaptiveAvgPool2d."""
         super(AdaptiveAvgPool2d, self).__init__(output_size)
@@ -750,6 +998,20 @@ class AdaptiveAvgPool2d(_AdaptivePoolNd):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
+        r"""
+        Constructs adaptive average pooling for input tensors x and y.
+        
+        Args:
+            self (AdaptiveAvgPool2d): The instance of the AdaptiveAvgPool2d class.
+            x (Tensor): The input tensor for adaptive average pooling.
+            y (Tensor): The input tensor for adaptive average pooling.
+        
+        Returns:
+            Tuple[Tensor, Tensor]: A tuple containing the output tensors after adaptive average pooling for x and y respectively.
+        
+        Raises:
+            None.
+        """
         out_x = self.adaptive_avgpool2d(x)
         out_y = self.adaptive_avgpool2d(y)
 
@@ -816,7 +1078,6 @@ class AdaptiveAvgPool3d(_AdaptivePoolNd):
         >>> print(y.shape)
         (2, 8, 64, 16, 24, 32)
     """
-
     def __init__(self, output_size: _size_3_t):
         """Initialize AdaptiveAvgPool3d."""
         super(AdaptiveAvgPool3d, self).__init__(output_size)
@@ -825,6 +1086,20 @@ class AdaptiveAvgPool3d(_AdaptivePoolNd):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
+        r"""
+        Constructs adaptive average pool 3D for input tensors x and y.
+        
+        Args:
+            self (AdaptiveAvgPool3d): The instance of the AdaptiveAvgPool3d class.
+            x (Tensor): Input tensor x to be processed.
+            y (Tensor): Input tensor y to be processed.
+        
+        Returns:
+            Tuple[Tensor, Tensor]: A tuple containing the output tensors after adaptive average pooling for x and y.
+        
+        Raises:
+            None.
+        """
         out_x = self.adaptive_avg_pool3d(x)
         out_y = self.adaptive_avg_pool3d(y)
 
@@ -878,7 +1153,6 @@ class AdaptiveMaxPool1d(_AdaptivePoolNd):
         >>> print(y.shape)
         (2, 8, 64, 16)
     """
-
     def __init__(self, output_size: int) -> None:
         """Initialize AdaptiveMaxPool1d."""
         super(AdaptiveMaxPool1d, self).__init__(output_size)
@@ -888,6 +1162,24 @@ class AdaptiveMaxPool1d(_AdaptivePoolNd):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
+        r"""
+        Constructs an AdaptiveMaxPool1d object that performs adaptive max pooling on the input tensors x and y.
+        
+        Args:
+            self (AdaptiveMaxPool1d): An instance of the AdaptiveMaxPool1d class.
+            x (Tensor): The input tensor x of shape (batch_size, channels, width).
+            y (Tensor): The input tensor y of shape (batch_size, channels, width).
+        
+        Returns:
+            Tuple[Tensor, Tensor]: A tuple containing two tensors out_x and out_y.
+                - out_x (Tensor): The output tensor after applying adaptive max pooling on x.
+                - out_y (Tensor): The output tensor after applying adaptive max pooling on y.
+        
+        Raises:
+            TypeError: If the input tensors x or y are not of type Tensor.
+            ValueError: If the input tensors x or y have incompatible shapes.
+            ValueError: If the input tensors x or y have incompatible data types.
+        """
         self._adaptive_shape_check(P.shape(x))
         self._adaptive_shape_check(P.shape(y))
         self._adaptive_dtype_check(x.dtype)
@@ -981,7 +1273,6 @@ class AdaptiveMaxPool2d(_AdaptivePoolNd):
         >>> print(y.shape)
         (2, 8, 64, 16, 16)
     """
-
     def __init__(self, output_size: _size_2_t) -> None:
         """Initialize AdaptiveAvgPool2d."""
         super(AdaptiveMaxPool2d, self).__init__(output_size)
@@ -990,6 +1281,20 @@ class AdaptiveMaxPool2d(_AdaptivePoolNd):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
+        r"""
+        Method to perform adaptive max pooling on two input tensors x and y.
+        
+        Args:
+            self (AdaptiveMaxPool2d): The instance of the AdaptiveMaxPool2d class.
+            x (Tensor): Input tensor for max pooling operation.
+            y (Tensor): Input tensor for max pooling operation.
+        
+        Returns:
+            Tuple[Tensor, Tensor]: Returns a tuple containing the output tensors after adaptive max pooling is performed on x and y.
+        
+        Raises:
+            None.
+        """
         out_x = self.adaptive_maxpool2d(x)
         out_y = self.adaptive_maxpool2d(y)
 

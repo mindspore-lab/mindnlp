@@ -47,6 +47,18 @@ def llama_apply_rotary_pos_emb(q, cos, sin, position_ids):
 
 
 def llama_compute_query_states(model: nn.Cell, **kwargs) -> Tensor:
+    """
+    Computes query states for a neural network model.
+    
+    Args:
+        model (nn.Cell): The neural network model for which query states are computed.
+    
+    Returns:
+        Tensor: The computed query states.
+    
+    Raises:
+        ValueError: If the input parameters do not meet the required constraints.
+    """
     hidden_states = kwargs.get("hidden_states")
     position_ids = kwargs.get("position_ids")
     past_key_value = kwargs.get("past_key_value")

@@ -20,8 +20,6 @@ from typing import Optional
 import numpy as np
 
 
-
-
 from ...configuration_utils import PretrainedConfig
 
 
@@ -138,6 +136,42 @@ class EncodecConfig(PretrainedConfig):
         use_conv_shortcut=True,
         **kwargs,
     ):
+        """
+        Initializes an instance of the EncodecConfig class.
+        
+        Args:
+            self: The instance of the class.
+            target_bandwidths (list[float]): List of target bandwidths in kHz. Default is [1.5, 3.0, 6.0, 12.0, 24.0].
+            sampling_rate (int): The audio sampling rate in Hz. Default is 24000.
+            audio_channels (int): The number of audio channels. Default is 1.
+            normalize (bool): Flag indicating whether to normalize the audio. Default is False.
+            chunk_length_s (float): The length of audio chunks in seconds. Default is None.
+            overlap (float): The overlap ratio between audio chunks. Default is None.
+            hidden_size (int): The size of the hidden state in the model. Default is 128.
+            num_filters (int): The number of filters in the model. Default is 32.
+            num_residual_layers (int): The number of residual layers in the model. Default is 1.
+            upsampling_ratios (list[int]): List of upsampling ratios. Default is [8, 5, 4, 2].
+            norm_type (str): The type of normalization. Must be either 'weight_norm' or 'time_group_norm'. Default is 'weight_norm'.
+            kernel_size (int): The size of the convolutional kernel. Default is 7.
+            last_kernel_size (int): The size of the last convolutional kernel. Default is 7.
+            residual_kernel_size (int): The size of the residual convolutional kernel. Default is 3.
+            dilation_growth_rate (int): The growth rate of dilation in the model. Default is 2.
+            use_causal_conv (bool): Flag indicating whether to use causal convolution. Default is True.
+            pad_mode (str): The padding mode for convolution. Default is 'reflect'.
+            compress (int): The compression factor for audio. Default is 2.
+            num_lstm_layers (int): The number of LSTM layers in the model. Default is 2.
+            trim_right_ratio (float): The ratio of trimming audio from the right. Default is 1.0.
+            codebook_size (int): The size of the codebook. Default is 1024.
+            codebook_dim (int): The dimension of the codebook. Default is equal to hidden_size if not provided.
+            use_conv_shortcut (bool): Flag indicating whether to use convolution shortcut. Default is True.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If norm_type is not 'weight_norm' or 'time_group_norm'.
+        
+        """
         self.target_bandwidths = target_bandwidths
         self.sampling_rate = sampling_rate
         self.audio_channels = audio_channels

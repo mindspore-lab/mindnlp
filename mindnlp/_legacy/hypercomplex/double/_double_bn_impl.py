@@ -47,7 +47,6 @@ class _BatchNormImpl(HCBatchNormImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def scale_and_shift(self,
                         u_x: Tensor,
                         u_y: Tensor,
@@ -160,7 +159,6 @@ class _J1J2BatchNormImpl(HCBatchNormImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def scale_and_shift(self,
                         u_x: Tensor,
                         u_y: Tensor,

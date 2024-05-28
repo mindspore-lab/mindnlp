@@ -44,12 +44,27 @@ class LayoutLMv2Processor(ProcessorMixin):
         tokenizer (`LayoutLMv2Tokenizer` or `LayoutLMv2TokenizerFast`, *optional*):
             An instance of [`LayoutLMv2Tokenizer`] or [`LayoutLMv2TokenizerFast`]. The tokenizer is a required input.
     """
-
     attributes = ["image_processor", "tokenizer"]
     image_processor_class = "LayoutLMv2ImageProcessor"
     tokenizer_class = ("LayoutLMv2Tokenizer", "LayoutLMv2TokenizerFast")
 
     def __init__(self, image_processor=None, tokenizer=None, **kwargs):
+        """
+        Initialize the LayoutLMv2Processor class.
+        
+        Args:
+            self (object): The instance of the class.
+            image_processor (object): An object representing the image processor. It can be an instance of a specific image processing class or None. If None, it will default to the value of
+'feature_extractor'.
+            tokenizer (object): An object representing the tokenizer to be used. This should be a valid tokenizer object required for processing the input data.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If either 'image_processor' is not provided or if 'tokenizer' is not specified.
+            FutureWarning: If the 'feature_extractor' argument is used (deprecated) in place of 'image_processor'.
+        """
         feature_extractor = None
         if "feature_extractor" in kwargs:
             warnings.warn(
@@ -192,6 +207,18 @@ class LayoutLMv2Processor(ProcessorMixin):
 
     @property
     def model_input_names(self):
+        """
+        This method returns a list of input names used by the LayoutLMv2Processor.
+        
+        Args:
+            self (LayoutLMv2Processor): The instance of the LayoutLMv2Processor.
+            
+        Returns:
+            list: A list containing the input names, including 'input_ids', 'bbox', 'token_type_ids', 'attention_mask', and 'image'.
+            
+        Raises:
+            None.
+        """
         return ["input_ids", "bbox", "token_type_ids", "attention_mask", "image"]
 
     @property

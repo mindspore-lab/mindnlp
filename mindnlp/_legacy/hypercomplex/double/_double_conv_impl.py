@@ -59,7 +59,6 @@ class _ConvImpl(BaseConvImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def construct(self,
                   conv_fn: Callable,
                   real: Tensor,
@@ -69,7 +68,26 @@ class _ConvImpl(BaseConvImpl):
                   stride: Tuple[int, ...],
                   dilation: Tuple[int, ...],
                   group: int) -> Tuple[Tensor, Tensor]:
-
+        r"""
+        Constructs a new convolution operation with given inputs and parameters.
+        
+        Args:
+            self (_ConvImpl): The instance of the _ConvImpl class.
+            conv_fn (Callable): The convolution function to apply.
+            real (Tensor): The real tensor input.
+            double (Tensor): The double tensor input.
+            pad_mode (str): The padding mode to use during convolution.
+            padding (Tuple[int, ...]): The padding to apply.
+            stride (Tuple[int, ...]): The stride of the convolution operation.
+            dilation (Tuple[int, ...]): The dilation rate for the convolution.
+            group (int): The number of groups for grouped convolution.
+        
+        Returns:
+            Tuple[Tensor, Tensor]: Two tensors, out_r and out_d, resulting from the convolution operation.
+        
+        Raises:
+            None
+        """
         u1 = real + double
         u2 = real - double
 
@@ -121,7 +139,6 @@ class _J1J2ConvImpl(BaseConvImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def construct(self,
                   conv_fn: Callable,
                   u1: Tensor,
@@ -131,7 +148,26 @@ class _J1J2ConvImpl(BaseConvImpl):
                   stride: Tuple[int, ...],
                   dilation: Tuple[int, ...],
                   group: int) -> Tuple[Tensor, Tensor]:
-
+        r"""
+        Constructs a J1J2 convolutional operation.
+        
+        Args:
+            self (_J1J2ConvImpl): An instance of the _J1J2ConvImpl class.
+            conv_fn (Callable): The convolution function to be used.
+            u1 (Tensor): The input tensor for the first channel.
+            u2 (Tensor): The input tensor for the second channel.
+            pad_mode (str): The padding mode to be applied during convolution.
+            padding (Tuple[int, ...]): The padding values for each dimension.
+            stride (Tuple[int, ...]): The stride values for each dimension.
+            dilation (Tuple[int, ...]): The dilation values for each dimension.
+            group (int): The number of groups for grouped convolution.
+        
+        Returns:
+            Tuple[Tensor, Tensor]: A tuple containing the convolution outputs for the first and second channels.
+        
+        Raises:
+            None.
+        """
         out1 = conv_fn(u1, self.weight_x, pad_mode=pad_mode, padding=padding,
                        stride=stride, dilation=dilation, group=group)
         out2 = conv_fn(u2, self.weight_y, pad_mode=pad_mode, padding=padding,

@@ -112,6 +112,19 @@ class Recall(Metric):
 
     """
     def __init__(self, name='Recall'):
+        r"""
+        __init__
+        
+        Args:
+            self: The instance of the class.
+            name (str): The name of the instance. Defaults to 'Recall'.
+        
+        Returns:
+            None. This method initializes the Recall class instance with the provided name and sets the initial values for actual_positives, true_positives, and epsilon.
+        
+        Raises:
+            None.
+        """
         super().__init__()
         self._name = name
         self.actual_positives = 0

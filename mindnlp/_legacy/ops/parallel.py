@@ -20,6 +20,18 @@ from mindspore.ops.primitive import _run_op
 class AllGather(msAllGather):
     """AllGather op."""
     def __call__(self, *args):
+        """
+        __call__ method in the AllGather class.
+        
+        Args:
+            self: AllGather object. Represents the instance of the AllGather class.
+            
+        Returns:
+            None. This method does not explicitly return a value. It either returns the output based on the check_elim condition or the result of _run_op.
+        
+        Raises:
+            No specific exceptions are raised within this method. However, exceptions may be raised within the called methods like check_elim, arg.init_data(), and _run_op.
+        """
         should_elim, output = self.check_elim(*args)
         for arg in args:
             if isinstance(arg, Parameter) and arg.has_init:

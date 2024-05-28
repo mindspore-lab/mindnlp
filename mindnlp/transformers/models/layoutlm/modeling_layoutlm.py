@@ -52,8 +52,19 @@ LayoutLMLayerNorm = nn.LayerNorm
 
 class LayoutLMEmbeddings(nn.Cell):
     """forward the embeddings from word, position and token_type embeddings."""
-
     def __init__(self, config):
+        """
+        Args:
+            self (LayoutLMEmbeddings): The instance of the LayoutLMEmbeddings class.
+            config (object): An object containing configuration parameters, including vocab_size, hidden_size, max_position_embeddings, 
+                max_2d_position_embeddings, type_vocab_size, pad_token_id, layer_norm_eps, and hidden_dropout_prob. 
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None
+        """
         super(LayoutLMEmbeddings, self).__init__()
         self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
@@ -68,7 +79,6 @@ class LayoutLMEmbeddings(nn.Cell):
 
         self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
 
-
     def construct(
         self,
         input_ids=None,
@@ -77,6 +87,27 @@ class LayoutLMEmbeddings(nn.Cell):
         position_ids=None,
         inputs_embeds=None,
     ):
+        """
+        Constructs the LayoutLM embeddings.
+        
+        Args:
+            self (LayoutLMEmbeddings): An instance of the LayoutLMEmbeddings class.
+            input_ids (Tensor, optional): The input tensor of token indices. Defaults to None.
+            bbox (Tensor, optional): The bounding box tensor. Defaults to None.
+            token_type_ids (Tensor, optional): The input tensor of token type indices. Defaults to None.
+            position_ids (Tensor, optional): The input tensor of position indices. Defaults to None.
+            inputs_embeds (Tensor, optional): The input tensor of embeddings. Defaults to None.
+        
+        Returns:
+            Tensor: The computed embeddings.
+        
+        Raises:
+            IndexError: If the `bbox` coordinate values are not within the 0-1000 range.
+        
+        Note:
+            The method calculates the embeddings by adding various embeddings such as words, position, 
+            bounding box, token type, etc. It also performs layer normalization and dropout on the embeddings.
+        """
         if input_ids is not None:
             input_shape = input_ids.shape
         else:
@@ -126,8 +157,30 @@ class LayoutLMEmbeddings(nn.Cell):
 
 class LayoutLMSelfAttention(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertSelfAttention with Bert->LayoutLM"""
-
     def __init__(self, config, position_embedding_type=None):
+        """
+        Initializes a LayoutLMSelfAttention instance with the provided configuration and optional position embedding type.
+        
+        Args:
+            self: The instance of LayoutLMSelfAttention.
+            config: An object containing the configuration parameters for the self-attention layer.
+                Expected attributes:
+                    - hidden_size (int): The size of the hidden layer.
+                    - num_attention_heads (int): The number of attention heads.
+                    - embedding_size (int, optional): The size of the embedding layer.
+                    - attention_probs_dropout_prob (float): The dropout probability for attention probabilities.
+                    - position_embedding_type (str, optional): The type of position embedding to use ('absolute' by default).
+                    - max_position_embeddings (int): The maximum number of position embeddings.
+                    - is_decoder (bool): Indicates if the self-attention layer is part of a decoder.
+            position_embedding_type (str, optional): The type of position embedding to use (default is None).
+                Accepted values: 'absolute', 'relative_key', 'relative_key_query'.
+        
+        Returns:
+            None. The method initializes the LayoutLMSelfAttention instance with the provided configuration.
+        
+        Raises:
+            ValueError: If the hidden size is not a multiple of the number of attention heads and no embedding size is provided.
+        """
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
             raise ValueError(
@@ -154,6 +207,25 @@ class LayoutLMSelfAttention(nn.Cell):
         self.is_decoder = config.is_decoder
 
     def transpose_for_scores(self, x: mindspore.Tensor) -> mindspore.Tensor:
+        """
+        Transposes the input tensor `x` for calculating self-attention scores.
+        
+        Args:
+            self (LayoutLMSelfAttention): The current instance of the LayoutLMSelfAttention class.
+            x (mindspore.Tensor): The input tensor of shape `(batch_size, sequence_length, hidden_size)`.
+        
+        Returns:
+            mindspore.Tensor: The transposed tensor of shape `(batch_size, num_attention_heads, sequence_length, attention_head_size)`.
+        
+        Raises:
+            None
+        
+        This method transposes the input tensor `x` to prepare it for calculating self-attention scores in the LayoutLMSelfAttention model. The transposition is performed by reshaping the tensor to include the
+number of attention heads and the size of each attention head. The resulting tensor is then permuted to match the desired shape `(batch_size, num_attention_heads, sequence_length, attention_head_size)`.
+        
+        Note that this method assumes that the input tensor `x` has a rank of at least 3, where the last dimension represents the hidden size. The number of attention heads and the size of each attention head
+are obtained from the attributes `num_attention_heads` and `attention_head_size` of the LayoutLMSelfAttention instance, respectively.
+        """
         new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
@@ -168,6 +240,27 @@ class LayoutLMSelfAttention(nn.Cell):
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
+        """
+        This method constructs the self-attention mechanism for the LayoutLMSelfAttention class.
+        
+        Args:
+        - self: The instance of the LayoutLMSelfAttention class.
+        - hidden_states (mindspore.Tensor): The input hidden states tensor.
+        - attention_mask (Optional[mindspore.Tensor], optional): Mask tensor to prevent attention to certain positions. Defaults to None.
+        - head_mask (Optional[mindspore.Tensor], optional): Mask tensor to control the heads involved in the attention computation. Defaults to None.
+        - encoder_hidden_states (Optional[mindspore.Tensor], optional): Hidden states of the encoder in case of cross-attention. Defaults to None.
+        - encoder_attention_mask (Optional[mindspore.Tensor], optional): Mask tensor for encoder attention. Defaults to None.
+        - past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]], optional): Cached key and value tensors from previous attention calculations. Defaults to None.
+        - output_attentions (Optional[bool], optional): Flag to indicate whether to output attentions. Defaults to False.
+        
+        Returns:
+        Tuple[mindspore.Tensor]: A tuple containing the context layer tensor and optionally attention probabilities tensor.
+        
+        Raises:
+        - ValueError: If the input tensor shapes are incompatible for matrix multiplication.
+        - RuntimeError: If there are runtime issues during tensor operations.
+        - TypeError: If the input types are not as expected.
+        """
         mixed_query_layer = self.query(hidden_states)
 
         # If this is instantiated as a cross-attention module, the keys
@@ -260,14 +353,47 @@ class LayoutLMSelfAttention(nn.Cell):
 
 class LayoutLMSelfOutput(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertSelfOutput with Bert->LayoutLM"""
-
     def __init__(self, config):
+        """
+        Initializes the LayoutLMSelfOutput class.
+        
+        Args:
+            self (object): The instance of the class itself.
+            config (object): An object containing configuration parameters for the layout model.
+                - Type: Custom class
+                - Purpose: To provide configuration settings for the layout model.
+                - Restrictions: Must be compatible with the defined configuration structure.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            - TypeError: If the provided 'config' parameter is not of the expected type.
+            - ValueError: If the configuration provided is missing essential parameters.
+        """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+        """
+        Constructs the output of the LayoutLMSelfOutput layer.
+        
+        Args:
+            self (LayoutLMSelfOutput): The instance of the LayoutLMSelfOutput class.
+            hidden_states (mindspore.Tensor): The hidden states tensor generated by the layer.
+                This tensor contains the output of the dense and dropout layers.
+            input_tensor (mindspore.Tensor): The input tensor to the layer.
+                This tensor represents the input to the layer that needs to be added to the hidden states.
+        
+        Returns:
+            mindspore.Tensor: The tensor representing the output of the LayerNorm operation.
+                This tensor is the result of adding the input tensor to the normalized hidden states.
+        
+        Raises:
+            None
+        """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
@@ -276,14 +402,57 @@ class LayoutLMSelfOutput(nn.Cell):
 
 class LayoutLMAttention(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertAttention with Bert->LayoutLM"""
-
     def __init__(self, config, position_embedding_type=None):
+        """
+        Initializes an instance of the LayoutLMAttention class.
+        
+        Args:
+            self: The instance of the class (automatically passed).
+            config: An object containing the configuration settings.
+                - Type: object
+                - Purpose: Provides the configuration settings for the LayoutLMAttention class.
+                - Restrictions: None
+        
+            position_embedding_type: The type of position embedding to use.
+                - Type: Any
+                - Purpose: Specifies the type of position embedding to be used in the LayoutLMAttention class.
+                - Restrictions: None
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
         super().__init__()
         self.self = LayoutLMSelfAttention(config, position_embedding_type=position_embedding_type)
         self.output = LayoutLMSelfOutput(config)
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
+        """
+        Prunes the attention heads in the LayoutLMAttention class.
+        
+        Args:
+            self: The LayoutLMAttention instance.
+            heads (list): A list of integers representing the attention heads to be pruned.
+        
+        Returns:
+            None. The method modifies the LayoutLMAttention instance in-place.
+        
+        Raises:
+            None.
+        
+        This method prunes the specified attention heads from the LayoutLMAttention instance. 
+        First, it checks if the 'heads' list is empty. If so, the method returns without making any changes.
+        Otherwise, it calls the 'find_pruneable_heads_and_indices' function to identify the attention heads and their corresponding indices that can be pruned based on the given 'heads' list, the number of
+attention heads, attention head size, and already pruned heads stored in the instance.
+        Next, it prunes the 'self.query', 'self.key', 'self.value', and 'self.output.dense' linear layers by calling the 'prune_linear_layer' function with the identified indices.
+        After each linear layer is pruned, the number of attention heads is updated by subtracting the length of the 'heads' list from the current number of attention heads.
+        The total size of all attention heads, 'self.all_head_size', is then recalculated as the product of the attention head size and the updated number of attention heads.
+        Finally, the 'pruned_heads' set is updated by adding the attention heads specified in the 'heads' list.
+        The method does not return any value but modifies the LayoutLMAttention instance by pruning the specified attention heads.
+        """
         if len(heads) == 0:
             return
         heads, index = find_pruneable_heads_and_indices(
@@ -311,6 +480,25 @@ class LayoutLMAttention(nn.Cell):
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
+        ''' 
+        This method constructs the LayoutLMAttention.
+        
+        Args:
+            self (LayoutLMAttention): The instance of the LayoutLMAttention class.
+            hidden_states (mindspore.Tensor): The input hidden states for the attention mechanism.
+            attention_mask (Optional[mindspore.Tensor]): An optional mask for the attention mechanism. Default is None.
+            head_mask (Optional[mindspore.Tensor]): An optional mask for the attention heads. Default is None.
+            encoder_hidden_states (Optional[mindspore.Tensor]): An optional input for encoder hidden states. Default is None.
+            encoder_attention_mask (Optional[mindspore.Tensor]): An optional mask for encoder attention. Default is None.
+            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): An optional input for past key value. Default is None.
+            output_attentions (Optional[bool]): A flag to indicate whether to output attentions. Default is False.
+        
+        Returns:
+            Tuple[mindspore.Tensor]: A tuple containing the attention output and other optional outputs.
+        
+        Raises:
+            None
+        '''
         self_outputs = self.self(
             hidden_states,
             attention_mask,
@@ -327,8 +515,21 @@ class LayoutLMAttention(nn.Cell):
 
 class LayoutLMIntermediate(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertIntermediate"""
-
     def __init__(self, config):
+        """
+        Initializes an instance of the LayoutLMIntermediate class.
+        
+        Args:
+            self: The current instance of the class.
+            config: An object of type 'config' containing the configuration settings for the intermediate layer.
+                This parameter is required and has no default value.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
@@ -337,6 +538,19 @@ class LayoutLMIntermediate(nn.Cell):
             self.intermediate_act_fn = config.hidden_act
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+        """
+        Constructs the intermediate layer in the LayoutLM model.
+        
+        Args:
+            self (LayoutLMIntermediate): An instance of the LayoutLMIntermediate class.
+            hidden_states (mindspore.Tensor): The input tensor representing hidden states.
+        
+        Returns:
+            mindspore.Tensor: The output tensor after passing through the intermediate layer.
+        
+        Raises:
+            None.
+        """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
@@ -344,14 +558,47 @@ class LayoutLMIntermediate(nn.Cell):
 
 class LayoutLMOutput(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertOutput with Bert->LayoutLM"""
-
     def __init__(self, config):
+        """
+        Initializes a new instance of the LayoutLMOutput class.
+        
+        Args:
+            self (object): The instance of the class.
+            config (object): An object containing configuration parameters for the LayoutLMOutput.
+                This parameter is required to configure the dense layer, layer normalization, and dropout.
+                It should be an instance of a class that contains the following attributes:
+                    - intermediate_size (int): The size of the intermediate layer.
+                    - hidden_size (int): The size of the hidden layer.
+                    - layer_norm_eps (float): The epsilon value for layer normalization.
+                    - hidden_dropout_prob (float): The dropout probability for the hidden layer.
+        
+        Returns:
+            None. This method initializes the dense, LayerNorm, and dropout attributes of the LayoutLMOutput instance.
+        
+        Raises:
+            - TypeError: If the config parameter is not provided or is not an instance of the expected class.
+            - ValueError: If the attributes intermediate_size, hidden_size, layer_norm_eps, or hidden_dropout_prob are missing from the config object.
+        """
         super().__init__()
         self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+        """
+        Construct method in the LayoutLMOutput class.
+        
+        Args:
+            self: LayoutLMOutput instance.
+            hidden_states (mindspore.Tensor): The hidden states tensor to be processed.
+            input_tensor (mindspore.Tensor): The input tensor to be added to the processed hidden states.
+        
+        Returns:
+            mindspore.Tensor: A tensor representing the processed hidden states with the input tensor added.
+        
+        Raises:
+            None
+        """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
@@ -360,8 +607,20 @@ class LayoutLMOutput(nn.Cell):
 
 class LayoutLMLayer(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertLayer with Bert->LayoutLM"""
-
     def __init__(self, config):
+        """
+        This method initializes an instance of the LayoutLMLayer class.
+        
+        Args:
+            self (LayoutLMLayer): The instance of the LayoutLMLayer class.
+            config: A configuration object containing parameters for the LayoutLMLayer.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If the cross attention is added and the model is not used as a decoder, a ValueError is raised.
+        """
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
@@ -385,6 +644,28 @@ class LayoutLMLayer(nn.Cell):
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
+        """
+        Constructs the LayoutLMLayer.
+        
+        Args:
+            self: The object instance.
+            hidden_states (mindspore.Tensor): The input hidden states tensor of shape (batch_size, seq_length, hidden_size).
+            attention_mask (Optional[mindspore.Tensor]): The attention mask tensor of shape (batch_size, seq_length) or (batch_size, seq_length, seq_length). Defaults to None.
+            head_mask (Optional[mindspore.Tensor]): The head mask tensor of shape (num_heads,) or (num_layers, num_heads), where num_heads and num_layers are derived from the configuration. Defaults to None.
+            encoder_hidden_states (Optional[mindspore.Tensor]): The encoder hidden states tensor of shape (batch_size, seq_length, hidden_size). Defaults to None.
+            encoder_attention_mask (Optional[mindspore.Tensor]): The encoder attention mask tensor of shape (batch_size, seq_length) or (batch_size, seq_length, seq_length). Defaults to None.
+            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): The past key-value tensor of shape (2, batch_size, num_heads, past_seq_length, head_dim), where past_seq_length is the length of past
+sequence. Defaults to None.
+            output_attentions (Optional[bool]): Whether to output attentions. Defaults to False.
+        
+        Returns:
+            Tuple[mindspore.Tensor]: A tuple containing the output tensor(s) of the layer. The first element is the layer output tensor of shape (batch_size, seq_length, hidden_size). If the layer is a
+decoder, the tuple also includes the present key-value tensor(s) of shape (2, batch_size, num_heads, seq_length, head_dim).
+        
+        Raises:
+            ValueError: If `encoder_hidden_states` are passed and the cross-attention layers are not instantiated by setting `config.add_cross_attention=True`.
+        
+        """
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
         self_attn_past_key_value = past_key_value[:2] if past_key_value is not None else None
         self_attention_outputs = self.attention(
@@ -441,6 +722,27 @@ class LayoutLMLayer(nn.Cell):
         return outputs
 
     def feed_forward_chunk(self, attention_output):
+        """
+        Class: LayoutLMLayer
+        
+        Description:
+        This class represents a layer in a layout LM model.
+        
+        Method: feed_forward_chunk
+        
+        Description:
+        This method applies a feed-forward operation to the given attention output.
+        
+        Args:
+        - self (LayoutLMLayer): The instance of the LayoutLMLayer class.
+        - attention_output (Tensor): The attention output tensor to be processed by the feed-forward operation.
+        
+        Returns:
+        - layer_output (Tensor): The output tensor after applying the feed-forward operation.
+        
+        Raises:
+        - N/A
+        """
         intermediate_output = self.intermediate(attention_output)
         layer_output = self.output(intermediate_output, attention_output)
         return layer_output
@@ -448,8 +750,19 @@ class LayoutLMLayer(nn.Cell):
 
 class LayoutLMEncoder(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertEncoder with Bert->LayoutLM"""
-
     def __init__(self, config):
+        """Initializes an instance of the LayoutLMEncoder class.
+        
+        Args:
+            self (LayoutLMEncoder): The instance of the LayoutLMEncoder class.
+            config (object): The configuration object containing the necessary parameters for the LayoutLMEncoder.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         super().__init__()
         self.config = config
         self.layer = nn.CellList([LayoutLMLayer(config) for _ in range(config.num_hidden_layers)])
@@ -468,6 +781,29 @@ class LayoutLMEncoder(nn.Cell):
         output_hidden_states: Optional[bool] = False,
         return_dict: Optional[bool] = True,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]:
+        """
+        This method constructs the LayoutLM encoder using the specified parameters.
+        
+        Args:
+        - self: The instance of the LayoutLMEncoder class.
+        - hidden_states (mindspore.Tensor): The input hidden states for encoding.
+        - attention_mask (Optional[mindspore.Tensor]): Mask to avoid attending to certain positions.
+        - head_mask (Optional[mindspore.Tensor]): Mask to specify which heads to disable in the attention computation.
+        - encoder_hidden_states (Optional[mindspore.Tensor]): Hidden states of the encoder to be used in cross-attention layers.
+        - encoder_attention_mask (Optional[mindspore.Tensor]): Mask for encoder attention mechanism.
+        - past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]]): Cached key/values for previous decoding steps.
+        - use_cache (Optional[bool]): Flag to indicate whether to use caching for decoding.
+        - output_attentions (Optional[bool]): Flag to output attention scores.
+        - output_hidden_states (Optional[bool]): Flag to output hidden states for each layer.
+        - return_dict (Optional[bool]): Flag to indicate returning the output as a dictionary.
+        
+        Returns:
+        - Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]: The output of the encoder, which is either a tuple of hidden states or a complex object containing past key values and
+attentions.
+        
+        Raises:
+        - Warning: If `use_cache=True` is incompatible with gradient checkpointing, it will issue a warning and set `use_cache=False`.
+        """
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
         all_cross_attentions = () if output_attentions and self.config.add_cross_attention else None
@@ -531,13 +867,40 @@ class LayoutLMEncoder(nn.Cell):
 
 class LayoutLMPooler(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertPooler"""
-
     def __init__(self, config):
+        """
+        Initializes a LayoutLMPooler instance.
+        
+        Args:
+            self: The instance of LayoutLMPooler.
+            config: The configuration object containing parameters for the LayoutLMPooler initialization. It should be an instance of the Config class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            This method does not raise any specific exceptions.
+        """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+        """
+        This method 'construct' in the class 'LayoutLMPooler' constructs a pooled output tensor based on the hidden states provided.
+        
+        Args:
+            self (LayoutLMPooler): The instance of the LayoutLMPooler class.
+            hidden_states (mindspore.Tensor): The input tensor containing hidden states. It should have the shape (batch_size, sequence_length, hidden_size).
+                This tensor holds the hidden states generated by the model for each token in the input sequence.
+                
+        Returns:
+            mindspore.Tensor: A tensor representing the pooled output. It is the result of applying dense and activation layers on the first token's hidden state.
+                The shape of the returned tensor is (batch_size, hidden_size).
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -548,8 +911,25 @@ class LayoutLMPooler(nn.Cell):
 
 class LayoutLMPredictionHeadTransform(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertPredictionHeadTransform with Bert->LayoutLM"""
-
     def __init__(self, config):
+        """
+        Initialize the LayoutLMPredictionHeadTransform class.
+        
+        Args:
+            self: The instance of the class.
+            config: An object containing configuration parameters for the head transformation.
+                Type: Custom configuration class
+                Purpose: Specifies the configuration settings for the head transformation.
+                Restrictions: Must be a valid configuration object.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            - KeyError: If the specified 'hidden_act' in the configuration is not found in the ACT2FN dictionary.
+            - AttributeError: If the configuration object does not contain the required attributes.
+            - ValueError: If there are issues with the provided configuration parameters.
+        """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
         if isinstance(config.hidden_act, str):
@@ -559,6 +939,20 @@ class LayoutLMPredictionHeadTransform(nn.Cell):
         self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+        """
+        This method 'construct' in the class 'LayoutLMPredictionHeadTransform' performs transformations on the input hidden states tensor.
+        
+        Args:
+            self: An instance of the class 'LayoutLMPredictionHeadTransform'.
+            hidden_states (mindspore.Tensor): The input tensor representing the hidden states. It is expected to be a tensor of shape (batch_size, sequence_length, hidden_size).
+        
+        Returns:
+            mindspore.Tensor: A tensor containing the transformed hidden states after passing through dense layers, activation function, and layer normalization. The shape of the output tensor is the same as
+the input hidden_states.
+        
+        Raises:
+            This method does not explicitly raise any exceptions.
+        """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.transform_act_fn(hidden_states)
         hidden_states = self.LayerNorm(hidden_states)
@@ -567,8 +961,21 @@ class LayoutLMPredictionHeadTransform(nn.Cell):
 
 class LayoutLMLMPredictionHead(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertLMPredictionHead with Bert->LayoutLM"""
-
     def __init__(self, config):
+        """
+        Initializes an instance of the LayoutLMLMPredictionHead class.
+        
+        Args:
+            self: The instance of the LayoutLMLMPredictionHead class.
+            config: An object containing configuration parameters for the LayoutLMLMPredictionHead.
+                It is expected to be an instance of a class that holds information such as hidden size and vocabulary size.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised within this method.
+        """
         super().__init__()
         self.transform = LayoutLMPredictionHeadTransform(config)
 
@@ -582,6 +989,19 @@ class LayoutLMLMPredictionHead(nn.Cell):
         self.decoder.bias = self.bias
 
     def construct(self, hidden_states):
+        """
+        Constructs the LayoutLMLMPredictionHead by transforming and decoding hidden states.
+        
+        Args:
+            self (LayoutLMLMPredictionHead): An instance of the LayoutLMLMPredictionHead class.
+            hidden_states (torch.Tensor): The input hidden states to be processed by the prediction head.
+        
+        Returns:
+            None: This method does not return any value explicitly.
+        
+        Raises:
+            None
+        """
         hidden_states = self.transform(hidden_states)
         hidden_states = self.decoder(hidden_states)
         return hidden_states
@@ -589,12 +1009,39 @@ class LayoutLMLMPredictionHead(nn.Cell):
 
 class LayoutLMOnlyMLMHead(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertOnlyMLMHead with Bert->LayoutLM"""
-
     def __init__(self, config):
+        """
+        Initializes a LayoutLMOnlyMLMHead object.
+        
+        Args:
+            self (LayoutLMOnlyMLMHead): The current instance of the LayoutLMOnlyMLMHead class.
+            config: The configuration parameters for the LayoutLMOnlyMLMHead.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         super().__init__()
         self.predictions = LayoutLMLMPredictionHead(config)
 
     def construct(self, sequence_output: mindspore.Tensor) -> mindspore.Tensor:
+        """
+        Constructs the LayoutLMOnlyMLMHead.
+        
+        This method takes two parameters: self and sequence_output. 
+        
+        Args:
+            self: An instance of the LayoutLMOnlyMLMHead class.
+            sequence_output (mindspore.Tensor): The output tensor from the sequence modeling layer. It is the input to the prediction layer.
+            
+        Returns:
+            mindspore.Tensor: The prediction scores tensor generated by the prediction layer. It represents the predicted scores for each token in the input sequence.
+        
+        Raises:
+            None.
+        """
         prediction_scores = self.predictions(sequence_output)
         return prediction_scores
 
@@ -604,7 +1051,6 @@ class LayoutLMPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = LayoutLMConfig
     pretrained_model_archive_map = LAYOUTLM_PRETRAINED_MODEL_ARCHIVE_LIST
     base_model_prefix = "layoutlm"
@@ -632,8 +1078,21 @@ class LayoutLMPreTrainedModel(PreTrainedModel):
 
 class LayoutLMModel(LayoutLMPreTrainedModel):
     """LayoutLM Model"""
-
     def __init__(self, config):
+        """
+        Initializes a LayoutLMModel instance.
+        
+        Args:
+            self: The instance of the LayoutLMModel class.
+            config: A dictionary containing the configuration settings for the LayoutLMModel.
+                The config should include parameters for initializing the LayoutLMModel, such as hidden size, number of layers, etc.
+        
+        Returns:
+            None. This method does not return any value explicitly.
+        
+        Raises:
+            N/A
+        """
         super(LayoutLMModel, self).__init__(config)
         self.config = config
 
@@ -645,9 +1104,34 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
+        """
+        Retrieves the input embeddings from the LayoutLMModel.
+        
+        Args:
+            self (LayoutLMModel): The LayoutLMModel instance.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, value):
+        """
+        Sets the input embeddings for the LayoutLMModel.
+        
+        Args:
+            self (LayoutLMModel): The LayoutLMModel instance.
+            value: The input embeddings to be set. It should be of type torch.Tensor and have the same shape as the word_embeddings.
+            
+        Returns:
+            None
+            
+        Raises:
+            None
+        """
         self.embeddings.word_embeddings = value
 
     def _prune_heads(self, heads_to_prune):
@@ -779,10 +1263,22 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
 
 class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
     """LayoutLMForMaskedLM Model"""
-
     _tied_weights_keys = ["cls.predictions.decoder.bias", "cls.predictions.decoder.weight"]
 
     def __init__(self, config):
+        """
+        Initializes the LayoutLMForMaskedLM class.
+        
+        Args:
+            self: The instance of the class.
+            config: The configuration object that contains the model configuration settings.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(config)
 
         self.layoutlm = LayoutLMModel(config)
@@ -792,12 +1288,50 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
+        """
+        Method to retrieve the input embeddings from the LayoutLM model for Masked Language Modeling task.
+        
+        Args:
+            self (LayoutLMForMaskedLM): The instance of the LayoutLMForMaskedLM class.
+                It represents the model for Masked Language Modeling.
+                
+        Returns:
+            None. This method returns the word embeddings from the LayoutLM model's embeddings.
+        
+        Raises:
+            None.
+        """
         return self.layoutlm.embeddings.word_embeddings
 
     def get_output_embeddings(self):
+        '''
+        Returns the output embeddings for the LayoutLM model.
+        
+        Args:
+            self (LayoutLMForMaskedLM): The LayoutLMForMaskedLM object.
+        
+        Returns:
+            None: The method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        '''
         return self.cls.predictions.decoder
 
     def set_output_embeddings(self, new_embeddings):
+        """
+        Sets the output embeddings for the LayoutLMForMaskedLM model.
+        
+        Args:
+            self (LayoutLMForMaskedLM): The instance of the LayoutLMForMaskedLM class.
+            new_embeddings (Any): The new embeddings to set for the model's output layer.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         self.cls.predictions.decoder = new_embeddings
 
     def construct(
@@ -902,8 +1436,24 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
 
 class LayoutLMForSequenceClassification(LayoutLMPreTrainedModel):
     """LayoutLMForSequenceClassification Model"""
-
     def __init__(self, config):
+        """
+        __init__
+        
+        Initializes the LayoutLMForSequenceClassification class.
+        
+        Args:
+            self: The instance of the class.
+            config: An instance of the configuration class containing the model configuration parameters.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            - TypeError: If the config parameter is not of the expected type.
+            - ValueError: If the num_labels attribute is not present in the config parameter.
+            - RuntimeError: If an error occurs during the initialization process.
+        """
         super().__init__(config)
         self.num_labels = config.num_labels
         self.layoutlm = LayoutLMModel(config)
@@ -914,6 +1464,21 @@ class LayoutLMForSequenceClassification(LayoutLMPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
+        """ 
+        This method, get_input_embeddings, retrieves the input embeddings from the LayoutLM model for sequence classification.
+        
+        Args:
+            self (LayoutLMForSequenceClassification): The instance of the LayoutLMForSequenceClassification class.
+                This parameter refers to the current instance of the LayoutLMForSequenceClassification class.
+                
+        Returns:
+            None
+            This method does not return any value. It simply retrieves and returns the input embeddings from the LayoutLM model for sequence classification.
+        
+        Raises:
+            None
+            No exceptions are raised within this method.
+        """
         return self.layoutlm.embeddings.word_embeddings
 
     def construct(
@@ -1028,8 +1593,23 @@ class LayoutLMForSequenceClassification(LayoutLMPreTrainedModel):
 
 class LayoutLMForTokenClassification(LayoutLMPreTrainedModel):
     """LayoutLMForTokenClassification Model"""
-
     def __init__(self, config):
+        """
+        Initializes an instance of the LayoutLMForTokenClassification class.
+        
+        Args:
+            self: The instance of the LayoutLMForTokenClassification class.
+            config: An object of the LayoutLMConfig class containing the configuration parameters for the LayoutLM model.
+                - Type: LayoutLMConfig
+                - Purpose: Specifies the configuration parameters for the LayoutLM model.
+                - Restrictions: None
+        
+        Returns:
+            None
+            
+        Raises:
+            None
+        """
         super().__init__(config)
         self.num_labels = config.num_labels
         self.layoutlm = LayoutLMModel(config)
@@ -1040,6 +1620,18 @@ class LayoutLMForTokenClassification(LayoutLMPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
+        """
+        This method returns the word embeddings from the LayoutLM model for token classification.
+        
+        Args:
+            self: The instance of the LayoutLMForTokenClassification class.
+        
+        Returns:
+            None. This method returns the word embeddings from the LayoutLM model for token classification.
+        
+        Raises:
+            N/A
+        """
         return self.layoutlm.embeddings.word_embeddings
 
     def construct(
@@ -1137,8 +1729,22 @@ class LayoutLMForTokenClassification(LayoutLMPreTrainedModel):
 
 class LayoutLMForQuestionAnswering(LayoutLMPreTrainedModel):
     """LayoutLMForQuestionAnswering Model"""
-
     def __init__(self, config, has_visual_segment_embedding=True):
+        """
+        Initializes an instance of the LayoutLMForQuestionAnswering class.
+        
+        Args:
+            self: The instance of the class.
+            config (object): An object containing configuration settings.
+            has_visual_segment_embedding (bool, optional): Flag indicating whether visual segment embedding is present. 
+                Defaults to True.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(config)
         self.num_labels = config.num_labels
 
@@ -1149,6 +1755,20 @@ class LayoutLMForQuestionAnswering(LayoutLMPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
+        """
+        Method to retrieve the input embeddings from the LayoutLM model for question answering.
+        
+        Args:
+            self: An instance of the LayoutLMForQuestionAnswering class.
+                  It represents the current instance of the model and is used to access the embeddings.
+                  
+        Returns:
+            None. This method returns the word embeddings from the LayoutLM model for input sequences.
+            The embeddings are used for processing the input data during question answering tasks.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         return self.layoutlm.embeddings.word_embeddings
 
     def construct(
@@ -1219,7 +1839,6 @@ class LayoutLMForQuestionAnswering(LayoutLMPreTrainedModel):
         >>> print(" ".join(words[start : end + 1]))
         M. Hamann P. Harper, P. Martinez
         ```"""
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.layoutlm(

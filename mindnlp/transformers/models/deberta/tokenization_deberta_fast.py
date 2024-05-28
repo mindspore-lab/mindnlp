@@ -131,7 +131,6 @@ class DebertaTokenizerFast(PreTrainedTokenizerFast):
             Whether or not to add an initial space to the input. This allows to treat the leading word just as any
             other word. (Deberta tokenizer detect beginning of words by the preceding space).
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -154,6 +153,29 @@ class DebertaTokenizerFast(PreTrainedTokenizerFast):
         add_prefix_space=False,
         **kwargs,
     ):
+        """Initialize a DebertaTokenizerFast object.
+        
+        Args:
+            self (DebertaTokenizerFast): An instance of the DebertaTokenizerFast class.
+            vocab_file (str, optional): The path to the vocabulary file. Defaults to None.
+            merges_file (str, optional): The path to the merges file. Defaults to None.
+            tokenizer_file (str, optional): The path to the tokenizer file. Defaults to None.
+            errors (str, optional): Specifies how to handle encoding and decoding errors. Defaults to 'replace'.
+            bos_token (str, optional): The beginning of sentence token. Defaults to '[CLS]'.
+            eos_token (str, optional): The end of sentence token. Defaults to '[SEP]'.
+            sep_token (str, optional): The separator token. Defaults to '[SEP]'.
+            cls_token (str, optional): The classification token. Defaults to '[CLS]'.
+            unk_token (str, optional): The unknown token. Defaults to '[UNK]'.
+            pad_token (str, optional): The padding token. Defaults to '[PAD]'.
+            mask_token (str, optional): The mask token. Defaults to '[MASK]'.
+            add_prefix_space (bool, optional): Whether to add a space before each token. Defaults to False.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
         super().__init__(
             vocab_file,
             merges_file,
@@ -261,6 +283,18 @@ class DebertaTokenizerFast(PreTrainedTokenizerFast):
 
     # Copied from transformers.models.gpt2.tokenization_gpt2_fast.GPT2TokenizerFast._batch_encode_plus
     def _batch_encode_plus(self, *args, **kwargs) -> BatchEncoding:
+        """
+        Encodes a batch of inputs into their tokenized form using the DebertaTokenizerFast.
+        
+        Args:
+            self: An instance of the DebertaTokenizerFast class.
+        
+        Returns:
+            A BatchEncoding object that represents the tokenized inputs.
+        
+        Raises:
+            AssertionError: If the 'is_split_into_words' parameter is set to True but the DebertaTokenizerFast instance is not instantiated with 'add_prefix_space=True'.
+        """
         is_split_into_words = kwargs.get("is_split_into_words", False)
         assert self.add_prefix_space or not is_split_into_words, (
             f"You need to instantiate {self.__class__.__name__} with add_prefix_space=True "
@@ -271,6 +305,19 @@ class DebertaTokenizerFast(PreTrainedTokenizerFast):
 
     # Copied from transformers.models.gpt2.tokenization_gpt2_fast.GPT2TokenizerFast._encode_plus
     def _encode_plus(self, *args, **kwargs) -> BatchEncoding:
+        """
+        Encodes the input into a batch of model inputs and returns a BatchEncoding object.
+        
+        Args:
+            self (DebertaTokenizerFast): An instance of the DebertaTokenizerFast class.
+            
+        Returns:
+            BatchEncoding: A BatchEncoding object containing the encoded inputs.
+            
+        Raises:
+            AssertionError: If `is_split_into_words` is True and `add_prefix_space` is False, an AssertionError is raised with a message indicating that the DebertaTokenizerFast class needs to be instantiated
+with `add_prefix_space=True` to use it with pretokenized inputs.
+        """
         is_split_into_words = kwargs.get("is_split_into_words", False)
 
         assert self.add_prefix_space or not is_split_into_words, (
@@ -282,6 +329,20 @@ class DebertaTokenizerFast(PreTrainedTokenizerFast):
 
     # Copied from transformers.models.gpt2.tokenization_gpt2_fast.GPT2TokenizerFast.save_vocabulary
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """
+        Save the vocabulary files of the tokenizer model to a specified directory.
+        
+        Args:
+            self: Instance of the DebertaTokenizerFast class.
+            save_directory (str): The directory path where the vocabulary files will be saved.
+            filename_prefix (Optional[str]): An optional prefix to be added to the saved filenames. Default is None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the paths of the saved vocabulary files.
+        
+        Raises:
+            None.
+        """
         files = self._tokenizer.model.save(save_directory, name=filename_prefix)
         return tuple(files)
 

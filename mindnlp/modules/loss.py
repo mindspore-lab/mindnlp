@@ -46,8 +46,22 @@ class RDropLoss(nn.Cell):
             - "sum": The reduced sum loss is returned.
             - "none": No reduction will be applied.
     """
-
     def __init__(self, reduction='none'):
+        r"""
+        Initialize an instance of the RDropLoss class.
+        
+        Args:
+            self: The instance of the class.
+            reduction (str): Specifies the type of reduction to be applied during loss calculation. 
+                It must be one of the following values: 'sum', 'mean', 'none', 'batchmean'.
+                
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If the specified 'reduction' parameter is not one of the allowed values 
+                ('sum', 'mean', 'none', 'batchmean'), a ValueError is raised with a corresponding error message.
+        """
         super().__init__()
         if reduction not in ['sum', 'mean', 'none', 'batchmean']:
             raise ValueError(
@@ -79,7 +93,6 @@ class RDropLoss(nn.Cell):
             >>> print(loss)
             0.100136
         """
-
         p_loss = kl_div(_inner_log_softmax(p, axis=-1),
                         softmax(q, axis=-1),
                         reduction=self.reduction)
@@ -108,8 +121,22 @@ class CMRC2018Loss(nn.Cell):
         reduction(str): Indicate how to average the loss, the candicates are "mean" and "sum".
             Default: "mean".
     """
-
     def __init__(self, reduction='mean'):
+        r"""
+        Initializes an instance of the CMRC2018Loss class.
+        
+        Args:
+            self: The instance of the CMRC2018Loss class.
+            reduction (str): Specifies the type of reduction to apply to the loss. Valid options are 'mean' and 'sum'.
+                The default value is 'mean'.
+                
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            AssertionError: If the reduction parameter is not one of the valid options ('mean' or 'sum').
+        
+        """
         super().__init__()
 
         assert reduction in ('mean', 'sum')
@@ -151,7 +178,6 @@ class CMRC2018Loss(nn.Cell):
             >>> my_loss = cmrc_loss(tensor_a, tensor_b, my_context_len, tensor_c, tensor_d)
             >>> print(my_loss)
         """
-
         batch_size, max_len = pred_end.shape
 
         zero_tensor = mindspore.Tensor(

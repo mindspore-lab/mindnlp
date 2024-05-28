@@ -32,11 +32,22 @@ class PeftConfigMixin():
     Args:
         peft_type (Union[[`~peft.utils.config.PeftType`], `str`]): The type of Peft method to use.
     """
-
     peft_type: Optional[PeftType] = field(default=None, metadata={"help": "The type of PEFT model."})
 
     @property
     def __dict__(self):
+        r"""
+        Method '__dict__' in the class 'PeftConfigMixin' returns a dictionary representation of the object using the 'asdict' function.
+        
+        Args:
+            self: The instance of the class. This parameter represents the object for which the dictionary representation is generated.
+        
+        Returns:
+            None. The method does not return any value explicitly, as the dictionary representation is retrieved internally.
+        
+        Raises:
+            No exceptions are explicitly raised by this method.
+        """
         return asdict(self)
 
     def to_dict(self):
@@ -69,8 +80,6 @@ class PeftConfigMixin():
         # save it
         with open(output_path, "w", encoding='utf-8') as writer:
             writer.write(json.dumps(output_dict, indent=2, sort_keys=True))
-
-
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, subfolder=None, **kwargs):
@@ -118,7 +127,6 @@ class PeftConfigMixin():
 
         return json_object
 
-
     @property
     def is_prompt_learning(self):
         r"""
@@ -137,7 +145,6 @@ class PeftConfig(PeftConfigMixin):
         task_type (Union[[`~peft.utils.config.TaskType`], `str`]): The type of task to perform.
         inference_mode (`bool`, defaults to `False`): Whether to use the Peft model in inference mode.
     """
-
     base_model_name_or_path: str = field(default=None, metadata={"help": "The name of the base model to use."})
     peft_type: Union[str, PeftType] = field(default=None, metadata={"help": "Peft type"})
     task_type: Union[str, TaskType] = field(default=None, metadata={"help": "Task type"})
@@ -158,7 +165,6 @@ class PromptLearningConfig(PeftConfig):
         num_attention_heads (`int`): The number of attention heads in the base transformer model.
         num_layers (`int`): The number of layers in the base transformer model.
     """
-
     num_virtual_tokens: int = field(default=None, metadata={"help": "Number of virtual tokens"})
     token_dim: int = field(
         default=None, metadata={"help": "The hidden embedding dimension of the base transformer model"}

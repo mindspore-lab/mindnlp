@@ -159,7 +159,6 @@ class ReformerConfig(PretrainedConfig):
     >>> configuration = model.config
     ```
 """
-
     model_type = "reformer"
     keys_to_ignore_at_inference = ["past_buckets_states"]
     attribute_map = {}
@@ -201,6 +200,50 @@ class ReformerConfig(PretrainedConfig):
         classifier_dropout=None,
         **kwargs,
     ):
+        """
+        Initializes a new instance of the ReformerConfig class.
+        
+        Args:
+            attention_head_size (int): The size of each attention head.
+            attn_layers (list): The list of attention layer types to be used.
+            axial_norm_std (float): Standard deviation for axial positional embeddings normalization.
+            axial_pos_embds (bool): Whether to use axial positional embeddings.
+            axial_pos_shape (list): The shape of axial positional embeddings.
+            axial_pos_embds_dim (list): The dimensions of axial positional embeddings.
+            chunk_size_lm_head (int): Size of chunk for the language model head.
+            eos_token_id (int): The token ID for the end-of-sequence token.
+            feed_forward_size (int): The size of the feed-forward network.
+            hash_seed (None or int): The seed for hashing functions.
+            hidden_act (str): The activation function for hidden layers.
+            hidden_dropout_prob (float): The dropout probability for hidden layers.
+            hidden_size (int): The size of the hidden layers.
+            initializer_range (float): The range for weight initialization.
+            is_decoder (bool): Whether the model is used as a decoder.
+            layer_norm_eps (float): Epsilon value for layer normalization.
+            local_num_chunks_before (int): Number of local attention chunks before.
+            local_num_chunks_after (int): Number of local attention chunks after.
+            local_attention_probs_dropout_prob (float): Dropout probability for local attention.
+            local_attn_chunk_length (int): Length of chunks for local attention.
+            lsh_attn_chunk_length (int): Length of chunks for LSH attention.
+            lsh_attention_probs_dropout_prob (float): Dropout probability for LSH attention.
+            lsh_num_chunks_before (int): Number of LSH attention chunks before.
+            lsh_num_chunks_after (int): Number of LSH attention chunks after.
+            max_position_embeddings (int): The maximum number of position embeddings.
+            num_attention_heads (int): The number of attention heads.
+            num_buckets (None or tuple): The number of buckets for hashing.
+            num_hashes (int): The number of hashes for LSH attention.
+            pad_token_id (int): The token ID for padding.
+            vocab_size (int): The size of the vocabulary.
+            tie_word_embeddings (bool): Whether to tie word embeddings.
+            use_cache (bool): Whether to cache intermediate values.
+            classifier_dropout (None or float): Dropout probability for classifier layers.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         self.hash_seed = hash_seed
         self.vocab_size = vocab_size
         self.attention_head_size = attention_head_size

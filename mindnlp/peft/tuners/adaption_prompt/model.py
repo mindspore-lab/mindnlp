@@ -39,8 +39,28 @@ class AdaptionPromptModel(nn.Cell):
       dictionary.
     - Disabling the adapter would also result in the cells being removed from the model.
     """
-
     def __init__(self, model, configs: Dict, adapter_name: str):
+        r"""
+        Initializes an instance of the AdaptionPromptModel class.
+        
+        Args:
+            self: The current instance of the class.
+            model: The underlying model to be used for adaption prompts. Expected to be an object of a specific model class.
+            configs: A dictionary containing configuration details for the adaption prompt model.
+                - Type: Dict
+                - Purpose: Specifies various configurations required for the adaption prompt model.
+                - Restrictions: None
+            adapter_name: The name of the adapter to be added.
+                - Type: str
+                - Purpose: Identifies the adapter which needs to be added to the adaption prompt model.
+                - Restrictions: None
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         super(AdaptionPromptModel, self).__init__()
         self.model = model
         self.peft_config = {}
@@ -136,6 +156,18 @@ class AdaptionPromptModel(nn.Cell):
         self._cached_adapters[adapter_name] = adapted_attentions
 
     def _mark_only_adaption_prompts_as_trainable(self, model: nn.Cell) -> None:
+        r"""Marks only adaption prompts as trainable in the given model.
+        
+        Args:
+            self (AdaptionPromptModel): The instance of AdaptionPromptModel class.
+            model (nn.Cell): The model for which adaption prompts need to be marked as trainable.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         for param in model.trainable_params():
             if not is_adaption_prompt_trainable(param.name):
                 param.requires_grad = False

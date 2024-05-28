@@ -36,9 +36,23 @@ class PadTransform(PyTensorOperation):
     Examples:
 
     """
-
     # @check_decode
     def __init__(self, max_length: int, pad_value:int, return_length:bool = False):
+        r"""
+        Initializes an instance of the PadTransform class.
+        
+        Args:
+            self: The instance of the class.
+            max_length (int): The maximum length of the sequence to be padded.
+            pad_value (int): The value used for padding the sequence.
+            return_length (bool, optional): Flag indicating whether to return the length of the padded sequence. Defaults to False.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         super().__init__()
         self.max_length = max_length
         self.pad_value = pad_value

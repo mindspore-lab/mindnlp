@@ -80,7 +80,6 @@ class MusicgenMelodyDecoderConfig(PretrainedConfig):
         eos_token_id (`int`, *optional*): The id of the *end-of-sequence* token.
         tie_word_embeddings (`bool`, *optional*, defaults to `False`): Whether to tie word embeddings with the text encoder.
     """
-
     model_type = "musicgen_melody_decoder"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -108,6 +107,37 @@ class MusicgenMelodyDecoderConfig(PretrainedConfig):
         tie_word_embeddings=False,
         **kwargs,
     ):
+        """
+        Initialize a MusicgenMelodyDecoderConfig object.
+        
+        Args:
+        - vocab_size (int): The size of the vocabulary. Default is 2048.
+        - max_position_embeddings (int): The maximum number of positions for positional embeddings. Default is 2048.
+        - num_hidden_layers (int): The number of hidden layers. Default is 24.
+        - ffn_dim (int): The dimension of the feedforward networks. Default is 4096.
+        - num_attention_heads (int): The number of attention heads. Default is 16.
+        - layerdrop (float): The probability of dropping a layer during training. Default is 0.0.
+        - use_cache (bool): Whether to use cache during decoding. Default is True.
+        - activation_function (str): The activation function to be used. Default is 'gelu'.
+        - hidden_size (int): The size of the hidden layers. Default is 1024.
+        - dropout (float): The dropout probability. Default is 0.1.
+        - attention_dropout (float): The dropout probability for attention layers. Default is 0.0.
+        - activation_dropout (float): The dropout probability for activation layers. Default is 0.0.
+        - initializer_factor (float): The factor for weight initialization. Default is 0.02.
+        - scale_embedding (bool): Whether to scale the embeddings. Default is False.
+        - num_codebooks (int): The number of codebooks for audio encoding. Default is 4.
+        - audio_channels (int): The number of audio channels (1 for mono, 2 for stereo).
+        - pad_token_id (int): The token ID for padding. Default is 2048.
+        - bos_token_id (int): The token ID for the beginning of sequence. Default is 2048.
+        - eos_token_id (int): The token ID for the end of sequence.
+        - tie_word_embeddings (bool): Whether to tie word embeddings. Default is False.
+          
+        Returns:
+        None
+        
+        Raises:
+        - ValueError: If the number of audio channels is not 1 (mono) or 2 (stereo).
+        """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
         self.hidden_size = hidden_size
@@ -197,7 +227,6 @@ class MusicgenMelodyConfig(PretrainedConfig):
     >>> musicgen_melody_config = MusicgenMelodyConfig.from_pretrained("musicgen_melody-model")
     >>> model = MusicgenMelodyForConditionalGeneration.from_pretrained("musicgen_melody-model", config=musicgen_melody_config)
     ```"""
-
     model_type = "musicgen_melody"
     is_composition = True
 
@@ -207,6 +236,20 @@ class MusicgenMelodyConfig(PretrainedConfig):
         chroma_length=235,
         **kwargs,
     ):
+        """
+        Initializes an instance of the MusicgenMelodyConfig class.
+        
+        Args:
+            self: The instance of the class.
+            num_chroma (int): The number of chroma values. Defaults to 12.
+            chroma_length (int): The length of the chroma. Defaults to 235.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If the config is not initialized with text_encoder, audio_encoder, and decoder config.
+        """
         super().__init__(**kwargs)
         if "text_encoder" not in kwargs or "audio_encoder" not in kwargs or "decoder" not in kwargs:
             raise ValueError("Config has to be initialized with text_encoder, audio_encoder and decoder config")
@@ -242,7 +285,6 @@ class MusicgenMelodyConfig(PretrainedConfig):
         Returns:
             [`MusicgenMelodyConfig`]: An instance of a configuration object
         """
-
         return cls(
             text_encoder=text_encoder_config.to_dict(),
             audio_encoder=audio_encoder_config.to_dict(),
@@ -253,6 +295,18 @@ class MusicgenMelodyConfig(PretrainedConfig):
     @property
     # This is a property because you might want to change the codec model on the fly
     def sampling_rate(self):
+        """
+        Returns the sampling rate of the audio encoder.
+        
+        Args:
+            self: An instance of the MusicgenMelodyConfig class.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         return self.audio_encoder.sampling_rate
 
 __all__ = ['MusicgenMelodyConfig', 'MusicgenMelodyDecoderConfig']

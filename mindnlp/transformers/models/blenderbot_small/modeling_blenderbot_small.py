@@ -64,8 +64,24 @@ class BlenderbotSmallLearnedPositionalEmbedding(nn.Embedding):
     """
     This module learns positional embeddings up to a fixed maximum size.
     """
-
     def __init__(self, num_embeddings: int, embedding_dim: int):
+        """
+        Initializes an instance of the BlenderbotSmallLearnedPositionalEmbedding class.
+        
+        Args:
+            self (BlenderbotSmallLearnedPositionalEmbedding): The instance of the class.
+            num_embeddings (int): The number of embeddings to be used.
+                Must be a positive integer representing the total number of embeddings to be initialized.
+            embedding_dim (int): The dimensionality of the embeddings.
+                Must be a positive integer representing the dimensionality of the embeddings.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            - TypeError: If num_embeddings or embedding_dim are not of type int.
+            - ValueError: If num_embeddings or embedding_dim are not positive integers.
+        """
         super().__init__(num_embeddings, embedding_dim)
 
     def construct(self, input_ids_shape, past_key_values_length: int = 0):
@@ -80,7 +96,6 @@ class BlenderbotSmallLearnedPositionalEmbedding(nn.Embedding):
 # Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->BlenderbotSmall
 class BlenderbotSmallAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(
         self,
         embed_dim: int,
@@ -91,6 +106,26 @@ class BlenderbotSmallAttention(nn.Cell):
         is_causal: bool = False,
         config: Optional[BlenderbotSmallConfig] = None,
     ):
+        """
+        Initializes an instance of the BlenderbotSmallAttention class.
+        
+        Args:
+            self: The object itself.
+            embed_dim (int): The dimension of the input embeddings.
+            num_heads (int): The number of attention heads.
+            dropout (float, optional): The dropout probability. Defaults to 0.0.
+            is_decoder (bool, optional): Whether the attention is used as a decoder. Defaults to False.
+            bias (bool, optional): Whether to include bias in the linear transformations. Defaults to True.
+            is_causal (bool, optional): Whether the attention should be restricted to a causal context. Defaults to False.
+            config (Optional[BlenderbotSmallConfig], optional): The configuration object. Defaults to None.
+        
+        Returns:
+            None
+        
+        Raises:
+            ValueError: If the `embed_dim` is not divisible by `num_heads`.
+        
+        """
         super().__init__()
         self.embed_dim = embed_dim
         self.num_heads = num_heads
@@ -113,6 +148,21 @@ class BlenderbotSmallAttention(nn.Cell):
         self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
+        """
+        This method reshapes the input tensor for the attention mechanism in the BlenderbotSmall model.
+        
+        Args:
+            self (BlenderbotSmallAttention): The instance of the BlenderbotSmallAttention class.
+            tensor (mindspore.Tensor): The input tensor that needs to be reshaped.
+            seq_len (int): The length of the sequence.
+            bsz (int): The batch size.
+        
+        Returns:
+            None: This method does not return any value directly. It operates by reshaping the input tensor.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
     def construct(
@@ -125,7 +175,6 @@ class BlenderbotSmallAttention(nn.Cell):
         output_attentions: bool = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
-
         # if key_value_states are provided this layer is used as a cross-attention layer
         # for the decoder
         is_cross_attention = key_value_states is not None
@@ -238,7 +287,47 @@ class BlenderbotSmallAttention(nn.Cell):
 
 # Copied from transformers.models.bart.modeling_bart.BartEncoderLayer with Bart->BlenderbotSmall, BART->BLENDERBOT_SMALL
 class BlenderbotSmallEncoderLayer(nn.Cell):
+
+    """
+    This class represents a single layer of the BlenderbotSmall model encoder. The layer consists of self-attention mechanism followed by feedforward neural network blocks with layer normalization and residual
+connections. 
+    
+    The class initializes the encoder layer with configuration parameters and defines a 'construct' method that processes the input hidden states through the self-attention mechanism and feedforward neural
+network blocks. The method also includes functionality for dropout, layer normalization, and handling of attention masks and head masks. 
+    
+    Parameters:
+        config (BlenderbotSmallConfig): Configuration object containing model hyperparameters.
+        
+    Methods:
+        - __init__(self, config: BlenderbotSmallConfig): Initializes the encoder layer with the provided configuration settings.
+        - construct(self, hidden_states: mindspore.Tensor, attention_mask: mindspore.Tensor, layer_head_mask: mindspore.Tensor, output_attentions: Optional[bool] = False) -> Tuple[mindspore.Tensor,
+Optional[mindspore.Tensor]]: Processes the input hidden states through the self-attention mechanism and feedforward neural network blocks, with optional attention outputs.
+    
+    Attributes:
+        - embed_dim: Dimension of the embedding space.
+        - self_attn: Self-attention mechanism used in the layer.
+        - self_attn_layer_norm: Layer normalization for the self-attention output.
+        - dropout: Dropout probability applied in the layer.
+        - activation_fn: Activation function used in the feedforward neural network.
+        - activation_dropout: Dropout probability applied after the activation function.
+        - fc1: First fully connected layer in the feedforward neural network.
+        - fc2: Second fully connected layer in the feedforward neural network.
+        - final_layer_norm: Layer normalization for the final output of the layer.
+    """
     def __init__(self, config: BlenderbotSmallConfig):
+        """
+        Initializes a new instance of the BlenderbotSmallEncoderLayer class.
+        
+        Args:
+            self (BlenderbotSmallEncoderLayer): The current instance of the class.
+            config (BlenderbotSmallConfig): An instance of the BlenderbotSmallConfig class, containing the configuration settings for the encoder layer.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         super().__init__()
         self.embed_dim = config.d_model
 
@@ -315,7 +404,62 @@ BLENDERBOT_SMALL_ATTENTION_CLASSES = {
 
 # Copied from transformers.models.bart.modeling_bart.BartDecoderLayer with Bart->BlenderbotSmall, BART->BLENDERBOT_SMALL
 class BlenderbotSmallDecoderLayer(nn.Cell):
+
+    """
+    BlenderbotSmallDecoderLayer represents a single layer of the BlenderbotSmallDecoder. It performs self-attention, cross-attention with an encoder, and feed-forward neural network operations.
+    
+    This class inherits from nn.Cell and implements the functionality required for processing inputs in the BlenderbotSmallDecoder.
+    
+    Attributes:
+        embed_dim (int): The dimension of the input embeddings.
+        self_attn: The self-attention mechanism used within the layer.
+        dropout (float): The dropout probability.
+        activation_fn: The activation function used in the feed-forward neural network.
+        activation_dropout (float): The dropout probability for the activation function.
+        self_attn_layer_norm: Layer normalization for the self-attention output.
+        encoder_attn: The cross-attention mechanism with the encoder.
+        encoder_attn_layer_norm: Layer normalization for the cross-attention output.
+        fc1: The first feed-forward neural network layer.
+        fc2: The second feed-forward neural network layer.
+        final_layer_norm: Layer normalization for the final output.
+    
+    Methods:
+        construct: Processes the input hidden_states and performs self-attention, cross-attention, and feed-forward operations.
+    
+    Args:
+        hidden_states (mindspore.Tensor): The input to the layer of shape (batch, seq_len, embed_dim).
+        attention_mask (mindspore.Tensor, optional): The attention mask for self-attention.
+        encoder_hidden_states (mindspore.Tensor, optional): The encoder hidden states for cross-attention.
+        encoder_attention_mask (mindspore.Tensor, optional): The attention mask for encoder cross-attention.
+        layer_head_mask (mindspore.Tensor, optional): The mask for attention heads in a given layer.
+        cross_attn_layer_head_mask (mindspore.Tensor, optional): The mask for cross-attention heads in a given layer.
+        past_key_value (Tuple(mindspore.Tensor), optional): Cached past key and value projection states.
+        output_attentions (bool, optional): Whether to return the attention tensors of all attention layers.
+        use_cache (bool, optional): Whether to use caching for the output.
+    
+    Returns:
+        Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: The output tensor and optional present_key_value tuple.
+    
+    Raises:
+        None
+    """
     def __init__(self, config: BlenderbotSmallConfig):
+        """
+        Initialize a BlenderbotSmallDecoderLayer object.
+        
+        Args:
+            self (BlenderbotSmallDecoderLayer): The instance of the BlenderbotSmallDecoderLayer class.
+            config (BlenderbotSmallConfig): The configuration object containing settings for the decoder layer.
+                - Type: BlenderbotSmallConfig
+                - Purpose: Specifies the configuration parameters for the decoder layer.
+                - Restrictions: Must be an instance of the BlenderbotSmallConfig class.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None
+        """
         super().__init__()
         self.embed_dim = config.d_model
 
@@ -435,6 +579,22 @@ class BlenderbotSmallDecoderLayer(nn.Cell):
 
 
 class BlenderbotSmallPreTrainedModel(PreTrainedModel):
+
+    """
+    This class represents a small version of the Blenderbot model that has been pre-trained on a specific task. It is a subclass of the `PreTrainedModel` class.
+    
+    The `BlenderbotSmallPreTrainedModel` class provides methods for initializing the weights of the model and generating dummy inputs for testing purposes.
+    
+    To initialize the weights, the `_init_weights` method is called with a specified `cell` object. If the `cell` is of type `nn.Dense`, the weights are initialized using the normal distribution with a
+standard deviation of `self.config.init_std`. If the `cell` has biases, they are initialized to zeros. If the `cell` is of type `nn.Embedding`, the weights are initialized using a normal distribution with a
+mean of 0.0 and a standard deviation of `self.config.init_std`. If a padding index is provided, the corresponding weights are set to 0.
+    
+    The `dummy_inputs` property returns a dictionary of dummy inputs that can be used for testing. It includes 'attention_mask', 'input_ids', and 'decoder_input_ids'. The 'input_ids' tensor contains two rows,
+with the second row having a padding token represented by `self.config.pad_token_id`. The 'attention_mask' tensor is obtained by checking if each element of 'input_ids' is not equal to the padding token. The
+'decoder_input_ids' tensor is the same as the 'input_ids' tensor.
+    
+    Note: This docstring does not include signatures or any other code.
+    """
     config_class = BlenderbotSmallConfig
     base_model_prefix = "model"
     supports_gradient_checkpointing = True
@@ -456,9 +616,25 @@ class BlenderbotSmallPreTrainedModel(PreTrainedModel):
 
             cell.weight.set_data(Tensor(weight, cell.weight.dtype))
 
-
     @property
     def dummy_inputs(self):
+        """
+        This method returns a dictionary of dummy inputs for the BlenderbotSmallPreTrainedModel.
+        
+        Args:
+            self: BlenderbotSmallPreTrainedModel
+                The instance of the BlenderbotSmallPreTrainedModel class.
+        
+        Returns:
+            dict
+                A dictionary containing dummy inputs with the following keys:
+                    - 'attention_mask': A tensor representing the attention mask for the input_ids.
+                    - 'input_ids': A tensor containing the input token IDs.
+                    - 'decoder_input_ids': A tensor containing the decoder input token IDs.
+        
+        Raises:
+            None
+        """
         pad_token = self.config.pad_token_id
         input_ids = mindspore.tensor([[0, 6, 10, 4, 2], [0, 8, 12, 2, pad_token]])
         dummy_inputs = {
@@ -478,8 +654,22 @@ class BlenderbotSmallEncoder(BlenderbotSmallPreTrainedModel):
         config: BlenderbotSmallConfig
         embed_tokens (nn.Embedding): output embedding
     """
-
     def __init__(self, config: BlenderbotSmallConfig, embed_tokens: Optional[nn.Embedding] = None):
+        """
+        Initializes the BlenderbotSmallEncoder.
+        
+        Args:
+            self: The instance of the class.
+            config (BlenderbotSmallConfig): The configuration for the encoder, including settings such as dropout, layer drop, embed dimension, padding index, maximum source positions, embed scale, and vocab
+size. 
+            embed_tokens (Optional[nn.Embedding]): Optional parameter representing the embedding tokens. If not provided, it defaults to None.
+        
+        Returns:
+            None. The method initializes the BlenderbotSmallEncoder but does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(config)
 
         self.dropout = config.dropout
@@ -646,8 +836,21 @@ class BlenderbotSmallDecoder(BlenderbotSmallPreTrainedModel):
         config: BlenderbotSmallConfig
         embed_tokens (nn.Embedding): output embedding
     """
-
     def __init__(self, config: BlenderbotSmallConfig, embed_tokens: Optional[nn.Embedding] = None):
+        """
+        Initializes a BlenderbotSmallDecoder instance.
+        
+        Args:
+            self: The instance of the BlenderbotSmallDecoder class.
+            config (BlenderbotSmallConfig): An instance of BlenderbotSmallConfig containing configuration parameters.
+            embed_tokens (Optional[nn.Embedding]): Optional parameter representing embedding tokens. Default is None.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(config)
         self.dropout = config.dropout
         self.layerdrop = config.decoder_layerdrop
@@ -672,9 +875,50 @@ class BlenderbotSmallDecoder(BlenderbotSmallPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
+        """
+        Method to retrieve the input embeddings from the BlenderbotSmallDecoder class.
+        
+        Args:
+            self: BlenderbotSmallDecoder instance. Represents the current instance of the BlenderbotSmallDecoder class.
+        
+        Returns:
+            None. This method returns the embed_tokens attribute of the BlenderbotSmallDecoder instance.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
+        """
+        Set the input embeddings for the BlenderbotSmallDecoder.
+        
+        Args:
+            self (BlenderbotSmallDecoder): The instance of the BlenderbotSmallDecoder class.
+            value: The input embeddings to be set. This should be of type torch.Tensor or any other compatible type.
+        
+        Returns:
+            None. This method does not return anything.
+        
+        Raises:
+            None.
+        
+        Description:
+        This method allows setting the input embeddings for the BlenderbotSmallDecoder. The input embeddings are used to represent the input tokens in the decoding process. The 'value' parameter should be a
+tensor or any other compatible type that contains the desired input embeddings.
+        
+        Note that the 'value' parameter replaces the existing embeddings set for the 'embed_tokens' attribute of the BlenderbotSmallDecoder instance. Therefore, calling this method will overwrite any
+previously set input embeddings.
+        
+        Example:
+            decoder = BlenderbotSmallDecoder()
+            embeddings = torch.tensor([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]])
+            decoder.set_input_embeddings(embeddings)
+        
+        In the example above, a new instance of BlenderbotSmallDecoder is created. The input embeddings are defined as a tensor with shape (2, 3), representing two tokens with three-dimensional embeddings. The
+'set_input_embeddings' method is then called on the decoder instance, passing the embeddings tensor as the 'value' parameter. This updates the 'embed_tokens' attribute of the decoder with the new input
+embeddings.
+        """
         self.embed_tokens = value
 
     def construct(
@@ -892,9 +1136,60 @@ class BlenderbotSmallDecoder(BlenderbotSmallPreTrainedModel):
 
 
 class BlenderbotSmallModel(BlenderbotSmallPreTrainedModel):
+
+    """
+        This class represents the BlenderbotSmallModel, which is a Python implementation of the Blenderbot Small model for chat-based language generation. 
+    
+        The BlenderbotSmallModel is a Seq2Seq model that consists of an encoder and a decoder. The encoder encodes the input text into hidden states, while the decoder generates the output text based on the
+encoded information. The model uses shared embeddings for both the encoder and the decoder.
+    
+        This class inherits from the BlenderbotSmallPreTrainedModel.
+    
+        Example usage:
+    
+        
+        from transformers import AutoTokenizer, BlenderbotSmallModel
+    
+        model = BlenderbotSmallModel.from_pretrained("facebook/blenderbot_small-90M")
+        tokenizer = AutoTokenizer.from_pretrained("facebook/blenderbot_small-90M")
+    
+        inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="pt")
+        decoder_inputs = tokenizer("Studies show that", return_tensors="pt")  # Batch size 1
+        outputs = model(input_ids=inputs.input_ids, decoder_input_ids=decoder_inputs.input_ids)
+    
+        last_hidden_states = outputs.last_hidden_state
+        list(last_hidden_states.shape)
+        [1, 3, 512]
+        
+    
+        Methods:
+            - __init__(self, config: BlenderbotSmallConfig): Initializes the BlenderbotSmallModel with the provided configuration.
+            - get_input_embeddings(self): Returns the shared input embeddings.
+            - set_input_embeddings(self, value): Sets the shared input embeddings.
+            - get_encoder(self): Returns the encoder of the model.
+            - get_decoder(self): Returns the decoder of the model.
+            - construct(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask, cross_attn_head_mask, encoder_outputs, past_key_values, inputs_embeds,
+decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model with the given inputs and returns the output.
+    
+        """
     _tied_weights_keys = ["decoder.embed_tokens.weight", "encoder.embed_tokens.weight"]
 
     def __init__(self, config: BlenderbotSmallConfig):
+        """
+        Initializes a new instance of BlenderbotSmallModel with the provided configuration.
+        
+        Args:
+            self (BlenderbotSmallModel): The instance of the BlenderbotSmallModel class.
+            config (BlenderbotSmallConfig): The configuration object containing model settings.
+                It must be an instance of BlenderbotSmallConfig class.
+                
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            - TypeError: If the config parameter is not of type BlenderbotSmallConfig.
+            - ValueError: If any of the required parameters from the config object are missing or invalid.
+        """
         super().__init__(config)
 
         padding_idx, vocab_size = config.pad_token_id, config.vocab_size
@@ -907,17 +1202,72 @@ class BlenderbotSmallModel(BlenderbotSmallPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
+        """
+        Method to retrieve the input embeddings from the BlenderbotSmallModel.
+        
+        Args:
+            self: The instance of the BlenderbotSmallModel class.
+                Type: class instance.
+                Purpose: Represents the current instance of the BlenderbotSmallModel class.
+                Restrictions: None.
+        
+        Returns:
+            None: The method returns None.
+                Type: None.
+                Purpose: Indicates that no specific value is returned from this method.
+        
+        Raises:
+            None.
+        """
         return self.shared
 
     def set_input_embeddings(self, value):
+        """
+        Sets the input embeddings for the BlenderbotSmallModel.
+        
+        Args:
+            self (BlenderbotSmallModel): The instance of the BlenderbotSmallModel class.
+            value: The input embeddings to be set. It should be a tensor of shape [vocab_size, embedding_dim].
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         self.shared = value
         self.encoder.embed_tokens = self.shared
         self.decoder.embed_tokens = self.shared
 
     def get_encoder(self):
+        """
+        Method to retrieve the encoder of the BlenderbotSmallModel instance.
+        
+        Args:
+            self: The instance of the BlenderbotSmallModel class. It is required to access the encoder.
+            
+        Returns:
+            NoneType: The method returns the encoder associated with the BlenderbotSmallModel instance. 
+            The encoder is used for encoding input data in the model.
+            
+        Raises:
+            N/A
+        """
         return self.encoder
 
     def get_decoder(self):
+        """
+        This method returns the decoder attribute of the BlenderbotSmallModel.
+        
+        Args:
+            self: BlenderbotSmallModel - The instance of the BlenderbotSmallModel class.
+        
+        Returns:
+            None: This method returns the decoder attribute of the BlenderbotSmallModel.
+        
+        Raises:
+            This method does not raise any exceptions.
+        """
         return self.decoder
 
     def construct(
@@ -1014,11 +1364,33 @@ class BlenderbotSmallModel(BlenderbotSmallPreTrainedModel):
 
 
 class BlenderbotSmallForConditionalGeneration(BlenderbotSmallPreTrainedModel):
+
+    """
+    This class represents a small Blenderbot model for conditional generation tasks. It is designed to generate responses based on given inputs in a conversational setting. The class provides methods for
+initializing the model, resizing token embeddings, constructing the model output, preparing inputs for generation, and reordering cache during inference. It inherits from BlenderbotSmallPreTrainedModel and
+includes functionalities such as getting encoder and decoder, setting output embeddings, and manipulating final logits bias. The class is equipped to handle various input parameters for generating responses
+and computing loss during training.
+    """
     base_model_prefix = "model"
     _keys_to_ignore_on_load_unexpected = ["final_logits_bias"]
     _tied_weights_keys = ["decoder.embed_tokens.weight", "encoder.embed_tokens.weight", "lm_head.weight"]
 
     def __init__(self, config: BlenderbotSmallConfig):
+        """
+        __init__
+        
+        Initialize the BlenderbotSmallForConditionalGeneration class.
+        
+        Args:
+            self: The instance of the BlenderbotSmallForConditionalGeneration class.
+            config (BlenderbotSmallConfig): An instance of the BlenderbotSmallConfig class containing the configuration parameters for the model.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         super().__init__(config)
         self.model = BlenderbotSmallModel(config)
         self.final_logits_bias = ops.zeros((1, self.model.shared.vocab_size))
@@ -1028,17 +1400,72 @@ class BlenderbotSmallForConditionalGeneration(BlenderbotSmallPreTrainedModel):
         self.post_init()
 
     def get_encoder(self):
+        """
+        Method: get_encoder
+        
+        Description:
+        Returns the encoder component of the BlenderbotSmallForConditionalGeneration model.
+        
+        Args:
+        - self: BlenderbotSmallForConditionalGeneration
+            The instance of the BlenderbotSmallForConditionalGeneration class.
+        
+        Returns:
+        None
+        
+        Raises:
+        - None
+        """
         return self.model.get_encoder()
 
     def get_decoder(self):
+        '''
+        This method returns the decoder component from the BlenderbotSmallForConditionalGeneration model.
+        
+        Args:
+            self (BlenderbotSmallForConditionalGeneration): An instance of the BlenderbotSmallForConditionalGeneration class.
+        
+        Returns:
+            None: The decoder component retrieved from the model.
+        
+        Raises:
+            This method does not raise any exceptions.
+        '''
         return self.model.get_decoder()
 
     def resize_token_embeddings(self, new_num_tokens: int, pad_to_multiple_of: Optional[int] = None) -> nn.Embedding:
+        """
+        Resize the token embeddings for the BlenderbotSmallForConditionalGeneration model.
+        
+        Args:
+            self: The instance of the class BlenderbotSmallForConditionalGeneration.
+            new_num_tokens (int): The new number of tokens to resize the embedding to.
+            pad_to_multiple_of (Optional[int]): If provided, the new embedding size will be padded to a multiple of this value.
+        
+        Returns:
+            nn.Embedding: The resized token embeddings as an instance of nn.Embedding.
+        
+        Raises:
+            None.
+        """
         new_embeddings = super().resize_token_embeddings(new_num_tokens, pad_to_multiple_of)
         self._resize_final_logits_bias(new_embeddings.weight.shape[0])
         return new_embeddings
 
     def _resize_final_logits_bias(self, new_num_tokens: int) -> None:
+        """
+        Resizes the final logits bias based on the number of tokens in the input.
+        
+        Args:
+            self (BlenderbotSmallForConditionalGeneration): The instance of the BlenderbotSmallForConditionalGeneration class.
+            new_num_tokens (int): The desired number of tokens in the input. It should be a positive integer.
+        
+        Returns:
+            None. This method modifies the final_logits_bias attribute of the instance.
+        
+        Raises:
+            None.
+        """
         old_num_tokens = self.final_logits_bias.shape[-1]
         if new_num_tokens <= old_num_tokens:
             new_bias = self.final_logits_bias[:, :new_num_tokens]
@@ -1048,9 +1475,35 @@ class BlenderbotSmallForConditionalGeneration(BlenderbotSmallPreTrainedModel):
         self.final_logits_bias = new_bias
 
     def get_output_embeddings(self):
+        """
+        Method to retrieve the output embeddings of the model.
+        
+        Args:
+            self: Instance of the BlenderbotSmallForConditionalGeneration class.
+        
+        Returns:
+            None. This method returns the output embeddings of the model stored in the 'lm_head' attribute.
+        
+        Raises:
+            None.
+        """
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
+        """
+        Sets the output embeddings for the BlenderbotSmallForConditionalGeneration model.
+        
+        Args:
+            self (BlenderbotSmallForConditionalGeneration): The instance of the BlenderbotSmallForConditionalGeneration class.
+            new_embeddings (torch.Tensor): The new output embeddings to be set for the model. It should be a tensor of shape (vocab_size, hidden_size).
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            TypeError: If the new_embeddings parameter is not a torch.Tensor.
+            ValueError: If the shape of new_embeddings does not match the expected shape (vocab_size, hidden_size).
+        """
         self.lm_head = new_embeddings
 
     def construct(
@@ -1142,6 +1595,35 @@ class BlenderbotSmallForConditionalGeneration(BlenderbotSmallPreTrainedModel):
         encoder_outputs=None,
         **kwargs,
     ):
+        '''
+        Prepare inputs for generation.
+        
+        Args:
+            self (BlenderbotSmallForConditionalGeneration): An instance of the BlenderbotSmallForConditionalGeneration class.
+            decoder_input_ids (torch.Tensor): The input tensor of decoder tokens. Shape: (batch_size, sequence_length).
+            past_key_values (Tuple[Tuple[torch.Tensor]]): The cached key-value states of the decoder. Default: None.
+            attention_mask (torch.Tensor): The attention mask tensor. Shape: (batch_size, sequence_length).
+            head_mask (torch.Tensor): The mask tensor for hiding heads of the encoder. Shape: (num_layers, num_heads).
+            decoder_head_mask (torch.Tensor): The mask tensor for hiding heads of the decoder. Shape: (num_layers, num_heads).
+            cross_attn_head_mask (torch.Tensor): The mask tensor for hiding heads of the cross-attention. Shape: (num_layers, num_heads).
+            use_cache (bool): Whether to use cache for decoding. Default: None.
+            encoder_outputs (Tuple[torch.Tensor]): The output tensor of the encoder. Default: None.
+        
+        Returns:
+            dict: A dictionary containing the prepared inputs for generation. The keys are as follows:
+                - 'input_ids' (None): Placeholder for input ids.
+                - 'encoder_outputs' (Tuple[torch.Tensor]): The output tensor of the encoder.
+                - 'past_key_values' (Tuple[Tuple[torch.Tensor]]): The cached key-value states of the decoder.
+                - 'decoder_input_ids' (torch.Tensor): The modified input tensor of decoder tokens.
+                - 'attention_mask' (torch.Tensor): The attention mask tensor.
+                - 'head_mask' (torch.Tensor): The mask tensor for hiding heads of the encoder.
+                - 'decoder_head_mask' (torch.Tensor): The mask tensor for hiding heads of the decoder.
+                - 'cross_attn_head_mask' (torch.Tensor): The mask tensor for hiding heads of the cross-attention.
+                - 'use_cache' (bool): Whether to use cache for decoding.
+        
+        Raises:
+            None.
+        '''
         # cut decoder_input_ids if past is used
         if past_key_values is not None:
             past_length = past_key_values[0][0].shape[2]
@@ -1169,6 +1651,19 @@ class BlenderbotSmallForConditionalGeneration(BlenderbotSmallPreTrainedModel):
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
+        """
+        Reorders the cache for a specific beam index in the BlenderbotSmallForConditionalGeneration class.
+        
+        Args:
+            past_key_values (tuple): A tuple containing past key-value pairs for each layer. Each layer's past consists of a tuple of two tensors and an additional tensor.
+            beam_idx (int): The index of the beam for which the cache needs to be reordered.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         reordered_past = ()
         for layer_past in past_key_values:
             # cached cross_attention states don't have to be reordered -> they are always the same
@@ -1185,20 +1680,74 @@ class BlenderbotSmallDecoderWrapper(BlenderbotSmallPreTrainedModel):
     This wrapper class is a helper class to correctly load pretrained checkpoints when the causal language model is
     used in combination with the [`EncoderDecoderModel`] framework.
     """
-
     def __init__(self, config):
+        """
+        Initializes a new instance of the BlenderbotSmallDecoderWrapper class.
+        
+        Args:
+            self: The instance of the class.
+            config: Dictionary containing configuration parameters for the decoder.
+        
+        Returns:
+            None. The method initializes the instance with the provided configuration.
+        
+        Raises:
+            - TypeError: If the config parameter is not a dictionary or if it does not contain required configuration parameters.
+            - ValueError: If the provided configuration parameters are invalid or incomplete.
+        """
         super().__init__(config)
         self.decoder = BlenderbotSmallDecoder(config)
 
     def construct(self, *args, **kwargs):
+        """
+        Constructs a BlenderbotSmallDecoderWrapper object.
+        
+        This method is used to construct a BlenderbotSmallDecoderWrapper object by calling the `decoder` method with the provided arguments and keyword arguments.
+        
+        Args:
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
         return self.decoder(*args, **kwargs)
 
 
 # Copied from transformers.models.bart.modeling_bart.BartForCausalLM with Bart->BlenderbotSmall, facebook/bart-base->facebook/blenderbot_small-90M
 class BlenderbotSmallForCausalLM(BlenderbotSmallPreTrainedModel):
+
+    """
+    Represents the BlenderbotSmallForCausalLM class, which is designed for causal language modeling with the BlenderbotSmall model architecture. This class inherits from BlenderbotSmallPreTrainedModel and
+provides methods for initializing the model, setting and getting input and output embeddings, setting and getting the decoder, constructing the model, and preparing inputs for generation. It also includes a
+method for reordering cache during generation. The class includes detailed information about the arguments and returns for the 'construct' and 'prepare_inputs_for_generation' methods. Additionally, example
+usage and expected outputs are provided for the 'construct' method.
+    
+    This class encapsulates the functionality for utilizing the BlenderbotSmall model for causal language modeling tasks and provides a comprehensive interface for model manipulation and generation.
+    """
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
+        """
+        Initializes a new instance of the BlenderbotSmallForCausalLM class.
+        
+        Args:
+            self (BlenderbotSmallForCausalLM): The instance of the class itself.
+            config (object): The configuration object containing settings for the model.
+                This object is deep copied to ensure immutability.
+                It must have the 'is_decoder' attribute set to True.
+                It must have the 'is_encoder_decoder' attribute set to False.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            TypeError: If the config parameter is not of the expected type.
+            AttributeError: If the config parameter does not have the required attributes.
+        """
         config = copy.deepcopy(config)
         config.is_decoder = True
         config.is_encoder_decoder = False
@@ -1211,21 +1760,100 @@ class BlenderbotSmallForCausalLM(BlenderbotSmallPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
+        """
+        This method retrieves the input embeddings from the BlenderbotSmallForCausalLM model.
+        
+        Args:
+            self (BlenderbotSmallForCausalLM): The instance of the BlenderbotSmallForCausalLM class.
+        
+        Returns:
+            None: This method returns None as it retrieves the input embeddings from the model and does not perform any additional processing.
+        
+        Raises:
+            N/A
+        """
         return self.model.decoder.embed_tokens
 
     def set_input_embeddings(self, value):
+        """
+        Set the input embeddings for the BlenderbotSmallForCausalLM model.
+        
+        Args:
+            self (BlenderbotSmallForCausalLM): The instance of the BlenderbotSmallForCausalLM class.
+            value (torch.Tensor): The input embeddings to be set for the model. It should be a torch.Tensor of appropriate shape and size.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         self.model.decoder.embed_tokens = value
 
     def get_output_embeddings(self):
+        """
+        Returns the output embeddings for the BlenderbotSmallForCausalLM model.
+        
+        Args:
+            self: An instance of the BlenderbotSmallForCausalLM class.
+        
+        Returns:
+            None. The method returns the output embeddings for the model, which are used for downstream tasks or further analysis.
+        
+        Raises:
+            None.
+        
+        Note:
+            The output embeddings are a representation of the model's internal hidden states after processing the input data. They capture the semantic information learned by the model during training and can
+be useful for various natural language processing tasks.
+        """
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
+        """
+        Sets the output embeddings for the BlenderbotSmallForCausalLM model.
+        
+        Args:
+            self (BlenderbotSmallForCausalLM): The instance of the BlenderbotSmallForCausalLM class.
+            new_embeddings (Tensor): The new output embeddings to be set for the model. It should be a tensor representing the new embeddings.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            TypeError: If the new_embeddings is not of type Tensor.
+        """
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
+        """
+        Sets the decoder for the BlenderbotSmallForCausalLM model.
+        
+        Args:
+            self (BlenderbotSmallForCausalLM): The instance of the BlenderbotSmallForCausalLM class.
+            decoder (object): The decoder object to be set for the model.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         self.model.decoder = decoder
 
     def get_decoder(self):
+        """
+        This method returns the decoder component of the BlenderbotSmallForCausalLM model.
+        
+        Args:
+            self: The instance of the BlenderbotSmallForCausalLM class.
+        
+        Returns:
+            None. The method returns the decoder component of the BlenderbotSmallForCausalLM model.
+        
+        Raises:
+            This method does not raise any exceptions.
+        """
         return self.model.decoder
 
     def construct(
@@ -1328,7 +1956,6 @@ class BlenderbotSmallForCausalLM(BlenderbotSmallPreTrainedModel):
         >>> list(logits.shape) == expected_shape
         True
         ```"""
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1373,6 +2000,23 @@ class BlenderbotSmallForCausalLM(BlenderbotSmallPreTrainedModel):
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, use_cache=None, **kwargs
     ):
+        """
+        This method prepares inputs for generation in the BlenderbotSmallForCausalLM class.
+        
+        Args:
+            self: The instance of the class.
+            input_ids (torch.Tensor): The input tensor containing token IDs for the input sequence.
+            past_key_values (tuple, optional): A tuple of past key values used in model inference.
+            attention_mask (torch.Tensor, optional): A tensor specifying which elements in the input sequence should be attended to.
+            use_cache (bool, optional): A flag indicating whether to use caching for faster generation.
+        
+        Returns:
+            dict: A dictionary containing the prepared inputs for generation including 'input_ids', 'attention_mask', 'past_key_values', and 'use_cache'.
+        
+        Raises:
+            ValueError: If the input_ids shape is incompatible with past_key_values.
+            IndexError: If an index error occurs during input_ids manipulation.
+        """
         # if model is used as a decoder in encoder-decoder model, the decoder attention mask is created on the fly
         if attention_mask is None:
             attention_mask = input_ids.new_ones(input_ids.shape)
@@ -1398,6 +2042,19 @@ class BlenderbotSmallForCausalLM(BlenderbotSmallPreTrainedModel):
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
+        """
+        Reorders the cache based on the provided beam index.
+        
+        Args:
+            past_key_values (tuple): A tuple containing the past key-values to be reordered. Each element in the tuple represents the past key-values for a layer.
+            beam_idx (Tensor): A tensor representing the indices of the beams to use for reordering the past key-values.
+        
+        Returns:
+            None. This method does not return anything but modifies the past key-values in place.
+        
+        Raises:
+            None.
+        """
         reordered_past = ()
         for layer_past in past_key_values:
             reordered_past += (

@@ -23,16 +23,48 @@ from mindnlp.utils import ExplicitEnum
 from .base import GenericTensor, Pipeline
 
 def sigmoid(_outputs):
+    """
+    Args:
+        _outputs (numeric): The input value to calculate the sigmoid function.
+        
+    Returns:
+        float: The output value after applying the sigmoid function.
+        
+    Raises:
+        None
+    """
     return 1.0 / (1.0 + np.exp(-_outputs))
 
 
 def softmax(_outputs):
+    """
+    This function calculates the softmax values of the input array _outputs.
+    Args:
+        _outputs (numpy.ndarray): The input array containing the logits.
+    Returns:
+        numpy.ndarray: The softmax values of the input array.
+    Raises:
+        None
+    """
     maxes = np.max(_outputs, axis=-1, keepdims=True)
     shifted_exp = np.exp(_outputs - maxes)
     return shifted_exp / shifted_exp.sum(axis=-1, keepdims=True)
 
 
 class ClassificationFunction(ExplicitEnum):
+
+    """
+    Represents a classification function that can be used to classify data into different categories.
+    
+    This class inherits from the ExplicitEnum class.
+    
+    Attributes:
+        None
+    
+    Methods:
+        None
+    
+    """
     SIGMOID = "sigmoid"
     SOFTMAX = "softmax"
     NONE = "none"
@@ -68,14 +100,44 @@ class TextClassificationPipeline(Pipeline):
     the up-to-date list of available models on
     [hf-mirror.com/models](https://hf-mirror.com/models?filter=text-classification).
     """
-
     return_all_scores = False
     function_to_apply = ClassificationFunction.NONE
 
     def __init__(self, **kwargs):
+        """
+        Initializes an instance of the TextClassificationPipeline class.
+        
+        Args:
+            self: The instance of the class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
         super().__init__(**kwargs)
 
     def _sanitize_parameters(self, return_all_scores=None, function_to_apply=None, top_k="", **tokenizer_kwargs):
+        """
+        Sanitizes and processes the parameters for the TextClassificationPipeline.
+        
+        Args:
+            self (TextClassificationPipeline): An instance of the TextClassificationPipeline class.
+            return_all_scores (bool, optional): Whether to return all scores. Defaults to None.
+            function_to_apply (str or ClassificationFunction, optional): The function to apply for classification. 
+                Can be a string representing one of the ClassificationFunction options or an instance of ClassificationFunction enum. 
+                Defaults to None.
+            top_k (int or None, optional): The number of top predictions to return. Defaults to ''.
+        
+        Returns:
+            tuple: A tuple containing three dictionaries: preprocess_params, an empty dictionary, and postprocess_params. 
+            - preprocess_params (dict): The parameters for tokenization and preprocessing.
+            - postprocess_params (dict): The parameters for post-processing.
+            
+        Raises:
+            UserWarning: If `return_all_scores` is set to True or False, as it is now deprecated.
+        """
         # Using "" as default argument because we're going to use `top_k=None` in user code to declare
         # "No top_k"
         preprocess_params = tokenizer_kwargs
@@ -149,6 +211,25 @@ class TextClassificationPipeline(Pipeline):
             return result
 
     def preprocess(self, inputs, **tokenizer_kwargs) -> Dict[str, GenericTensor]:
+        """
+        Preprocesses the input data for text classification using a tokenizer.
+        
+        Args:
+            self: An instance of the TextClassificationPipeline class.
+            inputs: The input data to be preprocessed. It can be one of the following:
+                - A dictionary containing the text and text_pair keys, representing the main text and its paired text for classification.
+                - A list containing a single sublist with two elements, representing the main text and its paired text for classification.
+                - A list containing only the main text for classification.
+            
+        Returns:
+            A dictionary containing preprocessed inputs in the form of {"input_ids": tensor, "attention_mask": tensor}.
+            The tensors represent the encoded input sequences and attention masks, respectively. The keys in the dictionary are as follows:
+                - "input_ids": A tensor containing the encoded input sequences.
+                - "attention_mask": A tensor indicating which tokens should be attended to.
+        
+        Raises:
+            ValueError: If the inputs are invalid and don't match any of the supported formats.
+        """
         if isinstance(inputs, dict):
             return self.tokenizer(**inputs, return_tensors='ms', **tokenizer_kwargs)
         elif isinstance(inputs, list) and len(inputs) == 1 and isinstance(inputs[0], list) and len(inputs[0]) == 2:
@@ -165,6 +246,20 @@ class TextClassificationPipeline(Pipeline):
         return self.tokenizer(inputs, return_tensors='ms', **tokenizer_kwargs)
 
     def _forward(self, model_inputs):
+        """
+        Forward the model with the provided inputs.
+        
+        Args:
+            self (TextClassificationPipeline): The instance of the TextClassificationPipeline class.
+            model_inputs (dict): The input parameters for the model_forward method.
+        
+        Returns:
+            None: This method does not explicitly return a value.
+        
+        Raises:
+            TypeError: If the model_forward method does not accept the 'use_cache' parameter.
+            Exception: Any other unhandled exceptions may be raised during the execution of the model_forward method.
+        """
         # `XXXForSequenceClassification` models should not use `use_cache=True` even if it's supported
         model_forward = self.model.construct
         if "use_cache" in inspect.signature(model_forward).parameters.keys():
@@ -172,6 +267,33 @@ class TextClassificationPipeline(Pipeline):
         return model_forward(**model_inputs)
 
     def postprocess(self, model_outputs, function_to_apply=None, top_k=1, _legacy=True):
+        """
+        Postprocess method in the TextClassificationPipeline class.
+        
+        Args:
+            self (object): The instance of the TextClassificationPipeline class.
+            model_outputs (dict): The dictionary containing model outputs with the following keys:
+                - 'logits': A tensor representing the model logits.
+            function_to_apply (ClassificationFunction): The function to apply to the model outputs. 
+                Can be one of the following:
+                - ClassificationFunction.SIGMOID: Applies the sigmoid function.
+                - ClassificationFunction.SOFTMAX: Applies the softmax function.
+                - ClassificationFunction.NONE: No function applied.
+            top_k (int): The number of top predictions to return. Default is 1.
+            _legacy (bool): A flag indicating whether to use legacy behavior. Default is True.
+        
+        Returns:
+            dict or None: If top_k is 1 and _legacy is True, returns a dictionary with keys:
+                - 'label': The predicted label.
+                - 'score': The confidence score of the prediction.
+            If top_k is not 1 or _legacy is False, returns a list of dictionaries with keys:
+                - 'label': The predicted label.
+                - 'score': The confidence score of the prediction.
+                The list is sorted by score in descending order and truncated to top_k if specified.
+        
+        Raises:
+            ValueError: If the function_to_apply argument is not recognized.
+        """
         # `_legacy` is used to determine if we're running the naked pipeline and in backward
         # compatibility mode, or if running the pipeline with `pipeline(..., top_k=1)` we're running
         # the more natural result containing the list.

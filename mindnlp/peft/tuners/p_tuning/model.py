@@ -68,8 +68,30 @@ class PromptEncoder(nn.Cell):
 
     Output shape: (`batch_size`, `total_virtual_tokens`, `token_dim`)
     """
-
     def __init__(self, config):
+        """
+        Initializes a PromptEncoder instance.
+        
+        Args:
+            self (PromptEncoder): The instance of the PromptEncoder class.
+            config (PromptEncoderConfig): An object containing configuration parameters for the PromptEncoder.
+                The configuration should include the following attributes:
+                    - token_dim (int): The dimensionality of the token embeddings.
+                    - encoder_hidden_size (int): The size of the hidden layer in the encoder.
+                    - num_virtual_tokens (int): The number of virtual tokens.
+                    - num_transformer_submodules (int): The number of transformer submodules.
+                    - encoder_reparameterization_type (PromptEncoderReparameterizationType): The type of encoder reparameterization.
+                    - encoder_dropout (float): The dropout rate for the encoder.
+                    - encoder_num_layers (int): The number of layers in the encoder.
+                    - inference_mode (bool): Flag indicating whether the model is in inference mode.
+        
+        Returns:
+            None. This method initializes the PromptEncoder instance with the provided configuration settings.
+        
+        Raises:
+            ValueError: If the encoder type specified in the configuration is not recognized. Accepted types are MLP or LSTM.
+            Warning: If the specified number of encoder layers is different from the default value when using the MLP encoder type.
+        """
         super().__init__()
         self.token_dim = config.token_dim
         self.input_size = self.token_dim
@@ -120,6 +142,25 @@ class PromptEncoder(nn.Cell):
                 raise ValueError("Prompt encoder type not recognized. Please use one of MLP (recommended) or LSTM.")
 
     def forward(self, indices):
+        """
+        Forward method in the PromptEncoder class.
+        
+        This method takes in two parameters, self and indices, and returns None.
+        
+        Args:
+            self: An instance of the PromptEncoder class.
+            indices (Tensor): A tensor containing the indices used for embedding lookup. The shape of the tensor should be (batch_size, sequence_length), where batch_size is the number of input sequences, and
+sequence_length is the length of each input sequence. Each element in the tensor represents the index of a word in the vocabulary.
+            
+        Returns:
+            output_embeds (Tensor): A tensor containing the output embeddings. The shape of the tensor depends on the encoder type. If the encoder_type is PromptEncoderReparameterizationType.LSTM, the shape
+will be (batch_size, sequence_length, embedding_size), where embedding_size is the size of the embedding vector. If the encoder_type is PromptEncoderReparameterizationType.MLP, the shape will be (batch_size,
+sequence_length, output_size), where output_size is the size of the output vector.
+        
+        Raises:
+            ValueError: If the encoder_type is not recognized. Please use either PromptEncoderReparameterizationType.MLP or PromptEncoderReparameterizationType.LSTM.
+        
+        """
         input_embeds = self.embedding(indices)
         if self.encoder_type == PromptEncoderReparameterizationType.LSTM:
             output_embeds = self.mlp_head(self.lstm_head(input_embeds)[0])

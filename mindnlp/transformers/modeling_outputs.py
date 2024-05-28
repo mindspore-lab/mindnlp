@@ -41,7 +41,6 @@ class BaseModelOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     last_hidden_state: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
     attentions: Optional[Tuple[mindspore.Tensor]] = None
@@ -61,7 +60,6 @@ class BaseModelOutputWithNoAttention(ModelOutput):
 
             Hidden-states of the model at the output of each layer plus the optional initial embedding outputs.
     """
-
     last_hidden_state: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
 
@@ -91,7 +89,6 @@ class BaseModelOutputWithPooling(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     last_hidden_state: mindspore.Tensor = None
     pooler_output: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -114,7 +111,6 @@ class BaseModelOutputWithPoolingAndNoAttention(ModelOutput):
 
             Hidden-states of the model at the output of each layer plus the optional initial embedding outputs.
     """
-
     last_hidden_state: mindspore.Tensor = None
     pooler_output: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -152,7 +148,6 @@ class BaseModelOutputWithPast(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     last_hidden_state: mindspore.Tensor = None
     past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -185,7 +180,6 @@ class BaseModelOutputWithCrossAttentions(ModelOutput):
             Attentions weights of the decoder's cross-attention layer, after the attention softmax, used to compute the
             weighted average in the cross-attention heads.
     """
-
     last_hidden_state: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
     attentions: Optional[Tuple[mindspore.Tensor]] = None
@@ -232,7 +226,6 @@ class BaseModelOutputWithPoolingAndCrossAttentions(ModelOutput):
             `config.is_encoder_decoder=True` in the cross-attention blocks) that can be used (see `past_key_values`
             input) to speed up sequential decoding.
     """
-
     last_hidden_state: mindspore.Tensor = None
     pooler_output: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -279,7 +272,6 @@ class BaseModelOutputWithPastAndCrossAttentions(ModelOutput):
             Attentions weights of the decoder's cross-attention layer, after the attention softmax, used to compute the
             weighted average in the cross-attention heads.
     """
-
     last_hidden_state: mindspore.Tensor = None
     past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -325,7 +317,6 @@ class MoECausalLMOutputWithPast(ModelOutput):
             Router logits of the encoder model, useful to compute the auxiliary loss and the z_loss for the sparse
             modules.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
@@ -361,7 +352,6 @@ class MoEModelOutput(ModelOutput):
             Raw router probabilities that are computed by MoE routers, these terms are used to compute the auxiliary
             loss and the z_loss for Mixture of Experts models.
     """
-
     last_hidden_state: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
     attentions: Optional[Tuple[mindspore.Tensor]] = None
@@ -412,7 +402,6 @@ class MoEModelOutputWithPastAndCrossAttentions(ModelOutput):
             Raw router probabilities that are computed by MoE routers, these terms are used to compute the auxiliary
             loss and the z_loss for Mixture of Experts models.
     """
-
     last_hidden_state: mindspore.Tensor = None
     past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -471,7 +460,6 @@ class Seq2SeqModelOutput(ModelOutput):
             Attentions weights of the encoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
     """
-
     last_hidden_state: mindspore.Tensor = None
     past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
     decoder_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -541,7 +529,6 @@ class Seq2SeqMoEModelOutput(ModelOutput):
             Router logits of the encoder model, useful to compute the auxiliary loss and the z_loss for the sparse
             modules.
     """
-
     last_hidden_state: mindspore.Tensor = None
     past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
     decoder_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -576,7 +563,6 @@ class CausalLMOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -611,7 +597,6 @@ class CausalLMOutputWithPast(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
@@ -654,7 +639,6 @@ class CausalLMOutputWithCrossAttentions(ModelOutput):
             Contains pre-computed hidden-states (key and values in the attention blocks) that can be used (see
             `past_key_values` input) to speed up sequential decoding.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
@@ -691,7 +675,6 @@ class SequenceClassifierOutputWithPast(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
@@ -721,7 +704,6 @@ class MaskedLMOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -776,7 +758,6 @@ class Seq2SeqLMOutput(ModelOutput):
             Attentions weights of the encoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
@@ -845,7 +826,6 @@ class Seq2SeqMoEOutput(ModelOutput):
             Router logits of the encoder model, useful to compute the auxiliary loss and z_loss for Mixture of Experts
             models.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     encoder_z_loss: mindspore.Tensor = None
@@ -886,7 +866,6 @@ class NextSentencePredictorOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -915,7 +894,6 @@ class SequenceClassifierOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -970,7 +948,6 @@ class Seq2SeqSequenceClassifierOutput(ModelOutput):
             Attentions weights of the encoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
@@ -1006,7 +983,6 @@ class MultipleChoiceModelOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -1035,7 +1011,6 @@ class TokenClassifierOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -1066,7 +1041,6 @@ class QuestionAnsweringModelOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     start_logits: mindspore.Tensor = None
     end_logits: mindspore.Tensor = None
@@ -1124,7 +1098,6 @@ class Seq2SeqQuestionAnsweringModelOutput(ModelOutput):
             Attentions weights of the encoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     start_logits: mindspore.Tensor = None
     end_logits: mindspore.Tensor = None
@@ -1168,7 +1141,6 @@ class SemanticSegmenterOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -1196,7 +1168,6 @@ class ImageClassifierOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -1218,7 +1189,6 @@ class ImageClassifierOutputWithNoAttention(ModelOutput):
             one for the output of each stage) of shape `(batch_size, num_channels, height, width)`. Hidden-states (also
             called feature maps) of the model at the output of each stage.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -1247,7 +1217,6 @@ class DepthEstimatorOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     predicted_depth: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -1275,7 +1244,6 @@ class ImageSuperResolutionOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     reconstruction: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -1304,7 +1272,6 @@ class Wav2Vec2BaseModelOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     last_hidden_state: mindspore.Tensor = None
     extract_features: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -1335,7 +1302,6 @@ class XVectorOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     embeddings: mindspore.Tensor = None
@@ -1364,7 +1330,6 @@ class BackboneOutput(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     feature_maps: Tuple[mindspore.Tensor] = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
     attentions: Optional[Tuple[mindspore.Tensor]] = None
@@ -1399,7 +1364,6 @@ class BaseModelOutputWithPoolingAndProjection(ModelOutput):
 
             Text embeddings before the projection layer, used to mimic the last hidden state of the teacher encoder.
     """
-
     last_hidden_state: mindspore.Tensor = None
     pooler_output: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -1455,7 +1419,6 @@ class Seq2SeqSpectrogramOutput(ModelOutput):
             Attentions weights of the encoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     spectrogram: mindspore.Tensor = None
     past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
@@ -1525,7 +1488,6 @@ class Seq2SeqTSModelOutput(ModelOutput):
         static_features (`mindspore.Tensor` of shape `(batch_size, feature size)`, *optional*):
             Static features of each time series' in a batch which are copied to the covariates at inference time.
     """
-
     last_hidden_state: mindspore.Tensor = None
     past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
     decoder_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -1596,7 +1558,6 @@ class Seq2SeqTSPredictionOutput(ModelOutput):
         static_features (`mindspore.Tensor` of shape `(batch_size, feature size)`, *optional*):
             Static features of each time series' in a batch which are copied to the covariates at inference time.
     """
-
     loss: Optional[mindspore.Tensor] = None
     params: Optional[Tuple[mindspore.Tensor]] = None
     past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
@@ -1621,7 +1582,6 @@ class SampleTSPredictionOutput(ModelOutput):
         sequences (`mindspore.Tensor` of shape `(batch_size, num_samples, prediction_length)` or `(batch_size, num_samples, prediction_length, input_size)`):
             Sampled values from the chosen distribution.
     """
-
     sequences: mindspore.Tensor = None
 
 
@@ -1646,7 +1606,6 @@ class MaskedImageModelingOutput(ModelOutput):
             sequence_length)`. Attentions weights after the attention softmax, used to compute the weighted average in
             the self-attention heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     reconstruction: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
@@ -1687,7 +1646,6 @@ class MoeModelOutputWithPast(ModelOutput):
             Raw router logtis (post-softmax) that are computed by MoE routers, these terms are used to compute the auxiliary
             loss for Mixture of Experts models.
     """
-
     last_hidden_state: mindspore.Tensor = None
     past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
     hidden_states: Optional[Tuple[mindspore.Tensor, ...]] = None
@@ -1734,7 +1692,6 @@ class MoeCausalLMOutputWithPast(ModelOutput):
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
-
     loss: Optional[mindspore.Tensor] = None
     aux_loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None

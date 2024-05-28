@@ -124,7 +124,6 @@ class XLNetTokenizer(PreTrainedTokenizer):
         sp_model (`SentencePieceProcessor`):
             The *SentencePiece* processor that is used for every conversion (string, tokens and IDs).
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -147,6 +146,31 @@ class XLNetTokenizer(PreTrainedTokenizer):
             sp_model_kwargs: Optional[Dict[str, Any]] = None,
             **kwargs,
     ) -> None:
+        """
+        Initialize an XLNetTokenizer object.
+        
+        Args:
+        - vocab_file (str): Path to the vocabulary file.
+        - do_lower_case (bool, optional): Whether to lowercase the input tokens. Defaults to False.
+        - remove_space (bool, optional): Whether to remove spaces in the input tokens. Defaults to True.
+        - keep_accents (bool, optional): Whether to keep accents in the input tokens. Defaults to False.
+        - bos_token (str, optional): Beginning of sentence token. Defaults to '<s>'.
+        - eos_token (str, optional): End of sentence token. Defaults to '</s>'.
+        - unk_token (str, optional): Unknown token. Defaults to '<unk>'.
+        - sep_token (str, optional): Separator token. Defaults to '<sep>'.
+        - pad_token (str, optional): Padding token. Defaults to '<pad>'.
+        - cls_token (str, optional): Classification token. Defaults to '<cls>'.
+        - mask_token (str, optional): Mask token. Defaults to '<mask>'.
+        - additional_special_tokens (list, optional): Additional special tokens to include. Defaults to ['<eop>', '<eod>'].
+        - sp_model_kwargs (Dict[str, Any], optional): SentencePiece model keyword arguments. Defaults to None.
+        - **kwargs: Additional keyword arguments.
+        
+        Returns:
+        None
+        
+        Raises:
+        - TypeError: If the mask_token is not a string.
+        """
         # Mask token behave like a normal word, i.e. include the space before it
         mask_token = AddedToken(mask_token, lstrip=True, special=True) if isinstance(mask_token, str) else mask_token
 
@@ -180,19 +204,89 @@ class XLNetTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
+        """
+        Returns the vocabulary size of the XLNetTokenizer.
+        
+        Args:
+            self (XLNetTokenizer): An instance of the XLNetTokenizer class.
+        
+        Returns:
+            int: The vocabulary size of the tokenizer.
+        
+        Raises:
+            None
+        
+        This method calculates and returns the size of the vocabulary used by the XLNetTokenizer. The vocabulary size is determined by the number of unique tokens present in the tokenizer's sp_model.
+        
+        Note:
+            The vocabulary size represents the number of distinct tokens that the tokenizer can recognize and encode.
+        
+        Example:
+            >>> tokenizer = XLNetTokenizer()
+            >>> size = tokenizer.vocab_size()
+            >>> print(size)
+            32000
+        """
         return len(self.sp_model)
 
     def get_vocab(self):
+        """
+        Returns the vocabulary of the XLNetTokenizer.
+        
+        Args:
+            self: The instance of the XLNetTokenizer class.
+        
+        Returns:
+            dict: A dictionary containing the vocabulary of the XLNetTokenizer. The keys of the dictionary are the tokens, and the values are their corresponding indices.
+        
+        Raises:
+            None.
+        
+        Example:
+            >>> tokenizer = XLNetTokenizer()
+            >>> tokenizer.get_vocab()
+            {'<s>': 0, '<pad>': 1, '</s>': 2, '<unk>': 3, '<mask>': 4, 'hello': 5, 'world': 6}
+        """
         vocab = {self.convert_ids_to_tokens(i): i for i in range(self.vocab_size)}
         vocab.update(self.added_tokens_encoder)
         return vocab
 
     def __getstate__(self):
+        """
+        Method '__getstate__' in the class 'XLNetTokenizer'.
+        
+        Args:
+            self (XLNetTokenizer): The instance of the XLNetTokenizer class.
+                Represents the current XLNetTokenizer object.
+                
+        Returns:
+            None. This method returns a dictionary representing the state of the XLNetTokenizer object.
+            The 'sp_model' key in the dictionary is set to None before returning.
+        
+        Raises:
+            No exceptions are raised by this method.
+        """
         state = self.__dict__.copy()
         state["sp_model"] = None
         return state
 
     def __setstate__(self, d):
+        """
+        This method __setstate__ is defined in the class XLNetTokenizer and is used to set the internal state of the object based on the provided dictionary 'd'.
+        
+        Args:
+            - self (XLNetTokenizer): The instance of the XLNetTokenizer class.
+            - d (dict): A dictionary containing the state information to be set. The keys and values in the dictionary are used to update the internal state of the XLNetTokenizer object.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            - No specific exceptions are raised by this method under normal circumstances. However, potential exceptions that could be raised include:
+                - AttributeError: If the 'sp_model_kwargs' attribute is not found within the XLNetTokenizer object.
+                - TypeError: If the provided 'd' parameter is not a dictionary.
+                - Other exceptions related to the SentencePieceProcessor object creation or loading process may be raised from the spm.SentencePieceProcessor constructor or Load method.
+        """
         self.__dict__ = d
 
         # for backward compatibility
@@ -203,6 +297,19 @@ class XLNetTokenizer(PreTrainedTokenizer):
         self.sp_model.Load(self.vocab_file)
 
     def preprocess_text(self, inputs):
+        """
+        This method preprocesses the input text according to the specified configuration settings.
+        
+        Args:
+            self (XLNetTokenizer): The instance of the XLNetTokenizer class.
+            inputs (str): The input text to be preprocessed. It should be a string representation.
+        
+        Returns:
+            str: The preprocessed text based on the applied configuration settings.
+        
+        Raises:
+            None
+        """
         if self.remove_space:
             outputs = " ".join(inputs.strip().split())
         else:
@@ -258,6 +365,24 @@ class XLNetTokenizer(PreTrainedTokenizer):
             spaces_between_special_tokens: bool = True,
             **kwargs,
     ) -> str:
+        """
+        This method decodes a list of token IDs into a string representation.
+        
+        Args:
+            self: The instance of the XLNetTokenizer class.
+            token_ids (List[int]): A list of token IDs to be decoded into a string.
+            skip_special_tokens (bool): A flag indicating whether to skip special tokens during decoding. Defaults to False.
+            clean_up_tokenization_spaces (bool): A flag indicating whether to clean up tokenization spaces in the decoded text. If None, the value is determined by the clean_up_tokenization_spaces attribute of
+the XLNetTokenizer instance.
+            spaces_between_special_tokens (bool): A flag indicating whether to include spaces between special tokens in the decoded text. Defaults to True.
+            **kwargs: Additional keyword arguments. 'use_source_tokenizer' is a supported argument to control the use of the source tokenizer during decoding.
+        
+        Returns:
+            str: The decoded string representation of the token IDs.
+        
+        Raises:
+            None
+        """
         self._decode_use_source_tokenizer = kwargs.pop("use_source_tokenizer", False)
 
         filtered_tokens = self.convert_ids_to_tokens(token_ids, skip_special_tokens=skip_special_tokens)
@@ -339,7 +464,6 @@ class XLNetTokenizer(PreTrainedTokenizer):
         Returns:
             `List[int]`: A list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
         """
-
         if already_has_special_tokens:
             return super().get_special_tokens_mask(
                 token_ids_0=token_ids_0, token_ids_1=token_ids_1, already_has_special_tokens=True
@@ -380,6 +504,37 @@ class XLNetTokenizer(PreTrainedTokenizer):
         return len(token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1] + cls_segment_id
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """
+        Save the vocabulary of the XLNetTokenizer.
+        
+        Args:
+            self (XLNetTokenizer): An instance of the XLNetTokenizer class.
+            save_directory (str): The directory path where the vocabulary will be saved.
+            filename_prefix (Optional[str]): An optional prefix for the filename of the saved vocabulary. 
+                Defaults to None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the path to the saved vocabulary file.
+        
+        Raises:
+            FileNotFoundError: If the specified save_directory does not exist.
+            PermissionError: If the specified save_directory is not accessible for writing.
+        
+        Note:
+            - The saved vocabulary file will be named as per the following format:
+                '<filename_prefix>-vocab.txt' if filename_prefix is provided, otherwise 'vocab.txt'.
+            - If the provided save_directory is the same as the current vocabulary file's directory and 
+              the vocabulary file already exists, it will be copied to the save_directory.
+            - If the current vocabulary file does not exist, a new vocabulary file will be created in the
+              save_directory using the serialized model from the sp_model attribute of the tokenizer.
+        
+        Example:
+            tokenizer = XLNetTokenizer()
+            save_dir = '/path/to/save'
+            prefix = 'english'
+            vocab_file = tokenizer.save_vocabulary(save_dir, prefix)
+            print(f"Vocabulary saved at: {vocab_file}")
+        """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return

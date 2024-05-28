@@ -37,6 +37,23 @@ class CheckpointCallback(Callback):
 
     """
     def __init__(self, save_path, ckpt_name=None, epochs=None, keep_checkpoint_max=5):
+        r"""
+        Initializes the CheckpointCallback.
+        
+        Args:
+            save_path (str or Path): The path where the checkpoints will be saved. If a string is provided, it will be converted to a Path object. 
+                                    It must be a valid directory path. 
+            ckpt_name (str, optional): The name of the checkpoint file. If not provided, a default name will be used. 
+            epochs (int, optional): The number of epochs. 
+            keep_checkpoint_max (int): The maximum number of checkpoints to keep.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If the 'save_path' argument is not a valid string or Path object.
+            OSError: If the 'save_path' directory does not exist and cannot be created.
+        """
         if isinstance(save_path, str):
             self.save_path = Path(save_path)
         elif isinstance(save_path, Path):

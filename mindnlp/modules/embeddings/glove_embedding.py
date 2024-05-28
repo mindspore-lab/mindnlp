@@ -58,6 +58,24 @@ class Glove(TokenEmbedding):
     dims = [50, 100, 200, 300]
 
     def __init__(self, init_embed, requires_grad: bool = True, dropout=0.0):
+        """
+        Initializes an instance of the Glove class.
+        
+        Args:
+            self: The instance of the Glove class.
+            init_embed (numpy.ndarray): The initial embedding matrix.
+                Represents the embeddings for vocabulary words.
+            requires_grad (bool): Indicates whether the embedding matrix requires gradient computation. 
+                Defaults to True.
+            dropout (float): The dropout probability for the dropout layer applied to the embeddings. 
+                Defaults to 0.0.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            TypeError: If the input parameters are not of the expected types.
+        """
         super().__init__(init_embed)
         self._embed_len = init_embed.shape[0]
         self.embed = init_embed
@@ -151,7 +169,6 @@ class Glove(TokenEmbedding):
             None
 
         """
-
         folder = os.path.join(root, 'embeddings', 'Glove', 'save', foldername)
         os.makedirs(folder, exist_ok=True)
 
@@ -195,7 +212,6 @@ class Glove(TokenEmbedding):
             None
 
         """
-
         if load_npy:
             load_embed = np.load(npy_path)
 

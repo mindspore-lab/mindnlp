@@ -48,8 +48,21 @@ class ScaledDotAttention(nn.Cell):
         >>> print(att.shape)
         # (2, 1024, 32)
     """
-
     def __init__(self, dropout=0.9):
+        r"""
+        Initializes an instance of the ScaledDotAttention class.
+        
+        Args:
+            self: The instance of the ScaledDotAttention class.
+            dropout (float, optional): The probability of an element to be zeroed in the dropout layer. 
+                Default is 0.9. Must be a value between 0 and 1.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         super().__init__()
         self.softmax = nn.Softmax(axis=-1)
         self.dropout = Dropout(p=dropout)
@@ -111,6 +124,20 @@ class AdditiveAttention(nn.Cell):
         (2, 32, 512) (2, 32, 20)
     """
     def __init__(self, hidden_dims, dropout=0.9):
+        r"""
+        Args:
+            self (object): The instance of the class AdditiveAttention.
+            hidden_dims (int): The dimensionality of the hidden representations.
+            dropout (float, optional): The dropout probability for regularization. Default is 0.9.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If the value of hidden_dims is not a positive integer.
+            ValueError: If the value of dropout is not within the range [0, 1].
+            TypeError: If the input types are not as expected.
+        """
         super().__init__()
         self.w_q = nn.Dense(hidden_dims, hidden_dims, has_bias=False)
         self.w_k = nn.Dense(hidden_dims, hidden_dims, has_bias=False)
@@ -181,6 +208,22 @@ class LinearAttention(nn.Cell):
         (2, 32, 512) (2, 32, 20)
     """
     def __init__(self, query_dim, key_dim, hidden_dim, dropout=0.9):
+        r"""
+        Initializes an instance of the LinearAttention class.
+        
+        Args:
+            self: The instance of the LinearAttention class.
+            query_dim (int): The dimension of the query input.
+            key_dim (int): The dimension of the key input.
+            hidden_dim (int): The dimension of the hidden layer.
+            dropout (float): The dropout rate for regularization. Default is 0.9.
+        
+        Returns:
+            None. This method initializes the LinearAttention instance with the specified parameters.
+        
+        Raises:
+            None.
+        """
         super().__init__()
         self.w_linear = nn.Dense(query_dim + key_dim, query_dim, has_bias=False)
         self.softmax = nn.Softmax(axis=-1)
@@ -251,6 +294,21 @@ class CosineAttention(nn.Cell):
         (2, 32, 512) (2, 32, 20)
     """
     def __init__(self, dropout=0.9):
+        r"""
+        Initializes an instance of the CosineAttention class.
+        
+        Args:
+            self: The instance of the CosineAttention class.
+            dropout (float, optional): The dropout probability for the attention mechanism. 
+                It controls the probability of elements being zeroed out during training. 
+                The value should be in the range [0.0, 1.0]. Default is 0.9.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If the value of dropout is outside the range [0.0, 1.0].
+        """
         super().__init__()
         self.softmax = nn.Softmax(axis=-1)
         self.dropout = Dropout(p=dropout)
@@ -346,8 +404,19 @@ class BinaryAttention(nn.Cell):
         >>> print(output_x.shape, output_y.shape)
         (2, 30, 512) (2, 20, 512)
     """
-
     def __init__(self):
+        r"""
+        Initializes an instance of the BinaryAttention class.
+        
+        Args:
+            self: The instance of the BinaryAttention class being initialized.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised within this method.
+        """
         super().__init__()
         self.bmm = ops.BatchMatMul()
 
@@ -401,6 +470,39 @@ class SelfAttention(nn.Cell):
         (2, 32, 512) (2, 32, 20)
     """
     def __init__(self, d_model=512, dropout_rate=0.1, bias=False, attention_mode="dot"):
+        r"""
+        Initializes a SelfAttention object.
+        
+        Args:
+            self (SelfAttention): The instance of the SelfAttention class.
+            d_model (int, optional): The dimensionality of the input and output vectors. Defaults to 512.
+            dropout_rate (float, optional): The dropout rate to be applied. Defaults to 0.1.
+            bias (bool, optional): Whether to include bias terms in linear transformations. Defaults to False.
+            attention_mode (str, optional): The type of attention mechanism to be used. 
+                Supported modes are 'dot', 'additive', and 'cosine'. Defaults to 'dot'.
+        
+        Returns:
+            None.
+        
+        Raises:
+            ValueError: If the attention_mode is not one of 'dot', 'additive', or 'cosine'.
+        '''
+        
+        # Method code:
+        def __init__(self, d_model=512, dropout_rate=0.1, bias=False, attention_mode='dot'):
+            super().__init__()
+            self.d_model = d_model
+            self.linear_query = nn.Dense(d_model, d_model, has_bias=bias)
+            self.linear_key = nn.Dense(d_model, d_model, has_bias=bias)
+            self.linear_value = nn.Dense(d_model, d_model, has_bias=bias)
+            self.linear_out = nn.Dense(d_model, d_model, has_bias=bias)
+            if 'add' in attention_mode.lower():
+                self.attention_mode = AdditiveAttention(hidden_dims=self.d_model, dropout=1 - dropout_rate)
+            elif 'cos' in attention_mode.lower():
+                self.attention_mode = CosineAttention(dropout=1 - dropout_rate)
+            else:
+                self.attention_mode = ScaledDotAttention(1 - dropout_rate)
+        """
         super().__init__()
         self.d_model = d_model
         self.linear_query = nn.Dense(d_model, d_model, has_bias=bias)
@@ -464,8 +566,34 @@ class LocationAwareAttention(nn.Cell):
         >>> print(cont.shape, attn.shape)
         (2, 1, 20) (2, 40)
     """
-
     def __init__(self, hidden_dim, smoothing=False):
+        r"""
+        Initializes an instance of the LocationAwareAttention class.
+        
+        Args:
+            self: The LocationAwareAttention object itself.
+            hidden_dim (int): The dimensionality of the hidden state.
+            smoothing (bool, optional): Flag indicating whether to apply smoothing. Defaults to False.
+            
+        Returns:
+            None. This method does not return any value.
+            
+        Raises:
+            None.
+        
+        This method initializes the LocationAwareAttention object with the specified hidden dimension and smoothing flag. It sets up the following components:
+        - conv (nn.Conv1d): A 1D convolutional layer with an input channel of 1, output channel of hidden_dim, kernel size of 3, padding mode of 'pad', padding size of 1, and bias.
+        - w_linear (nn.Dense): A fully connected layer with input and output dimensions of hidden_dim, used for attention weights computation.
+        - v_linear (nn.Dense): Another fully connected layer with input and output dimensions of hidden_dim, also used for attention weights computation.
+        - fc_linear (nn.Dense): A fully connected layer with input dimension of hidden_dim and output dimension of 1, used for final attention score calculation.
+        - bias (nn.Parameter): A learnable parameter used as bias in the attention calculation.
+        - tanh (nn.Tanh): A hyperbolic tangent activation function used in the attention calculation.
+        - softmax (nn.Softmax): A softmax activation function used to normalize attention weights across the input sequence.
+        - mask (None): A variable to store an optional mask.
+        - sigmoid (nn.Sigmoid): A sigmoid activation function.
+        
+        This method is called when a new LocationAwareAttention object is created and sets up the necessary components and parameters for attention calculation.
+        """
         super().__init__()
         self.hidden_dim = hidden_dim
         self.smoothing = smoothing

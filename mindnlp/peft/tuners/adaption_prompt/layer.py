@@ -22,7 +22,6 @@ from .config import TRANSFORMERS_MODEL_CONFIG
 
 class AdaptedAttention(nn.Cell):
     """This cell wraps a LLamaAttention cell and injects adaption prompts."""
-
     def __init__(self, model_type: str, adapter_len: int, model):
         """
         Initialize object.
@@ -65,7 +64,6 @@ class AdaptedAttention(nn.Cell):
         factor = (
                 self.model.k_proj.in_features // self.model.k_proj.out_features
         )
-
 
         if k_proj_layer == v_proj_layer:
             _, key, value = getattr(self.model, k_proj_layer)(self.adaption_prompt).split(embed_dim, axis=2)

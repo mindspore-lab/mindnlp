@@ -18,7 +18,6 @@
 from ...configuration_utils import PretrainedConfig
 
 
-
 class GPTNeoConfig(PretrainedConfig):
     """
     Configuration class to store the configuration of a `GPTNeoModel`.

@@ -34,8 +34,20 @@ class AttentionMaskConverter:
         sliding_window (`int`, *optional*):
             Optionally, the sliding window masks can be created if `sliding_window` is defined to a positive integer.
     """
-
     def __init__(self, is_causal: bool, sliding_window: Optional[int] = None):
+        """
+        This method initializes an instance of the AttentionMaskConverter class.
+        
+        Args:
+            is_causal (bool): A boolean value indicating whether the attention mask is causal or not.
+            sliding_window (Optional[int], optional): An optional integer representing the sliding window size. Defaults to None. If provided, it must be a strictly positive integer. 
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If the sliding_window parameter is provided and its value is not a strictly positive integer.
+        """
         self.is_causal = is_causal
         self.sliding_window = sliding_window
 
@@ -118,7 +130,6 @@ class AttentionMaskConverter:
         expanded_4d_mask = expanded_attn_mask
 
         return expanded_4d_mask
-
 
     @staticmethod
     def _make_causal_mask(

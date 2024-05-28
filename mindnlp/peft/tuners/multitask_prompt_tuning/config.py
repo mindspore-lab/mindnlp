@@ -21,6 +21,21 @@ from ...utils import PeftType
 
 
 class MultitaskPromptTuningInit(str, enum.Enum):
+
+    """
+    This class represents a multitask prompt tuning initialization process. 
+    
+    It inherits from the built-in str class and the enum.Enum class, allowing instances of this class to have string-like behavior and access to enumeration functionality.
+    
+    MultitaskPromptTuningInit provides methods and attributes that are specific to the initialization process for multitask prompt tuning in a Python application.
+    
+    Attributes:
+        <list of attributes>
+    
+    Methods:
+        <list of methods>
+    
+    """
     # initialize prompt with text
     TEXT = "TEXT"
     # initialize prompt with random matrix
@@ -35,6 +50,13 @@ class MultitaskPromptTuningInit(str, enum.Enum):
 
 @dataclass
 class MultitaskPromptTuningConfig(PromptTuningConfig):
+
+    """
+    Represents a configuration class for multitask prompt tuning in a natural language processing model.
+    
+    This class inherits from PromptTuningConfig and provides additional configurations specifically for multitask prompt tuning. The class includes methods for initializing the configuration settings, such as
+setting the prompt type to MULTITASK_PROMPT_TUNING.
+    """
     prompt_tuning_init: Union[MultitaskPromptTuningInit, str] = field(
         default=MultitaskPromptTuningInit.RANDOM,
         metadata={
@@ -58,4 +80,16 @@ class MultitaskPromptTuningConfig(PromptTuningConfig):
     num_tasks: Optional[int] = field(default=1, metadata={"help": "number of tasks"})
 
     def __post_init__(self):
+        """
+        This method is called immediately after the instance of the MultitaskPromptTuningConfig class is created.
+        
+        Args:
+            self: A reference to the instance of the class. It is automatically passed when the method is called. 
+        
+        Returns:
+            None. This method does not return anything.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         self.peft_type = PeftType.MULTITASK_PROMPT_TUNING

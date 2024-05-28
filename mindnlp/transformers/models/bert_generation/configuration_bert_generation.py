@@ -84,7 +84,6 @@ class BertGenerationConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "bert-generation"
 
     def __init__(
@@ -107,6 +106,35 @@ class BertGenerationConfig(PretrainedConfig):
         use_cache=True,
         **kwargs,
     ):
+        """
+        This method initializes an instance of the BertGenerationConfig class.
+        
+        Args:
+            self: The instance of the class.
+            vocab_size (int, optional): The size of the vocabulary. Default is 50358.
+            hidden_size (int, optional): The size of the hidden layers. Default is 1024.
+            num_hidden_layers (int, optional): The number of hidden layers. Default is 24.
+            num_attention_heads (int, optional): The number of attention heads. Default is 16.
+            intermediate_size (int, optional): The size of the intermediate layer in the transformer encoder. Default is 4096.
+            hidden_act (str, optional): The activation function for the hidden layers. Default is 'gelu'.
+            hidden_dropout_prob (float, optional): The dropout probability for the hidden layers. Default is 0.1.
+            attention_probs_dropout_prob (float, optional): The dropout probability for the attention probabilities. Default is 0.1.
+            max_position_embeddings (int, optional): The maximum number of positional embeddings. Default is 512.
+            initializer_range (float, optional): The range of the parameter initializer. Default is 0.02.
+            layer_norm_eps (float, optional): The epsilon value for layer normalization. Default is 1e-12.
+            pad_token_id (int, optional): The token id for padding. Default is 0.
+            bos_token_id (int, optional): The token id for the beginning of sequence. Default is 2.
+            eos_token_id (int, optional): The token id for the end of sequence. Default is 1.
+            position_embedding_type (str, optional): The type of position embedding. Default is 'absolute'.
+            use_cache (bool, optional): Whether to use caching. Default is True.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If any of the input arguments are invalid.
+        """
         super().__init__(pad_token_id=pad_token_id, bos_token_id=bos_token_id, eos_token_id=eos_token_id, **kwargs)
 
         self.vocab_size = vocab_size

@@ -25,7 +25,6 @@ from .dropout import Dropout
 
 class Linear(nn.Dense):
     """inner Linear."""
-
 class MultiheadAttention(nn.Cell):
     r"""
     This is an implementation of multihead attention in the paper `Attention is all you need
@@ -109,9 +108,29 @@ class MultiheadAttention(nn.Cell):
         >>> attn_output, attn_output_weights = multihead_attn(query, key, value)
 
     """
-
     def __init__(self, embed_dim, num_heads, dropout=0., bias=True, add_bias_kv=False, add_zero_attn=False,
                  kdim=None, vdim=None, batch_first=False) -> None:
+        r"""Initialize the MultiheadAttention class.
+        
+        Args:
+            embed_dim (int): The dimension of the input embeddings.
+            num_heads (int): The number of attention heads.
+            dropout (float, optional): The dropout probability. Defaults to 0.0.
+            bias (bool, optional): Whether to include bias parameters. Defaults to True.
+            add_bias_kv (bool, optional): Whether to add bias to key and value tensors. Defaults to False.
+            add_zero_attn (bool, optional): Whether to handle the zero attention case. Defaults to False.
+            kdim (int, optional): The dimension of the key projections. Defaults to None.
+            vdim (int, optional): The dimension of the value projections. Defaults to None.
+            batch_first (bool, optional): Whether the input and output tensors are provided as (batch, seq, feature). 
+                Defaults to False.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            AssertionError: If the embed_dim is not divisible by num_heads.
+            ValueError: If invalid parameters or configurations are provided.
+        """
         super().__init__()
         self.embed_dim = embed_dim
         self.kdim = kdim if kdim is not None else embed_dim
@@ -152,6 +171,22 @@ class MultiheadAttention(nn.Cell):
         self.q_is_k = False
 
     def __call__(self, *args, **kwargs):
+        r"""
+        This method is the '__call__' method of the 'MultiheadAttention' class.
+        
+        Args:
+            self (object): The instance of the 'MultiheadAttention' class.
+                - Purpose: Represents the instance of the 'MultiheadAttention' class on which the method is called.
+                - Restrictions: This parameter is required for the method to be called.
+        
+        Returns:
+            None: This method does not return any value.
+                - Purpose: The method does not have a specific return value as it is intended for its side effects on the instance.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+                - Purpose: The method does not explicitly raise any exceptions.
+        """
         query = kwargs.get('query', args[0])
         key = kwargs.get('key', args[1])
         value = kwargs.get('value', args[2])
@@ -161,6 +196,25 @@ class MultiheadAttention(nn.Cell):
 
     def construct(self, query: Tensor, key: Tensor, value: Tensor, key_padding_mask: Optional[Tensor] = None,
                   need_weights: bool = True, attn_mask: Optional[Tensor] = None, average_attn_weights: bool = True):
+        r"""
+        Method 'construct' in the class 'MultiheadAttention'.
+        
+        Args:
+        - self: The instance of the class.
+        - query (Tensor): The input query tensor.
+        - key (Tensor): The input key tensor.
+        - value (Tensor): The input value tensor.
+        - key_padding_mask (Optional[Tensor], optional): Mask tensor specifying which keys have padding elements. Defaults to None.
+        - need_weights (bool): Flag indicating whether to return attention weights. Defaults to True.
+        - attn_mask (Optional[Tensor], optional): Mask tensor for attention calculation. Defaults to None.
+        - average_attn_weights (bool): Flag indicating whether to average attention weights. Defaults to True.
+        
+        Returns:
+        - None: This method does not return any value.
+        
+        Raises:
+        - AssertionError: Raised if key_padding_mask is not of type bool or floating point type.
+        """
         is_batched = query.ndim == 3
         if key_padding_mask is not None:
             _kpm_dtype = key_padding_mask.dtype
@@ -257,6 +311,25 @@ class TransformerEncoderLayer(nn.Cell):
     def __init__(self, d_model: int, nhead: int, dim_feedforward: int = 2048, dropout: float = 0.1,
                  activation = 'relu',
                  layer_norm_eps: float = 1e-5, batch_first: bool = False, norm_first: bool = False):
+        r"""
+        Args:
+            self: The instance of the class.
+            d_model (int): The number of expected features in the input.
+            nhead (int): The number of heads in the multiheadattention models.
+            dim_feedforward (int, optional): The dimension of the feedforward network model. Default is 2048.
+            dropout (float, optional): The dropout value. Default is 0.1.
+            activation (str or torch.nn.Module): The activation function. Can be a string ('relu') or a torch.nn.Module instance (e.g., nn.ReLU). Default is 'relu'.
+            layer_norm_eps (float, optional): The epsilon value for layer normalization. Default is 1e-05.
+            batch_first (bool, optional): If True, then the input and output tensors are provided as (batch, seq, feature). Default is False.
+            norm_first (bool, optional): If True, layer normalization is applied first, otherwise last. Default is False.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If the activation function is neither 'relu' nor 'gelu' or an instance of nn.ReLU or nn.GELU.
+            TypeError: If the provided activation function is not of type str or torch.nn.Module.
+        """
         super().__init__()
         self.self_attn = MultiheadAttention(d_model, nhead, dropout=dropout, batch_first=batch_first)
         # Implementation of Feedforward model
@@ -285,6 +358,28 @@ class TransformerEncoderLayer(nn.Cell):
         self.activation = activation
 
     def construct(self, src, src_mask=None, src_key_padding_mask=None):
+        r"""
+        This method 'construct' is part of the 'TransformerEncoderLayer' class and is used to construct the transformer encoder layer.
+        
+        Args:
+            self: The instance of the class.
+            src: Input tensor representing the source data.
+                Type: Tensor
+                Purpose: The input source data for the transformer encoder layer.
+            src_mask: An optional mask tensor for the source data.
+                Type: Tensor, default None
+                Purpose: Mask tensor for the source data to specify padding or special tokens.
+            src_key_padding_mask: An optional mask tensor for key padding.
+                Type: Tensor, default None
+                Purpose: Mask tensor to specify which elements in the key sequence should be ignored.
+                Restrictions: Only bool and floating types of key_padding_mask are supported.
+        
+        Returns:
+            None: This method returns None after constructing the transformer encoder layer.
+        
+        Raises:
+            AssertionError: Raised when the key_padding_mask dtype is not bool or floating-point.
+        """
         if src_key_padding_mask is not None:
             _skpm_dtype = src_key_padding_mask.dtype
             if _skpm_dtype != mindspore.bool_ and not ops.is_floating_point(src_key_padding_mask):
@@ -303,6 +398,22 @@ class TransformerEncoderLayer(nn.Cell):
 
     # self-attention block
     def _sa_block(self, x, attn_mask, key_padding_mask):
+        r"""
+        This method represents a self-attention block within a Transformer Encoder Layer.
+        
+        Args:
+            self (object): The instance of the TransformerEncoderLayer class.
+            x (Tensor): The input tensor to the self-attention block.
+            attn_mask (Tensor): A mask tensor applied to the attention calculation to prevent attending to certain positions.
+            key_padding_mask (Tensor): A mask tensor indicating which elements in the input should be ignored in the attention calculation.
+        
+        Returns:
+            None. This method applies self-attention mechanism to the input tensor 'x' using the given masks and returns None.
+        
+        Raises:
+            - ValueError: If the input tensors 'x', attn_mask, or key_padding_mask have incorrect shapes.
+            - RuntimeError: If there are runtime issues during the self-attention computation.
+        """
         x = self.self_attn(x, x, x,
                            attn_mask=attn_mask,
                            key_padding_mask=key_padding_mask,
@@ -311,6 +422,21 @@ class TransformerEncoderLayer(nn.Cell):
 
     # feed forward block
     def _ff_block(self, x: Tensor):
+        r"""
+        TransformEncoderLayer._ff_block
+        
+        This method applies a feed-forward block to the input tensor.
+        
+        Args:
+            self (TransformerEncoderLayer): The instance of the TransformerEncoderLayer class.
+            x (Tensor): The input tensor to be processed by the feed-forward block.
+        
+        Returns:
+            None. The method modifies the input tensor in place.
+        
+        Raises:
+            N/A
+        """
         x = self.linear2(self.dropout(self.activation(self.linear1(x))))
         return self.dropout2(x)
 
@@ -366,6 +492,26 @@ class TransformerDecoderLayer(nn.Cell):
     def __init__(self, d_model: int, nhead: int, dim_feedforward: int = 2048, dropout: float = 0.1,
                  activation = 'relu',
                  layer_norm_eps: float = 1e-5, batch_first: bool = False, norm_first: bool = False):
+        r"""
+        Initialize a Transformer Decoder Layer.
+        
+        Args:
+            self (object): The instance of the class.
+            d_model (int): The number of expected features in the input.
+            nhead (int): The number of heads in the multiheadattention models.
+            dim_feedforward (int, optional): The dimension of the feedforward network model. Default is 2048.
+            dropout (float, optional): The dropout value. Default is 0.1.
+            activation (str or function, optional): The activation function or string. Default is 'relu'.
+            layer_norm_eps (float, optional): The epsilon value for layer normalization. Default is 1e-05.
+            batch_first (bool, optional): If True, the input and output tensors are provided as (batch, seq, feature). Default is False.
+            norm_first (bool, optional): If True, apply layer normalization before each sub-layer. Default is False.
+        
+        Returns:
+            None. This method initializes the Transformer Decoder Layer.
+        
+        Raises:
+            ValueError: If the activation function is not recognized or supported.
+        """
         super().__init__()
         self.self_attn = MultiheadAttention(d_model, nhead, dropout=dropout, batch_first=batch_first)
         self.multihead_attn = MultiheadAttention(d_model, nhead, dropout=dropout, batch_first=batch_first)
@@ -390,6 +536,33 @@ class TransformerDecoderLayer(nn.Cell):
 
     def construct(self, tgt, memory, tgt_mask = None, memory_mask = None,
                   tgt_key_padding_mask = None, memory_key_padding_mask = None):
+        r"""
+        Constructs a single layer of the Transformer Decoder.
+        
+        Args:
+            self (TransformerDecoderLayer): An instance of the TransformerDecoderLayer class.
+            tgt (Tensor): The target sequence tensor of shape (seq_len_tgt, batch_size, embed_dim).
+            memory (Tensor): The source sequence tensor of shape (seq_len_mem, batch_size, embed_dim).
+            tgt_mask (Optional[Tensor]): The mask tensor for the target sequence, with shape (seq_len_tgt, seq_len_tgt).
+                Each element should be a boolean value indicating whether the corresponding position is valid or padded.
+                Defaults to None.
+            memory_mask (Optional[Tensor]): The mask tensor for the source sequence, with shape (seq_len_tgt, seq_len_mem).
+                Each element should be a boolean value indicating whether the corresponding position is valid or padded.
+                Defaults to None.
+            tgt_key_padding_mask (Optional[Tensor]): The padding mask tensor for the target sequence,
+                with shape (batch_size, seq_len_tgt). Each element should be a boolean value indicating whether the
+                corresponding position is a valid token or a padding token. Defaults to None.
+            memory_key_padding_mask (Optional[Tensor]): The padding mask tensor for the source sequence,
+                with shape (batch_size, seq_len_mem). Each element should be a boolean value indicating whether the
+                corresponding position is a valid token or a padding token. Defaults to None.
+        
+        Returns:
+            Tensor: The output tensor of the Transformer Decoder layer, with shape (seq_len_tgt, batch_size, embed_dim).
+        
+        Raises:
+            ValueError: If the shapes of tgt and memory are not compatible.
+            TypeError: If the input arguments are not of the expected types.
+        """
         x = tgt
         if self.norm_first:
             x = x + self._sa_block(self.norm1(x), tgt_mask, tgt_key_padding_mask)
@@ -404,6 +577,22 @@ class TransformerDecoderLayer(nn.Cell):
 
     # self-attention block
     def _sa_block(self, x, attn_mask, key_padding_mask):
+        r"""
+        Method _sa_block in class TransformerDecoderLayer.
+        
+        Args:
+            self (object): The instance of TransformerDecoderLayer.
+            x (Tensor): Input tensor of shape (seq_len, batch_size, embed_dim).
+            attn_mask (ByteTensor, optional): 3D mask tensor for the self-attention mechanism, with shape (batch_size, seq_len, seq_len). Defaults to None.
+            key_padding_mask (ByteTensor, optional): 2D mask tensor for ignoring padding elements in key, with shape (batch_size, seq_len). Defaults to None.
+        
+        Returns:
+            None. The method does not return anything.
+        
+        Raises:
+            ValueError: If the shape of x is incorrect or if attn_mask and key_padding_mask have incompatible shapes.
+            TypeError: If the input types are not as expected.
+        """
         x = self.self_attn(x, x, x,
                            attn_mask=attn_mask,
                            key_padding_mask=key_padding_mask,
@@ -412,6 +601,24 @@ class TransformerDecoderLayer(nn.Cell):
 
     # multihead attention block
     def _mha_block(self, x, mem, attn_mask, key_padding_mask):
+        r"""
+        This method `_mha_block` is defined within the class `TransformerDecoderLayer` and is used to perform multi-head attention block operations.
+        
+        Args:
+            self (object): The instance of the `TransformerDecoderLayer` class.
+            x (Tensor): The input tensor of shape (seq_len, batch_size, embed_dim) representing the current input to the multi-head attention block.
+            mem (Tensor): The memory tensor of shape (mem_seq_len, batch_size, embed_dim) representing the memory input to the multi-head attention block.
+            attn_mask (ByteTensor, optional): An optional boolean mask tensor of shape (seq_len, mem_seq_len) indicating the positions to be masked in the attention computation.
+            key_padding_mask (ByteTensor, optional): An optional boolean mask tensor of shape (batch_size, mem_seq_len) indicating which elements in the key need to be masked.
+        
+        Returns:
+            None. This method returns None as the result of the multi-head attention block operation.
+        
+        Raises:
+            - TypeError: If the input arguments are not of the expected types.
+            - ValueError: If the shapes of the input tensors are not compatible for the multi-head attention operation.
+            - RuntimeError: If there are any runtime issues during the multi-head attention computation.
+        """
         x = self.multihead_attn(x, mem, mem,
                                 attn_mask=attn_mask,
                                 key_padding_mask=key_padding_mask,
@@ -420,6 +627,22 @@ class TransformerDecoderLayer(nn.Cell):
 
     # feed forward block
     def _ff_block(self, x: Tensor):
+        r"""
+        Method _ff_block in the TransformerDecoderLayer class.
+        
+        Args:
+            self (TransformerDecoderLayer): The instance of the TransformerDecoderLayer class.
+                Used to access the methods and attributes of the TransformerDecoderLayer.
+            x (Tensor): The input tensor to the feed-forward block.
+                It represents the output of the previous layer in the TransformerDecoder.
+                Must be a valid tensor object.
+        
+        Returns:
+            None. The method does not return any value directly, but modifies the input tensor 'x' in-place.
+        
+        Raises:
+            None.
+        """
         x = self.linear2(self.dropout(self.activation(self.linear1(x))))
         return self.dropout3(x)
 
@@ -456,12 +679,43 @@ class TransformerEncoder(nn.Cell):
     __constants__ = ['norm']
 
     def __init__(self, encoder_layer, num_layers, norm=None):
+        r"""
+        Initializes a TransformerEncoder object.
+        
+        Args:
+            self (TransformerEncoder): The instance of the TransformerEncoder class.
+            encoder_layer (torch.nn.Module): The encoder layer module to be cloned.
+            num_layers (int): The number of encoder layers to be created.
+            norm (torch.nn.Module, optional): The normalization layer to be applied after each encoder layer. 
+                Defaults to None.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         super().__init__()
         self.layers = _get_clones(encoder_layer, num_layers)
         self.num_layers = num_layers
         self.norm = norm
 
     def construct(self, src: Tensor, src_mask = None, src_key_padding_mask = None):
+        r"""
+        This method constructs the Transformer encoder by applying the specified layers to the source input, with optional masking and padding.
+        
+        Args:
+            self: The instance of the TransformerEncoder class.
+            src (Tensor): The source input tensor to be encoded.
+            src_mask (Tensor, optional): The mask tensor to apply on the source input, if applicable.
+            src_key_padding_mask (Tensor, optional): The mask tensor for padding in the source input. Only bool and floating types are supported.
+        
+        Returns:
+            None: This method returns None as the output.
+        
+        Raises:
+            AssertionError: Raised if the src_key_padding_mask is not of type bool or floating point, or if it does not match the dtype of the input source.
+        """
         if src_key_padding_mask is not None:
             _skpm_dtype = src_key_padding_mask.dtype
             if _skpm_dtype != mindspore.bool_ and not ops.is_floating_point(src_key_padding_mask):
@@ -514,6 +768,21 @@ class TransformerDecoder(nn.Cell):
     __constants__ = ['norm']
 
     def __init__(self, decoder_layer, num_layers, norm=None):
+        r"""
+        Initializes a TransformerDecoder object.
+        
+        Args:
+            self (TransformerDecoder): The instance of the class.
+            decoder_layer (nn.Module): The decoder layer to be cloned.
+            num_layers (int): The number of decoder layers to be created.
+            norm (nn.Module, optional): The normalization layer to be applied after each decoder layer. Default is None.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         super().__init__()
         self.layers = _get_clones(decoder_layer, num_layers)
         self.num_layers = num_layers
@@ -522,7 +791,24 @@ class TransformerDecoder(nn.Cell):
     def construct(self, tgt, memory, tgt_mask = None,
                   memory_mask = None, tgt_key_padding_mask = None,
                   memory_key_padding_mask = None):
-
+        r"""
+        Constructs the output of the TransformerDecoder.
+        
+        Args:
+            self (TransformerDecoder): The instance of the TransformerDecoder class.
+            tgt (Tensor): The input tensor representing the target sequence. 
+            memory (Tensor): The input tensor representing the memory sequence.
+            tgt_mask (Optional[Tensor]): An optional tensor representing the mask for the target sequence. Defaults to None.
+            memory_mask (Optional[Tensor]): An optional tensor representing the mask for the memory sequence. Defaults to None.
+            tgt_key_padding_mask (Optional[Tensor]): An optional tensor representing the mask for the target key padding. Defaults to None.
+            memory_key_padding_mask (Optional[Tensor]): An optional tensor representing the mask for the memory key padding. Defaults to None.
+        
+        Returns:
+            Tensor: The output tensor representing the constructed output.
+        
+        Raises:
+            None
+        """
         output = tgt
 
         for mod in self.layers:
@@ -583,12 +869,41 @@ class Transformer(nn.Cell):
         >>> tgt = Tensor(np.random.rand(20, 32, 512), mindspore.float32)
         >>> out = transformer_model(src, tgt)
     """
-
     def __init__(self, d_model: int = 512, nhead: int = 8, num_encoder_layers: int = 6,
                  num_decoder_layers: int = 6, dim_feedforward: int = 2048, dropout: float = 0.1,
                  activation = 'relu',
                  custom_encoder = None, custom_decoder = None,
                  layer_norm_eps: float = 1e-5, batch_first: bool = False, norm_first: bool = False):
+        r"""
+        Initializes a Transformer model with the specified parameters.
+        
+        Args:
+            self: The object itself.
+            d_model (int): The number of expected features in the input (default=512).
+            nhead (int): The number of heads in the multiheadattention models (default=8).
+            num_encoder_layers (int): The number of sub-encoder-layers in the encoder (default=6).
+            num_decoder_layers (int): The number of sub-decoder-layers in the decoder (default=6).
+            dim_feedforward (int): The dimension of the feedforward network model (default=2048).
+            dropout (float): The dropout value (default=0.1).
+            activation (str): The activation function of the feedforward network, can be 'relu', 'gelu', etc. (default='relu').
+            custom_encoder: Custom encoder to be used instead of the default TransformerEncoder (default=None).
+            custom_decoder: Custom decoder to be used instead of the default TransformerDecoder (default=None).
+            layer_norm_eps (float): The epsilon value used in LayerNorm (default=1e-05).
+            batch_first (bool): If True, then the input and output tensors are provided as (batch, seq, feature) (default=False).
+            norm_first (bool): If True, Layer Normalization is applied first (default=False).
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If d_model, nhead, num_encoder_layers, or num_decoder_layers is not a positive integer.
+            ValueError: If dim_feedforward is not a positive integer greater than 0.
+            ValueError: If dropout is not in the range [0.0, 1.0].
+            ValueError: If activation is not a valid activation function.
+            ValueError: If layer_norm_eps is not a positive float.
+            TypeError: If custom_encoder or custom_decoder is not of the correct type.
+            ValueError: If batch_first or norm_first is not a boolean value.
+        """
         super().__init__()
 
         if custom_encoder is not None:
@@ -617,7 +932,28 @@ class Transformer(nn.Cell):
     def construct(self, src, tgt, src_mask = None, tgt_mask = None,
                 memory_mask = None, src_key_padding_mask = None,
                 tgt_key_padding_mask = None, memory_key_padding_mask = None):
-
+        r"""
+        Args:
+            self (object): The instance of the Transformer class.
+            src (tensor): The input tensor representing the source sequence. If the data is batched, the shape should be (batch_size, sequence_length, feature_number). If not batched, the shape should be
+(sequence_length, feature_number).
+            tgt (tensor): The input tensor representing the target sequence. If the data is batched, the shape should be (batch_size, sequence_length, feature_number). If not batched, the shape should be
+(sequence_length, feature_number).
+            src_mask (tensor, optional): The mask tensor for the src input. It should have the same shape as src. Defaults to None.
+            tgt_mask (tensor, optional): The mask tensor for the tgt input. It should have the same shape as tgt. Defaults to None.
+            memory_mask (tensor, optional): The mask tensor for the memory. Defaults to None.
+            src_key_padding_mask (tensor, optional): The mask tensor for src key padding. Defaults to None.
+            tgt_key_padding_mask (tensor, optional): The mask tensor for tgt key padding. Defaults to None.
+            memory_key_padding_mask (tensor, optional): The mask tensor for memory key padding. Defaults to None.
+        
+        Returns:
+            None. The method does not return any value.
+        
+        Raises:
+            RuntimeError: 
+                - If the batch number of src and tgt must be equal but is not.
+                - If the feature number of src and tgt is not equal to d_model.
+        """
         is_batched = src.ndim == 3
         if not self.batch_first and src.shape[1] != tgt.shape[1] and is_batched:
             raise RuntimeError("the batch number of src and tgt must be equal")
@@ -635,12 +971,22 @@ class Transformer(nn.Cell):
 
     def _reset_parameters(self):
         r"""Initiate parameters in the transformer model."""
-
         for _, p in self.parameters_and_names():
             if p.ndim > 1:
                 p.set_data(initializer('xavier_uniform', p.shape, p.dtype))
 
 def _get_activation_fn(activation: str):
+    r"""
+    Args:
+        activation (str): Specifies the type of activation function to retrieve. 
+            Should be either 'relu' or 'gelu'.
+            
+    Returns:
+        None: The retrieved activation function based on the specified type.
+        
+    Raises:
+        RuntimeError: If the provided activation type is neither 'relu' nor 'gelu'.
+    """
     if activation == "relu":
         return relu
     if activation == "gelu":
@@ -649,6 +995,17 @@ def _get_activation_fn(activation: str):
     raise RuntimeError(f"activation should be relu/gelu, not {activation}")
 
 def _get_clones(module, N):
+    r"""
+    Args:
+        module: The module to be cloned. Type should be a valid module object. This parameter specifies the module that needs to be cloned.
+        N: The number of clones to create. Type should be an integer. This parameter specifies the number of clones to create for the given module.
+    
+    Returns:
+        None. This function does not return any value explicitly, but it creates a CellList containing deep copies of the provided module.
+    
+    Raises:
+        None.
+    """
     return nn.CellList([copy.deepcopy(module) for i in range(N)])
 
 

@@ -32,7 +32,6 @@ class NezhaConfig(PretrainedConfig):
     """
     Configuration for Nezha
     """
-
     def __init__(
         self,
         vocab_size=21128,
@@ -55,6 +54,36 @@ class NezhaConfig(PretrainedConfig):
         use_cache=True,
         **kwargs,
     ):
+        '''
+        Initializes a new instance of the NezhaConfig class.
+        
+        Args:
+            self: The instance of the class.
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 21128.
+            hidden_size (int, optional): The size of the hidden layers. Defaults to 768.
+            num_hidden_layers (int, optional): The number of hidden layers. Defaults to 12.
+            num_attention_heads (int, optional): The number of attention heads. Defaults to 12.
+            intermediate_size (int, optional): The size of the intermediate layers. Defaults to 3072.
+            hidden_act (str, optional): The activation function for the hidden layers. Defaults to 'gelu'.
+            hidden_dropout_prob (float, optional): The dropout probability for the hidden layers. Defaults to 0.1.
+            attention_probs_dropout_prob (float, optional): The dropout probability for the attention probabilities. Defaults to 0.1.
+            max_position_embeddings (int, optional): The maximum number of positional embeddings. Defaults to 512.
+            max_relative_position (int, optional): The maximum relative position. Defaults to 64.
+            type_vocab_size (int, optional): The size of the type vocabulary. Defaults to 2.
+            initializer_range (float, optional): The range for the initializer. Defaults to 0.02.
+            layer_norm_eps (float, optional): The epsilon value for layer normalization. Defaults to 1e-12.
+            classifier_dropout (float, optional): The dropout probability for the classifier. Defaults to 0.1.
+            pad_token_id (int, optional): The ID of the padding token. Defaults to 0.
+            bos_token_id (int, optional): The ID of the beginning-of-sentence token. Defaults to 2.
+            eos_token_id (int, optional): The ID of the end-of-sentence token. Defaults to 3.
+            use_cache (bool, optional): Whether to use caching. Defaults to True.
+        
+        Returns:
+            None.
+        
+        Raises:
+            None.
+        '''
         super().__init__(pad_token_id=pad_token_id, bos_token_id=bos_token_id, eos_token_id=eos_token_id, **kwargs)
 
         self.vocab_size = vocab_size

@@ -102,7 +102,6 @@ class MPNetTokenizerFast(PreTrainedTokenizerFast):
             Whether or not to strip all accents. If this option is not specified, then it will be determined by the
             value for `lowercase` (as in the original BERT).
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     pretrained_init_configuration = PRETRAINED_INIT_CONFIGURATION
@@ -126,6 +125,34 @@ class MPNetTokenizerFast(PreTrainedTokenizerFast):
         strip_accents=None,
         **kwargs,
     ):
+        """
+        __init__
+        
+        Initializes an instance of the MPNetTokenizerFast class.
+        
+        Args:
+        - self: The instance of the class.
+        - vocab_file (str, optional): The path to the vocabulary file. Defaults to None.
+        - tokenizer_file (str, optional): The path to the tokenizer file. Defaults to None.
+        - do_lower_case (bool, optional): Indicates whether the text should be lowercased. Defaults to True.
+        - bos_token (str, optional): The beginning of sentence token. Defaults to '<s>'.
+        - eos_token (str, optional): The end of sentence token. Defaults to '</s>'.
+        - sep_token (str, optional): The separator token. Defaults to '</s>'.
+        - cls_token (str, optional): The classification token. Defaults to '<s>'.
+        - unk_token (str, optional): The unknown token. Defaults to '[UNK]'.
+        - pad_token (str, optional): The padding token. Defaults to '<pad>'.
+        - mask_token (str, optional): The masking token. Defaults to '<mask>'.
+        - tokenize_chinese_chars (bool, optional): Indicates whether to tokenize Chinese characters. Defaults to True.
+        - strip_accents (str, optional): The type of accents to strip. Defaults to None.
+        
+        Returns:
+        None. This method does not return any value.
+        
+        Raises:
+        - ValueError: If the provided vocab_file or tokenizer_file is invalid or inaccessible.
+        - TypeError: If the provided parameters are of incorrect type.
+        - OSError: If there is an issue with file access or manipulation.
+        """
         bos_token = AddedToken(bos_token, lstrip=False, rstrip=False) if isinstance(bos_token, str) else bos_token
         eos_token = AddedToken(eos_token, lstrip=False, rstrip=False) if isinstance(eos_token, str) else eos_token
         sep_token = AddedToken(sep_token, lstrip=False, rstrip=False) if isinstance(sep_token, str) else sep_token
@@ -192,6 +219,20 @@ class MPNetTokenizerFast(PreTrainedTokenizerFast):
         self._mask_token = value
 
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
+        """
+        This method builds inputs with special tokens for the MPNetTokenizerFast class.
+        
+        Args:
+            self: The instance of the MPNetTokenizerFast class.
+            token_ids_0 (list): The list of token IDs representing the input tokens to which special tokens will be added.
+            token_ids_1 (list, optional): The list of token IDs representing additional input tokens. Defaults to None.
+        
+        Returns:
+            None. Returns the modified list of token IDs with special tokens added based on the input parameters.
+        
+        Raises:
+            None.
+        """
         output = [self.bos_token_id] + token_ids_0 + [self.eos_token_id]
         if token_ids_1 is None:
             return output
@@ -222,6 +263,20 @@ class MPNetTokenizerFast(PreTrainedTokenizerFast):
         return len(cls + token_ids_0 + sep + sep + token_ids_1 + sep) * [0]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """
+        Save the vocabulary files for the MPNetTokenizerFast model.
+        
+        Args:
+            self (MPNetTokenizerFast): The instance of the MPNetTokenizerFast class.
+            save_directory (str): The directory where the vocabulary files will be saved.
+            filename_prefix (Optional[str]): The prefix to be used for the vocabulary file names. Defaults to None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the file paths of the saved vocabulary files.
+        
+        Raises:
+            This method does not raise any specific exceptions.
+        """
         files = self._tokenizer.model.save(save_directory, name=filename_prefix)
         return tuple(files)
 

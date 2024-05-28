@@ -212,6 +212,25 @@ def model_info(
     securityStatus: Optional[bool] = None,
     files_metadata: bool = False,
 ):
+    """
+    This function retrieves information about a model from the specified repository.
+    
+    Args:
+        repo_id (str): The identifier of the repository containing the model.
+    
+        timeout (Optional[float], optional): The maximum time (in seconds) to wait for the server to respond. Defaults to None.
+        
+        securityStatus (Optional[bool], optional): If True, includes security status information in the response. Defaults to None.
+        
+        files_metadata (bool, optional): If True, includes metadata about the model's files in the response. Defaults to False.
+    
+    Returns:
+        None: This function does not return a value directly, but rather instantiates an ADDict object with the retrieved data.
+    
+    Raises:
+        (requests.exceptions.RequestException): If a request error occurs.
+        (json.JSONDecodeError): If the response is not valid JSON.
+    """
     path = f"{HF_ENDPOINT}/api/models/{repo_id}"
 
     params = {}
@@ -224,6 +243,21 @@ def model_info(
     return ADDict(**data)
 
 def get_task(model: str) -> str:
+    """
+    This function retrieves the task associated with the input model.
+    
+    Args:
+        model (str): The model for which the task needs to be retrieved.
+    
+    Returns:
+        str: The task associated with the input model.
+    
+    Raises:
+        RuntimeError: When attempting to infer task in offline mode.
+        RuntimeError: When instantiating a pipeline without a task set raises an error.
+        RuntimeError: When the model does not have a correct `pipeline_tag` set to infer the task automatically.
+        RuntimeError: When the model is not meant to be used with transformers library.
+    """
     if is_offline_mode():
         raise RuntimeError("You cannot infer task automatically within `pipeline` when using offline mode")
     try:
@@ -288,6 +322,26 @@ def check_task(task: str) -> Tuple[str, Dict, Any]:
 
 
 def clean_custom_task(task_info):
+    """
+    This function cleans a custom task by performing the following steps:
+    - Checks if the 'impl' key is present in the 'task_info' dictionary. If not, it raises a RuntimeError indicating that the model introduces a custom pipeline without specifying its implementation.
+    - Retrieves the 'ms' key from the 'task_info' dictionary and converts it to a tuple if it is a string.
+    - Retrieves the class names specified in the 'ms' key and fetches the corresponding classes from the 'transformers' module.
+    - Updates the 'task_info' dictionary with the tuple of classes obtained from the 'ms' key.
+    - Returns the updated 'task_info' dictionary and None.
+    
+    Args:
+        task_info (dict): A dictionary containing information about the custom task.
+            - The 'impl' key specifies the implementation of the custom pipeline.
+            - The 'ms' key specifies the class names to be fetched from the 'transformers' module.
+    
+    Returns:
+        tuple: A tuple containing the updated 'task_info' dictionary and None.
+    
+    Raises:
+        RuntimeError: If the 'impl' key is not present in the 'task_info' dictionary.
+    
+    """
     from mindnlp import transformers
 
     if "impl" not in task_info:

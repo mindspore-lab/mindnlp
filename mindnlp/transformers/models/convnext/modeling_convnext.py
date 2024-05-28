@@ -71,15 +71,55 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
 # Copied from transformers.models.beit.modeling_beit.BeitDropPath with Beit->ConvNext
 class ConvNextDropPath(nn.Cell):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
-
     def __init__(self, drop_prob: Optional[float] = None) -> None:
+        """
+        Initializes an instance of the ConvNextDropPath class.
+        
+        Args:
+            self (object): The instance of the ConvNextDropPath class.
+            drop_prob (Optional[float]): The probability of dropping a connection during training. 
+                If not provided, defaults to None. Should be a float value between 0 and 1, inclusive.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         super().__init__()
         self.drop_prob = drop_prob
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+        """
+        Construct a drop path operation on the hidden states.
+        
+        Args:
+            self (ConvNextDropPath): The instance of the ConvNextDropPath class.
+            hidden_states (mindspore.Tensor): The input tensor of hidden states on which the drop path operation will be performed.
+        
+        Returns:
+            mindspore.Tensor: The tensor resulting from applying the drop path operation on the input hidden states.
+        
+        Raises:
+            - ValueError: If the drop probability is not within the valid range.
+            - TypeError: If the input hidden_states is not a valid tensor type.
+            - RuntimeError: If the operation fails due to an internal error.
+        """
         return drop_path(hidden_states, self.drop_prob, self.training)
 
     def extra_repr(self) -> str:
+        """
+        Method to generate a string representation of the drop probability in the ConvNextDropPath class.
+        
+        Args:
+            self: ConvNextDropPath object. Represents the instance of the ConvNextDropPath class.
+            
+        Returns:
+            str: A string representing the drop probability of the ConvNextDropPath object.
+        
+        Raises:
+            None.
+        """
         return "p={}".format(self.drop_prob)
 
 
@@ -88,8 +128,24 @@ class ConvNextLayerNorm(nn.Cell):
     The ordering of the dimensions in the inputs. channels_last corresponds to inputs with shape (batch_size, height,
     width, channels) while channels_first corresponds to inputs with shape (batch_size, channels, height, width).
     """
-
     def __init__(self, normalized_shape, eps=1e-6, data_format="channels_last"):
+        """
+        Initializes an instance of the ConvNextLayerNorm class.
+        
+        Args:
+            self: The object itself.
+            normalized_shape (tuple): The shape of the input tensor normalized over the specified axes.
+            eps (float, optional): A small value added to the denominator for numerical stability. Defaults to 1e-06.
+            data_format (str, optional): The format of the input data. Must be either 'channels_last' or 'channels_first'. 
+                Defaults to 'channels_last'.
+        
+        Returns:
+            None
+        
+        Raises:
+            NotImplementedError: If the data format is not supported.
+        
+        """
         super().__init__()
         self.weight = Parameter(ops.ones(normalized_shape))
         self.bias = Parameter(ops.zeros(normalized_shape))
@@ -103,6 +159,21 @@ class ConvNextLayerNorm(nn.Cell):
                                         epsilon=eps)
 
     def construct(self, x: mindspore.Tensor) -> mindspore.Tensor:
+        """
+        Constructs the ConvNextLayerNorm.
+        
+        Args:
+            self (ConvNextLayerNorm): An instance of the ConvNextLayerNorm class.
+            x (mindspore.Tensor): The input tensor to be normalized.
+            
+        Returns:
+            mindspore.Tensor: The normalized tensor.
+        
+        Raises:
+            TypeError: If the input tensor is not of type mindspore.Tensor.
+            ValueError: If the data format is not 'channels_last' or 'channels_first'.
+            ValueError: If the input tensor has an unsupported dtype.
+        """
         if self.data_format == "channels_last":
             x, _, _ = self.layer_norm(x, self.weight, self.bias)
         elif self.data_format == "channels_first":
@@ -120,8 +191,20 @@ class ConvNextEmbeddings(nn.Cell):
     """This class is comparable to (and inspired by) the SwinEmbeddings class
     found in src/transformers/models/swin/modeling_swin.py.
     """
-
     def __init__(self, config):
+        """
+        Initializes the ConvNextEmbeddings class.
+        
+        Args:
+            self: The instance of the ConvNextEmbeddings class.
+            config: An object containing the configuration parameters for the ConvNextEmbeddings class.
+            
+        Returns:
+            None. This method initializes the ConvNextEmbeddings class and does not return any value.
+        
+        Raises:
+            N/A
+        """
         super().__init__()
         self.patch_embeddings = nn.Conv2d(
             config.num_channels, config.hidden_sizes[0], kernel_size=config.patch_size, stride=config.patch_size,
@@ -131,6 +214,21 @@ class ConvNextEmbeddings(nn.Cell):
         self.num_channels = config.num_channels
 
     def construct(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
+        """
+        Constructs embeddings from the input pixel values using the ConvNextEmbeddings class.
+        
+        Args:
+            self (ConvNextEmbeddings): An instance of the ConvNextEmbeddings class.
+            pixel_values (mindspore.Tensor): A tensor containing pixel values with shape (batch_size, num_channels, height, width).
+                The pixel values should align with the channel dimension specified in the configuration.
+        
+        Returns:
+            mindspore.Tensor: A tensor representing the embeddings generated from the input pixel values.
+                The embeddings have the same shape as the input pixel values.
+        
+        Raises:
+            ValueError: If the number of channels in the input pixel values does not match the configured number of channels.
+        """
         num_channels = pixel_values.shape[1]
         if num_channels != self.num_channels:
             raise ValueError(
@@ -154,8 +252,23 @@ class ConvNextLayer(nn.Cell):
         dim (`int`): Number of input channels.
         drop_path (`float`): Stochastic depth rate. Default: 0.0.
     """
-
     def __init__(self, config, dim, drop_path=0):
+        ''' 
+        Initializes the ConvNextLayer.
+        
+        Args:
+            self: The instance of the class.
+            config: An object containing configuration settings.
+            dim: An integer representing the dimension for convolution operation.
+            drop_path: A float representing the dropout probability for drop path regularization.
+        
+        Returns:
+            None: This method does not return a value.
+        
+        Raises:
+            ValueError: If config.hidden_act is not found in ACT2FN.
+            TypeError: If config.layer_scale_init_value is not a positive number.
+        '''
         super().__init__()
         self.dwconv = nn.Conv2d(dim, dim, kernel_size=7, padding=3, pad_mode='pad', group=dim, has_bias=True)  # depthwise conv
         self.layernorm = ConvNextLayerNorm(dim, eps=1e-6)
@@ -170,6 +283,19 @@ class ConvNextLayer(nn.Cell):
         self.drop_path = ConvNextDropPath(drop_path) if drop_path > 0.0 else nn.Identity()
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+        '''
+        Construct method in the ConvNextLayer class.
+        
+        Args:
+            self: ConvNextLayer instance.
+            hidden_states (mindspore.Tensor): The input hidden states tensor.
+        
+        Returns:
+            mindspore.Tensor: The output tensor after applying the convolutional layer operations.
+        
+        Raises:
+            None.
+        '''
         input = hidden_states
         x = self.dwconv(hidden_states)
         x = x.permute(0, 2, 3, 1)  # (N, C, H, W) -> (N, H, W, C)
@@ -195,8 +321,27 @@ class ConvNextStage(nn.Cell):
         depth (`int`): Number of residual blocks.
         drop_path_rates(`List[float]`): Stochastic depth rates for each layer.
     """
-
     def __init__(self, config, in_channels, out_channels, kernel_size=2, stride=2, depth=2, drop_path_rates=None):
+        """ 
+        Initializes a ConvNextStage object with the provided configuration.
+        
+        Args:
+            self (ConvNextStage): The ConvNextStage object itself.
+            config (any): The configuration settings for the ConvNextStage.
+            in_channels (int): The number of input channels.
+            out_channels (int): The number of output channels.
+            kernel_size (int, optional): The size of the convolutional kernel. Defaults to 2.
+            stride (int, optional): The stride of the convolution operation. Defaults to 2.
+            depth (int): The depth of the ConvNextStage.
+            drop_path_rates (list, optional): A list of dropout rates for each layer in the stage. Defaults to None.
+        
+        Returns:
+            None. This method initializes the ConvNextStage object.
+        
+        Raises:
+            ValueError: If in_channels is not equal to out_channels or stride is greater than 1.
+            TypeError: If drop_path_rates is not a list.
+        """
         super().__init__()
 
         if in_channels != out_channels or stride > 1:
@@ -212,13 +357,58 @@ class ConvNextStage(nn.Cell):
         )
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+        """
+        Constructs the next stage of a convolutional neural network.
+        
+        Args:
+            self (ConvNextStage): An instance of the ConvNextStage class.
+            hidden_states (mindspore.Tensor): The input tensor representing the hidden states.
+        
+        Returns:
+            mindspore.Tensor: The tensor representing the output hidden states after the next stage.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         hidden_states = self.downsampling_layer(hidden_states)
         hidden_states = self.layers(hidden_states)
         return hidden_states
 
 
 class ConvNextEncoder(nn.Cell):
+
+    """ConvNextEncoder is a Python class that represents an encoder for a Convolutional Neural Network (CNN) model. 
+    
+    This class inherits from the nn.Cell class, which is a base class for all neural network layers in the MindSpore framework.
+    
+    The ConvNextEncoder class initializes a list of stages, where each stage consists of a ConvNextStage module. The number of stages is defined by the config.num_stages attribute. Each stage performs
+convolutional operations with different parameters, such as input and output channels, stride, and depth. The drop_path_rates parameter specifies the drop path rates for each stage.
+    
+    The construct method of the ConvNextEncoder class takes a tensor of hidden states as input and performs the forward pass through each stage. It optionally returns a tuple containing all hidden states at
+each stage, as specified by the output_hidden_states parameter. If return_dict is set to True, it returns an instance of the BaseModelOutputWithNoAttention class, which encapsulates the last hidden state and
+all hidden states.
+    
+    Note that this docstring is generated based on the provided code, and the actual implementation may contain additional methods or attributes.
+    
+    """
     def __init__(self, config):
+        """
+        Initializes an instance of the ConvNextEncoder class.
+        
+        Args:
+            self (ConvNextEncoder): The instance of the ConvNextEncoder class.
+            config: A configuration object containing various settings for the ConvNextEncoder.
+                - drop_path_rate (float): The rate at which to apply drop path regularization.
+                - depths (list[int]): List of integers representing the depths of each stage.
+                - hidden_sizes (list[int]): List of integers representing the number of hidden units in each stage.
+                - num_stages (int): The total number of stages in the ConvNextEncoder.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__()
         self.stages = nn.CellList()
         drop_path_rates = [
@@ -244,6 +434,21 @@ class ConvNextEncoder(nn.Cell):
         output_hidden_states: Optional[bool] = False,
         return_dict: Optional[bool] = True,
     ) -> Union[Tuple, BaseModelOutputWithNoAttention]:
+        """
+        Constructs the encoder for the ConvNext model.
+        
+        Args:
+            self (ConvNextEncoder): The instance of the ConvNextEncoder class.
+            hidden_states (mindspore.Tensor): The input hidden states to be processed by the encoder.
+            output_hidden_states (Optional[bool], optional): Whether to output hidden states for each layer. Defaults to False.
+            return_dict (Optional[bool], optional): Whether to return the output as a dictionary. Defaults to True.
+        
+        Returns:
+            Union[Tuple, BaseModelOutputWithNoAttention]: The output value which can be a tuple of hidden states or BaseModelOutputWithNoAttention object.
+        
+        Raises:
+            None
+        """
         all_hidden_states = () if output_hidden_states else None
 
         for i, layer_module in enumerate(self.stages):
@@ -269,7 +474,6 @@ class ConvNextPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
     config_class = ConvNextConfig
     base_model_prefix = "convnext"
     main_input_name = "pixel_values"
@@ -289,7 +493,33 @@ class ConvNextPreTrainedModel(PreTrainedModel):
 
 
 class ConvNextModel(ConvNextPreTrainedModel):
+
+    """
+    The ConvNextModel class represents a ConvNext model for image processing tasks. It inherits from ConvNextPreTrainedModel and includes methods for model initialization and construction. 
+    
+    The __init__ method initializes the ConvNextModel with the provided configuration. It sets up the embeddings, encoder, and layer normalization based on the configuration parameters.
+    
+    The construct method processes the input pixel values using the embeddings and encoder, and returns the last hidden state and pooled output. It allows for customization of returning hidden states and
+outputs as specified in the configuration parameters.
+    
+    Note: This docstring is based on the provided code snippet and does not include complete signatures or any other code.
+    """
     def __init__(self, config):
+        """
+        Initializes a new instance of the ConvNextModel class.
+        
+        Args:
+            self: The instance of the ConvNextModel class.
+            config: A dictionary containing configuration parameters for the model.
+        
+        Returns:
+            None
+        
+        Raises:
+            - TypeError: If the provided config parameter is not a dictionary.
+            - ValueError: If the config parameter does not contain the required keys for initializing the model.
+            - RuntimeError: If an error occurs during the initialization process.
+        """
         super().__init__(config)
         self.config = config
 
@@ -308,6 +538,27 @@ class ConvNextModel(ConvNextPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPoolingAndNoAttention]:
+        """
+        Constructs a ConvNextModel by processing the given pixel values.
+        
+        Args:
+            self (ConvNextModel): The instance of the ConvNextModel class.
+            pixel_values (mindspore.Tensor): The input pixel values. It should be a tensor.
+            output_hidden_states (Optional[bool]): Whether or not to output hidden states. Defaults to None.
+            return_dict (Optional[bool]): Whether or not to use a return dictionary. Defaults to None.
+        
+        Returns:
+            Union[Tuple, BaseModelOutputWithPoolingAndNoAttention]: The constructed ConvNextModel output. It can be either a tuple or an instance of BaseModelOutputWithPoolingAndNoAttention.
+        
+        Raises:
+            ValueError: If pixel_values is not specified.
+        
+        Note:
+            - If output_hidden_states is not provided, it defaults to the value specified in the configuration.
+            - If return_dict is not provided, it defaults to the value specified in the configuration.
+            - The returned value may contain the last hidden state, pooled output, and additional encoder outputs.
+        
+        """
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
@@ -340,7 +591,41 @@ class ConvNextModel(ConvNextPreTrainedModel):
 
 
 class ConvNextForImageClassification(ConvNextPreTrainedModel):
+
+    """ConvNextForImageClassification
+    
+    This class represents a Convolutional Neural Network (CNN) model for image classification using the ConvNext architecture. The model is designed for tasks such as single-label or multi-label classification
+and regression. It inherits from the ConvNextPreTrainedModel class.
+    
+    Attributes:
+        num_labels (int): The number of labels in the classification task.
+        convnext (ConvNextModel): The ConvNext model used for feature extraction.
+        classifier (nn.Dense or nn.Identity): The classifier layer for predicting the final output.
+        
+    Methods:
+        construct(pixel_values, labels, output_hidden_states, return_dict)
+            Constructs the ConvNextForImageClassification model.
+        
+    """
     def __init__(self, config):
+        """
+        __init__
+        
+        Initializes an instance of the ConvNextForImageClassification class.
+        
+        Args:
+            self: The instance of the class.
+            config: An instance of the configuration class containing the necessary parameters for model initialization.
+                - Type: config
+                - Purpose: To configure the model with specific settings and hyperparameters.
+                - Restrictions: Must be an instance of the appropriate configuration class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(config)
 
         self.num_labels = config.num_labels
@@ -406,7 +691,51 @@ class ConvNextForImageClassification(ConvNextPreTrainedModel):
 
 
 class ConvNextBackbone(ConvNextPreTrainedModel, BackboneMixin):
+
+    """
+    This class represents the ConvNext backbone used in a ConvNext model for image processing tasks. It inherits functionality from ConvNextPreTrainedModel and BackboneMixin. 
+    
+    The ConvNextBackbone class initializes the backbone architecture with ConvNextEmbeddings and ConvNextEncoder components. It also sets up layer normalization for hidden states based on the specified
+configuration.
+    The construct method processes input pixel values through the embeddings and encoder, optionally returning hidden states and feature maps. It handles the logic for outputting the desired information based
+on the configuration settings.
+    
+    Returns:
+        BackboneOutput: A named tuple containing the feature maps and hidden states of the backbone.
+    
+    Examples:
+        
+        >>> from transformers import AutoImageProcessor, AutoBackbone
+        >>> import torch
+        >>> from PIL import Image
+        >>> import requests
+    
+        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+        >>> image = Image.open(requests.get(url, stream=True).raw)
+    
+        >>> processor = AutoImageProcessor.from_pretrained("facebook/convnext-tiny-224")
+        >>> model = AutoBackbone.from_pretrained("facebook/convnext-tiny-224")
+    
+        >>> inputs = processor(image, return_tensors="pt")
+        >>> outputs = model(**inputs)
+        
+    """
     def __init__(self, config):
+        """
+        Initializes an instance of the ConvNextBackbone class.
+        
+        Args:
+            self: The instance of the class.
+            config: A configuration object containing the necessary parameters for initializing the backbone. It should have the following attributes:
+                - hidden_sizes (list): A list of integers representing the hidden layer sizes.
+                - channels (list): A list of integers representing the number of channels for each stage.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(config)
         super()._init_backbone(config)
 

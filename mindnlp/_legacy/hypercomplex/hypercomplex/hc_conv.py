@@ -148,7 +148,6 @@ class _ConvNd(Cell):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  conv_impl: Type[TConvImpl],
                  in_channels: int,
@@ -265,6 +264,29 @@ class _ConvNd(Cell):
         self.dtype = self.weight_init.dtype if isinstance(self.weight_init, Tensor) else None
 
     def construct(self, u: Tensor) -> Tensor:
+        r"""
+        Construct is a method in the _ConvNd class that constructs a tensor based on the input tensor 'u'.
+        
+        Args:
+            self: An instance of the _ConvNd class.
+            u (Tensor): The input tensor to be processed. It should be a valid tensor object.
+        
+        Returns:
+            Tensor: The constructed tensor. It will have the same data type as the input tensor 'u'.
+        
+        Raises:
+            TypeError: If the specified data type 'dtype' is not equal to the data type of the input tensor 'u'.
+        
+        The method first checks if the specified data type 'dtype' is not None and is not equal to the data type of the input tensor 'u'. If it is, a TypeError is raised with a descriptive error message.
+        
+        Next, the method extracts the values of 'x' and 'y' by calling the 'get_x_and_y' function on the input tensor 'u'.
+        
+        Then, it calls the '_construct' method with 'x' and 'y' as arguments, which returns the constructed values for 'out_x' and 'out_y'.
+        
+        The 'to_2channel' function is then called to convert 'out_x' and 'out_y' into a two-channel tensor, using the data type of the input tensor 'u'.
+        
+        Finally, the constructed tensor 'out' is returned.
+        """
         if self.dtype is not None and self.dtype != u.dtype:
             raise TypeError("dtype must be equal to the data type of the inputs tensor, but got: "
                             f"dtype={self.dtype} and inputs.dtype={u.dtype}")
@@ -297,9 +319,41 @@ class _ConvNd(Cell):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
-        pass
+        r"""
+        Constructs a tuple of tensors based on the input tensors x and y.
+        
+        Args:
+            self: _ConvNd
+                The instance of the _ConvNd class.
+            x: Tensor
+                The input tensor x.
+            y: Tensor
+                The input tensor y.
+        
+        Returns:
+            Tuple[Tensor, Tensor]
+                A tuple containing two tensors, the constructed tensor based on x and the constructed tensor based on y.
+        
+        Raises:
+            None
+        """
 
     def _check_input_5dims(self, input_shape: tuple):
+        r"""
+        Checks if the input shape is 5-dimensional.
+        
+        Args:
+            self: Instance of the '_ConvNd' class.
+            input_shape (tuple): The shape of the input to be checked for dimensionality.
+                It should be a tuple representing the shape of the input tensor.
+                
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If the length of the input_shape tuple is not equal to 5,
+                a ValueError is raised indicating that the input should be 5 dimensions.
+        """
         if len(input_shape) != 5:
             raise ValueError(f"For {self.cls_name}, input should be 5 dims, but got shape {input_shape}.")
 
@@ -442,7 +496,6 @@ class Conv2d(_ConvNd):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  conv_impl: Type[TConvImpl],
                  in_channels: int,
@@ -479,6 +532,23 @@ class Conv2d(_ConvNd):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
+        r"""
+        Constructs the convolution operation for the Conv2d class.
+        
+        Args:
+            self (Conv2d): The Conv2d instance.
+            x (Tensor): The input tensor with shape (batch_size, in_channels, height, width).
+            y (Tensor): The weight tensor with shape (out_channels, in_channels, kernel_height, kernel_width).
+        
+        Returns:
+            Tuple[Tensor, Tensor]: A tuple containing the output tensors after applying the convolution operation.
+                - out_x (Tensor): The output tensor for input x with shape (batch_size, out_channels, out_height, out_width).
+                - out_y (Tensor): The output tensor for input y with shape (batch_size, out_channels, out_height, out_width).
+        
+        Raises:
+            None.
+        
+        """
         out_x, out_y = self.conv_impl(P.conv2d, x, y, pad_mode=self.pad_mode, padding=self.padding,
                                       stride=self.stride, dilation=self.dilation, group=self.group)
         if self.has_bias:
@@ -588,7 +658,6 @@ class Conv1d(_ConvNd):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  conv_impl: Type[TConvImpl],
                  in_channels: int,
@@ -641,12 +710,42 @@ class Conv1d(_ConvNd):
                              + str(pad_mode) + ', should be one of values in \'valid\', \'same\', \'pad\'.')
 
     def _check_input_3d(self, input_shape: tuple):
+        r"""
+        Check if the input shape is 3-dimensional.
+        
+        Args:
+            self (object): The instance of the Conv1d class.
+            input_shape (tuple): A tuple representing the shape of the input data.
+                It must be a 3-dimensional tuple (e.g., (batch_size, sequence_length, input_dim)).
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If the length of the input_shape tuple is not equal to 3, it raises a ValueError
+                with a message indicating that the input dimension must be 3d.
+        """
         if len(input_shape) != 3:
             raise ValueError(f"For '{self.cls_name}', the dimension of input must be 3d, but got {len(input_shape)}.")
 
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
+        """
+        Constructs a 1D convolution operation on the input tensors x and y.
+        
+        Args:
+            self (Conv1d): The Conv1d instance.
+            x (Tensor): The input tensor of shape (N, C, L) where N is the batch size, C is the number of channels, and L is the length of the input sequence.
+            y (Tensor): The kernel tensor of shape (M, C, K) where M is the number of output channels, C is the number of input channels, and K is the kernel size.
+        
+        Returns:
+            Tuple[Tensor, Tensor]: A tuple containing the output tensors out_x and out_y after the 1D convolution operation. Both tensors have the shape (N, M, L') where L' is the length of the output sequence.
+        
+        Raises:
+            ValueError: If the input tensor x is not 3-dimensional.
+            ValueError: If the input tensor y is not 3-dimensional.
+        """
         x_shape = P.shape(x)
         self._check_input_3d(x_shape)
         x = P.expand_dims(x, 2)
@@ -802,7 +901,6 @@ class Conv3d(_ConvNd):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  conv_impl: Type[TConvImpl],
                  in_channels: int,
@@ -842,6 +940,23 @@ class Conv3d(_ConvNd):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
+        """
+        Constructs the output of a 3D convolution operation.
+        
+        Args:
+            self (Conv3d): The instance of the Conv3d class.
+            x (Tensor): The input tensor of shape [batch, in_channel, in_depth, in_height, in_width] for the convolution operation.
+            y (Tensor): The weight tensor of shape [out_channel, in_channel, kernel_depth, kernel_height, kernel_width] for the convolution operation.
+        
+        Returns:
+            Tuple[Tensor, Tensor]: A tuple containing the output tensors out_x and out_y of the convolution operation.
+                out_x: The output tensor of the convolution operation for x.
+                out_y: The output tensor of the convolution operation for y.
+        
+        Raises:
+            ValueError: If the input tensor x does not have 5 dimensions.
+            RuntimeError: If any runtime error occurs during the convolution operation.
+        """
         x_shape = P.shape(x)
         self._check_input_5dims(x_shape)
         out_x, out_y = self.conv_impl(P.conv3d, x, y, pad_mode=self.pad_mode, padding=self.padding,

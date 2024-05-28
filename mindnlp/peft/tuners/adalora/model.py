@@ -63,10 +63,26 @@ class AdaLoraModel(LoraModel):
 
     >   - **peft_config** ([`AdaLoraConfig`]): The configuration of the AdaLora model. 
     """
-
     # Note: don't redefine prefix here, it should be inherited from LoraModel
 
     def __init__(self, model, config, adapter_name):
+        r"""
+        Initializes an instance of the AdaLoraModel class.
+        
+        Args:
+            self (AdaLoraModel): The current instance of the AdaLoraModel.
+            model: The underlying model to be used.
+            config: The configuration object for the AdaLoraModel.
+            adapter_name: The name of the adapter to be used.
+        
+        Returns:
+            None.
+        
+        Raises:
+            ValueError: If more than one trainable adapter is specified.
+            TypeError: If the adapter specified by 'adapter_name' is not in the configuration.
+            AttributeError: If the specified adapter is in inference mode.
+        """
         super().__init__(model, config, adapter_name)
 
         traininable_mode_counter = 0
@@ -107,6 +123,19 @@ class AdaLoraModel(LoraModel):
                 "you want to train."
             )
     def _mark_only_adapters_as_trainable(self, model: nn.Cell) -> None:
+        """
+        Marks only specific adapters in the model as trainable based on the specified bias configuration.
+        
+        Args:
+            self: The instance of the AdaLoraModel class.
+            model (nn.Cell): The neural network model for which adapters should be marked as trainable.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            NotImplementedError: If the requested bias configuration is not implemented.
+        """
         for n, p in model.parameters_and_names():
             if "lora_" not in n:
                 p.requires_grad = False
@@ -136,6 +165,25 @@ class AdaLoraModel(LoraModel):
         current_key,
         **optionnal_kwargs,
     ):
+        r"""
+        This method '_create_and_replace' is defined within the 'AdaLoraModel' class and is responsible for creating and replacing a cell based on the provided parameters.
+        
+        Args:
+            self (object): The instance of the 'AdaLoraModel' class.
+            lora_config (object): An object containing LoRa configuration parameters.
+            adapter_name (str): The name of the adapter.
+            target (object): The target object on which the cell will be created and replaced.
+            target_name (str): The name of the target.
+            parent (object): The parent object where the cell will be replaced.
+            current_key: Additional optional keyword arguments.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            TypeError: If the 'target' parameter is not an instance of the 'AdaLoraLayer' class.
+            Exception: Any other unexpected exceptions may be raised during the execution of this method.
+        """
         kwargs = {
             "r": lora_config.init_r,
             "lora_alpha": lora_config.lora_alpha,
@@ -169,6 +217,21 @@ class AdaLoraModel(LoraModel):
 
     @staticmethod
     def _create_new_cell(lora_config, adapter_name, target, **kwargs):
+        r"""
+        This method creates a new cell for the AdaLoraModel.
+        
+        Args:
+            lora_config (LoraConfig): The configuration for the LoRa model.
+            adapter_name (str): The name of the adapter.
+            target (Union[BaseTunerLayer, nn.Module]): The target layer for which the new cell is being created.
+        
+        Returns:
+            None. This method returns None.
+        
+        Raises:
+            - ValueError: If the target cell is not supported. Currently, only `torch.nn.Linear` and `Conv1D` are supported.
+            - Warning: If the 'fan_in_fan_out' parameter needs to be adjusted based on the type of the target cell.
+        """
         # avoid eager bnb import
         # if is_bnb_available():
         #     import bitsandbytes as bnb
@@ -233,6 +296,23 @@ class AdaLoraModel(LoraModel):
 
         return new_cell
     def _replace_cell(self, parent, child_name, new_cell, child):
+        r"""
+        This method '_replace_cell' is defined within the 'AdaLoraModel' class.
+        It replaces a cell within the model with a new cell, transferring relevant attributes from the original cell to the new cell.
+        
+        Args:
+        - self (object): The instance of the AdaLoraModel class.
+        - parent (object): The parent object where the cell is to be replaced.
+        - child_name (str): The name of the child attribute within the parent object.
+        - new_cell (object): The new cell object that will replace the original cell.
+        - child (object): The original cell object that is being replaced.
+        
+        Returns:
+        None. This method does not return any value.
+        
+        Raises:
+        This method does not explicitly raise any exceptions. However, it may raise AttributeError if the attributes being accessed do not exist in the provided objects.
+        """
         setattr(parent, child_name, new_cell)
 
         # child layer wraps the original cell, unpack it
@@ -252,6 +332,22 @@ class AdaLoraModel(LoraModel):
                 new_cell.state = child.state
     @staticmethod
     def _prepare_adapter_config(peft_config, model_config):
+        r"""
+        This method '_prepare_adapter_config' in the class 'AdaLoraModel' prepares the adapter configuration based on the provided 'peft_config' and 'model_config' parameters.
+        
+        Args:
+        - peft_config (dict): A dictionary containing the configuration details for the adapter. It should include information about the target cells. If 'target_cells' is not specified, it is inferred based
+on the 'model_type' from the 'model_config' parameter.
+        - model_config (dict): A dictionary containing the configuration details specific to the model. It is used to determine the 'model_type' which is then used to infer the 'target_cells' if not explicitly
+provided in 'peft_config'.
+        
+        Returns:
+        None: This method does not return any value but updates the 'peft_config' parameter with the inferred or provided 'target_cells' based on the 'model_type'.
+        
+        Raises:
+        - ValueError: Raised if 'target_cells' is not specified in 'peft_config' and the 'model_type' from 'model_config' does not have a corresponding mapping in
+TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING.
+        """
         if peft_config.target_cells is None:
             if model_config["model_type"] not in TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING:
                 raise ValueError("Please specify `target_cells` in `peft_config`")
@@ -325,7 +421,6 @@ class AdaLoraModel(LoraModel):
                 target.lora_B.update({adapter_name: Parameter(lora_B_weights)})
                 # The scaling is exactly as the previous
                 target.ranknum.update({adapter_name: Parameter(ranknum)})
-
 
     def resize_state_dict_by_rank_pattern(self, rank_pattern, state_dict, adapter_name):
         "resize the state_dict by rank pattern"

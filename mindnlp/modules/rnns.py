@@ -30,6 +30,18 @@ logger = logging.get_logger(__name__)
 
 @constexpr
 def _init_state(shape, dtype, is_lstm):
+    """
+    Args:
+        shape (tuple): The shape of the tensors to be initialized.
+        dtype (str): The data type of the tensors.
+        is_lstm (bool): A flag indicating whether the model is LSTM or not.
+    
+    Returns:
+        None: This function returns None.
+    
+    Raises:
+        None
+    """
     hx = Tensor(np.zeros(shape), dtype)
     cx = Tensor(np.zeros(shape), dtype)
     if is_lstm:
@@ -58,6 +70,21 @@ def gru_cell(inputs, hidden, w_ih, w_hh, b_ih=None, b_hh=None):
 class SingleGRULayer_CPU(nn.Cell):
     """Single layer gru on CPU."""
     def __init__(self, input_size, hidden_size, has_bias, bidirectional):
+        r""" 
+        Initializes a SingleGRULayer_CPU object.
+        
+        Args:
+            input_size (int): The size of the input features.
+            hidden_size (int): The size of the hidden state.
+            has_bias (bool): Indicates whether bias is used in the GRU layer.
+            bidirectional (bool): Indicates whether the GRU layer is bidirectional.
+        
+        Returns:
+            None. The method initializes the SingleGRULayer_CPU object.
+        
+        Raises:
+            None.
+        """
         super().__init__(False)
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -92,7 +119,6 @@ class SingleGRULayer_CPU(nn.Cell):
 
         return outputs, h.view(h_shape)
 
-
     def bidirection(self, inputs, h, weights, biases):
         """bidirectional."""
         rev_inputs = reverse(inputs, [0])
@@ -108,7 +134,6 @@ class SingleGRULayer_CPU(nn.Cell):
             biases_f = None
             biases_b = None
 
-
         outputs_f, hn_f = self.forward(inputs, h_f, weights_f, biases_f)
         outputs_b, hn_b = self.forward(rev_inputs, h_b, weights_b, biases_b)
 
@@ -119,6 +144,22 @@ class SingleGRULayer_CPU(nn.Cell):
         return outputs, hn
 
     def construct(self, inputs, h, weights, biases):
+        r"""
+        Constructs a single GRU layer in the CPU.
+        
+        Args:
+            self (SingleGRULayer_CPU): An instance of the SingleGRULayer_CPU class.
+            inputs (Tensor): The input tensor of shape (batch_size, input_dim) representing the input sequences.
+            h (Tensor): The hidden state tensor of shape (batch_size, hidden_dim) representing the initial hidden state.
+            weights (Tensor): The weight tensor of shape (input_dim + hidden_dim, 3 * hidden_dim) representing the GRU layer weights.
+            biases (Tensor): The bias tensor of shape (3 * hidden_dim,) representing the GRU layer biases.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         if self.bidirectional:
             return self.bidirection(inputs, h, weights, biases)
         return self.forward(inputs, h, weights, biases)
@@ -127,6 +168,22 @@ class SingleGRULayer_CPU(nn.Cell):
 class SingleLSTMLayerBase(nn.Cell):
     """Single LSTM Layer"""
     def __init__(self, input_size, hidden_size, has_bias, bidirectional):
+        r"""
+        Initializes a SingleLSTMLayerBase object.
+        
+        Args:
+            self (SingleLSTMLayerBase): The instance of the class.
+            input_size (int): The size of the input tensor.
+            hidden_size (int): The size of the hidden state tensor.
+            has_bias (bool): Specifies whether to include bias terms in the calculations.
+            bidirectional (bool): Specifies whether the LSTM layer is bidirectional or not.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         super().__init__(False)
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -136,9 +193,42 @@ class SingleLSTMLayerBase(nn.Cell):
         self.rnn = ops.LSTM(input_size, hidden_size, 1, has_bias, bidirectional, 0.0)
 
     def _flatten_weights(self, weights, biases):
+        r"""
+        SingleLSTMLayerBase._flatten_weights method
+        
+        Args:
+            self (object): The instance of the SingleLSTMLayerBase class.
+            weights (object): The weights to be flattened.
+            biases (object): The biases to be flattened.
+        
+        Returns:
+            None. The method does not return any value.
+        
+        Raises:
+            NotImplementedError: If the method is called, a NotImplementedError is raised as this method is not implemented yet.
+        """
         raise NotImplementedError
 
     def construct(self, inputs, h, weights, biases):
+        r"""
+        Method to construct a single LSTM layer.
+        
+        Args:
+            self: The instance of the SingleLSTMLayerBase class.
+            inputs: The input data for the LSTM layer. It should be a tensor of shape (batch_size, sequence_length, input_size).
+            h: The initial hidden state and cell state tuple. This should be a tuple of tensors (h0, c0) where h0 and c0 are the initial hidden state and cell state respectively.
+            weights: The weights matrix for the LSTM layer. Should be a tensor with appropriate dimensions for the LSTM computation.
+            biases: The biases vector for the LSTM layer. Should be a tensor with appropriate dimensions for the LSTM computation.
+        
+        Returns:
+            outputs: The output tensor of the LSTM layer. This tensor has shape (batch_size, sequence_length, num_units).
+            (hn, cn): The final hidden state and cell state tuple after processing the input sequence.
+        
+        Raises:
+            ValueError: If the dimensions of the input tensors are not compatible with the LSTM layer.
+            TypeError: If the data types of the input tensors are not compatible with the required types for LSTM computation.
+            RuntimeError: If an error occurs during the LSTM computation process.
+        """
         h0, c0 = h
         weights = self._flatten_weights(weights, biases)
         outputs, hn, cn, _, _ =  self.rnn(inputs, h0, c0, weights.astype(inputs.dtype))
@@ -149,6 +239,20 @@ class SingleLSTMLayerBase(nn.Cell):
 class SingleLSTMLayer_CPU(SingleLSTMLayerBase):
     """Single LSTM Layer CPU"""
     def _flatten_weights(self, weights, biases):
+        r"""
+        This method flattens the weights and biases for a single LSTM layer.
+        
+        Args:
+            self (SingleLSTMLayer_CPU): The instance of the SingleLSTMLayer_CPU class.
+            weights (tuple): A tuple containing the weights for the LSTM layer.
+            biases (tuple): A tuple containing the biases for the LSTM layer.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None
+        """
         if self.bidirectional:
             weights = (weights[0].view((-1, 1, 1)), weights[2].view((-1, 1, 1)),
                        weights[1].view((-1, 1, 1)), weights[3].view((-1, 1, 1)))
@@ -170,6 +274,23 @@ class SingleLSTMLayer_CPU(SingleLSTMLayerBase):
 class SingleLSTMLayer_GPU(SingleLSTMLayerBase):
     """Single LSTM Layer GPU"""
     def _flatten_weights(self, weights, biases):
+        r"""
+        This method '_flatten_weights' in the class 'SingleLSTMLayer_GPU' flattens the weights and biases for a single LSTM layer.
+        
+        Args:
+            self: The instance of the SingleLSTMLayer_GPU class.
+            weights: A tuple containing weights for the LSTM layer. The weights are expected to be in the format (weight_i, weight_f, weight_c, weight_o) if bidirectional is True, and (weight_i, weight_f) if
+bidirectional is False.
+            biases: A tuple containing biases for the LSTM layer. The biases are expected to be in the format (bias_i, bias_f, bias_c, bias_o) if bidirectional is True, and (bias_i, bias_f) if bidirectional is
+False.
+        
+        Returns:
+            None
+        
+        Raises:
+            - ValueError: If the bidirectional flag is not a boolean value.
+            - ValueError: If the dimensions of the weights or biases do not match the expected format based on the bidirectional and has_bias flags.
+        """
         if self.bidirectional:
             weights = (weights[0].view((-1, 1, 1)), weights[1].view((-1, 1, 1)),
                        weights[2].view((-1, 1, 1)), weights[3].view((-1, 1, 1)))
@@ -192,6 +313,27 @@ class MultiLayerRNN(nn.Cell):
     """Multilayer RNN."""
     def __init__(self, mode, input_size, hidden_size, num_layers, has_bias, \
                  bidirectional, dropout):
+        r"""
+        Initializes a MultiLayerRNN object.
+        
+        Args:
+            mode (str): The type of RNN cell to use, either 'LSTM' or 'GRU'.
+            input_size (int): The number of expected features in the input x.
+            hidden_size (int): The number of features in the hidden state h.
+            num_layers (int): Number of recurrent layers.
+            has_bias (bool): If False, the layer does not use bias weights b_ih and b_hh. Default is True.
+            bidirectional (bool): If True, becomes a bidirectional RNN. Default is False.
+            dropout (float): If non-zero, introduces a Dropout layer on the outputs of each RNN layer except the last layer, with dropout probability equal to dropout. Default is 0.0.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If mode is not 'LSTM' or 'GRU'.
+            ValueError: If num_layers is less than or equal to 0.
+            ValueError: If input_size or hidden_size is less than or equal to 0.
+            ValueError: If dropout is not in the range [0.0, 1.0].
+        """
         super().__init__(False)
         backend = context.get_context('device_target')
         rnn_class = eval(f"Single{mode}Layer_{backend}")
@@ -261,6 +403,24 @@ class StaticGRU_GPU(nn.Cell):
     """Static GRU on GPU"""
     def __init__(self, input_size, hidden_size, num_layers, has_bias, \
                  bidirectional, dropout):
+        r"""
+        Initializes a StaticGRU_GPU object.
+        
+        Args:
+            self (StaticGRU_GPU): The instance of the StaticGRU_GPU class.
+            input_size (int): The size of the input tensor.
+            hidden_size (int): The number of features in the hidden state.
+            num_layers (int): The number of recurrent layers.
+            has_bias (bool): Whether the layers have bias or not.
+            bidirectional (bool): Whether the layers are bidirectional or not.
+            dropout (float): The dropout probability.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
         super().__init__(False)
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -270,6 +430,22 @@ class StaticGRU_GPU(nn.Cell):
         self.dropout = dropout
 
     def construct(self, inputs, h, weights, biases):
+        r"""
+        Constructs a StaticGRU_GPU object.
+        
+        Args:
+            self: The instance of the StaticGRU_GPU class.
+            inputs: The input tensor of shape (seq_len, batch_size, input_size).
+            h: The initial hidden state tensor of shape (num_layers * num_directions, batch_size, hidden_size).
+            weights: A tuple of weight tensors, each of shape (num_directions * hidden_size, 3 * hidden_size).
+            biases: A tuple of bias tensors, each of shape (num_directions * hidden_size,).
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         weights_new = ()
         for w in weights:
             weights_new += (ops.reshape(w, (-1, 1, 1)),)
@@ -288,6 +464,27 @@ class _RNNBase(nn.Cell):
     '''Basic class for RNN operators'''
     def __init__(self, mode, input_size, hidden_size, num_layers=1, has_bias=True,
                  batch_first=False, dropout=0., bidirectional=False):
+        r"""
+        This method initializes the _RNNBase class with the specified parameters.
+        
+        Args:
+            self (object): The instance of the class.
+            mode (str): The mode of the RNN, either 'GRU' or 'LSTM'.
+            input_size (int): The size of the input.
+            hidden_size (int): The number of features in the hidden state.
+            num_layers (int, optional): The number of recurrent layers. Defaults to 1.
+            has_bias (bool, optional): Indicates whether bias is added to the result. Defaults to True.
+            batch_first (bool, optional): If True, input and output tensors are provided as (batch, seq, feature). Defaults to False.
+            dropout (float, optional): The dropout probability. It should be a number in the range [0, 1], representing the probability of an element being zeroed. Defaults to 0.0.
+            bidirectional (bool, optional): If True, becomes a bidirectional RNN. Defaults to False.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If dropout is not in the range [0, 1] or if an unrecognized RNN mode is provided.
+            Warning: If the combination of dropout and num_layers does not meet the expected criteria.
+        """
         super().__init__()
         self.batch_first = batch_first
         self.bidirectional = bidirectional
@@ -436,6 +633,18 @@ class StaticGRU(_RNNBase):
         (3, 5, 16)
     """
     def __init__(self, *args, **kwargs):
+        r"""
+        Initializes a new instance of the StaticGRU class.
+        
+        Args:
+            self: The instance of the StaticGRU class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            This method does not raise any exceptions.
+        """
         mode = 'GRU'
         super().__init__(mode, *args, **kwargs)
 
@@ -519,8 +728,19 @@ class StaticLSTM(_RNNBase):
         >>> print(output.shape)
         (3, 5, 16)
     """
-
     def __init__(self, *args, **kwargs):
+        r"""
+        Initializes a StaticLSTM object.
+        
+        Args:
+            self: The instance of the StaticLSTM class.
+        
+        Returns:
+            None
+        
+        Raises:
+            - None
+        """
         mode = 'LSTM'
         super().__init__(mode, *args, **kwargs)
 

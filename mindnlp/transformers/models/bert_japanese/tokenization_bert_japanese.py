@@ -89,7 +89,6 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
         jumanpp_kwargs (`dict`, *optional*):
             Dictionary passed to the `JumanppTokenizer` constructor.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
 
     def __init__(
@@ -112,6 +111,34 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
         jumanpp_kwargs=None,
         **kwargs,
     ):
+        """
+        Initializes a new instance of the BertJapaneseTokenizer class.
+        
+        Args:
+            self (object): The instance of the class.
+            vocab_file (str): The path to the vocabulary file. If not using a 'sentencepiece' subword tokenizer, this file is required.
+            spm_file (str, optional): The path to the SentencePiece model file. Defaults to None.
+            do_lower_case (bool): A flag to indicate whether the tokenizer should convert all characters to lowercase. Defaults to False.
+            do_word_tokenize (bool): A flag to indicate whether word tokenization should be performed. Defaults to True.
+            do_subword_tokenize (bool): A flag to indicate whether subword tokenization should be performed. Defaults to True.
+            word_tokenizer_type (str): The type of word tokenizer to use. Must be one of 'basic', 'mecab', 'sudachi', or 'jumanpp'.
+            subword_tokenizer_type (str): The type of subword tokenizer to use. Must be one of 'wordpiece', 'character', or 'sentencepiece'.
+            never_split (list): A list of tokens that should not be split during tokenization. Defaults to None.
+            unk_token (str): The token to represent unknown words. Defaults to '[UNK]'.
+            sep_token (str): The separator token. Defaults to '[SEP]'.
+            pad_token (str): The padding token. Defaults to '[PAD]'.
+            cls_token (str): The classification token. Defaults to '[CLS]'.
+            mask_token (str): The mask token. Defaults to '[MASK]'.
+            mecab_kwargs (dict): Additional keyword arguments for the Mecab word tokenizer. Defaults to None.
+            sudachi_kwargs (dict): Additional keyword arguments for the Sudachi word tokenizer. Defaults to None.
+            jumanpp_kwargs (dict): Additional keyword arguments for the Jumanpp word tokenizer. Defaults to None.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If the specified vocabulary or SentencePiece model file cannot be found, or if an invalid tokenizer type is specified.
+        """
         if subword_tokenizer_type == "sentencepiece":
             if not os.path.isfile(spm_file):
                 raise ValueError(
@@ -187,15 +214,54 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
 
     @property
     def do_lower_case(self):
+        """
+        Method: do_lower_case
+        
+        Description:
+        This method returns the lower case value of the input.
+        
+        Args:
+        - self: Represents the instance of the class BertJapaneseTokenizer. It is used to access the attributes and methods of the class.
+        
+        Returns:
+        None: This method does not return any value, rather it directly accesses and returns the lower case value of the input.
+        
+        Raises:
+        This method does not raise any exceptions.
+        """
         return self.lower_case
 
     def __getstate__(self):
+        """
+        This method '__getstate__' is defined within the class 'BertJapaneseTokenizer' and is used to retrieve the internal state of the object for pickling purposes.
+        
+        Args:
+            self: This parameter represents the instance of the 'BertJapaneseTokenizer' class itself. It is required to access the internal attributes of the object.
+        
+        Returns:
+            The method returns a dictionary representing the current state of the object. If the 'word_tokenizer_type' attribute of the object is one of ['mecab', 'sudachi', 'jumanpp'], the 'word_tokenizer'
+attribute is removed from the state dictionary before returning it.
+        
+        Raises:
+            This method does not raise any exceptions under normal circumstances.
+        """
         state = dict(self.__dict__)
         if self.word_tokenizer_type in ["mecab", "sudachi", "jumanpp"]:
             del state["word_tokenizer"]
         return state
 
     def __setstate__(self, state):
+        """
+        Args:
+            self (BertJapaneseTokenizer): The instance of the BertJapaneseTokenizer class.
+            state (dict): The state dictionary containing the attributes to be restored.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         self.__dict__ = state
         if self.word_tokenizer_type == "mecab":
             self.word_tokenizer = MecabTokenizer(
@@ -211,6 +277,38 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
             )
 
     def _tokenize(self, text):
+        """
+        Tokenizes the given text using word and subword tokenization.
+        
+        Args:
+            self (BertJapaneseTokenizer): The instance of the BertJapaneseTokenizer class.
+            text (str): The text to be tokenized.
+        
+        Returns:
+            list: The list of tokens after word and subword tokenization.
+        
+        Raises:
+            None.
+        
+        This method tokenizes the input text using word and subword tokenization techniques. 
+        If the 'do_word_tokenize' flag is set to True, the text is first tokenized into words using the 'word_tokenizer' 
+        with the 'never_split' option set to 'all_special_tokens'. If the flag is set to False, the text is treated 
+        as a single token.
+        
+        If the 'do_subword_tokenize' flag is set to True, each word token is further split into subword tokens using 
+        the 'subword_tokenizer'. The resulting subword tokens are returned as the final list of tokens. If the flag 
+        is set to False, the word tokens are returned as is.
+        
+        Note: The 'do_word_tokenize' and 'do_subword_tokenize' flags are set during the initialization of the 
+        BertJapaneseTokenizer class.
+        
+        Example:
+            tokenizer = BertJapaneseTokenizer()
+            text = "こんにちは、世界！"
+            tokens = tokenizer._tokenize(text)
+            print(tokens)
+            # Output: ['こんにちは', '、', '世界', '！']
+        """
         if self.do_word_tokenize:
             tokens = self.word_tokenizer.tokenize(text, never_split=self.all_special_tokens)
         else:
@@ -225,11 +323,37 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
+        """
+        This method 'vocab_size' in the class 'BertJapaneseTokenizer' retrieves the vocabulary size based on the tokenizer type.
+        
+        Args:
+            self (object): The instance of the BertJapaneseTokenizer class.
+            
+        Returns:
+            None: This method does not return any value directly. The vocabulary size is accessed through the property 'vocab_size'.
+            
+        Raises:
+            N/A
+        """
         if self.subword_tokenizer_type == "sentencepiece":
             return len(self.subword_tokenizer.sp_model)
         return len(self.vocab)
 
     def get_vocab(self):
+        """
+        This method 'get_vocab' in the class 'BertJapaneseTokenizer' retrieves the vocabulary used by the tokenizer.
+        
+        Args:
+            self: The instance of the BertJapaneseTokenizer class. It is a required parameter for instance method access.
+        
+        Returns:
+            Returns a dictionary representing the vocabulary. If the subword_tokenizer_type is 'sentencepiece', the vocabulary is constructed by mapping token IDs to their corresponding tokens for the range of
+0 to vocab_size. Any added tokens are then added to this vocabulary. If the subword_tokenizer_type is not 'sentencepiece', the vocabulary is a combination of the existing vocabulary and the
+added_tokens_encoder.
+        
+        Raises:
+            No specific exceptions are documented to be raised by this method.
+        """
         if self.subword_tokenizer_type == "sentencepiece":
             vocab = {self.convert_ids_to_tokens(i): i for i in range(self.vocab_size)}
             vocab.update(self.added_tokens_encoder)
@@ -300,7 +424,6 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
         Returns:
             `List[int]`: A list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
         """
-
         if already_has_special_tokens:
             return super().get_special_tokens_mask(
                 token_ids_0=token_ids_0, token_ids_1=token_ids_1, already_has_special_tokens=True
@@ -341,6 +464,22 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """
+        Save the vocabulary to a file in the specified directory.
+        
+        Args:
+            self: Instance of the BertJapaneseTokenizer class.
+            save_directory (str): The directory where the vocabulary file will be saved.
+            filename_prefix (Optional[str]): Optional prefix to be added to the filename. Defaults to None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the path to the saved vocabulary file.
+        
+        Raises:
+            FileNotFoundError: If the specified save_directory does not exist.
+            ValueError: If the subword_tokenizer_type is not supported.
+            IOError: If there is an issue writing the vocabulary file to the specified location.
+        """
         if os.path.isdir(save_directory):
             if self.subword_tokenizer_type == "sentencepiece":
                 vocab_file = os.path.join(
@@ -375,7 +514,6 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
 
 class MecabTokenizer:
     """Runs basic tokenization with MeCab morphological parser."""
-
     def __init__(
         self,
         do_lower_case=False,
@@ -483,7 +621,6 @@ class MecabTokenizer:
 
 class SudachiTokenizer:
     """Runs basic tokenization with Sudachi morphological parser."""
-
     def __init__(
         self,
         do_lower_case=False,
@@ -518,7 +655,6 @@ class SudachiTokenizer:
             **sudachi_projection**: (*optional*) string
                 Word projection mode of sudachi, choose from `["surface", "normalized", "reading", "dictionary", "dictionary_and_surface", "normalized_and_surface", "normalized_nouns"]`.
         """
-
         self.do_lower_case = do_lower_case
         self.never_split = never_split if never_split is not None else []
         self.normalize_text = normalize_text
@@ -579,7 +715,6 @@ class SudachiTokenizer:
 
 class JumanppTokenizer:
     """Runs basic tokenization with jumanpp morphological parser."""
-
     def __init__(
         self,
         do_lower_case=False,
@@ -601,7 +736,6 @@ class JumanppTokenizer:
             **trim_whitespace**: (*optional*) boolean (default False)
                 Whether to trim all whitespace, tab, newline from tokens.
         """
-
         self.do_lower_case = do_lower_case
         self.never_split = never_split if never_split is not None else []
         self.normalize_text = normalize_text
@@ -645,7 +779,6 @@ class JumanppTokenizer:
 
 class CharacterTokenizer:
     """Runs Character tokenization."""
-
     def __init__(self, vocab, unk_token, normalize_text=True):
         """
         Constructs a CharacterTokenizer.
@@ -712,7 +845,6 @@ class BasicTokenizer:
             In some instances we want to skip the basic punctuation splitting so that later tokenization can capture
             the full context of the words, such as contractions.
     """
-
     def __init__(
         self,
         do_lower_case=True,
@@ -721,6 +853,23 @@ class BasicTokenizer:
         strip_accents=None,
         do_split_on_punc=True,
     ):
+        '''
+        Initializes the BasicTokenizer class with the specified parameters.
+        
+        Args:
+            self: The instance of the class.
+            do_lower_case (bool): A flag indicating whether to convert tokens to lower case. Default is True.
+            never_split (list): A list of tokens that should never be split. Default is an empty list.
+            tokenize_chinese_chars (bool): A flag indicating whether to tokenize Chinese characters. Default is True.
+            strip_accents (None): Not used in the current implementation.
+            do_split_on_punc (bool): A flag indicating whether to split on punctuation. Default is True.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None
+        '''
         if never_split is None:
             never_split = []
         self.do_lower_case = do_lower_case
@@ -854,8 +1003,23 @@ class BasicTokenizer:
 # Copied from transformers.models.bert.tokenization_bert.WordpieceTokenizer
 class WordpieceTokenizer:
     """Runs WordPiece tokenization."""
-
     def __init__(self, vocab, unk_token, max_input_chars_per_word=100):
+        """
+        Initializes a new instance of the WordpieceTokenizer class.
+        
+        Args:
+            self (WordpieceTokenizer): The instance of the WordpieceTokenizer class.
+            vocab (dict): A dictionary containing the vocabulary for tokenization.
+            unk_token (str): The token to be used for unknown or out-of-vocabulary words.
+            max_input_chars_per_word (int, optional): The maximum number of characters allowed per word for tokenization. Defaults to 100.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If max_input_chars_per_word is less than or equal to 0.
+            TypeError: If vocab is not a dictionary or unk_token is not a string.
+        """
         self.vocab = vocab
         self.unk_token = unk_token
         self.max_input_chars_per_word = max_input_chars_per_word
@@ -874,7 +1038,6 @@ class WordpieceTokenizer:
         Returns:
             A list of wordpiece tokens.
         """
-
         output_tokens = []
         for token in whitespace_tokenize(text):
             chars = list(token)
@@ -913,7 +1076,6 @@ class SentencepieceTokenizer:
     """
     Runs sentencepiece tokenization. Based on transformers.models.albert.tokenization_albert.AlbertTokenizer.
     """
-
     def __init__(
         self,
         vocab,
@@ -923,6 +1085,26 @@ class SentencepieceTokenizer:
         keep_accents=True,
         sp_model_kwargs: Optional[Dict[str, Any]] = None,
     ):
+        """
+        Initializes a SentencepieceTokenizer instance.
+        
+        Args:
+            self: The instance of the class.
+            vocab (str): The path to the vocabulary file.
+            unk_token (str): The unknown token to be used for out-of-vocabulary tokens.
+            do_lower_case (bool, optional): Whether to convert all input to lowercase. Default is False.
+            remove_space (bool, optional): Whether to remove space in the tokenization. Default is True.
+            keep_accents (bool, optional): Whether to keep accents in the tokenization. Default is True.
+            sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional keyword arguments to be passed to the SentencePieceProcessor. Default is None.
+        
+        Returns:
+            None. This method initializes the SentencepieceTokenizer instance.
+        
+        Raises:
+            ValueError: If the vocab file is invalid or missing.
+            FileNotFoundError: If the vocab file is not found.
+            OSError: If there is an issue loading the SentencePiece model.
+        """
         self.vocab = vocab
         self.unk_token = unk_token
         self.do_lower_case = do_lower_case
@@ -934,6 +1116,19 @@ class SentencepieceTokenizer:
         self.sp_model.Load(self.vocab)
 
     def preprocess_text(self, inputs):
+        """
+        Preprocesses the input text by removing spaces, normalizing accents, and converting to lowercase, if specified.
+        
+        Args:
+            self: An instance of the SentencepieceTokenizer class.
+            inputs (str): The input text to be preprocessed.
+        
+        Returns:
+            None: This method modifies the input text in-place.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         if self.remove_space:
             outputs = " ".join(inputs.strip().split())
         else:

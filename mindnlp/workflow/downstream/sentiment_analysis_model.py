@@ -22,6 +22,24 @@ from mindnlp.transformers import BertModel
 class BertForSentimentAnalysis(nn.Cell):
     """Bert Model for classification tasks"""
     def __init__(self, config):
+        """
+        Initializes a BertForSentimentAnalysis instance.
+        
+        Args:
+            self: Instance of the BertForSentimentAnalysis class.
+            config: An object containing configuration parameters for the model.
+                    Expected to be an instance of a class that has the following attributes:
+                    - num_labels: An integer representing the number of labels for classification.
+                    - hidden_size: An integer representing the size of hidden layers.
+        
+        Returns:
+            None. This method initializes the BertForSentimentAnalysis instance with the provided configuration.
+        
+        Raises:
+            - TypeError: If the config parameter is not in the expected format or is missing required attributes.
+            - ValueError: If the num_labels or hidden_size attributes in the config parameter are invalid.
+            - RuntimeError: If an error occurs during the initialization process.
+        """
         super().__init__(config)
         self.num_labels = config.num_labels
         self.config = config
@@ -30,6 +48,23 @@ class BertForSentimentAnalysis(nn.Cell):
 
     def construct(self, input_ids, attention_mask=None, token_type_ids=None, \
         position_ids=None, head_mask=None):
+        """
+        Constructs the sentiment analysis model using the BERT architecture.
+        
+        Args:
+            self (BertForSentimentAnalysis): An instance of the BertForSentimentAnalysis class.
+            input_ids (Tensor): The input sequence of token IDs, of shape (batch_size, sequence_length).
+            attention_mask (Tensor, optional): The attention mask, indicating which tokens should be attended to, of shape (batch_size, sequence_length). Defaults to None.
+            token_type_ids (Tensor, optional): The token type IDs, indicating the segment IDs for the tokens in the input sequence, of shape (batch_size, sequence_length). Defaults to None.
+            position_ids (Tensor, optional): The position IDs, indicating the position of each token in the input sequence, of shape (batch_size, sequence_length). Defaults to None.
+            head_mask (Tensor, optional): The head mask, indicating which attention heads to mask out, of shape (batch_size, num_heads). Defaults to None.
+        
+        Returns:
+            logits (Tensor): The output logits representing the sentiment scores for each input sequence, of shape (batch_size, num_classes).
+        
+        Raises:
+            None.
+        """
         outputs = self.bert(
             input_ids,
             attention_mask=attention_mask,

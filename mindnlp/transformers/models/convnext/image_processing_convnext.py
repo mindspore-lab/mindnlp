@@ -83,7 +83,6 @@ class ConvNextImageProcessor(BaseImageProcessor):
             Standard deviation to use if normalizing the image. This is a float or list of floats the length of the
             number of channels in the image. Can be overridden by the `image_std` parameter in the `preprocess` method.
     """
-
     model_input_names = ["pixel_values"]
 
     def __init__(
@@ -99,6 +98,27 @@ class ConvNextImageProcessor(BaseImageProcessor):
         image_std: Optional[Union[float, List[float]]] = None,
         **kwargs,
     ) -> None:
+        """
+        Initialize a ConvNextImageProcessor object.
+        
+        Args:
+        - self (object): The instance of the ConvNextImageProcessor class.
+        - do_resize (bool): A flag indicating whether to resize the input image. Default is True.
+        - size (Dict[str, int]): A dictionary specifying the size of the output image. Default is {'shortest_edge': 384}.
+        - crop_pct (float): The percentage of the image to be cropped. Default is 224 / 256.
+        - resample (PILImageResampling): The resampling method for image resizing. Default is PILImageResampling.BILINEAR.
+        - do_rescale (bool): A flag indicating whether to rescale the image. Default is True.
+        - rescale_factor (Union[int, float]): The factor by which to rescale the image. Default is 1 / 255.
+        - do_normalize (bool): A flag indicating whether to normalize the image. Default is True.
+        - image_mean (Optional[Union[float, List[float]]): The mean values for image normalization. Default is IMAGENET_STANDARD_MEAN.
+        - image_std (Optional[Union[float, List[float]]): The standard deviation values for image normalization. Default is IMAGENET_STANDARD_STD.
+        
+        Returns:
+        - None: This method does not return any value.
+        
+        Raises:
+        - None
+        """
         super().__init__(**kwargs)
         size = size if size is not None else {"shortest_edge": 384}
         size = get_size_dict(size, default_to_square=False)

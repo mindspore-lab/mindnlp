@@ -85,7 +85,6 @@ class ReformerTokenizerFast(PreTrainedTokenizerFast):
         additional_special_tokens (`List[str]`, *optional*):
             Additional special tokens used by the tokenizer.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -101,6 +100,25 @@ class ReformerTokenizerFast(PreTrainedTokenizerFast):
         additional_special_tokens=[],
         **kwargs,
     ):
+        """
+        __init__
+        
+        Initializes the ReformerTokenizerFast class.
+        
+        Args:
+            self: The instance of the class.
+            vocab_file (str): The path to the vocabulary file. If not provided, the tokenizer will use a default vocabulary.
+            tokenizer_file (str): The path to the tokenizer file. If not provided, the tokenizer will use a default tokenizer.
+            eos_token (str): The end-of-sequence token. Defaults to '</s>'.
+            unk_token (str): The unknown token. Defaults to '<unk>'.
+            additional_special_tokens (list): A list of additional special tokens to be added to the vocabulary.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(
             vocab_file,
             tokenizer_file=tokenizer_file,
@@ -114,9 +132,37 @@ class ReformerTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def can_save_slow_tokenizer(self) -> bool:
+        """
+        Method to check if the slow tokenizer can be saved.
+        
+        Args:
+            self (ReformerTokenizerFast): An instance of the ReformerTokenizerFast class.
+                This parameter refers to the current instance of the ReformerTokenizerFast class.
+                
+        Returns:
+            bool: A boolean value indicating whether the slow tokenizer can be saved.
+                Returns True if the vocab_file exists, otherwise returns False.
+        
+        Raises:
+            None.
+        """
         return os.path.isfile(self.vocab_file) if self.vocab_file else False
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """Save the vocabulary for a ReformerTokenizerFast instance.
+        
+        Args:
+            self (ReformerTokenizerFast): The instance of the ReformerTokenizerFast class.
+            save_directory (str): The directory where the vocabulary will be saved.
+            filename_prefix (Optional[str]): An optional prefix for the filename. Defaults to None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the path to the saved vocabulary file.
+        
+        Raises:
+            ValueError: If the fast tokenizer does not have the necessary information to save the vocabulary for a slow tokenizer.
+            OSError: If the specified save_directory is not a valid directory.
+        """
         if not self.can_save_slow_tokenizer:
             raise ValueError(
                 "Your fast tokenizer does not have the necessary information to save the vocabulary for a slow "

@@ -36,8 +36,28 @@ class Work(metaclass=abc.ABCMeta):
         model(string): The model name in the work.
         kwargs (dict, optional): Additional keyword arguments passed along to the specific work.
     """
-
     def __init__(self, model, work, **kwargs):
+        """
+        The __init__ method initializes an instance of the Work class.
+        
+        Args:
+            self: The instance of the Work class.
+            model (str): The model being used for the work.
+            work (str): The type of work being performed.
+            **kwargs: Additional keyword arguments. 
+                home_path (str, optional): The home path for the work. Defaults to DEFAULT_ROOT.
+                work_flag (str, optional): The work flag. Defaults to the specified model.
+                from_hf_hub (bool, optional): Flag indicating whether the model is from the Hugging Face Hub.
+                work_path (str, optional): The custom work path.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            KeyError: If the required 'home_path' or 'work_flag' is not provided in kwargs.
+            ValueError: If an invalid value is provided for any of the parameters.
+            OSError: If an error occurs while creating the work path.
+        """
         self.model = model
         self.work = work
         self.kwargs = kwargs
@@ -69,13 +89,11 @@ class Work(metaclass=abc.ABCMeta):
         """
         Construct the inference model for the predictor.
         """
-
     @abstractmethod
     def _construct_tokenizer(self, model):
         """
         Construct the tokenizer for the predictor.
         """
-
     @abstractmethod
     def _preprocess(self, inputs, padding=True, add_special_tokens=True):
         """
@@ -83,20 +101,17 @@ class Work(metaclass=abc.ABCMeta):
            1) Transform the raw text to token ids.
            2) Generate the other model inputs from the raw text and token ids.
         """
-
     @abstractmethod
     def _run_model(self, inputs):
         """
         Run the work model from the outputs of the `_tokenize` function.
         """
-
     @abstractmethod
     def _postprocess(self, inputs):
         """
         The model output is the logits and pros,
         this function will convert the model output to raw text.
         """
-
     def _get_graph_model_name(self):
         """
         Get the graph model name.
@@ -121,22 +136,18 @@ class Work(metaclass=abc.ABCMeta):
         """
         Check the predictor type.
         """
-
     def _prepare_graph_mode(self):
         """
         Construct the input data and predictor in the MindSpore graph mode.
         """
-
     def _prepare_onnx_mode(self):
         """
         Prepare the onnx model.
         """
-
     def _get_inference_model(self):
         """
         Return the inference program, inputs and outputs in graph mode.
         """
-
     def _check_input_text(self, inputs):
         """
         Check whether the input text meet the requirement.
@@ -208,7 +219,6 @@ class Work(metaclass=abc.ABCMeta):
         Join the short results automatically and generate
         the final results to match with the user inputs.
         """
-
     def help(self):
         """
         Return the usage message of the current work.
@@ -216,6 +226,20 @@ class Work(metaclass=abc.ABCMeta):
         print(f"Examples:\n{self._usage}")
 
     def __call__(self, *args):
+        """ 
+        Method '__call__' in the class 'Work'.
+        
+        This method acts as the entry point when an instance of the 'Work' class is called as a function.
+        
+        Args:
+            self (Work): The instance of the 'Work' class. It is automatically passed when the method is called.
+            
+        Returns:
+            None. This method does not return any value explicitly. The results of the operation are returned through the 'results' variable.
+        
+        Raises:
+            This method does not explicitly raise any exceptions. However, exceptions may be raised within the '_preprocess', '_run_model', or '_postprocess' methods called internally.
+        """
         inputs = self._preprocess(*args)
         outputs = self._run_model(inputs)
         results = self._postprocess(outputs)

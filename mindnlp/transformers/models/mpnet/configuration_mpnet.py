@@ -33,7 +33,6 @@ class MPNetConfig(PretrainedConfig):
     configuration with the defaults will yield a similar configuration to that of the MPNet
     [microsoft/mpnet-base](https://huggingface.co/microsoft/mpnet-base) architecture.
     ```"""
-
     model_type = "mpnet"
 
     def __init__(
@@ -55,6 +54,31 @@ class MPNetConfig(PretrainedConfig):
         eos_token_id=2,
         **kwargs,
     ):
+        """Initializes a new instance of the MPNetConfig class.
+        
+        Args:
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 30527.
+            hidden_size (int, optional): The size of the hidden states. Defaults to 768.
+            num_hidden_layers (int, optional): The number of hidden layers. Defaults to 12.
+            num_attention_heads (int, optional): The number of attention heads. Defaults to 12.
+            intermediate_size (int, optional): The size of the intermediate layer in the feedforward network. Defaults to 3072.
+            hidden_act (str, optional): The activation function for the hidden layers. Defaults to 'gelu'.
+            hidden_dropout_prob (float, optional): The dropout probability for the hidden layers. Defaults to 0.1.
+            attention_probs_dropout_prob (float, optional): The dropout probability for the attention probabilities. Defaults to 0.1.
+            max_position_embeddings (int, optional): The maximum number of positional embeddings. Defaults to 512.
+            initializer_range (float, optional): The range for the random weight initialization. Defaults to 0.02.
+            layer_norm_eps (float, optional): The epsilon value for layer normalization. Defaults to 1e-12.
+            relative_attention_num_buckets (int, optional): The number of buckets for relative attention. Defaults to 32.
+            pad_token_id (int, optional): The token ID for padding. Defaults to 1.
+            bos_token_id (int, optional): The token ID for the beginning of sequence. Defaults to 0.
+            eos_token_id (int, optional): The token ID for the end of sequence. Defaults to 2.
+        
+        Returns:
+            None. This method does not return a value.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
         super().__init__(pad_token_id=pad_token_id, bos_token_id=bos_token_id, eos_token_id=eos_token_id, **kwargs)
 
         self.vocab_size = vocab_size

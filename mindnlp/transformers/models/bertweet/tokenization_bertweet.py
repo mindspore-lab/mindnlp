@@ -102,7 +102,6 @@ class BertweetTokenizer(PreTrainedTokenizer):
             The token used for masking values. This is the token used when training this model with masked language
             modeling. This is the token which the model will try to predict.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
 
     def __init__(
@@ -119,6 +118,32 @@ class BertweetTokenizer(PreTrainedTokenizer):
         mask_token="<mask>",
         **kwargs,
     ):
+        """
+        Initialize the BertweetTokenizer class with the provided parameters.
+        
+        Args:
+        - self: The instance of the class.
+        - vocab_file (str): The path to the vocabulary file.
+        - merges_file (str): The path to the merges file.
+        - normalization (bool): Flag indicating whether normalization should be applied (default is False).
+        - bos_token (str): Beginning of sentence token (default is '<s>').
+        - eos_token (str): End of sentence token (default is '</s>').
+        - sep_token (str): Separator token (default is '</s>').
+        - cls_token (str): Class token (default is '<s>').
+        - unk_token (str): Unknown token (default is '<unk>').
+        - pad_token (str): Padding token (default is '<pad>').
+        - mask_token (str): Mask token (default is '<mask>').
+        
+        Returns:
+        None. This method initializes the BertweetTokenizer instance with the provided parameters.
+        
+        Raises:
+        - ImportError: If the 'emoji' library is not installed, a warning is logged, and emoticons or emojis will not be converted to text. 
+          To resolve this, install emoji library using 'pip3 install emoji==0.6.0'.
+        - FileNotFoundError: If the vocab_file or merges_file cannot be found or accessed.
+        - IOError: If there is an issue reading the merges_file with UTF-8 encoding.
+        - Exception: Any other unforeseen exceptions that might occur during the initialization process.
+        """
         try:
             from emoji import demojize
 
@@ -184,7 +209,6 @@ class BertweetTokenizer(PreTrainedTokenizer):
         Returns:
             `List[int]`: List of [input IDs](../glossary#input-ids) with the appropriate special tokens.
         """
-
         if token_ids_1 is None:
             return [self.cls_token_id] + token_ids_0 + [self.sep_token_id]
         cls = [self.cls_token_id]
@@ -209,7 +233,6 @@ class BertweetTokenizer(PreTrainedTokenizer):
         Returns:
             `List[int]`: A list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
         """
-
         if already_has_special_tokens:
             return super().get_special_tokens_mask(
                 token_ids_0=token_ids_0, token_ids_1=token_ids_1, already_has_special_tokens=True
@@ -235,7 +258,6 @@ class BertweetTokenizer(PreTrainedTokenizer):
         Returns:
             `List[int]`: List of zeros.
         """
-
         sep = [self.sep_token_id]
         cls = [self.cls_token_id]
 
@@ -245,12 +267,57 @@ class BertweetTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
+        """
+        Method to retrieve the vocabulary size of the BertweetTokenizer.
+        
+        Args:
+            self: The instance of the BertweetTokenizer class.
+                Type: BertweetTokenizer object.
+                Purpose: Represents the current instance of the BertweetTokenizer class.
+                Restrictions: None.
+        
+        Returns:
+            The total number of unique tokens in the tokenizer's encoder.
+                Type: int.
+                Purpose: Indicates the vocabulary size of the tokenizer.
+                
+        Raises:
+            None.
+        """
         return len(self.encoder)
 
     def get_vocab(self):
+        """
+        Method to retrieve the combined vocabulary from the encoder and added tokens encoder.
+        
+        Args:
+            self (BertweetTokenizer): An instance of the BertweetTokenizer class.
+                Represents the tokenizer object.
+                
+        Returns:
+            None. Returns a dictionary that combines the encoder and added tokens encoder.
+            The keys are word pieces and the values are their corresponding IDs.
+        
+        Raises:
+            None.
+        """
         return dict(self.encoder, **self.added_tokens_encoder)
 
     def bpe(self, token):
+        """
+        This method is part of the BertweetTokenizer class and implements the Byte-Pair Encoding (BPE) algorithm for tokenization.
+        
+        Args:
+            self (BertweetTokenizer): The instance of the BertweetTokenizer class.
+            token (str): The input token to be processed by the BPE algorithm.
+        
+        Returns:
+            str or None: The processed token after applying the BPE algorithm. If the input token is not found in the cache and the BPE algorithm is applied, the processed token is returned. If the input token
+is found in the cache, the corresponding processed token is returned from the cache. If the input token is not found in the cache and the BPE algorithm is not applied, None is returned.
+        
+        Raises:
+            None: This method does not raise any specific exceptions.
+        """
         if token in self.cache:
             return self.cache[token]
         word = tuple(token)
@@ -372,6 +439,23 @@ class BertweetTokenizer(PreTrainedTokenizer):
         return out_string
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """
+        Saves the vocabulary files required for the BertweetTokenizer.
+        
+        Args:
+            self (BertweetTokenizer): An instance of the BertweetTokenizer class.
+            save_directory (str): The directory where the vocabulary files will be saved.
+            filename_prefix (Optional[str], optional): A prefix to be added to the filename. Defaults to None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the paths of the saved vocabulary files: out_vocab_file and out_merge_file.
+        
+        Raises:
+            OSError: If the provided save_directory is not a valid directory.
+            FileNotFoundError: If the self.vocab_file does not exist.
+            PermissionError: If there is a permission error while copying the vocabulary files.
+        
+        """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return
@@ -603,6 +687,24 @@ ENT_RE = regex.compile(r"&(#?(x?))([^&;\s]+);")
 
 
 def _str_to_unicode(text, encoding=None, errors="strict"):
+    """
+    Converts a string to Unicode format using the specified encoding.
+    
+    Args:
+        text (str or bytes): The input string or bytes object to be converted to Unicode.
+        encoding (str, optional): The encoding to be used for the conversion. If not specified, 'utf-8' is used as the default encoding.
+        errors (str, optional): Specifies how decoding errors should be handled. Default is 'strict', which raises a UnicodeDecodeError. Other possible values are 'ignore' and 'replace'.
+    
+    Returns:
+        str: The converted string in Unicode format.
+    
+    Raises:
+        UnicodeDecodeError: If the text cannot be decoded using the specified encoding and error handling mode.
+    
+    Note:
+        If the input text is already a string, it is returned as is without any modification.
+    
+    """
     if encoding is None:
         encoding = "utf-8"
     if isinstance(text, bytes):
@@ -639,7 +741,6 @@ def _replace_html_entities(text, keep=(), remove_illegal=True, encoding="utf-8")
     >>> print(_replace_html_entities(b"Price: &pound;100"))
     Price: £100
     ```"""
-
     def _convert_entity(match):
         entity_body = match.group(3)
         if match.group(1):
@@ -694,8 +795,22 @@ class TweetTokenizer:
     >>> tknzr.tokenize(s1)
     [':', 'This', 'is', 'waaayyy', 'too', 'much', 'for', 'you', '!', '!', '!']
     ```"""
-
     def __init__(self, preserve_case=True, reduce_len=False, strip_handles=False):
+        """
+        Initializes a TweetTokenizer object with the specified parameters.
+        
+        Args:
+            self (TweetTokenizer): The current instance of the TweetTokenizer class.
+            preserve_case (bool, optional): Indicates whether the tokenizer should preserve the case of the tokens. Defaults to True.
+            reduce_len (bool, optional): Indicates whether the tokenizer should reduce the length of repeated characters in the tokens. Defaults to False.
+            strip_handles (bool, optional): Indicates whether the tokenizer should strip Twitter handles from the tokens. Defaults to False.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         self.preserve_case = preserve_case
         self.reduce_len = reduce_len
         self.strip_handles = strip_handles

@@ -64,8 +64,23 @@ class BatchFeature(UserDict):
             You can give a tensor_type here to convert the lists of integers in PyTorch/TensorFlow/Numpy Tensors at
             initialization.
     """
-
     def __init__(self, data: Optional[Dict[str, Any]] = None, tensor_type: Union[None, str, TensorType] = None):
+        """
+        Initializes a new instance of the BatchFeature class.
+        
+        Args:
+            self: The instance of the BatchFeature class.
+            data (Optional[Dict[str, Any]]): A dictionary containing the data for the batch feature. Defaults to None.
+                If provided, it should be a dictionary with string keys and values of any type.
+            tensor_type (Union[None, str, TensorType]): The type of tensor to convert the data to. Defaults to None.
+                It can be None, a string, or an instance of the TensorType class.
+        
+        Returns:
+            None. This method returns nothing.
+        
+        Raises:
+            None.
+        """
         super().__init__(data)
         self.convert_to_tensors(tensor_type=tensor_type)
 
@@ -79,31 +94,140 @@ class BatchFeature(UserDict):
         raise KeyError("Indexing with integers is not available when using Python based feature extractors")
 
     def __getattr__(self, item: str):
+        """
+        This method allows access to attributes of the BatchFeature class that are not directly defined.
+        
+        Args:
+            self: Instance of the BatchFeature class.
+                Type: BatchFeature
+                Purpose: Represents the current instance of the class.
+                Restrictions: Must be an instance of the BatchFeature class.
+        
+            item: The attribute name being accessed.
+                Type: str
+                Purpose: Indicates the name of the attribute to retrieve.
+                Restrictions: Must be a string representing a valid attribute name.
+        
+        Returns:
+            None: If the attribute 'item' does not exist in the data dictionary of the BatchFeature instance.
+        
+        Raises:
+            AttributeError: Raised when the specified 'item' attribute does not exist in the data dictionary of the BatchFeature instance.
+        """
         try:
             return self.data[item]
         except KeyError as exc:
             raise AttributeError from exc
 
     def __getstate__(self):
+        """
+        Method: __getstate__
+        
+        Description:
+        This method is used to retrieve the state of an instance of the 'BatchFeature' class. It returns a dictionary containing the 'data' attribute of the instance.
+        
+        Args:
+        - self: Represents the instance of the 'BatchFeature' class. It is automatically passed as the first argument when the method is called.
+        
+        Returns:
+        - None: This method does not explicitly return a value. However, it implicitly returns a dictionary containing the 'data' attribute of the instance.
+        
+        Raises:
+        - None: This method does not raise any exceptions.
+        
+        """
         return {"data": self.data}
 
     def __setstate__(self, state):
+        """
+        Sets the state of the BatchFeature object.
+        
+        Args:
+            self (BatchFeature): The BatchFeature object to set the state for.
+            state (dict): A dictionary containing the state information to be set. It should include the 'data' key.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        
+        This method is automatically called by the pickle module when unpickling a BatchFeature object. It sets the state of the object based on the provided 'state' dictionary. The 'data' key in the 'state'
+dictionary is used to set the 'data' attribute of the BatchFeature object.
+        """
         if "data" in state:
             self.data = state["data"]
 
     # Copied from transformers.tokenization_utils_base.BatchEncoding.keys
     def keys(self):
+        '''
+        Method: keys
+        
+        Description:
+        This method returns a list of all the keys in the BatchFeature's data dictionary.
+        
+        Args:
+        - self: (object) The instance of the BatchFeature class.
+        
+        Returns:
+        - None: This method does not return any value, as it directly operates on the instance's data.
+        
+        Raises:
+        - No specific exceptions are documented to be raised by this method.
+        '''
         return self.data.keys()
 
     # Copied from transformers.tokenization_utils_base.BatchEncoding.values
     def values(self):
+        """
+        Retrieves and returns the values stored in the 'data' attribute of the BatchFeature class instance.
+        
+        Args:
+            self (BatchFeature): The current instance of the BatchFeature class.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         return self.data.values()
 
     # Copied from transformers.tokenization_utils_base.BatchEncoding.items
     def items(self):
+        """
+        Method items in class BatchFeature.
+        
+        Args:
+            self: BatchFeature object
+                The self parameter refers to the instance of the BatchFeature class.
+        
+        Returns:
+            dict_items
+                Returns a view object that displays a list of a given dictionary's (key, value) tuple pairs.
+        
+        Raises:
+            None
+        """
         return self.data.items()
 
     def _get_is_as_tensor_fns(self, tensor_type: Optional[Union[str, TensorType]] = None):
+        """
+        This method '_get_is_as_tensor_fns' in the class 'BatchFeature' is responsible for returning functions for checking if a given input is a tensor and converting values to tensors based on the specified
+tensor type.
+        
+        Args:
+            self: An instance of the class BatchFeature.
+            tensor_type: An optional parameter indicating the type of tensor to be used for conversion. It can be a string or an instance of the enum TensorType. If not provided, the default value is None.
+        
+        Returns:
+            A tuple containing two functions:
+            - is_tensor: A function that checks whether a given value is a tensor.
+            - as_tensor: A function that converts a given value to a tensor based on the specified tensor_type.
+        
+        Raises:
+            - ImportError: If the tensor_type is set to MindSpore but MindSpore is not installed.
+        """
         if tensor_type is None:
             return None, None
 
@@ -209,7 +333,6 @@ class FeatureExtractionMixin():
     This is a feature extraction mixin used to provide saving/loading functionality for sequential and image feature
     extractors.
     """
-
     _auto_class = None
 
     def __init__(self, **kwargs):
@@ -382,7 +505,6 @@ class FeatureExtractionMixin():
         self.to_json_file(output_feature_extractor_file)
         logger.info(f"Feature extractor saved in {output_feature_extractor_file}")
 
-
         return [output_feature_extractor_file]
 
     @classmethod
@@ -474,7 +596,6 @@ class FeatureExtractionMixin():
             logger.info(
                 f"loading configuration file {feature_extractor_file} from cache at {resolved_feature_extractor_file}"
             )
-
 
         return feature_extractor_dict, kwargs
 
@@ -579,6 +700,20 @@ class FeatureExtractionMixin():
             writer.write(self.to_json_string())
 
     def __repr__(self):
+        """
+        This method '__repr__' in the 'FeatureExtractionMixin' class generates a string representation of the object.
+        
+        Args:
+            self (object): The instance of the class.
+                This parameter refers to the current instance of the class.
+        
+        Returns:
+            None.
+                This method does not return any value explicitly; it generates a formatted string representation of the object.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         return f"{self.__class__.__name__} {self.to_json_string()}"
 
     @classmethod

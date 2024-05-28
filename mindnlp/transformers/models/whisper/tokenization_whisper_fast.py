@@ -127,7 +127,6 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
         predict_timestamps (`bool`, *optional*, defaults to `False`):
             Whether to omit the `<|notimestamps|>` token at the start of the sequence.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -149,6 +148,34 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
         predict_timestamps=False,
         **kwargs,
     ):
+        """
+        This method initializes an instance of the WhisperTokenizerFast class.
+        
+        Args:
+        - self: The instance of the class.
+        - vocab_file (str): The file path to the vocabulary file.
+        - merges_file (str): The file path to the merges file.
+        - normalizer_file (str): The file path to the normalizer file.
+        - tokenizer_file (str): The file path to the tokenizer file.
+        - unk_token (str): The unknown token. Default is 'endoftext'.
+        - bos_token (str): The beginning of sentence token. Default is 'endoftext'.
+        - eos_token (str): The end of sentence token. Default is 'endoftext'.
+        - add_prefix_space (bool): Indicates whether to add prefix space. Default is False.
+        - language (str): The language used.
+        - task (str): The task for the tokenizer.
+        - predict_timestamps (bool): Indicates whether timestamps should be predicted.
+        
+        Returns:
+        None
+        
+        Raises:
+        - TypeError: If any of the parameters are of incorrect type.
+        - FileNotFoundError: If any of the specified files cannot be found.
+        - JSONDecodeError: If there is an issue with decoding JSON data.
+        - AttributeError: If there is an attribute error while setting tokenizer pre-tokenizer.
+        - ValueError: If there is an issue with the provided values.
+        - RegexError: If there is an issue with the regular expression compilation.
+        """
         bos_token = (
             AddedToken(bos_token, lstrip=False, rstrip=False, normalized=False, special=True)
             if isinstance(bos_token, str)
@@ -199,6 +226,19 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
 
     # Copied from transformers.models.gpt2.tokenization_gpt2_fast.GPT2TokenizerFast._batch_encode_plus
     def _batch_encode_plus(self, *args, **kwargs) -> BatchEncoding:
+        """ 
+        Method _batch_encode_plus in the class WhisperTokenizerFast.
+        
+        Args:
+            self (WhisperTokenizerFast): The instance of the WhisperTokenizerFast class.
+            
+        Returns:
+            BatchEncoding: An object of type BatchEncoding containing the encoded inputs.
+            
+        Raises:
+            AssertionError: If add_prefix_space is False and is_split_into_words is True, it raises an assertion error with the message indicating that the class needs to be instantiated with
+add_prefix_space=True to use it with pretokenized inputs.
+        """
         is_split_into_words = kwargs.get("is_split_into_words", False)
         assert self.add_prefix_space or not is_split_into_words, (
             f"You need to instantiate {self.__class__.__name__} with add_prefix_space=True "
@@ -209,6 +249,19 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
 
     # Copied from transformers.models.gpt2.tokenization_gpt2_fast.GPT2TokenizerFast._encode_plus
     def _encode_plus(self, *args, **kwargs) -> BatchEncoding:
+        """
+        Encode the input sequence into a batch encoding using the WhisperTokenizerFast class.
+        
+        Args:
+            self (WhisperTokenizerFast): The instance of the WhisperTokenizerFast class.
+            
+        Returns:
+            BatchEncoding: A batch encoding object containing the encoded input sequence.
+        
+        Raises:
+            AssertionError: If the 'add_prefix_space' attribute is not set to True and the input is split into words. This indicates that the WhisperTokenizerFast instance needs to be instantiated with
+add_prefix_space=True for use with pretokenized inputs.
+        """
         is_split_into_words = kwargs.get("is_split_into_words", False)
 
         assert self.add_prefix_space or not is_split_into_words, (
@@ -334,6 +387,19 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
 
     # Copied from transformers.models.whisper.tokenization_whisper.WhisperTokenizer._filter_timestamp_ids
     def _filter_timestamp_ids(self, token_ids):
+        """
+        Filters out timestamp IDs from a given list of token IDs.
+        
+        Args:
+            self (WhisperTokenizerFast): An instance of the WhisperTokenizerFast class.
+            token_ids (str): A string containing the token IDs.
+        
+        Returns:
+            None: This method modifies the 'token_ids' string in-place by removing any timestamp IDs.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         return re.sub(self.timestamp_pat, "", token_ids)
 
     # Copied from transformers.models.whisper.tokenization_whisper.WhisperTokenizer.decode
@@ -416,6 +482,26 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
     def _decode(
         self, *args, normalize: bool = False, basic_normalize: bool = False, remove_diacritics: bool = False, **kwargs
     ) -> str:
+        """
+        Decodes the text passed as input with optional normalization and diacritics removal.
+        
+        Args:
+            self (WhisperTokenizerFast): The instance of the WhisperTokenizerFast class.
+            *args: Variable length argument list.
+            normalize (bool): Flag to enable full normalization of the text.
+                Defaults to False.
+            basic_normalize (bool): Flag to enable basic normalization of the text.
+                Defaults to False.
+            remove_diacritics (bool): Flag to remove diacritics from the text.
+                Defaults to False.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            str: The decoded and optionally normalized text.
+        
+        Raises:
+            None.
+        """
         text = super()._decode(*args, **kwargs)
 
         if normalize:
@@ -428,6 +514,32 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
 
     # Copied from transformers.models.whisper.tokenization_whisper.WhisperTokenizer._normalize
     def _normalize(self, text):
+        """
+        Normalize the input text using the Whisper English normalizer.
+        
+        Args:
+            self (WhisperTokenizerFast): An instance of the WhisperTokenizerFast class.
+            text (str): The input text to be normalized.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            DeprecationWarning: If the method is called, a DeprecationWarning will be raised to notify that the private method `_normalize` is deprecated and will be removed in v5 of Transformers. Users are
+encouraged to use the `normalize` method to normalize the input string.
+        
+        Note:
+            The `_normalize` method is a private method intended for internal use only. Its functionality will be replaced by the `normalize` method in future versions of Transformers.
+        
+        Example:
+            >>> tokenizer = WhisperTokenizerFast()
+            >>> text = "Hello, World!"
+            >>> tokenizer._normalize(text)
+        
+            .. warning::
+                The `_normalize` method is deprecated and will be removed in v5 of Transformers.
+                You can normalize an input string using the Whisper English normalizer using the `normalize` method.
+        """
         warnings.warn(
             "The private method `_normalize` is deprecated and will be removed in v5 of Transformers."
             "You can normalize an input string using the Whisper English normalizer using the `normalize` method."
@@ -436,6 +548,21 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
 
     # Copied from transformers.models.whisper.tokenization_whisper.WhisperTokenizer._basic_normalize
     def _basic_normalize(self, text, remove_diacritics=False):
+        """
+        This method '_basic_normalize' in the class 'WhisperTokenizerFast' is deprecated and will be removed in v5 of Transformers. It is recommended to use the 'basic_normalize' method for string
+normalization.
+        
+        Args:
+            self: Instance of the WhisperTokenizerFast class.
+            text (str): Input text to be normalized.
+            remove_diacritics (bool): Flag indicating whether diacritics should be removed during normalization. Defaults to False.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            DeprecationWarning: If the method '_basic_normalize' is called, a DeprecationWarning is raised indicating that the method is deprecated and will be removed in v5 of Transformers.
+        """
         warnings.warn(
             "The private method `_basic_normalize` is deprecated and will be removed in v5 of Transformers."
             "You can normalize an input string using the Whisper basic normalizer using the `basic_normalize` method."
@@ -462,6 +589,22 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
         return normalizer(text)
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """
+        Save the vocabulary to the specified directory.
+        
+        Args:
+            self: Instance of the WhisperTokenizerFast class.
+            save_directory (str): The directory where the vocabulary files will be saved.
+            filename_prefix (Optional[str]): An optional prefix to be included in the filename. Default is None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the paths of the saved files and the path of the normalizer file.
+        
+        Raises:
+            OSError: If an error occurs while saving the vocabulary files to the specified directory.
+            ValueError: If the save_directory is invalid or inaccessible.
+            TypeError: If the provided filename_prefix is not a string.
+        """
         files = self._tokenizer.model.save(save_directory, name=filename_prefix)
 
         normalizer_file = os.path.join(
@@ -517,6 +660,20 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
     @property
     # Copied from transformers.models.whisper.tokenization_whisper.WhisperTokenizer.prefix_tokens
     def prefix_tokens(self) -> List[int]:
+        """
+        This method, prefix_tokens, is a member of the class WhisperTokenizerFast and is responsible for generating a list of token IDs that represent the prefix of a transcription or translation sequence. It
+takes the following parameter:
+        
+        Args:
+        - self: The instance of the WhisperTokenizerFast class. It is used to access the attributes and methods of the class within the prefix_tokens method.
+        
+        Returns:
+        - List[int]: Returns a list of integer token IDs representing the prefix of a transcription or translation sequence.
+        
+        Raises:
+        - ValueError: This exception is raised if the language provided is not supported or if the task provided is not recognized. The exception message provides details about the unsupported language or task
+and the valid options for language and task, respectively.
+        """
         bos_token_id = self.convert_tokens_to_ids("<|startoftranscript|>")
         translate_token_id = self.convert_tokens_to_ids("<|translate|>")
         transcribe_token_id = self.convert_tokens_to_ids("<|transcribe|>")
@@ -576,7 +733,6 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
         Returns:
             `List[int]`: A list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
         """
-
         if already_has_special_tokens:
             return super().get_special_tokens_mask(
                 token_ids_0=token_ids_0, token_ids_1=token_ids_1, already_has_special_tokens=True
@@ -604,6 +760,21 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
 
     # Copied from transformers.models.whisper.tokenization_whisper.WhisperTokenizer.get_decoder_prompt_ids
     def get_decoder_prompt_ids(self, task=None, language=None, no_timestamps=True):
+        """
+        This method retrieves the decoder prompt IDs for the WhisperTokenizerFast class.
+        
+        Args:
+            self (WhisperTokenizerFast): The instance of the WhisperTokenizerFast class.
+            task (str, optional): The task associated with the decoder prompt IDs. Default is None.
+            language (str, optional): The language for which the decoder prompt IDs are retrieved. Default is None.
+            no_timestamps (bool, optional): A flag indicating whether timestamps should be predicted or not. Default is True.
+        
+        Returns:
+            list: A list of tuples containing the rank and corresponding token of forced decoder IDs.
+        
+        Raises:
+            None.
+        """
         self.set_prefix_tokens(task=task, language=language, predict_timestamps=not no_timestamps)
         # prefix tokens are of the form: <|startoftranscript|> <|lang_id|> <|task|> <|notimestamps|>
         # we don't want to force the bos token at position 1, as this is the starting token
@@ -614,6 +785,25 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
         return forced_decoder_ids
 
     def _decode_asr(self, model_outputs, *, return_timestamps, return_language, time_precision):
+        """
+        This method is used to decode ASR (Automatic Speech Recognition) outputs. It takes model outputs as input and decodes them based on specified parameters.
+        
+        Args:
+            self (WhisperTokenizerFast): The instance of the WhisperTokenizerFast class.
+            model_outputs (Any): The model outputs from the ASR system that need to be decoded.
+            
+            return_timestamps (bool): A flag indicating whether to return timestamps along with the decoded output.
+            return_language (bool): A flag indicating whether to return the language information along with the decoded output.
+            time_precision (str): The precision level for the timestamps, e.g., 'milliseconds', 'seconds'.
+        
+        Returns:
+            None: This method does not return any value directly. The decoding results are processed within the method.
+        
+        Raises:
+            ValueError: If the model_outputs are not in the expected format.
+            RuntimeError: If there is an issue during the decoding process.
+            KeyError: If there is a key error while accessing the model outputs.
+        """
         return _decode_asr(
             self,
             model_outputs,
@@ -640,6 +830,26 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
     @staticmethod
     # Copied from transformers.models.whisper.tokenization_whisper.WhisperTokenizer._strip_prompt
     def _strip_prompt(token_ids: List[int], prompt_token_id: int, decoder_start_token_id: int):
+        """
+        Removes the prompt from the given token IDs and returns the remaining tokens.
+        
+        Args:
+            token_ids (List[int]): A list of token IDs.
+                This list represents the sequence of tokens to process.
+            prompt_token_id (int): The token ID that indicates the start of the prompt.
+                The prompt is the initial text or instruction given to the model.
+            decoder_start_token_id (int): The token ID that indicates the start of the decoder input.
+                This token marks the beginning of the sequence of tokens to keep after stripping the prompt.
+                
+        Returns:
+            List[int]: A list of token IDs with the prompt removed.
+                If the token IDs contain the decoder start token, the resulting list starts from that token.
+                If the token IDs do not contain the decoder start token, an empty list is returned.
+                
+        Raises:
+            None.
+        
+        """
         has_prompt = isinstance(token_ids, list) and token_ids and token_ids[0] == prompt_token_id
         if has_prompt:
             if decoder_start_token_id in token_ids:

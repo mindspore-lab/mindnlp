@@ -97,6 +97,22 @@ def get_resize_output_image_size(
     size_divisor: int = 32,
     input_data_format: Optional[Union[str, ChannelDimension]] = None,
 ) -> Tuple[int, int]:
+    '''
+    Resizes the input image to the specified shorter and longer dimensions, while maintaining the aspect ratio.
+    
+    Args:
+        input_image (np.ndarray): The input image to be resized.
+        shorter (int, optional): The desired shorter dimension of the output image. Default is 800.
+        longer (int, optional): The desired longer dimension of the output image. Default is 1333.
+        size_divisor (int, optional): The divisor used to round the output image dimensions. Default is 32.
+        input_data_format (Optional[Union[str, ChannelDimension]], optional): The data format of the input image. Default is None.
+        
+    Returns:
+        Tuple[int, int]: The resized height and width of the output image.
+    
+    Raises:
+        None.
+    '''
     input_height, input_width = get_image_size(input_image, input_data_format)
     min_size, max_size = shorter, longer
 
@@ -166,7 +182,6 @@ class BridgeTowerImageProcessor(BaseImageProcessor):
             Whether to pad the image to the `(max_height, max_width)` of the images in the batch. Can be overridden by
             the `do_pad` parameter in the `preprocess` method.
     """
-
     model_input_names = ["pixel_values"]
 
     def __init__(
@@ -185,6 +200,31 @@ class BridgeTowerImageProcessor(BaseImageProcessor):
         do_pad: bool = True,
         **kwargs,
     ) -> None:
+        """
+        Initializes an instance of the BridgeTowerImageProcessor class.
+        
+        Args:
+            self: The instance of the class itself.
+            do_resize (bool, optional): Indicates whether to resize the image. Defaults to True.
+            size (Dict[str, int], optional): The desired size of the image. Defaults to {'shortest_edge': 288}.
+            size_divisor (int, optional): The divisor to be used during resizing. Defaults to 32.
+            resample (PILImageResampling, optional): The resampling method to be used during resizing. Defaults to PILImageResampling.BICUBIC.
+            do_rescale (bool, optional): Indicates whether to rescale the image. Defaults to True.
+            rescale_factor (Union[int, float], optional): The factor to be used during rescaling. Defaults to 1 / 255.
+            do_normalize (bool, optional): Indicates whether to normalize the image. Defaults to True.
+            image_mean (Optional[Union[float, List[float]]], optional): The mean values for image normalization. Defaults to None.
+            image_std (Optional[Union[float, List[float]]], optional): The standard deviation values for image normalization. Defaults to None.
+            do_center_crop (bool, optional): Indicates whether to perform center cropping. Defaults to True.
+            crop_size (Dict[str, int], optional): The desired size for center cropping. Defaults to None.
+            do_pad (bool, optional): Indicates whether to pad the image. Defaults to True.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
         if "pad_and_return_pixel_mask" in kwargs:
             do_pad = kwargs.pop("pad_and_return_pixel_mask")
 

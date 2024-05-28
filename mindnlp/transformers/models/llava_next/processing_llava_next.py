@@ -39,12 +39,25 @@ class LlavaNextProcessor(ProcessorMixin):
         tokenizer ([`LlamaTokenizerFast`], *optional*):
             The tokenizer is a required input.
     """
-
     attributes = ["image_processor", "tokenizer"]
     image_processor_class = "LlavaNextImageProcessor"
     tokenizer_class = ("LlamaTokenizer", "LlamaTokenizerFast")
 
     def __init__(self, image_processor=None, tokenizer=None):
+        """
+        Initializes a new instance of the LlavaNextProcessor class.
+        
+        Args:
+            self (LlavaNextProcessor): The instance of the class itself.
+            image_processor (optional): An image processing object. Defaults to None.
+            tokenizer (optional): A tokenizer object. Defaults to None.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(image_processor, tokenizer)
 
     def __call__(
@@ -131,6 +144,21 @@ class LlavaNextProcessor(ProcessorMixin):
     @property
     # Copied from transformers.models.clip.processing_clip.CLIPProcessor.model_input_names
     def model_input_names(self):
+        """
+        Returns a list of model input names used by the LlavaNextProcessor.
+        
+        Args:
+            self: An instance of the LlavaNextProcessor class.
+        
+        Returns:
+            None.
+        
+        Raises:
+            None.
+        
+        This method retrieves the model input names from the tokenizer and image processor of the LlavaNextProcessor. It concatenates the tokenizer input names and image processor input names, and removes any
+duplicate entries using a dictionary conversion. The resulting list of model input names is returned.
+        """
         tokenizer_input_names = self.tokenizer.model_input_names
         image_processor_input_names = self.image_processor.model_input_names
         return list(dict.fromkeys(tokenizer_input_names + image_processor_input_names))

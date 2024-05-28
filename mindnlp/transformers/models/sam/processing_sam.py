@@ -40,11 +40,23 @@ class SamProcessor(ProcessorMixin):
         image_processor (`SamImageProcessor`):
             An instance of [`SamImageProcessor`]. The image processor is a required input.
     """
-
     attributes = ["image_processor"]
     image_processor_class = "SamImageProcessor"
 
     def __init__(self, image_processor):
+        """
+        Initializes a new instance of the SamProcessor class.
+        
+        Args:
+            self: The instance of the SamProcessor class.
+            image_processor: An image processor object used for image processing operations.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised within this method.
+        """
         super().__init__(image_processor)
         self.current_processor = self.image_processor
         self.point_pad_value = -10
@@ -102,6 +114,31 @@ class SamProcessor(ProcessorMixin):
         input_boxes=None,
         return_tensors="ms",
     ):
+        """Normalize and convert input data for encoding image processing.
+        
+        Args:
+            self: SamProcessor
+                The instance of the SamProcessor class.
+            encoding_image_processor: object
+                The encoding image processor object.
+            original_sizes: list
+                A list containing the original sizes of the input data.
+            input_points: list, optional
+                A list of input points to be processed. Defaults to None.
+            input_labels: list, optional
+                A list of input labels to be processed. Defaults to None.
+            input_boxes: list, optional
+                A list of input boxes to be processed. Defaults to None.
+            return_tensors: str
+                A string indicating the type of return tensors. Allowed values are: 'ms' for MindSpore tensors.
+        
+        Returns:
+            None: This method does not return a value. The input encoding_image_processor is updated with the processed input data.
+        
+        Raises:
+            ValueError: If the length of original_sizes does not match the length of input_points or input_boxes.
+            ValueError: If input_points and input_labels are not of the same shape.
+        """
         if input_points is not None:
             if len(original_sizes) != len(input_points):
                 input_points = [
@@ -242,10 +279,34 @@ class SamProcessor(ProcessorMixin):
 
     @property
     def model_input_names(self):
+        """
+        This method returns a list of unique model input names used in the SamProcessor class.
+        
+        Args:
+            self (SamProcessor): The instance of the SamProcessor class.
+            
+        Returns:
+            list: A list of unique model input names extracted from the image processor.
+        
+        Raises:
+            None.
+        """
         image_processor_input_names = self.image_processor.model_input_names
         return list(dict.fromkeys(image_processor_input_names))
 
     def post_process_masks(self, *args, **kwargs):
+        """
+        Post-processes masks using the image processor.
+        
+        Args:
+            self: The instance of the SamProcessor class.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            Any exceptions raised by the image_processor.post_process_masks method may be propagated from this method.
+        """
         return self.image_processor.post_process_masks(*args, **kwargs)
 
 __all__ = ['SamProcessor']

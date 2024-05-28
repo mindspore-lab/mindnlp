@@ -123,7 +123,6 @@ class OpenELMConfig(PretrainedConfig):
         eos_token_id (`int`, *optional*, defaults to 1):
             End of stream token id.
     """
-
     model_type = "openelm"
 
     def __init__(
@@ -151,6 +150,39 @@ class OpenELMConfig(PretrainedConfig):
         eos_token_id: int = 2,
         **kwargs,
     ) -> None:
+        """
+        This method initializes an instance of the OpenELMConfig class with the provided parameters.
+        
+        Args:
+        - self: The instance of the class.
+        - vocab_size (int): The size of the vocabulary.
+        - max_context_length (int): The maximum length of the context.
+        - num_transformer_layers (int): The number of transformer layers.
+        - model_dim (int): The dimension of the model.
+        - head_dim (int): The dimension of the head.
+        - qkv_multipliers (Union[Number, List[Number]]): The multiplier(s) for query, key, and value vectors.
+        - num_query_heads (Union[int, None]): The number of query heads. If None, it will be computed based on model_dim and head_dim.
+        - num_gqa_groups (int): The number of groups for generalized query attention.
+        - ffn_multipliers (Union[Number, List[Number]]): The multiplier(s) for feed-forward network.
+        - ffn_with_glu (bool): A boolean indicating whether to use gated linear units in the feed-forward network.
+        - ffn_dim_divisor (int): The divisor for the feed-forward network dimension.
+        - activation_fn_name (str): The name of the activation function.
+        - normalization_layer_name (str): The name of the normalization layer.
+        - normalize_qk_projections (bool): A boolean indicating whether to normalize query and key projections.
+        - share_input_output_layers (bool): A boolean indicating whether to share input and output layers.
+        - rope_freq_constant (int): The frequency constant for the relative positional encoding.
+        - rope_max_length (int): The maximum length for the relative positional encoding.
+        - initializer_range (float): The range for random weight initialization.
+        - use_cache (bool): A boolean indicating whether to use cache.
+        - bos_token_id (int): The token ID for the beginning of sentence.
+        - eos_token_id (int): The token ID for the end of sentence.
+        
+        Returns:
+        - None. This method does not return any value.
+        
+        Raises:
+        - No specific exceptions are documented for this method.
+        """
         self.vocab_size = vocab_size
         self.max_context_length = max_context_length
         self.num_transformer_layers = num_transformer_layers
@@ -184,6 +216,20 @@ class OpenELMConfig(PretrainedConfig):
         )
 
     def __post_init__(self) -> None:
+        """
+        This method initializes the configuration parameters for the OpenELM model.
+        
+        Args:
+            self (OpenELMConfig): The instance of the OpenELMConfig class.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            NotImplementedError: If the QKV multipliers are not a single number or a list containing exactly two numbers, or if the FFN multipliers are not a single number or a list containing exactly two
+numbers.
+            AssertionError: If the length of the FFN multipliers does not match the number of transformer layers, or if the number of query heads is not divisible by the number of key-value heads for any layer.
+        """
         if self.num_gqa_groups is not None:
             head_multiple_of = self.num_gqa_groups
         else:

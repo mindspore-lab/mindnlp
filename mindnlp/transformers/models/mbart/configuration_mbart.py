@@ -30,7 +30,6 @@ class MBartConfig(PretrainedConfig):
     """
     Configuration for MBart
     """
-
     model_type = "mbart"
     keys_to_ignore_at_inference = ["past_key_values"]
     attribute_map = {"num_attention_heads": "encoder_attention_heads", "hidden_size": "d_model"}
@@ -63,6 +62,42 @@ class MBartConfig(PretrainedConfig):
             forced_eos_token_id=2,
             **kwargs,
     ):
+        """
+        Initializes an instance of the MBartConfig class.
+        
+        Args:
+            self: The instance of the class.
+            vocab_size (int): The size of the vocabulary. Defaults to 50265.
+            max_position_embeddings (int): The maximum number of positional embeddings. Defaults to 1024.
+            encoder_layers (int): The number of encoder layers. Defaults to 12.
+            encoder_ffn_dim (int): The dimension of the encoder feed-forward network. Defaults to 4096.
+            encoder_attention_heads (int): The number of encoder attention heads. Defaults to 16.
+            decoder_layers (int): The number of decoder layers. Defaults to 12.
+            decoder_ffn_dim (int): The dimension of the decoder feed-forward network. Defaults to 4096.
+            decoder_attention_heads (int): The number of decoder attention heads. Defaults to 16.
+            encoder_layerdrop (float): The probability of dropping an encoder layer. Defaults to 0.0.
+            decoder_layerdrop (float): The probability of dropping a decoder layer. Defaults to 0.0.
+            use_cache (bool): Whether to use cache during decoding. Defaults to True.
+            is_encoder_decoder (bool): Whether the model is an encoder-decoder. Defaults to True.
+            activation_function (str): The activation function to be used. Defaults to 'gelu'.
+            d_model (int): The dimension of the model. Defaults to 1024.
+            dropout (float): The dropout rate. Defaults to 0.1.
+            attention_dropout (float): The dropout rate for attention layers. Defaults to 0.0.
+            activation_dropout (float): The dropout rate for activation layers. Defaults to 0.0.
+            init_std (float): The standard deviation for weight initialization. Defaults to 0.02.
+            classifier_dropout (float): The dropout rate for classifier layers. Defaults to 0.0.
+            scale_embedding (bool): Whether to scale the embeddings. Defaults to False.
+            pad_token_id (int): The ID for padding token. Defaults to 1.
+            bos_token_id (int): The ID for beginning-of-sentence token. Defaults to 0.
+            eos_token_id (int): The ID for end-of-sentence token. Defaults to 2.
+            forced_eos_token_id (int): The ID for forced end-of-sentence token. Defaults to 2.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
         self.d_model = d_model

@@ -82,7 +82,6 @@ class SegformerImageProcessor(BaseImageProcessor):
             background label will be replaced by 255. Can be overridden by the `do_reduce_labels` parameter in the
             `preprocess` method.
     """
-
     model_input_names = ["pixel_values"]
 
     def __init__(
@@ -98,6 +97,28 @@ class SegformerImageProcessor(BaseImageProcessor):
         do_reduce_labels: bool = False,
         **kwargs,
     ) -> None:
+        """Initialize the SegformerImageProcessor.
+        
+        This method initializes the SegformerImageProcessor object with the provided parameters.
+        
+        Args:
+            self: The SegformerImageProcessor object.
+            do_resize (bool, optional): Whether to resize the image. Defaults to True.
+            size (Dict[str, int], optional): The desired height and width of the image. Defaults to {'height': 512, 'width': 512}.
+            resample (PILImageResampling, optional): The resampling method to use during resizing. Defaults to PILImageResampling.BILINEAR.
+            do_rescale (bool, optional): Whether to rescale the image. Defaults to True.
+            rescale_factor (Union[int, float], optional): The rescale factor to apply to the image. Defaults to 1 / 255.
+            do_normalize (bool, optional): Whether to normalize the image. Defaults to True.
+            image_mean (Optional[Union[float, List[float]]], optional): The mean values used for image normalization. Defaults to None, which uses IMAGENET_DEFAULT_MEAN.
+            image_std (Optional[Union[float, List[float]]], optional): The standard deviation values used for image normalization. Defaults to None, which uses IMAGENET_DEFAULT_STD.
+            do_reduce_labels (bool, optional): Whether to reduce the number of labels. Defaults to False.
+        
+        Returns:
+            None
+        
+        Raises:
+            FutureWarning: If the 'reduce_labels' parameter is used. This parameter is deprecated and will be removed in a future version. Please use 'do_reduce_labels' instead.
+        """
         if "reduce_labels" in kwargs:
             warnings.warn(
                 "The `reduce_labels` parameter is deprecated and will be removed in a future version. Please use "
@@ -198,6 +219,19 @@ class SegformerImageProcessor(BaseImageProcessor):
 
     # Copied from transformers.models.beit.image_processing_beit.BeitImageProcessor.reduce_label
     def reduce_label(self, label: ImageInput) -> np.ndarray:
+        """
+        Reduces the label values in the input image for Segformer image processing.
+        
+        Args:
+            self: Instance of the SegformerImageProcessor class.
+            label (ImageInput): Input label image to be processed. It should be in a compatible format for processing.
+            
+        Returns:
+            np.ndarray: A NumPy array representing the processed label image with reduced values.
+        
+        Raises:
+            None.
+        """
         label = to_numpy_array(label)
         # Avoid using underflow conversion
         label[label == 0] = 255
@@ -219,6 +253,30 @@ class SegformerImageProcessor(BaseImageProcessor):
         image_std: Optional[Union[float, List[float]]] = None,
         input_data_format: Optional[Union[str, ChannelDimension]] = None,
     ):
+        """
+        Preprocesses an input image according to specified options.
+        
+        Args:
+            self: The instance of the SegformerImageProcessor class.
+            image (ImageInput): The input image to be preprocessed.
+            do_reduce_labels (bool): Whether to reduce the labels.
+            do_resize (bool): Whether to resize the image.
+            do_rescale (bool): Whether to rescale the image.
+            do_normalize (bool): Whether to normalize the image.
+            size (Optional[Dict[str, int]]): Optional dictionary specifying the target size for resizing the image. Default is None.
+            resample (PILImageResampling): The resampling method to be used during resizing. Default is None.
+            rescale_factor (Optional[float]): Optional scaling factor for rescaling the image. Default is None.
+            image_mean (Optional[Union[float, List[float]]]): Optional mean value(s) to be used for normalization. Default is None.
+            image_std (Optional[Union[float, List[float]]]): Optional standard deviation value(s) to be used for normalization. Default is None.
+            input_data_format (Optional[Union[str, ChannelDimension]]): Optional data format of the input image. Default is None.
+        
+        Returns:
+            None. This method modifies the input image in-place.
+        
+        Raises:
+            None.
+        
+        """
         if do_reduce_labels:
             image = self.reduce_label(image)
 

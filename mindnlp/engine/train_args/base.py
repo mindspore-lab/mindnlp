@@ -79,7 +79,6 @@ class OptimizerNames(ExplicitEnum):
     """
     Stores the acceptable string identifiers for optimizers.
     """
-
     ADAMW = "adamw"
     SGD = "sgd"
 
@@ -589,7 +588,6 @@ class TrainingArguments:
             [original code](https://github.com/neelsjain/NEFTune). Support transformers `PreTrainedModel` and also
             `PeftModel` from peft.
     """
-
     output_dir: str = field(
         metadata={"help": "The output directory where the model predictions and checkpoints will be written."},
     )
@@ -987,6 +985,29 @@ class TrainingArguments:
     )
 
     def __post_init__(self):
+        r"""
+        This method initializes the TrainingArguments class instance after its creation.
+        
+        Args:
+            self: An instance of the TrainingArguments class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            - ValueError: If the evaluation strategy requires non-zero evaluation steps or logging steps are zero.
+            - FutureWarning: If using `EvaluationStrategy` for `evaluation_strategy` is deprecated.
+            - ValueError: If the logging strategy requires non-zero logging steps or steps are not an integer.
+            - ValueError: If the saving steps are not an integer when required.
+            - ValueError: If `load_best_model_at_end` is enabled but save and evaluation strategies do not match.
+            - ValueError: If the saving steps are not a multiple of evaluation steps for `load_best_model_at_end`.
+            - ValueError: If `save_safetensors` is enabled but safetensors are not installed.
+            - ValueError: If both `fp16` and `bf16` are set to True.
+            - ValueError: If both `fp16_full_eval` and `bf16_full_eval` are set to True.
+            - ValueError: If lr_scheduler_type is reduce_lr_on_plateau but eval strategy or mindspore is not available.
+            - ValueError: If warmup_ratio is not in the range [0,1] or if both warmup_ratio and warmup_steps are provided.
+            - ValueError: If dataset_prefetch_factor is set without dataset_num_workers > 1.
+        """
         # expand paths, if not os.makedirs("~/bar") will make directory
         # in the current directory instead of the actual home
         # see https://github.com/huggingface/transformers/issues/10628
@@ -1126,8 +1147,19 @@ class TrainingArguments:
                 " when --dataset_num_workers > 1."
             )
 
-
     def __str__(self):
+        r"""
+        This method returns a string representation of the TrainingArguments object.
+        
+        Args:
+            self (TrainingArguments): The instance of the TrainingArguments class.
+            
+        Returns:
+            None: This method returns a string representation of the TrainingArguments object.
+        
+        Raises:
+            No specific exceptions are documented to be raised by this method.
+        """
         self_as_dict = asdict(self)
 
         # Remove deprecated arguments. That code should be removed once
@@ -1144,6 +1176,18 @@ class TrainingArguments:
 
     @property
     def n_device(self):
+        r"""
+        Returns the number of devices used for training.
+        
+        Args:
+            self (TrainingArguments): The object instance.
+            
+        Returns:
+            None: This method does not return a value.
+            
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         return 1
 
     @property
@@ -1182,7 +1226,6 @@ class TrainingArguments:
           `nn.DistributedDataParallel`).
         - `ParallelMode.TPU`: several TPU cores.
         """
-
     @property
     def world_size(self):
         """
@@ -1202,7 +1245,6 @@ class TrainingArguments:
         """
         The index of the local process used.
         """
-
         return 0
 
     @property
@@ -1238,7 +1280,6 @@ class TrainingArguments:
 
         The choice between the main and replica process settings is made according to the return value of `should_log`.
         """
-
         # convert to int
         log_level = trainer_log_levels[self.log_level]
         log_level_replica = trainer_log_levels[self.log_level_replica]
@@ -1246,7 +1287,6 @@ class TrainingArguments:
         log_level_main_node = logging.get_verbosity() if log_level == -1 else log_level
         log_level_replica_node = logging.get_verbosity() if log_level_replica == -1 else log_level_replica
         return log_level_main_node if self.should_log else log_level_replica_node
-
 
     @contextlib.contextmanager
     def main_process_first(self, local=True, desc="work"):
@@ -1796,6 +1836,13 @@ class TrainingArguments:
 
 
 class ParallelMode(Enum):
+
+    r"""
+    Represents the different modes of parallel processing supported by the system.
+    
+    This class defines an enumeration for the various modes of parallel processing that can be utilized by the system. It inherits from the Enum class, providing a structured way to define and work with
+parallel processing modes within the system.
+    """
     NOT_PARALLEL = "not_parallel"
     NOT_DISTRIBUTED = "not_distributed"
     DISTRIBUTED = "distributed"

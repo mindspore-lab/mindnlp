@@ -51,9 +51,26 @@ _CACHED_NO_EXIST_T = Any
 _is_offline_mode = os.environ.get("MINDNLP_OFFLINE", "0").upper() in ENV_VARS_TRUE_VALUES
 
 def is_offline_mode():
+    """
+    This function checks if the application is running in offline mode.
+    
+    Returns:
+        None
+    
+    """
     return _is_offline_mode
 
 def is_remote_url(url_or_filename):
+    """
+    Args:
+        url_or_filename (str): The URL or filename to be checked for being a remote URL.
+        
+    Returns:
+        None: Returns None if the given URL is a remote URL (starts with 'http://' or 'https://').
+    
+    Raises:
+        N/A
+    """
     parsed = urlparse(url_or_filename)
     return parsed.scheme in ("http", "https")
 
@@ -367,7 +384,6 @@ def get_file_from_repo(
         _raise_exceptions_for_missing_entries=False,
         _raise_exceptions_for_connection_errors=False,
     )
-
 
 
 def cached_file(
@@ -801,7 +817,6 @@ def get_checkpoint_shard_files(
     For the description of each arg, see [`PreTrainedModel.from_pretrained`]. `index_filename` is the full path to the
     index (downloaded and cached if `pretrained_model_name_or_path` is a model ID on the Hub).
     """
-
     if not os.path.isfile(index_filename):
         raise ValueError(f"Can't find a checkpoint index ({index_filename}) in {pretrained_model_name_or_path}.")
 
