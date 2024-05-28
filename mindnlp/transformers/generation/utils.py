@@ -13,6 +13,7 @@
 # limitations under the License.
 # ============================================================================
 # pylint: disable=not-callable
+# pylint: disable=used-before-assignment
 """
 Generation mixin.
 """

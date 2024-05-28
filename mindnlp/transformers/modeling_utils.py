@@ -1597,7 +1597,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
         Raises:
             This method does not raise any exceptions.
         """
-        pass
 
 def get_parameter_dtype(parameter: Union[nn.Cell, GenerationMixin, "ModuleUtilsMixin"]):
     """

@@ -31,4 +31,3 @@ class TrainingArguments:
         Raises:
             No exceptions are raised by this method.
         """
-        pass

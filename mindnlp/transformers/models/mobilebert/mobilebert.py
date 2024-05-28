@@ -1234,7 +1234,6 @@ any value but updates the instance by setting the input embeddings.
         Note:
             The MobileBertPreTrainedModel class should be initialized before calling this method.
         """
-        pass
 
     def set_input_embeddings(self):
         """
@@ -1249,7 +1248,6 @@ any value but updates the instance by setting the input embeddings.
         Raises:
             This method does not raise any exceptions.
         """
-        pass
 
     def resize_position_embeddings(self):
         """
@@ -1265,7 +1263,6 @@ any value but updates the instance by setting the input embeddings.
         Raises:
             This method does not raise any exceptions.
         """
-        pass
 
     def get_position_embeddings(self):
         """
@@ -1291,8 +1288,6 @@ information of words or tokens in a sequence.
             model = MobileBertPreTrainedModel()
             model.get_position_embeddings()
         """
-        pass
-
 
 class MobileBertModel(MobileBertPreTrainedModel):
     """

@@ -109,4 +109,3 @@ class Lookup(TextTensorOperation):
         - This method assumes that the `cde.LookupOperation` function is available and properly implemented.
         """
         return cde.LookupOperation(self._vocab, self._unk_token, str(mstype_to_detype(self._return_dtype)))
-    

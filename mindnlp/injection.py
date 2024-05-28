@@ -1399,7 +1399,6 @@ def _check_cell_flags_in_pynative(self):
     Raises:
         No exceptions are raised by this function.
     """
-    pass
 
 nn.Cell._check_cell_flags_in_pynative = _check_cell_flags_in_pynative
 
@@ -1437,8 +1436,7 @@ def _cells_and_names(self, name_prefix=''):
             cells_name_prefix = name
             if name_prefix:
                 cells_name_prefix = name_prefix + '.' + cells_name_prefix
-            for ele in cell.cells_and_names(cells_name_prefix):
-                yield ele
+            yield from cell.cells_and_names(cells_name_prefix)
 
 nn.Cell.cells_and_names = _cells_and_names
 
@@ -1860,7 +1858,6 @@ def _check_names(self):
     This function does not have any parameters. It is used to perform a check on names and does not return any value.
     
     """
-    pass
 
 nn.Cell.check_names = _check_names
 

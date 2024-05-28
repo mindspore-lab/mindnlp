@@ -1905,7 +1905,6 @@ the method.
         Raises:
             None.
         """
-        pass
 
 __all__ = [
     'CHATGLM_6B_PRETRAINED_MODEL_ARCHIVE_LIST',

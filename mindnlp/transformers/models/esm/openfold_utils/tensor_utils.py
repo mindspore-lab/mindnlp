@@ -285,7 +285,6 @@ def tree_map(fn: Callable[[T], Any], tree: T, leaf_type: Type[T]) -> Any:
         None.
     
     """
-    ...
 
 
 @overload
@@ -307,7 +306,6 @@ def tree_map(fn: Callable[[T], Any], tree: dict, leaf_type: Type[T]) -> dict:
     Note:
         This function operates on the leaf values of the dictionary tree, which are defined as the values that are not themselves dictionaries.
     """
-    ...
 
 
 @overload
@@ -326,7 +324,6 @@ def tree_map(fn: Callable[[T], Any], tree: list, leaf_type: Type[T]) -> list:
     Raises:
         None.
     """
-    ...
 
 
 @overload
@@ -343,7 +340,6 @@ def tree_map(fn: Callable[[T], Any], tree: tuple, leaf_type: Type[T]) -> tuple:
     Raises:
         None
     """
-    ...
 
 
 def tree_map(fn, tree, leaf_type):

@@ -22,7 +22,6 @@ from mindnlp.utils import logging
 from ..tokenization_utils_base import TruncationStrategy
 from .base import ArgumentHandler, ChunkPipeline
 
-
 logger = logging.get_logger(__name__)
 
 
@@ -32,6 +31,7 @@ class ZeroShotClassificationArgumentHandler(ArgumentHandler):
     by turning each possible label into an NLI
     premise/hypothesis pair.
     """
+
     def _parse_labels(self, labels):
         """
         This method '_parse_labels' is a part of the class 'ZeroShotClassificationArgumentHandler' and is responsible for parsing and processing the input labels.
@@ -133,6 +133,7 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
     See the up-to-date list
     of available models on [hf-mirror.com/models](https://hf-mirror.com/models?search=nli).
     """
+
     def __init__(self, *args, args_parser=ZeroShotClassificationArgumentHandler(), **kwargs):
         """
         Initializes a new instance of the ZeroShotClassificationPipeline class.
@@ -178,7 +179,7 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
         return -1
 
     def _parse_and_tokenize(
-        self, sequence_pairs, padding=True, add_special_tokens=True, truncation=TruncationStrategy.ONLY_FIRST
+            self, sequence_pairs, padding=True, add_special_tokens=True, truncation=TruncationStrategy.ONLY_FIRST
     ):
         """
         Parse arguments and tokenize only_first so that hypothesis (label) is not truncated
@@ -268,10 +269,10 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
         return preprocess_params, {}, postprocess_params
 
     def __call__(
-        self,
-        sequences: Union[str, List[str]],
-        *args,
-        **kwargs,
+            self,
+            sequences: Union[str, List[str]],
+            *args,
+            **kwargs,
     ):
         """
         Classify the sequence(s) given as inputs. See the [`ZeroShotClassificationPipeline`] documentation 
@@ -415,6 +416,4 @@ order of their scores, and 'scores' key with the corresponding scores of the can
         return {
             "sequence": sequences[0],
             "labels": [candidate_labels[i] for i in top_inds],
-            "scores": scores[0, top_inds].tolist(),
-        }
-        
+            "scores": scores[0, top_inds].tolist()}

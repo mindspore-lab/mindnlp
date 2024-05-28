@@ -1143,7 +1143,6 @@ class NezhaPreTrainedModel(PreTrainedModel):
         Raises:
             This method does not raise any exceptions.
         """
-        pass
 
     # TODO
     def get_position_embeddings(self):
@@ -1159,7 +1158,6 @@ class NezhaPreTrainedModel(PreTrainedModel):
         Raises:
             This method does not raise any specific exceptions.
         """
-        pass
 
     # TODO
     def resize_position_embeddings(self):
@@ -1176,7 +1174,6 @@ class NezhaPreTrainedModel(PreTrainedModel):
         Raises:
             This method does not raise any exceptions.
         """
-        pass
 
     # TODO
     def set_input_embeddings(self):
@@ -1194,7 +1191,6 @@ class NezhaPreTrainedModel(PreTrainedModel):
         Raises:
             This method does not raise any exceptions.
         """
-        pass
 
     # TODO
     def post_init(self):
@@ -1216,7 +1212,6 @@ child classes to add custom initialization logic or perform additional setup ste
         
         Note that the 'self' parameter is automatically passed to the method and does not need to be provided explicitly when calling the method.
         """
-        pass
 
 
 class NezhaModel(NezhaPreTrainedModel):

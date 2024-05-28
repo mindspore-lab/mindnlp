@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-
 """image utils"""
 import base64
 import os
@@ -833,32 +832,32 @@ class ImageFeatureExtractionMixin:
                 image = image.transpose(2, 0, 1)
             if is_mindspore_tensor(image):
                 image = image.permute(2, 0, 1)
+        new_image = None
 
-        # Check if cropped area is within image boundaries
         if top >= 0 and bottom <= image_shape[0] and left >= 0 and right <= image_shape[1]:
-            return image[..., top:bottom, left:right]
+            new_image = image[..., top:bottom, left:right]
+        else:
+            new_shape = image.shape[:-2] + (max(size[0], image_shape[0]), max(size[1], image_shape[1]))
+            if isinstance(image, np.ndarray):
+                new_image = np.zeros_like(image, shape=new_shape)
+            elif is_mindspore_tensor(image):
+                new_image = image.new_zeros(new_shape)
 
-        # Otherwise, we may need to pad if the image is too small. Oh joy...
-        new_shape = image.shape[:-2] + (max(size[0], image_shape[0]), max(size[1], image_shape[1]))
-        if isinstance(image, np.ndarray):
-            new_image = np.zeros_like(image, shape=new_shape)
-        elif is_mindspore_tensor(image):
-            new_image = image.new_zeros(new_shape)
+            top_pad = (new_shape[-2] - image_shape[0]) // 2
+            bottom_pad = top_pad + image_shape[0]
+            left_pad = (new_shape[-1] - image_shape[1]) // 2
+            right_pad = left_pad + image_shape[1]
+            new_image[..., top_pad:bottom_pad, left_pad:right_pad] = image
 
-        top_pad = (new_shape[-2] - image_shape[0]) // 2
-        bottom_pad = top_pad + image_shape[0]
-        left_pad = (new_shape[-1] - image_shape[1]) // 2
-        right_pad = left_pad + image_shape[1]
-        new_image[..., top_pad:bottom_pad, left_pad:right_pad] = image
+            top += top_pad
+            bottom += top_pad
+            left += left_pad
+            right += left_pad
 
-        top += top_pad
-        bottom += top_pad
-        left += left_pad
-        right += left_pad
-
-        new_image = new_image[
-            ..., max(0, top) : min(new_image.shape[-2], bottom), max(0, left) : min(new_image.shape[-1], right)
-        ]
+            new_image = new_image[
+                        ..., max(0, top): min(new_image.shape[-2], bottom),
+                        max(0, left): min(new_image.shape[-1], right)
+                        ]
 
         return new_image
 

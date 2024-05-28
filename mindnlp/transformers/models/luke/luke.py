@@ -1022,7 +1022,6 @@ class LukePreTrainedModel(PreTrainedModel):
         Raises:
             None
         """
-        pass
 
     def set_input_embeddings(self, new_embeddings: "nn.Cell"):
         """
@@ -1038,7 +1037,6 @@ class LukePreTrainedModel(PreTrainedModel):
         Raises:
             None
         """
-        pass
 
     def resize_position_embeddings(self, new_num_position_embeddings: int):
         """
@@ -1054,7 +1052,6 @@ class LukePreTrainedModel(PreTrainedModel):
         Raises:
             N/A
         """
-        pass
 
     def get_position_embeddings(self):
         """
@@ -1069,7 +1066,6 @@ class LukePreTrainedModel(PreTrainedModel):
         Raises:
             This method does not raise any exceptions.
         """
-        pass
 
     def _init_weights(self, cell: nn.Cell):
         """Initialize the weights"""

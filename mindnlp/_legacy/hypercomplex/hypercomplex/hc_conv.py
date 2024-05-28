@@ -337,7 +337,6 @@ class _ConvNd(Cell):
         Raises:
             None
         """
-        pass
 
     def _check_input_5dims(self, input_shape: tuple):
         r"""

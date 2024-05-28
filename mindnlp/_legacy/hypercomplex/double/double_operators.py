@@ -1115,7 +1115,6 @@ moving_mean_init=moving_mean_init, moving_var_init=moving_var_init, use_batch_st
             else:
                 super(BatchNorm2d, self).__init__(HBatchNorm2d, BatchNormImpl, num_features=num_features, eps=eps, momentum=momentum, affine=affine, gamma_init=gamma_init, beta_init=beta_init,
 moving_mean_init=moving_mean_init, moving_var_init=moving_var_init, use_batch_statistics=use_batch_statistics, data_format=data_format)
-        
         if has_diagonal_form:
             super(BatchNorm2d, self).__init__(HBatchNorm2d,
                                               J1J2BatchNormImpl,

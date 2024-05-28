@@ -285,7 +285,6 @@ class IA3Model(BaseTuner):
                 if adapter_name not in self.active_adapters:
                     new_cell.requires_grad = False
                 self._replace_cell(parent, target_name, new_cell, target)
-        
         # check if target cell is in feedforward_cells
         current_key = optionnal_kwargs.pop("current_key")
         is_feedforward = self._check_target_cell_feedforward(ia3_config, current_key)

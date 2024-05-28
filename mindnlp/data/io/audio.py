@@ -357,7 +357,6 @@ class WavFileWarning(UserWarning):
     
     This class inherits from UserWarning and is used to indicate warnings specific to WAV file handling in Python.
     """
-    pass
 
 
 class Endian:

@@ -1470,7 +1470,6 @@ prefix projection, prefix tokens, prefix encoder, and dropout.
         Raises:
             None: This method does not raise any exceptions.
         """
-        pass
 
 
 class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
@@ -2028,11 +2027,8 @@ instead.
             ValueError: If the bits parameter is not a positive integer.
             TypeError: If the bits parameter is not an integer.
         """
-        pass
-
 
 class ChatGLM2ForSequenceClassification(ChatGLM2PreTrainedModel):
-
     """
     ChatGLM2ForSequenceClassification is a class representing a pre-trained model for sequence classification based on the ChatGLM2 architecture. It inherits from the ChatGLM2PreTrainedModel and provides
 methods for initializing the model and generating classification outputs. 

@@ -177,7 +177,6 @@ class _PoolNd(nn.Cell):
         Raises:
             None. This method does not raise any exceptions.
         """
-        pass
 
 
 class MaxPool2d(_PoolNd):
@@ -822,8 +821,6 @@ from '_construct' is then converted to a 2-channel tensor using the 'to_2channel
         Raises:
             This method does not explicitly raise any exceptions.
         """
-        pass
-
     def _adaptive_shape_check(self, in_shape):
         """Check shape."""
         msg_prefix = "For {}, the".format(self.cls_name)

@@ -2019,7 +2019,6 @@ class ReformerConverter(SpmConverter):
     Usage:
         To use the ReformerConverter, instantiate the class and call the reform_data method with the data to be transformed.
     """
-    pass
 
 
 class RemBertConverter(SpmConverter):
@@ -2112,7 +2111,6 @@ class BertGenerationConverter(SpmConverter):
         - tokenize_text: Tokenizes the input text using Bert tokenizer.
         - detokenize_text: Detokenizes the text tokens back into human-readable text.
     """
-    pass
 
 
 class PegasusConverter(SpmConverter):

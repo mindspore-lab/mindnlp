@@ -697,7 +697,6 @@ applied.
             Raises:
                 None.
             """
-        
         # Mask the unimportant triplets
         is_adapter_name_truncated = False
         if self.adapter_name not in next(iter(rank_pattern.keys())):

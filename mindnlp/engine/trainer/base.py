@@ -16,6 +16,7 @@
 # ============================================================================
 # pylint: disable=expression-not-assigned
 # pylint: disable=assignment-from-no-return
+# pylint: disable=used-before-assignment
 """Trainer class, to easily train a 🤗 Transformers from scratch or finetune it on a new task."""
 import os
 import re

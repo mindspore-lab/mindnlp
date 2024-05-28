@@ -123,8 +123,7 @@ def _fast_find_longest_common_sequence(sequence_left, sequence_right):
             if sequence_left[i] == sequence_right[j]:
                 previous_counter = counter[i][j] + 1
                 counter[i + 1][j + 1] = previous_counter
-                if previous_counter > longest:
-                    longest = previous_counter
+                longest = max(longest, previous_counter)
 
     counter = np.array(counter)
     # we return the idx of the first element of the longest common sequence in the left sequence
@@ -529,10 +528,9 @@ provided, the first value represents the left stride and the second value repres
             if chunk_len < stride_left + stride_right:
                 raise ValueError("Chunk length must be superior to stride length")
 
-            for item in chunk_iter(
+            yield from chunk_iter(
                 inputs, self.feature_extractor, chunk_len, stride_left, stride_right, self.ms_dtype
-            ):
-                yield item
+            )
         else:
             if self.type == "seq2seq_whisper" and inputs.shape[0] > self.feature_extractor.n_samples:
                 processed = self.feature_extractor(

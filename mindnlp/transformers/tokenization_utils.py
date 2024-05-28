@@ -1126,7 +1126,6 @@ transformers.PreTrainedTokenizerFast.
             text = tokenizer.convert_ids_to_tokens(token_ids)
             # text now contains "[CLS] token1 token2 [SEP]"
         """
-        ...
 
     @overload
     def convert_ids_to_tokens(self, ids: List[int], skip_special_tokens: bool = False) -> List[str]:
@@ -1144,7 +1143,6 @@ transformers.PreTrainedTokenizerFast.
         Raises:
             None.
         """
-        ...
 
     def convert_ids_to_tokens(
         self, ids: Union[int, List[int]], skip_special_tokens: bool = False

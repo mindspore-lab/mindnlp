@@ -334,7 +334,6 @@ class _BaseBatchNormImpl(_BatchNormImpl):
         Raises:
             NotImplementedError: If the method is not implemented in the derived class.
         """
-        pass
 
     @abstractmethod
     def get_square_norm(self, u: Tensor) -> Tensor:
@@ -351,7 +350,6 @@ class _BaseBatchNormImpl(_BatchNormImpl):
         Raises:
             None.
         """
-        pass
 
     @abstractmethod
     def scale_and_shift(self,
@@ -387,4 +385,3 @@ the y-axis.
             - The scaling operation scales the input data by multiplying it with the corresponding scaling factor.
             - The shifting operation shifts the scaled data by adding the corresponding shifting factor.
         """
-        pass

@@ -41,7 +41,6 @@ def pseudo_beta_fn(aatype: mindspore.Tensor, all_atom_positions: mindspore.Tenso
     Raises:
         None
     """
-    ...
 
 
 @overload
@@ -62,7 +61,6 @@ def pseudo_beta_fn(
     Raises:
         None
     '''
-    ...
 
 
 def pseudo_beta_fn(aatype, all_atom_positions, all_atom_masks):

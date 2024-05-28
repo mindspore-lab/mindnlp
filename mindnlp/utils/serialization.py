@@ -481,7 +481,6 @@ class _opener:
         Raises:
             No specific exceptions are raised by this method.
         """
-        pass
 
 
 class _open_file(_opener):
