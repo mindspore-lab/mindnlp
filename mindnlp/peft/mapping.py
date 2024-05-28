@@ -40,6 +40,8 @@ from .tuners import (
     PromptTuningConfig,
     LoHaConfig,
     LoHaModel,
+    PrefixTuningConfig,
+    PromptEncoderConfig
 )
 
 MODEL_TYPE_TO_PEFT_MODEL_MAPPING = {
@@ -55,8 +57,8 @@ MODEL_TYPE_TO_PEFT_MODEL_MAPPING = {
 PEFT_TYPE_TO_CONFIG_MAPPING = {
     # "ADAPTION_PROMPT": AdaptionPromptConfig,
     "PROMPT_TUNING": PromptTuningConfig,
-    # "PREFIX_TUNING": PrefixTuningConfig,
-    # "P_TUNING": PromptEncoderConfig,
+    "PREFIX_TUNING": PrefixTuningConfig,
+    "P_TUNING": PromptEncoderConfig,
     "ADAPTION_PROMPT": AdaptionPromptConfig,
     "LORA": LoraConfig,
     "ADALORA": AdaLoraConfig,

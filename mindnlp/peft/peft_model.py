@@ -21,7 +21,7 @@ from copy import deepcopy
 from typing import Dict, Optional
 
 import mindspore
-from mindspore import nn, ops
+from mindspore import nn, ops, Tensor
 from mindspore.train.serialization import _exec_save
 
 from .config import PeftConfig, PromptLearningConfig
@@ -36,6 +36,9 @@ from .tuners import (
     LoKrModel,
     # LoraConfig,
     PromptEmbedding,
+    MultitaskPromptEmbedding,
+    PromptEncoder,
+    PrefixEncoder,
     LoHaModel,
 )
 from .utils import (
@@ -49,7 +52,6 @@ from .utils import (
     _set_trainable,
     # add_library_to_model_card,
     get_peft_model_state_dict,
-    # infer_device,
     load_peft_weights,
     set_peft_model_state_dict,
     shift_tokens_right,
@@ -191,12 +193,12 @@ class PeftModel(nn.Cell):
 
         if config.peft_type == PeftType.PROMPT_TUNING:
             prompt_encoder = PromptEmbedding(config, self.word_embeddings)
-        # elif config.peft_type == PeftType.MULTITASK_PROMPT_TUNING:
-        #     prompt_encoder = MultitaskPromptEmbedding(config, self.word_embeddings)
-        # elif config.peft_type == PeftType.P_TUNING:
-        #     prompt_encoder = PromptEncoder(config)
-        # elif config.peft_type == PeftType.PREFIX_TUNING:
-        #     prompt_encoder = PrefixEncoder(config)
+        elif config.peft_type == PeftType.MULTITASK_PROMPT_TUNING:
+            prompt_encoder = MultitaskPromptEmbedding(config, self.word_embeddings)
+        elif config.peft_type == PeftType.P_TUNING:
+            prompt_encoder = PromptEncoder(config)
+        elif config.peft_type == PeftType.PREFIX_TUNING:
+            prompt_encoder = PrefixEncoder(config)
         else:
             raise ValueError("Not supported")
 
@@ -247,6 +249,26 @@ class PeftModel(nn.Cell):
                 trainable_params += num_params
 
         return trainable_params, all_param
+
+    def get_prompt_embedding_to_save(self, adapter_name: str) -> mindspore.Tensor:
+        """
+        Returns the prompt embedding to save when saving the model. Only applicable when using a prompt learning
+        method.
+        """
+        prompt_encoder = self.prompt_encoder[adapter_name]
+        prompt_tokens = (
+            self.prompt_tokens[adapter_name].unsqueeze(0).expand(1, -1)
+        )
+        if self.peft_config[adapter_name].peft_type == PeftType.PREFIX_TUNING:
+            prompt_tokens = prompt_tokens[:, : self.peft_config[adapter_name].num_virtual_tokens]
+
+        if self.peft_config[adapter_name].peft_type == PeftType.MULTITASK_PROMPT_TUNING:
+            prompt_embeddings = super(MultitaskPromptEmbedding, prompt_encoder).construct(prompt_tokens) # pylint: disable=bad-super-call
+        else:
+            prompt_embeddings = prompt_encoder(prompt_tokens)
+
+        embedding = prompt_embeddings[0]
+        return Tensor(embedding.asnumpy())
 
     def get_prompt(self, batch_size: int, task_ids: Optional[mindspore.Tensor] = None) -> mindspore.Tensor:
         """
@@ -528,7 +550,7 @@ class PeftModelForCausalLM(PeftModel):
         batch_size = input_ids.shape[0]
         if attention_mask is not None:
             # concat prompt attention mask
-            prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens).to(attention_mask.device)
+            prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens)
             attention_mask = ops.cat((prefix_attention_mask, attention_mask), axis=1)
 
         if kwargs.get("position_ids", None) is not None:
@@ -554,7 +576,7 @@ class PeftModelForCausalLM(PeftModel):
             inputs_embeds = self.word_embeddings(input_ids)
         # concat prompt labels
         if labels is not None:
-            prefix_labels = ops.full((batch_size, peft_config.num_virtual_tokens), -100).to(labels.device)
+            prefix_labels = ops.full((batch_size, peft_config.num_virtual_tokens), -100)
             kwargs["labels"] = ops.cat((prefix_labels, labels), axis=1)
         prompts = self.get_prompt(batch_size=batch_size)
         prompts = prompts.to(inputs_embeds.dtype)
@@ -665,9 +687,7 @@ class PeftModelForSeq2SeqLM(PeftModel):
         batch_size = input_ids.shape[0]
         if decoder_attention_mask is not None:
             # concat prompt attention mask
-            prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens).to(
-                decoder_attention_mask.device
-            )
+            prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens)
             decoder_attention_mask = ops.cat((prefix_attention_mask, decoder_attention_mask), axis=1)
 
         if kwargs.get("position_ids", None) is not None:
@@ -698,9 +718,7 @@ class PeftModelForSeq2SeqLM(PeftModel):
 
             if attention_mask is not None:
                 # concat prompt attention mask
-                prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens).to(
-                    attention_mask.device
-                )
+                prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens)
                 kwargs["attention_mask"] = ops.cat((prefix_attention_mask, attention_mask), axis=1)
 
             prompts = self.get_prompt(batch_size=batch_size)
@@ -719,16 +737,14 @@ class PeftModelForSeq2SeqLM(PeftModel):
 
             if attention_mask is not None:
                 # concat prompt attention mask
-                prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens).to(
-                    attention_mask.device
-                )
+                prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens)
                 kwargs["attention_mask"] = ops.cat((prefix_attention_mask, attention_mask), axis=1)
             # concat prompt labels
             if labels is not None:
                 if peft_config.num_transformer_subcells == 1:
                     kwargs["labels"] = labels
                 elif peft_config.num_transformer_subcells == 2:
-                    prefix_labels = ops.full((batch_size, peft_config.num_virtual_tokens), -100).to(labels.device)
+                    prefix_labels = ops.full((batch_size, peft_config.num_virtual_tokens), -100)
                     kwargs["labels"] = ops.cat((prefix_labels, labels), axis=1)
             prompts = self.get_prompt(batch_size=batch_size)
             prompts = prompts.to(inputs_embeds.dtype)
@@ -789,9 +805,7 @@ class PeftModelForSeq2SeqLM(PeftModel):
                     kwargs["inputs_embeds"] = inputs_embeds
 
                     if "attention_mask" in kwargs:
-                        prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens).to(
-                            kwargs["attention_mask"].device
-                        )
+                        prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens)
                         kwargs["attention_mask"] = ops.cat((prefix_attention_mask, kwargs["attention_mask"]), axis=1)
 
                     return self.base_model.generate(**kwargs)
@@ -897,7 +911,7 @@ class PeftModelForTokenClassification(PeftModel):
             if kwargs.get("token_type_ids", None) is not None:
                 kwargs["token_type_ids"] = ops.cat(
                     (
-                        ops.zeros(batch_size, peft_config.num_virtual_tokens).to(self.word_embeddings.weight.device),
+                        ops.zeros(batch_size, peft_config.num_virtual_tokens),
                         kwargs["token_type_ids"],
                     ),
                     axis=1,

@@ -111,11 +111,6 @@ class AdaLoraLayer(BaseTunerLayer):
         self.scaling[adapter_name] = lora_alpha if lora_alpha > 0 else float(r)
         if init_lora_weights and r > 0:
             self.reset_lora_parameters(adapter_name)
-        # if hasattr(self.get_base_layer(), "qweight"):
-        #     # QuantLinear
-        #     self.to(self.get_base_layer().qweight.device)
-        # else:
-        #     self.to(self.get_base_layer().weight.device)
         self.set_adapter(self.active_adapters)
 
     def reset_lora_parameters(self, adapter_name):
