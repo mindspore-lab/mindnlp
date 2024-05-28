@@ -32,7 +32,6 @@ from mindnlp._legacy.abc import  ParameterDict
 from ..tuners_utils import BaseTunerLayer, check_adapters_to_merge
 
 
-
 class IA3Layer(BaseTunerLayer):
 
     r"""
@@ -62,7 +61,6 @@ class IA3Layer(BaseTunerLayer):
     adapter_layer_names = ("ia3_l",)
 
     def __init__(self, base_layer: nn.Cell, is_feedforward: bool, **kwargs) -> None:
-
         r"""
         Initialize the IA3Layer class.
         
@@ -102,7 +100,6 @@ class IA3Layer(BaseTunerLayer):
         self.out_features = out_features
 
     def update_layer(self, adapter_name, init_ia3_weights):
-
         r"""
         Updates the IA3 layer with the given adapter name and initializes its weights if specified.
         
@@ -129,7 +126,6 @@ class IA3Layer(BaseTunerLayer):
         self.set_adapter(self.active_adapters)
 
     def reset_ia3_parameters(self, adapter_name):
-
         r"""
         Resets the IA3 parameters for a given adapter in the IA3Layer.
         
@@ -203,7 +199,6 @@ None`:
         init_ia3_weights: bool = True,  # whether to initialize IA3 weights
         **kwargs,
     ) -> None:
-
         r"""
         Initializes a Linear object.
         
@@ -292,7 +287,6 @@ None`:
                     base_layer.bias.data = ops.div(base_layer.bias.data, scaling.data + 1e-8)
 
     def construct(self, x: Tensor, *args: Any, **kwargs: Any) -> Tensor:
-
         r"""
         This method constructs a tensor using the input tensor 'x' and additional arguments and keyword arguments. It adapts the input tensor based on the configuration of the Linear class, including the use
 of adapters and merging layers.
@@ -360,7 +354,6 @@ class Conv2d(nn.Cell, IA3Layer):
         init_ia3_weights: bool = True,
         **kwargs,
     ) -> None:
-
         r"""
         Initializes a new instance of the Conv2d class.
         
@@ -387,7 +380,6 @@ class Conv2d(nn.Cell, IA3Layer):
         self.update_layer(adapter_name, init_ia3_weights)
 
     def update_layer(self, adapter_name, init_ia3_weights):
-
         r"""
         Updates the layer of the Conv2d class with the specified adapter name and initialization of IA3 weights.
         
@@ -479,7 +471,6 @@ class Conv2d(nn.Cell, IA3Layer):
                     base_layer.bias.data = ops.mul(base_layer.bias.data, scaling.data)
 
     def construct(self, x: Tensor, *args: Any, **kwargs: Any) -> Tensor:
-
         r"""
         Construct method for the Conv2d class.
         

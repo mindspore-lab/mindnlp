@@ -107,7 +107,6 @@ class BertGenerationConfig(PretrainedConfig):
         use_cache=True,
         **kwargs,
     ):
-
         """
         This method initializes an instance of the BertGenerationConfig class.
         

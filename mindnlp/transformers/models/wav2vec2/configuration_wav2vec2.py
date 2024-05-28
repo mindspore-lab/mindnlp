@@ -269,7 +269,6 @@ class Wav2Vec2Config(PretrainedConfig):
         adapter_attn_dim=None,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the Wav2Vec2Config class.
         
@@ -419,7 +418,6 @@ class Wav2Vec2Config(PretrainedConfig):
 
     @property
     def inputs_to_logits_ratio(self):
-
         """
         Calculates the ratio of inputs to logits for the Wav2Vec2Config class.
         

@@ -119,7 +119,6 @@ class _PoolNd(nn.Cell):
         self.stride = _check_int_or_tuple('stride', stride)
 
     def construct(self, u: Tensor) -> Tensor:
-
         r"""
         Constructs a tensor based on the input tensor 'u'.
         
@@ -139,7 +138,6 @@ class _PoolNd(nn.Cell):
         return out
 
     def extend_repr(self):
-
         r"""
         Method to extend the representation output for the _PoolNd class.
         
@@ -160,7 +158,6 @@ class _PoolNd(nn.Cell):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
-
         r"""
         Constructs and returns a tuple of tensors based on the given inputs.
         
@@ -260,7 +257,6 @@ class MaxPool2d(_PoolNd):
                  stride: _size_2_t = 1,
                  pad_mode: str = "valid",
                  data_format: str = "NCHW") -> None:
-
         r"""
         Initializes a MaxPool2d layer.
         
@@ -288,7 +284,6 @@ class MaxPool2d(_PoolNd):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
-
         r"""
         Constructs a tuple of max-pooled tensors from input tensors using the MaxPool2d algorithm.
         
@@ -400,7 +395,6 @@ class MaxPool1d(_PoolNd):
                                   pad_mode=self.pad_mode)
 
     def _shape_check(self, in_shape: tuple):
-
         r"""
         Checks the shape of the input tensor in the MaxPool1d class.
         
@@ -422,7 +416,6 @@ class MaxPool1d(_PoolNd):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
-
         r"""
         Construct function for the MaxPool1d class.
         
@@ -539,7 +532,6 @@ class AvgPool2d(_PoolNd):
                  stride: _size_2_t = 1,
                  pad_mode: str = "valid",
                  data_format: str = "NCHW") -> None:
-
         r"""
         Initializes an instance of AvgPool2d.
         
@@ -568,7 +560,6 @@ class AvgPool2d(_PoolNd):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
-
         r"""
         This method constructs the average pooled representation of input tensors x and y.
         
@@ -673,9 +664,7 @@ class AvgPool1d(_PoolNd):
                                   strides=self.stride,
                                   pad_mode=self.pad_mode)
 
-
     def _shape_check(self, in_shape: tuple):
-
         r"""
         Checks the shape of the input for the 'AvgPool1d' class.
         
@@ -707,7 +696,6 @@ class AvgPool1d(_PoolNd):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
-
         r"""
         Constructs the output tensor of the AvgPool1d layer.
         
@@ -777,7 +765,6 @@ class _AdaptivePoolNd(nn.Cell):
     """
 
     def __init__(self, output_size: Tuple[int, ...]) -> None:
-
         r"""
         __init__
         
@@ -800,7 +787,6 @@ class _AdaptivePoolNd(nn.Cell):
         self.output_size = output_size
 
     def construct(self, u: Tensor) -> Tensor:
-
         r"""
         Constructs a tensor with adaptive pooling based on the input tensor.
         
@@ -828,7 +814,6 @@ from '_construct' is then converted to a 2-channel tensor using the 'to_2channel
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
-
         r"""
         This method '_construct' in the class '_AdaptivePoolNd' constructs and processes the input tensors 'x' and 'y' to produce a tuple of tensors.
         
@@ -921,7 +906,6 @@ class AdaptiveAvgPool1d(_AdaptivePoolNd):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
-
         r"""
         Method for constructing an adaptive average pooling operation for 1D tensors.
         
@@ -1025,7 +1009,6 @@ class AdaptiveAvgPool2d(_AdaptivePoolNd):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
-
         r"""
         Constructs adaptive average pooling for input tensors x and y.
         
@@ -1115,7 +1098,6 @@ class AdaptiveAvgPool3d(_AdaptivePoolNd):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
-
         r"""
         Constructs adaptive average pool 3D for input tensors x and y.
         
@@ -1193,7 +1175,6 @@ class AdaptiveMaxPool1d(_AdaptivePoolNd):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
-
         r"""
         Constructs an AdaptiveMaxPool1d object that performs adaptive max pooling on the input tensors x and y.
         
@@ -1314,7 +1295,6 @@ class AdaptiveMaxPool2d(_AdaptivePoolNd):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
-
         r"""
         Method to perform adaptive max pooling on two input tensors x and y.
         

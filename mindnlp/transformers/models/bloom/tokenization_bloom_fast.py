@@ -114,7 +114,6 @@ class BloomTokenizerFast(PreTrainedTokenizerFast):
         clean_up_tokenization_spaces=False,
         **kwargs,
     ):
-
         """
         Initialize a BloomTokenizerFast object.
         
@@ -162,7 +161,6 @@ class BloomTokenizerFast(PreTrainedTokenizerFast):
         self.add_prefix_space = add_prefix_space
 
     def _batch_encode_plus(self, *args, **kwargs) -> BatchEncoding:
-
         """
         The `_batch_encode_plus` method is used in the `BloomTokenizerFast` class to encode a batch of inputs into a `BatchEncoding` object.
         
@@ -186,7 +184,6 @@ with pretokenized inputs.
         return super()._batch_encode_plus(*args, **kwargs)
 
     def _encode_plus(self, *args, **kwargs) -> BatchEncoding:
-
         """
         Encodes the input sequence into a batch of encoded sequences using the BloomTokenizerFast.
         
@@ -220,7 +217,6 @@ pretokenized. If not, it raises an exception.
         return super()._encode_plus(*args, **kwargs)
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the tokenizer's vocabulary to a specified directory.
         

@@ -360,7 +360,6 @@ class PeftAdapterMixin:
         return active_adapters
 
     def active_adapter(self) -> str:
-
         """
         Retrieve the active adapter.
         

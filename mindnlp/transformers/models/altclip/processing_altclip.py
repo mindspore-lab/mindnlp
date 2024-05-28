@@ -42,7 +42,6 @@ class AltCLIPProcessor(ProcessorMixin):
     tokenizer_class = ("XLMRobertaTokenizer", "XLMRobertaTokenizerFast")
 
     def __init__(self, image_processor=None, tokenizer=None, **kwargs):
-
         """
         Initializes an instance of AltCLIPProcessor.
         
@@ -146,7 +145,6 @@ class AltCLIPProcessor(ProcessorMixin):
 
     @property
     def model_input_names(self):
-
         """
         Retrieve the input names required for the model from the tokenizer and image processor.
         

@@ -107,7 +107,6 @@ class CpmAntConfig(PretrainedConfig):
         use_cache: bool = True,
         **kwargs,
     ):
-
         """
         Initializes an instance of the CpmAntConfig class.
         

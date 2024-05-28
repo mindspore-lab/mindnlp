@@ -112,7 +112,6 @@ class SegformerConfig(PretrainedConfig):
         semantic_loss_ignore_index=255,
         **kwargs,
     ):
-
         '''
         Initializes a new instance of SegformerConfig.
         

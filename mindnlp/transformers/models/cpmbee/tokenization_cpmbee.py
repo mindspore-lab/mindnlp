@@ -92,7 +92,6 @@ CPMBeeInputType = Union[str, Dict[str, "CPMBeeInputType"]]
 
 
 def rel_to_bucket(n_up: int, n_down: int, max_depth: int = 8):
-
     """
     Calculates the relative position of an item in a bucket based on the number of items above and below it.
     
@@ -222,7 +221,6 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
         padding_side="left",
         **kwargs,
     ):
-
         """
             Initialize a CpmBeeTokenizer object.
         
@@ -257,7 +255,6 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
             padding_side=padding_side,
             **kwargs,
         )
-
 
         with open(vocab_file, "r", encoding="utf-8") as reader:
             for token in reader.readlines():
@@ -299,7 +296,6 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
 
     @property
     def bod_token_id(self):
-
         """
         Returns the token ID for the beginning of document (BOD) token.
         
@@ -316,7 +312,6 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
 
     @property
     def eod_token_id(self):
-
         """
         Method to retrieve the token ID corresponding to the end-of-document token in the CpmBeeTokenizer class.
         
@@ -333,7 +328,6 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
 
     @property
     def newline_id(self):
-
         """
         Returns the ID of the newline token in the CpmBeeTokenizer.
         
@@ -350,7 +344,6 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self) -> int:
-
         """
         Returns the size of the vocabulary used by the CpmBeeTokenizer instance.
         
@@ -380,7 +373,6 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
         return self.vocab_size + len(self.added_tokens_encoder)
 
     def get_vocab(self):
-
         """
         Get the vocabulary of the CpmBeeTokenizer instance.
         
@@ -528,7 +520,6 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
         return output_tokens
 
     def check(self, token):
-
         """
         Checks if a token is present in the encoder.
         
@@ -545,7 +536,6 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
         return token in self.encoder
 
     def convert_tokens_to_string(self, tokens: List[str]) -> str:
-
         """
         Converts a list of tokens into a single string.
         
@@ -590,7 +580,6 @@ list of strings representing individual tokens.
                 return self.decoder[index]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary to a file.
         
@@ -1115,7 +1104,6 @@ list of strings representing individual tokens.
         data_list: List[Dict],
         max_length: int = 2048
     ):
-
         """
         Prepares the input data for fine-tuning.
         

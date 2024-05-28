@@ -141,7 +141,6 @@ class Qwen2MoeConfig(PretrainedConfig):
         router_aux_loss_coef=0.001,
         **kwargs,
     ):
-
         """
         Initializes a Qwen2MoeConfig object with the specified parameters.
         

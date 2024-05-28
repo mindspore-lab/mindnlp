@@ -45,7 +45,6 @@ logger = logging.get_logger(__name__)
 
 
 def build_chat_input(model, tokenizer, messages: List[dict], max_new_tokens: int=0):
-
     """ 
     This function builds the input tokens for a chat generation model.
     
@@ -153,7 +152,6 @@ processing, and the __next__ method retrieves the next processed text data.
     
     """
     def __init__(self, tokenizer, skip_prompt=False, skip_special_tokens=False):
-
         """
         Initializes a new instance of the TextIterStreamer class.
         
@@ -181,7 +179,6 @@ should be skipped during tokenization. The tokens attribute is an empty list tha
         self.next_tokens_are_prompt = True
 
     def put(self, value):
-
         """
         Args:
             self: TextIterStreamer
@@ -206,7 +203,6 @@ should be skipped during tokenization. The tokens attribute is an empty list tha
                 self.tokenizer.decode(self.tokens, skip_special_tokens=self.skip_special_tokens))
 
     def end(self):
-
         """
         Ends the text iteration process by putting a None value into the text queue.
         
@@ -227,7 +223,6 @@ should be skipped during tokenization. The tokens attribute is an empty list tha
         self.text_queue.put(None)
 
     def __iter__(self):
-
         """
         __iter__ method in the TextIterStreamer class.
         
@@ -246,7 +241,6 @@ should be skipped during tokenization. The tokens attribute is an empty list tha
         return self
 
     def __next__(self):
-
         """
         Docstring for the '__next__' method in the 'TextIterStreamer' class.
         
@@ -310,7 +304,6 @@ def _expand_mask(mask: Tensor, dtype: mstype, tgt_len: Optional[int] = None):
     )
 
 def _get_interleave(n):
-
     """
     This function returns an interleaved list of length n. 
     
@@ -374,7 +367,6 @@ class RMSNorm(nn.Cell):
         self.variance_epsilon = epsilon
 
     def construct(self, hidden_states):
-
         """
         This method constructs RMSNorm by normalizing the hidden states.
         
@@ -405,7 +397,6 @@ class RotaryEmbedding(nn.Cell):
     """
 
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
-
         """
         __init__(self, dim, max_position_embeddings=2048, base=10000)
             
@@ -437,7 +428,6 @@ class RotaryEmbedding(nn.Cell):
         self.sin_cached = emb.sin()[None, None, :, :]
 
     def construct(self, x, seq_len=None):
-
         """
         Constructs the rotary embedding for a given sequence length.
         
@@ -516,7 +506,6 @@ class MLP(nn.Cell):
             intermediate_size: int,
             hidden_act: str,
     ):
-
         """
         __init__ method for the MLP class.
         
@@ -542,7 +531,6 @@ class MLP(nn.Cell):
         self.act_fn = ACT2FN[hidden_act]
 
     def construct(self, x):
-
         """
         Method 'construct' in class 'MLP' constructs a multi-layer perceptron.
         
@@ -563,7 +551,6 @@ class Attention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(self, config: BaiChuanConfig):
-
         """
         Initializes an instance of the Attention class.
         
@@ -599,7 +586,6 @@ class Attention(nn.Cell):
         self.rotary_emb = RotaryEmbedding(self.head_dim, max_position_embeddings=self.max_position_embeddings)
 
     def _shape(self, tensor: Tensor, seq_len: int, bsz: int):
-
         """
         This method reshapes the input tensor to match the specified dimensions for batch size, sequence length, number of heads, and head dimension.
         
@@ -627,7 +613,6 @@ class Attention(nn.Cell):
             output_attentions: bool = False,
             use_cache: bool = False,
     ) -> Tuple[Tensor, Optional[Tensor], Optional[Tuple[Tensor]]]:
-
         """
         Method 'construct' in the class 'Attention' processes hidden states using self-attention mechanism.
         
@@ -737,7 +722,6 @@ states and additional parameters.
 caching is enabled).
     """
     def __init__(self, config: BaiChuanConfig):
-
         """
         Initializes an instance of the BaiChuanAttention class.
         
@@ -778,7 +762,6 @@ caching is enabled).
         self.o_proj = nn.Dense(self.num_heads * self.head_dim, self.hidden_size, has_bias=False)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-
         """
         Reshapes the input tensor for the BaiChuanAttention module.
         
@@ -819,7 +802,6 @@ caching is enabled).
             output_attentions: bool = False,
             use_cache: bool = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
-
         '''
         Constructs the attention mechanism for the BaiChuanAttention class.
         
@@ -892,7 +874,6 @@ class DecoderLayer(nn.Cell):
     """
 
     def __init__(self, config: BaiChuanConfig):
-
         """
         Initializes an instance of the DecoderLayer class.
         
@@ -1004,7 +985,6 @@ optional present key value computed during attention.
     
     '''
     def __init__(self, config: BaiChuanConfig):
-
         """
         Initializes a new instance of the BaiChuanLayer class.
         
@@ -1038,7 +1018,6 @@ optional present key value computed during attention.
             output_attentions: Optional[bool] = False,
             use_cache: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
-
         """
         Constructs the BaiChuanLayer.
         
@@ -1098,7 +1077,6 @@ class BaiChuanPreTrainedModel(PreTrainedModel):
     _keys_to_ignore_on_load_unexpected = [r"decoder\.version"]
 
     def _init_weights(self, cell):
-
         """
         Initializes the weights for the given cell.
         
@@ -1134,7 +1112,6 @@ class BaiChuan7bModel(BaiChuanPreTrainedModel):
     """
 
     def __init__(self, config: BaiChuanConfig):
-
         """
         Initializes a new instance of the BaiChuan7bModel class.
         
@@ -1162,7 +1139,6 @@ class BaiChuan7bModel(BaiChuanPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Retrieves the input embeddings for the BaiChuan7bModel.
         
@@ -1180,7 +1156,6 @@ class BaiChuan7bModel(BaiChuanPreTrainedModel):
         return self.embed_tokens
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Sets the input embeddings for the BaiChuan7bModel.
         
@@ -1198,7 +1173,6 @@ class BaiChuan7bModel(BaiChuanPreTrainedModel):
 
     # Copied from transformers.models.bart.modeling_bart.BartDecoder._prepare_decoder_attention_mask
     def _prepare_decoder_attention_mask(self, attention_mask, input_shape, inputs_embeds, past_key_values_length):
-
         """
         This method prepares the decoder attention mask based on the provided parameters.
         
@@ -1247,7 +1221,6 @@ class BaiChuan7bModel(BaiChuanPreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
-
         """
         This method constructs the BaiChuan7bModel by processing the input data and generating model outputs.
         
@@ -1395,7 +1368,6 @@ model output.
     - The construct method is the main entry point for using the model, which takes various inputs and returns the model output.
     """
     def __init__(self, config: BaiChuanConfig):
-
         """
         __init__
         
@@ -1426,7 +1398,6 @@ num_attention_heads, hidden_size, num_hidden_layers, rms_norm_eps, and model_max
         self.alibi_mask = None
 
     def get_input_embeddings(self):
-
         """
         This method returns the input embeddings for the BaiChuan13bModel.
         
@@ -1442,7 +1413,6 @@ num_attention_heads, hidden_size, num_hidden_layers, rms_norm_eps, and model_max
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Method to set the input embeddings for the BaiChuan13bModel.
         
@@ -1462,7 +1432,6 @@ num_attention_heads, hidden_size, num_hidden_layers, rms_norm_eps, and model_max
         self.embed_tokens = value
 
     def get_alibi_mask(self, tensor, seq_length_with_past):
-
         """
         This method is a member of the 'BaiChuan13bModel' class and is used to obtain an alibi mask based on the input tensor and sequence length with past information.
         
@@ -1505,7 +1474,6 @@ num_attention_heads, hidden_size, num_hidden_layers, rms_norm_eps, and model_max
             output_hidden_states: Optional[bool] = False,
             return_dict: Optional[bool] = True,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
-
         """
         Constructs the BaiChuan13bModel.
         
@@ -1623,7 +1591,6 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
     """
 
     def __init__(self, config, size=None):
-
         """
         Initializes a new instance of BaiChuanForCausalLM.
         
@@ -1653,7 +1620,6 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method to retrieve the input embeddings from the model for the BaiChuanForCausalLM class.
         
@@ -1669,7 +1635,6 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
         return self.model.embed_tokens
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Set the input embeddings for the BaiChuanForCausalLM model.
         
@@ -1687,7 +1652,6 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
         self.model.embed_tokens = new_embeddings
 
     def get_output_embeddings(self):
-
         """
         This method retrieves the output embeddings from the BaiChuanForCausalLM model.
         
@@ -1703,7 +1667,6 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Set the output embeddings for BaiChuanForCausalLM model.
         
@@ -1745,7 +1708,6 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
-
         """
         Constructs the Causal Language Model for the BaiChuan model.
         
@@ -1832,7 +1794,6 @@ instance of `CausalLMOutputWithPast` containing the loss, logits, past key value
     def prepare_inputs_for_generation(
             self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
-
         """
         This method prepares inputs for generation in the BaiChuanForCausalLM class.
         
@@ -1879,7 +1840,6 @@ instance of `CausalLMOutputWithPast` containing the loss, logits, past key value
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Reorders the cache for the given beam indices.
         
@@ -1902,7 +1862,6 @@ instance of `CausalLMOutputWithPast` containing the loss, logits, past key value
 
     def chat(self, tokenizer, messages: List[dict], stream=False,
              generation_config: Optional[GenerationConfig]=None):
-
         """
         Method: chat
         

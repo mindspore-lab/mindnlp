@@ -97,7 +97,6 @@ def get_resize_output_image_size(
     size_divisor: int = 32,
     input_data_format: Optional[Union[str, ChannelDimension]] = None,
 ) -> Tuple[int, int]:
-
     '''
     Resizes the input image to the specified shorter and longer dimensions, while maintaining the aspect ratio.
     
@@ -202,7 +201,6 @@ class BridgeTowerImageProcessor(BaseImageProcessor):
         do_pad: bool = True,
         **kwargs,
     ) -> None:
-
         """
         Initializes an instance of the BridgeTowerImageProcessor class.
         

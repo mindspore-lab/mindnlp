@@ -53,7 +53,6 @@ class LayoutLMv2Embeddings(nn.Cell):
     """Construct the embeddings from word, position and token_type embeddings."""
 
     def __init__(self, config):
-
         """
         Initializes the LayoutLMv2Embeddings class with the provided configuration.
         
@@ -94,7 +93,6 @@ class LayoutLMv2Embeddings(nn.Cell):
                 (1, -1))
 
     def _calc_spatial_position_embeddings(self, bbox):
-
         """
         This method calculates spatial position embeddings based on the provided bounding box coordinates.
         
@@ -143,7 +141,6 @@ class LayoutLMv2SelfAttention(nn.Cell):
     """
 
     def __init__(self, config):
-
         """Initializes the LayoutLMv2SelfAttention class.
         
         Args:
@@ -190,7 +187,6 @@ class LayoutLMv2SelfAttention(nn.Cell):
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x):
-
         """
         Args:
             self (LayoutLMv2SelfAttention): The instance of the LayoutLMv2SelfAttention class.
@@ -207,7 +203,6 @@ class LayoutLMv2SelfAttention(nn.Cell):
         return x.permute(0, 2, 1, 3)
 
     def compute_qkv(self, hidden_states):
-
         """
         This method computes the query, key, and value tensors for LayoutLMv2 self-attention mechanism.
         
@@ -247,7 +242,6 @@ class LayoutLMv2SelfAttention(nn.Cell):
             rel_pos=None,
             rel_2d_pos=None,
     ):
-
         """
         Constructs the self-attention mechanism for the LayoutLMv2 model.
         
@@ -312,7 +306,6 @@ class LayoutLMv2Attention(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initialize the LayoutLMv2Attention class.
         
@@ -339,7 +332,6 @@ class LayoutLMv2Attention(nn.Cell):
             rel_pos=None,
             rel_2d_pos=None,
     ):
-
         """
         This method 'construct' is defined in the class 'LayoutLMv2Attention' and is responsible for constructing the attention mechanism in the LayoutLMv2 model.
         
@@ -377,7 +369,6 @@ class LayoutLMv2SelfOutput(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes the LayoutLMv2SelfOutput class.
         
@@ -400,7 +391,6 @@ class LayoutLMv2SelfOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states, input_tensor):
-
         """
         Constructs the self-attention output of the LayoutLMv2 transformer model.
         
@@ -431,7 +421,6 @@ class LayoutLMv2Intermediate(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initialize the LayoutLMv2Intermediate class.
         
@@ -460,7 +449,6 @@ class LayoutLMv2Intermediate(nn.Cell):
             self.intermediate_act_fn = config.hidden_act
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Method 'construct' in the class 'LayoutLMv2Intermediate'.
         
@@ -489,7 +477,6 @@ class LayoutLMv2Output(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the LayoutLMv2Output class.
         
@@ -511,7 +498,6 @@ class LayoutLMv2Output(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the LayoutLMv2Output for the given hidden states and input tensor.
         
@@ -541,7 +527,6 @@ class LayoutLMv2Layer(nn.Cell):
     """
 
     def __init__(self, config):
-
         """Initialize a LayoutLMv2Layer.
         
         Args:
@@ -573,7 +558,6 @@ class LayoutLMv2Layer(nn.Cell):
             rel_pos=None,
             rel_2d_pos=None,
     ):
-
         """Constructs a LayoutLMv2Layer by applying the attention mechanism and feed-forward neural network to the input hidden states.
         
         Args:
@@ -613,7 +597,6 @@ class LayoutLMv2Layer(nn.Cell):
         return outputs
 
     def feed_forward_chunk(self, attention_output):
-
         """
         Performs a feed forward operation on the given attention output in the LayoutLMv2Layer.
         
@@ -636,7 +619,6 @@ class LayoutLMv2Layer(nn.Cell):
 def relative_position_bucket(
         relative_position, bidirectional=True, num_buckets=32, max_distance=128
 ):
-
     '''Calculate the relative position bucket.
     
     Args:
@@ -686,7 +668,6 @@ class LayoutLMv2Encoder(nn.Cell):
     """
 
     def __init__(self, config):
-
         '''
         Initializes a LayoutLMv2Encoder object.
         
@@ -720,7 +701,6 @@ class LayoutLMv2Encoder(nn.Cell):
         self.gradient_checkpointing = False
 
     def _calculate_1d_position_embeddings(self, position_ids):
-
         """
         This method calculates 1D position embeddings for the LayoutLMv2Encoder.
         
@@ -748,7 +728,6 @@ class LayoutLMv2Encoder(nn.Cell):
         return rel_pos
 
     def _calculate_2d_position_embeddings(self, bbox):
-
         """
         Method to calculate 2D position embeddings based on the given bounding box.
         
@@ -793,7 +772,6 @@ class LayoutLMv2Encoder(nn.Cell):
             bbox=None,
             position_ids=None,
     ):
-
         """
         This method constructs the LayoutLMv2Encoder.
         
@@ -914,7 +892,6 @@ class LayoutLMv2VisualBackbone(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the LayoutLMv2VisualBackbone class.
         
@@ -983,7 +960,6 @@ class LayoutLMv2VisualBackbone(nn.Cell):
             param.requires_grad = False
 
     def construct(self, images):
-
         """
         This method 'construct' is defined within the class 'LayoutLMv2VisualBackbone' and is responsible for processing images through the visual backbone network.
         
@@ -1020,7 +996,6 @@ class LayoutLMv2Pooler(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the LayoutLMv2Pooler class.
         
@@ -1039,7 +1014,6 @@ class LayoutLMv2Pooler(nn.Cell):
         self.activation = nn.Tanh()
 
     def construct(self, hidden_states):
-
         """
         Constructs the pooled output tensor for the LayoutLMv2Pooler class.
         
@@ -1074,7 +1048,6 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the LayoutLMv2Model class.
         
@@ -1112,7 +1085,6 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method returns the input embeddings of the LayoutLMv2Model.
         
@@ -1128,7 +1100,6 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the LayoutLMv2Model.
         
@@ -1145,7 +1116,6 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
         self.embeddings.word_embeddings = value
 
     def _calc_text_embeddings(self, input_ids, bbox, position_ids, token_type_ids, inputs_embeds=None):
-
         """
         Calculates the text embeddings for the LayoutLMv2Model.
         
@@ -1191,7 +1161,6 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
         return embeddings
 
     def _calc_img_embeddings(self, image, bbox, position_ids):
-
         """
         Calculate image embeddings for the LayoutLMv2Model.
         
@@ -1228,7 +1197,6 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
         return embeddings
 
     def _calc_visual_bbox(self, image_feature_pool_shape, bbox, visual_shape):
-
         '''
         Calculate the visual bounding box based on the given image features.
         
@@ -1269,7 +1237,6 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
         return visual_bbox
 
     def _get_input_shape(self, input_ids=None, inputs_embeds=None):
-
         """
         Returns the shape of the input tensor for the LayoutLMv2Model.
         
@@ -1450,7 +1417,6 @@ class LayoutLMv2ForSequenceClassification(LayoutLMv2PreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the LayoutLMv2ForSequenceClassification class.
         
@@ -1477,7 +1443,6 @@ class LayoutLMv2ForSequenceClassification(LayoutLMv2PreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method to retrieve the input embeddings from the LayoutLMv2 model for sequence classification.
         
@@ -1651,7 +1616,6 @@ class LayoutLMv2ForTokenClassification(LayoutLMv2PreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes a LayoutLMv2ForTokenClassification instance.
         
@@ -1678,7 +1642,6 @@ class LayoutLMv2ForTokenClassification(LayoutLMv2PreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Returns the input embeddings for LayoutLMv2ForTokenClassification.
         
@@ -1807,7 +1770,6 @@ class LayoutLMv2ForQuestionAnswering(LayoutLMv2PreTrainedModel):
     """
 
     def __init__(self, config, has_visual_segment_embedding=True):
-
         """
         Initialize the LayoutLMv2ForQuestionAnswering class.
         
@@ -1833,7 +1795,6 @@ class LayoutLMv2ForQuestionAnswering(LayoutLMv2PreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method to retrieve the input embeddings from LayoutLMv2 model for question answering.
         

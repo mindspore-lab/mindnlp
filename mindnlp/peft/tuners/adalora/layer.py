@@ -36,8 +36,6 @@ from mindnlp.transformers.ms_utils import Conv1D
 from ..tuners_utils import check_adapters_to_merge, BaseTunerLayer
 
 
-
-
 class AdaLoraLayer(BaseTunerLayer):
     "AdaLoraLayer class for AdaLoraModel."
     # List all names of layers that may contain adapter weights
@@ -46,7 +44,6 @@ class AdaLoraLayer(BaseTunerLayer):
     # other_param_names is defined in LoraLayer
 
     def __init__(self, base_layer: nn.Cell) -> None:
-
         r"""
         Initializes an instance of the AdaLoraLayer class.
         
@@ -92,9 +89,7 @@ class AdaLoraLayer(BaseTunerLayer):
         self.in_features = in_features
         self.out_features = out_features
 
-
     def update_layer(self, adapter_name, r, lora_alpha, lora_dropout, init_lora_weights):
-
         r"""
         This method updates the AdaLoraLayer with the provided parameters.
         
@@ -156,7 +151,6 @@ class AdaLoraLayer(BaseTunerLayer):
         self.set_adapter(self.active_adapters)
 
     def reset_lora_parameters(self, adapter_name):
-
         r"""
         Resets the LoRa parameters of the specified adapter in the AdaLoraLayer class.
         
@@ -197,7 +191,6 @@ operation.
             ))
 
 
-
 class SVDLinear(nn.Cell, AdaLoraLayer):
     "SVD-based adaptation by a dense layer"
     # SVD-based adaptation by a dense layer
@@ -212,7 +205,6 @@ class SVDLinear(nn.Cell, AdaLoraLayer):
         init_lora_weights: bool = True,
         **kwargs,
     ) -> None:
-
         r"""
         Initializes an instance of the SVDLinear class.
         
@@ -292,7 +284,6 @@ class SVDLinear(nn.Cell, AdaLoraLayer):
                 self.get_base_layer().weight.data -= self.get_delta_weight(active_adapter)
 
     def get_delta_weight(self, adapter) -> Tensor:
-
         r"""
         Calculates the delta weight for a given adapter in the SVDLinear class.
         
@@ -319,7 +310,6 @@ class SVDLinear(nn.Cell, AdaLoraLayer):
         )
 
     def construct(self, x: Tensor, *args: Any, **kwargs: Any) -> Tensor:
-
         r"""Constructs a tensor using the SVDLinear method.
         
         Args:
@@ -356,7 +346,6 @@ class SVDLinear(nn.Cell, AdaLoraLayer):
         return result
 
     def __repr__(self) -> str:
-
         r"""
         This method returns a string representation of the object.
         
@@ -384,8 +373,6 @@ class RankAllocator:
     """
 
     def __init__(self, model, peft_config, adapter_name):
-
-        
         """
         Initializes a RankAllocator instance.
         
@@ -413,7 +400,6 @@ class RankAllocator:
         self._set_budget_scheduler(model)
 
     def set_total_step(self, total_step):
-
         r"""
         Sets the total number of steps in the RankAllocator.
         
@@ -431,7 +417,6 @@ class RankAllocator:
         self.peft_config.total_step = total_step
 
     def reset_ipt(self):
-
         r"""
         Resets the 'ipt' attribute, along with its associated attributes 'exp_avg_ipt' and 'exp_avg_unc', in the RankAllocator class.
         
@@ -449,7 +434,6 @@ class RankAllocator:
         self.exp_avg_unc = {}
 
     def _set_budget_scheduler(self, model):
-
         r"""
         This method '_set_budget_scheduler' belongs to the class 'RankAllocator' and is responsible for setting up the budget scheduler based on the provided model.
         
@@ -474,7 +458,6 @@ class RankAllocator:
         self.target_bgt = self.peft_config.target_r * len(self.name_set)
 
     def budget_schedule(self, step: int):
-
         r"""
         This method calculates the budget and mask indicator based on the given step value.
         
@@ -508,7 +491,6 @@ applied.
         return budget, mask_ind
 
     def update_ipt(self, model,gradient):
-
         r"""
         This method updates the importance parameter table (ipt) for the given model using the provided gradient.
         
@@ -546,7 +528,6 @@ applied.
                     )
 
     def _element_score(self, n):
-
         r"""
         This method calculates the element score based on the exponential average input and exponential average uncertainty values.
         
@@ -564,7 +545,6 @@ applied.
         return self.exp_avg_ipt[n] * self.exp_avg_unc[n]
 
     def _combine_ipt(self, ipt_E, ipt_AB):
-
         r"""
         This method combines two input arrays, ipt_E and ipt_AB, into a single array and returns the resulting sum.
         
@@ -588,7 +568,6 @@ applied.
         return sum_ipt
 
     def mask_to_budget(self, model, budget):
-
         r""" 
         The 'mask_to_budget' method in the class 'RankAllocator' calculates a mask threshold based on the given budget and applies the threshold to mask certain parameters in the model.
         
@@ -658,7 +637,6 @@ applied.
         return rank_pattern
 
     def update_and_allocate(self, model, global_step, gradient, force_mask=False):
-
         r"""
         This method updates the model and allocates budget based on the global step and gradient information.
         
@@ -688,7 +666,6 @@ applied.
         return budget, rank_pattern
 
     def mask_using_rank_pattern(self, model, rank_pattern):
-
         r""" 
             Applies a mask to the model parameters based on the provided rank pattern.
         
@@ -706,7 +683,6 @@ applied.
                 None.
         """
 
-        
         def mask_using_rank_pattern(self, model, rank_pattern):
             """
             Applies a mask to the model parameters based on the provided rank pattern.

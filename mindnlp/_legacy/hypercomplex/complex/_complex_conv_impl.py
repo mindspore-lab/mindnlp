@@ -71,7 +71,6 @@ class _ConvImpl(BaseConvImpl):
                   stride: Tuple[int, ...],
                   dilation: Tuple[int, ...],
                   group: int) -> Tuple[Tensor, Tensor]:
-
         r"""
         Constructs the complex convolution operation in the specified mode.
         
@@ -158,7 +157,6 @@ class _KaratsubaConvImpl(BaseConvImpl):
                   stride: Tuple[int, ...],
                   dilation: Tuple[int, ...],
                   group: int) -> Tuple[Tensor, Tensor]:
-
         r"""
         Constructs a complex convolution operation using the Karatsuba algorithm.
         
@@ -242,7 +240,6 @@ class _ReImConvImpl(BaseConvImpl):
                  weight_init: Union[Tensor, str, Initializer, numbers.Number],
                  weight_shape: tuple,
                  **factory_kwargs) -> None:
-
         r"""
         Initializes the _ReImConvImpl object.
         
@@ -273,8 +270,6 @@ class _ReImConvImpl(BaseConvImpl):
                   stride: Tuple[int, ...],
                   dilation: Tuple[int, ...],
                   group: int) -> Tuple[Tensor, Tensor]:
-
-        
         """
         Constructs the real and imaginary parts of the convolution operation.
         
@@ -296,7 +291,6 @@ class _ReImConvImpl(BaseConvImpl):
             (Any exceptions that the function may raise should be documented here.)
         """
         
-
         inp = P.concat([real, imag], axis=self.c_idx)
         weight_y_neg = P.neg(self.weight_y)
         w1 = P.concat([self.weight_x, weight_y_neg], axis=self.c_idx)

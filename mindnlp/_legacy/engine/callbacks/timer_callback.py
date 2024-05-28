@@ -22,7 +22,6 @@ class _Timer:
     """Timer."""
 
     def __init__(self, name):
-
         r"""
         Initializes a new instance of the `_Timer` class.
         
@@ -74,7 +73,6 @@ class Timers:
     """Group of timers."""
 
     def __init__(self):
-
         r"""
         Initializes a Timers object.
         
@@ -90,7 +88,6 @@ class Timers:
         self.timers = {}
 
     def __call__(self, name):
-
         r"""
         This method __call__ in the Timers class allows for creating or retrieving a timer object by name.
         
@@ -109,7 +106,6 @@ class Timers:
         return self.timers[name]
 
     def __contains__(self, item):
-
         r"""
         Checks if the given item is present in the Timers object.
         
@@ -144,7 +140,6 @@ class TimerCallback(Callback):
         time_ndigit (int): Number of decimal places to keep. Default:3
     """
     def __init__(self, print_steps=0, time_ndigit=3):
-
         r"""
         Initializes an instance of the TimerCallback class.
         

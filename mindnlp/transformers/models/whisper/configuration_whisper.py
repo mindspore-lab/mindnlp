@@ -226,7 +226,6 @@ class WhisperConfig(PretrainedConfig):
         median_filter_width=7,
         **kwargs,
     ):
-
         """
         Initialize a WhisperConfig object with the provided parameters.
         

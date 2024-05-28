@@ -89,7 +89,6 @@ class LlavaNextConfig(PretrainedConfig):
         image_grid_pinpoints=None,
         **kwargs,
     ):
-
         """
         This method initializes an instance of the LlavaNextConfig class with the provided parameters.
         

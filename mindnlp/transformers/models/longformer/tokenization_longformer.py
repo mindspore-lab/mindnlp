@@ -213,7 +213,6 @@ class LongformerTokenizer(PreTrainedTokenizer):
         add_prefix_space=False,
         **kwargs,
     ):
-
         """
         Initializes a LongformerTokenizer object.
         
@@ -287,7 +286,6 @@ class LongformerTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
-
         """
         Get the vocabulary size of the LongformerTokenizer.
         
@@ -314,7 +312,6 @@ tokenizer's encoder.
         return len(self.encoder)
 
     def get_vocab(self):
-
         """
         Method: get_vocab
         
@@ -336,7 +333,6 @@ is updated into the vocab dictionary.
         return vocab
 
     def bpe(self, token):
-
         """
         The 'bpe' method in the class 'LongformerTokenizer' is used to apply Byte Pair Encoding (BPE) on a given token.
         
@@ -452,7 +448,6 @@ is updated into the vocab dictionary.
         return text
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary to the specified directory.
         
@@ -572,7 +567,6 @@ is updated into the vocab dictionary.
         return len(cls + token_ids_0 + sep + sep + token_ids_1 + sep) * [0]
 
     def prepare_for_tokenization(self, text, is_split_into_words=False, **kwargs):
-
         """
         Prepare the input text for tokenization by the LongformerTokenizer.
         

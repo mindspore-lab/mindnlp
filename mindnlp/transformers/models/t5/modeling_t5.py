@@ -70,7 +70,6 @@ class T5LayerNorm(nn.Cell):
         self.variance_epsilon = eps
 
     def construct(self, hidden_states):
-
         """
         This method 'construct' is a part of the class 'T5LayerNorm' and is used to perform layer normalization on the input hidden states.
         
@@ -98,7 +97,6 @@ ALL_LAYERNORM_LAYERS.append(T5LayerNorm)
 class T5DenseActDense(nn.Cell):
     """T5DenseActDense"""
     def __init__(self, config: T5Config):
-
         """
         Initializes an instance of the T5DenseActDense class.
         
@@ -122,7 +120,6 @@ class T5DenseActDense(nn.Cell):
         self.act = ACT2FN[config.dense_act_fn]
 
     def construct(self, hidden_states):
-
         """
         This method constructs the hidden states by applying a series of transformations including linear mapping, activation function,
         dropout, and additional conversion based on weight data types.
@@ -149,7 +146,6 @@ class T5DenseActDense(nn.Cell):
 class T5DenseGatedActDense(nn.Cell):
     """T5DenseGatedActDense"""
     def __init__(self, config: T5Config):
-
         """
         Initializes an instance of the T5DenseGatedActDense class.
         
@@ -171,7 +167,6 @@ class T5DenseGatedActDense(nn.Cell):
         self.act = ACT2FN[config.dense_act_fn]
 
     def construct(self, hidden_states):
-
         """
         Constructs the hidden states of the T5DenseGatedActDense model.
         
@@ -200,7 +195,6 @@ class T5DenseGatedActDense(nn.Cell):
 class T5LayerFF(nn.Cell):
     """T5LayerFF"""
     def __init__(self, config: T5Config):
-
         """
         Initializes an instance of the T5LayerFF class.
         
@@ -224,7 +218,6 @@ class T5LayerFF(nn.Cell):
         self.dropout = nn.Dropout(p=config.dropout_rate)
 
     def construct(self, hidden_states):
-
         """
         Constructs the forward pass of the T5LayerFF class.
         
@@ -247,7 +240,6 @@ class T5LayerFF(nn.Cell):
 class T5Attention(nn.Cell):
     """T5Attention"""
     def __init__(self, config: T5Config, has_relative_attention_bias=False):
-
         """
         Initializes an instance of the T5Attention class.
         
@@ -284,7 +276,6 @@ class T5Attention(nn.Cell):
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
-
         """
         Prunes the attention heads in the T5Attention class.
         
@@ -504,7 +495,6 @@ class T5Attention(nn.Cell):
 class T5LayerSelfAttention(nn.Cell):
     """T5LayerSelfAttention"""
     def __init__(self, config, has_relative_attention_bias=False):
-
         """Initialize the T5LayerSelfAttention.
         
         Args:
@@ -534,7 +524,6 @@ class T5LayerSelfAttention(nn.Cell):
         use_cache=False,
         output_attentions=False,
     ):
-
         """
         This method 'construct' in the class 'T5LayerSelfAttention' constructs the output of a T5 self-attention layer.
         
@@ -571,7 +560,6 @@ class T5LayerSelfAttention(nn.Cell):
 class T5LayerCrossAttention(nn.Cell):
     """T5LayerCrossAttention"""
     def __init__(self, config):
-
         """
         Initializes an instance of the T5LayerCrossAttention class.
         
@@ -607,7 +595,6 @@ class T5LayerCrossAttention(nn.Cell):
         query_length=None,
         output_attentions=False,
     ):
-
         """
         This method constructs the T5 layer cross-attention mechanism.
         
@@ -649,7 +636,6 @@ class T5LayerCrossAttention(nn.Cell):
 class T5Block(nn.Cell):
     """T5Block"""
     def __init__(self, config, has_relative_attention_bias=False):
-
         """
         Initializes a new instance of the T5Block class.
         
@@ -688,7 +674,6 @@ class T5Block(nn.Cell):
         output_attentions=False,
         # return_dict=True,
     ):
-
         """
         Constructs a T5Block.
         
@@ -807,7 +792,6 @@ class T5ClassificationHead(nn.Cell):
     """Head for sentence-level classification tasks."""
 
     def __init__(self, config: T5Config):
-
         """
         Initializes a T5ClassificationHead instance.
         
@@ -828,7 +812,6 @@ class T5ClassificationHead(nn.Cell):
         self.out_proj = nn.Dense(config.d_model, config.num_labels)
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the T5 classification head.
         
@@ -868,7 +851,6 @@ class T5PreTrainedModel(PreTrainedModel):
 
     @property
     def dummy_inputs(self):
-
         """
         Method: dummy_inputs
         
@@ -977,7 +959,6 @@ class T5PreTrainedModel(PreTrainedModel):
                                                     cell.relative_attention_bias.weight.shape, cell.relative_attention_bias.weight.dtype))
 
     def _shift_right(self, input_ids):
-
         """
         Shifts the input IDs to the right by one position, inserting the decoder start token ID at the beginning.
         
@@ -1016,7 +997,6 @@ class T5PreTrainedModel(PreTrainedModel):
 class T5Stack(T5PreTrainedModel):
     """T5Stack"""
     def __init__(self, config):
-
         """
         Initializes an instance of the T5Stack class.
         
@@ -1050,7 +1030,6 @@ class T5Stack(T5PreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """Return the input embeddings of the T5Stack.
         
         Args:
@@ -1065,7 +1044,6 @@ class T5Stack(T5PreTrainedModel):
         return self.embed_tokens
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Method to set new input embeddings for the T5Stack model.
         
@@ -1096,7 +1074,6 @@ class T5Stack(T5PreTrainedModel):
         output_hidden_states=None,
         return_dict=None,
     ):
-
         """
         Constructs the T5Stack model.
         
@@ -1275,9 +1252,7 @@ class T5Model(T5PreTrainedModel):
     ]
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
-
     def __init__(self, config: T5Config):
-
         """
         __init__ method in the T5Model class initializes a new instance of the class.
         
@@ -1310,7 +1285,6 @@ and num_decoder_layers.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Get the input embeddings for the T5Model.
         
@@ -1326,7 +1300,6 @@ and num_decoder_layers.
         return self.shared
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Sets the input embeddings for the T5Model.
         
@@ -1345,7 +1318,6 @@ and num_decoder_layers.
         # self.decoder.set_input_embeddings(new_embeddings)
 
     def _tie_weights(self):
-
         """
         Tie the weights of the T5Model if specified in the configuration.
         
@@ -1364,7 +1336,6 @@ and num_decoder_layers.
             self._tie_or_clone_weights(self.decoder.embed_tokens, self.shared)
 
     def get_encoder(self):
-
         """
         This method returns the encoder for the T5Model.
         
@@ -1380,7 +1351,6 @@ and num_decoder_layers.
         return self.encoder
 
     def get_decoder(self):
-
         """
         Method to retrieve the decoder of the T5Model.
         
@@ -1421,7 +1391,6 @@ and num_decoder_layers.
         output_hidden_states = None,
         return_dict = None,
     ):
-
         """
         Constructs the T5 model for sequence-to-sequence tasks.
         
@@ -1511,7 +1480,6 @@ class T5ForConditionalGeneration(T5PreTrainedModel):
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight", "lm_head.weight"]
 
     def __init__(self, config: T5Config):
-
         """
         Initializes an instance of the T5ForConditionalGeneration class.
         
@@ -1548,7 +1516,6 @@ layers.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Returns the input embeddings for the T5 model.
         
@@ -1564,7 +1531,6 @@ layers.
         return self.shared
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Set input embeddings for the T5 model.
         
@@ -1584,7 +1550,6 @@ layers.
         # self.decoder.set_input_embeddings(new_embeddings)
 
     def _tie_weights(self):
-
         """
         Method _tie_weights in the class T5ForConditionalGeneration ties or clones weights for word embeddings.
         
@@ -1603,7 +1568,6 @@ layers.
             self._tie_or_clone_weights(self.decoder.embed_tokens, self.shared)
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Set the output embeddings for the T5 model.
         
@@ -1621,7 +1585,6 @@ layers.
         self.lm_head = new_embeddings
 
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings for the T5 model.
         
@@ -1637,7 +1600,6 @@ layers.
         return self.lm_head
 
     def get_encoder(self):
-
         """
         This method is part of the 'T5ForConditionalGeneration' class and is used to retrieve the encoder.
         
@@ -1653,7 +1615,6 @@ layers.
         return self.encoder
 
     def get_decoder(self):
-
         """
         Returns the decoder used by the T5 model for conditional generation.
         
@@ -1687,7 +1648,6 @@ layers.
         output_hidden_states = None,
         return_dict = None,
     ):
-
         """Constructs the T5 model for conditional generation.
         
         Args:
@@ -1801,7 +1761,6 @@ layers.
             encoder_attentions=encoder_outputs.attentions,
         )
 
-
     def prepare_inputs_for_generation(
         self,
         input_ids,
@@ -1815,7 +1774,6 @@ layers.
         encoder_outputs=None,
         **kwargs,
     ):
-
         """
         Prepare inputs for generation.
         
@@ -1872,7 +1830,6 @@ layers.
         }
 
     def prepare_decoder_input_ids_from_labels(self, labels: mindspore.Tensor):
-
         """
         Prepare decoder input ids from labels.
         
@@ -1892,7 +1849,6 @@ layers.
         return self._shift_right(labels)
 
     def _reorder_cache(self, past_key_values, beam_idx):
-
         """
         This method '_reorder_cache' is defined within the class 'T5ForConditionalGeneration' and is used to reorder the cache for decoding during the T5 model's conditional generation.
         
@@ -1945,7 +1901,6 @@ class T5EncoderModel(T5PreTrainedModel):
     _keys_to_ignore_on_load_unexpected = [r"decoder"]
 
     def __init__(self, config: T5Config):
-
         """
         Initializes a T5EncoderModel instance.
         
@@ -1972,7 +1927,6 @@ class T5EncoderModel(T5PreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """Retrieve the input embeddings.
         
         This method is used to obtain the input embeddings for the T5EncoderModel class.
@@ -1989,7 +1943,6 @@ class T5EncoderModel(T5PreTrainedModel):
         return self.shared
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Sets the input embeddings for the T5EncoderModel.
         
@@ -2007,7 +1960,6 @@ class T5EncoderModel(T5PreTrainedModel):
         self.encoder.set_input_embeddings(new_embeddings)
 
     def _tie_weights(self):
-
         """
         Ties the weights of the word embeddings in the T5EncoderModel.
         
@@ -2024,7 +1976,6 @@ class T5EncoderModel(T5PreTrainedModel):
             self._tie_or_clone_weights(self.encoder.embed_tokens, self.shared)
 
     def get_encoder(self):
-
         """
         Get the encoder of the T5EncoderModel.
         
@@ -2057,7 +2008,6 @@ class T5EncoderModel(T5PreTrainedModel):
         output_hidden_states = None,
         return_dict = None,
     ):
-
         """
         Constructs the T5EncoderModel.
         
@@ -2119,7 +2069,6 @@ class T5ForSequenceClassification(T5PreTrainedModel):
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
     def __init__(self, config: T5Config):
-
         """
         Initializes an instance of the T5ForSequenceClassification class.
         
@@ -2155,7 +2104,6 @@ object.
         self.classification_head = T5ClassificationHead(config)
         # Initialize weights and apply final processing
         self.post_init()
-
 
     def construct(
         self,
@@ -2283,7 +2231,6 @@ other relevant information.
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
     def __init__(self, config: T5Config):
-
         """
         Initializes an instance of the T5ForQuestionAnswering class.
         
@@ -2323,9 +2270,7 @@ other relevant information.
         # Initialize weights and apply final processing
         self.post_init()
 
-
     def get_input_embeddings(self):
-
         '''
         Method: get_input_embeddings
         
@@ -2344,7 +2289,6 @@ other relevant information.
         return self.shared
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Method to set new input embeddings for the T5 model used for Question Answering.
         
@@ -2365,7 +2309,6 @@ other relevant information.
         # self.decoder.set_input_embeddings(new_embeddings)
 
     def _tie_weights(self):
-
         """
         Ties the weights of the word embeddings in the T5ForQuestionAnswering model.
         
@@ -2383,7 +2326,6 @@ other relevant information.
             self._tie_or_clone_weights(self.decoder.embed_tokens, self.shared)
 
     def get_encoder(self):
-
         """
         Returns the encoder used for T5 question answering.
         
@@ -2399,7 +2341,6 @@ other relevant information.
         return self.encoder
 
     def get_decoder(self):
-
         """
         Returns the decoder for the T5 model used for question answering.
         

@@ -19,7 +19,6 @@ Falcon model
 """
 
 
-
 import math
 import warnings
 from typing import Optional, Tuple, Union
@@ -75,7 +74,6 @@ def rotate_half(x):
 
 # Copied from transformers.models.llama.modeling_llama._get_unpad_data
 def _get_unpad_data(padding_mask):
-
     """
     This function retrieves the necessary data from a padding mask for further processing.
     
@@ -138,7 +136,6 @@ class FalconRotaryEmbedding(nn.Cell):
     """
 
     def __init__(self, dim: int, max_position_embeddings=2048, base=10000):
-
         """
         Initializes an instance of the FalconRotaryEmbedding class.
         
@@ -166,7 +163,6 @@ class FalconRotaryEmbedding(nn.Cell):
         )
 
     def _set_cos_sin_cache(self, seq_len, dtype):
-
         """
         Sets the cosine and sine cache for FalconRotaryEmbedding.
         
@@ -190,7 +186,6 @@ class FalconRotaryEmbedding(nn.Cell):
         self.sin_cached = emb.sin().astype(dtype)
 
     def construct(self, x, seq_len=None):
-
         """
         Constructs the FalconRotaryEmbedding.
         
@@ -221,7 +216,6 @@ class FalconLinearScalingRotaryEmbedding(FalconRotaryEmbedding):
     def __init__(
         self, dim: int, max_position_embeddings=2048, base=10000, scaling_factor=1.0
     ):
-
         """
         __init__
         
@@ -244,7 +238,6 @@ class FalconLinearScalingRotaryEmbedding(FalconRotaryEmbedding):
         super().__init__(dim, max_position_embeddings, base)
 
     def _set_cos_sin_cache(self, seq_len, dtype):
-
         """
         Set the cached values for cosine and sine embeddings based on the given sequence length and data type.
         
@@ -276,7 +269,6 @@ class FalconDynamicNTKScalingRotaryEmbedding(FalconRotaryEmbedding):
     def __init__(
         self, dim: int, max_position_embeddings=2048, base=10000, scaling_factor=1.0
     ):
-
         """
         Initializes an instance of the FalconDynamicNTKScalingRotaryEmbedding class.
         
@@ -297,7 +289,6 @@ class FalconDynamicNTKScalingRotaryEmbedding(FalconRotaryEmbedding):
         super().__init__(dim, max_position_embeddings, base)
 
     def _set_cos_sin_cache(self, seq_len, dtype):
-
         """
         This method '_set_cos_sin_cache' is a part of the 'FalconDynamicNTKScalingRotaryEmbedding' class and is responsible for caching cosine and sine values based on the input sequence length and data type.
         
@@ -438,7 +429,6 @@ class FalconAttention(nn.Cell):
     """
 
     def __init__(self, config: FalconConfig):
-
         """
         Initialize the FalconAttention class with the provided configuration.
         
@@ -797,7 +787,6 @@ class FalconMLP(nn.Cell):
         Tensor: The output tensor after applying the MLP transformation."""
 
     def __init__(self, config: FalconConfig):
-
         """
         Initializes a FalconMLP instance.
         
@@ -827,7 +816,6 @@ class FalconMLP(nn.Cell):
         self.hidden_dropout = config.hidden_dropout
 
     def construct(self, x: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the FalconMLP by performing forward propagation on the input tensor 'x'.
         
@@ -869,7 +857,6 @@ class FalconDecoderLayer(nn.Cell):
     """
 
     def __init__(self, config: FalconConfig):
-
         """
         Initializes a FalconDecoderLayer object.
         
@@ -1069,7 +1056,6 @@ class FalconModel(FalconPreTrainedModel):
     """
 
     def __init__(self, config: FalconConfig):
-
         """
         Initializes a FalconModel instance.
         
@@ -1110,7 +1096,6 @@ class FalconModel(FalconPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Returns the input embeddings used by the FalconModel.
         
@@ -1126,7 +1111,6 @@ class FalconModel(FalconPreTrainedModel):
         return self.word_embeddings
 
     def set_input_embeddings(self, new_embeddings: mindspore.Tensor):
-
         """
         Sets the input embeddings for the FalconModel.
         
@@ -1157,7 +1141,6 @@ class FalconModel(FalconPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor, ...], BaseModelOutputWithPastAndCrossAttentions]:
-
         """
         Constructs the Falcon model.
         
@@ -1333,7 +1316,6 @@ class FalconForCausalLM(FalconPreTrainedModel):
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config: FalconConfig):
-
         """
         Initializes a new instance of the FalconForCausalLM class.
         
@@ -1355,7 +1337,6 @@ class FalconForCausalLM(FalconPreTrainedModel):
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings of the FalconForCausalLM model.
         
@@ -1378,7 +1359,6 @@ downstream tasks such as fine-tuning or feature extraction.
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings: mindspore.Tensor):
-
         """
         Sets the output embeddings of the FalconForCausalLM model.
         
@@ -1405,7 +1385,6 @@ downstream tasks such as fine-tuning or feature extraction.
         position_ids: Optional[mindspore.Tensor] = None,
         **kwargs,
     ) -> dict:
-
         """
         Prepare inputs for generation.
         
@@ -1559,7 +1538,6 @@ class FalconForSequenceClassification(FalconPreTrainedModel):
     """
 
     def __init__(self, config: FalconConfig):
-
         """
         Initializes a new instance of the FalconForSequenceClassification class.
         
@@ -1698,7 +1676,6 @@ class FalconForTokenClassification(FalconPreTrainedModel):
     """
 
     def __init__(self, config: FalconConfig):
-
         """
         Initializes an instance of FalconForTokenClassification.
         
@@ -1825,7 +1802,6 @@ class FalconForQuestionAnswering(FalconPreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the FalconForQuestionAnswering class.
         

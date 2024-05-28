@@ -151,7 +151,6 @@ class OpenELMConfig(PretrainedConfig):
         eos_token_id: int = 2,
         **kwargs,
     ) -> None:
-
         """
         This method initializes an instance of the OpenELMConfig class with the provided parameters.
         
@@ -218,7 +217,6 @@ class OpenELMConfig(PretrainedConfig):
         )
 
     def __post_init__(self) -> None:
-
         """
         This method initializes the configuration parameters for the OpenELM model.
         

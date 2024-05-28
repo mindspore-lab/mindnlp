@@ -114,7 +114,6 @@ FEATURE_EXTRACTOR_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, FEATURE_EXTRA
 
 
 def feature_extractor_class_from_name(class_name: str):
-
     """
     Retrieves the feature extractor class based on the given class name.
     
@@ -268,7 +267,6 @@ class AutoFeatureExtractor:
     """
 
     def __init__(self):
-
         """
         Initializes an instance of the AutoFeatureExtractor class.
         

@@ -23,7 +23,6 @@ from mindnlp.utils import ExplicitEnum
 from .base import GenericTensor, Pipeline
 
 def sigmoid(_outputs):
-
     """
     Args:
         _outputs (numeric): The input value to calculate the sigmoid function.
@@ -38,7 +37,6 @@ def sigmoid(_outputs):
 
 
 def softmax(_outputs):
-
     """
     This function calculates the softmax values of the input array _outputs.
     Args:
@@ -107,7 +105,6 @@ class TextClassificationPipeline(Pipeline):
     function_to_apply = ClassificationFunction.NONE
 
     def __init__(self, **kwargs):
-
         """
         Initializes an instance of the TextClassificationPipeline class.
         
@@ -123,7 +120,6 @@ class TextClassificationPipeline(Pipeline):
         super().__init__(**kwargs)
 
     def _sanitize_parameters(self, return_all_scores=None, function_to_apply=None, top_k="", **tokenizer_kwargs):
-
         """
         Sanitizes and processes the parameters for the TextClassificationPipeline.
         
@@ -216,7 +212,6 @@ class TextClassificationPipeline(Pipeline):
             return result
 
     def preprocess(self, inputs, **tokenizer_kwargs) -> Dict[str, GenericTensor]:
-
         """
         Preprocesses the input data for text classification using a tokenizer.
         
@@ -252,7 +247,6 @@ class TextClassificationPipeline(Pipeline):
         return self.tokenizer(inputs, return_tensors='ms', **tokenizer_kwargs)
 
     def _forward(self, model_inputs):
-
         """
         Forward the model with the provided inputs.
         
@@ -274,7 +268,6 @@ class TextClassificationPipeline(Pipeline):
         return model_forward(**model_inputs)
 
     def postprocess(self, model_outputs, function_to_apply=None, top_k=1, _legacy=True):
-
         """
         Postprocess method in the TextClassificationPipeline class.
         

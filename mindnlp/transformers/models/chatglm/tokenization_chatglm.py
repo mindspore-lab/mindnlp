@@ -32,7 +32,6 @@ PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
 class TextTokenizer:
     """TextTokenizer"""
     def __init__(self, model_path):
-
         """
         Initializes a TextTokenizer object with the provided model path.
         
@@ -55,7 +54,6 @@ class TextTokenizer:
         self.num_tokens = self.sp.vocab_size()
 
     def encode(self, text):
-
         """
         Encode the given text using the SentencePiece tokenizer.
         
@@ -72,7 +70,6 @@ class TextTokenizer:
         return self.sp.EncodeAsIds(text)
 
     def decode(self, ids: List[int]):
-
         """
         Decodes a list of integer IDs into a text sequence using the SentencePiece tokenizer.
         
@@ -89,7 +86,6 @@ class TextTokenizer:
         return self.sp.DecodeIds(ids)
 
     def tokenize(self, text):
-
         """
         Tokenizes the input text using the SentencePiece tokenizer.
         
@@ -106,7 +102,6 @@ class TextTokenizer:
         return self.sp.EncodeAsPieces(text)
 
     def convert_tokens_to_string(self, tokens):
-
         """
         Converts a list of tokens into a string using the SentencePiece model.
         
@@ -123,7 +118,6 @@ class TextTokenizer:
         return self.sp.DecodePieces(tokens)
 
     def convert_tokens_to_ids(self, tokens):
-
         """
         Converts a list of tokens into their corresponding ids using the TextTokenizer.
         
@@ -143,7 +137,6 @@ class TextTokenizer:
         return [self.sp.PieceToId(token) for token in tokens]
 
     def convert_token_to_id(self, token):
-
         """
         Converts a token to its corresponding ID using the TextTokenizer.
         
@@ -161,7 +154,6 @@ class TextTokenizer:
         return self.sp.PieceToId(token)
 
     def convert_id_to_token(self, idx):
-
         """
         Converts an index to its corresponding token.
         
@@ -178,7 +170,6 @@ class TextTokenizer:
         return self.sp.IdToPiece(idx)
 
     def __len__(self):
-
         """
         This method returns the number of tokens in the TextTokenizer object.
         
@@ -203,7 +194,6 @@ class SPTokenizer:
             max_blank_length=80,
             byte_fallback=True,
     ):
-
         """
         __init__ method for SPTokenizer class.
         
@@ -240,7 +230,6 @@ class SPTokenizer:
         self.text_tokenizer = TextTokenizer(vocab_file)
 
     def _get_text_tokenizer(self):
-
         """
         Method _get_text_tokenizer in class SPTokenizer.
         
@@ -257,7 +246,6 @@ class SPTokenizer:
 
     @staticmethod
     def get_blank_token(length: int):
-
         """
         This method generates a blank token based on the specified length.
         
@@ -275,7 +263,6 @@ class SPTokenizer:
 
     @staticmethod
     def get_tab_token():
-
         """
         This method is a static method belonging to the 'SPTokenizer' class. It returns a tab token.
         
@@ -292,7 +279,6 @@ class SPTokenizer:
 
     @property
     def num_text_tokens(self):
-
         """
         Returns the number of text tokens in the SPTokenizer object.
         
@@ -309,7 +295,6 @@ class SPTokenizer:
 
     @property
     def num_tokens(self):
-
         """
         Method to calculate the total number of tokens in the SPTokenizer instance.
         
@@ -326,7 +311,6 @@ class SPTokenizer:
 
     @staticmethod
     def _encode_whitespaces(text: str, max_len: int = 80):
-
         """
         This method encodes whitespaces in the input text.
         
@@ -346,7 +330,6 @@ class SPTokenizer:
         return text
 
     def _preprocess(self, text: str, linebreak=True, whitespaces=True):
-
         """
         Preprocesses the given text by replacing linebreaks and encoding whitespaces.
         
@@ -386,7 +369,6 @@ class SPTokenizer:
         return tokens if add_dummy_prefix else tokens[2:]
 
     def postprocess(self, text):
-
         """
         postprocess method in SPTokenizer class.
         
@@ -407,7 +389,6 @@ class SPTokenizer:
         return text
 
     def decode(self, text_ids: List[int]) -> str:
-
         """
         Decode the given text ids using the SPTokenizer.
         
@@ -429,7 +410,6 @@ class SPTokenizer:
         return text
 
     def decode_tokens(self, tokens: List[str]) -> str:
-
         """Decode a list of tokens into a string.
         
         Args:
@@ -466,7 +446,6 @@ formatting. The method returns the final decoded string as output. This method i
         return tokens if add_dummy_prefix else tokens[2:]
 
     def __getitem__(self, x: Union[int, str]):
-
         """
         This method is used to retrieve items from the SPTokenizer instance based on the provided key.
         
@@ -522,7 +501,6 @@ class ChatGLMTokenizer(PreTrainedTokenizer):
             num_image_tokens=20000,
             **kwargs
     ) -> None:
-
         """
         Initializes a ChatGLMTokenizer object.
         
@@ -576,7 +554,6 @@ class ChatGLMTokenizer(PreTrainedTokenizer):
 
     @property
     def gmask_token_id(self) -> Optional[int]:
-
         """
         This method returns the token ID of the gmask token in the ChatGLMTokenizer.
         
@@ -615,7 +592,6 @@ class ChatGLMTokenizer(PreTrainedTokenizer):
         return vocab
 
     def preprocess_text(self, inputs):
-
         """
         preprocess_text method in the ChatGLMTokenizer class preprocesses the input text based on the specified configuration.
         
@@ -649,7 +625,6 @@ single space. If self.do_lower_case is True, the text is converted to lowercase.
         return seq
 
     def convert_tokens_to_string(self, tokens: List[str]) -> str:
-
         """
         Converts a list of tokens into a single string representation.
         
@@ -679,7 +654,6 @@ single space. If self.do_lower_case is True, the text is converted to lowercase.
             token_ids: Union[int, List[int]],
             **kwargs
     ) -> str:
-
         """
         This method decodes the given token IDs into a string representation.
         

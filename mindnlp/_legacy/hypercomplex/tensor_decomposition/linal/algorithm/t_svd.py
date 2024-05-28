@@ -37,7 +37,6 @@ class with a value of -1, indicating that no truncation is applied.
 
     @staticmethod
     def decompose(matrix: Matrix) -> Tuple[Matrix, Matrix, Matrix]:
-
         r"""
         Decompose the given matrix using the TSVD method.
         

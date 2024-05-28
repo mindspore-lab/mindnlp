@@ -614,7 +614,6 @@ class XLMTokenizer(PreTrainedTokenizer):
         do_lowercase_and_remove_accent=True,
         **kwargs,
     ):
-
         ''' 
         Initializes an instance of XLMTokenizer.
         
@@ -691,7 +690,6 @@ class XLMTokenizer(PreTrainedTokenizer):
 
     @property
     def do_lower_case(self):
-
         """
         This method, 'do_lower_case', is a property method within the 'XLMTokenizer' class.
         
@@ -707,7 +705,6 @@ class XLMTokenizer(PreTrainedTokenizer):
         return self.do_lowercase_and_remove_accent
 
     def moses_punct_norm(self, text, lang):
-
         """
         The 'moses_punct_norm' method is a member of the 'XLMTokenizer' class. It normalizes punctuation in a given text based on the specified language using the MosesPunctNormalizer.
         
@@ -730,7 +727,6 @@ class XLMTokenizer(PreTrainedTokenizer):
         return punct_normalizer.normalize(text)
 
     def moses_tokenize(self, text, lang):
-
         """
         Performs tokenization using the MosesTokenizer from the SentencePiece library.
         
@@ -777,7 +773,6 @@ of tokens rather than a single string. The 'escape' parameter is set to False, i
         return moses_tokenizer.tokenize(text, return_str=False, escape=False)
 
     def moses_pipeline(self, text, lang):
-
         """
         Applies the Moses pipeline to preprocess text.
         
@@ -798,7 +793,6 @@ of tokens rather than a single string. The 'escape' parameter is set to False, i
         return text
 
     def ja_tokenize(self, text):
-
         """
         Method to tokenize Japanese text using KyTea library.
         
@@ -836,7 +830,6 @@ of tokens rather than a single string. The 'escape' parameter is set to False, i
 
     @property
     def vocab_size(self):
-
         """
         Returns the size of the vocabulary used by the XLMTokenizer.
         
@@ -861,7 +854,6 @@ of tokens rather than a single string. The 'escape' parameter is set to False, i
         return len(self.encoder)
 
     def get_vocab(self):
-
         """Return the vocabulary of the XLMTokenizer.
         
         Args:
@@ -884,7 +876,6 @@ of tokens rather than a single string. The 'escape' parameter is set to False, i
         return dict(self.encoder, **self.added_tokens_encoder)
 
     def bpe(self, token):
-
         """
         This method is part of the XLMTokenizer class and performs Byte Pair Encoding (BPE) on a given token.
         
@@ -1135,7 +1126,6 @@ of tokens rather than a single string. The 'escape' parameter is set to False, i
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary to the specified directory.
         
@@ -1180,7 +1170,6 @@ of tokens rather than a single string. The 'escape' parameter is set to False, i
         return vocab_file, merge_file
 
     def __getstate__(self):
-
         """
         Method '__getstate__' in the class 'XLMTokenizer'.
         
@@ -1201,7 +1190,6 @@ of tokens rather than a single string. The 'escape' parameter is set to False, i
         return state
 
     def __setstate__(self, d):
-
         """
         Sets the state of the XLMTokenizer object.
         

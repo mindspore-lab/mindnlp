@@ -100,7 +100,6 @@ class CpmBeeLayerNorm(nn.Cell):
     """
 
     def __init__(self, config: CpmBeeConfig):
-
         """
         Initializes a CpmBeeLayerNorm object with the provided configuration.
         
@@ -162,7 +161,6 @@ class CpmBeeAttention(nn.Cell):
             Constructs the attention mechanism.
     """
     def __init__(self, config: CpmBeeConfig):
-
         """
         Initializes an instance of the CpmBeeAttention class.
         
@@ -321,7 +319,6 @@ class CpmBeeSelfAttentionBlock(nn.Cell):
         Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]: The updated hidden states, attention weights, and current key-value states.
     '''
     def __init__(self, config: CpmBeeConfig):
-
         """
         Initializes a CpmBeeSelfAttentionBlock instance.
         
@@ -400,7 +397,6 @@ class CpmBeeDenseGatedACT(nn.Cell):
     
     """
     def __init__(self, config: CpmBeeConfig):
-
         """
         Initializes a new instance of the CpmBeeDenseGatedACT class.
         
@@ -455,7 +451,6 @@ class CpmBeeFeedForward(nn.Cell):
         - mindspore.Tensor: Transformed hidden states after passing through the feedforward layer.
     """
     def __init__(self, config: CpmBeeConfig):
-
         """
         Initializes an instance of the CpmBeeFeedForward class.
         
@@ -511,7 +506,6 @@ class CpmBeeFFNBlock(nn.Cell):
     
     """
     def __init__(self, config: CpmBeeConfig):
-
         """
         Initializes a CpmBeeFFNBlock instance.
         
@@ -589,7 +583,6 @@ Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None, use_cache: Optional[
 shape `(2, batch, num_heads, seq_len, dim_head)`.
     """
     def __init__(self, config: CpmBeeConfig, mask_att: bool = False, mask_ffn: bool = False):
-
         """
         __init__
         
@@ -697,7 +690,6 @@ class CpmBeeEncoder(nn.Cell):
                 Tuple[mindspore.Tensor, ...]: Attention weights of all layers if 'output_attentions' is enabled.
     """
     def __init__(self, config: CpmBeeConfig):
-
         """
         Initializes a new instance of the CpmBeeEncoder class.
         
@@ -815,7 +807,6 @@ class CpmBeeBucketPositionBias(nn.Cell):
     
     """
     def __init__(self, config: CpmBeeConfig) -> None:
-
         """Initializes an instance of the CpmBeeBucketPositionBias class.
         
         Args:
@@ -849,7 +840,6 @@ class CpmBeeBucketPositionBias(nn.Cell):
         )
 
     def construct(self, query_pos: mindspore.Tensor, key_pos: mindspore.Tensor, rel_buckets: mindspore.Tensor):
-
         """
         This method constructs relative position bias embeddings based on the input query positions, key positions, and relative buckets.
         
@@ -908,7 +898,6 @@ class CpmBeeBucketPositionBias(nn.Cell):
         return embeds
 
     def _position_bucket(self, relative_position, num_buckets=32, max_distance=128):
-
         """
         This method calculates the position bucket for a given relative position within a specified range.
         
@@ -966,7 +955,6 @@ class CpmBeeOutput(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes a CpmBeeOutput instance.
         
@@ -992,7 +980,6 @@ class CpmBeeOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the CpmBeeOutput.
         
@@ -1026,7 +1013,6 @@ class CpmBeeRotaryEmbedding(nn.Cell):
     """
 
     def __init__(self, config: CpmBeeConfig):
-
         '''
         Initializes a new instance of the CpmBeeRotaryEmbedding class.
         
@@ -1049,7 +1035,6 @@ class CpmBeeRotaryEmbedding(nn.Cell):
         self.inv_freq = inv_freq.to(config.ms_dtype)
 
     def construct(self, x: mindspore.Tensor, x_pos: mindspore.Tensor):
-
         """
         Constructs a rotary embedding for a given input tensor.
         
@@ -1084,7 +1069,6 @@ class CpmBeeEmbeddingExt(nn.Embedding):
     """
 
     def __init__(self, config: CpmBeeConfig):
-
         """
         Initialize the CpmBeeEmbeddingExt object.
         
@@ -1106,7 +1090,6 @@ class CpmBeeEmbeddingExt(nn.Embedding):
         self.rotary_emb = CpmBeeRotaryEmbedding(config)
 
     def construct(self, ids: mindspore.Tensor, ids_sub: mindspore.Tensor):
-
         """
         Construct and return the embeddings of the given input IDs and sub-IDs for the CpmBeeEmbeddingExt class.
         
@@ -1131,7 +1114,6 @@ class CpmBeeEmbeddingExt(nn.Embedding):
         return self.rotary_emb(embeds, ids_sub)
 
     def projection(self, x: mindspore.Tensor, ext_table: Optional[mindspore.Tensor] = None):
-
         """
         This method projects the input tensor 'x' using a dense layer and optionally concatenates it with another tensor 'ext_table'.
         
@@ -1212,7 +1194,6 @@ Optional[mindspore.Tensor] = None, past_states: Optional[Dict] = None, output_at
 Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs): Performs inference using the CpmBee model with the provided input and configuration.
     """
     def __init__(self, config: CpmBeeConfig):
-
         """
         Initializes an instance of the CpmBeeModel class.
         
@@ -1241,7 +1222,6 @@ Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs): Performs i
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings for the CpmBeeModel.
         
@@ -1258,7 +1238,6 @@ Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs): Performs i
         return self.input_embedding
 
     def set_input_embeddings(self, embeddings, **kwargs):
-
         """
         This method sets the input embeddings for the CpmBeeModel.
         
@@ -1292,7 +1271,6 @@ Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs): Performs i
         return_dict: Optional[bool] = None,
         **kwargs,
     ):
-
         """Constructs the CpmBeeModel.
         
             Args:
@@ -1436,7 +1414,6 @@ Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs): Performs i
         return_dict: Optional[bool] = None,
         **kwargs,
     ):
-
         '''
         Perform inference using the CpmBeeModel.
         
@@ -1622,7 +1599,6 @@ class CpmBeeBeamSearchScorer(BeamSearchScorer):
         max_length: Optional[int] = None,
         **model_kwargs,
     ):
-
         """
         Initializes the CpmBeeBeamSearchScorer object.
         
@@ -1697,7 +1673,6 @@ class CpmBeeBeamSearchScorer(BeamSearchScorer):
         ext_table_ids_cpu: Optional[mindspore.Tensor] = None,
         **model_kwargs,
     ) -> Tuple[mindspore.Tensor]:
-
         """
         Process the beam search for the CpmBeeBeamSearchScorer.
         
@@ -1853,7 +1828,6 @@ class CpmBeeBeamSearchScorer(BeamSearchScorer):
         )
 
     def finalize(self) -> Tuple[mindspore.Tensor]:
-
         """
         Finalizes the beam search scoring process and returns the best hypotheses.
         
@@ -1895,7 +1869,6 @@ assigned to it. The selected best hypotheses are then returned as a tuple of min
         end_idx=None,
         window_size=None,
     ):
-
         """
         Applies repetition penalty to the logits for beam search in the CpmBeeBeamSearchScorer class.
         
@@ -1959,7 +1932,6 @@ returns a dictionary or a list of dictionaries with the '<ans>' field filled wit
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config: CpmBeeConfig):
-
         """
         Initializes a new instance of the CpmBeeForCausalLM class.
         
@@ -2237,7 +2209,6 @@ returns a dictionary or a list of dictionaries with the '<ans>' field filled wit
         )
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings from the CpmBeeForCausalLM object.
         
@@ -2253,7 +2224,6 @@ returns a dictionary or a list of dictionaries with the '<ans>' field filled wit
         return self.cpmbee.input_embedding
 
     def set_input_embeddings(self, embeddings):
-
         """
         Sets the input embeddings for the CpmBeeForCausalLM class.
         
@@ -2270,7 +2240,6 @@ returns a dictionary or a list of dictionaries with the '<ans>' field filled wit
         self.cpmbee.input_embedding = embeddings
 
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings for the CpmBeeForCausalLM model.
         
@@ -2286,7 +2255,6 @@ returns a dictionary or a list of dictionaries with the '<ans>' field filled wit
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the CpmBeeForCausalLM model.
         
@@ -2405,7 +2373,6 @@ returns a dictionary or a list of dictionaries with the '<ans>' field filled wit
         return model_kwargs
 
     def _reorder_cache(self, past_key_values: Dict, beam_idx: mindspore.Tensor):
-
         """
         Reorders the cache of past key values for beam search decoding in a CpmBeeForCausalLM object.
         

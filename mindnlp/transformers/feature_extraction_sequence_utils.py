@@ -40,7 +40,6 @@ class SequenceFeatureExtractor(FeatureExtractionMixin):
     """
 
     def __init__(self, feature_size: int, sampling_rate: int, padding_value: float, **kwargs):
-
         """
         Initializes a SequenceFeatureExtractor object.
         

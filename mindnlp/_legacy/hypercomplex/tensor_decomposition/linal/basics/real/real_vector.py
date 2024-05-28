@@ -49,7 +49,6 @@ as addition, subtraction, multiplication, and division with scalars and other ve
     def __init__(self,
                  size: Optional[int] = None,
                  items: Union[np.ndarray, List, NoneType] = None) -> None:
-
         r"""
         Initializes a Vector object.
         
@@ -79,7 +78,6 @@ as addition, subtraction, multiplication, and division with scalars and other ve
         super(Vector, self).__init__(size)
 
     def __getitem__(self, key):
-
         r"""
         Method to retrieve an item from the Vector instance.
         
@@ -100,7 +98,6 @@ as addition, subtraction, multiplication, and division with scalars and other ve
             return Scalar(x)
 
     def __neg__(self) -> 'Vector':
-
         r"""
         Method '__neg__' in the 'Vector' class negates the vector items.
         
@@ -119,7 +116,6 @@ as addition, subtraction, multiplication, and division with scalars and other ve
         return Vector(self._size, np.negative(self._items))
 
     def add_scalar(self, that: Union[Scalar, float, np.float64]) -> 'Vector':
-
         r"""
         Adds a scalar value to each element of the vector.
         
@@ -146,7 +142,6 @@ as addition, subtraction, multiplication, and division with scalars and other ve
         return Vector(self._size, np.add(self._items, num))
 
     def sub_scalar(self, that: Union[Scalar, float, np.float64]) -> 'Vector':
-
         r"""
         Method to subtract a scalar value from each element of the Vector.
         
@@ -171,7 +166,6 @@ as addition, subtraction, multiplication, and division with scalars and other ve
         return Vector(self._size, np.subtract(self._items, num))
 
     def mul_scalar(self, that: Union[Scalar, float, np.float64]) -> 'Vector':
-
         r"""
         Calculates the result of multiplying the Vector by a scalar value.
         
@@ -193,7 +187,6 @@ as addition, subtraction, multiplication, and division with scalars and other ve
         return Vector(self._size, np.multiply(self._items, num))
 
     def div_scalar(self, that: Union[Scalar, float, np.float64]) -> 'Vector':
-
         r"""
         Divides the elements of the Vector by a scalar value.
         
@@ -223,7 +216,6 @@ as addition, subtraction, multiplication, and division with scalars and other ve
         return Vector(self._size, np.divide(self._items, num))
 
     def conjugate(self) -> 'Vector':
-
         r"""
         Conjugates the current vector.
         
@@ -239,7 +231,6 @@ as addition, subtraction, multiplication, and division with scalars and other ve
         return self
 
     def as_array(self) -> np.ndarray:
-
         r"""
         Converts the Vector object into a NumPy array.
         
@@ -255,8 +246,6 @@ as addition, subtraction, multiplication, and division with scalars and other ve
         return np.array(self._items)
 
     def _init_default(self, size: Optional[int]) -> int:
-
-        
         """
         Initializes the Vector with a default size and returns the size of the Vector.
         
@@ -277,7 +266,6 @@ as addition, subtraction, multiplication, and division with scalars and other ve
         return size
 
     def _init_ndarray(self, size: Optional[int], items: np.ndarray) -> int:
-
         r"""
         Initializes an ndarray in the Vector class.
         
@@ -298,7 +286,6 @@ as addition, subtraction, multiplication, and division with scalars and other ve
         return size
 
     def _init_list(self, size: Optional[int], items: List[Scalar]) -> int:
-
         r"""
         Initializes the list of items for the Vector class.
         
@@ -327,7 +314,6 @@ as addition, subtraction, multiplication, and division with scalars and other ve
         return size
 
     def _add(self, that: 'Vector') -> 'Vector':
-
         r"""
         Adds the elements of the current Vector with another Vector provided as input.
         
@@ -345,7 +331,6 @@ as addition, subtraction, multiplication, and division with scalars and other ve
         return Vector(self._size, np.add(self._items, that._items))
 
     def _sub(self, that: 'Vector') -> 'Vector':
-
         r"""
         Args:
             self (Vector): The first vector used for subtraction. It represents the instance of the Vector class.
@@ -361,7 +346,6 @@ as addition, subtraction, multiplication, and division with scalars and other ve
         return Vector(self._size, np.subtract(self._items, that._items))
 
     def _mul(self, that: 'Vector') -> 'Vector':
-
         r"""
         This method performs element-wise multiplication of two Vector objects.
         
@@ -381,7 +365,6 @@ as addition, subtraction, multiplication, and division with scalars and other ve
         return Vector(self._size, np.multiply(self._items, that._items))
 
     def _dot_product(self, that: 'Vector') -> Scalar:
-
         r"""
         Calculate the dot product between two vectors.
         
@@ -402,7 +385,6 @@ as addition, subtraction, multiplication, and division with scalars and other ve
         return Scalar(np.dot(self._items, that._items).item())
 
     def _div(self, that: 'Vector') -> 'Vector':
-
         r"""
         Method _div in class Vector.
         
@@ -421,7 +403,6 @@ as addition, subtraction, multiplication, and division with scalars and other ve
         return Vector(self._size, np.divide(self._items, that._items))
 
     def _full_like(self, items: Union[np.ndarray, List]) -> 'Vector':
-
         r"""
         Method _full_like in class Vector.
         
@@ -438,7 +419,6 @@ as addition, subtraction, multiplication, and division with scalars and other ve
         return Vector(items=items)
 
     def _ones_like(self) -> 'Vector':
-
         r"""
         This method creates a new Vector object with elements that are all set to the value of Scalar.one().
         
@@ -454,7 +434,6 @@ as addition, subtraction, multiplication, and division with scalars and other ve
         return Vector(items=[Scalar.one()] * self._size)
 
     def _zeros_like(self) -> 'Vector':
-
         r"""Creates a new Vector object with the same size as the current Vector object, where all elements are set to zero.
         
         Args:

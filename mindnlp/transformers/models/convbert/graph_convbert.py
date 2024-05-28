@@ -42,7 +42,6 @@ class MSConvBertEmbeddings(nn.Cell):
     """Construct the embeddings from word, position and token_type embeddings."""
 
     def __init__(self, config):
-
         """
         Initialize the MSConvBertEmbeddings class with the provided configuration.
         
@@ -86,7 +85,6 @@ class MSConvBertEmbeddings(nn.Cell):
         input_ids: Optional[ms.Tensor] = None,
         token_type_ids: Optional[ms.Tensor] = None,
     ) -> ms.Tensor:
-
         '''
         Construct embeddings for the MSConvBert model.
         
@@ -168,7 +166,6 @@ class SeparableConv1D(nn.Cell):
     """This class implements separable convolution, i.e. a depthwise and a pointwise layer"""
 
     def __init__(self, config, input_filters, output_filters, kernel_size):
-
         """
         Initializes a separable 1D convolutional layer.
         
@@ -217,7 +214,6 @@ class SeparableConv1D(nn.Cell):
         )
 
     def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
-
         """
         Method to construct a separable 1D convolution operation on the given hidden states.
         
@@ -245,7 +241,6 @@ class MSConvBertSelfAttention(nn.Cell):
     """
 
     def __init__(self, config):
-
         """Initialize the MSConvBertSelfAttention class.
         
         Args:
@@ -324,7 +319,6 @@ class MSConvBertSelfAttention(nn.Cell):
         hidden_states: ms.Tensor,
         attention_mask: Optional[ms.Tensor] = None,
     ) -> Tuple[ms.Tensor, Optional[ms.Tensor]]:
-
         """
         Constructs the self-attention mechanism for the MSConvBert model.
         
@@ -430,7 +424,6 @@ class MSConvBertSelfOutput(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the MSConvBertSelfOutput class.
         
@@ -454,7 +447,6 @@ class MSConvBertSelfOutput(nn.Cell):
         self.dropout_p = config.hidden_dropout_prob
 
     def construct(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
-
         '''
         This method constructs the self output for the MSConvBert model.
         
@@ -482,7 +474,6 @@ class MSConvBertAttention(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the MSConvBertAttention class.
         
@@ -534,7 +525,6 @@ class MSConvBertAttention(nn.Cell):
         hidden_states: ms.Tensor,
         attention_mask: Optional[ms.Tensor] = None,
     ) -> Tuple[ms.Tensor, Optional[ms.Tensor]]:
-
         """
         Constructs the attention mechanism for the MSConvBert model.
         
@@ -565,7 +555,6 @@ class MSConvBertIntermediate(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the MSConvBertIntermediate class.
         
@@ -587,7 +576,6 @@ class MSConvBertIntermediate(nn.Cell):
         self.intermediate_act_fn = ACT2FN[config.hidden_act]
 
     def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
-
         """
         Constructs the intermediate layer for MSConvBert model.
         
@@ -612,7 +600,6 @@ class MSConvBertOutput(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the MSConvBertOutput class.
         
@@ -641,7 +628,6 @@ class MSConvBertOutput(nn.Cell):
         self.dropout_p = config.hidden_dropout_prob
 
     def construct(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
-
         """
         The 'construct' method in the 'MSConvBertOutput' class constructs a tensor output based on the provided hidden states and input tensor.
         
@@ -673,7 +659,6 @@ class MSConvBertLayer(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of MSConvBertLayer.
         
@@ -699,7 +684,6 @@ class MSConvBertLayer(nn.Cell):
         hidden_states: ms.Tensor,
         attention_mask: ms.Tensor,
     ) -> Tuple[ms.Tensor, Optional[ms.Tensor]]:
-
         """
         Constructs a Convolutional BERT layer.
         
@@ -733,7 +717,6 @@ class MSConvBertEncoder(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the MSConvBertEncoder class.
         
@@ -758,7 +741,6 @@ class MSConvBertEncoder(nn.Cell):
         hidden_states: ms.Tensor,
         attention_mask: ms.Tensor,
     ) -> Union[Tuple, BaseModelOutputWithCrossAttentions]:
-
         ''' 
         Constructs the MSConvBertEncoder by processing the hidden states with attention mask.
         
@@ -789,7 +771,6 @@ class MSConvBertModel(ConvBertPreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the MSConvBertModel class.
         
@@ -813,7 +794,6 @@ class MSConvBertModel(ConvBertPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Returns the input embeddings for the MSConvBertModel.
         
@@ -830,7 +810,6 @@ class MSConvBertModel(ConvBertPreTrainedModel):
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Sets the input embeddings of the MSConvBertModel.
         
@@ -868,7 +847,6 @@ of the model, otherwise unexpected behavior may occur.
         attention_mask: ms.Tensor,
         token_type_ids: ms.Tensor,
     ) -> Union[Tuple, BaseModelOutputWithCrossAttentions]:
-
         """
         Constructs the MSConvBertModel by processing the input data.
         
@@ -917,7 +895,6 @@ class MSConvBertForQuestionAnswering(ConvBertPreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initialize the MSConvBertForQuestionAnswering class.
         
@@ -949,7 +926,6 @@ class MSConvBertForQuestionAnswering(ConvBertPreTrainedModel):
         start_positions: Optional[ms.Tensor] = None,
         end_positions: Optional[ms.Tensor] = None,
     ) -> Union[Tuple, QuestionAnsweringModelOutput]:
-
         """
         Constructs the Question Answering model for MSConvBert.
         

@@ -59,7 +59,6 @@ class MambaDense(nn.Dense):
         return x
     """
     def construct(self, x):
-
         """
         Constructs the output of the MambaDense layer by performing matrix multiplication with weights and adding bias if applicable.
         
@@ -93,7 +92,6 @@ class MSMambaMixer(nn.Cell):
     """
 
     def __init__(self, config, layer_idx):
-
         """
         Initializes an instance of the MSMambaMixer class.
         

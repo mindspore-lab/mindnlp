@@ -90,7 +90,6 @@ class MusicgenMelodyFeatureExtractor(SequenceFeatureExtractor):
         stem_indices=[3, 2],
         **kwargs,
     ):
-
         """
         Initializes a MusicgenMelodyFeatureExtractor object.
         

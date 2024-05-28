@@ -218,7 +218,6 @@ class BertTokenizerFast(PreTrainedTokenizerFast):
         strip_accents=None,
         **kwargs,
     ):
-
         """
         Initialize the BertTokenizerFast class.
         
@@ -324,7 +323,6 @@ class BertTokenizerFast(PreTrainedTokenizerFast):
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary of the BertTokenizerFast model to the specified directory.
         

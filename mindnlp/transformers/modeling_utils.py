@@ -124,7 +124,6 @@ class CellUtilMixin:
         """
         return get_parameter_dtype(self)
 
-
     @staticmethod
     def create_extended_attention_mask_for_decoder(input_shape, attention_mask):
         """create_extended_attention_mask_for_decoder"""
@@ -292,7 +291,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
     supports_recompute = False
 
     def __init__(self, config):
-
         """
         __init__
         
@@ -318,7 +316,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
         self.generation_config = GenerationConfig.from_model_config(config) if self.can_generate() else None
 
     def _check_and_unset_acl(self):
-
         """
         This method '_check_and_unset_acl' is defined within the class 'PreTrainedModel' and is used to verify and remove the ACL (Access Control List) settings if certain conditions are met.
         
@@ -631,7 +628,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
         return model_embeds
 
     def _resize_token_embeddings(self, new_num_tokens, pad_to_multiple_of=None):
-
         """
         Resize the token embeddings of the PreTrainedModel.
         
@@ -662,7 +658,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
                 old_lm_head, new_num_tokens)
             self.set_output_embeddings(new_lm_head)
             self.get_output_embeddings().weight.data_sync(True)
-
 
         return self.get_input_embeddings()
 
@@ -797,7 +792,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
     def _copy_lm_head_original_to_resized(
         self, new_lm_head, old_lm_head, num_tokens_to_copy, transposed, has_new_lm_head_bias
     ):
-
         """
         Copies the original language model head to a resized language model head.
         
@@ -824,7 +818,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
         # Copy bias weights to new lm head
         if has_new_lm_head_bias:
             new_lm_head.bias.data[:num_tokens_to_copy] = old_lm_head.bias.data[:num_tokens_to_copy]
-
 
     @classmethod
     def load(cls, pretrained_model_name_or_path: Optional[Union[str, os.PathLike]],
@@ -1110,7 +1103,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
 
         # tie the model weights before retrieving the state_dict
         model.tie_weights()
-
 
         ptrs = collections.defaultdict(list)
         for name, tensor in model.parameters_dict().items():
@@ -1422,7 +1414,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
 
                     yield par_new_name, par
 
-
     def num_parameters(self, only_trainable=False):
         """return parameters count"""
         total = 0
@@ -1433,7 +1424,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
                 total += param.size
             param_set.add(param_id)
         return total
-
 
     def trainable_params(self, recurse=True):
         """
@@ -1510,7 +1500,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
 
         os.makedirs(save_directory, exist_ok=True)
 
-
         # Only save the model itself if we are using distributed training
         model_to_save = self
 
@@ -1527,7 +1516,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
             model_to_save.config.save_pretrained(save_directory)
             if self.can_generate():
                 model_to_save.generation_config.save_pretrained(save_directory)
-
 
         # Save the model
         if state_dict is None:
@@ -1600,7 +1588,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
                 cell._set_recompute()
 
     def check_names(self):
-
         """
         This method checks the names in the PreTrainedModel class.
         
@@ -1632,7 +1619,6 @@ def get_parameter_dtype(parameter: Union[nn.Cell, GenerationMixin, "ModuleUtilsM
     return last_dtype
 
 def _add_variant(weights_name: str, variant: Optional[str] = None) -> str:
-
     """
     Adds a variant to the weights name.
     
@@ -1761,7 +1747,6 @@ class PoolerStartLogits(nn.Cell):
     """
 
     def __init__(self, config: PretrainedConfig):
-
         """
         Initializes an instance of the PoolerStartLogits class.
         
@@ -1816,7 +1801,6 @@ class PoolerEndLogits(nn.Cell):
     """
 
     def __init__(self, config: PretrainedConfig):
-
         """
         Initializes the PoolerEndLogits class.
         
@@ -1900,7 +1884,6 @@ class PoolerAnswerClass(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes the PoolerAnswerClass.
         
@@ -2013,7 +1996,6 @@ class SQuADHead(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the SQuADHead class.
         
@@ -2134,7 +2116,6 @@ class SequenceSummary(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initialize the SequenceSummary class.
         
@@ -2181,7 +2162,6 @@ config, defaulting to nn.Identity() if not specified.
             self.last_dropout = nn.Dropout(p=config.summary_last_dropout)
 
     def construct(self, hidden_states: Tensor, cls_index: Optional[Tensor] = None) -> Tensor:
-
         """
         Constructs a summary of hidden states based on the specified summary type.
         

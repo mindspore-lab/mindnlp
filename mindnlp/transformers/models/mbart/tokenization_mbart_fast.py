@@ -108,7 +108,6 @@ class MBartTokenizerFast(PreTrainedTokenizerFast):
             additional_special_tokens=None,
             **kwargs,
     ):
-
         """
         This method initializes an instance of the MBartTokenizerFast class.
         
@@ -172,7 +171,6 @@ class MBartTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def can_save_slow_tokenizer(self) -> bool:
-
         """
         Check if the slow tokenizer can be saved.
         
@@ -197,7 +195,6 @@ corresponds to an existing file, the method returns True. Otherwise, it returns 
 
     @src_lang.setter
     def src_lang(self, new_src_lang: str) -> None:
-
         """
         Sets the source language for the MBartTokenizerFast instance.
         
@@ -288,7 +285,6 @@ corresponds to an existing file, the method returns True. Otherwise, it returns 
             tgt_lang: str = "ro_RO",
             **kwargs,
     ) -> BatchEncoding:
-
         """
         Prepare a batch for sequence-to-sequence tokenization using the MBartTokenizerFast class.
         
@@ -320,7 +316,6 @@ corresponds to an existing file, the method returns True. Otherwise, it returns 
         return super().prepare_seq2seq_batch(src_texts, tgt_texts, **kwargs)
 
     def _switch_to_input_mode(self):
-
         """
         Method to switch to input mode for the MBartTokenizerFast class.
         
@@ -337,7 +332,6 @@ corresponds to an existing file, the method returns True. Otherwise, it returns 
         return self.set_src_lang_special_tokens(self.src_lang)
 
     def _switch_to_target_mode(self):
-
         """
         Switches the tokenizer to the target mode for the MBartTokenizerFast class.
         
@@ -396,7 +390,6 @@ switch to the target mode.
         )
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary for the MBartTokenizerFast class.
         

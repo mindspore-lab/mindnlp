@@ -52,7 +52,6 @@ GPT_NEOX_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 # Copied from transformers.models.llama.modeling_llama._get_unpad_data
 def _get_unpad_data(attention_mask):
-
     """
     Args:
         attention_mask (Tensor): A tensor representing the attention mask for the input data. It is used to mask padded tokens in the input sequence. 
@@ -107,7 +106,6 @@ class GPTNeoXPreTrainedModel(PreTrainedModel):
             cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
 
     def _set_gradient_checkpointing(self, module, value=False):
-
         """
         Sets the gradient checkpointing flag for the specified module.
         
@@ -153,7 +151,6 @@ GPTNeoXModel class.
 class GPTNeoXAttention(nn.Cell):
     """GPTNeoXAttention"""
     def __init__(self, config):
-
         """
         Initializes a new instance of the GPTNeoXAttention class.
         
@@ -192,7 +189,6 @@ class GPTNeoXAttention(nn.Cell):
         self.is_causal = True
 
     def _init_bias(self, max_positions):
-
         """
         Initialize the bias matrix for GPTNeoXAttention.
         
@@ -211,7 +207,6 @@ class GPTNeoXAttention(nn.Cell):
                 1, 1, max_positions, max_positions).astype(mindspore.bool_)
 
     def _init_rope(self):
-
         """
         Initializes the routing position encoding (RoPE) for the GPTNeoXAttention class.
         
@@ -258,7 +253,6 @@ class GPTNeoXAttention(nn.Cell):
             use_cache: Optional[bool] = False,
             output_attentions: Optional[bool] = False,
     ):
-
         ''' 
         Constructs the GPTNeoXAttention method.
         
@@ -355,7 +349,6 @@ class GPTNeoXAttention(nn.Cell):
         return tensor
 
     def _attn(self, query, key, value, attention_mask=None, head_mask=None):
-
         """
         Performs attention mechanism on the given inputs.
         
@@ -433,7 +426,6 @@ def attention_mask_func(attention_scores, ltor_mask):
 class GPTNeoXRotaryEmbedding(nn.Cell):
     """GPTNeoXRotaryEmbedding"""
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
-
         """
         Initializes the GPTNeoXRotaryEmbedding class.
         
@@ -462,7 +454,6 @@ class GPTNeoXRotaryEmbedding(nn.Cell):
         )
 
     def _set_cos_sin_cache(self, seq_len, dtype):
-
         ''' 
         _set_cos_sin_cache(self, seq_len, dtype):
             Set the cached cosine and sine values for the GPTNeoXRotaryEmbedding layer.
@@ -488,7 +479,6 @@ class GPTNeoXRotaryEmbedding(nn.Cell):
         self.sin_cached = emb.sin()
 
     def construct(self, x, seq_len=None):
-
         """
         Constructs the rotary embeddings for the GPTNeoX model.
         
@@ -518,7 +508,6 @@ class GPTNeoXLinearScalingRotaryEmbedding(GPTNeoXRotaryEmbedding):
     """GPTNeoXRotaryEmbedding extended with linear scaling. Credits to the Reddit user /u/kaiokendev"""
 
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
-
         """
         Initializes an instance of GPTNeoXLinearScalingRotaryEmbedding.
         
@@ -539,7 +528,6 @@ class GPTNeoXLinearScalingRotaryEmbedding(GPTNeoXRotaryEmbedding):
         super().__init__(dim, max_position_embeddings, base)
 
     def _set_cos_sin_cache(self, seq_len, dtype):
-
         """
         Sets the cosine and sine caches for the GPTNeoXLinearScalingRotaryEmbedding class.
         
@@ -597,7 +585,6 @@ class GPTNeoXDynamicNTKScalingRotaryEmbedding(GPTNeoXRotaryEmbedding):
     """GPTNeoXRotaryEmbedding extended with Dynamic NTK scaling. Credits to the Reddit users /u/bloc97 and /u/emozilla"""
 
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
-
         """
         __init__
         
@@ -622,7 +609,6 @@ class GPTNeoXDynamicNTKScalingRotaryEmbedding(GPTNeoXRotaryEmbedding):
         super().__init__(dim, max_position_embeddings, base)
 
     def _set_cos_sin_cache(self, seq_len, dtype):
-
         """
         Method _set_cos_sin_cache in the class GPTNeoXDynamicNTKScalingRotaryEmbedding.
         
@@ -677,7 +663,6 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
 class GPTNeoXMLP(nn.Cell):
     """GPTNeoXMLP"""
     def __init__(self, config):
-
         """
         __init__ method in the GPTNeoXMLP class.
         
@@ -699,7 +684,6 @@ class GPTNeoXMLP(nn.Cell):
         self.act = ACT2FN[config.hidden_act]
 
     def construct(self, hidden_states):
-
         """
         Constructs the hidden states using the specified operations.
         
@@ -727,7 +711,6 @@ GPT_NEOX_ATTENTION_CLASSES = {
 class GPTNeoXLayer(nn.Cell):
     """GPTNeoXLayer"""
     def __init__(self, config):
-
         """
         Initializes a GPTNeoXLayer instance.
         
@@ -768,7 +751,6 @@ class GPTNeoXLayer(nn.Cell):
             layer_past: Optional[Tuple[mindspore.Tensor]] = None,
             output_attentions: Optional[bool] = False,
     ):
-
         """
         Constructs the GPTNeoXLayer.
         
@@ -827,7 +809,6 @@ class GPTNeoXLayer(nn.Cell):
 class GPTNeoXModel(GPTNeoXPreTrainedModel):
     """GPTNeoXModel"""
     def __init__(self, config):
-
         """
         Initializes a new instance of the GPTNeoXModel class.
         
@@ -858,7 +839,6 @@ class GPTNeoXModel(GPTNeoXPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings for the GPTNeoXModel.
         
@@ -875,7 +855,6 @@ class GPTNeoXModel(GPTNeoXPreTrainedModel):
         return self.embed_in
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Set the input embeddings for the GPTNeoXModel.
         
@@ -965,8 +944,6 @@ class GPTNeoXModel(GPTNeoXPreTrainedModel):
                 attention_mask = attention_mask.to(dtype=self.dtype)  # fp16 compatibility
                 attention_mask = (1.0 - attention_mask) * np.finfo(mindspore.dtype_to_nptype(self.dtype)).min
 
-
-
         # Prepare head mask if needed
         # 1.0 in head_mask indicate we keep the head
         # attention_probs has shape bsz x n_heads x N x N
@@ -1041,7 +1018,6 @@ class GPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
     _tied_weights_keys = ["embed_out.weight"]
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the GPTNeoXForCausalLM class.
         
@@ -1066,7 +1042,6 @@ class GPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         Method: get_output_embeddings
         
@@ -1085,7 +1060,6 @@ class GPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
         return self.embed_out
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Set the output embeddings for the GPTNeoXForCausalLM model.
         
@@ -1177,7 +1151,6 @@ class GPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
     def prepare_inputs_for_generation(
             self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
-
         """
         This method prepares inputs for generation in the GPTNeoXForCausalLM class.
         
@@ -1239,7 +1212,6 @@ class GPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
         return model_inputs
 
     def _reorder_cache(self, past, beam_idx):
-
         """
         Reorders the cache for the GPTNeoXForCausalLM model based on the given beam index.
         
@@ -1267,7 +1239,6 @@ class GPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
 class GPTNeoXForSequenceClassification(GPTNeoXPreTrainedModel):
     """GPTNeoXForSequenceClassification"""
     def __init__(self, config):
-
         """
         Initializes a new instance of the GPTNeoXForSequenceClassification class.
         
@@ -1386,7 +1357,6 @@ class GPTNeoXForSequenceClassification(GPTNeoXPreTrainedModel):
 class GPTNeoXForTokenClassification(GPTNeoXPreTrainedModel):
     """GPTNeoXForTokenClassification"""
     def __init__(self, config):
-
         """
         Initializes a new instance of the GPTNeoXForTokenClassification class.
         
@@ -1473,7 +1443,6 @@ of labels from the configuration. Finally, the post_init() method is called for 
 class GPTNeoXForQuestionAnswering(GPTNeoXPreTrainedModel):
     """GPTNeoXForQuestionAnswering"""
     def __init__(self, config):
-
         """
         Initializes a new instance of the GPTNeoXForQuestionAnswering class.
         

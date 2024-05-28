@@ -42,7 +42,6 @@ class MusicgenProcessor(ProcessorMixin):
     tokenizer_class = ("T5Tokenizer", "T5TokenizerFast")
 
     def __init__(self, feature_extractor, tokenizer):
-
         """
         Initializes a new instance of the MusicgenProcessor class.
         
@@ -62,7 +61,6 @@ class MusicgenProcessor(ProcessorMixin):
         self._in_target_context_manager = False
 
     def get_decoder_prompt_ids(self, task=None, language=None, no_timestamps=True):
-
         """
         This method retrieves the decoder prompt IDs for a specified task and language, while allowing the exclusion of timestamps.
         

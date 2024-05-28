@@ -49,7 +49,6 @@ given algebra factory, size, and items.
                  algebra_factory: Type[TAlgebraFactory],
                  size: Optional[int] = None,
                  items: Union[Tuple, np.ndarray, List, NoneType] = None) -> None:
-
         r"""
         Initializes a Vector object.
         
@@ -81,7 +80,6 @@ given algebra factory, size, and items.
         super(Vector, self).__init__(size)
 
     def __getitem__(self, key):
-
         r"""
         Retrieve an item from the Vector object using the given key.
         
@@ -103,7 +101,6 @@ given algebra factory, size, and items.
             return Scalar(self._alg_factory, x, y)
 
     def __neg__(self) -> 'Vector':
-
         r"""
         Negates the vector.
         
@@ -122,7 +119,6 @@ given algebra factory, size, and items.
         )
 
     def get_algebra_type(self) -> Type[AlgebraFactory]:
-
         r"""
         Retrieve the type of algebra factory associated with the Vector instance.
         
@@ -139,7 +135,6 @@ given algebra factory, size, and items.
         return self._alg_factory
 
     def add_scalar(self, that: Union[Scalar, Tuple[np.float64, np.float64]]) -> 'Vector':
-
         r"""
         Adds a scalar value to the vector.
         
@@ -165,7 +160,6 @@ vector's algebra type.
         )
 
     def sub_scalar(self, that: Union[Scalar, Tuple[np.float64, np.float64]]) -> 'Vector':
-
         r"""
         sub_scalar
         
@@ -193,7 +187,6 @@ the current vector's algebra type.
         )
 
     def mul_scalar(self, that: Union[Scalar, Tuple[np.float64, np.float64]]) -> 'Vector':
-
         r"""
         mul_scalar method in the Vector class multiplies the Vector by a scalar.
         
@@ -217,7 +210,6 @@ the current vector's algebra type.
         return Vector(self._alg_factory, self._size, items)
 
     def div_scalar(self, that: Union[Scalar, Tuple[np.float64, np.float64]]) -> 'Vector':
-
         r"""
         Divides the vector by a scalar value.
         
@@ -250,7 +242,6 @@ the current vector's algebra type.
         return Vector(self._alg_factory, self._size, items)
 
     def conjugate(self) -> 'Vector':
-
         r"""
         Conjugates the vector by negating the imaginary part of each element.
         
@@ -266,7 +257,6 @@ the current vector's algebra type.
         return Vector(self._alg_factory, self._size, (self._items_x, np.negative(self._items_y)))
 
     def as_array(self) -> np.ndarray:
-
         r"""
         Converts the Vector object into a NumPy array.
         
@@ -282,7 +272,6 @@ the current vector's algebra type.
         return np.array(list(zip(self._items_x, self._items_y)))
 
     def _init_default(self, size: Optional[int]) -> int:
-
         r"""
         Initializes the default values for the Vector class.
         
@@ -305,7 +294,6 @@ the current vector's algebra type.
         return size
 
     def _init_tuple(self, size: Optional[int], items: Tuple[np.ndarray, np.ndarray]) -> int:
-
         r"""Initialize the Vector class with a tuple of numpy arrays.
         
         Args:
@@ -339,7 +327,6 @@ the current vector's algebra type.
         return size
 
     def _init_ndarray(self, size: Optional[int], items: np.ndarray) -> int:
-
         r"""
         Initializes a Vector object with the provided size and items.
         
@@ -363,7 +350,6 @@ the current vector's algebra type.
         return size
 
     def _init_list(self, size: Optional[int], items: List[Scalar]) -> int:
-
         r"""
         Initializes a list of vectors in the class 'Vector'.
         
@@ -417,7 +403,6 @@ the current vector's algebra type.
         return size
 
     def _add(self, that: 'Vector') -> 'Vector':
-
         r"""
         This method performs the addition operation between two vectors and returns a new Vector object as the result.
         
@@ -442,7 +427,6 @@ the current vector's algebra type.
         )
 
     def _sub(self, that: 'Vector') -> 'Vector':
-
         r"""
         Subtracts a vector from the current vector.
         
@@ -471,8 +455,6 @@ the current vector's algebra type.
         )
 
     def _mul(self, that: 'Vector') -> 'Vector':
-
-        
         """
         Performs multiplication operation with another vector.
         
@@ -496,7 +478,6 @@ the current vector's algebra type.
         return Vector(self._alg_factory, self._size, items)
 
     def _dot_product(self, that: 'Vector') -> Scalar:
-
         r"""
         Calculate the dot product between two vectors.
         
@@ -519,7 +500,6 @@ the current vector's algebra type.
         return Scalar(self._alg_factory, x, y)
 
     def _div(self, that: 'Vector') -> 'Vector':
-
         r"""
         Method '_div' in the class 'Vector'.
         
@@ -544,7 +524,6 @@ the current vector's algebra type.
         return Vector(self._alg_factory, self._size, items)
 
     def _full_like(self, items: Union[Tuple, np.ndarray, List]) -> 'Vector':
-
         r"""
         _full_like Method
         
@@ -563,7 +542,6 @@ the current vector's algebra type.
         return Vector(self._alg_factory, items=items)
 
     def _ones_like(self) -> 'Vector':
-
         r"""
         Method _ones_like in class Vector.
         
@@ -581,7 +559,6 @@ the current vector's algebra type.
         )
 
     def _zeros_like(self) -> 'Vector':
-
         r"""
         Create a new Vector object with all elements initialized to zero.
         

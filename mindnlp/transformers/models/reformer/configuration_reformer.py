@@ -201,7 +201,6 @@ class ReformerConfig(PretrainedConfig):
         classifier_dropout=None,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the ReformerConfig class.
         

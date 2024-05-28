@@ -100,7 +100,6 @@ class Qwen2TokenizerFast(PreTrainedTokenizerFast):
         pad_token="<|endoftext|>",
         **kwargs,
     ):
-
         """
         Initializes a new instance of the Qwen2TokenizerFast class.
         
@@ -166,7 +165,6 @@ class Qwen2TokenizerFast(PreTrainedTokenizerFast):
 
     # Copied from transformers.models.gpt2.tokenization_gpt2_fast.GPT2TokenizerFast.save_vocabulary
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary of the Qwen2TokenizerFast model to the specified directory.
         

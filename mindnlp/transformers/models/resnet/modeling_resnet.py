@@ -69,7 +69,6 @@ class ResNetConvLayer(nn.Cell):
     def __init__(
         self, in_channels: int, out_channels: int, kernel_size: int = 3, stride: int = 1, activation: str = "relu"
     ):
-
         """
         Initializes a ResNetConvLayer object.
         
@@ -97,7 +96,6 @@ class ResNetConvLayer(nn.Cell):
         self.activation = ACT2FN[activation] if activation is not None else nn.Identity()
 
     def construct(self, input: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Method 'construct' in the class 'ResNetConvLayer'.
         
@@ -132,7 +130,6 @@ class ResNetEmbeddings(nn.Cell):
     """
 
     def __init__(self, config: ResNetConfig):
-
         """
         Initializes an instance of the ResNetEmbeddings class.
         
@@ -157,7 +154,6 @@ class ResNetEmbeddings(nn.Cell):
         self.num_channels = config.num_channels
 
     def construct(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the embeddings for a given set of pixel values.
         
@@ -192,7 +188,6 @@ class ResNetShortCut(nn.Cell):
     """
 
     def __init__(self, in_channels: int, out_channels: int, stride: int = 2):
-
         """
         Initializes a new instance of the ResNetShortCut class.
         
@@ -219,7 +214,6 @@ class ResNetShortCut(nn.Cell):
         self.normalization = nn.BatchNorm2d(out_channels)
 
     def construct(self, input: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs a hidden state tensor using convolution and normalization operations.
         
@@ -244,7 +238,6 @@ class ResNetBasicLayer(nn.Cell):
     """
 
     def __init__(self, in_channels: int, out_channels: int, stride: int = 1, activation: str = "relu"):
-
         """
         Initializes a ResNetBasicLayer object with the specified parameters.
         
@@ -273,7 +266,6 @@ class ResNetBasicLayer(nn.Cell):
         self.activation = ACT2FN[activation]
 
     def construct(self, hidden_state):
-
         """
         Constructs a ResNet basic layer by applying a series of operations to the input hidden state.
         
@@ -313,7 +305,6 @@ class ResNetBottleNeckLayer(nn.Cell):
         reduction: int = 4,
         downsample_in_bottleneck: bool = False,
     ):
-
         """
         Initializes a ResNetBottleNeckLayer object.
         
@@ -348,7 +339,6 @@ class ResNetBottleNeckLayer(nn.Cell):
         self.activation = ACT2FN[activation]
 
     def construct(self, hidden_state):
-
         """
         Constructs a ResNet bottleneck layer.
         
@@ -383,7 +373,6 @@ class ResNetStage(nn.Cell):
         stride: int = 2,
         depth: int = 2,
     ):
-
         """
         Initializes a ResNetStage object.
         
@@ -421,7 +410,6 @@ class ResNetStage(nn.Cell):
         )
 
     def construct(self, input: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the hidden state of the ResNet stage based on the given input.
         
@@ -466,7 +454,6 @@ class ResNetEncoder(nn.Cell):
     
     """
     def __init__(self, config: ResNetConfig):
-
         """
         Initializes an instance of the ResNetEncoder class.
         
@@ -503,7 +490,6 @@ class ResNetEncoder(nn.Cell):
     def construct(
         self, hidden_state: mindspore.Tensor, output_hidden_states: bool = False, return_dict: bool = True
     ) -> BaseModelOutputWithNoAttention:
-
         """
         Constructs the ResNetEncoder by processing the hidden state through the defined stages.
         
@@ -556,7 +542,6 @@ class ResNetPreTrainedModel(PreTrainedModel):
     _keys_to_ignore_on_load_unexpected = [r'num_batches_tracked']
 
     def _init_weights(self, module):
-
         """
         This method initializes the weights of the given module according to the specified initialization scheme.
         
@@ -598,7 +583,6 @@ pass.
         BaseModelOutputWithPoolingAndNoAttention: An output object containing the last hidden state, pooled output, and optional hidden states.
     """
     def __init__(self, config):
-
         """
         Initializes a ResNetModel instance with the provided configuration.
         
@@ -624,7 +608,6 @@ pass.
     def construct(
         self, pixel_values: mindspore.Tensor, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None
     ) -> BaseModelOutputWithPoolingAndNoAttention:
-
         """
         Constructs a ResNet model.
         
@@ -702,7 +685,6 @@ class ResNetForImageClassification(ResNetPreTrainedModel):
         - The problem type is automatically determined based on the number of labels and label data type.
     """
     def __init__(self, config):
-
         """
         Initializes the ResNetForImageClassification class.
         
@@ -798,7 +780,6 @@ class ResNetBackbone(ResNetPreTrainedModel, BackboneMixin):
         - construct(self, pixel_values, output_hidden_states, return_dict): Constructs the backbone and returns the output.
     """
     def __init__(self, config):
-
         """
         Initialize the ResNetBackbone class with the provided configuration.
         

@@ -60,7 +60,6 @@ class EncodecFeatureExtractor(SequenceFeatureExtractor):
         overlap: float = None,
         **kwargs,
     ):
-
         """
         Initialize the EncodecFeatureExtractor class with the given parameters.
         
@@ -83,7 +82,6 @@ class EncodecFeatureExtractor(SequenceFeatureExtractor):
         self.chunk_length_s = chunk_length_s
         self.overlap = overlap
 
-
     @property
     def chunk_length(self) -> Optional[int]:
         r"""
@@ -92,7 +90,6 @@ class EncodecFeatureExtractor(SequenceFeatureExtractor):
         if self.chunk_length_s is None:
             return None
         return int(self.chunk_length_s * self.sampling_rate)
-
 
     @property
     def chunk_stride(self) -> Optional[int]:

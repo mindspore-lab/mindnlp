@@ -56,7 +56,6 @@ class _OutputTo32(nn.Cell):
     "Wrap cell for amp. Cast network output back to float32"
 
     def __init__(self, op):
-
         r"""
         Initializes an instance of the '_OutputTo32' class.
         
@@ -74,7 +73,6 @@ class _OutputTo32(nn.Cell):
         self._op = op
 
     def construct(self, *x):
-
         r"""
         Constructs and returns a float32 tensor.
         
@@ -94,7 +92,6 @@ class _OutputTo16(nn.Cell):
     "Wrap cell for amp. Cast network output back to float32"
 
     def __init__(self, op):
-
         r"""
         Initialize an instance of the _OutputTo16 class.
         
@@ -112,7 +109,6 @@ class _OutputTo16(nn.Cell):
         self._op = op
 
     def construct(self, *x):
-
         r"""
         This method constructs a new instance of _OutputTo16 class.
         
@@ -187,7 +183,6 @@ _partial = ops.Partial()
 
 @constexpr
 def _ascend_target():
-
     r"""
     Checks if the current device target is set to 'Ascend'.
     
@@ -202,7 +197,6 @@ def _ascend_target():
 
 @constexpr
 def _gpu_target():
-
     r"""
     This function checks whether the device target context is set to 'GPU'.
     
@@ -262,7 +256,6 @@ class LossScaler():
     Basic LossScaler.
     """
     def __init__(self, scale_value):
-
         r"""
         __init__
         
@@ -300,7 +293,6 @@ class NoLossScaler(LossScaler):
     No LossScaler
     """
     def __init__(self):
-
         r"""
         Initializes the NoLossScaler class instance.
         
@@ -316,7 +308,6 @@ class NoLossScaler(LossScaler):
         super().__init__(1)
 
     def scale(self, inputs):
-
         r"""
         Method: scale
         
@@ -336,7 +327,6 @@ class NoLossScaler(LossScaler):
         return inputs
 
     def unscale(self, inputs):
-
         """
         Unscales the given inputs.
         
@@ -359,7 +349,6 @@ class NoLossScaler(LossScaler):
                 - This method does not raise any exceptions.
         """
 
-        
         def unscale(self, inputs):
             """
             Unscales the given inputs.
@@ -378,7 +367,6 @@ class NoLossScaler(LossScaler):
         return inputs
 
     def adjust(self, grads_finite):
-
         r"""
         Adjusts the value of the finite gradients.
         
@@ -399,7 +387,6 @@ class StaticLossScaler(LossScaler):
     Static LossScaler.
     """
     def scale(self, inputs):
-
         r"""
         Method to scale the inputs using a static loss scaler.
         
@@ -420,7 +407,6 @@ class StaticLossScaler(LossScaler):
         return _hypermap(_partial(_grad_scale, self.scale_value), inputs)
 
     def unscale(self, inputs):
-
         r"""
         Unscale the inputs using the specified scale value.
         
@@ -437,7 +423,6 @@ class StaticLossScaler(LossScaler):
         return _hypermap(_partial(_grad_unscale, self.scale_value), inputs)
 
     def adjust(self, grads_finite):
-
         r"""
         Method 'adjust' in the class 'StaticLossScaler'.
         
@@ -458,7 +443,6 @@ class DynamicLossScaler(LossScaler):
     Dynamic LossScaler
     """
     def __init__(self, scale_value, scale_factor, scale_window):
-
         r"""
         Initializes an instance of the DynamicLossScaler class.
         
@@ -479,8 +463,6 @@ class DynamicLossScaler(LossScaler):
         self.scale_window = scale_window
 
     def scale(self, inputs):
-
-        
         """
         This method scales the inputs using a dynamic loss scaler value.
         
@@ -501,7 +483,6 @@ class DynamicLossScaler(LossScaler):
         return _hypermap(_partial(_grad_scale, self.scale_value), inputs)
 
     def unscale(self, inputs):
-
         r"""
         Unscale the input values using the specified scaling factor.
         
@@ -520,8 +501,6 @@ class DynamicLossScaler(LossScaler):
         return _hypermap(_partial(_grad_unscale, self.scale_value), inputs)
 
     def adjust(self, grads_finite):
-
-        
         """
         Adjusts the dynamic loss scaling value based on the gradients and internal state.
         

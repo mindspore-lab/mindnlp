@@ -26,7 +26,6 @@ class Seq2seqModel(BaseModel):
     """
 
     def __init__(self, encoder, decoder):
-
         r"""
         Initializes a new Seq2seqModel.
         

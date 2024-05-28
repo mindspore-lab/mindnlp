@@ -202,7 +202,6 @@ class RobertaTokenizer(PreTrainedTokenizer):
         add_prefix_space=False,
         **kwargs,
     ):
-
         """
         This method initializes an instance of the RobertaTokenizer class.
         
@@ -276,7 +275,6 @@ class RobertaTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
-
         """
         Returns the size of the vocabulary used by the RobertaTokenizer instance.
         
@@ -292,7 +290,6 @@ class RobertaTokenizer(PreTrainedTokenizer):
         return len(self.encoder)
 
     def get_vocab(self):
-
         """
         Returns a vocabulary dictionary containing both the base encoder and any additional tokens added to the tokenizer.
         
@@ -321,7 +318,6 @@ the tokenizer, while the added_tokens_encoder dictionary contains any additional
         return vocab
 
     def bpe(self, token):
-
         """
         This method is a part of the RobertaTokenizer class and implements Byte-Pair Encoding (BPE) for tokenizing input tokens.
         
@@ -404,7 +400,6 @@ the tokenizer, while the added_tokens_encoder dictionary contains any additional
         return text
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Saves the vocabulary and merge files of the RobertaTokenizer.
         
@@ -534,7 +529,6 @@ indices and tokens. The files are saved in the specified save_directory with opt
         return len(cls + token_ids_0 + sep + sep + token_ids_1 + sep) * [0]
 
     def prepare_for_tokenization(self, text, is_split_into_words=False, **kwargs):
-
         """
         Prepares the given text for tokenization by adding a prefix space if necessary.
         

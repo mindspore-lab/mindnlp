@@ -44,7 +44,6 @@ class BridgeTowerProcessor(ProcessorMixin):
     tokenizer_class = ("RobertaTokenizer", "RobertaTokenizerFast")
 
     def __init__(self, image_processor, tokenizer):
-
         """
         This method initializes an instance of the BridgeTowerProcessor class.
         
@@ -129,7 +128,6 @@ class BridgeTowerProcessor(ProcessorMixin):
 
     @property
     def model_input_names(self):
-
         """
         Returns a list of model input names for the 'BridgeTowerProcessor' class.
         

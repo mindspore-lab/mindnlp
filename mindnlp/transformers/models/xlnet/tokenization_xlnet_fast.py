@@ -144,7 +144,6 @@ class XLNetTokenizerFast(PreTrainedTokenizerFast):
         additional_special_tokens=["<eop>", "<eod>"],
         **kwargs,
     ):
-
         """
         __init__
         
@@ -202,7 +201,6 @@ class XLNetTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def can_save_slow_tokenizer(self) -> bool:
-
         """
         Checks if the slow tokenizer can be saved.
         
@@ -278,7 +276,6 @@ saved or not. If the 'vocab_file' attribute is not set or if the file does not e
         return len(token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1] + cls_segment_id
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """Save the vocabulary for a fast tokenizer to a specified directory.
         
         Args:

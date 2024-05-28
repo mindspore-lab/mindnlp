@@ -22,7 +22,6 @@ from ...backbone_utils import BackboneConfigMixin, get_aligned_output_features_o
 logger = logging.get_logger(__name__)
 
 
-
 class ResNetConfig(BackboneConfigMixin, PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`ResNetModel`]. It is used to instantiate an
@@ -95,7 +94,6 @@ class ResNetConfig(BackboneConfigMixin, PretrainedConfig):
         out_indices=None,
         **kwargs,
     ):
-
         """
         Initializes a ResNetConfig object with the specified configuration parameters.
         

@@ -137,7 +137,6 @@ class MixtralConfig(PretrainedConfig):
         router_aux_loss_coef=0.001,
         **kwargs,
     ):
-
         """
         Initializes a new MixtralConfig object.
         

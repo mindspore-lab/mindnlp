@@ -265,7 +265,6 @@ class _ConvNd(Cell):
         self.dtype = self.weight_init.dtype if isinstance(self.weight_init, Tensor) else None
 
     def construct(self, u: Tensor) -> Tensor:
-
         r"""
         Construct is a method in the _ConvNd class that constructs a tensor based on the input tensor 'u'.
         
@@ -321,7 +320,6 @@ class _ConvNd(Cell):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
-
         r"""
         Constructs a tuple of tensors based on the input tensors x and y.
         
@@ -343,7 +341,6 @@ class _ConvNd(Cell):
         pass
 
     def _check_input_5dims(self, input_shape: tuple):
-
         r"""
         Checks if the input shape is 5-dimensional.
         
@@ -538,7 +535,6 @@ class Conv2d(_ConvNd):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
-
         r"""
         Constructs the convolution operation for the Conv2d class.
         
@@ -718,7 +714,6 @@ class Conv1d(_ConvNd):
                              + str(pad_mode) + ', should be one of values in \'valid\', \'same\', \'pad\'.')
 
     def _check_input_3d(self, input_shape: tuple):
-
         r"""
         Check if the input shape is 3-dimensional.
         
@@ -740,8 +735,6 @@ class Conv1d(_ConvNd):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
-
-        
         """
         Constructs a 1D convolution operation on the input tensors x and y.
         
@@ -953,8 +946,6 @@ class Conv3d(_ConvNd):
     def _construct(self,
                    x: Tensor,
                    y: Tensor) -> Tuple[Tensor, Tensor]:
-
-        
         """
         Constructs the output of a 3D convolution operation.
         

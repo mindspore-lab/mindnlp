@@ -136,7 +136,6 @@ class GPTConfig(PretrainedConfig):
         summary_first_dropout=0.1,
         **kwargs,
     ):
-
         """
         Initializes a GPTConfig object with the provided parameters.
         

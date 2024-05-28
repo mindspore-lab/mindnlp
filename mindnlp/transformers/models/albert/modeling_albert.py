@@ -69,7 +69,6 @@ class AlbertEmbeddings(nn.Cell):
     """
 
     def __init__(self, config: AlbertConfig):
-
         """
         Initializes an instance of the `AlbertEmbeddings` class.
         
@@ -115,7 +114,6 @@ class AlbertEmbeddings(nn.Cell):
         inputs_embeds: Optional[mindspore.Tensor] = None,
         past_key_values_length: int = 0,
     ) -> mindspore.Tensor:
-
         """
         This method 'construct' is a part of the 'AlbertEmbeddings' class and is used to construct the embeddings for input tokens in the Albert model.
         
@@ -194,7 +192,6 @@ class AlbertAttention(nn.Cell):
     
     """
     def __init__(self, config: AlbertConfig):
-
         """
         Initializes an instance of the AlbertAttention class.
         
@@ -245,7 +242,6 @@ class AlbertAttention(nn.Cell):
 
     # Copied from transformers.models.bert.modeling_bert.BertSelfAttention.transpose_for_scores
     def transpose_for_scores(self, x: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Transpose the input tensor for calculating attention scores in the AlbertAttention class.
         
@@ -265,7 +261,6 @@ num_attention_heads.
         return x.permute(0, 2, 1, 3)
 
     def prune_heads(self, heads: List[int]) -> None:
-
         """
         This method prunes specific attention heads from the AlbertAttention class.
         
@@ -303,7 +298,6 @@ num_attention_heads.
         head_mask: Optional[mindspore.Tensor] = None,
         output_attentions: bool = False,
     ) -> Union[Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor]]:
-
         '''
         Constructs the attention mechanism for the Albert model.
         
@@ -398,7 +392,6 @@ along with optional attention outputs.
     Note: This class assumes that the nn module is imported as nn and that the AlbertAttention and ACT2FN classes are defined elsewhere.
     '''
     def __init__(self, config: AlbertConfig):
-
         """Initializes an instance of the AlbertLayer class.
         
         Args:
@@ -432,7 +425,6 @@ along with optional attention outputs.
         output_attentions: bool = False,
         output_hidden_states: bool = False,
     ) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
-
         ''' 
         Constructs an AlbertLayer.
         
@@ -469,7 +461,6 @@ along with optional attention outputs.
         return (hidden_states,) + attention_output[1:]  # add attentions if we output them
 
     def ff_chunk(self, attention_output: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Performs a feedforward chunk operation on the input attention output tensor.
         
@@ -512,7 +503,6 @@ class AlbertLayerGroup(nn.Cell):
     
     """
     def __init__(self, config: AlbertConfig):
-
         """
         Initializes an instance of the AlbertLayerGroup class.
         
@@ -543,7 +533,6 @@ parameter of the configuration object.
         output_attentions: bool = False,
         output_hidden_states: bool = False,
     ) -> Tuple[Union[mindspore.Tensor, Tuple[mindspore.Tensor]], ...]:
-
         """
         Constructs an Albert Layer Group.
         
@@ -613,7 +602,6 @@ class AlbertTransformer(nn.Cell):
     
     """
     def __init__(self, config: AlbertConfig):
-
         """
         Initializes an instance of the AlbertTransformer class.
         
@@ -643,7 +631,6 @@ class AlbertTransformer(nn.Cell):
         output_hidden_states: bool = False,
         return_dict: bool = True,
     ) -> Union[BaseModelOutput, Tuple]:
-
         """
         Constructs the AlbertTransformer.
         
@@ -727,7 +714,6 @@ class AlbertPreTrainedModel(PreTrainedModel):
             cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 
-
 @dataclass
 class AlbertForPreTrainingOutput(ModelOutput):
     """
@@ -775,7 +761,6 @@ method is used to prune heads of the model, and the 'construct' method construct
     base_model_prefix = "albert"
 
     def __init__(self, config: AlbertConfig, add_pooling_layer: bool = True):
-
         """
         Initializes an instance of the AlbertModel class.
         
@@ -807,7 +792,6 @@ method is used to prune heads of the model, and the 'construct' method construct
         self.post_init()
 
     def get_input_embeddings(self) -> nn.Embedding:
-
         """
         Retrieve the input embeddings for the AlbertModel.
         
@@ -825,7 +809,6 @@ method is used to prune heads of the model, and the 'construct' method construct
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, value: nn.Embedding) -> None:
-
         """
         Set input embeddings for the AlbertModel.
         
@@ -870,7 +853,6 @@ method is used to prune heads of the model, and the 'construct' method construct
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[BaseModelOutputWithPooling, Tuple]:
-
         """
         Constructs the AlbertModel.
         
@@ -968,7 +950,6 @@ prediction head to compute the total loss for pre-training tasks.
     _tied_weights_keys = ["predictions.decoder.bias", "predictions.decoder.weight"]
 
     def __init__(self, config: AlbertConfig):
-
         """
         Initializes an instance of the AlbertForPreTraining class.
         
@@ -992,7 +973,6 @@ prediction head to compute the total loss for pre-training tasks.
         self.post_init()
 
     def get_output_embeddings(self) -> nn.Dense:
-
         """
             Retrieves the output embeddings from the AlbertForPreTraining model.
         
@@ -1016,7 +996,6 @@ prediction head to compute the total loss for pre-training tasks.
         return self.predictions.decoder
 
     def set_output_embeddings(self, new_embeddings: nn.Dense) -> None:
-
         """
         Set the output embeddings for the AlbertForPreTraining model.
         
@@ -1034,7 +1013,6 @@ prediction head to compute the total loss for pre-training tasks.
         self.predictions.decoder = new_embeddings
 
     def get_input_embeddings(self) -> nn.Embedding:
-
         """
         Retrieve the input embeddings for the ALBERT model.
         
@@ -1151,7 +1129,6 @@ class AlbertMLMHead(nn.Cell):
     This class is designed to be used as part of an ALBERT model architecture for masked language modeling tasks.
     """
     def __init__(self, config: AlbertConfig):
-
         """
         Initializes an instance of the AlbertMLMHead class.
         
@@ -1180,7 +1157,6 @@ class AlbertMLMHead(nn.Cell):
         self.decoder.bias = self.bias
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method constructs the Albert Masked Language Model (MLM) head.
         
@@ -1207,7 +1183,6 @@ class AlbertMLMHead(nn.Cell):
         return prediction_scores
 
     def _tie_weights(self) -> None:
-
         """
         This method ties the weights of the decoder bias to the main decoder weights.
         
@@ -1253,7 +1228,6 @@ class AlbertSOPHead(nn.Cell):
         logits = albert_sop_head.construct(pooled_output)  # construct the logits for SOP classification
     """
     def __init__(self, config: AlbertConfig):
-
         """
         Initializes an instance of the AlbertSOPHead class.
         
@@ -1273,7 +1247,6 @@ class AlbertSOPHead(nn.Cell):
         self.classifier = nn.Dense(config.hidden_size, config.num_labels)
 
     def construct(self, pooled_output: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method constructs the AlbertSOPHead by applying dropout and classifier operations on the provided pooled_output.
         
@@ -1304,7 +1277,6 @@ including the loss and prediction scores. The class is designed to be used in na
     _tied_weights_keys = ["predictions.decoder.bias", "predictions.decoder.weight"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of the AlbertForMaskedLM class.
         
@@ -1327,7 +1299,6 @@ including the loss and prediction scores. The class is designed to be used in na
         self.post_init()
 
     def get_output_embeddings(self) -> nn.Dense:
-
         """
         Retrieve the output embeddings from the AlbertForMaskedLM model.
         
@@ -1346,7 +1317,6 @@ including the loss and prediction scores. The class is designed to be used in na
         return self.predictions.decoder
 
     def set_output_embeddings(self, new_embeddings: nn.Dense) -> None:
-
         """
         Sets the output embeddings for the AlbertForMaskedLM model.
         
@@ -1363,7 +1333,6 @@ including the loss and prediction scores. The class is designed to be used in na
         self.predictions.decoder = new_embeddings
 
     def get_input_embeddings(self) -> nn.Embedding:
-
         """
         Retrieve the input embeddings for the AlbertForMaskedLM model.
         
@@ -1480,7 +1449,6 @@ labels provided.
     Note: This docstring is a high-level summary and is not meant to be executed as code.
     """
     def __init__(self, config: AlbertConfig):
-
         """
         Initializes a new instance of the `AlbertForSequenceClassification` class.
         
@@ -1633,7 +1601,6 @@ class AlbertForTokenClassification(AlbertPreTrainedModel):
         The labels should be tensor of shape `(batch_size, sequence_length)` with indices in the range `[0, ..., num_labels - 1]`.
     """
     def __init__(self, config: AlbertConfig):
-
         """
         Initializes an instance of the AlbertForTokenClassification class.
         
@@ -1734,7 +1701,6 @@ class AlbertForQuestionAnswering(AlbertPreTrainedModel):
             Returns the total loss along with start and end logits if return_dict is False, otherwise returns a QuestionAnsweringModelOutput object.
     """
     def __init__(self, config: AlbertConfig):
-
         """
         Initializes an instance of AlbertForQuestionAnswering.
         
@@ -1862,7 +1828,6 @@ depending on the return_dict parameter.
     Please refer to the AlbertConfig documentation for more details on the configuration options used by this class.
     """
     def __init__(self, config: AlbertConfig):
-
         """
         Initialize the AlbertForMultipleChoice model.
         

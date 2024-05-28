@@ -324,7 +324,6 @@ class SeamlessM4TConfig(PretrainedConfig):
         vocoder_offset=4,
         **kwargs,
     ):
-
         """
         Initializes a SeamlessM4TConfig object with the specified configuration parameters.
         

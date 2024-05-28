@@ -82,7 +82,6 @@ class MBartTokenizer(PreTrainedTokenizer):
         additional_special_tokens=None,
         **kwargs,
     ):
-
         """
         This method initializes an instance of the MBartTokenizer class.
         
@@ -168,7 +167,6 @@ class MBartTokenizer(PreTrainedTokenizer):
         self.set_src_lang_special_tokens(self._src_lang)
 
     def __getstate__(self):
-
         """
         __getstate__
         
@@ -189,7 +187,6 @@ class MBartTokenizer(PreTrainedTokenizer):
         return state
 
     def __setstate__(self, _d):
-
         """
         Sets the state of the MBartTokenizer object during unpickling.
         
@@ -214,7 +211,6 @@ class MBartTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
-
         """
         Returns the total vocabulary size of the MBartTokenizer.
         
@@ -236,7 +232,6 @@ class MBartTokenizer(PreTrainedTokenizer):
 
     @src_lang.setter
     def src_lang(self, new_src_lang: str) -> None:
-
         """
         Sets the source language for the MBartTokenizer.
         
@@ -352,7 +347,6 @@ class MBartTokenizer(PreTrainedTokenizer):
         return inputs
 
     def get_vocab(self):
-
         """
         Retrieves the vocabulary of the MBartTokenizer instance.
         
@@ -380,7 +374,6 @@ class MBartTokenizer(PreTrainedTokenizer):
         return vocab
 
     def _tokenize(self, text: str) -> List[str]:
-
         """
         Tokenizes the given text into a list of strings using the mBART tokenizer.
         
@@ -420,7 +413,6 @@ class MBartTokenizer(PreTrainedTokenizer):
         return out_string
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the tokenizer's vocabulary to a file in the specified directory.
         
@@ -464,7 +456,6 @@ class MBartTokenizer(PreTrainedTokenizer):
         tgt_lang: str = "ro_RO",
         **kwargs,
     ) -> BatchEncoding:
-
         """
         Prepare and encode a batch of sequences for sequence-to-sequence (seq2seq) model input.
         
@@ -487,7 +478,6 @@ class MBartTokenizer(PreTrainedTokenizer):
         return super().prepare_seq2seq_batch(src_texts, tgt_texts, **kwargs)
 
     def _switch_to_input_mode(self):
-
         """
         Switch to input mode by setting the source language special tokens.
         
@@ -503,7 +493,6 @@ class MBartTokenizer(PreTrainedTokenizer):
         return self.set_src_lang_special_tokens(self.src_lang)
 
     def _switch_to_target_mode(self):
-
         """
         Switches the tokenizer to the target mode by setting the target language special tokens.
         

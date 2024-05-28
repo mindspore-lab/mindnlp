@@ -192,7 +192,6 @@ class RougeN(Metric):
 
     """
     def __init__(self, n_size=1, name='RougeN'):
-
         r"""
         Initializes an instance of the RougeN class.
         
@@ -312,7 +311,6 @@ class RougeL(Metric):
 
     """
     def __init__(self, beta=1.2, name='RougeL'):
-
         r"""
         Initializes an instance of the 'RougeL' class.
         

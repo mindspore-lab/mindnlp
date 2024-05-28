@@ -164,7 +164,6 @@ class CpmTokenizer(PreTrainedTokenizer):
     @property
     # Copied from transformers.models.xlnet.tokenization_xlnet.XLNetTokenizer.vocab_size
     def vocab_size(self):
-
         """
         Method to retrieve the vocabulary size of the CpmTokenizer instance.
         
@@ -183,7 +182,6 @@ class CpmTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.xlnet.tokenization_xlnet.XLNetTokenizer.get_vocab
     def get_vocab(self):
-
         """
         Retrieves the vocabulary of the CpmTokenizer instance.
         
@@ -204,7 +202,6 @@ class CpmTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.xlnet.tokenization_xlnet.XLNetTokenizer.__getstate__
     def __getstate__(self):
-
         """
         Method '__getstate__' in the class 'CpmTokenizer'.
         
@@ -226,7 +223,6 @@ class CpmTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.xlnet.tokenization_xlnet.XLNetTokenizer.__setstate__
     def __setstate__(self, d):
-
         """
         Method '__setstate__' in the class 'CpmTokenizer' updates the state of the object by restoring its attributes from a serialized state dictionary.
         
@@ -255,7 +251,6 @@ initialized as an empty dictionary. Then, a SentencePieceProcessor object 'sp_mo
 
     # Copied from transformers.models.xlnet.tokenization_xlnet.XLNetTokenizer.preprocess_text
     def preprocess_text(self, inputs):
-
         """
         This method preprocesses text input based on the specified settings in the CpmTokenizer class.
         
@@ -409,7 +404,6 @@ unicodedata.combining().
 
     # Copied from transformers.models.xlnet.tokenization_xlnet.XLNetTokenizer.save_vocabulary
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary file to the specified directory with an optional filename prefix.
         
@@ -443,7 +437,6 @@ unicodedata.combining().
         return (out_vocab_file,)
 
     def _decode(self, *args, **kwargs):
-
         """
         Method _decode in the class CpmTokenizer.
         

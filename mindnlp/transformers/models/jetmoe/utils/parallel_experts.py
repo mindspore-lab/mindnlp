@@ -78,7 +78,6 @@ class ParallelExperts(nn.Cell):
         self.output_size = output_size
 
     def extra_repr(self):
-
         """
         Method 'extra_repr' in the class 'ParallelExperts' generates a string representation of the object for debugging and logging purposes.
         

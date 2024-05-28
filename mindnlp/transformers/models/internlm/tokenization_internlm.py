@@ -69,7 +69,6 @@ class InternLMTokenizer(PreTrainedTokenizer):
         clean_up_tokenization_spaces=False,
         **kwargs,
     ):
-
         """
         Initializes an instance of the InternLMTokenizer class.
         
@@ -116,7 +115,6 @@ class InternLMTokenizer(PreTrainedTokenizer):
         self.add_eos_token = add_eos_token
 
     def __getstate__(self):
-
         """
         Method '__getstate__' in the class 'InternLMTokenizer' is used to retrieve the state of the object for pickling or serialization purposes.
         
@@ -134,7 +132,6 @@ class InternLMTokenizer(PreTrainedTokenizer):
         return state
 
     def __setstate__(self, d):
-
         """
         Sets the state of the InternLMTokenizer object.
         
@@ -223,7 +220,6 @@ class InternLMTokenizer(PreTrainedTokenizer):
         return (out_vocab_file,)
 
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
-
         """
         Method to build input tokens with special tokens for an internal language model tokenizer.
         

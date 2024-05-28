@@ -43,7 +43,6 @@ class BlipProcessor(ProcessorMixin):
     tokenizer_class = ("BertTokenizer", "BertTokenizerFast")
 
     def __init__(self, image_processor, tokenizer):
-
         """
         Initializes a BlipProcessor instance.
         
@@ -165,7 +164,6 @@ class BlipProcessor(ProcessorMixin):
 
     @property
     def model_input_names(self):
-
         """
         This method, model_input_names, in the BlipProcessor class, retrieves the unique model input names from the tokenizer and image processor.
         

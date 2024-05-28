@@ -17,7 +17,6 @@ get_vector_impl method returns an instance of _DualAlgebraImpl for vectors, and 
     """
 
     def get_matrix_impl(self) -> _MatrixImpl:
-
         r"""
         This method returns an instance of _MatrixImpl created by _DualAlgebraImpl.
         
@@ -33,7 +32,6 @@ get_vector_impl method returns an instance of _DualAlgebraImpl for vectors, and 
         return _DualAlgebraImpl()
 
     def get_vector_impl(self) -> _VectorImpl:
-
         r"""
         This method returns an instance of the _VectorImpl class.
         
@@ -51,7 +49,6 @@ get_vector_impl method returns an instance of _DualAlgebraImpl for vectors, and 
         return _DualAlgebraImpl()
 
     def get_scalar_impl(self) -> _ScalarImpl:
-
         r"""
         Retrieve the scalar implementation for the DualAlgebraFactory.
         

@@ -87,7 +87,6 @@ class Text2TextGenerationPipeline(Pipeline):
     return_name = "generated"
 
     def __init__(self, *args, **kwargs):
-
         """
         Initializes an instance of Text2TextGenerationPipeline.
         
@@ -112,7 +111,6 @@ class Text2TextGenerationPipeline(Pipeline):
             stop_sequence=None,
             **generate_kwargs,
     ):
-
         """
         This method '_sanitize_parameters' in the 'Text2TextGenerationPipeline' class sanitizes and prepares input parameters for text generation.
         
@@ -178,7 +176,6 @@ class Text2TextGenerationPipeline(Pipeline):
         return True
 
     def _parse_and_tokenize(self, *args, truncation):
-
         """
         This method '_parse_and_tokenize' is a member of the class 'Text2TextGenerationPipeline'. It parses and tokenizes input text data using a tokenizer and prepares it for model inference.
         
@@ -250,7 +247,6 @@ class Text2TextGenerationPipeline(Pipeline):
         return result
 
     def preprocess(self, inputs, truncation=TruncationStrategy.DO_NOT_TRUNCATE, **kwargs):
-
         """
         Preprocesses the input text for text-to-text generation.
         
@@ -272,7 +268,6 @@ class Text2TextGenerationPipeline(Pipeline):
         return inputs
 
     def _forward(self, model_inputs, **generate_kwargs):
-
         '''
         Forward pass method for the Text2TextGenerationPipeline class.
         
@@ -305,7 +300,6 @@ class Text2TextGenerationPipeline(Pipeline):
         return {"output_ids": output_ids}
 
     def postprocess(self, model_outputs, return_type=ReturnType.TEXT, clean_up_tokenization_spaces=False):
-
         """
         Postprocesses the model outputs to generate the final records based on the specified return type.
         
@@ -431,7 +425,6 @@ class TranslationPipeline(Text2TextGenerationPipeline):
     return_name = "translation"
 
     def check_inputs(self, input_length: int, min_length: int, max_length: int):
-
         """
         Method to check the input length against specified minimum and maximum lengths in the TranslationPipeline class.
         
@@ -455,7 +448,6 @@ class TranslationPipeline(Text2TextGenerationPipeline):
         return True
 
     def preprocess(self, *args, truncation=TruncationStrategy.DO_NOT_TRUNCATE, src_lang=None, tgt_lang=None):
-
         """
         This method preprocesses the input for translation using the TranslationPipeline class.
         
@@ -495,7 +487,6 @@ class TranslationPipeline(Text2TextGenerationPipeline):
             return super()._parse_and_tokenize(*args, truncation=truncation)
 
     def _sanitize_parameters(self, src_lang=None, tgt_lang=None, **kwargs):
-
         """
         Sanitizes the parameters for the TranslationPipeline.
         

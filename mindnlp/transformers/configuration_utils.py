@@ -39,7 +39,6 @@ class PretrainedConfig:
     attribute_map: Dict[str, str] = {}
 
     def __init__(self, **kwargs):
-
         '''
         This method initializes an instance of the PretrainedConfig class.
         
@@ -165,7 +164,6 @@ class PretrainedConfig:
                 raise err
 
     def __setattr__(self, key, value):
-
         """
         Method to set attribute values in the PretrainedConfig class.
         
@@ -185,7 +183,6 @@ class PretrainedConfig:
         super().__setattr__(key, value)
 
     def __getattribute__(self, key):
-
         """
         This method __getattribute__ in the class PretrainedConfig dynamically retrieves the value of the specified attribute key.
         
@@ -688,7 +685,6 @@ class PretrainedConfig:
 
     @num_labels.setter
     def num_labels(self, num_labels: int):
-
         """
         Method to set the number of labels in the PretrainedConfig class.
         
@@ -712,7 +708,6 @@ class PretrainedConfig:
 
     @property
     def _attn_implementation(self):
-
         """
         Returns the implementation type of the attention mechanism.
         
@@ -740,7 +735,6 @@ class PretrainedConfig:
 
     @_attn_implementation.setter
     def _attn_implementation(self, value):
-
         """
         This method '_attn_implementation' in the class 'PretrainedConfig' sets the value of the '_attn_implementation_internal' attribute.
         
@@ -807,7 +801,6 @@ class EncoderDecoderConfig(PretrainedConfig):
     is_composition = True
 
     def __init__(self, **kwargs):
-
         """
         Initializes an instance of the EncoderDecoderConfig class.
         

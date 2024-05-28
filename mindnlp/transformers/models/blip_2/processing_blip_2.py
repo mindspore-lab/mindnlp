@@ -44,7 +44,6 @@ class Blip2Processor(ProcessorMixin):
 
     # Copied from transformers.models.blip.processing_blip.BlipProcessor.__init__
     def __init__(self, image_processor, tokenizer):
-
         """
         Initializes a new instance of the Blip2Processor class.
         
@@ -166,7 +165,6 @@ will be set to False.
     @property
     # Copied from transformers.models.blip.processing_blip.BlipProcessor.model_input_names
     def model_input_names(self):
-
         """
         Retrieves the names of the model inputs for the 'Blip2Processor' class.
         

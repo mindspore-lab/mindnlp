@@ -20,8 +20,6 @@ from typing import Optional
 import numpy as np
 
 
-
-
 from ...configuration_utils import PretrainedConfig
 
 
@@ -138,7 +136,6 @@ class EncodecConfig(PretrainedConfig):
         use_conv_shortcut=True,
         **kwargs,
     ):
-
         """
         Initializes an instance of the EncodecConfig class.
         

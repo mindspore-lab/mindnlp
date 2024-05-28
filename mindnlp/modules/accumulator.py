@@ -23,7 +23,6 @@ from mindspore import jit_class
 class Accumulator():
     """Gradient Accumulator."""
     def __init__(self, optimizer, accumulate_step, clip_norm=1.0):
-
         r"""
         Initialize the Accumulator object with the provided optimizer, accumulate step, and optional clipping norm.
         
@@ -48,7 +47,6 @@ class Accumulator():
         self.map = ops.HyperMap()
 
     def __call__(self, grads):
-
         r"""
         This method '__call__' is defined within the class 'Accumulator' and is used to accumulate gradients and update the optimizer at a specified interval.
         

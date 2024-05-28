@@ -83,7 +83,6 @@ class ContextPooler(nn.Cell):
         output_dim: Property that returns the output dimension based on the hidden size in the configuration.
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the ContextPooler class.
         
@@ -106,7 +105,6 @@ class ContextPooler(nn.Cell):
         self.config = config
 
     def construct(self, hidden_states):
-
         """
         Args:
             self (ContextPooler): The instance of the ContextPooler class.
@@ -131,7 +129,6 @@ class ContextPooler(nn.Cell):
 
     @property
     def output_dim(self):
-
         """
         Method to retrieve the output dimension of the ContextPooler.
         
@@ -177,7 +174,6 @@ class XSoftmax(nn.Cell):
     ```"""
 
     def __init__(self, dim=-1):
-
         """
         Initializes an instance of the XSoftmax class.
         
@@ -198,7 +194,6 @@ class XSoftmax(nn.Cell):
         self.dim = dim
 
     def construct(self, input, mask):
-
         """
         Constructs a softmax operation with masking for a given input tensor.
         
@@ -223,7 +218,6 @@ class XSoftmax(nn.Cell):
         return output
 
     def brop(self, input, mask, output, grad_output):
-
         """
         This method, 'brop', is a member of the 'XSoftmax' class and performs a specific operation on the given input, mask, output, and grad_output parameters.
         
@@ -265,7 +259,6 @@ network framework to control dropout behavior during training.
     
     """
     def __init__(self):
-
         """
         Initialize a DropoutContext object.
         
@@ -285,7 +278,6 @@ network framework to control dropout behavior during training.
 
 
 def get_mask(input, local_context):
-
     """
     Args:
         input (Tensor): The input tensor for which the dropout mask is generated.
@@ -321,7 +313,6 @@ class XDropout(nn.Cell):
     """Optimized dropout function to save computation and memory by using mask operation instead of multiplication."""
 
     def __init__(self, local_ctx):
-
         """
         Initialize a new instance of the XDropout class.
         
@@ -341,7 +332,6 @@ class XDropout(nn.Cell):
         self.mask = None
 
     def construct(self, inputs):
-
         """
         Constructs a masked and scaled version of the input tensor using the XDropout method.
         
@@ -378,7 +368,6 @@ class StableDropout(nn.Cell):
     """
 
     def __init__(self, drop_prob):
-
         """Initialize the StableDropout object.
         
         This method is called when a new instance of the StableDropout class is created.
@@ -411,7 +400,6 @@ class StableDropout(nn.Cell):
         return x
 
     def clear_context(self):
-
         """
         Clears the context of the StableDropout class.
         
@@ -428,7 +416,6 @@ class StableDropout(nn.Cell):
         self.context_stack = None
 
     def init_context(self, reuse_mask=True, scale=1):
-
         """
         Initializes the context stack for the StableDropout class.
         
@@ -451,7 +438,6 @@ class StableDropout(nn.Cell):
             c.scale = scale
 
     def get_context(self):
-
         """
         Args:
             self (StableDropout): The instance of the StableDropout class invoking the method.
@@ -477,7 +463,6 @@ class DebertaLayerNorm(nn.Cell):
     """LayerNorm module in the TF style (epsilon inside the square root)."""
 
     def __init__(self, size, eps=1e-12):
-
         """
         Initializes an instance of the DebertaLayerNorm class.
         
@@ -498,7 +483,6 @@ class DebertaLayerNorm(nn.Cell):
         self.variance_epsilon = eps
 
     def construct(self, hidden_states):
-
         """
         This method constructs layer normalization for hidden states in a Deberta model.
         
@@ -543,7 +527,6 @@ class DebertaSelfOutput(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the DebertaSelfOutput class.
         
@@ -563,7 +546,6 @@ class DebertaSelfOutput(nn.Cell):
         self.dropout = StableDropout(config.hidden_dropout_prob)
 
     def construct(self, hidden_states, input_tensor):
-
         """
         Method 'construct' in the class 'DebertaSelfOutput'.
         
@@ -630,7 +612,6 @@ DebertaSelfOutput layer.
 is True.
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the DebertaAttention class.
         
@@ -659,7 +640,6 @@ DebertaSelfOutput instances.
         relative_pos=None,
         rel_embeddings=None,
     ):
-
         """
         Constructs the DebertaAttention layer with the given parameters.
         
@@ -715,7 +695,6 @@ class DebertaIntermediate(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the DebertaIntermediate class.
         
@@ -741,7 +720,6 @@ callable that takes a single argument.
             self.intermediate_act_fn = config.hidden_act
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the intermediate layer of the Deberta model.
         
@@ -800,7 +778,6 @@ class DebertaOutput(nn.Cell):
                 The transformed hidden states after applying the intermediate dense layer, dropout, and layer normalization.
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the DebertaOutput class.
         
@@ -824,7 +801,6 @@ class DebertaOutput(nn.Cell):
         self.config = config
 
     def construct(self, hidden_states, input_tensor):
-
         """
         Constructs the output of the Deberta model by performing a series of operations.
         
@@ -878,7 +854,6 @@ to perform these operations and return the final layer output.
         If 'output_attentions' is set to True, the 'construct' method will return both the final layer output and the attention matrix.
     """
     def __init__(self, config):
-
         """
         Initialize a DebertaLayer instance.
         
@@ -907,7 +882,6 @@ to perform these operations and return the final layer output.
         rel_embeddings=None,
         output_attentions=False,
     ):
-
         """
         Constructs the DebertaLayer by performing attention, intermediate, and output operations.
         
@@ -948,7 +922,6 @@ class DebertaEncoder(nn.Cell):
     """Modified BertEncoder with relative position bias support"""
 
     def __init__(self, config):
-
         """
         Initialize the DebertaEncoder class with the provided configuration.
         
@@ -980,7 +953,6 @@ class DebertaEncoder(nn.Cell):
         self.gradient_checkpointing = False
 
     def get_rel_embedding(self):
-
         """
         Retrieve the relative embeddings from the DebertaEncoder.
         
@@ -997,7 +969,6 @@ class DebertaEncoder(nn.Cell):
         return rel_embeddings
 
     def get_attention_mask(self, attention_mask):
-
         """
         This method calculates the attention mask for the DebertaEncoder.
         
@@ -1023,7 +994,6 @@ attention mechanism.
         return attention_mask
 
     def get_rel_pos(self, hidden_states, query_states=None, relative_pos=None):
-
         """
         Method: get_rel_pos
         
@@ -1068,7 +1038,6 @@ attention mechanism.
         relative_pos=None,
         return_dict=True,
     ):
-
         """
         This method constructs the DebertaEncoder by processing the input hidden states and attention mask.
         
@@ -1174,7 +1143,6 @@ def build_relative_position(query_size, key_size):
 
 
 def c2p_dynamic_expand(c2p_pos, query_layer, relative_pos):
-
     """
     Converts the input Cartesian coordinates to polar coordinates by dynamically expanding the Cartesian coordinates based on the shape of the query layer and relative positions.
     
@@ -1193,7 +1161,6 @@ def c2p_dynamic_expand(c2p_pos, query_layer, relative_pos):
 
 
 def p2c_dynamic_expand(c2p_pos, query_layer, key_layer):
-
     """
     Transforms the given c2p_pos tensor into a dynamic expanded tensor.
     
@@ -1213,7 +1180,6 @@ key_layer.shape[-2]].
 
 
 def pos_dynamic_expand(pos_index, p2c_att, key_layer):
-
     """
     Args:
         pos_index (torch.Tensor): A tensor representing positional indices.
@@ -1241,7 +1207,6 @@ class DisentangledSelfAttention(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes a DisentangledSelfAttention object with the given configuration.
         
@@ -1294,7 +1259,6 @@ class DisentangledSelfAttention(nn.Cell):
         self.softmax = XSoftmax(-1)
 
     def swapaxes_for_scores(self, x):
-
         """
         Performs a swap axis operation on the input tensor for scores in the DisentangledSelfAttention class.
         
@@ -1412,7 +1376,6 @@ class DisentangledSelfAttention(nn.Cell):
         return context_layer
 
     def disentangled_att_bias(self, query_layer, key_layer, relative_pos, rel_embeddings, scale_factor):
-
         """
         Perform disentangled attention bias calculation in the DisentangledSelfAttention class.
         
@@ -1491,7 +1454,6 @@ class DebertaEmbeddings(nn.Cell):
     """Construct the embeddings from word, position and token_type embeddings."""
 
     def __init__(self, config):
-
         """
         Initializes the DebertaEmbeddings class.
         
@@ -1532,7 +1494,6 @@ class DebertaEmbeddings(nn.Cell):
         self.position_ids = ops.arange(config.max_position_embeddings).expand((1, -1))
 
     def construct(self, input_ids=None, token_type_ids=None, position_ids=None, mask=None, inputs_embeds=None):
-
         """
         Constructs the embeddings for the Deberta model.
         
@@ -1655,7 +1616,6 @@ class DebertaModel(DebertaPreTrainedModel):
     
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the DebertaModel class.
         
@@ -1679,7 +1639,6 @@ class DebertaModel(DebertaPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Retrieve the input embeddings from the DebertaModel.
         
@@ -1695,7 +1654,6 @@ class DebertaModel(DebertaPreTrainedModel):
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Method to set the input embeddings for a DebertaModel instance.
         
@@ -1720,7 +1678,6 @@ class DebertaModel(DebertaPreTrainedModel):
         """
         raise NotImplementedError("The prune function is not implemented in DeBERTa model.")
 
-
     def construct(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
@@ -1732,7 +1689,6 @@ class DebertaModel(DebertaPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutput]:
-
         """
         This method constructs a DebertaModel based on the provided input parameters.
         
@@ -1846,7 +1802,6 @@ attentions. It also allows for customization of return types based on the 'retur
     _tied_weights_keys = ["cls.predictions.decoder.weight", "cls.predictions.decoder.bias"]
 
     def __init__(self, config):
-
         """
         Initialize the DebertaForMaskedLM class.
         
@@ -1870,7 +1825,6 @@ attentions. It also allows for customization of return types based on the 'retur
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         Retrieve the output embeddings from the DebertaForMaskedLM model.
         
@@ -1886,7 +1840,6 @@ attentions. It also allows for customization of return types based on the 'retur
         return self.cls.predictions.decoder
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the DebertaForMaskedLM model.
         
@@ -1975,7 +1928,6 @@ class DebertaPredictionHeadTransform(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes the DebertaPredictionHeadTransform class.
         
@@ -2008,7 +1960,6 @@ class DebertaPredictionHeadTransform(nn.Cell):
         self.LayerNorm = nn.LayerNorm(self.embedding_size, epsilon=config.layer_norm_eps)
 
     def construct(self, hidden_states):
-
         """
         This method 'construct' is defined within the class 'DebertaPredictionHeadTransform' and is responsible for processing the hidden states.
         
@@ -2046,7 +1997,6 @@ class DebertaLMPredictionHead(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the DebertaLMPredictionHead class.
         
@@ -2077,7 +2027,6 @@ class DebertaLMPredictionHead(nn.Cell):
         self.decoder.bias = self.bias
 
     def construct(self, hidden_states):
-
         """
         This method constructs the prediction head for DebertaLM model.
         
@@ -2111,7 +2060,6 @@ class DebertaOnlyMLMHead(nn.Cell):
         construct(sequence_output): Constructs prediction scores from the provided sequence output.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the DebertaOnlyMLMHead class.
         
@@ -2129,7 +2077,6 @@ class DebertaOnlyMLMHead(nn.Cell):
         self.predictions = DebertaLMPredictionHead(config)
 
     def construct(self, sequence_output):
-
         """
         Class: DebertaOnlyMLMHead
         
@@ -2168,7 +2115,6 @@ flexibility in handling various types of sequence classification tasks and suppo
     For more detailed information on the methods and parameters of DebertaForSequenceClassification, refer to the class implementation and the DeBERTa documentation.
     """
     def __init__(self, config):
-
         """
         Initializes the DebertaForSequenceClassification class.
         
@@ -2202,7 +2148,6 @@ flexibility in handling various types of sequence classification tasks and suppo
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method to retrieve the input embeddings from the Deberta model for sequence classification.
         
@@ -2219,7 +2164,6 @@ flexibility in handling various types of sequence classification tasks and suppo
         return self.deberta.get_input_embeddings()
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Sets the input embeddings for the Deberta model in the DebertaForSequenceClassification class.
         
@@ -2342,7 +2286,6 @@ class DebertaForTokenClassification(DebertaPreTrainedModel):
                 - If `return_dict` is True, returns a `TokenClassifierOutput` object containing the loss, logits, hidden states, and attentions.
     """
     def __init__(self, config):
-
         """
         __init__
         
@@ -2431,7 +2374,6 @@ provides detailed documentation for the construct method, including explanations
 total loss for question answering tasks based on start and end positions, and returns the final model outputs as a QuestionAnsweringModelOutput object.
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the DebertaForQuestionAnswering class.
         

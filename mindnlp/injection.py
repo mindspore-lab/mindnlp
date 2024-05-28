@@ -53,8 +53,6 @@ if DEVICE_TARGET == 'Ascend':
 
 old_set_context = mindspore.set_context
 def _set_context(**kwargs):
-
-    
     """
     Args:
         device_target (str): Specifies the target device. If device_target is not 'Ascend', sets global floating point precision to False.
@@ -144,8 +142,6 @@ def bool_io_patch_decorator(func):
     return wrapper
 
 def _get_unflatten_size(input_shape, dim, sizes):
-
-    
     """
     Args:
         input_shape (Tuple[int]): The shape of the input tensor.
@@ -187,7 +183,6 @@ def _get_unflatten_size(input_shape, dim, sizes):
 
 old_op_call = ops.Primitive.__call__
 def _op_call(self, *args):
-
     r"""
     This function modifies the input arguments based on a global flag and predefined white/black lists before calling the original function 'old_op_call'. 
     
@@ -259,7 +254,6 @@ ops.einsum = einsum
 ops.conv1d = fp16_patch_decorator(ops.conv1d)
 
 def _ones(*size, dtype=None):
-
     r"""
     Fills a tensor of specified size with ones.
     
@@ -285,7 +279,6 @@ def _ones(*size, dtype=None):
 ops.ones = _ones
 
 def _zeros(*size, dtype=None):
-
     r"""
     Args:
         *size (tuple or list): Represents the size of the output tensor to be created. If a tuple is provided, it is used as-is. If a list is provided, it is converted to a tuple.
@@ -309,8 +302,6 @@ ops.zeros = _zeros
 
 # cross_entropy
 def _cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
-
-    
     """
     Args:
         input (array_like): The input tensor or array of shape (N, C) where N is the batch size and C is the number of classes.
@@ -340,8 +331,6 @@ def _cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mea
 # for Tensor
 # unfold
 def _get_unfold_indices(input_shape, dimension, size, step):
-
-    
     """
     Args:
         input_shape (tuple): The shape of the input data tensor.
@@ -410,7 +399,6 @@ def masked_fill(inputs, mask, value):
     return ops.select(mask, masked_value, inputs)
 
 def _masked_fill(self, mask, value):
-
     r"""
     Fills elements of the input with a specified value, based on a provided mask.
     
@@ -456,7 +444,6 @@ def std(input, axis=None, ddof=0, keepdims=False):
     return out
 
 def _std(self, axis=None, ddof=0, keepdims=False):
-
     r"""
     This function calculates the standard deviation along the specified axis.
     
@@ -483,7 +470,6 @@ StubTensor.std = _std
 
 # Tensor.__contains__
 def _contains(self, key):
-
     r"""
     Args:
         self (object): The object instance on which the method is called.
@@ -511,7 +497,6 @@ Tensor.unflatten = unflatten
 StubTensor.unflatten = unflatten
 
 def _as_strided(self, size, stride, storage_offset=None):
-
     r"""
     Function _as_strided
     
@@ -551,8 +536,6 @@ Tensor.as_strided = _as_strided
 StubTensor.as_strided = _as_strided
 
 def _nonzero(self, as_tuple=False):
-
-    
     """
     Args:
         self (Tensor): The input tensor to find nonzero elements in.
@@ -577,8 +560,6 @@ Tensor.nonzero = _nonzero
 StubTensor.nonzero = _nonzero
 
 def _expand(self, *size):
-
-    
     """
     Expands the input array to a larger size.
     
@@ -621,8 +602,6 @@ if LESS_MS_2_2:
 mindspore.tensor = mindspore.Tensor
 ops.prod = bool_patch_decorator(ops.prod)
 def _prod(self, axis=None, keep_dims=False):
-
-    
     """
     This function calculates the product of elements along a specified axis.
     
@@ -644,7 +623,6 @@ Tensor.prod = _prod
 StubTensor.prod = _prod
 
 def _eq(self, other):
-
     r"""
     Function to compare the equality of two objects.
     
@@ -674,7 +652,6 @@ Parameter.__eq__ = _eq
 
 
 def _initialize(self, init_method):
-
     r"""
     Initializes the object with the given initialization method.
     
@@ -703,8 +680,6 @@ Parameter.initialize = _initialize
 
 old_param_init = Parameter.__init__
 def _param_new_init(self, default_input, name=None, requires_grad=True, layerwise_parallel=False, parallel_optimizer=True):
-
-    
     """
     Args:
         self (object): The instance of the class.
@@ -739,7 +714,6 @@ def new_repeat_interleave(input, repeats, axis=None):
 
 ops.repeat_interleave = bool_io_patch_decorator(new_repeat_interleave)
 def _repeat_interleave(self, repeats, dim):
-
     r"""
     Args:
         self (object): The object instance on which the method is called.
@@ -758,7 +732,6 @@ Tensor.repeat_interleave = _repeat_interleave
 StubTensor.repeat_interleave = _repeat_interleave
 
 def _repeat(self, *sizes):
-
     r"""
     This function repeats the input tensor along each dimension according to the given sizes.
     
@@ -785,7 +758,6 @@ if version.parse(mindspore.__version__) < version.parse('2.3.0'):
     StubTensor.stride = _stride
 
 def _ne(self, other):
-
     r"""
     This function is used to check if the given 'self' object is not equal to the 'other' object.
     
@@ -919,7 +891,6 @@ class Dense(nn.Cell):
                 Uniform(bound), [out_channels], dtype=dtype), name="bias")
 
     def construct(self, x):
-
         r"""
         This method constructs the output of a dense layer operation based on the input tensor 'x' using the weights and biases of the Dense class instance.
         
@@ -949,7 +920,6 @@ class Dense(nn.Cell):
         return ops.dense(x, self.weight, self.bias)
 
     def extend_repr(self):
-
         r"""
         This method extends the string representation of the Dense class instance.
         
@@ -984,7 +954,6 @@ class Embedding(nn.Cell):
             self.weight[self.padding_idx] = 0
 
     def construct(self, ids):
-
         r"""
         Constructs an embedding tensor based on the given input IDs.
         
@@ -1012,7 +981,6 @@ class Embedding(nn.Cell):
         return output
 
     def extend_repr(self):
-
         r"""
         This method extends the representation of the Embedding class.
         
@@ -1083,7 +1051,6 @@ class Conv1d(_Conv):
         self.dilation = (dilation,)
 
     def construct(self, x):
-
         r"""
         Method to construct a 1D convolutional layer.
         
@@ -1170,7 +1137,6 @@ class Conv1dTranspose(_Conv):
                                                       group=group)
 
     def construct(self, x):
-
         r"""
         Constructs a transposed 1D convolution operation.
         
@@ -1246,7 +1212,6 @@ class LayerNorm(nn.Cell):
         self.elementwise_affine = elementwise_affine
 
     def construct(self, input_x):
-
         r"""
         Constructs the normalized output tensor based on the input tensor using Layer Normalization.
         
@@ -1270,7 +1235,6 @@ class LayerNorm(nn.Cell):
         return y
 
     def extend_repr(self):
-
         r"""
         Method to extend the representation of the LayerNorm class instance.
         
@@ -1337,7 +1301,6 @@ class BatchNorm1d(nn.Cell):
         self.bn_infer = ops.BatchNorm(is_training=False, epsilon=self.eps)
 
     def construct(self, x):
-
         r"""
         This method constructs the batch normalization for 1D input.
         
@@ -1379,7 +1342,6 @@ class BatchNorm1d(nn.Cell):
                              self.running_var)[0]
 
     def extend_repr(self):
-
         r"""
         This method extends the string representation of the BatchNorm1d class instance.
         
@@ -1434,7 +1396,6 @@ if not LESS_MS_2_2:
 
 
 def _check_cell_flags_in_pynative(self):
-
     r"""
     This function checks the cell flags in the PyNative environment.
     
@@ -1452,7 +1413,6 @@ def _check_cell_flags_in_pynative(self):
 nn.Cell._check_cell_flags_in_pynative = _check_cell_flags_in_pynative
 
 def _update_parameters_name(self, prefix='', recurse=True):
-
     r"""
     Updates the parameter names with the specified prefix.
     
@@ -1576,7 +1536,6 @@ class GroupNorm_hijack(GroupNorm_original):
     """
 
     def __init__(self, num_groups, num_channels, eps=0.00001, affine=True, gamma_init='ones', beta_init='zeros', dtype=mstype.float32):
-
         r"""
         Initializes an instance of the GroupNorm_hijack class.
         
@@ -1606,7 +1565,6 @@ class GroupNorm_hijack(GroupNorm_original):
         del self.beta
 
     def _cal_output(self, x):
-
         r"""
         Calculates the output of GroupNorm_hijack.
         
@@ -1635,7 +1593,6 @@ class GroupNorm_hijack(GroupNorm_original):
         return output
 
     def construct(self, x:Tensor) -> Tensor:
-
         r"""
         Method to construct a tensor with additional processing steps based on its shape.
         
@@ -1713,8 +1670,6 @@ mindspore.experimental.optim.lr_scheduler.LambdaLR.state_dict = state_dict
 mindspore.experimental.optim.lr_scheduler.LambdaLR.load_state_dict = load_state_dict
 
 def _str(self):
-
-    
     """
     Returns a string representation of the Parameter.
     
@@ -1752,7 +1707,6 @@ class CustomDropout(nn.Cell):
     Note: The 'ops' module is assumed to be imported for the 'rand_like' function.
     """
     def __init__(self, p=0.5):
-
         r"""
         Args:
             self (object): The instance of the CustomDropout class.
@@ -1770,7 +1724,6 @@ class CustomDropout(nn.Cell):
         self.p = p
 
     def construct(self, x):
-
         r"""
         Constructs a custom dropout layer for the given input data.
         
@@ -1792,8 +1745,6 @@ class CustomDropout(nn.Cell):
 nn.Dropout = CustomDropout
 
 def dropout(input, p=0.5, training=True, seed=None):
-
-    
     """
     Implements the dropout function to apply dropout regularization during training.
     
@@ -1820,7 +1771,6 @@ ops.dropout = dropout
 
 old_cell_call = nn.Cell.__call__
 def _cell_call(self, *args, **kwargs):
-
     r"""
     This function is used to make a call to the '_cell_call' method. 
     
@@ -1841,7 +1791,6 @@ def _cell_call(self, *args, **kwargs):
 nn.Cell.__call__ = old_cell_call
 
 def get_cell(self, target):
-
     r"""
     This function retrieves the specified cell based on the given target.
     
@@ -1920,7 +1869,6 @@ def _set_attr_for_parameter_tuple(self, name, value):
 nn.Cell._set_attr_for_parameter_tuple = _set_attr_for_parameter_tuple
 
 def _check_names(self):
-
     r"""
     This function does not have any parameters. It is used to perform a check on names and does not return any value.
     
@@ -1930,7 +1878,6 @@ def _check_names(self):
 nn.Cell.check_names = _check_names
 
 def requires_grad_(self, requires_grad: bool = True):
-
     r"""
     Sets the 'requires_grad' attribute of all parameters in the model to the given value.
     

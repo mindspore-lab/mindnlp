@@ -52,7 +52,6 @@ class EvalPrediction:
         label_ids: Union[np.ndarray, Tuple[np.ndarray]],
         inputs: Optional[Union[np.ndarray, Tuple[np.ndarray]]] = None,
     ):
-
         r"""
         Initializes an instance of the EvalPrediction class.
         
@@ -72,7 +71,6 @@ class EvalPrediction:
         self.inputs = inputs
 
     def __iter__(self):
-
         r"""
         Args:
             self (EvalPrediction): The instance of the EvalPrediction class.
@@ -90,7 +88,6 @@ class EvalPrediction:
             return iter((self.predictions, self.label_ids))
 
     def __getitem__(self, idx):
-
         r"""
         Method: __getitem__
             
@@ -162,7 +159,6 @@ specific use cases or requirements.
     NO = "no"
     STEPS = "steps"
     EPOCH = "epoch"
-
 
 
 class HubStrategy(ExplicitEnum):
@@ -248,7 +244,6 @@ class LabelSmoother:
     ignore_index: int = -100
 
     def __call__(self, model_output, labels, shift_labels=False):
-
         r"""
         This method performs label smoothing for the given model output and labels.
         
@@ -364,7 +359,6 @@ PREFIX_CHECKPOINT_DIR = "checkpoint"
 _re_checkpoint = re.compile(r"^" + PREFIX_CHECKPOINT_DIR + r"\-(\d+)$")
 
 def get_last_checkpoint(folder):
-
     r"""
     This function returns the path to the most recent checkpoint folder within the specified folder.
     
@@ -512,7 +506,6 @@ def speed_metrics(split, start_time, num_samples=None, num_steps=None, num_token
     return result
 
 def _get_learning_rate(self):
-
     r"""
     This function retrieves the learning rate used by the optimizer.
     
@@ -567,7 +560,6 @@ def denumpify_detensorize(metrics):
     return metrics
 
 def convert_tensor_to_scalar(data):
-
     r"""
     Converts tensor objects within nested dictionaries and lists to scalar values.
     
@@ -593,7 +585,6 @@ def convert_tensor_to_scalar(data):
 
 
 def atleast_1d(tensor_or_array: Union[mindspore.Tensor, np.ndarray]):
-
     r"""
     Converts the input tensor or array to at least one dimension.
     
@@ -712,7 +703,6 @@ def neftune_post_forward_hook(module, input, output):
     return output
 
 def mismatch_dataset_col_names(map_fn_args, col_names):
-
     r"""
     Checks if all elements of the map_fn_args parameter are present in the col_names parameter.
     
@@ -729,7 +719,6 @@ def mismatch_dataset_col_names(map_fn_args, col_names):
     return not set(map_fn_args).issubset(set(col_names))
 
 def get_function_args(fn):
-
     r"""
     This function retrieves the names of the parameters of a given function.
     
@@ -747,7 +736,6 @@ def get_function_args(fn):
     return parameter_names
 
 def args_only_in_map_fn(map_fn_args, col_names):
-
     r"""
     This function filters the elements in 'map_fn_args' that are not present in 'col_names'.
     
@@ -765,8 +753,6 @@ def args_only_in_map_fn(map_fn_args, col_names):
     return [element for element in map_fn_args if element not in col_names]
 
 def check_input_output_count(fn):
-
-    
     """
     Checks the input and output parameter count of a given function.
     

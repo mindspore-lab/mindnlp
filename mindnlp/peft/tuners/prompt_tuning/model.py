@@ -58,7 +58,6 @@ class PromptEmbedding(nn.Cell):
     """
 
     def __init__(self, config, word_embeddings):
-
         r"""
         Initialize the PromptEmbedding class.
         
@@ -107,7 +106,6 @@ class PromptEmbedding(nn.Cell):
             self.embedding.weight = Parameter(word_embedding_weights)
 
     def construct(self, indices):
-
         r"""
         Construct the prompt embeddings based on the given indices.
         

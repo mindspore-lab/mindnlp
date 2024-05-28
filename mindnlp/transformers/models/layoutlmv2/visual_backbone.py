@@ -65,7 +65,6 @@ class Conv2d(nn.Conv2d):
     
     """
     def __init__(self, *args, **kwargs):
-
         """
         Initializes an instance of the Conv2d class.
         
@@ -99,7 +98,6 @@ class Conv2d(nn.Conv2d):
         self.activation = activation
 
     def construct(self, x):
-
         """
         Construct method in the Conv2d class.
         
@@ -154,7 +152,6 @@ class BasicStem(nn.Cell):
         self.max_pool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1, pad_mode="pad")
 
     def construct(self, x):
-
         """
         Constructs a basic stem block by applying convolution, ReLU activation, and max pooling operations.
         
@@ -230,7 +227,6 @@ class BasicBlock(nn.Cell):
         self.relu = nn.ReLU()
 
     def construct(self, x):
-
         """
         Constructs a basic block by performing convolutional operations and element-wise addition with shortcut connection.
         
@@ -344,7 +340,6 @@ class BottleneckBlock(nn.Cell):
         self.relu = nn.ReLU()
 
     def construct(self, x):
-
         """
         Constructs a bottleneck block for the BottleneckBlock class.
         
@@ -468,7 +463,6 @@ class ResNet(nn.Cell):
         return outputs
 
     def output_shape(self):
-
         """
         Method to calculate the output shape of the ResNet model.
         
@@ -597,7 +591,6 @@ class ResNet(nn.Cell):
 
 
 def build_resnet_backbone(cfg):
-
     """
     Builds a ResNet backbone network based on the provided configuration.
     
@@ -685,7 +678,6 @@ def build_resnet_backbone(cfg):
     return ResNet(stem, stages, out_features=out_features)
 
 def read_config():
-
     """Reads the visual_backbone.yaml configuration file and returns its contents as a dictionary.
     
     Returns:
@@ -703,7 +695,6 @@ def read_config():
 
 
 def build_resnet_fpn_backbone(cfg):
-
     """
     Builds a ResNet-FPN backbone based on the provided configuration.
     
@@ -754,7 +745,6 @@ class LastLevelMaxPool(nn.Cell):
         result = last_level_max_pool.construct(input_data)
     """
     def __init__(self):
-
         """
         Initializes an instance of the LastLevelMaxPool class.
         
@@ -772,7 +762,6 @@ class LastLevelMaxPool(nn.Cell):
         self.in_feature = "p5"
 
     def construct(self, x):
-
         """
             Constructs the last level max pooling operation on the input tensor.
         
@@ -823,7 +812,6 @@ class FPN(nn.Cell):
                  top_block=None,
                  fuse_type="sum",
                  square_pad=0):
-
         """
         __init__
         
@@ -900,7 +888,6 @@ class FPN(nn.Cell):
 
     @property
     def size_divisibility(self):
-
         """
         Returns the size divisibility of the object.
         
@@ -917,7 +904,6 @@ class FPN(nn.Cell):
 
     @property
     def padding_constraints(self):
-
         """
         Returns the padding constraints for the FPN class.
         
@@ -933,7 +919,6 @@ class FPN(nn.Cell):
         return {"square_size": self._square_pad}
 
     def output_shape(self):
-
         """
         Returns the output shape of the Feature Pyramid Network (FPN) for each feature level.
         
@@ -954,7 +939,6 @@ class FPN(nn.Cell):
         }
 
     def construct(self, x):
-
         """
         Constructs the Feature Pyramid Network (FPN) based on the provided input.
         

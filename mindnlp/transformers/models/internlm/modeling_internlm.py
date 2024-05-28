@@ -93,7 +93,6 @@ class InternLMRMSNorm(nn.Cell):
         self.variance_epsilon = epsilon
 
     def construct(self, hidden_states):
-
         """
         Constructs the RMS normalization of hidden states.
         
@@ -123,7 +122,6 @@ class InternLMRotaryEmbedding(nn.Cell):
     """
 
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
-
         """
         __init__ method in the InternLMRotaryEmbedding class.
         
@@ -152,7 +150,6 @@ class InternLMRotaryEmbedding(nn.Cell):
         self.sin_cached = emb.sin()[None, None, :, :]
 
     def construct(self, x, seq_len=None):
-
         '''
         This method constructs the rotary embeddings for the input sequence.
         
@@ -220,7 +217,6 @@ the cosine and sine values necessary for the rotary embeddings.
     """
 
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
-
         """
         Initializes an instance of the InternLMDynamicNTKScalingRotaryEmbedding class.
         
@@ -241,7 +237,6 @@ the cosine and sine values necessary for the rotary embeddings.
         super().__init__(dim, max_position_embeddings, base)
 
     def _set_cos_sin_cache(self, seq_len, dtype):
-
         """
         Method '_set_cos_sin_cache' in the class 'InternLMDynamicNTKScalingRotaryEmbedding'.
         
@@ -306,7 +301,6 @@ class InternLMMLP(nn.Cell):
             intermediate_size: int,
             hidden_act: str,
     ):
-
         """
         Initializes the InternLMMLP class.
         
@@ -330,7 +324,6 @@ class InternLMMLP(nn.Cell):
         self.act_fn = ACT2FN[hidden_act]
 
     def construct(self, x):
-
         """
         Constructs the output of the InternLMMLP model.
         
@@ -350,7 +343,6 @@ class InternLMAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(self, config: InternLMConfig):
-
         """
         Initializes an instance of the InternLMAttention class.
         
@@ -407,7 +399,6 @@ class InternLMAttention(nn.Cell):
         self._init_rope()
 
     def _init_rope(self):
-
         """
         This method initializes the rotary embedding for the InternLMAttention class.
         
@@ -438,7 +429,6 @@ class InternLMAttention(nn.Cell):
         return self.rotary_emb
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-
         """
         Reshapes the input tensor according to the specified dimensions for the InternLMAttention class.
         
@@ -466,7 +456,6 @@ class InternLMAttention(nn.Cell):
         use_cache: bool = False,
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
-
         """
         Constructs the attention mechanism for the InternLMAttention class.
         
@@ -548,7 +537,6 @@ class InternLMDecoderLayer(nn.Cell):
     """
 
     def __init__(self, config: InternLMConfig):
-
         """Initialize an instance of the InternLMDecoderLayer class.
         
         Args:
@@ -656,7 +644,6 @@ checkpointing.
     #_skip_keys_device_placement = "past_key_values"
 
     def _init_weights(self, cell):
-
         """
         Initializes the weights of a given cell.
         
@@ -695,7 +682,6 @@ checkpointing.
             cell.weight.set_data(Tensor(weight, cell.weight.dtype))
 
     def _set_gradient_checkpointing(self, module, value=False):
-
         """
         Sets the gradient checkpointing attribute of a given module.
         
@@ -729,7 +715,6 @@ class InternLMModel(InternLMPreTrainedModel):
     _auto_class = "AutoModel"
 
     def __init__(self, config: InternLMConfig):
-
         """
         Args:
             self (object): The instance of the InternLMModel class.
@@ -758,7 +743,6 @@ class InternLMModel(InternLMPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings from the InternLMModel.
         
@@ -774,7 +758,6 @@ class InternLMModel(InternLMPreTrainedModel):
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the InternLMModel.
         
@@ -792,7 +775,6 @@ class InternLMModel(InternLMPreTrainedModel):
 
     # Copied from transformers.models.bart.modeling_bart.BartDecoder._prepare_decoder_attention_mask
     def _prepare_decoder_attention_mask(self, attention_mask, input_shape, inputs_embeds, past_key_values_length):
-
         """
         This method prepares the decoder attention mask for the InternLMModel.
         
@@ -841,7 +823,6 @@ class InternLMModel(InternLMPreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
-
         ''' 
         Constructs the internal language model for the model.
         
@@ -1011,7 +992,6 @@ masked language modeling loss.
     """
     _auto_class = "AutoModelForCausalLM"
     def __init__(self, config, size=None):
-
         """
         Initializes a new instance of the InternLMForCausalLM class.
         
@@ -1039,7 +1019,6 @@ masked language modeling loss.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Retrieve the input embeddings from the InternLMForCausalLM model.
         
@@ -1065,7 +1044,6 @@ semantic meaning and contextual information of the tokens, which is crucial for 
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
-
         '''
         Sets the input embeddings for the InternLMForCausalLM model.
         
@@ -1082,7 +1060,6 @@ semantic meaning and contextual information of the tokens, which is crucial for 
         self.model.embed_tokens = value
 
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings of the InternLMForCausalLM model.
         
@@ -1101,7 +1078,6 @@ semantic meaning and contextual information of the tokens, which is crucial for 
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the InternLMForCausalLM model.
         
@@ -1118,7 +1094,6 @@ semantic meaning and contextual information of the tokens, which is crucial for 
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
-
         """
         Sets the decoder for the InternLMForCausalLM class.
         
@@ -1135,7 +1110,6 @@ semantic meaning and contextual information of the tokens, which is crucial for 
         self.model = decoder
 
     def get_decoder(self):
-
         """
         Method to retrieve the decoder from the InternLMForCausalLM class.
         
@@ -1233,7 +1207,6 @@ semantic meaning and contextual information of the tokens, which is crucial for 
     def prepare_inputs_for_generation(
             self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
-
         """
         Prepare inputs for generation.
         
@@ -1287,7 +1260,6 @@ semantic meaning and contextual information of the tokens, which is crucial for 
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Reorders the cache of past key values based on the provided beam index.
         
@@ -1305,7 +1277,6 @@ semantic meaning and contextual information of the tokens, which is crucial for 
         for layer_past in past_key_values:
             reordered_past += (tuple(past_state.index_select(0, beam_idx) for past_state in layer_past),)
         return reordered_past
-
 
 
 class InternLMForSequenceClassification(InternLMPreTrainedModel):
@@ -1336,7 +1307,6 @@ parameter is True, the method returns a SequenceClassifierOutputWithPast object,
     _keys_to_ignore_on_load_missing = [r"lm_head.weight"]
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the `InternLMForSequenceClassification` class.
         
@@ -1364,7 +1334,6 @@ parameter is True, the method returns a SequenceClassifierOutputWithPast object,
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Retrieve the input embeddings from the InternLMForSequenceClassification model.
         
@@ -1383,7 +1352,6 @@ the input embeddings or perform any additional processing. The retrieved input e
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         This method is a part of the 'InternLMForSequenceClassification' class and is used to set the input embeddings for the model.
         

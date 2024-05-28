@@ -54,7 +54,6 @@ class LogitsProcessorList(list):
     """
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor, **kwargs) -> mindspore.Tensor:
-
         """
         This method processes input_ids and scores using a list of processors.
         
@@ -102,7 +101,6 @@ class HammingDiversityLogitsProcessor(LogitsProcessor):
     """
 
     def __init__(self, diversity_penalty: float, num_beams: int, num_beam_groups: int):
-
         """
         Initializes a new instance of the HammingDiversityLogitsProcessor class.
         
@@ -140,7 +138,6 @@ class HammingDiversityLogitsProcessor(LogitsProcessor):
             current_tokens: mindspore.Tensor,
             beam_group_idx: int,
     ) -> mindspore.Tensor:
-
         """
         This method calculates the diversity penalty and updates the input scores based on the previous group tokens.
         
@@ -193,7 +190,6 @@ class EncoderRepetitionPenaltyLogitsProcessor(LogitsProcessor):
     """
 
     def __init__(self, penalty: float, encoder_input_ids: mindspore.Tensor):
-
         """
         Initializes an instance of the EncoderRepetitionPenaltyLogitsProcessor class.
         
@@ -216,7 +212,6 @@ class EncoderRepetitionPenaltyLogitsProcessor(LogitsProcessor):
         self.encoder_input_ids = encoder_input_ids
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method calculates and applies repetition penalty to the logits based on the input scores.
         
@@ -253,7 +248,6 @@ class RepetitionPenaltyLogitsProcessor(LogitsProcessor):
     """
 
     def __init__(self, penalty: float):
-
         """
         Initializes a new RepetitionPenaltyLogitsProcessor with the specified penalty.
         
@@ -272,7 +266,6 @@ class RepetitionPenaltyLogitsProcessor(LogitsProcessor):
         self.penalty = penalty
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method applies repetition penalty to the input logits based on the given input_ids and scores.
         
@@ -303,7 +296,6 @@ class RepetitionPenaltyLogitsProcessor(LogitsProcessor):
 
 
 def _get_ngrams(ngram_size: int, prev_input_ids: mindspore.Tensor, num_hypos: int):
-
     """
     Args:
         ngram_size (int): The size of the n-grams to generate.
@@ -327,7 +319,6 @@ def _get_ngrams(ngram_size: int, prev_input_ids: mindspore.Tensor, num_hypos: in
 
 
 def _get_generated_ngrams(banned_ngrams, prev_input_ids, ngram_size, cur_len):
-
     """
     Args:
         banned_ngrams (dict): A dictionary containing banned ngrams as keys and corresponding values.
@@ -375,7 +366,6 @@ class NoRepeatNGramLogitsProcessor(LogitsProcessor):
     """
 
     def __init__(self, ngram_size: int):
-
         """
         Initializes a NoRepeatNGramLogitsProcessor object with the specified ngram size.
         
@@ -394,7 +384,6 @@ class NoRepeatNGramLogitsProcessor(LogitsProcessor):
         self.ngram_size = ngram_size
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method processes the logits for generating token sequences without repeating n-grams.
         
@@ -436,7 +425,6 @@ class EncoderNoRepeatNGramLogitsProcessor(LogitsProcessor):
     """
 
     def __init__(self, encoder_ngram_size: int, encoder_input_ids: mindspore.Tensor):
-
         """
         Initializes the EncoderNoRepeatNGramLogitsProcessor.
         
@@ -461,7 +449,6 @@ class EncoderNoRepeatNGramLogitsProcessor(LogitsProcessor):
         self.generated_ngrams = _get_ngrams(encoder_ngram_size, encoder_input_ids, self.batch_size)
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method processes logits to prevent generation of n-grams that have already appeared in the input sequence.
         
@@ -511,7 +498,6 @@ class NoBadWordsLogitsProcessor(LogitsProcessor):
     """
 
     def __init__(self, bad_words_ids: List[List[int]], eos_token_id: Union[int, List[int]]):
-
         """
         This method initializes an instance of the NoBadWordsLogitsProcessor class.
         
@@ -569,7 +555,6 @@ element.
                 raise ValueError(f"Banned words token sequences {bad_words_ids} cannot have an empty list")
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method is a part of the 'NoBadWordsLogitsProcessor' class and is called '__call__'. It processes the input tensors and applies the 'No Bad Words' logic to the scores.
         
@@ -599,7 +584,6 @@ element.
         return scores
 
     def _calc_static_bad_word_mask(self, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method calculates a static bad word mask based on the given scores in the NoBadWordsLogitsProcessor class.
         
@@ -618,7 +602,6 @@ element.
         return static_bad_words_mask.unsqueeze(0).bool()
 
     def _tokens_match(self, prev_tokens: List[int], tokens: List[int]) -> bool:
-
         """
         Method _tokens_match in the class NoBadWordsLogitsProcessor checks if a sequence of tokens matches the previous tokens.
         
@@ -642,7 +625,6 @@ element.
         return prev_tokens[-len(tokens):] == tokens
 
     def _calc_banned_bad_words_ids(self, prev_input_ids: List[List[int]]) -> Iterable[int]:
-
         """
         Calculates the banned bad word IDs based on the previous input IDs.
         
@@ -742,7 +724,6 @@ class MinLengthLogitsProcessor(LogitsProcessor):
     """
 
     def __init__(self, min_length: int, eos_token_id: Union[int, List[int]]):
-
         """
         Initializes an instance of the MinLengthLogitsProcessor class.
         
@@ -771,7 +752,6 @@ integers.
         self.eos_token_id = eos_token_id
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         The '__call__' method processes the scores of a given input and applies a minimum length constraint to the logits. It takes three parameters: self, input_ids, and scores. 
         
@@ -809,7 +789,6 @@ class MinNewTokensLengthLogitsProcessor(LogitsProcessor):
     """
 
     def __init__(self, prompt_length_to_skip: int, min_new_tokens: int, eos_token_id: int):
-
         """
         __init__
         
@@ -837,7 +816,6 @@ class MinNewTokensLengthLogitsProcessor(LogitsProcessor):
         self.eos_token_id = eos_token_id
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method '__call__' in the class 'MinNewTokensLengthLogitsProcessor' processes input_ids and scores to adjust scores based on the length of new tokens.
         
@@ -873,7 +851,6 @@ class PrefixConstrainedLogitsProcessor(LogitsProcessor):
     """
 
     def __init__(self, prefix_allowed_tokens_fn: Callable[[int, mindspore.Tensor], List[int]], num_beams: int):
-
         """
         Initialize the PrefixConstrainedLogitsProcessor object.
         
@@ -894,7 +871,6 @@ class PrefixConstrainedLogitsProcessor(LogitsProcessor):
         self._num_beams = num_beams
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         ''' 
         Method '__call__' in the class 'PrefixConstrainedLogitsProcessor'.
         
@@ -928,7 +904,6 @@ class ForcedBOSTokenLogitsProcessor(LogitsProcessor):
     """
 
     def __init__(self, bos_token_id: int):
-
         """
         Initializes a new instance of the ForcedBOSTokenLogitsProcessor class.
         
@@ -945,7 +920,6 @@ class ForcedBOSTokenLogitsProcessor(LogitsProcessor):
         self.bos_token_id = bos_token_id
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method, '__call__', is a part of the 'ForcedBOSTokenLogitsProcessor' class. It takes three parameters: self, input_ids, and scores. The method returns a value of type 'mindspore.Tensor'.
         
@@ -984,7 +958,6 @@ class ForcedEOSTokenLogitsProcessor(LogitsProcessor):
     """
 
     def __init__(self, max_length: int, eos_token_id: Union[int, List[int]]):
-
         """
         Initializes a ForcedEOSTokenLogitsProcessor object with the specified parameters.
         
@@ -1004,7 +977,6 @@ class ForcedEOSTokenLogitsProcessor(LogitsProcessor):
         self.eos_token_id = eos_token_id
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         '''
         This method processes the logits by forcing end-of-sequence (EOS) tokens and returns the updated scores.
         
@@ -1037,7 +1009,6 @@ class InfNanRemoveLogitsProcessor(LogitsProcessor):
     """
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method '__call__' in the class 'InfNanRemoveLogitsProcessor' processes input scores by replacing infinite and NaN values.
         
@@ -1080,7 +1051,6 @@ class ExponentialDecayLengthPenalty(LogitsProcessor):
             self, exponential_decay_length_penalty: Tuple, eos_token_id: Union[int, List[int]],
             input_ids_seq_length: int
     ):
-
         """
         Initializes an instance of the ExponentialDecayLengthPenalty class with the specified parameters.
         
@@ -1108,7 +1078,6 @@ class ExponentialDecayLengthPenalty(LogitsProcessor):
         self.eos_token_id = eos_token_id
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method calculates exponential decay length penalty for input scores based on the length of input_ids.
         
@@ -1139,7 +1108,6 @@ class SuppressTokensLogitsProcessor(LogitsProcessor):
     are not sampled."""
 
     def __init__(self, suppress_tokens):
-
         """
         Initializes an instance of the SuppressTokensLogitsProcessor class.
         
@@ -1156,7 +1124,6 @@ class SuppressTokensLogitsProcessor(LogitsProcessor):
         self.suppress_tokens = list(suppress_tokens)
 
     def __call__(self, input_ids, scores):
-
         """
         The '__call__' method in the 'SuppressTokensLogitsProcessor' class modifies the 'scores' array by setting the values of specific tokens to negative infinity. It takes three parameters: 'self',
 'input_ids', and 'scores'. The method does not return any value.
@@ -1184,7 +1151,6 @@ class SuppressTokensAtBeginLogitsProcessor(LogitsProcessor):
     """
 
     def __init__(self, begin_suppress_tokens, begin_index):
-
         """
         Initializes a new instance of the SuppressTokensAtBeginLogitsProcessor class.
         
@@ -1203,7 +1169,6 @@ class SuppressTokensAtBeginLogitsProcessor(LogitsProcessor):
         self.begin_index = begin_index
 
     def __call__(self, input_ids, scores):
-
         """
         This method __call__ is a part of the class SuppressTokensAtBeginLogitsProcessor and is used to process input_ids and scores by suppressing certain tokens at the beginning.
         
@@ -1230,7 +1195,6 @@ class ForceTokensLogitsProcessor(LogitsProcessor):
     sampled at their corresponding index."""
 
     def __init__(self, force_token_map: List[List[int]]):
-
         """
         Initializes a new instance of the ForceTokensLogitsProcessor class.
         
@@ -1247,7 +1211,6 @@ class ForceTokensLogitsProcessor(LogitsProcessor):
         self.force_token_map = dict(force_token_map)
 
     def __call__(self, input_ids, scores):
-
         """
         This method modifies the scores of input tokens based on a predefined set of force tokens.
         
@@ -1279,7 +1242,6 @@ class LogitNormalization(LogitsProcessor, LogitsWarper):
     """
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Class: LogitNormalization
         
@@ -1315,7 +1277,6 @@ class TemperatureLogitsWarper(LogitsWarper):
     """
 
     def __init__(self, temperature: float):
-
         """
         Initializes a TemperatureLogitsWarper object with the provided temperature.
         
@@ -1336,7 +1297,6 @@ class TemperatureLogitsWarper(LogitsWarper):
         self.temperature = temperature
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method adjusts the input 'scores' by dividing them by a temperature value and returns the adjusted scores.
         
@@ -1370,7 +1330,6 @@ class TopPLogitsWarper(LogitsWarper):
     """
 
     def __init__(self, top_p: float, filter_value: float = -float("Inf"), min_tokens_to_keep: int = 1):
-
         """
         Initializes an instance of the TopPLogitsWarper class.
         
@@ -1400,7 +1359,6 @@ class TopPLogitsWarper(LogitsWarper):
         self.min_tokens_to_keep = min_tokens_to_keep
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method '__call__' in the class 'TopPLogitsWarper' applies the Top-p sampling strategy to filter out low probability tokens from the input scores tensor.
         
@@ -1448,7 +1406,6 @@ class TopKLogitsWarper(LogitsWarper):
     """
 
     def __init__(self, top_k: int, filter_value: float = -float("Inf"), min_tokens_to_keep: int = 1):
-
         """Initialize the TopKLogitsWarper object.
         
         Args:
@@ -1469,7 +1426,6 @@ class TopKLogitsWarper(LogitsWarper):
         self.filter_value = filter_value
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method, named '__call__', is defined within the 'TopKLogitsWarper' class and is used to process input_ids and scores to obtain a mindspore.Tensor result.
         
@@ -1509,7 +1465,6 @@ class TypicalLogitsWarper(LogitsWarper):
     """
 
     def __init__(self, mass: float = 0.9, filter_value: float = -float("Inf"), min_tokens_to_keep: int = 1):
-
         """
         Initializes an instance of TypicalLogitsWarper.
         
@@ -1539,7 +1494,6 @@ class TypicalLogitsWarper(LogitsWarper):
         self.min_tokens_to_keep = min_tokens_to_keep
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         __call__
         
@@ -1618,7 +1572,6 @@ class EpsilonLogitsWarper(LogitsWarper):
     """
 
     def __init__(self, epsilon: float, filter_value: float = -float("Inf"), min_tokens_to_keep: int = 1):
-
         """
         Initializes an instance of the EpsilonLogitsWarper class.
         
@@ -1652,7 +1605,6 @@ class EpsilonLogitsWarper(LogitsWarper):
         self.min_tokens_to_keep = min_tokens_to_keep
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         '''
         This method takes three parameters:
         Args:
@@ -1727,7 +1679,6 @@ class EtaLogitsWarper(LogitsWarper):
     """
 
     def __init__(self, epsilon: float, filter_value: float = -float("Inf"), min_tokens_to_keep: int = 1):
-
         """Initialize a new instance of the EtaLogitsWarper class.
         
         Args:
@@ -1758,7 +1709,6 @@ class EtaLogitsWarper(LogitsWarper):
         self.min_tokens_to_keep = min_tokens_to_keep
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method '__call__' in the class 'EtaLogitsWarper' takes three parameters:
         
@@ -1849,7 +1799,6 @@ class SequenceBiasLogitsProcessor(LogitsProcessor):
     """
 
     def __init__(self, sequence_bias: Dict[Tuple[int], float]):
-
         """
         Initializes an instance of the SequenceBiasLogitsProcessor class.
         
@@ -1873,7 +1822,6 @@ representing the bias for each position.
         self.prepared_bias_variables = False
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         __call__
         
@@ -1937,7 +1885,6 @@ class AlternatingCodebooksLogitsProcessor(LogitsProcessor):
     """
 
     def __init__(self, input_start_len: int, semantic_vocab_size: int, codebook_size: int):
-
         """
         Initializes an instance of the AlternatingCodebooksLogitsProcessor class.
         
@@ -1963,7 +1910,6 @@ class AlternatingCodebooksLogitsProcessor(LogitsProcessor):
         self.codebook_size = codebook_size
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         The '__call__' method in the 'AlternatingCodebooksLogitsProcessor' class processes the input tensors to manipulate the scores based on alternating codebooks.
         
@@ -2056,7 +2002,6 @@ class UnbatchedClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
         unconditional_attention_mask: Optional[mindspore.Tensor] = None,
         use_cache: Optional[bool] = True,
     ):
-
         """
         Initializes the UnbatchedClassifierFreeGuidanceLogitsProcessor.
         
@@ -2121,7 +2066,6 @@ class UnbatchedClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
         return out.logits
 
     def __call__(self, input_ids, scores):
-
         """
         This method processes input_ids and scores to compute guidance logits in the UnbatchedClassifierFreeGuidanceLogitsProcessor class.
         
@@ -2201,7 +2145,6 @@ Ithaca.<|9.44|><|endoftext|>
     """
 
     def __init__(self, generate_config):  # support for the kwargs
-
         """
         This method initializes an instance of the WhisperTimeStampLogitsProcessor class.
         
@@ -2233,7 +2176,6 @@ Ithaca.<|9.44|><|endoftext|>
         self.max_initial_timestamp_index = generate_config.max_initial_timestamp_index
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method '__call__' in the class 'WhisperTimeStampLogitsProcessor' processes input_ids and scores to manipulate timestamps in the logits.
         
@@ -2305,7 +2247,6 @@ class BarkEosPrioritizerLogitsProcessor(LogitsProcessor):
     """
 
     def __init__(self, eos_token_id: Union[int, List[int]], min_eos_p: float):
-
         """
         Initializes an instance of the BarkEosPrioritizerLogitsProcessor class.
         
@@ -2330,7 +2271,6 @@ class BarkEosPrioritizerLogitsProcessor(LogitsProcessor):
         self.min_eos_p = min_eos_p
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method processes input logits for early stopping based on a minimum probability threshold for the end-of-sequence token.
         
@@ -2398,7 +2338,6 @@ class ClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
     """
 
     def __init__(self, guidance_scale):
-
         """
         Initializes a new instance of the ClassifierFreeGuidanceLogitsProcessor class.
         
@@ -2421,7 +2360,6 @@ class ClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
             )
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Performs processing on logits to generate processed scores for a classifier with free guidance.
         

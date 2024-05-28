@@ -101,7 +101,6 @@ class ReformerTokenizerFast(PreTrainedTokenizerFast):
         additional_special_tokens=[],
         **kwargs,
     ):
-
         """
         __init__
         
@@ -134,7 +133,6 @@ class ReformerTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def can_save_slow_tokenizer(self) -> bool:
-
         """
         Method to check if the slow tokenizer can be saved.
         
@@ -152,7 +150,6 @@ class ReformerTokenizerFast(PreTrainedTokenizerFast):
         return os.path.isfile(self.vocab_file) if self.vocab_file else False
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """Save the vocabulary for a ReformerTokenizerFast instance.
         
         Args:

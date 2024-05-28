@@ -45,7 +45,6 @@ class LlavaNextProcessor(ProcessorMixin):
     tokenizer_class = ("LlamaTokenizer", "LlamaTokenizerFast")
 
     def __init__(self, image_processor=None, tokenizer=None):
-
         """
         Initializes a new instance of the LlavaNextProcessor class.
         
@@ -146,7 +145,6 @@ class LlavaNextProcessor(ProcessorMixin):
     @property
     # Copied from transformers.models.clip.processing_clip.CLIPProcessor.model_input_names
     def model_input_names(self):
-
         """
         Returns a list of model input names used by the LlavaNextProcessor.
         

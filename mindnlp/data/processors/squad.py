@@ -86,7 +86,6 @@ def _new_check_is_max_context(doc_spans, cur_span_index, position):
 
 
 def _is_whitespace(c):
-
     r"""
     Args:
         c (str): The character to be checked for whitespace.
@@ -104,7 +103,6 @@ def _is_whitespace(c):
 def squad_convert_example_to_features(
     example, max_seq_length, doc_stride, max_query_length, padding_strategy, is_training
 ):
-
     r"""
     Args:
     example (Example): An object representing a single training example containing the necessary information for feature conversion.
@@ -325,7 +323,6 @@ def squad_convert_example_to_features(
 
 
 def squad_convert_example_to_features_init(tokenizer_for_convert: PreTrainedTokenizerBase):
-
     r"""
     Converts an example into a feature for the Squad dataset.
     
@@ -452,7 +449,6 @@ class SquadExample:
         answers=[],
         is_impossible=False,
     ):
-
         r"""
         Initialize a SquadExample object with the provided parameters.
         
@@ -556,7 +552,6 @@ class SquadFeatures:
         qas_id: str = None,
         encoding: BatchEncoding = None,
     ):
-
         r"""
         This method initializes an instance of the SquadFeatures class.
         

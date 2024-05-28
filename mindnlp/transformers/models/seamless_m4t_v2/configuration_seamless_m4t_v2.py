@@ -329,7 +329,6 @@ class SeamlessM4Tv2Config(PretrainedConfig):
         vocoder_offset=4,
         **kwargs,
     ):
-
         '''
         Initializes a new instance of the SeamlessM4Tv2Config class.
         

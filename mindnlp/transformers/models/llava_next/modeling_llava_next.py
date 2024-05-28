@@ -163,7 +163,6 @@ class LlavaNextMultiModalProjector(nn.Cell):
     
     """
     def __init__(self, config: LlavaNextConfig):
-
         """
         Initializes an instance of the LlavaNextMultiModalProjector class.
         
@@ -187,7 +186,6 @@ class LlavaNextMultiModalProjector(nn.Cell):
             config.text_config.hidden_size, config.text_config.hidden_size, has_bias=True)
 
     def construct(self, image_features):
-
         """
         Constructs the hidden states for the LlavaNextMultiModalProjector.
         
@@ -225,7 +223,6 @@ standard deviation value. The initialization process handles class embeddings, b
     _supports_flash_attn_2 = True
 
     def _init_weights(self, cell):
-
         """
         This method initializes the weights of the specified cell based on the configuration parameters.
         
@@ -276,7 +273,6 @@ with image features. Additionally, the class offers a 'construct' method for gen
     This class inherits from LlavaNextPreTrainedModel and is designed to be used for conditional text generation tasks in a multimodal setting.
     """
     def __init__(self, config: LlavaNextConfig):
-
         """Initializes an instance of the LlavaNextForConditionalGeneration class.
         
         Args:
@@ -304,7 +300,6 @@ with image features. Additionally, the class offers a 'construct' method for gen
 
     # Copied from transformers.models.llava.modeling_llava.LlavaForConditionalGeneration.get_input_embeddings
     def get_input_embeddings(self):
-
         """
         Returns the input embeddings of the language model used for conditional generation.
         
@@ -321,7 +316,6 @@ with image features. Additionally, the class offers a 'construct' method for gen
 
     # Copied from transformers.models.llava.modeling_llava.LlavaForConditionalGeneration.set_input_embeddings
     def set_input_embeddings(self, value):
-
         """
         Method to set input embeddings for the LlavaNextForConditionalGeneration class.
         
@@ -339,7 +333,6 @@ with image features. Additionally, the class offers a 'construct' method for gen
 
     # Copied from transformers.models.llava.modeling_llava.LlavaForConditionalGeneration.get_output_embeddings
     def get_output_embeddings(self):
-
         """
         Retrieve the output embeddings from the language model for the LlavaNextForConditionalGeneration class.
         
@@ -356,7 +349,6 @@ with image features. Additionally, the class offers a 'construct' method for gen
 
     # Copied from transformers.models.llava.modeling_llava.LlavaForConditionalGeneration.set_output_embeddings
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the LlavaNextForConditionalGeneration class.
         
@@ -374,7 +366,6 @@ with image features. Additionally, the class offers a 'construct' method for gen
 
     # Copied from transformers.models.llava.modeling_llava.LlavaForConditionalGeneration.set_decoder
     def set_decoder(self, decoder):
-
         """
         Sets the decoder for the LlavaNextForConditionalGeneration language model.
         
@@ -392,7 +383,6 @@ with image features. Additionally, the class offers a 'construct' method for gen
 
     # Copied from transformers.models.llava.modeling_llava.LlavaForConditionalGeneration.get_decoder
     def get_decoder(self):
-
         """
         Retrieve the decoder from the language model for conditional generation.
         
@@ -410,7 +400,6 @@ with image features. Additionally, the class offers a 'construct' method for gen
 
     # Copied from transformers.models.llava.modeling_llava.LlavaForConditionalGeneration.tie_weights
     def tie_weights(self):
-
         """
         Ties the weights of the language model for conditional generation in the LlavaNextForConditionalGeneration class.
         
@@ -434,7 +423,6 @@ need to be learned.
 
     # Copied from transformers.models.llava.modeling_llava.LlavaForConditionalGeneration.resize_token_embeddings
     def resize_token_embeddings(self, new_num_tokens: Optional[int] = None, pad_to_multiple_of=None) -> nn.Embedding:
-
         """
         Resizes the token embeddings for conditional generation in the LlavaNext model.
         
@@ -458,7 +446,6 @@ need to be learned.
 
     # Copied from transformers.models.llava.modeling_llava.LlavaForConditionalGeneration._merge_input_ids_with_image_features
     def _merge_input_ids_with_image_features(self, image_features, inputs_embeds, input_ids, attention_mask, labels):
-
         """
         Merges image features with input embeddings, input IDs, attention masks, and labels.
         
@@ -754,7 +741,6 @@ need to be learned.
         attention_mask=None,
         **kwargs,
     ):
-
         """
         Prepare the inputs for text generation.
         
@@ -833,7 +819,6 @@ Defaults to None.
 
     # Copied from transformers.models.llava.modeling_llava.LlavaForConditionalGeneration._reorder_cache
     def _reorder_cache(self, *args, **kwargs):
-
         """
         Reorders the cache for the language model.
         

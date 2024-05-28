@@ -105,7 +105,6 @@ class PegasusTokenizer(PreTrainedTokenizer):
         sp_model_kwargs: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> None:
-
         """
         Initialize a PegasusTokenizer object.
         
@@ -191,7 +190,6 @@ class PegasusTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self) -> int:
-
         """
         This method returns the size of the vocabulary used by the PegasusTokenizer.
         
@@ -207,7 +205,6 @@ class PegasusTokenizer(PreTrainedTokenizer):
         return len(self.sp_model) + self.offset
 
     def get_vocab(self) -> Dict[str, int]:
-
         """
         Returns the vocabulary of the PegasusTokenizer.
         
@@ -234,7 +231,6 @@ class PegasusTokenizer(PreTrainedTokenizer):
         return vocab
 
     def __getstate__(self):
-
         """
         This method __getstate__ is defined within the class PegasusTokenizer.
         It is used to return the state of the object for serialization purposes.
@@ -255,7 +251,6 @@ class PegasusTokenizer(PreTrainedTokenizer):
         return state
 
     def __setstate__(self, d):
-
         """
         This method __setstate__ is defined within the class PegasusTokenizer and is used to set the internal state of the tokenizer object based on the provided dictionary 'd'.
         
@@ -314,7 +309,6 @@ SentencePieceProcessor class methods like Load, if there are issues with loading
         return 1
 
     def _special_token_mask(self, seq):
-
         """
         This method is defined in the 'PegasusTokenizer' class and is named '_special_token_mask'. It takes two parameters: self and seq.
         
@@ -370,7 +364,6 @@ SentencePieceProcessor class methods like Load, if there are issues with loading
         return token_ids_0 + token_ids_1 + [self.eos_token_id]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """Save the vocabulary files for the Pegasus Tokenizer.
         
         Args:

@@ -38,7 +38,6 @@ class PrefixTuningConfig(PromptLearningConfig):
     )
 
     def __post_init__(self):
-
         """
         The '__post_init__' method is a special method in the 'PrefixTuningConfig' class that is automatically called after the initialization of a new instance of the class.
         

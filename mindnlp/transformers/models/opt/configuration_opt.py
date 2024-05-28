@@ -121,7 +121,6 @@ class OPTConfig(PretrainedConfig):
         layer_norm_elementwise_affine=True,
         **kwargs,
     ):
-
         ''' 
         Initializes an instance of the OPTConfig class.
         

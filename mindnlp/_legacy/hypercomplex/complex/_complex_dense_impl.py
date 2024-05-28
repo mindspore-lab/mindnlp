@@ -59,7 +59,6 @@ class _DenseImpl(BaseDenseImpl):
     def construct(self,
                   real: Tensor,
                   imag: Tensor) -> Tuple[Tensor, Tensor]:
-
         r"""
         Constructs a dense implementation of a neural network layer.
         
@@ -129,7 +128,6 @@ class _KaratsubaDenseImpl(BaseDenseImpl):
     def construct(self,
                   real: Tensor,
                   imag: Tensor) -> Tuple[Tensor, Tensor]:
-
         r""" 
         Constructs a complex tensor from real and imaginary parts using the Karatsuba algorithm.
         

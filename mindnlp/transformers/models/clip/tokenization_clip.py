@@ -93,7 +93,6 @@ def get_pairs(word):
 
 
 def whitespace_clean(text):
-
     """
     Args:
         text (str): The input text to be cleaned from extra whitespace.
@@ -151,7 +150,6 @@ class BasicTokenizer:
         strip_accents=None,
         do_split_on_punc=True,
     ):
-
         """
         Initializes an instance of the BasicTokenizer class.
         
@@ -341,7 +339,6 @@ class CLIPTokenizer(PreTrainedTokenizer):
         pad_token="<|endoftext|>",  # hack to enable padding
         **kwargs,
     ):
-
         """
         Initializes a CLIPTokenizer object.
         
@@ -401,7 +398,6 @@ class CLIPTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
-
         """
         Method to return the vocabulary size of the CLIPTokenizer instance.
         
@@ -419,7 +415,6 @@ class CLIPTokenizer(PreTrainedTokenizer):
         return len(self.encoder)
 
     def get_vocab(self):
-
         """
         Method to retrieve the vocabulary of the CLIPTokenizer instance.
         
@@ -515,7 +510,6 @@ class CLIPTokenizer(PreTrainedTokenizer):
         return len(bos_token + token_ids_0 + eos_token + eos_token + token_ids_1 + eos_token) * [0]
 
     def bpe(self, token):
-
         """
         This method 'bpe' is defined in the class 'CLIPTokenizer'. It processes a given token using Byte Pair Encoding (BPE).
         
@@ -600,7 +594,6 @@ class CLIPTokenizer(PreTrainedTokenizer):
         return text
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary to the specified directory with an optional filename prefix.
         

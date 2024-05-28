@@ -131,7 +131,6 @@ class ErnieConfig(PretrainedConfig):
         classifier_dropout=None,
         **kwargs,
     ):
-
         """
         Initialize the ErnieConfig class.
         

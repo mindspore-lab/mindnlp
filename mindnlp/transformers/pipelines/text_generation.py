@@ -44,7 +44,6 @@ class Chat:
     actually a batch of samples rather than messages in the same conversation."""
 
     def __init__(self, messages: List[Dict[str, str]]):
-
         """
         Initializes a new instance of the Chat class.
         
@@ -84,7 +83,6 @@ class TextGenerationPipeline(Pipeline):
     """
 
     def __init__(self, *args, **kwargs):
-
         """
         Initializes an instance of the TextGenerationPipeline class.
         
@@ -124,7 +122,6 @@ class TextGenerationPipeline(Pipeline):
         max_length=None,
         **generate_kwargs,
     ):
-
         """
         This method '_sanitize_parameters' in the class 'TextGenerationPipeline' is responsible for sanitizing and processing parameters used in text generation. It takes 13 parameters: self, return_full_text,
 return_tensors, return_text, return_type, clean_up_tokenization_spaces, prefix, handle_long_generation, stop_sequence, add_special_tokens, truncation, padding, max_length.
@@ -271,7 +268,6 @@ return_tensors, return_text, return_type, clean_up_tokenization_spaces, prefix, 
         max_length=None,
         **generate_kwargs,
     ):
-
         """
         Preprocesses the prompt text for text generation.
         
@@ -341,7 +337,6 @@ return_tensors, return_text, return_type, clean_up_tokenization_spaces, prefix, 
         return inputs
 
     def _forward(self, model_inputs, **generate_kwargs):
-
         """
         This method, '_forward', is part of the 'TextGenerationPipeline' class and is responsible for generating text based on the provided model inputs and generation parameters.
         
@@ -401,7 +396,6 @@ return_tensors, return_text, return_type, clean_up_tokenization_spaces, prefix, 
         return {"generated_sequence": generated_sequence, "input_ids": input_ids, "prompt_text": prompt_text}
 
     def postprocess(self, model_outputs, return_type=ReturnType.FULL_TEXT, clean_up_tokenization_spaces=True):
-
         """
         postprocess method in the TextGenerationPipeline class.
         
