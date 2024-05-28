@@ -14,7 +14,12 @@ nav:
   - API Reference:
       - Accelerate: api/accelerate.md
       - Data: api/data.md
-      - Dataset: api/dataset.md
+      - Dataset: 
+          - api/dataset/index.md
+          - load_dataset: api/dataset/load_dataset.md
+          - BaseMapFunction: api/dataset/BaseMapFunction.md
+          - transforms: api/dataset/transforms.md
+
       - Engine:
           - train_args:
               base: api/engine/train_args/base.md
