@@ -55,7 +55,7 @@ class WeightNorm:
     def compute_weight(self, module: nn.Cell) -> Any:
         g = getattr(module, self.name + '_g')
         v = getattr(module, self.name + '_v')
-        return Parameter(_weight_norm(v, g, self.dim), 'weight')
+        return _weight_norm(v, g, self.dim)
 
     @staticmethod
     def apply(cell: nn.Cell, name: str, dim: int) -> 'WeightNorm':
@@ -76,7 +76,7 @@ class WeightNorm:
         del cell._params[name]
         setattr(cell, name + '_g', Parameter(norm_except_dim(weight, 2 ,dim)))
         setattr(cell, name + '_v', Parameter(weight.data))
-        setattr(cell, name, Parameter(weight_fn.compute_weight(cell)))
+        setattr(cell, name, weight_fn.compute_weight(cell))
         cell.register_forward_pre_hook(weight_fn.wrapper_func(cell, weight_fn.__call__))
         return weight_fn
 
