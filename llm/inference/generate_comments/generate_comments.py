@@ -102,7 +102,6 @@ def extract_class_info(child):
         if isinstance(method, astroid.FunctionDef):
             method_info = extract_function_info(method)
             class_info['methods'].append(method_info)
-    # print(class_info)
     return class_info
 
 
@@ -197,10 +196,10 @@ def insert_comments(file_path, comments):
 
             import re
             match = re.search(r'(?:r|u|b|f)*?("""|\'\'\')[\s\S]*?\1', docstring).group()
-
-            if match is not None:
+            if match:
                 docstring = match.group()
             else:
+                print(f"No valid multiline string literal found in：{name}")
                 continue
 
             insert_point = find_def_end(lines, startline - 1)
@@ -230,7 +229,6 @@ def process_directory(directory_path, suffix, exclude=None, ):
             python_files.extend(os.path.join(root, file) for file in files if file.endswith('.py'))
 
         for file_path in tqdm(python_files, desc="正在处理的文件"):
-            # 检查是否是排除的文件
             if exclude and any(os.path.abspath(ex_path) == file_path for ex_path in exclude):
                 continue
             print(f"Processing file: {file_path}")
