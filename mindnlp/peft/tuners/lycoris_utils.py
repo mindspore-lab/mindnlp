@@ -94,9 +94,7 @@ class LycorisLayer(BaseTunerLayer):
         # Instead of this approach, it would be possible to bypass the __init__ of the class but that runs the risk of
         # omitting important logic inside that __init__.
         kwargs = kwargs.copy()
-        # final_device = kwargs.pop("device", "cpu")
         cls.__init__(self, *args, device="meta", **kwargs)
-        # self.to_empty(device=final_device)
 
     @abstractmethod
     def create_adapter_parameters(self, adapter_name: str, r: int, **kwargs): ...
@@ -303,12 +301,6 @@ class LycorisTuner(BaseTuner):
                 new_module.base_layer.state = child.state
             else:
                 new_module.state = child.state
-            # new_module.to(child.weight.device)
-
-        # dispatch to correct device
-        # for name, module in new_module.cells_and_names():
-        #     if self.prefix in name:
-        # module.to(child.weight.device)
 
     def _set_adapter_layers(self, enabled=True):
         for module in self.model.cells():

@@ -43,6 +43,7 @@ from .tuners import (
     AdaLoraConfig,
     AdaLoraModel,
     PromptTuningConfig,
+    PrefixTuningConfig,
     LoHaConfig,
     LoHaModel,
 )
