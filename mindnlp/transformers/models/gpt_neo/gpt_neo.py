@@ -37,7 +37,6 @@ class GPTNeoSelfAttention(nn.Cell):
     """
 
     def __init__(self, config, attention_type):
-
         """
         Initializes the GPTNeoSelfAttention class.
         
@@ -107,7 +106,6 @@ class GPTNeoSelfAttention(nn.Cell):
         return tensor.view(new_shape)
 
     def _attn(self, query, key, value, attention_mask=None, head_mask=None):
-
         """
         This method calculates the attention weights and output for GPT-Neo self-attention mechanism.
         
@@ -168,7 +166,6 @@ class GPTNeoSelfAttention(nn.Cell):
         use_cache=False,
         output_attentions=False,
     ):
-
         """
         This method constructs the self-attention mechanism for the GPTNeo model.
         
@@ -228,7 +225,6 @@ class GPTNeoAttention(nn.Cell):
     """
 
     def __init__(self, config, layer_id=0):
-
         """
         Initialize the GPTNeoAttention class.
         
@@ -266,7 +262,6 @@ class GPTNeoAttention(nn.Cell):
         use_cache=False,
         output_attentions=False,
     ):
-
         """
         Constructs the attention mechanism for the GPTNeoAttention class.
         
@@ -303,7 +298,6 @@ class GPTNeoMLP(nn.Cell):
 
     # in MLP: intermediate_size= 4 * hidden_size
     def __init__(self, intermediate_size, config):
-
         """
         Initializes the GPTNeoMLP class.
         
@@ -326,7 +320,6 @@ class GPTNeoMLP(nn.Cell):
         self.dropout = nn.Dropout(p=float(config.resid_dropout))
 
     def construct(self, hidden_states):
-
         """
         Constructs the multi-layer perceptron (MLP) component of the GPT-Neo model.
         
@@ -353,7 +346,6 @@ class GPTNeoBlock(nn.Cell):
     """
 
     def __init__(self, config, layer_id):
-
         """Initializes a GPTNeoBlock instance.
         
         Args:
@@ -386,7 +378,6 @@ class GPTNeoBlock(nn.Cell):
         use_cache=False,
         output_attentions=False,
     ):
-
         """
         Method 'construct' in the class 'GPTNeoBlock' constructs the output of a GPTNeo block.
         
@@ -504,7 +495,6 @@ class GPTNeoPreTrainedModel(PreTrainedModel):
         "save pretrain model"
 
     def _set_gradient_checkpointing(self, module, value=False):
-
         """
         Sets the gradient checkpointing flag for the specified module in a GPTNeoPreTrainedModel.
         
@@ -556,7 +546,6 @@ class GPTNeoModel(GPTNeoPreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the GPTNeoModel class.
         
@@ -616,7 +605,6 @@ class GPTNeoModel(GPTNeoPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
     ) -> Tuple[Tensor]:
-
         '''
         Constructs the GPTNeoModel.
         
@@ -789,7 +777,6 @@ class GPTNeoForCausalLM(GPTNeoPreTrainedModel):
     _keys_to_ignore_on_save = [r"lm_head.weight"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of the GPTNeoForCausalLM class.
         
@@ -933,7 +920,6 @@ class GPTNeoForSequenceClassification(GPTNeoPreTrainedModel):
         r"h\.\d+\.attn\.masked_bias", r"lm_head.weight"]
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the GPTNeoForSequenceClassification class.
         

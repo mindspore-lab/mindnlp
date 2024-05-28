@@ -155,7 +155,6 @@ class CpmTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def can_save_slow_tokenizer(self) -> bool:
-
         """
         Method: can_save_slow_tokenizer
         
@@ -233,7 +232,6 @@ class CpmTokenizerFast(PreTrainedTokenizerFast):
 
     # Copied from transformers.models.xlnet.tokenization_xlnet_fast.XLNetTokenizerFast.save_vocabulary
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Saves the vocabulary of a fast tokenizer to a specified directory.
         
@@ -275,7 +273,6 @@ class CpmTokenizerFast(PreTrainedTokenizerFast):
         return (out_vocab_file,)
 
     def _batch_encode_plus(self, batch_text_or_text_pairs, *args, **kwargs):
-
         """
         Performs batch encoding of text or text pairs using the CpmTokenizerFast class.
         
@@ -305,7 +302,6 @@ class CpmTokenizerFast(PreTrainedTokenizerFast):
         return super()._batch_encode_plus(batch_text_or_text_pairs, *args, **kwargs)
 
     def _decode(self, *args, **kwargs):
-
         """
         Decodes the text representation of a CpmTokenizerFast object.
         

@@ -66,7 +66,6 @@ class SentimentAnalysisWork(Work):
     }
 
     def __init__(self, work, model, **kwargs):
-
         """
         Initializes a new instance of the SentimentAnalysisWork class.
         
@@ -153,7 +152,6 @@ class SentimentAnalysisWork(Work):
         return outputs
 
     def _batchify_fn(self, samples):
-
         """
         Batchify the samples for sentiment analysis.
         

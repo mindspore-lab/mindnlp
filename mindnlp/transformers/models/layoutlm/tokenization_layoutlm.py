@@ -134,7 +134,6 @@ class LayoutLMTokenizer(PreTrainedTokenizer):
             strip_accents=None,
             **kwargs,
     ):
-
         """
         Initializes an instance of the LayoutLMTokenizer class.
         
@@ -204,7 +203,6 @@ class LayoutLMTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
-
         """
         Method to retrieve the size of the vocabulary in the LayoutLMTokenizer class.
         
@@ -222,7 +220,6 @@ class LayoutLMTokenizer(PreTrainedTokenizer):
         return len(self.vocab)
 
     def get_vocab(self):
-
         """
         This method retrieves the vocabulary of the LayoutLMTokenizer object.
         
@@ -238,7 +235,6 @@ class LayoutLMTokenizer(PreTrainedTokenizer):
         return dict(self.vocab, **self.added_tokens_encoder)
 
     def _tokenize(self, text, split_special_tokens=False):
-
         '''
         This method '_tokenize' is defined within the 'LayoutLMTokenizer' class and is responsible for tokenizing the input text.
         
@@ -364,7 +360,6 @@ class LayoutLMTokenizer(PreTrainedTokenizer):
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary to a file.
         
@@ -432,7 +427,6 @@ class BasicTokenizer:
             strip_accents=None,
             do_split_on_punc=True,
     ):
-
         """
         __init__()
         
@@ -587,7 +581,6 @@ class WordpieceTokenizer:
     """Runs WordPiece tokenization."""
 
     def __init__(self, vocab, unk_token, max_input_chars_per_word=100):
-
         """
         Initializes a new instance of the WordpieceTokenizer class.
         

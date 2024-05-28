@@ -86,7 +86,6 @@ class BertGenerationTokenizer(PreTrainedTokenizer):
         sp_model_kwargs: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> None:
-
         """
         Initializes a BertGenerationTokenizer object.
         
@@ -127,7 +126,6 @@ class BertGenerationTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
-
         """
         Returns the size of the vocabulary used by the BertGenerationTokenizer instance.
         
@@ -143,7 +141,6 @@ class BertGenerationTokenizer(PreTrainedTokenizer):
         return self.sp_model.get_piece_size()
 
     def get_vocab(self):
-
         """
         Returns the vocabulary of the BertGenerationTokenizer.
         
@@ -173,7 +170,6 @@ class BertGenerationTokenizer(PreTrainedTokenizer):
         return vocab
 
     def __getstate__(self):
-
         """
         Method __getstate__ in the class BertGenerationTokenizer.
         
@@ -193,7 +189,6 @@ class BertGenerationTokenizer(PreTrainedTokenizer):
         return state
 
     def __setstate__(self, d):
-
         """
         Set the state of the BertGenerationTokenizer object.
         
@@ -244,7 +239,6 @@ class BertGenerationTokenizer(PreTrainedTokenizer):
         return out_string.strip()
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary files to the specified directory.
         

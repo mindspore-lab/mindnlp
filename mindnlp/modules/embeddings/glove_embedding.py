@@ -58,8 +58,6 @@ class Glove(TokenEmbedding):
     dims = [50, 100, 200, 300]
 
     def __init__(self, init_embed, requires_grad: bool = True, dropout=0.0):
-
-        
         """
         Initializes an instance of the Glove class.
         

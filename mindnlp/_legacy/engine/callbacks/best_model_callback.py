@@ -36,8 +36,6 @@ class BestModelCallback(Callback):
     """
     def __init__(self, save_path, ckpt_name=None, larger_better=True,
                  auto_load=False, save_on_exception=False):
-
-        
         """
         Initializes a new instance of the BestModelCallback class.
         
@@ -104,7 +102,6 @@ class BestModelCallback(Callback):
             print(f"Loading best model from '{self.save_path}' with '{run_context.metrics_names}': "
                   f"{self.best_metrics_values}...")
             self._load_model(run_context)
-
 
     def exception(self, run_context):
         """Called if having exceptions."""

@@ -41,7 +41,6 @@ class AdaptionPromptModel(nn.Cell):
     """
 
     def __init__(self, model, configs: Dict, adapter_name: str):
-
         r"""
         Initializes an instance of the AdaptionPromptModel class.
         
@@ -158,7 +157,6 @@ class AdaptionPromptModel(nn.Cell):
         self._cached_adapters[adapter_name] = adapted_attentions
 
     def _mark_only_adaption_prompts_as_trainable(self, model: nn.Cell) -> None:
-
         r"""Marks only adaption prompts as trainable in the given model.
         
         Args:

@@ -45,7 +45,6 @@ class CallbackManager(Callback):
     """
 
     def __init__(self, callbacks):
-
         r"""
         Initializes an instance of the 'CallbackManager' class.
         
@@ -148,7 +147,6 @@ class RunContext:
             engine_args (dict): Holding the related information of model.
     """
     def __init__(self, engine_args):
-
         r"""
         Initializes a new instance of the RunContext class.
         

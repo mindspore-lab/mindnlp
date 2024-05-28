@@ -52,7 +52,6 @@ class XLMRobertaEmbeddings(nn.Cell):
 
     # Copied from transformers.models.bert.modeling_bert.BertEmbeddings.__init__
     def __init__(self, config):
-
         """
         __init__
         
@@ -99,7 +98,6 @@ class XLMRobertaEmbeddings(nn.Cell):
     def construct(
         self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None, past_key_values_length=0
     ):
-
         """
         Class: XLMRobertaEmbeddings
         
@@ -180,7 +178,6 @@ class XLMRobertaEmbeddings(nn.Cell):
 class XLMRobertaSelfAttention(nn.Cell):
     """XLMRobertaSelfAttention"""
     def __init__(self, config, position_embedding_type=None):
-
         """
         This method initializes an instance of the XLMRobertaSelfAttention class.
         
@@ -238,7 +235,6 @@ attention_probs_dropout_prob, position_embedding_type, max_position_embeddings, 
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         """
         Constructs the self-attention mechanism for the XLMRoberta model.
         
@@ -359,7 +355,6 @@ attention_probs_dropout_prob, position_embedding_type, max_position_embeddings, 
 class XLMRobertaSelfOutput(nn.Cell):
     """XLMRobertaSelfOutput"""
     def __init__(self, config):
-
         """
         Initializes the XLMRobertaSelfOutput class.
         
@@ -384,7 +379,6 @@ class XLMRobertaSelfOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method constructs the output of the XLMRoberta model's self-attention layer.
         
@@ -411,7 +405,6 @@ class XLMRobertaSelfOutput(nn.Cell):
 class XLMRobertaAttention(nn.Cell):
     """XLMRobertaAttention"""
     def __init__(self, config, position_embedding_type=None):
-
         """
         Initializes an instance of XLMRobertaAttention.
         
@@ -460,7 +453,6 @@ class XLMRobertaAttention(nn.Cell):
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         """
         This method 'construct' in the class 'XLMRobertaAttention' constructs the output of the attention mechanism based on the input parameters.
         
@@ -497,7 +489,6 @@ class XLMRobertaAttention(nn.Cell):
 class XLMRobertaIntermediate(nn.Cell):
     """XLMRobertaIntermediate"""
     def __init__(self, config):
-
         """
         Initializes an instance of the XLMRobertaIntermediate class.
         
@@ -522,7 +513,6 @@ class XLMRobertaIntermediate(nn.Cell):
             self.intermediate_act_fn = config.hidden_act
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method constructs the hidden states using the specified intermediate layers in the XLMRoberta model.
         
@@ -545,7 +535,6 @@ layers.
 class XLMRobertaOutput(nn.Cell):
     """XLMRobertaOutput"""
     def __init__(self, config):
-
         """
         Initializes an instance of XLMRobertaOutput class.
         
@@ -568,7 +557,6 @@ class XLMRobertaOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-
         ''' 
         This method constructs the output of the XLMRoberta model by performing a series of operations on the hidden states and input tensor.
         
@@ -596,7 +584,6 @@ class XLMRobertaOutput(nn.Cell):
 class XLMRobertaLayer(nn.Cell):
     """XLMRobertaLayer"""
     def __init__(self, config):
-
         """
         This method initializes an instance of the XLMRobertaLayer class.
         
@@ -637,7 +624,6 @@ attention is added.
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         """
         Method to construct the XLMRobertaLayer.
         
@@ -722,7 +708,6 @@ attention is added.
 class XLMRobertaEncoder(nn.Cell):
     """XLMRobertaEncoder"""
     def __init__(self, config):
-
         """
         Initializes a new XLMRobertaEncoder object.
         
@@ -755,7 +740,6 @@ class XLMRobertaEncoder(nn.Cell):
         output_hidden_states: Optional[bool] = False,
         return_dict: Optional[bool] = True,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]:
-
         """
         This method constructs the XLMRobertaEncoder.
         
@@ -843,7 +827,6 @@ class XLMRobertaEncoder(nn.Cell):
 class XLMRobertaPooler(nn.Cell):
     """XLMRobertaPooler"""
     def __init__(self, config):
-
         """
         Initializes an instance of the XLMRobertaPooler class.
         
@@ -863,7 +846,6 @@ class XLMRobertaPooler(nn.Cell):
         self.activation = nn.Tanh()
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
             Constructs the pooled output tensor from the given hidden states.
         
@@ -920,7 +902,6 @@ class XLMRobertaPreTrainedModel(PreTrainedModel):
             cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
     def _set_gradient_checkpointing(self, module, value=False):
-
         """
         Sets the gradient checkpointing attribute of the given module.
         
@@ -957,7 +938,6 @@ class XLMRobertaModel(XLMRobertaPreTrainedModel):
 
     # Copied from transformers.models.bert.modeling_bert.BertModel.__init__ with Bert->XLMRoberta
     def __init__(self, config, add_pooling_layer=True):
-
         """
         Initializes an instance of the XLMRobertaModel class.
         
@@ -982,7 +962,6 @@ class XLMRobertaModel(XLMRobertaPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method 'get_input_embeddings' is defined in the class 'XLMRobertaModel' and retrieves the input embeddings from the model.
         
@@ -1001,7 +980,6 @@ class XLMRobertaModel(XLMRobertaPreTrainedModel):
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the XLMRobertaModel.
         
@@ -1170,7 +1148,6 @@ class XLMRobertaForCausalLM(XLMRobertaPreTrainedModel):
     _tied_weights_keys = ["lm_head.decoder.weight", "lm_head.decoder.bias"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of the XLMRobertaForCausalLM class.
         
@@ -1196,7 +1173,6 @@ class XLMRobertaForCausalLM(XLMRobertaPreTrainedModel):
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         Method to retrieve the output embeddings from XLMRobertaForCausalLM model.
         
@@ -1213,7 +1189,6 @@ class XLMRobertaForCausalLM(XLMRobertaPreTrainedModel):
         return self.lm_head.decoder
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the XLMRobertaForCausalLM model.
         
@@ -1341,7 +1316,6 @@ requirements.
         )
 
     def prepare_inputs_for_generation(self, input_ids, past_key_values=None, attention_mask=None, **model_kwargs):
-
         """
         Prepare inputs for generation.
         
@@ -1369,7 +1343,6 @@ requirements.
         return {"input_ids": input_ids, "attention_mask": attention_mask, "past_key_values": past_key_values}
 
     def _reorder_cache(self, past_key_values, beam_idx):
-
         """
         Reorders the cache of past key values based on the provided beam index.
         
@@ -1398,7 +1371,6 @@ class XLMRobertaForMaskedLM(XLMRobertaPreTrainedModel):
     _tied_weights_keys = ["lm_head.decoder.weight", "lm_head.decoder.bias"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of XLMRobertaForMaskedLM.
         
@@ -1430,7 +1402,6 @@ class XLMRobertaForMaskedLM(XLMRobertaPreTrainedModel):
         self.post_init()
 
     def get_output_embeddings(self):
-
         """Get the output embeddings for the XLM-Roberta model.
         
         Args:
@@ -1445,7 +1416,6 @@ class XLMRobertaForMaskedLM(XLMRobertaPreTrainedModel):
         return self.lm_head.decoder
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         This method sets the output embeddings for the XLMRobertaForMaskedLM model.
         
@@ -1526,7 +1496,6 @@ class XLMRobertaLMHead(nn.Cell):
     """Roberta Head for masked language modeling."""
 
     def __init__(self, config):
-
         """
         This method initializes an instance of the XLMRobertaLMHead class.
         
@@ -1550,7 +1519,6 @@ normalization epsilon for the XLMRobertaLMHead instance.
         self.decoder.bias = self.bias
 
     def construct(self, features, **kwargs):
-
         """
         Construct the LM head for the XLM-Roberta model.
         
@@ -1574,7 +1542,6 @@ normalization epsilon for the XLMRobertaLMHead instance.
         return x
 
     def _tie_weights(self):
-
         """
         This method ties the weights of the XLMRobertaLMHead decoder to the bias.
         
@@ -1595,7 +1562,6 @@ normalization epsilon for the XLMRobertaLMHead instance.
 class XLMRobertaForSequenceClassification(XLMRobertaPreTrainedModel):
     """XLMRobertaForSequenceClassification"""
     def __init__(self, config):
-
         """
         Initializes an instance of XLMRobertaForSequenceClassification.
         
@@ -1693,7 +1659,6 @@ class XLMRobertaForSequenceClassification(XLMRobertaPreTrainedModel):
 class XLMRobertaForMultipleChoice(XLMRobertaPreTrainedModel):
     """XLMRobertaForMultipleChoice"""
     def __init__(self, config):
-
         """
         __init__
         
@@ -1787,7 +1752,6 @@ class XLMRobertaForMultipleChoice(XLMRobertaPreTrainedModel):
 class XLMRobertaForTokenClassification(XLMRobertaPreTrainedModel):
     """XLMRobertaForTokenClassification"""
     def __init__(self, config):
-
         """
         Initializes the XLMRobertaForTokenClassification model.
         
@@ -1878,7 +1842,6 @@ class XLMRobertaClassificationHead(nn.Cell):
     """Head for sentence-level classification tasks."""
 
     def __init__(self, config):
-
         """
         Initializes an instance of the XLMRobertaClassificationHead class.
         
@@ -1901,7 +1864,6 @@ class XLMRobertaClassificationHead(nn.Cell):
         self.out_proj = nn.Dense(config.hidden_size, config.num_labels)
 
     def construct(self, features, **kwargs):
-
         """
         Constructs the XLMRobertaClassificationHead.
         
@@ -1929,7 +1891,6 @@ class XLMRobertaClassificationHead(nn.Cell):
 class XLMRobertaForQuestionAnswering(XLMRobertaPreTrainedModel):
     """XLMRobertaForQuestionAnswering"""
     def __init__(self, config):
-
         """
         Initializes the XLMRobertaForQuestionAnswering class.
         

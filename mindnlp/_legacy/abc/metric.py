@@ -28,7 +28,6 @@ class Metric(metaclass=ABCMeta):
 
     """
     def __init__(self):
-
         r"""
         Initializes an instance of the Metric class.
         

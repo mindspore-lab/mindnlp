@@ -132,7 +132,6 @@ class BartphoTokenizer(PreTrainedTokenizer):
         sp_model_kwargs: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> None:
-
         """
         Initializes a new instance of the BartphoTokenizer class.
         
@@ -197,7 +196,6 @@ class BartphoTokenizer(PreTrainedTokenizer):
         )
 
     def __getstate__(self):
-
         """
         This method '__getstate__' in the class 'BartphoTokenizer' is used to provide the state of the object for pickling.
         
@@ -216,7 +214,6 @@ class BartphoTokenizer(PreTrainedTokenizer):
         return state
 
     def __setstate__(self, d):
-
         """
         This method '__setstate__' is defined within the class 'BartphoTokenizer' and is used to restore the object's state from a dictionary representation. It takes two parameters, 'self' which refers to the
 instance of the class, and 'd' which is a dictionary representing the state to be restored.
@@ -322,7 +319,6 @@ related to the initialization of the 'SentencePieceProcessor' instance or its 'L
 
     @property
     def vocab_size(self):
-
         """
         Returns the size of the vocabulary used by the BartphoTokenizer.
         
@@ -338,7 +334,6 @@ related to the initialization of the 'SentencePieceProcessor' instance or its 'L
         return len(self.fairseq_ids_to_tokens)
 
     def get_vocab(self):
-
         """
         Retrieves the vocabulary dictionary of the BartphoTokenizer instance.
         
@@ -358,7 +353,6 @@ related to the initialization of the 'SentencePieceProcessor' instance or its 'L
         return vocab
 
     def _tokenize(self, text: str) -> List[str]:
-
         """
         Tokenizes the input text using the SentencePiece model.
         
@@ -391,7 +385,6 @@ related to the initialization of the 'SentencePieceProcessor' instance or its 'L
         return out_string
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
             Saves the vocabulary files to the specified directory.
         

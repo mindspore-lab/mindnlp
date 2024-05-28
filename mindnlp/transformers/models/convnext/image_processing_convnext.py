@@ -99,7 +99,6 @@ class ConvNextImageProcessor(BaseImageProcessor):
         image_std: Optional[Union[float, List[float]]] = None,
         **kwargs,
     ) -> None:
-
         """
         Initialize a ConvNextImageProcessor object.
         

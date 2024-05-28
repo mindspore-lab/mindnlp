@@ -41,7 +41,6 @@ def _make_causal_mask(
     return mask[None, None, :, :].expand(bsz, 1, tgt_len, tgt_len + past_key_values_length)
 
 
-
 # Copied from transformers.models.bart.modeling_bart._expand_mask
 def _expand_mask(mask: mindspore.Tensor, dtype: mindspore.dtype, tgt_len: Optional[int] = None):
     """
@@ -89,7 +88,6 @@ class RMSNorm(nn.Cell):
         - The RMSNorm layer expects the input hidden states to have a floating-point data type.
     """
     def __init__(self, hidden_size, eps=1e-6):
-
         """
         Initializes a new instance of the RMSNorm class.
         
@@ -110,7 +108,6 @@ class RMSNorm(nn.Cell):
         self.variance_epsilon = eps
 
     def construct(self, hidden_states):
-
         """
         Constructs an RMSNorm object.
         
@@ -164,7 +161,6 @@ class MLP(nn.Cell):
         The MLP class assumes that the ACT2FN dictionary, containing activation functions, is defined in the global scope.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the MLP class.
         
@@ -190,7 +186,6 @@ class MLP(nn.Cell):
         self.act_fn = ACT2FN[config.hidden_act]
 
     def construct(self, x):
-
         """
         Method to construct a down_proj output based on the given input x.
         
@@ -210,7 +205,6 @@ class MLP(nn.Cell):
 
 
 def get_expert_mask(token_type_ids):
-
     """
     Args:
         token_type_ids (Tensor): A 2D tensor representing the token type ids.
@@ -260,7 +254,6 @@ masks, and then aggregates the results to produce the final output.
     
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the VisionExpertMLP class.
         
@@ -279,7 +272,6 @@ masks, and then aggregates the results to produce the final output.
         self.vision_mlp = MLP(config)
 
     def construct(self, hidden_states: "mindspore.Tensor(B, L, D)", token_type_ids: "mindspore.Tensor(B, L)"):
-
         """
         Constructs the expert output by applying vision and language MLPs on the given hidden states.
         
@@ -306,7 +298,6 @@ masks, and then aggregates the results to produce the final output.
 
 
 def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.0, is_causal=False, scale=None) -> mindspore.Tensor:
-
     """
     Perform scaled dot product attention.
     
@@ -356,7 +347,6 @@ def attention_fn(
         *,
         scaling_attention_score: bool = True,
         attention_dropout: nn.Cell = None):
-
     """
     The attention_fn function calculates the attention scores between the given query, key, and value layers, using an attention mask if provided. It then applies softmax to normalize the attention scores and
 performs an optional attention dropout. Finally, it computes the context layer by multiplying the attention scores with the value layer.
@@ -441,7 +431,6 @@ class RotaryEmbedding(mindspore.nn.Cell):
                 Tuple[Tensor, Tensor]: The cosine and sine embeddings for the given sequence length and input.
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
-
         """
         Initializes an instance of the RotaryEmbedding class.
         
@@ -466,7 +455,6 @@ class RotaryEmbedding(mindspore.nn.Cell):
         self.max_seq_len_cached = 0
 
     def _compute_inv_freq(self):
-
         """
         Compute the inverse frequency values for RotaryEmbedding.
         
@@ -486,7 +474,6 @@ class RotaryEmbedding(mindspore.nn.Cell):
         )
 
     def _set_cos_sin_cache(self, seq_len, dtype):
-
         ''' 
         Set the cosine and sine cache for rotary embedding.
         
@@ -509,9 +496,7 @@ class RotaryEmbedding(mindspore.nn.Cell):
         self.cos_cached = emb.cos()[:, None, :].to(dtype)
         self.sin_cached = emb.sin()[:, None, :].to(dtype)
 
-
     def construct(self, x, seq_len):
-
         """
         This method constructs the rotary embedding for the input sequence.
         
@@ -542,7 +527,6 @@ class RotaryEmbedding(mindspore.nn.Cell):
 
 
 def rotate_half(x):
-
     """
     Rotates the given tensor by 180 degrees along the last dimension and swaps the two halves.
     
@@ -560,7 +544,6 @@ def rotate_half(x):
 
 
 def apply_rotary_pos_emb_index_bhs(q, k, cos, sin, position_id,unsqueeze_dim=1):
-
     """
     Apply rotary positional embedding index to inputs.
     
@@ -625,7 +608,6 @@ class VisionExpertAttention(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the VisionExpertAttention class.
         
@@ -668,7 +650,6 @@ class VisionExpertAttention(nn.Cell):
             output_attentions: bool = False,
             use_cache: bool = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
-
         """
         Constructs the VisionExpertAttention.
         
@@ -760,7 +741,6 @@ Optional[Tuple[mindspore.Tensor]] = None, output_attentions: Optional[bool] = Fa
         Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: A tuple containing the hidden states of the layer and optionally attention weights and present key value.
     """
     def __init__(self, config):
-
         """Initialize CogVLMDecoderLayer with given configuration.
         
             Args:
@@ -790,7 +770,6 @@ Optional[Tuple[mindspore.Tensor]] = None, output_attentions: Optional[bool] = Fa
             output_attentions: Optional[bool] = False,
             use_cache: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
-
         """
         CogVLMDecoderLayer.construct method.
         
@@ -861,7 +840,6 @@ normal distribution with a mean of 0 and a standard deviation specified by `self
     _skip_keys_device_placement = "past_key_values"
 
     def _init_weights(self, cell):
-
         """
         Initialize the weights and biases for a given neural network cell.
         
@@ -893,7 +871,6 @@ normal distribution with a mean of 0 and a standard deviation specified by `self
 
 
 def is_empty(images_list: Optional[List[List[mindspore.Tensor]]]):
-
     '''
     Args:
         images_list (Optional[List[List[mindspore.Tensor]]]): A list of lists of mindspore tensors representing images. Can be None or an empty list.
@@ -912,9 +889,7 @@ def is_empty(images_list: Optional[List[List[mindspore.Tensor]]]):
     return True
 
 
-
 def build_position_ids(x:"mindspore.Tensor(B, L)", attention_mask: Optional["mindspore.Tensor(B, L)"] = None) -> "mindspore.Tensor(B, L)":
-
     """
     Builds position IDs for each element in the input tensor.
     
@@ -992,7 +967,6 @@ Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Tuple, BaseM
     
     '''
     def __init__(self, config):
-
         """
         __init__(self, config)
         Initialize the CogVLMModel with the provided configuration.
@@ -1023,7 +997,6 @@ Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Tuple, BaseM
         self.post_init()
 
     def encode_images(self, images: List[List[mindspore.Tensor]]) -> mindspore.Tensor:
-
         """
         Encodes a batch of images into their corresponding image features using the CogVLMModel.
         
@@ -1207,7 +1180,6 @@ Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Tuple, BaseM
         )
 
     def get_input_embeddings(self):
-
         """
         This method returns the input embeddings for the CogVLMModel.
         
@@ -1223,7 +1195,6 @@ Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Tuple, BaseM
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the CogVLMModel.
         
@@ -1253,7 +1224,6 @@ attribute, the input embeddings can be customized or updated during runtime.
     # noinspection PyMethodMayBeStatic
     # Copied from transformers.models.bart.modeling_bart.BartDecoder._prepare_decoder_attention_mask
     def _prepare_decoder_attention_mask(self, attention_mask, input_shape, inputs_embeds, past_key_values_length):
-
         """
         Prepare the decoder attention mask for the CogVLMModel.
         
@@ -1296,7 +1266,6 @@ attribute, the input embeddings can be customized or updated during runtime.
 
 
 def _history_to_prompt(signal_type, history, query):
-
     """
     Converts a given history of queries and responses into a formatted prompt.
     
@@ -1357,7 +1326,6 @@ model with given inputs and returns the output.
     _auto_class = "AutoModelForCausalLM"
 
     def __init__(self, config):
-
         """
         Initialize the CogVLMForCausalLM class.
         
@@ -1385,7 +1353,6 @@ model with given inputs and returns the output.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Returns the input embeddings of the CogVLMForCausalLM model.
         
@@ -1402,7 +1369,6 @@ model with given inputs and returns the output.
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Set input embeddings for the CogVLMForCausalLM model.
         
@@ -1425,7 +1391,6 @@ embeddings during the model's forward pass.
         self.model.embed_tokens = value
 
     def get_output_embeddings(self):
-
         """Return the output embeddings from the CogVLMForCausalLM model.
         
         This method takes no additional arguments other than the instance itself.
@@ -1442,7 +1407,6 @@ embeddings during the model's forward pass.
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the CogVLMForCausalLM model.
         
@@ -1459,7 +1423,6 @@ embeddings during the model's forward pass.
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
-
         """
         Sets the decoder for the CogVLMForCausalLM class.
         
@@ -1476,7 +1439,6 @@ embeddings during the model's forward pass.
         self.model = decoder
 
     def get_decoder(self):
-
         """
         Returns the decoder model used for causal language modeling in CogVLMForCausalLM.
         
@@ -1506,7 +1468,6 @@ embeddings during the model's forward pass.
             return_dict: Optional[bool] = None,
             labels: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
-
         """
         Constructs the CogVLMForCausalLM model.
         
@@ -1589,7 +1550,6 @@ embeddings during the model's forward pass.
             pad_token_id: Optional[int],
             eos_token_id: Optional[Union[int, List[int]]],
     ) -> mindspore.Tensor:
-
         """
         Prepare attention mask for generation.
         
@@ -1610,7 +1570,6 @@ embeddings during the model's forward pass.
     def prepare_inputs_for_generation(
             self, input_ids, token_type_ids, images=None, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
-
         """
         Prepare inputs for generation.
         
@@ -1679,7 +1638,6 @@ tensors.
             is_encoder_decoder: bool = False,
             standardize_cache_format: bool = False,
     ) -> Dict[str, Any]:
-
         ''' 
         Method for updating model keyword arguments for generation.
         
@@ -1735,7 +1693,6 @@ tensors.
         return model_kwargs
 
     def _reorder_cache(self, past_key_values, beam_idx):
-
         """
         Reorders the cached past states based on the provided beam index.
         
@@ -1767,7 +1724,6 @@ tensors.
             images: Optional[List["PIL.Image"]] = None,
             template_version: Optional[Literal["base", "chat", "vqa"]] = None,
     ):
-
         """
         This method builds conversation input IDs for the CogVLMForCausalLM class.
         

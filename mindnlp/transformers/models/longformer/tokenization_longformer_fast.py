@@ -193,7 +193,6 @@ class LongformerTokenizerFast(PreTrainedTokenizerFast):
         trim_offsets=True,
         **kwargs,
     ):
-
         """
         This method initializes an instance of the LongformerTokenizerFast class.
         
@@ -306,7 +305,6 @@ class LongformerTokenizerFast(PreTrainedTokenizerFast):
         self._mask_token = value
 
     def _batch_encode_plus(self, *args, **kwargs) -> BatchEncoding:
-
         """
         This method is a private function within the class LongformerTokenizerFast that batch encodes input sequences and returns the encoded representations.
         
@@ -329,7 +327,6 @@ instantiated with 'add_prefix_space=True'.
         return super()._batch_encode_plus(*args, **kwargs)
 
     def _encode_plus(self, *args, **kwargs) -> BatchEncoding:
-
         """
         This method encodes input sequences into a BatchEncoding object. It is intended for use within the LongformerTokenizerFast class.
         
@@ -358,7 +355,6 @@ add_prefix_space=True to use pretokenized inputs.
         return super()._encode_plus(*args, **kwargs)
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary.
         
@@ -380,7 +376,6 @@ using the 'load_vocabulary' method.
         return tuple(files)
 
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
-
         """
         Builds a list of token IDs with special tokens for the LongformerTokenizerFast class.
         

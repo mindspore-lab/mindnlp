@@ -18,7 +18,6 @@ if the scalar is zero, and getting the real value as a NumPy float64.
 
     @staticmethod
     def make_like(m: 'Scalar', val: Any) -> 'Scalar':
-
         r"""
         This method creates a new 'Scalar' object by utilizing the '_make_like' method of the 'Scalar' class.
         
@@ -37,7 +36,6 @@ if the scalar is zero, and getting the real value as a NumPy float64.
 
     @staticmethod
     def zero_like(m: 'Scalar') -> 'Scalar':
-
         r"""
         This method creates a new instance of the class 'Scalar' with values initialized to zero, based on the provided 'Scalar' instance 'm'.
         
@@ -54,7 +52,6 @@ if the scalar is zero, and getting the real value as a NumPy float64.
 
     @staticmethod
     def one_like(m: 'Scalar') -> 'Scalar':
-
         r"""
         Method 'one_like' in class 'Scalar' creates a new instance of 'Scalar' object with the same shape and type as the input.
         
@@ -71,7 +68,6 @@ if the scalar is zero, and getting the real value as a NumPy float64.
 
     @abstractmethod
     def __neg__(self) -> 'Scalar':
-
         r"""
         This method '__neg__' in the class 'Scalar' implements the negation operation for a scalar object.
         
@@ -88,7 +84,6 @@ if the scalar is zero, and getting the real value as a NumPy float64.
 
     @abstractmethod
     def __add__(self, that: 'Scalar') -> 'Scalar':
-
         r"""
         __add__
         
@@ -108,7 +103,6 @@ if the scalar is zero, and getting the real value as a NumPy float64.
 
     @abstractmethod
     def __sub__(self, that: 'Scalar') -> 'Scalar':
-
         r"""
         This method performs subtraction between two Scalar objects.
         
@@ -126,7 +120,6 @@ if the scalar is zero, and getting the real value as a NumPy float64.
 
     @abstractmethod
     def __mul__(self, that: 'Scalar') -> 'Scalar':
-
         r"""
         Multiplies two instances of the 'Scalar' class.
         
@@ -149,7 +142,6 @@ if the scalar is zero, and getting the real value as a NumPy float64.
 
     @abstractmethod
     def __truediv__(self, that: 'Scalar') -> 'Scalar':
-
         r"""
         This method performs the true division operation on the 'self' object and the 'that' object of type 'Scalar'.
         
@@ -168,7 +160,6 @@ if the scalar is zero, and getting the real value as a NumPy float64.
 
     @abstractmethod
     def sqrt(self) -> 'Scalar':
-
         r"""
         Calculate the square root of the Scalar object.
         
@@ -185,7 +176,6 @@ if the scalar is zero, and getting the real value as a NumPy float64.
 
     @abstractmethod
     def visit(self, visitor, *args, **kwargs) -> None:
-
         r"""
         This method 'visit' in the class 'Scalar' is an abstract method that must be implemented by subclasses. It is used to allow a visitor to interact with the Scalar object.
         
@@ -203,7 +193,6 @@ if the scalar is zero, and getting the real value as a NumPy float64.
 
     @abstractmethod
     def _make_like(self, val: Any) -> 'Scalar':
-
         r"""
         Make a new instance of the 'Scalar' class with the same attributes as the current instance, except for the 'val' attribute which will be updated to the specified value.
         
@@ -222,7 +211,6 @@ if the scalar is zero, and getting the real value as a NumPy float64.
 
     @abstractmethod
     def _zero_like(self) -> 'Scalar':
-
         r"""
         This method creates a new instance of 'Scalar' with zero values.
         
@@ -239,7 +227,6 @@ if the scalar is zero, and getting the real value as a NumPy float64.
 
     @abstractmethod
     def _one_like(self) -> 'Scalar':
-
         r"""
         This method, _one_like, returns a value of type 'Scalar'.
         
@@ -259,7 +246,6 @@ if the scalar is zero, and getting the real value as a NumPy float64.
 
     @abstractmethod
     def as_array(self) -> np.ndarray:
-
         r"""
         Converts the scalar value to a NumPy array.
         
@@ -285,7 +271,6 @@ if the scalar is zero, and getting the real value as a NumPy float64.
 
     @abstractmethod
     def is_zero(self) -> bool:
-
         r"""
         Method to check if the Scalar object is zero.
         
@@ -305,7 +290,6 @@ if the scalar is zero, and getting the real value as a NumPy float64.
 
     @abstractmethod
     def get_real(self) -> np.float64:
-
         r"""
         Returns the real part of the scalar value.
         

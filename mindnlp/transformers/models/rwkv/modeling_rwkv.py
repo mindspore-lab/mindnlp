@@ -81,7 +81,6 @@ def load_wkv_cuda_kernel(func_name, context_length):
 class RwkvLinearAttention(nn.Cell):
     """RWKV linear attention"""
     def __init__(self, config):
-
         """
         Initializes an instance of the RwkvLinearAttention class.
         
@@ -106,7 +105,6 @@ class RwkvLinearAttention(nn.Cell):
         self.wkv_backward = load_wkv_cuda_kernel('wkv_backward', config.context_length)
 
     def construct(self, time_decay, time_first, key, value, state=None, return_state=False):
-
         """
         Constructs the linear attention mechanism for the RwkvLinearAttention class.
         
@@ -229,7 +227,6 @@ def rwkv_linear_attention_cpu(time_decay, time_first, key, value, state=None, re
 class RwkvSelfAttention(nn.Cell):
     """RWKV self attention"""
     def __init__(self, config, layer_id=0):
-
         """
         Initializes an instance of the RwkvSelfAttention class.
         
@@ -293,7 +290,6 @@ class RwkvSelfAttention(nn.Cell):
         return receptance, key, value, state
 
     def construct(self, hidden, state=None, use_cache=False):
-
         """
         Construct method in the RwkvSelfAttention class.
         
@@ -334,7 +330,6 @@ attention mechanism and the updated state.
 class RwkvFeedForward(nn.Cell):
     """RWKV feed forward"""
     def __init__(self, config, layer_id=0):
-
         """
         Initializes a new instance of the RwkvFeedForward class.
         
@@ -372,7 +367,6 @@ class RwkvFeedForward(nn.Cell):
         self.value = nn.Dense(intermediate_size, hidden_size, has_bias=False)
 
     def construct(self, hidden, state=None):
-
         """
         This method 'construct' is defined in the class 'RwkvFeedForward' and is responsible for constructing the value and state based on the input parameters.
         
@@ -413,7 +407,6 @@ based on the input hidden array.
 class RwkvBlock(nn.Cell):
     """RWKV block"""
     def __init__(self, config, layer_id):
-
         """
         Initialize the RwkvBlock.
         
@@ -447,7 +440,6 @@ class RwkvBlock(nn.Cell):
         self.feed_forward = RwkvFeedForward(config, layer_id)
 
     def construct(self, hidden, state=None, use_cache=False, output_attentions=False):
-
         """
         Method to construct a RwkvBlock.
         
@@ -613,7 +605,6 @@ class RwkvCausalLMOutput(ModelOutput):
 class RwkvModel(RwkvPreTrainedModel):
     """RWKV Model"""
     def __init__(self, config):
-
         """
         Initializes an instance of the RwkvModel class.
         
@@ -642,7 +633,6 @@ class RwkvModel(RwkvPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method returns the input embeddings used in the RwkvModel class.
         
@@ -658,7 +648,6 @@ class RwkvModel(RwkvPreTrainedModel):
         return self.embeddings
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Sets the input embeddings for the RwkvModel.
         
@@ -692,7 +681,6 @@ class RwkvModel(RwkvPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, RwkvOutput]:
-
         """
         This method constructs the RwkvModel based on the provided input and configuration parameters.
         
@@ -776,7 +764,6 @@ class RwkvModel(RwkvPreTrainedModel):
         )
 
     def _rescale_layers(self):
-
         """
         Rescales the layers of the RwkvModel based on the training status.
         
@@ -819,7 +806,6 @@ class RwkvForCausalLM(RwkvPreTrainedModel):
     _tied_weights_keys = ["head.weight"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of the RwkvForCausalLM class.
         

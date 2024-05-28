@@ -70,7 +70,6 @@ class RNNDecoder(DecoderBase):
 
     def __init__(self, embedding, rnns, dropout_in=0, dropout_out=0, attention=True,
                  encoder_output_units=512, mode="RNN"):
-
         r"""
         Initialize the RNNDecoder class.
         

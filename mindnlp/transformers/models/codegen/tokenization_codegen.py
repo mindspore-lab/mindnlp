@@ -160,7 +160,6 @@ class CodeGenTokenizer(PreTrainedTokenizer):
         add_bos_token=False,
         **kwargs,
     ):
-
         """
         Initializes an instance of the CodeGenTokenizer class.
         
@@ -226,7 +225,6 @@ class CodeGenTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
-
         """
         This method returns the size of the vocabulary in the CodeGenTokenizer instance.
         
@@ -243,7 +241,6 @@ class CodeGenTokenizer(PreTrainedTokenizer):
         return len(self.encoder)
 
     def get_vocab(self):
-
         """
         Returns a dictionary containing the vocabulary of the CodeGenTokenizer instance.
         
@@ -260,7 +257,6 @@ class CodeGenTokenizer(PreTrainedTokenizer):
         return dict(self.encoder, **self.added_tokens_encoder)
 
     def bpe(self, token):
-
         """
         This method implements the Byte Pair Encoding (BPE) algorithm to tokenize a given token.
         
@@ -327,7 +323,6 @@ class CodeGenTokenizer(PreTrainedTokenizer):
         return word
 
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
-
         """
         Args:
             self (CodeGenTokenizer): The instance of the CodeGenTokenizer class.
@@ -377,7 +372,6 @@ class CodeGenTokenizer(PreTrainedTokenizer):
         return text
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the generated vocabulary files to the specified directory.
         
@@ -423,7 +417,6 @@ class CodeGenTokenizer(PreTrainedTokenizer):
         return vocab_file, merge_file
 
     def prepare_for_tokenization(self, text, is_split_into_words=False, **kwargs):
-
         """
         Prepare the text for tokenization by adding prefix space if required.
         
@@ -488,7 +481,6 @@ class CodeGenTokenizer(PreTrainedTokenizer):
         return decoded_text
 
     def truncate(self, completion, truncate_before_pattern):
-
         """
         This method 'truncate' is defined in the 'CodeGenTokenizer' class and is used to truncate a given completion based on specified patterns.
         

@@ -27,7 +27,6 @@ from mindnlp.configs import DEFAULT_ROOT
 class TransferIterableDataset():
     """TransferDataset for Huggingface Dataset."""
     def __init__(self, arrow_ds, column_names):
-
         r"""
         Initializes a new instance of TransferIterableDataset.
         
@@ -46,7 +45,6 @@ class TransferIterableDataset():
         self.column_names = column_names
 
     def __iter__(self):
-
         r"""
         Method '__iter__' in the class 'TransferIterableDataset'.
         
@@ -68,7 +66,6 @@ class TransferIterableDataset():
 class TransferDataset():
     """TransferDataset for Huggingface Dataset."""
     def __init__(self, arrow_ds, column_names):
-
         r"""
         __init__ method in the TransferDataset class.
         
@@ -87,7 +84,6 @@ class TransferDataset():
         self.column_names = column_names
 
     def __getitem__(self, index):
-
         r"""
         Retrieve the item at the specified index.
         
@@ -105,7 +101,6 @@ class TransferDataset():
         return tuple(self.ds[int(index)][name] for name in self.column_names)
 
     def __len__(self):
-
         r"""
         This method '__len__' is implemented in the class 'TransferDataset' to return the number of rows in the dataset.
         

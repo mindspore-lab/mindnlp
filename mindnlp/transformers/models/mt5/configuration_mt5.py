@@ -94,7 +94,6 @@ class MT5Config(PretrainedConfig):
         classifier_dropout=0.0,
         **kwargs,
     ):
-
         """
         Initialize a new MT5Config object.
         
@@ -171,7 +170,6 @@ class MT5Config(PretrainedConfig):
 
     @property
     def hidden_size(self):
-
         """
         Returns the hidden size of the MT5Config.
         
@@ -188,7 +186,6 @@ class MT5Config(PretrainedConfig):
 
     @property
     def num_attention_heads(self):
-
         """
         This method, num_attention_heads, is a property method within the MT5Config class, and it takes one parameter, self.
         
@@ -205,7 +202,6 @@ class MT5Config(PretrainedConfig):
 
     @property
     def num_hidden_layers(self):
-
         '''
         Returns the number of hidden layers in the MT5Config.
         

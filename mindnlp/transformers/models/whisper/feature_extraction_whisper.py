@@ -67,7 +67,6 @@ class WhisperFeatureExtractor(SequenceFeatureExtractor):
         return_attention_mask=False,  # pad inputs to max length with silence token (zero) and no attention mask
         **kwargs,
     ):
-
         """
         Initializes a WhisperFeatureExtractor object.
         

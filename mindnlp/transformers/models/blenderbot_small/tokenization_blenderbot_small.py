@@ -88,7 +88,6 @@ class BlenderbotSmallTokenizer(PreTrainedTokenizer):
         pad_token="__null__",
         **kwargs,
     ):
-
         """
         Initializes a BlenderbotSmallTokenizer instance with the provided parameters.
         
@@ -122,7 +121,6 @@ class BlenderbotSmallTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self) -> int:
-
         """
         Returns the size of the vocabulary used by the BlenderbotSmallTokenizer instance.
         
@@ -138,7 +136,6 @@ class BlenderbotSmallTokenizer(PreTrainedTokenizer):
         return len(self.encoder)
 
     def get_vocab(self) -> Dict:
-
         """
         Retrieve the vocabulary of the BlenderbotSmallTokenizer.
         
@@ -154,7 +151,6 @@ class BlenderbotSmallTokenizer(PreTrainedTokenizer):
         return dict(self.encoder, **self.added_tokens_encoder)
 
     def bpe(self, token: str) -> str:
-
         """
         The 'bpe' method in the 'BlenderbotSmallTokenizer' class performs Byte Pair Encoding (BPE) on a given token.
         
@@ -271,7 +267,6 @@ class BlenderbotSmallTokenizer(PreTrainedTokenizer):
         return out_string
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary and merge files for the BlenderbotSmallTokenizer.
         

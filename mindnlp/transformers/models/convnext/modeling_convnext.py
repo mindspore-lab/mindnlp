@@ -73,7 +73,6 @@ class ConvNextDropPath(nn.Cell):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
 
     def __init__(self, drop_prob: Optional[float] = None) -> None:
-
         """
         Initializes an instance of the ConvNextDropPath class.
         
@@ -92,7 +91,6 @@ class ConvNextDropPath(nn.Cell):
         self.drop_prob = drop_prob
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Construct a drop path operation on the hidden states.
         
@@ -111,7 +109,6 @@ class ConvNextDropPath(nn.Cell):
         return drop_path(hidden_states, self.drop_prob, self.training)
 
     def extra_repr(self) -> str:
-
         """
         Method to generate a string representation of the drop probability in the ConvNextDropPath class.
         
@@ -134,7 +131,6 @@ class ConvNextLayerNorm(nn.Cell):
     """
 
     def __init__(self, normalized_shape, eps=1e-6, data_format="channels_last"):
-
         """
         Initializes an instance of the ConvNextLayerNorm class.
         
@@ -165,7 +161,6 @@ class ConvNextLayerNorm(nn.Cell):
                                         epsilon=eps)
 
     def construct(self, x: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the ConvNextLayerNorm.
         
@@ -200,7 +195,6 @@ class ConvNextEmbeddings(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes the ConvNextEmbeddings class.
         
@@ -223,7 +217,6 @@ class ConvNextEmbeddings(nn.Cell):
         self.num_channels = config.num_channels
 
     def construct(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs embeddings from the input pixel values using the ConvNextEmbeddings class.
         
@@ -264,7 +257,6 @@ class ConvNextLayer(nn.Cell):
     """
 
     def __init__(self, config, dim, drop_path=0):
-
         ''' 
         Initializes the ConvNextLayer.
         
@@ -295,7 +287,6 @@ class ConvNextLayer(nn.Cell):
         self.drop_path = ConvNextDropPath(drop_path) if drop_path > 0.0 else nn.Identity()
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         '''
         Construct method in the ConvNextLayer class.
         
@@ -336,7 +327,6 @@ class ConvNextStage(nn.Cell):
     """
 
     def __init__(self, config, in_channels, out_channels, kernel_size=2, stride=2, depth=2, drop_path_rates=None):
-
         """ 
         Initializes a ConvNextStage object with the provided configuration.
         
@@ -372,7 +362,6 @@ class ConvNextStage(nn.Cell):
         )
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the next stage of a convolutional neural network.
         
@@ -408,7 +397,6 @@ all hidden states.
     
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the ConvNextEncoder class.
         
@@ -451,7 +439,6 @@ all hidden states.
         output_hidden_states: Optional[bool] = False,
         return_dict: Optional[bool] = True,
     ) -> Union[Tuple, BaseModelOutputWithNoAttention]:
-
         """
         Constructs the encoder for the ConvNext model.
         
@@ -524,7 +511,6 @@ outputs as specified in the configuration parameters.
     Note: This docstring is based on the provided code snippet and does not include complete signatures or any other code.
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the ConvNextModel class.
         
@@ -558,7 +544,6 @@ outputs as specified in the configuration parameters.
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPoolingAndNoAttention]:
-
         """
         Constructs a ConvNextModel by processing the given pixel values.
         
@@ -629,7 +614,6 @@ and regression. It inherits from the ConvNextPreTrainedModel class.
         
     """
     def __init__(self, config):
-
         """
         __init__
         
@@ -743,7 +727,6 @@ on the configuration settings.
         
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the ConvNextBackbone class.
         

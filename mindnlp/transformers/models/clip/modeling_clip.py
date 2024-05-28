@@ -46,7 +46,6 @@ CLIP_PRETRAINED_MODEL_ARCHIVE_LIST = [
 # contrastive loss function, adapted from
 # https://sachinruk.github.io/blog/2021-03-07-clip.html
 def contrastive_loss(logits: mindspore.Tensor) -> mindspore.Tensor:
-
     """
     Calculates the contrastive loss for the given logits.
     
@@ -64,7 +63,6 @@ def contrastive_loss(logits: mindspore.Tensor) -> mindspore.Tensor:
 
 
 def clip_loss(similarity: mindspore.Tensor) -> mindspore.Tensor:
-
     ''' 
     Calculate the average of caption loss and image loss obtained from contrastive loss calculation.
     
@@ -171,7 +169,6 @@ class CLIPOutput(ModelOutput):
     vision_model_output: BaseModelOutputWithPooling = None
 
     def to_tuple(self) -> Tuple[Any]:
-
         """
         Converts the CLIPOutput object to a tuple representation.
         
@@ -221,7 +218,6 @@ constructing the embeddings for input images.
         NotImplementedError: If the construct method is not implemented in the subclass.
     """
     def __init__(self, config: CLIPVisionConfig):
-
         """
         Initialize the CLIPVisionEmbeddings class.
         
@@ -261,7 +257,6 @@ constructing the embeddings for input images.
         self.position_ids = ops.arange(self.num_positions).expand((1, -1))
 
     def construct(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Construct embeddings for CLIP vision model.
         
@@ -309,7 +304,6 @@ embeddings.
     
     """
     def __init__(self, config: CLIPTextConfig):
-
         """
         Initializes the CLIPTextEmbeddings class.
         
@@ -340,7 +334,6 @@ embeddings.
         position_ids: Optional[mindspore.Tensor] = None,
         inputs_embeds: Optional[mindspore.Tensor] = None,
     ) -> mindspore.Tensor:
-
         """
         Constructs the text embeddings for the CLIP model.
         
@@ -375,7 +368,6 @@ class CLIPAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(self, config):
-
         """
         __init__(self, config)
             
@@ -413,7 +405,6 @@ class CLIPAttention(nn.Cell):
         self.out_proj = nn.Dense(self.embed_dim, self.embed_dim)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-
         """
         Reshapes the input tensor to match the required shape for attention calculation in the CLIPAttention class.
         
@@ -536,7 +527,6 @@ class CLIPMLP(nn.Cell):
             given an input tensor of hidden states, returning the output tensor after passing through the MLP layers.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the CLIPMLP class.
         
@@ -559,7 +549,6 @@ class CLIPMLP(nn.Cell):
         self.fc2 = nn.Dense(config.intermediate_size, config.hidden_size)
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the forward pass of the CLIPMLP model.
         
@@ -614,7 +603,6 @@ class CLIPEncoderLayer(nn.Cell):
                 Tuple[mindspore.Tensor]: A tuple containing the encoded hidden states. If output_attentions is True, the tuple also includes the attention weights.
     """
     def __init__(self, config: CLIPConfig):
-
         """
         Initializes a new instance of the CLIPEncoderLayer class.
         
@@ -760,7 +748,6 @@ class CLIPEncoder(nn.Cell):
     """
 
     def __init__(self, config: CLIPConfig):
-
         """
         Initializes an instance of the CLIPEncoder class.
         
@@ -872,7 +859,6 @@ to the input embeddings and returns the encoded hidden states and pooled output.
     For additional details and usage examples, please refer to the code and method-specific docstrings.
     """
     def __init__(self, config: CLIPTextConfig):
-
         """
         Initializes an instance of the CLIPTextTransformer class.
         
@@ -1012,7 +998,6 @@ using the model.
     _no_split_modules = ["CLIPTextEmbeddings", "CLIPEncoderLayer"]
 
     def __init__(self, config: CLIPTextConfig):
-
         """Initialize the CLIPTextModel object with the given configuration.
         
             Args:
@@ -1031,7 +1016,6 @@ using the model.
         self.post_init()
 
     def get_input_embeddings(self) -> nn.Cell:
-
         """
         Method to retrieve the input embeddings from the CLIPTextModel.
         
@@ -1051,7 +1035,6 @@ using the model.
         return self.text_model.embeddings.token_embedding
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the CLIPTextModel.
         
@@ -1119,7 +1102,6 @@ resulting hidden states, pooled output, and other relevant information according
     Note: This class is designed to be used within the MindSpore framework for vision-related tasks in the CLIP framework.
     """
     def __init__(self, config: CLIPVisionConfig):
-
         """
         Initializes an instance of the CLIPVisionTransformer class.
         
@@ -1232,7 +1214,6 @@ Union[Tuple, BaseModelOutputWithPooling]: Constructs the vision model and perfor
     _no_split_modules = ["CLIPEncoderLayer"]
 
     def __init__(self, config: CLIPVisionConfig):
-
         """
         Initializes a new instance of the CLIPVisionModel class.
         
@@ -1254,7 +1235,6 @@ Union[Tuple, BaseModelOutputWithPooling]: Constructs the vision model and perfor
         self.post_init()
 
     def get_input_embeddings(self) -> nn.Cell:
-
         """
         This method returns the input embeddings from the CLIPVisionModel.
         
@@ -1319,7 +1299,6 @@ layers, and scaling of logits for calculating similarity scores. It also include
     _no_split_modules = ["CLIPTextEmbeddings", "CLIPEncoderLayer"]
 
     def __init__(self, config: CLIPConfig):
-
         """
         Initializes an instance of the CLIPModel class.
         
@@ -1590,7 +1569,6 @@ object containing the text embeddings and other relevant information.
     _no_split_modules = ["CLIPTextEmbeddings", "CLIPEncoderLayer"]
 
     def __init__(self, config: CLIPTextConfig):
-
         """
         Initializes an instance of the CLIPTextModelWithProjection class.
         
@@ -1614,7 +1592,6 @@ object containing the text embeddings and other relevant information.
         self.post_init()
 
     def get_input_embeddings(self) -> nn.Cell:
-
         """
         Method to get the input embeddings from the CLIPTextModelWithProjection instance.
         
@@ -1632,7 +1609,6 @@ object containing the text embeddings and other relevant information.
         return self.text_model.embeddings.token_embedding
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the CLIPTextModelWithProjection class.
         
@@ -1734,7 +1710,6 @@ input parameters.
     main_input_name = "pixel_values"
 
     def __init__(self, config: CLIPVisionConfig):
-
         """
         Initializes a CLIPVisionModelWithProjection instance.
         
@@ -1758,7 +1733,6 @@ input parameters.
         self.post_init()
 
     def get_input_embeddings(self) -> nn.Cell:
-
         """
         Returns the input embeddings of the CLIPVisionModelWithProjection.
         
@@ -1856,7 +1830,6 @@ return_dict: Optional[bool] = None) -> Union[tuple, ImageClassifierOutput]:
     main_input_name = "pixel_values"
 
     def __init__(self, config: CLIPConfig) -> None:
-
         """
         Initializes an instance of the CLIPForImageClassification class.
         

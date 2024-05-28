@@ -31,7 +31,6 @@ class MSRobertaEmbeddings(nn.Cell):
 
     # Copied from transformers.models.bert.modeling_bert.BertEmbeddings.__init__
     def __init__(self, config):
-
         """
         This method initializes the MSRobertaEmbeddings class.
         
@@ -77,7 +76,6 @@ class MSRobertaEmbeddings(nn.Cell):
     def construct(
         self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None, past_key_values_length=0
     ):
-
         """
         Construct the embeddings for the MSRoberta model.
         
@@ -155,7 +153,6 @@ class MSRobertaEmbeddings(nn.Cell):
         return position_ids.unsqueeze(0).broadcast_to(input_shape)
 
 
-
 class MSRobertaPreTrainedModel(BertPreTrainedModel):
     """Roberta Pretrained Model."""
 
@@ -169,7 +166,6 @@ class MSRobertaModel(BertModel):
     base_model_prefix = "roberta"
 
     def __init__(self, config, add_pooling_layer=True):
-
         """
         Initializes a new instance of the MSRobertaModel class.
         
@@ -190,7 +186,6 @@ class MSRobertaModel(BertModel):
 class MSRobertaLMHead(nn.Cell):
     """RobertaLMHead"""
     def __init__(self, config):
-
         """
         Initializes the MSRobertaLMHead class with the given configuration.
         
@@ -219,7 +214,6 @@ class MSRobertaLMHead(nn.Cell):
         self.gelu = nn.GELU()
 
     def construct(self, features):
-
         """
         Constructs the output of the MSRobertaLMHead model.
         
@@ -243,7 +237,6 @@ class MSRobertaLMHead(nn.Cell):
 class MSRobertaClassificationHead(nn.Cell):
     """RobertaClassificationHead"""
     def __init__(self, config):
-
         """
         Initializes an instance of the MSRobertaClassificationHead class.
         
@@ -267,7 +260,6 @@ class MSRobertaClassificationHead(nn.Cell):
         self.out_proj = nn.Dense(config.hidden_size, config.num_labels)
 
     def construct(self, features):
-
         """
         This method constructs the classification head for the MSRoberta model.
         
@@ -292,7 +284,6 @@ class MSRobertaClassificationHead(nn.Cell):
 class MSRobertaForMaskedLM(MSRobertaPreTrainedModel):
     """RobertaForMaskedLM"""
     def __init__(self, config, *args, **kwargs):
-
         """
         Initializes an instance of the MSRobertaForMaskedLM class.
         
@@ -313,7 +304,6 @@ class MSRobertaForMaskedLM(MSRobertaPreTrainedModel):
         self.vocab_size = self.config.vocab_size
 
     def get_output_embeddings(self):
-
         """
         This method returns the output embeddings of the model's decoder layer.
         
@@ -332,7 +322,6 @@ class MSRobertaForMaskedLM(MSRobertaPreTrainedModel):
         return self.lm_head.decoder
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Method to set new output embeddings for the MSRobertaForMaskedLM model.
         
@@ -352,7 +341,6 @@ class MSRobertaForMaskedLM(MSRobertaPreTrainedModel):
 
     def construct(self, input_ids, attention_mask=None, token_type_ids=None, position_ids=None, head_mask=None,
                   masked_lm_labels=None):
-
         """
         Constructs the masked language model (MLM) outputs for the MSRobertaForMaskedLM model.
         
@@ -394,7 +382,6 @@ class MSRobertaForMaskedLM(MSRobertaPreTrainedModel):
 class MSRobertaForSequenceClassification(MSRobertaPreTrainedModel):
     """MSRobertaForSequenceClassification"""
     def __init__(self, config, *args, **kwargs):
-
         """
         Initializes an instance of the MSRobertaForSequenceClassification class.
         
@@ -416,7 +403,6 @@ class MSRobertaForSequenceClassification(MSRobertaPreTrainedModel):
 
     def construct(self, input_ids, attention_mask=None, token_type_ids=None, position_ids=None, head_mask=None,
                   labels=None):
-
         """
         Constructs the model architecture for sequence classification using the MSRoberta model.
         
@@ -472,7 +458,6 @@ class MSRobertaForSequenceClassification(MSRobertaPreTrainedModel):
 class MSRobertaForMultipleChoice(MSRobertaPreTrainedModel):
     """RobertaForMultipleChoice"""
     def __init__(self, config, *args, **kwargs):
-
         """
         Initializes an instance of the 'MSRobertaForMultipleChoice' class.
         
@@ -493,7 +478,6 @@ class MSRobertaForMultipleChoice(MSRobertaPreTrainedModel):
 
     def construct(self, input_ids, token_type_ids=None, attention_mask=None, labels=None,
                   position_ids=None, head_mask=None):
-
         """
         Constructs the multiple choice model for MSRoberta.
         

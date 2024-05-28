@@ -25,7 +25,6 @@ properties such as ones, zeros, and identity matrices, as well as concatenating 
                  height: Optional[int] = None,
                  width: Optional[int] = None,
                  items: Union[Tuple, np.ndarray, List, NoneType] = None) -> None:
-
         r"""
         Initializes a Matrix object.
         
@@ -57,8 +56,6 @@ properties such as ones, zeros, and identity matrices, as well as concatenating 
         super(Matrix, self).__init__(height, width)
 
     def __getitem__(self, key):
-
-        
         """
         __getitem__
         
@@ -85,7 +82,6 @@ properties such as ones, zeros, and identity matrices, as well as concatenating 
             return Scalar(self._alg_factory, x, y)
 
     def __neg__(self) -> 'Matrix':
-
         r"""
         Negates the elements of the matrix.
         
@@ -106,7 +102,6 @@ properties such as ones, zeros, and identity matrices, as well as concatenating 
         )
 
     def get_algebra_type(self) -> Type[AlgebraFactory]:
-
         r"""
         This method returns the type of algebra factory associated with the Matrix object.
         
@@ -122,7 +117,6 @@ properties such as ones, zeros, and identity matrices, as well as concatenating 
         return self._alg_factory
 
     def add_scalar(self, that: Union[Scalar, Tuple[Union[float, np.float64], Union[float, np.float64]]]) -> 'Matrix':
-
         r"""
         This method 'add_scalar' in the class 'Matrix' adds a scalar value to the matrix.
         
@@ -150,7 +144,6 @@ type are allowed for addition.
         )
 
     def sub_scalar(self, that: Union[Scalar, Tuple[Union[float, np.float64], Union[float, np.float64]]]) -> 'Matrix':
-
         r"""
         Subtracts a scalar value from each element in the Matrix.
         
@@ -179,8 +172,6 @@ type are allowed for addition.
         )
 
     def mul_scalar(self, that: Union[Scalar, Tuple[Union[float, np.float64], Union[float, np.float64]]]) -> 'Matrix':
-
-        
         """
         Perform scalar multiplication on the Matrix.
         
@@ -205,7 +196,6 @@ type are allowed for addition.
         return Matrix(self._alg_factory, self._height, self._width, items)
 
     def transpose(self) -> 'Matrix':
-
         r"""
         Transposes the current matrix by swapping its rows with columns.
         
@@ -243,7 +233,6 @@ matrix will have dimensions 'width' x 'height', where 'width' is the number of c
         )
 
     def transpose_conjugate(self) -> 'Matrix':
-
         r"""
         Method to compute the transpose conjugate of the matrix.
         
@@ -265,7 +254,6 @@ matrix will have dimensions 'width' x 'height', where 'width' is the number of c
         )
 
     def div_scalar(self, that: Union[Scalar, Tuple[Union[float, np.float64], Union[float, np.float64]]]) -> 'Matrix':
-
         r"""
         This method performs scalar division on the matrix.
         
@@ -289,7 +277,6 @@ its algebra type must match the algebra type of the matrix.
         return Matrix(self._alg_factory, self._height, self._width, items)
 
     def as_array(self) -> np.ndarray:
-
         r"""
         Converts the Matrix object to a NumPy ndarray.
         
@@ -310,7 +297,6 @@ its algebra type must match the algebra type of the matrix.
     def _init_default(self,
                       height: Optional[int],
                       width: Optional[int]) -> Tuple[int, int]:
-
         r"""
         Initialize the default matrix with given height and width.
         
@@ -335,7 +321,6 @@ its algebra type must match the algebra type of the matrix.
                     height: Optional[int],
                     width: Optional[int],
                     items: Tuple[np.ndarray, np.ndarray]) -> Tuple[int, int]:
-
         r"""
         Initializes the Matrix object with the given parameters.
         
@@ -385,7 +370,6 @@ represents the y-coordinate values.
                       height: Optional[int],
                       width: Optional[int],
                       items: np.ndarray) -> Tuple[int, int]:
-
         r"""
         Initializes the ndarray for the Matrix class.
         
@@ -415,7 +399,6 @@ represents the y-coordinate values.
                    height: Optional[int],
                    width: Optional[int],
                    items: List[Vector]) -> Tuple[int, int]:
-
         r"""
         Initializes the list of vectors for the Matrix class.
         
@@ -455,7 +438,6 @@ represents the y-coordinate values.
         return height, width
 
     def _add(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         Method _add in the class Matrix performs element-wise addition between two matrices of the same data type.
         
@@ -484,7 +466,6 @@ represents the y-coordinate values.
         )
 
     def _sub(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         Subtracts another Matrix from the current Matrix.
         
@@ -511,7 +492,6 @@ same data type.
         )
 
     def _mul(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         This method multiplies the current Matrix object with another Matrix object.
         
@@ -534,7 +514,6 @@ same data type.
         return Matrix(self._alg_factory, self._height, self._width, items)
 
     def _matmul(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         Performs matrix multiplication between two Matrix objects and returns a new Matrix object.
         
@@ -566,7 +545,6 @@ same data type.
         return Matrix(self._alg_factory, self._height, that._width, items)
 
     def _div(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         Performs division operation between two matrices.
         
@@ -590,7 +568,6 @@ same data type.
         return Matrix(self._alg_factory, self._height, self._width, items)
 
     def _full_like(self, items: Union[Tuple, np.ndarray, List]) -> 'Matrix':
-
         r"""
         Performs a deep copy of the current matrix with the same shape as the provided 'items'.
         
@@ -623,7 +600,6 @@ same data type.
         return Matrix(self._alg_factory, items=items)
 
     def _ones_like(self) -> 'Matrix':
-
         r"""
         Args:
             self (Matrix): The Matrix instance on which the method is called.
@@ -642,7 +618,6 @@ same data type.
         )
 
     def _zeros_like(self) -> 'Matrix':
-
         r"""
         Returns a new Matrix object with the same dimensions as the current Matrix object, but with all elements initialized to zero.
         
@@ -678,7 +653,6 @@ same data type.
         )
 
     def _identity_like(self) -> 'Matrix':
-
         r"""
         Method _identity_like in the class Matrix creates a new Matrix object that is an identity matrix of the same dimensions as the calling instance.
         
@@ -703,7 +677,6 @@ same data type.
         return Matrix(self._alg_factory, items=items)
 
     def _concat_rows(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         The _concat_rows method concatenates the rows of the current Matrix instance with another Matrix instance.
         
@@ -732,7 +705,6 @@ same data type.
         )
 
     def _concat_cols(self, that: 'Matrix') -> 'Matrix':
-
         r"""Concatenates the columns of the current matrix with another matrix.
         
         Args:

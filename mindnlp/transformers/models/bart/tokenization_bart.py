@@ -197,7 +197,6 @@ class BartTokenizer(PreTrainedTokenizer):
         add_prefix_space=False,
         **kwargs,
     ):
-
         """
         This method initializes an instance of the BartTokenizer class.
         
@@ -264,7 +263,6 @@ class BartTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
-
         """
         Method to retrieve the vocabulary size of the BartTokenizer instance.
         
@@ -282,7 +280,6 @@ class BartTokenizer(PreTrainedTokenizer):
         return len(self.encoder)
 
     def get_vocab(self):
-
         """Return the vocabulary of the BartTokenizer.
         
         Args:
@@ -299,7 +296,6 @@ class BartTokenizer(PreTrainedTokenizer):
         return dict(self.encoder, **self.added_tokens_encoder)
 
     def bpe(self, token):
-
         """
         This method 'bpe' is defined within the class 'BartTokenizer' and performs Byte Pair Encoding (BPE) on a given token.
         
@@ -387,7 +383,6 @@ class BartTokenizer(PreTrainedTokenizer):
         return text
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary files for the BartTokenizer.
         
@@ -508,7 +503,6 @@ class BartTokenizer(PreTrainedTokenizer):
         return len(cls + token_ids_0 + sep + sep + token_ids_1 + sep) * [0]
 
     def prepare_for_tokenization(self, text, is_split_into_words=False, **kwargs):
-
         """
         Prepares the input text for tokenization in the BartTokenizer class.
         

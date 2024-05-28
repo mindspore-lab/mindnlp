@@ -151,7 +151,6 @@ class AlbertTokenizer(PreTrainedTokenizer):
         sp_model_kwargs: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> None:
-
         """
         Initializes an instance of the AlbertTokenizer class.
         
@@ -212,7 +211,6 @@ class AlbertTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self) -> int:
-
         """
         This method returns the size of the vocabulary used in the AlbertTokenizer.
         
@@ -228,7 +226,6 @@ class AlbertTokenizer(PreTrainedTokenizer):
         return len(self.sp_model)
 
     def get_vocab(self) -> Dict[str, int]:
-
         """
         Get the vocabulary of the AlbertTokenizer.
         
@@ -248,7 +245,6 @@ class AlbertTokenizer(PreTrainedTokenizer):
         return vocab
 
     def __getstate__(self):
-
         """
         Method: __getstate__
         
@@ -269,7 +265,6 @@ class AlbertTokenizer(PreTrainedTokenizer):
         return state
 
     def __setstate__(self, d):
-
         """
         Sets the internal state of the AlbertTokenizer instance.
         
@@ -314,7 +309,6 @@ arguments provided through 'self.sp_model_kwargs'.
         self.sp_model.Load(self.vocab_file)
 
     def preprocess_text(self, inputs):
-
         """
         Preprocesses the input text by removing spaces, replacing quotation marks, normalizing accents, and converting to lowercase.
         
@@ -475,7 +469,6 @@ arguments provided through 'self.sp_model_kwargs'.
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary of the AlbertTokenizer to a specified directory with an optional filename prefix.
         

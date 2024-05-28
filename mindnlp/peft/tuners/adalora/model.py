@@ -67,7 +67,6 @@ class AdaLoraModel(LoraModel):
     # Note: don't redefine prefix here, it should be inherited from LoraModel
 
     def __init__(self, model, config, adapter_name):
-
         r"""
         Initializes an instance of the AdaLoraModel class.
         
@@ -125,8 +124,6 @@ class AdaLoraModel(LoraModel):
                 "you want to train."
             )
     def _mark_only_adapters_as_trainable(self, model: nn.Cell) -> None:
-
-        
         """
         Marks only specific adapters in the model as trainable based on the specified bias configuration.
         
@@ -170,7 +167,6 @@ class AdaLoraModel(LoraModel):
         current_key,
         **optionnal_kwargs,
     ):
-
         r"""
         This method '_create_and_replace' is defined within the 'AdaLoraModel' class and is responsible for creating and replacing a cell based on the provided parameters.
         
@@ -223,7 +219,6 @@ class AdaLoraModel(LoraModel):
 
     @staticmethod
     def _create_new_cell(lora_config, adapter_name, target, **kwargs):
-
         r"""
         This method creates a new cell for the AdaLoraModel.
         
@@ -303,7 +298,6 @@ class AdaLoraModel(LoraModel):
 
         return new_cell
     def _replace_cell(self, parent, child_name, new_cell, child):
-
         r"""
         This method '_replace_cell' is defined within the 'AdaLoraModel' class.
         It replaces a cell within the model with a new cell, transferring relevant attributes from the original cell to the new cell.
@@ -340,7 +334,6 @@ class AdaLoraModel(LoraModel):
                 new_cell.state = child.state
     @staticmethod
     def _prepare_adapter_config(peft_config, model_config):
-
         r"""
         This method '_prepare_adapter_config' in the class 'AdaLoraModel' prepares the adapter configuration based on the provided 'peft_config' and 'model_config' parameters.
         
@@ -430,7 +423,6 @@ TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING.
                 target.lora_B.update({adapter_name: Parameter(lora_B_weights)})
                 # The scaling is exactly as the previous
                 target.ranknum.update({adapter_name: Parameter(ranknum)})
-
 
     def resize_state_dict_by_rank_pattern(self, rank_pattern, state_dict, adapter_name):
         "resize the state_dict by rank pattern"

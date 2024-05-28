@@ -49,7 +49,6 @@ PROTOCOL_VERSION = 1001
 
 @contextmanager
 def mkdtemp():
-
     """
     Context manager that creates a temporary directory and provides its path.
     
@@ -83,7 +82,6 @@ class PyTorchFileReader:
     """
 
     def __init__(self, file):
-
         """
         Initializes a new instance of PyTorchFileReader.
         
@@ -103,7 +101,6 @@ class PyTorchFileReader:
         self.directory = self.file.namelist()[0].split('/')[0]
 
     def open_record(self, name):
-
         """
         Opens a record file from the PyTorchFileReader directory.
         
@@ -125,7 +122,6 @@ class PyTorchFileReader:
         return None
 
     def read_record(self, name):
-
         """
         Reads a record from a PyTorch file.
         
@@ -146,9 +142,7 @@ class PyTorchFileReader:
             return self.file.read(filename)
         return None
 
-
     def has_record(self, name):
-
         """
         This method checks if a record with the specified name exists in the PyTorchFileReader's directory.
         
@@ -168,7 +162,6 @@ class PyTorchFileReader:
     def get_all_records(
         self,
     ):
-
         """
         Retrieves a list of all records from the PyTorchFileReader object.
         
@@ -191,7 +184,6 @@ class PyTorchFileReader:
         return files
 
     def get_record_offset(self, name):
-
         """
         Returns the header offset of a specified record in a PyTorch file.
         
@@ -282,7 +274,6 @@ def set_default_load_endianness(endianness):
     _default_load_endian = endianness
 
 def _is_zipfile(f) -> bool:
-
     """
     Args:
         f (file object): The file object to be checked for being a valid zip file.
@@ -317,7 +308,6 @@ def _is_zipfile(f) -> bool:
     return read_bytes == local_header_magic_number
 
 def _check_seekable(f) -> bool:
-
     """
     Checks if the given file object is seekable.
     
@@ -349,7 +339,6 @@ def _check_seekable(f) -> bool:
     return False
 
 def _is_compressed_file(f) -> bool:
-
     """
     Checks whether the given file is a compressed file.
     
@@ -386,7 +375,6 @@ def _should_read_directly(f):
 
 
 def _is_path(name_or_buffer):
-
     """
     Check if the input is a valid path.
     
@@ -402,7 +390,6 @@ def _is_path(name_or_buffer):
     return isinstance(name_or_buffer, (str, pathlib.Path))
 
 def _is_torchscript_zip(zip_file):
-
     """
     Checks if the given zip file contains a specific record.
     
@@ -446,7 +433,6 @@ class _opener:
             This method does not handle exceptions. It is designed to be used as a context manager and should be used in conjunction with a `try-except-finally` block to handle exceptions properly.
     """
     def __init__(self, file_like):
-
         """
         Initializes an instance of the '_opener' class.
         
@@ -465,7 +451,6 @@ class _opener:
         self.file_like = file_like
 
     def __enter__(self):
-
         """
         The '__enter__' method is a special method in the '_opener' class that is used to set up the context for an object. It is called when using the 'with' statement in Python.
         
@@ -481,7 +466,6 @@ class _opener:
         return self.file_like
 
     def __exit__(self, *args):
-
         """
         Method '__exit__' in the class '_opener'.
         
@@ -523,7 +507,6 @@ class _open_file(_opener):
             Closes the file-like object when the instance is exited.
     """
     def __init__(self, name, mode):
-
         """
         __init__
         
@@ -551,7 +534,6 @@ modes are also supported.
         super().__init__(open(name, mode))
 
     def __exit__(self, *args):
-
         """
         This method __exit__ is used in the class _open_file to handle the cleanup operations when exiting a context manager.
         
@@ -578,7 +560,6 @@ class _open_buffer_reader(_opener):
     It also performs a check to ensure that the buffer is seekable before proceeding with reading operations.
     """
     def __init__(self, buffer):
-
         """
         Initializes an instance of the '_open_buffer_reader' class.
         
@@ -645,7 +626,6 @@ class _open_buffer_writer(_opener):
                 None
     """
     def __exit__(self, *args):
-
         """
         __exit__
         
@@ -664,7 +644,6 @@ class _open_buffer_writer(_opener):
 
 
 def _open_file_like(name_or_buffer, mode):
-
     """
     Args:
         name_or_buffer (str or buffer): The name of the file or a buffer object to be opened. If a string, it represents the file path. If a buffer, it represents a memory buffer.
@@ -697,7 +676,6 @@ class _open_zipfile_reader(_opener):
         __init__: Initializes the _open_zipfile_reader instance, using the specified name_or_buffer to open a PyTorchFileReader.
     """
     def __init__(self, name_or_buffer) -> None:
-
         """
         Initializes the _open_zipfile_reader class.
         
@@ -717,7 +695,6 @@ class _open_zipfile_reader(_opener):
         super().__init__(PyTorchFileReader(name_or_buffer))
 
 def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, backward_hooks, metadata=None):
-
     '''Rebuilds a tensor based on the provided parameters.
     
     Args:
@@ -830,7 +807,6 @@ class FakeStorage:
     storage: np.ndarray = None
 
 def _rebuild_tensor_legacy(storage, storage_offset, size, stride, requires_grad, backward_hooks, metadata=None):
-
     """
     This function rebuilds a tensor using legacy parameters.
     
@@ -852,7 +828,6 @@ def _rebuild_tensor_legacy(storage, storage_offset, size, stride, requires_grad,
     return FakeParameter(storage, storage_offset, size, stride, requires_grad)
 
 def _maybe_decode_ascii(bytes_str: Union[bytes, str]) -> str:
-
     """
     This function decodes a bytes string to ASCII if it is a bytes type, otherwise returns the input string.
     
@@ -895,7 +870,6 @@ element_size_map = {
 }
 
 def load(f, pickle_module=pickle, *, mmap=None, **pickle_load_args):
-
     """
     Load a file using pickle, optionally with memory mapping.
     
@@ -946,7 +920,6 @@ def load(f, pickle_module=pickle, *, mmap=None, **pickle_load_args):
         return _legacy_load(opened_file, pickle_module, **pickle_load_args)
 
 def _legacy_load(f, pickle_module, **pickle_load_args):
-
     """
     Args:
         f (file-like object): The file-like object containing the serialized data to be loaded.
@@ -987,7 +960,6 @@ def _legacy_load(f, pickle_module, **pickle_load_args):
         with closing(tarfile.open(fileobj=f, mode='r:', format=tarfile.PAX_FORMAT)) as tar, \
                 mkdtemp() as tmpdir:
             raise ValueError('do not support legacy load for Pytorch.')
-
 
     deserialized_objects = {}
 
@@ -1086,7 +1058,6 @@ def _legacy_load(f, pickle_module, **pickle_load_args):
     return new_result
 
 def _load(zip_file, pickle_module, overall_storage=None, pickle_file='data.pkl', **pickle_load_args):
-
     """
     Loads data from a zip file using pickle serialization.
     
@@ -1234,7 +1205,6 @@ def convert_torch_to_mindspore(pth_file):
     return ms_ckpt_path
 
 def safe_load_file(filename):
-
     """
     This function safely loads a file containing state dictionary data and converts it into a dictionary of MindSpore Parameters.
     
@@ -1252,7 +1222,6 @@ def safe_load_file(filename):
     return {k: mindspore.Parameter(v) for k, v in state_dict.items()}
 
 def safe_save_file(tensor_dict, filename, metadata=None):
-
     """
     Function to safely save a dictionary of tensors to a file.
     

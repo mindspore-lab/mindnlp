@@ -147,7 +147,6 @@ class XLNetTokenizer(PreTrainedTokenizer):
             sp_model_kwargs: Optional[Dict[str, Any]] = None,
             **kwargs,
     ) -> None:
-
         """
         Initialize an XLNetTokenizer object.
         
@@ -206,7 +205,6 @@ class XLNetTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
-
         """
         Returns the vocabulary size of the XLNetTokenizer.
         
@@ -233,7 +231,6 @@ class XLNetTokenizer(PreTrainedTokenizer):
         return len(self.sp_model)
 
     def get_vocab(self):
-
         """
         Returns the vocabulary of the XLNetTokenizer.
         
@@ -256,7 +253,6 @@ class XLNetTokenizer(PreTrainedTokenizer):
         return vocab
 
     def __getstate__(self):
-
         """
         Method '__getstate__' in the class 'XLNetTokenizer'.
         
@@ -276,7 +272,6 @@ class XLNetTokenizer(PreTrainedTokenizer):
         return state
 
     def __setstate__(self, d):
-
         """
         This method __setstate__ is defined in the class XLNetTokenizer and is used to set the internal state of the object based on the provided dictionary 'd'.
         
@@ -303,7 +298,6 @@ class XLNetTokenizer(PreTrainedTokenizer):
         self.sp_model.Load(self.vocab_file)
 
     def preprocess_text(self, inputs):
-
         """
         This method preprocesses the input text according to the specified configuration settings.
         
@@ -372,7 +366,6 @@ class XLNetTokenizer(PreTrainedTokenizer):
             spaces_between_special_tokens: bool = True,
             **kwargs,
     ) -> str:
-
         """
         This method decodes a list of token IDs into a string representation.
         
@@ -513,7 +506,6 @@ the XLNetTokenizer instance.
         return len(token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1] + cls_segment_id
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary of the XLNetTokenizer.
         

@@ -99,7 +99,6 @@ class Pop2PianoProcessor(ProcessorMixin):
         if audio is None or sampling_rate is None:
             return encoded_token_ids
 
-
         inputs["token_ids"] = encoded_token_ids["token_ids"]
         return inputs
 
@@ -121,7 +120,6 @@ class Pop2PianoProcessor(ProcessorMixin):
 
     @property
     def model_input_names(self):
-
         """
         Returns a list of model input names for the Pop2PianoProcessor.
         
@@ -139,7 +137,6 @@ class Pop2PianoProcessor(ProcessorMixin):
         return list(dict.fromkeys(tokenizer_input_names + feature_extractor_input_names))
 
     def save_pretrained(self, save_directory, **kwargs):
-
         """
         Save the model and its configuration file to a directory. If the directory does not exist, it will be created.
         
@@ -160,7 +157,6 @@ class Pop2PianoProcessor(ProcessorMixin):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, **kwargs):
-
         """
         This method creates an instance of the Pop2PianoProcessor class from a pretrained model.
         

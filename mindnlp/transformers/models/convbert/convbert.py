@@ -49,7 +49,6 @@ class ConvBertEmbeddings(nn.Cell):
     """Construct the embeddings from word, position and token_type embeddings."""
 
     def __init__(self, config):
-
         """
         Initializes the ConvBertEmbeddings object.
         
@@ -101,7 +100,6 @@ class ConvBertEmbeddings(nn.Cell):
         position_ids: Optional[ms.Tensor] = None,
         inputs_embeds: Optional[ms.Tensor] = None,
     ) -> ms.Tensor:
-
         """
         Constructs the embeddings for ConvBert model.
         
@@ -203,7 +201,6 @@ class SeparableConv1D(nn.Cell):
     """This class implements separable convolution, i.e. a depthwise and a pointwise layer"""
 
     def __init__(self, config, input_filters, output_filters, kernel_size):
-
         """
         Initializes a SeparableConv1D instance.
         
@@ -256,7 +253,6 @@ class SeparableConv1D(nn.Cell):
         )
 
     def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
-
         """
         Constructs a separable 1D convolution operation.
         
@@ -285,7 +281,6 @@ class ConvBertSelfAttention(nn.Cell):
     """
 
     def __init__(self, config):
-
         '''
         Initializes a new instance of the ConvBertSelfAttention class.
         
@@ -360,7 +355,6 @@ class ConvBertSelfAttention(nn.Cell):
         encoder_hidden_states: Optional[ms.Tensor] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[ms.Tensor, Optional[ms.Tensor]]:
-
         ''' 
         The `construct` method in the `ConvBertSelfAttention` class performs the construction of self-attention mechanism using convolutional operations.
         
@@ -473,7 +467,6 @@ class ConvBertSelfOutput(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the ConvBertSelfOutput class.
         
@@ -493,7 +486,6 @@ class ConvBertSelfOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
-
         """
         Constructs the output of the ConvBertSelfOutput layer.
         
@@ -523,7 +515,6 @@ class ConvBertAttention(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the ConvBertAttention class.
         
@@ -574,7 +565,6 @@ class ConvBertAttention(nn.Cell):
         encoder_hidden_states: Optional[ms.Tensor] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[ms.Tensor, Optional[ms.Tensor]]:
-
         """
         This method constructs the output of ConvBertAttention.
         
@@ -611,7 +601,6 @@ class GroupedLinearLayer(nn.Cell):
     """
 
     def __init__(self, input_size, output_size, num_groups):
-
         """
         Initializes a GroupedLinearLayer object.
         
@@ -639,7 +628,6 @@ class GroupedLinearLayer(nn.Cell):
         self.bias = nn.Parameter(ops.zeros(output_size))
 
     def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
-
         """Constructs a grouped linear layer.
         
         Args:
@@ -687,7 +675,6 @@ class ConvBertIntermediate(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the ConvBertIntermediate class with the provided configuration.
         
@@ -727,7 +714,6 @@ class ConvBertIntermediate(nn.Cell):
             self.intermediate_act_fn = config.hidden_act
 
     def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
-
         '''
         This method constructs the intermediate layer in the ConvBert model.
         
@@ -752,7 +738,6 @@ class ConvBertOutput(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the ConvBertOutput class.
         
@@ -785,7 +770,6 @@ class ConvBertOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
-
         """
         Constructs the output tensor for the ConvBertOutput class.
         
@@ -812,7 +796,6 @@ class ConvBertLayer(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the ConvBertLayer class.
         
@@ -850,7 +833,6 @@ class ConvBertLayer(nn.Cell):
         encoder_attention_mask: Optional[ms.Tensor] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[ms.Tensor, Optional[ms.Tensor]]:
-
         """
         Constructs a ConvBertLayer.
         
@@ -920,7 +902,6 @@ class ConvBertEncoder(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         __init__(self, config)
             
@@ -956,7 +937,6 @@ class ConvBertEncoder(nn.Cell):
         output_hidden_states: Optional[bool] = False,
         return_dict: Optional[bool] = True,
     ) -> Union[Tuple, BaseModelOutputWithCrossAttentions]:
-
         """
         This method constructs the ConvBertEncoder by processing the input hidden states through a series of layers.
         
@@ -1042,7 +1022,6 @@ class ConvBertPredictionHeadTransform(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes a ConvBertPredictionHeadTransform object.
         
@@ -1072,7 +1051,6 @@ class ConvBertPredictionHeadTransform(nn.Cell):
         self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
 
     def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
-
         """
         This method constructs the prediction head transformation for ConvBert.
         
@@ -1098,7 +1076,6 @@ class ConvBertModel(ConvBertPreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes the ConvBertModel class.
         
@@ -1128,7 +1105,6 @@ class ConvBertModel(ConvBertPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Retrieve the input embeddings from the ConvBertModel.
         
@@ -1144,7 +1120,6 @@ class ConvBertModel(ConvBertPreTrainedModel):
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Set the input embeddings for the ConvBertModel.
         
@@ -1180,7 +1155,6 @@ class ConvBertModel(ConvBertPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithCrossAttentions]:
-
         ''' 
         Construct method in ConvBertModel class.
         
@@ -1274,7 +1248,6 @@ class ConvBertGeneratorPredictions(nn.Cell):
     """Prediction cell for the generator, made up of two dense layers."""
 
     def __init__(self, config):
-
         """
         Initializes an instance of the ConvBertGeneratorPredictions class.
         
@@ -1297,7 +1270,6 @@ class ConvBertGeneratorPredictions(nn.Cell):
         self.dense = nn.Dense(config.hidden_size, config.embedding_size)
 
     def construct(self, generator_hidden_states: ms.Tensor) -> ms.Tensor:
-
         """
         Constructs the generator predictions based on the given generator hidden states.
         
@@ -1330,7 +1302,6 @@ class ConvBertForMaskedLM(ConvBertPreTrainedModel):
     _tied_weights_keys = ["generator.lm_head.weight"]
 
     def __init__(self, config):
-
         """Initialize a ConvBertForMaskedLM object.
         
         Args:
@@ -1353,7 +1324,6 @@ class ConvBertForMaskedLM(ConvBertPreTrainedModel):
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         Method to retrieve the output embeddings from the ConvBertForMaskedLM model.
         
@@ -1369,7 +1339,6 @@ class ConvBertForMaskedLM(ConvBertPreTrainedModel):
         return self.generator_lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the ConvBertForMaskedLM model.
         
@@ -1449,7 +1418,6 @@ class ConvBertClassificationHead(nn.Cell):
     """Head for sentence-level classification tasks."""
 
     def __init__(self, config):
-
         """
         Initializes an instance of the ConvBertClassificationHead class.
         
@@ -1476,7 +1444,6 @@ class ConvBertClassificationHead(nn.Cell):
         self.config = config
 
     def construct(self, hidden_states: ms.Tensor, **kwargs) -> ms.Tensor:
-
         """
         This method constructs a classification head for ConvBert model.
         
@@ -1505,7 +1472,6 @@ class ConvBertForSequenceClassification(ConvBertPreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
             Initializes a new instance of ConvBertForSequenceClassification.
         
@@ -1607,7 +1573,6 @@ class ConvBertForMultipleChoice(ConvBertPreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initialize the ConvBertForMultipleChoice class.
         
@@ -1721,7 +1686,6 @@ class ConvBertForTokenClassification(ConvBertPreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the ConvBertForTokenClassification class.
         
@@ -1811,7 +1775,6 @@ class ConvBertForQuestionAnswering(ConvBertPreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of ConvBertForQuestionAnswering.
         
@@ -1849,7 +1812,6 @@ class ConvBertForQuestionAnswering(ConvBertPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, QuestionAnsweringModelOutput]:
-
         """
         Constructs the ConvBertForQuestionAnswering model.
         

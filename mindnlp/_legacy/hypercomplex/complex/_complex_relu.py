@@ -51,7 +51,6 @@ class ReLU(nn.Cell):
         super().__init__()
 
     def construct(self, u: Tensor) -> Tensor:
-
         r"""
         Constructs a Tensor using the ReLU activation function.
         

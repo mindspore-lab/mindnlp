@@ -156,7 +156,6 @@ def collate_dense_tensors(samples: List[mindspore.Tensor], pad_v: float = 0) -> 
 
 
 def flatten_final_dims(t: mindspore.Tensor, no_dims: int):
-
     """
     Flatten the final dimensions of a tensor.
     
@@ -174,7 +173,6 @@ def flatten_final_dims(t: mindspore.Tensor, no_dims: int):
 
 
 def permute_final_dims(tensor: mindspore.Tensor, inds: List[int]):
-
     """
     This function permutes the final dimensions of the input tensor based on the provided indices.
     
@@ -195,7 +193,6 @@ def permute_final_dims(tensor: mindspore.Tensor, inds: List[int]):
 
 
 def dict_multimap(fn, dicts):
-
     """
     This function takes two parameters: 
     
@@ -222,7 +219,6 @@ input dictionaries.
 
 
 def trunc_normal_init_(weights, scale=1.0, fan="fan_in"):
-
     """
     This function initializes weights with a truncated normal distribution.
     
@@ -259,7 +255,6 @@ def trunc_normal_init_(weights, scale=1.0, fan="fan_in"):
 
 
 def ipa_point_weights_init_(weights):
-
     """
     Initializes the IPA (International Phonetic Alphabet) point weights.
     
@@ -345,7 +340,6 @@ class EsmFoldLayerNorm(nn.Cell):
         Tensor: The normalized output tensor after applying the layer normalization operation with custom parameters.
     """
     def __init__(self, c_in, eps=1e-5):
-
         """
         Initialize the EsmFoldLayerNorm class.
         
@@ -372,7 +366,6 @@ class EsmFoldLayerNorm(nn.Cell):
                                         begin_params_axis=-1,
                                         epsilon=eps)
     def construct(self, x):
-
         """
         Constructs a normalized layer using the EsmFold algorithm.
         
@@ -452,7 +445,6 @@ class EsmFoldAttention(nn.Cell):
         self.sigmoid = nn.Sigmoid()
 
     def _prep_qkv(self, q_x: mindspore.Tensor, kv_x: mindspore.Tensor) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
-
         """
         Prepares the query, key, and value tensors for the EsmFoldAttention module.
         
@@ -492,7 +484,6 @@ class EsmFoldAttention(nn.Cell):
         return q, k, v
 
     def _wrap_up(self, o: mindspore.Tensor, q_x: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method '_wrap_up' in the class 'EsmFoldAttention' performs a wrapping up operation on the input tensors.
         
@@ -738,7 +729,6 @@ class EsmFoldTriangleMultiplicativeUpdate(nn.Cell):
     """
 
     def __init__(self, config, _outgoing=True):
-
         """
         Initializes an instance of the EsmFoldTriangleMultiplicativeUpdate class.
         
@@ -774,7 +764,6 @@ class EsmFoldTriangleMultiplicativeUpdate(nn.Cell):
     def _combine_projections(
         self, a: mindspore.Tensor, b: mindspore.Tensor, _inplace_chunk_size: Optional[int] = None
     ) -> mindspore.Tensor:
-
         """
         Combines two projections using a multiplicative update method.
         
@@ -1178,7 +1167,6 @@ class EsmFoldSelfAttention(nn.Cell):
         - Masking is supported to handle sequences of different lengths.
     """
     def __init__(self, embed_dim, num_heads, head_width, gated=False):
-
         """ 
         Initializes the EsmFoldSelfAttention class.
         
@@ -1262,7 +1250,6 @@ class EsmFoldDropout(nn.Cell):
     """
 
     def __init__(self, r: float, batch_dim: Union[int, List[int]]):
-
         """
         Initializes an instance of the EsmFoldDropout class.
         
@@ -1286,7 +1273,6 @@ class EsmFoldDropout(nn.Cell):
         self.dropout = nn.Dropout(p=self.r)
 
     def construct(self, x: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method constructs a modified tensor with dropout for the EsmFoldDropout class.
         
@@ -1347,7 +1333,6 @@ class EsmFoldSequenceToPair(nn.Cell):
     
     """
     def __init__(self, sequence_state_dim, inner_dim, pairwise_state_dim):
-
         """
         Initializes the EsmFoldSequenceToPair class.
         
@@ -1426,7 +1411,6 @@ class EsmFoldPairToSequence(nn.Cell):
         pairwise_bias (tensor): Output tensor of shape B x L x L x num_heads.
     """
     def __init__(self, pairwise_state_dim, num_heads):
-
         """
         Initializes an instance of the EsmFoldPairToSequence class.
         
@@ -1496,7 +1480,6 @@ to produce an output tensor. The output tensor is then added element-wise to the
     
     """
     def __init__(self, embed_dim, inner_dim, dropout=0):
-
         """
         Initializes the EsmFoldResidueMLP class.
         
@@ -1524,7 +1507,6 @@ to produce an output tensor. The output tensor is then added element-wise to the
         )
 
     def construct(self, x):
-
         """
         Constructs an output value by adding the input value with the result of the multi-layer perceptron (MLP) operation.
         
@@ -1577,7 +1559,6 @@ class EsmFoldTriangularSelfAttentionBlock(nn.Cell):
                 pairwise_state (torch.Tensor): Processed pairwise state tensor of shape (batch_size, sequence_length, sequence_length, pairwise_state_dim).
     """
     def __init__(self, config):
-
         """
         This method initializes an instance of the EsmFoldTriangularSelfAttentionBlock class.
         
@@ -1716,7 +1697,6 @@ class EsmCategoricalMixture:
     Note: This class inherits from an unspecified parent class.
     """
     def __init__(self, param, bins=50, start=0, end=1):
-
         """ 
         Initializes an instance of the EsmCategoricalMixture class.
         
@@ -1741,7 +1721,6 @@ class EsmCategoricalMixture:
         self.v_bins = (bins[:-1] + bins[1:]) / 2
 
     def log_prob(self, true):
-
         """
         This method calculates the log probability of a given true value in the context of a categorical mixture model.
         
@@ -1768,7 +1747,6 @@ range of valid classes for the categorical mixture model.
         return ops.gather_elements(nll, -1, true_index.unsqueeze(-1)).squeeze(-1)
 
     def mean(self):
-
         """
         Method 'mean' calculates the mean value of the categorical mixture distribution in the EsmCategoricalMixture class.
         
@@ -1787,7 +1765,6 @@ range of valid classes for the categorical mixture model.
 
 
 def categorical_lddt(logits, bins=50):
-
     """
     This function calculates the average log-likelihood of a categorical distribution.
     
@@ -1858,7 +1835,6 @@ class EsmFoldRelativePosition(nn.Cell):
         - ValueError: If the dtype of residue_index is not torch.long or if the shapes of residue_index and mask are inconsistent.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the EsmFoldRelativePosition class.
         
@@ -1923,7 +1899,6 @@ class EsmFoldAngleResnetBlock(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes an EsmFoldAngleResnetBlock object.
         
@@ -1948,7 +1923,6 @@ class EsmFoldAngleResnetBlock(nn.Cell):
         self.relu = nn.ReLU()
 
     def construct(self, a: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method constructs a computation graph for the EsmFoldAngleResnetBlock.
         
@@ -1978,7 +1952,6 @@ class EsmFoldAngleResnet(nn.Cell):
     """
 
     def __init__(self, config):
-
         '''
         Initializes the EsmFoldAngleResnet class.
         
@@ -2061,7 +2034,6 @@ class EsmFoldInvariantPointAttention(nn.Cell):
     """
 
     def __init__(self, config):
-
         '''Initializes an instance of the EsmFoldInvariantPointAttention class.
         
         Args:
@@ -2284,7 +2256,6 @@ class EsmFoldBackboneUpdate(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes the EsmFoldBackboneUpdate class.
         
@@ -2340,7 +2311,6 @@ class EsmFoldStructureModuleTransitionLayer(nn.Cell):
         The output tensor after applying the transition layer to the input tensor 's'.
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the EsmFoldStructureModuleTransitionLayer class.
         
@@ -2366,7 +2336,6 @@ class EsmFoldStructureModuleTransitionLayer(nn.Cell):
         self.relu = nn.ReLU()
 
     def construct(self, s):
-
         """Constructs a new EsmFoldStructureModuleTransitionLayer.
         
         This method takes in two parameters, self and s. 
@@ -2411,7 +2380,6 @@ class EsmFoldStructureModuleTransition(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the EsmFoldStructureModuleTransition class.
         
@@ -2437,7 +2405,6 @@ class EsmFoldStructureModuleTransition(nn.Cell):
         self.layer_norm = nn.LayerNorm(config.sequence_dim)
 
     def construct(self, s):
-
         """
         Constructs the EsmFoldStructureModuleTransition.
         
@@ -2477,7 +2444,6 @@ atom14 positions.
     Please note that the detailed implementation and usage of the class methods are described in the code provided.
     """
     def __init__(self, config):
-
         '''
         Initializes an instance of the EsmFoldStructureModule class.
         
@@ -2624,7 +2590,6 @@ atom14 positions.
         return outputs
 
     def _init_residue_constants(self, float_dtype):
-
         """
         Initializes the residue constants required for EsmFoldStructureModule.
         
@@ -2671,7 +2636,6 @@ float_dtype.
                 )
 
     def torsion_angles_to_frames(self, r, alpha, f):
-
         """
         Converts torsion angles to frames using the given parameters.
         
@@ -2695,7 +2659,6 @@ float_dtype.
         return torsion_angles_to_frames(r, alpha, f, self.default_frames)
 
     def frames_and_literature_positions_to_atom14_pos(self, r, f):  # [*, N, 8]  # [*, N]
-
         """
         Converts frames and literature positions to atom14 positions.
         
@@ -2744,7 +2707,6 @@ a Coordinates object.
     Note: This class assumes the presence of the required modules and dependencies for the ESM-Fold model.
     """
     def __init__(self, config):
-
         '''
         Initializes an instance of the EsmFoldingTrunk class.
         
@@ -2787,7 +2749,6 @@ a Coordinates object.
         self.chunk_size = config.chunk_size
 
     def set_chunk_size(self, chunk_size):
-
         """
         Sets the chunk size for the EsmFoldingTrunk.
         
@@ -2873,7 +2834,6 @@ a Coordinates object.
 
     @staticmethod
     def distogram(coords, min_bin, max_bin, num_bins):
-
         """
         Method to calculate the distance histogram based on the provided coordinates.
         
@@ -2932,7 +2892,6 @@ language model representations, masking input sequences, and inferring protein s
     _no_split_modules = ["EsmFoldStructureModule", "EsmFoldTriangularSelfAttentionBlock"]
 
     def __init__(self, config):
-
         """Initializes an instance of the EsmForProteinFolding class.
         
         Args:
@@ -3000,7 +2959,6 @@ language model representations, masking input sequences, and inferring protein s
 
     @staticmethod
     def _af2_to_esm_from_vocab_list(vocab_list: List[str]) -> mindspore.Tensor:
-
         """
         Converts a vocabulary list to a mindspore Tensor, specifically for the ESM (Evolutionary Scale Modeling) implementation, in the context of protein folding.
         
@@ -3150,7 +3108,6 @@ and the following elements being the indices of the residues from the 'restypes_
         return EsmForProteinFoldingOutput(**structure)
 
     def af2_idx_to_esm_idx(self, aa, mask):
-
         """
         This method 'af2_idx_to_esm_idx' is defined in the class 'EsmForProteinFolding' and is used to convert the input indices from one representation to another.
         
@@ -3169,7 +3126,6 @@ and the following elements being the indices of the residues from the 'restypes_
         return self.af2_to_esm[aa]
 
     def compute_language_model_representations(self, esmaa: mindspore.Tensor) -> mindspore.Tensor:
-
         ''' 
         The method 'compute_language_model_representations' in the class 'EsmForProteinFolding' computes the representations of the language model.
         
@@ -3207,7 +3163,6 @@ and the following elements being the indices of the residues from the 'restypes_
         return esm_s
 
     def bert_mask(self, aa, esmaa, mask, pattern):
-
         """
         This method 'bert_mask' in the class 'EsmForProteinFolding' masks specific elements in the input arrays based on the provided pattern.
         
@@ -3237,7 +3192,6 @@ and the following elements being the indices of the residues from the 'restypes_
         seqs: Union[str, List[str]],
         position_ids=None,
     ):
-
         """
         Performs inference on protein folding using the ESM model.
         

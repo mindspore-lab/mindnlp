@@ -119,7 +119,6 @@ class BertweetTokenizer(PreTrainedTokenizer):
         mask_token="<mask>",
         **kwargs,
     ):
-
         """
         Initialize the BertweetTokenizer class with the provided parameters.
         
@@ -272,7 +271,6 @@ class BertweetTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
-
         """
         Method to retrieve the vocabulary size of the BertweetTokenizer.
         
@@ -293,7 +291,6 @@ class BertweetTokenizer(PreTrainedTokenizer):
         return len(self.encoder)
 
     def get_vocab(self):
-
         """
         Method to retrieve the combined vocabulary from the encoder and added tokens encoder.
         
@@ -311,7 +308,6 @@ class BertweetTokenizer(PreTrainedTokenizer):
         return dict(self.encoder, **self.added_tokens_encoder)
 
     def bpe(self, token):
-
         """
         This method is part of the BertweetTokenizer class and implements the Byte-Pair Encoding (BPE) algorithm for tokenization.
         
@@ -447,7 +443,6 @@ is found in the cache, the corresponding processed token is returned from the ca
         return out_string
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Saves the vocabulary files required for the BertweetTokenizer.
         
@@ -696,7 +691,6 @@ ENT_RE = regex.compile(r"&(#?(x?))([^&;\s]+);")
 
 
 def _str_to_unicode(text, encoding=None, errors="strict"):
-
     """
     Converts a string to Unicode format using the specified encoding.
     
@@ -808,7 +802,6 @@ class TweetTokenizer:
     ```"""
 
     def __init__(self, preserve_case=True, reduce_len=False, strip_handles=False):
-
         """
         Initializes a TweetTokenizer object with the specified parameters.
         

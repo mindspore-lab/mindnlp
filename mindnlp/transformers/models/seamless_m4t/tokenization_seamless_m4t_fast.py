@@ -144,7 +144,6 @@ class SeamlessM4TTokenizerFast(PreTrainedTokenizerFast):
         additional_special_tokens=None,
         **kwargs,
     ):
-
         """
         Initializes the SeamlessM4TTokenizerFast class.
         
@@ -191,7 +190,6 @@ class SeamlessM4TTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def can_save_slow_tokenizer(self) -> bool:
-
         """
         This method checks if the slow tokenizer can be saved.
         
@@ -209,7 +207,6 @@ class SeamlessM4TTokenizerFast(PreTrainedTokenizerFast):
     @property
     # Copied from transformers.models.nllb.tokenization_nllb.NllbTokenizer.src_lang
     def src_lang(self) -> str:
-
         """
         This method returns the source language used for tokenization.
         
@@ -226,7 +223,6 @@ class SeamlessM4TTokenizerFast(PreTrainedTokenizerFast):
 
     @src_lang.setter
     def src_lang(self, new_src_lang: str) -> None:
-
         """
         src_lang(self, new_src_lang: str) -> None
         
@@ -250,7 +246,6 @@ class SeamlessM4TTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def tgt_lang(self) -> str:
-
         """
         tgt_lang method in the SeamlessM4TTokenizerFast class.
         
@@ -267,7 +262,6 @@ class SeamlessM4TTokenizerFast(PreTrainedTokenizerFast):
 
     @tgt_lang.setter
     def tgt_lang(self, new_tgt_lang: str) -> None:
-
         """
         Sets the target language for the SeamlessM4TTokenizerFast object.
         
@@ -365,7 +359,6 @@ class SeamlessM4TTokenizerFast(PreTrainedTokenizerFast):
         tgt_lang: str = "fra",
         **kwargs,
     ) -> BatchEncoding:
-
         """
         Prepares a batch for sequence-to-sequence tokenization using the SeamlessM4TTokenizerFast class.
         
@@ -410,7 +403,6 @@ target language as input parameters. The method returns a BatchEncoding object, 
 
     # Copied from transformers.models.nllb.tokenization_nllb_fast.NllbTokenizerFast._switch_to_input_mode
     def _switch_to_input_mode(self):
-
         """
         Method to switch the tokenizer to input mode by setting source language special tokens.
         
@@ -428,7 +420,6 @@ target language as input parameters. The method returns a BatchEncoding object, 
 
     # Copied from transformers.models.nllb.tokenization_nllb_fast.NllbTokenizerFast._switch_to_target_mode
     def _switch_to_target_mode(self):
-
         """
         Switches the tokenizer to target mode for SeamlessM4TTokenizerFast.
         
@@ -500,7 +491,6 @@ target language as input parameters. The method returns a BatchEncoding object, 
 
     # Copied from transformers.models.nllb.tokenization_nllb_fast.NllbTokenizerFast.save_vocabulary
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary for a slow tokenizer.
         
@@ -559,7 +549,6 @@ target language as input parameters. The method returns a BatchEncoding object, 
         _is_local=False,
         **kwargs,
     ):
-
         """
         Method _from_pretrained in the class SeamlessM4TTokenizerFast.
         

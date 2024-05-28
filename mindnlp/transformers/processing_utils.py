@@ -50,7 +50,6 @@ class ProcessorMixin:
 
     # args have to match the attributes class attribute
     def __init__(self, *args, **kwargs):
-
         """
         This method initializes an instance of the ProcessorMixin class.
         
@@ -98,7 +97,6 @@ processor.
             setattr(self, attribute_name, arg)
 
     def __repr__(self):
-
         """
         Method '__repr__' in the class 'ProcessorMixin' generates a string representation of the object.
         
@@ -240,7 +238,6 @@ processor.
 
     @classmethod
     def _get_arguments_from_pretrained(cls, pretrained_model_name_or_path, **kwargs):
-
         """
         A method to obtain arguments from a pre-trained model or path.
         
@@ -272,7 +269,6 @@ processor.
 
     @property
     def model_input_names(self):
-
         """
         Retrieve the model input names from the first attribute of the ProcessorMixin instance.
         

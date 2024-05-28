@@ -73,7 +73,6 @@ GLOBAL_AMP = False
 GLOBAL_AMP_DTYPE = mindspore.float32
 
 def _set_amp(mode, dtype):
-
     r"""
     Sets the global amplifier mode and data type.
     
@@ -93,7 +92,6 @@ def _set_amp(mode, dtype):
     GLOBAL_AMP_DTYPE = dtype
 
 def get_global_amp():
-
     r"""
     Returns the global amplitude and its data type.
     
@@ -104,7 +102,6 @@ def get_global_amp():
 
 
 def autocast_decorator(autocast_instance, func):
-
     r"""
     Decorator function that applies an autocast instance to a given function.
     
@@ -144,7 +141,6 @@ decorator for functions to apply automatic mixed precision to the decorated func
         enabled: bool = True,
         dtype = mindspore.float16,
     ):
-
         r"""
         Initialize the autocast object.
         
@@ -164,7 +160,6 @@ decorator for functions to apply automatic mixed precision to the decorated func
         self.old_dtype = GLOBAL_AMP_DTYPE
 
     def __enter__(self):
-
         r"""
         Method '__enter__' in the class 'autocast'.
         
@@ -184,7 +179,6 @@ decorator for functions to apply automatic mixed precision to the decorated func
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any):
-
         r"""
         This method is called when exiting a context managed by the 'autocast' class.
         
@@ -205,7 +199,6 @@ decorator for functions to apply automatic mixed precision to the decorated func
         return False
 
     def __call__(self, func):
-
         r"""
         Executes the '__call__' method of the 'autocast' class.
         

@@ -54,7 +54,6 @@ BART_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 # Copied from transformers.models.llama.modeling_llama._get_unpad_data
 def _get_unpad_data(attention_mask):
-
     """
     Args:
         attention_mask (Tensor): A 2D tensor representing the attention mask with values of 0 or 1. 
@@ -104,7 +103,6 @@ class BartLearnedPositionalEmbedding(nn.Embedding):
     """
 
     def __init__(self, num_embeddings: int, embedding_dim: int):
-
         """
         Initializes a new instance of the BartLearnedPositionalEmbedding class.
         
@@ -148,7 +146,6 @@ class BartAttention(nn.Cell):
         is_causal: bool = False,
         config: Optional[BartConfig] = None,
     ):
-
         """
         Initializes an instance of the BartAttention class.
         
@@ -189,7 +186,6 @@ class BartAttention(nn.Cell):
         self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-
         """
         This method _shape is defined within the class BartAttention.
         
@@ -328,7 +324,6 @@ class BartAttention(nn.Cell):
         return attn_output, attn_weights_reshaped, past_key_value
 
 
-
 BART_ATTENTION_CLASSES = {
     "eager": BartAttention,
 }
@@ -371,7 +366,6 @@ network (FFN) and layer normalization.
                 Tuple[mindspore.Tensor, Optional[mindspore.Tensor]]: The output tensor and the attention weights if output_attentions is True.
     '''
     def __init__(self, config: BartConfig):
-
         """
         Initializes a new instance of BartEncoderLayer.
         
@@ -493,7 +487,6 @@ Transformers) model.
         Tuple containing the decoder layer outputs, optional attentions tensors, and cached key and value states if requested.
     """
     def __init__(self, config: BartConfig):
-
         """
         Args:
             self (BartDecoderLayer): The current instance of the BartDecoderLayer class.
@@ -641,7 +634,6 @@ class BartClassificationHead(nn.Cell):
         num_classes: int,
         pooler_dropout: float,
     ):
-
         """
         Initializes a new instance of the BartClassificationHead class.
         
@@ -664,7 +656,6 @@ class BartClassificationHead(nn.Cell):
         self.out_proj = nn.Dense(inner_dim, num_classes)
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method constructs the BartClassificationHead by processing the hidden states input.
         
@@ -733,10 +724,8 @@ methods for initializing weights and generating dummy inputs for the model.
 
             cell.weight.set_data(Tensor(weight, cell.weight.dtype))
 
-
     @property
     def dummy_inputs(self):
-
         """
         Method: dummy_inputs
         
@@ -776,7 +765,6 @@ class BartEncoder(BartPreTrainedModel):
     """
 
     def __init__(self, config: BartConfig, embed_tokens: Optional[nn.Embedding] = None):
-
         """Initializes a new instance of the BartEncoder class.
         
         Args:
@@ -817,7 +805,6 @@ class BartEncoder(BartPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method to retrieve the input embeddings from the BartEncoder.
         
@@ -833,7 +820,6 @@ class BartEncoder(BartPreTrainedModel):
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Method to set the input embeddings for the BartEncoder.
         
@@ -986,7 +972,6 @@ class BartDecoder(BartPreTrainedModel):
     """
 
     def __init__(self, config: BartConfig, embed_tokens: Optional[nn.Embedding] = None):
-
         """
         Initializes a new instance of the BartDecoder class.
         
@@ -1031,7 +1016,6 @@ class BartDecoder(BartPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Get the input embeddings for the BartDecoder class.
         
@@ -1047,7 +1031,6 @@ class BartDecoder(BartPreTrainedModel):
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Method to set the input embeddings for the BartDecoder.
         
@@ -1284,7 +1267,6 @@ decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, retur
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
     def __init__(self, config: BartConfig):
-
         """
         Initialize the BartModel class with the provided configuration.
         
@@ -1314,7 +1296,6 @@ decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, retur
         self.post_init()
 
     def _tie_weights(self):
-
         """
         Ties the weights of the word embeddings in the encoder and decoder of the BartModel.
         
@@ -1345,7 +1326,6 @@ decoder embeddings.
             self._tie_or_clone_weights(self.decoder.embed_tokens, self.shared)
 
     def get_input_embeddings(self):
-
         """
         Method to get the input embeddings for the BartModel.
         
@@ -1366,7 +1346,6 @@ decoder embeddings.
         return self.shared
 
     def set_input_embeddings(self, value):
-
         """
         Set input embeddings for the BartModel.
         
@@ -1385,7 +1364,6 @@ decoder embeddings.
         self.decoder.embed_tokens = self.shared
 
     def get_encoder(self):
-
         """
         Get the encoder associated with the BartModel.
         
@@ -1401,7 +1379,6 @@ decoder embeddings.
         return self.encoder
 
     def get_decoder(self):
-
         """
         Method get_decoder in class BartModel.
         
@@ -1436,7 +1413,6 @@ decoder embeddings.
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Seq2SeqModelOutput]:
-
         """
         Constructs the BartModel.
         
@@ -1548,7 +1524,6 @@ setting and getting output embeddings and resizing final logits bias. The class 
     # _keys_to_ignore_on_load_missing = ["final_logits_bias"]
 
     def __init__(self, config: BartConfig):
-
         """Initialize a BART model for conditional generation.
         
         Args:
@@ -1570,7 +1545,6 @@ setting and getting output embeddings and resizing final logits bias. The class 
         self.post_init()
 
     def get_encoder(self):
-
         """
         Method to retrieve the encoder from the BartForConditionalGeneration model.
         
@@ -1588,7 +1562,6 @@ setting and getting output embeddings and resizing final logits bias. The class 
         return self.model.get_encoder()
 
     def get_decoder(self):
-
         """
         Method to retrieve the decoder module from the BartForConditionalGeneration model.
         
@@ -1604,7 +1577,6 @@ setting and getting output embeddings and resizing final logits bias. The class 
         return self.model.get_decoder()
 
     def resize_token_embeddings(self, new_num_tokens: int, pad_to_multiple_of: Optional[int] = None) -> nn.Embedding:
-
         """
         Resize the token embeddings for the BartForConditionalGeneration model.
         
@@ -1627,7 +1599,6 @@ setting and getting output embeddings and resizing final logits bias. The class 
         return new_embeddings
 
     def _resize_final_logits_bias(self, new_num_tokens: int) -> None:
-
         ''' 
         Resize the final logits bias to accommodate a different number of tokens.
         
@@ -1650,7 +1621,6 @@ setting and getting output embeddings and resizing final logits bias. The class 
         self.final_logits_bias = new_bias
 
     def get_output_embeddings(self):
-
         """
         Method to retrieve the output embeddings from the BartForConditionalGeneration model.
         
@@ -1669,7 +1639,6 @@ setting and getting output embeddings and resizing final logits bias. The class 
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Method: set_output_embeddings
         
@@ -1781,7 +1750,6 @@ setting and getting output embeddings and resizing final logits bias. The class 
         encoder_outputs=None,
         **kwargs,
     ):
-
         """
         Prepare the inputs for generation in the BartForConditionalGeneration class.
         
@@ -1840,7 +1808,6 @@ setting and getting output embeddings and resizing final logits bias. The class 
         }
 
     def prepare_decoder_input_ids_from_labels(self, labels: mindspore.Tensor):
-
         """
         Prepare decoder input IDs from labels.
         
@@ -1861,7 +1828,6 @@ the input labels.
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Reorders the cache for the BartForConditionalGeneration model based on the provided beam index.
         
@@ -1902,7 +1868,6 @@ BART models for sequence classification applications.
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
     def __init__(self, config: BartConfig, **kwargs):
-
         """
         Initializes a new instance of BartForSequenceClassification.
         
@@ -2073,7 +2038,6 @@ decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, retur
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of the 'BartForQuestionAnswering' class.
         
@@ -2199,7 +2163,6 @@ class BartDecoderWrapper(BartPreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initialize the BartDecoderWrapper class with the provided configuration.
         
@@ -2219,7 +2182,6 @@ class BartDecoderWrapper(BartPreTrainedModel):
         self.decoder = BartDecoder(config)
 
     def construct(self, *args, **kwargs):
-
         """
         Constructs a decoder wrapper instance.
         
@@ -2267,7 +2229,6 @@ dictionary containing the prepared inputs.
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of BartForCausalLM.
         
@@ -2295,7 +2256,6 @@ dictionary containing the prepared inputs.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method to retrieve the input embeddings from the decoder of a BartForCausalLM model.
         
@@ -2313,7 +2273,6 @@ dictionary containing the prepared inputs.
         return self.model.decoder.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Set the input embeddings for the BartForCausalLM model.
         
@@ -2331,7 +2290,6 @@ dictionary containing the prepared inputs.
         self.model.decoder.embed_tokens = value
 
     def get_output_embeddings(self):
-
         """Return the output embeddings of the BartForCausalLM model.
         
         Args:
@@ -2347,7 +2305,6 @@ dictionary containing the prepared inputs.
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings of the `BartForCausalLM` model.
         
@@ -2372,7 +2329,6 @@ dictionary containing the prepared inputs.
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
-
         """
         Sets the decoder for the BartForCausalLM model.
         
@@ -2403,7 +2359,6 @@ dictionary containing the prepared inputs.
         self.model.decoder = decoder
 
     def get_decoder(self):
-
         """
         This method returns the decoder component of the model.
         
@@ -2563,7 +2518,6 @@ dictionary containing the prepared inputs.
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, use_cache=None, **kwargs
     ):
-
         """
         Prepare the inputs for generation in the BartForCausalLM class.
         
@@ -2613,7 +2567,6 @@ dictionary containing the prepared inputs.
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Reorders the cache for the BartForCausalLM model based on the specified beam index.
         

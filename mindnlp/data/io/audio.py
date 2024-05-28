@@ -375,8 +375,6 @@ class Endian:
 
 
 def _fmt_chunk(file_to_read, endian):
-
-    
     """
     This function reads and validates the chunk of a wave file.
     
@@ -481,7 +479,6 @@ def _data_chunk(
     offset,
     duration,
 ):
-
     r"""
     Args:
         file_to_read (file object): The file object representing the WAV file to read.
@@ -597,8 +594,6 @@ def _data_chunk(
 
 
 def _skip_unknown_chunk(file_to_read, endian):
-
-    
     """
     Args:
         file_to_read (file object): The file to read from.
@@ -969,7 +964,6 @@ PaddedData = collections.namedtuple("PaddedData", ["data", "lengths"])
 
 
 def pin_memory(data):
-
     r"""
     This function takes a parameter 'data' which can be of any data type. It is used to pin the memory of the input data for efficient transfer between CPU and GPU. 
     

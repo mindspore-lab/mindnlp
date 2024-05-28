@@ -16,7 +16,6 @@ from mindspore import ops
 
 # needed for prefix-tuning of bloom model
 def bloom_model_postprocess_past_key_value(past_key_values):
-
     r"""
     This function takes a single parameter 'past_key_values' and performs post-processing on it. 
     
@@ -45,7 +44,6 @@ def bloom_model_postprocess_past_key_value(past_key_values):
 
 # needed for prefix-tuning of StarCoder models
 def starcoder_model_postprocess_past_key_value(past_key_values):
-
     r"""
     Args:
         past_key_values (list): A list of past key values in a specific format.

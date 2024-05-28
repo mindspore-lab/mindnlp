@@ -139,7 +139,6 @@ class AlbertConfig(PretrainedConfig):
         eos_token_id=3,
         **kwargs,
     ):
-
         """
         __init__
         

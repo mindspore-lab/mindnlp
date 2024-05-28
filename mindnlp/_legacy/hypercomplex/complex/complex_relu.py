@@ -52,7 +52,6 @@ class ReLU(nn.Cell):
         self.relu = P.ReLU()
 
     def construct(self, u: Tensor) -> Tensor:
-
         r"""
         Construct a tensor using the ReLU activation function.
         

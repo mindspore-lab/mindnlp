@@ -174,7 +174,6 @@ class GraphormerConfig(PretrainedConfig):
         eos_token_id=2,
         **kwargs,
     ):
-
         """
         Initialize a GraphormerConfig object with specified configuration parameters.
         

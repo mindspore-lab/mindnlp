@@ -189,7 +189,6 @@ class Dense(nn.Cell):
         return out
 
     def extend_repr(self):
-
         r"""
         Dense.extend_repr(self)
             

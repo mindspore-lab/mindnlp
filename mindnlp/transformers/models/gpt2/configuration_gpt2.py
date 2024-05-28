@@ -163,7 +163,6 @@ class GPT2Config(PretrainedConfig):
         reorder_and_upcast_attn=False,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the GPT2Config class.
         

@@ -105,7 +105,6 @@ class CLIPImageProcessor(BaseImageProcessor):
         do_convert_rgb: bool = True,
         **kwargs,
     ) -> None:
-
         """
         Initializes a CLIPImageProcessor object.
         

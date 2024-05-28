@@ -37,7 +37,6 @@ class TimesformerPatchEmbeddings(nn.Cell):
     """Image to Patch Embedding"""
 
     def __init__(self, config):
-
         """
         Initializes an instance of the TimesformerPatchEmbeddings class.
         
@@ -73,7 +72,6 @@ class TimesformerPatchEmbeddings(nn.Cell):
                                     stride=patch_size, pad_mode='valid', has_bias=True)
 
     def construct(self, pixel_values):
-
         ''' 
         construct method in TimesformerPatchEmbeddings class.
         
@@ -107,7 +105,6 @@ class TimesformerEmbeddings(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
             Initialize the TimesformerEmbeddings instance with the given configuration.
         
@@ -144,7 +141,6 @@ class TimesformerEmbeddings(nn.Cell):
             self.time_drop = nn.Dropout(p=drop_rate)
 
     def construct(self, pixel_values):
-
         """
         Constructs the embeddings for the Timesformer model.
         
@@ -249,7 +245,6 @@ class TimeSformerDropPath(nn.Cell):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
 
     def __init__(self, drop_prob: Optional[float] = None) -> None:
-
         """
         Initializes an instance of the TimeSformerDropPath class.
         
@@ -268,7 +263,6 @@ class TimeSformerDropPath(nn.Cell):
         self.drop_prob = drop_prob
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Method to apply drop path regularization to the hidden states.
         
@@ -290,7 +284,6 @@ class TimeSformerDropPath(nn.Cell):
         return drop_path(hidden_states, self.drop_prob, self.training)
 
     def extra_repr(self) -> str:
-
         """
         Returns a string representation of the TimeSformerDropPath object.
         
@@ -325,7 +318,6 @@ class TimesformerSelfAttention(nn.Cell):
     
     """
     def __init__(self, config: TimesformerConfig):
-
         """
         Initializes a new instance of the TimesformerSelfAttention class.
         
@@ -352,7 +344,6 @@ class TimesformerSelfAttention(nn.Cell):
         self.attn_drop = nn.Dropout(p=attention_dropout_prob)
 
     def construct(self, hidden_states, output_attentions: bool = False):
-
         """
         Constructs the self-attention mechanism within a Timesformer model.
         
@@ -400,7 +391,6 @@ class TimesformerSelfOutput(nn.Cell):
     """
 
     def __init__(self, config: TimesformerConfig) -> None:
-
         """
         Initializes a new instance of the TimesformerSelfOutput class.
         
@@ -421,7 +411,6 @@ class TimesformerSelfOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the self output of the Timesformer model.
         
@@ -458,7 +447,6 @@ using the provided hidden states and optionally returns attention outputs.
     This class is an essential component of the TimeSformer model, providing the functionality for self-attention computations and output generation.
     """
     def __init__(self, config: TimesformerConfig) -> None:
-
         """
         Initializes a new instance of the TimeSformerAttention class.
         
@@ -492,7 +480,6 @@ TimeSformerAttention.
         hidden_states: mindspore.Tensor,
         output_attentions: bool = False,
     ) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]:
-
         '''
         This method constructs the attention mechanism for the TimeSformer model.
         
@@ -534,7 +521,6 @@ class TimesformerIntermediate(nn.Cell):
         construct(hidden_states: mindspore.Tensor) -> mindspore.Tensor: Performs intermediate computations on the input hidden states and returns the result.
     """
     def __init__(self, config: TimesformerConfig) -> None:
-
         """
         Initializes a new instance of the TimesformerIntermediate class.
         
@@ -560,7 +546,6 @@ and hidden dropout probability.
             self.intermediate_act_fn = config.hidden_act
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method constructs the intermediate representation for the Timesformer model.
         
@@ -606,7 +591,6 @@ class TimesformerOutput(nn.Cell):
         The TimesformerOutput class is designed to work in conjunction with the Timesformer model for processing hidden states efficiently.
     """
     def __init__(self, config: TimesformerConfig) -> None:
-
         """
         Initializes a new instance of TimesformerOutput.
         
@@ -628,7 +612,6 @@ class TimesformerOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method 'construct' is defined within the class 'TimesformerOutput' and is used to process the input 'hidden_states' through a series of operations and return the resulting tensor.
         
@@ -686,7 +669,6 @@ different attention types, including divided space-time, space only, and joint s
         - ValueError: If the provided attention type is not one of the valid options.
     """
     def __init__(self, config: TimesformerConfig, layer_index: int) -> None:
-
         """
         Initializes a TimesformerLayer instance.
         
@@ -729,7 +711,6 @@ different attention types, including divided space-time, space only, and joint s
             self.temporal_dense = nn.Dense(config.hidden_size, config.hidden_size)
 
     def construct(self, hidden_states: mindspore.Tensor, output_attentions: bool = False):
-
         """
         Construct a Timesformer layer.
         
@@ -883,7 +864,6 @@ class TimesformerEncoder(nn.Cell):
         - The output can be returned either as a tuple or as a BaseModelOutput dictionary.
     """
     def __init__(self, config: TimesformerConfig) -> None:
-
         """
         Initializes the TimesformerEncoder object with the given configuration.
         
@@ -910,7 +890,6 @@ class TimesformerEncoder(nn.Cell):
         output_hidden_states: bool = False,
         return_dict: bool = True,
     ) -> Union[tuple, BaseModelOutput]:
-
         """
         Constructs the TimesformerEncoder.
         
@@ -969,7 +948,6 @@ class TimesformerPreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
 
     def _init_weights(self, cell):
-
         """
         Initializes the weights and biases of the given cell.
         
@@ -1035,7 +1013,6 @@ states in the returned dictionary.
     
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the TimesformerModel class.
         
@@ -1066,7 +1043,6 @@ states in the returned dictionary.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """Retrieve the input embeddings for the TimesformerModel.
         
         Args:
@@ -1219,7 +1195,6 @@ class TimesformerForVideoClassification(TimesformerPreTrainedModel):
     
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the TimesformerForVideoClassification class.
         
@@ -1248,7 +1223,6 @@ class TimesformerForVideoClassification(TimesformerPreTrainedModel):
 
         # Initialize weights and apply final processing
         self.post_init()
-
 
     def construct(
         self,

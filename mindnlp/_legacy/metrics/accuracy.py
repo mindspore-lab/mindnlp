@@ -114,7 +114,6 @@ class Accuracy(Metric):
 
     """
     def __init__(self, name='Accuracy'):
-
         r"""
         Initializes an instance of the 'Accuracy' class.
         

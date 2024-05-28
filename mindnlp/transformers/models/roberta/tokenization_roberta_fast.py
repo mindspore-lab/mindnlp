@@ -177,7 +177,6 @@ class RobertaTokenizerFast(PreTrainedTokenizerFast):
         trim_offsets=True,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the `RobertaTokenizerFast` class.
         
@@ -288,7 +287,6 @@ class RobertaTokenizerFast(PreTrainedTokenizerFast):
         self._mask_token = value
 
     def _batch_encode_plus(self, *args, **kwargs) -> BatchEncoding:
-
         """
         This method, _batch_encode_plus, is a part of the RobertaTokenizerFast class and is responsible for batch encoding inputs.
         
@@ -311,7 +309,6 @@ add_prefix_space=True to use it with pretokenized inputs.
         return super()._batch_encode_plus(*args, **kwargs)
 
     def _encode_plus(self, *args, **kwargs) -> BatchEncoding:
-
         """
         Encodes the inputs into a batch of tokenized sequences using the fast version of the Roberta tokenizer.
         
@@ -337,7 +334,6 @@ add_prefix_space=True to use it with pretokenized inputs.
         return super()._encode_plus(*args, **kwargs)
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Saves the tokenizer's vocabulary to disk.
         
@@ -362,7 +358,6 @@ add_prefix_space=True to use it with pretokenized inputs.
         return tuple(files)
 
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
-
         """
         Builds inputs with special tokens for the RobertaTokenizerFast class.
         

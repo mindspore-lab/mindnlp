@@ -34,7 +34,6 @@ class TokenEmbedding(nn.Cell):
 
     """
     def __init__(self, init_embed, requires_grad: bool = True, dropout=0.0):
-
         r"""
         Initializes an instance of the TokenEmbedding class.
         

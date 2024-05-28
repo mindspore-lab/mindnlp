@@ -171,7 +171,6 @@ class GPT2Tokenizer(PreTrainedTokenizer):
         add_bos_token=False,
         **kwargs,
     ):
-
         """Initializes a GPT2Tokenizer object.
         
         Args:
@@ -229,7 +228,6 @@ class GPT2Tokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
-
         """
         This method retrieves the vocabulary size of the GPT2Tokenizer.
         
@@ -245,7 +243,6 @@ class GPT2Tokenizer(PreTrainedTokenizer):
         return len(self.encoder)
 
     def get_vocab(self):
-
         """
         Method to retrieve the vocabulary of the GPT2Tokenizer.
         
@@ -261,7 +258,6 @@ class GPT2Tokenizer(PreTrainedTokenizer):
         return dict(self.encoder, **self.added_tokens_encoder)
 
     def bpe(self, token):
-
         """
         This method 'bpe' in the class 'GPT2Tokenizer' implements byte pair encoding (BPE) algorithm for tokenization.
         
@@ -319,7 +315,6 @@ class GPT2Tokenizer(PreTrainedTokenizer):
         return word
 
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
-
         """
         Method to build inputs with special tokens in the GPT2Tokenizer class.
         
@@ -403,7 +398,6 @@ class GPT2Tokenizer(PreTrainedTokenizer):
         return text
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary to the specified directory.
         
@@ -456,7 +450,6 @@ the saved merge file.
         return vocab_file, merge_file
 
     def prepare_for_tokenization(self, text, is_split_into_words=False, **kwargs):
-
         """
         Prepare for tokenization method in the GPT2Tokenizer class.
         

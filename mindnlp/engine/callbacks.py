@@ -105,7 +105,6 @@ class TrainerState:
     trial_params: Dict[str, Union[str, float, int, bool]] = None
 
     def __post_init__(self):
-
         r"""
         Method __post_init__ in the class TrainerState initializes the log_history attribute if it is None.
         
@@ -308,7 +307,6 @@ class CallbackHandler(TrainerCallback):
     """Internal class that just calls the list of callbacks in order."""
 
     def __init__(self, callbacks, model, tokenizer, optimizer, lr_scheduler):
-
         r"""
         Initializes a new instance of the CallbackHandler class.
         
@@ -345,7 +343,6 @@ class CallbackHandler(TrainerCallback):
             )
 
     def add_callback(self, callback):
-
         r"""
         Adds a callback to the list of callbacks in the CallbackHandler.
         
@@ -370,7 +367,6 @@ class CallbackHandler(TrainerCallback):
         self.callbacks.append(cb)
 
     def pop_callback(self, callback):
-
         r"""
         pop_callback method in the CallbackHandler class removes a specified callback from the list of callbacks.
         
@@ -396,7 +392,6 @@ class CallbackHandler(TrainerCallback):
                     return cb
 
     def remove_callback(self, callback):
-
         r"""
         Method to remove a callback from the list of callbacks in the CallbackHandler class.
         
@@ -424,7 +419,6 @@ class CallbackHandler(TrainerCallback):
 
     @property
     def callback_list(self):
-
         r"""
         This method, callback_list, returns a string containing the names of the callback objects in the CallbackHandler.
         
@@ -440,7 +434,6 @@ class CallbackHandler(TrainerCallback):
         return "\n".join(cb.__class__.__name__ for cb in self.callbacks)
 
     def on_init_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl):
-
         r"""
         This method is called at the end of the initialization process.
         
@@ -459,7 +452,6 @@ class CallbackHandler(TrainerCallback):
         return self.call_event("on_init_end", args, state, control)
 
     def on_train_begin(self, args: TrainingArguments, state: TrainerState, control: TrainerControl):
-
         r"""
         The 'on_train_begin' method is a callback function in the 'CallbackHandler' class. It is called at the beginning of the training process.
         
@@ -483,7 +475,6 @@ class CallbackHandler(TrainerCallback):
         return self.call_event("on_train_begin", args, state, control)
 
     def on_train_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl):
-
         r"""
         This method is called at the end of the training process.
         
@@ -508,7 +499,6 @@ class CallbackHandler(TrainerCallback):
         return self.call_event("on_train_end", args, state, control)
 
     def on_epoch_begin(self, args: TrainingArguments, state: TrainerState, control: TrainerControl):
-
         r"""
         CallbackHandler.on_epoch_begin method is called at the beginning of each epoch during training.
         
@@ -528,7 +518,6 @@ class CallbackHandler(TrainerCallback):
         return self.call_event("on_epoch_begin", args, state, control)
 
     def on_epoch_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl):
-
         r"""
         on_epoch_end method in CallbackHandler class.
         
@@ -547,7 +536,6 @@ class CallbackHandler(TrainerCallback):
         return self.call_event("on_epoch_end", args, state, control)
 
     def on_step_begin(self, args: TrainingArguments, state: TrainerState, control: TrainerControl):
-
         r"""
         This method is called at the beginning of each training step.
         
@@ -578,7 +566,6 @@ class CallbackHandler(TrainerCallback):
         return self.call_event("on_step_begin", args, state, control)
 
     def on_substep_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl):
-
         r"""
         CallbackHandler.on_substep_end(self, args, state, control)
         
@@ -604,7 +591,6 @@ class CallbackHandler(TrainerCallback):
         return self.call_event("on_substep_end", args, state, control)
 
     def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl):
-
         r"""
         on_step_end method in the CallbackHandler class.
         
@@ -629,7 +615,6 @@ class CallbackHandler(TrainerCallback):
         return self.call_event("on_step_end", args, state, control)
 
     def on_evaluate(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, metrics):
-
         r"""
         This method 'on_evaluate' is a callback function in the 'CallbackHandler' class that is triggered during the evaluation phase of the training process.
         
@@ -651,7 +636,6 @@ process.
         return self.call_event("on_evaluate", args, state, control, metrics=metrics)
 
     def on_predict(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, metrics):
-
         r"""
         Method: on_predict
         
@@ -674,7 +658,6 @@ process.
         return self.call_event("on_predict", args, state, control, metrics=metrics)
 
     def on_save(self, args: TrainingArguments, state: TrainerState, control: TrainerControl):
-
         r"""
         This method 'on_save' in the 'CallbackHandler' class is triggered when the model is saved during training.
         
@@ -697,7 +680,6 @@ process.
         return self.call_event("on_save", args, state, control)
 
     def on_log(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, logs):
-
         r"""
         Method 'on_log' in the class 'CallbackHandler'.
         
@@ -718,8 +700,6 @@ process.
         return self.call_event("on_log", args, state, control, logs=logs)
 
     def on_prediction_step(self, args: TrainingArguments, state: TrainerState, control: TrainerControl):
-
-        
         """
         Callback method called on each prediction step during training.
         
@@ -739,7 +719,6 @@ process.
         return self.call_event("on_prediction_step", args, state, control)
 
     def call_event(self, event, args, state, control, **kwargs):
-
         r"""
         call_event method in CallbackHandler class.
         
@@ -784,7 +763,6 @@ class DefaultFlowCallback(TrainerCallback):
     """
 
     def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
-
         r"""
         This method is called at the end of each training step in the 'DefaultFlowCallback' class.
         
@@ -843,7 +821,6 @@ class DefaultFlowCallback(TrainerCallback):
         return control
 
     def on_epoch_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
-
         r"""
         This method is called at the end of each epoch during the training process.
         
@@ -883,7 +860,6 @@ class ProgressCallback(TrainerCallback):
     """
 
     def __init__(self):
-
         r"""
         Initializes a ProgressCallback object.
         
@@ -900,7 +876,6 @@ class ProgressCallback(TrainerCallback):
         self.prediction_bar = None
 
     def on_train_begin(self, args, state, control, **kwargs):
-
         r"""
         This method is called at the beginning of the training process.
         
@@ -921,7 +896,6 @@ class ProgressCallback(TrainerCallback):
         self.current_step = 0
 
     def on_step_end(self, args, state, control, **kwargs):
-
         r"""
         Executes actions at the end of each step during training progress.
         
@@ -942,7 +916,6 @@ class ProgressCallback(TrainerCallback):
             self.current_step = state.global_step
 
     def on_prediction_step(self, args, state, control, eval_dataset=None, **kwargs):
-
         r"""
         Method: on_prediction_step
         
@@ -979,7 +952,6 @@ class ProgressCallback(TrainerCallback):
             self.prediction_bar.update(1)
 
     def on_evaluate(self, args, state, control, **kwargs):
-
         r"""
         This method 'on_evaluate' is defined in the 'ProgressCallback' class and is used to evaluate a given state based on certain conditions.
         
@@ -1001,7 +973,6 @@ class ProgressCallback(TrainerCallback):
             self.prediction_bar = None
 
     def on_predict(self, args, state, control, **kwargs):
-
         r"""
         Performs the prediction process and updates the progress bar accordingly.
         
@@ -1023,7 +994,6 @@ class ProgressCallback(TrainerCallback):
             self.prediction_bar = None
 
     def on_log(self, args, state, control, logs=None, **kwargs):
-
         r"""
         Method 'on_log' in the class 'ProgressCallback' handles logging during training progress.
         
@@ -1045,7 +1015,6 @@ class ProgressCallback(TrainerCallback):
             self.training_bar.write(str(logs))
 
     def on_train_end(self, args, state, control, **kwargs):
-
         r"""
         This method 'on_train_end' is defined within the class 'ProgressCallback' and is called when the training process ends.
         
@@ -1072,7 +1041,6 @@ class PrinterCallback(TrainerCallback):
     """
 
     def on_log(self, args, state, control, logs=None, **kwargs):
-
         r"""
         This method 'on_log' is defined within the class 'PrinterCallback' and is used to handle logging events.
         
@@ -1112,7 +1080,6 @@ class EarlyStoppingCallback(TrainerCallback):
     """
 
     def __init__(self, early_stopping_patience: int = 1, early_stopping_threshold: Optional[float] = 0.0):
-
         r"""
         Initializes an instance of the EarlyStoppingCallback class.
         
@@ -1133,7 +1100,6 @@ class EarlyStoppingCallback(TrainerCallback):
         self.early_stopping_patience_counter = 0
 
     def check_metric_value(self, args, state, control, metric_value):
-
         r"""
         This method 'check_metric_value' is part of the 'EarlyStoppingCallback' class and is used to evaluate a metric value and determine if early stopping criteria are met.
         
@@ -1171,7 +1137,6 @@ class EarlyStoppingCallback(TrainerCallback):
             self.early_stopping_patience_counter += 1
 
     def on_train_begin(self, args, state, control, **kwargs):
-
         r"""
         This method is called at the beginning of the training process within the 'EarlyStoppingCallback' class.
         
@@ -1209,7 +1174,6 @@ class EarlyStoppingCallback(TrainerCallback):
         ), "EarlyStoppingCallback requires IntervalStrategy of steps or epoch"
 
     def on_evaluate(self, args, state, control, metrics, **kwargs):
-
         r"""
         This method 'on_evaluate' is a part of the 'EarlyStoppingCallback' class and is responsible for evaluating the metrics and performing early stopping if the specified metric value does not meet the
 criteria.

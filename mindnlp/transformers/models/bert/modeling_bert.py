@@ -105,7 +105,6 @@ class BertEmbeddings(nn.Cell):
     Embeddings for BERT, include word, position and token_type
     """
     def __init__(self, config):
-
         """
         This method initializes an instance of the BertEmbeddings class.
         
@@ -150,7 +149,6 @@ class BertEmbeddings(nn.Cell):
         inputs_embeds: Optional[mindspore.Tensor] = None,
         past_key_values_length: int = 0,
     ):
-
         """
         This method constructs the embeddings for input tokens in the BERT model.
         
@@ -208,7 +206,6 @@ class BertSelfAttention(nn.Cell):
     Self attention layer for BERT.
     """
     def __init__(self, config, position_embedding_type=None):
-
         """
         Initializes the BertSelfAttention instance.
         
@@ -267,7 +264,6 @@ class BertSelfAttention(nn.Cell):
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ):
-
         """
         Constructs the self-attention mechanism for the Bert model.
         
@@ -382,7 +378,6 @@ class BertSelfOutput(nn.Cell):
     Bert Self Output
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the BertSelfOutput class.
         
@@ -406,7 +401,6 @@ class BertSelfOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states, input_tensor):
-
         """
         This method 'construct' is a part of the 'BertSelfOutput' class and is responsible for processing hidden states in a BERT model.
         
@@ -443,7 +437,6 @@ class BertAttention(nn.Cell):
     Bert Attention
     """
     def __init__(self, config, position_embedding_type=None):
-
         """
         Initializes a BertAttention object.
         
@@ -492,7 +485,6 @@ class BertAttention(nn.Cell):
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ):
-
         """
         This method constructs the BertAttention layer.
         
@@ -536,7 +528,6 @@ class BertIntermediate(nn.Cell):
     Bert Intermediate
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the BertIntermediate class.
         
@@ -558,7 +549,6 @@ class BertIntermediate(nn.Cell):
             self.intermediate_act_fn = config.hidden_act
 
     def construct(self, hidden_states):
-
         """
         Constructs the intermediate layer of the BERT model.
         
@@ -582,7 +572,6 @@ class BertOutput(nn.Cell):
     Bert Output
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the BertOutput class.
         
@@ -607,7 +596,6 @@ class BertOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states, input_tensor):
-
         """
         This method constructs the output of a BERT model by applying transformations to the hidden states.
         
@@ -637,7 +625,6 @@ class BertLayer(nn.Cell):
     Bert Layer
     """
     def __init__(self, config):
-
         """
         Initialize a BertLayer object.
         
@@ -668,7 +655,6 @@ class BertLayer(nn.Cell):
         self.intermediate = BertIntermediate(config)
         self.output = BertOutput(config)
 
-
     def construct(
         self,
         hidden_states: mindspore.Tensor,
@@ -679,7 +665,6 @@ class BertLayer(nn.Cell):
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ):
-
         """
         This method constructs a BertLayer by processing the input hidden_states through self-attention and potentially cross-attention mechanisms.
         
@@ -766,7 +751,6 @@ class BertEncoder(nn.Cell):
     Bert Encoder
     """
     def __init__(self, config):
-
         """
         BertEncoder.__init__
         
@@ -802,7 +786,6 @@ class BertEncoder(nn.Cell):
         output_hidden_states: Optional[bool] = False,
         return_dict: Optional[bool] = True,
     ):
-
         """
         This method 'construct' is a part of the class 'BertEncoder' and is responsible for processing hidden states through the encoder layers.
         
@@ -882,7 +865,6 @@ class BertPooler(nn.Cell):
     Bert Pooler
     """
     def __init__(self, config):
-
         """
         Initializes the BertPooler class.
         
@@ -904,7 +886,6 @@ class BertPooler(nn.Cell):
         self.activation = nn.Tanh()
 
     def construct(self, hidden_states):
-
         """
         Constructs the pooled output tensor from the given hidden states tensor.
         
@@ -933,7 +914,6 @@ class BertPredictionHeadTransform(nn.Cell):
     Bert Prediction Head Transform
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the BertPredictionHeadTransform class.
         
@@ -953,7 +933,6 @@ class BertPredictionHeadTransform(nn.Cell):
         self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
 
     def construct(self, hidden_states):
-
         """
         Constructs the transformed hidden states for the BertPredictionHeadTransform class.
         
@@ -978,7 +957,6 @@ class BertLMPredictionHead(nn.Cell):
     Bert LM Prediction Head
     """
     def __init__(self, config):
-
         """
         This method initializes the BertLMPredictionHead class.
         
@@ -1007,9 +985,7 @@ behavior and settings.
         self.decoder.has_bias = True
         self.decoder.bias_add = ops.add
 
-
     def construct(self, hidden_states):
-
         """
         This method 'construct' is defined in the class 'BertLMPredictionHead' and is responsible for processing the hidden states.
         
@@ -1028,7 +1004,6 @@ behavior and settings.
         return hidden_states
 
     def _tie_weights(self):
-
         """
         Ties the weights of the bias in the BertLMPredictionHead decoder to the main decoder weights.
         
@@ -1048,7 +1023,6 @@ behavior and settings.
 class BertOnlyMLMHead(nn.Cell):
     """BertOnlyMLMHead"""
     def __init__(self, config):
-
         """
         __init__
         
@@ -1068,7 +1042,6 @@ class BertOnlyMLMHead(nn.Cell):
         self.predictions = BertLMPredictionHead(config)
 
     def construct(self, sequence_output: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the masked language modeling (MLM) head for the BERT model.
         
@@ -1102,7 +1075,6 @@ class BertOnlyMLMHead(nn.Cell):
 class BertOnlyNSPHead(nn.Cell):
     """BertOnlyNSPHead"""
     def __init__(self, config):
-
         """
         Initializes a BertOnlyNSPHead object with the specified configuration.
         
@@ -1122,7 +1094,6 @@ class BertOnlyNSPHead(nn.Cell):
         self.seq_relationship = nn.Dense(config.hidden_size, 2)
 
     def construct(self, pooled_output):
-
         """
         This method constructs a sequence relationship score based on the pooled output.
         
@@ -1145,7 +1116,6 @@ class BertPreTrainingHeads(nn.Cell):
     Bert PreTraining Heads
     """
     def __init__(self, config):
-
         """
         Initializes the BertPreTrainingHeads class.
         
@@ -1165,7 +1135,6 @@ class BertPreTrainingHeads(nn.Cell):
         self.seq_relationship = nn.Dense(config.hidden_size, 2)
 
     def construct(self, sequence_output, pooled_output):
-
         """
         Construct the prediction scores and sequence relationship scores for pre-training heads in BERT.
         
@@ -1221,7 +1190,6 @@ class BertModel(BertPreTrainedModel):
     Bert Model
     """
     def __init__(self, config, add_pooling_layer=True):
-
         """
         Initializes a BertModel instance.
         
@@ -1246,7 +1214,6 @@ class BertModel(BertPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Gets the input embeddings for the BertModel.
         
@@ -1262,7 +1229,6 @@ class BertModel(BertPreTrainedModel):
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         This method sets the input embeddings for the BertModel.
         
@@ -1302,7 +1268,6 @@ class BertModel(BertPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ):
-
         """
         This method constructs a BERT model with the specified input parameters.
         
@@ -1433,7 +1398,6 @@ class BertForPretraining(BertPreTrainedModel):
     _tied_weights_keys = ["predictions.decoder.bias", "cls.predictions.decoder.weight"]
 
     def __init__(self, config):
-
         """
         Initializes a new instance of BertForPretraining.
         
@@ -1457,7 +1421,6 @@ class BertForPretraining(BertPreTrainedModel):
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         This method retrieves the output embeddings for the BertForPretraining model.
         
@@ -1473,7 +1436,6 @@ class BertForPretraining(BertPreTrainedModel):
         return self.cls.predictions.decoder
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the BertForPretraining model.
         
@@ -1503,7 +1465,6 @@ class BertForPretraining(BertPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ):
-
         """ 
         Construct method in the BertForPretraining class.
         
@@ -1568,7 +1529,6 @@ class BertLMHeadModel(BertPreTrainedModel):
     _tied_weights_keys = ["predictions.decoder.bias", "cls.predictions.decoder.weight"]
 
     def __init__(self, config):
-
         """
         Initializes a new instance of BertLMHeadModel.
         
@@ -1599,7 +1559,6 @@ class BertLMHeadModel(BertPreTrainedModel):
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings of the BertLMHeadModel.
         
@@ -1620,7 +1579,6 @@ class BertLMHeadModel(BertPreTrainedModel):
         return self.cls.predictions.decoder
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Method to set new output embeddings for the language model head in a BERT model.
         
@@ -1654,7 +1612,6 @@ class BertLMHeadModel(BertPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ):
-
         ''' 
         This method constructs the BertLMHeadModel.
         
@@ -1727,7 +1684,6 @@ class BertLMHeadModel(BertPreTrainedModel):
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, use_cache=True, **model_kwargs
     ):
-
         """
         Prepare inputs for generation.
         
@@ -1775,7 +1731,6 @@ class BertLMHeadModel(BertPreTrainedModel):
         }
 
     def _reorder_cache(self, past_key_values, beam_idx):
-
         """
         Reorders the cache based on the provided beam index for a BERT language model head model.
         
@@ -1803,7 +1758,6 @@ class BertForMaskedLM(BertPreTrainedModel):
     _tied_weights_keys = ["predictions.decoder.bias", "cls.predictions.decoder.weight"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of the BertForMaskedLM class.
         
@@ -1846,7 +1800,6 @@ with bi-directional self-attention.
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         This method returns the output embeddings for the BertForMaskedLM model.
         
@@ -1862,7 +1815,6 @@ with bi-directional self-attention.
         return self.cls.predictions.decoder
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Set the output embeddings for the BertForMaskedLM model.
         
@@ -1935,7 +1887,6 @@ with bi-directional self-attention.
         )
 
     def prepare_inputs_for_generation(self, input_ids, attention_mask=None):
-
         """
         Method: prepare_inputs_for_generation
         
@@ -1971,7 +1922,6 @@ with bi-directional self-attention.
 class BertForNextSentencePrediction(BertPreTrainedModel):
     """BertForNextSentencePrediction"""
     def __init__(self, config):
-
         """
         Initializes an instance of BertForNextSentencePrediction class.
         
@@ -2006,7 +1956,6 @@ class BertForNextSentencePrediction(BertPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ):
-
         """Constructs the BertForNextSentencePrediction model.
         
         Args:
@@ -2066,7 +2015,6 @@ class BertForSequenceClassification(BertPreTrainedModel):
     """Bert Model for classification tasks"""
 
     def __init__(self, config):
-
         """
         Initializes the BertForSequenceClassification class.
         
@@ -2108,7 +2056,6 @@ class BertForSequenceClassification(BertPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ):
-
         '''
         This method constructs the Bert model for sequence classification.
         
@@ -2185,7 +2132,6 @@ class BertForSequenceClassification(BertPreTrainedModel):
 class BertForMultipleChoice(BertPreTrainedModel):
     """BertForMultipleChoice"""
     def __init__(self, config):
-
         """
         Initializes a BertForMultipleChoice instance.
         
@@ -2282,7 +2228,6 @@ class BertForMultipleChoice(BertPreTrainedModel):
 class BertForTokenClassification(BertPreTrainedModel):
     """BertForTokenClassification"""
     def __init__(self, config):
-
         """
         Initialize the BertForTokenClassification model.
         
@@ -2367,7 +2312,6 @@ class BertForTokenClassification(BertPreTrainedModel):
 class BertForQuestionAnswering(BertPreTrainedModel):
     """BertForQuestionAnswering"""
     def __init__(self, config):
-
         """
         Initializes a new instance of the BertForQuestionAnswering class.
         
@@ -2407,7 +2351,6 @@ class BertForQuestionAnswering(BertPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ):
-
         """
         Constructs the BertForQuestionAnswering model.
         
@@ -2486,7 +2429,6 @@ class BertForPreTraining(BertPreTrainedModel):
     _tied_weights_keys = ["predictions.decoder.bias", "cls.predictions.decoder.weight"]
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the BertForPreTraining class.
         
@@ -2509,7 +2451,6 @@ class BertForPreTraining(BertPreTrainedModel):
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         Method to retrieve the output embeddings from a BERT model for pre-training.
         
@@ -2528,7 +2469,6 @@ class BertForPreTraining(BertPreTrainedModel):
         return self.cls.predictions.decoder
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings of the model with the provided new embeddings.
         
@@ -2562,7 +2502,6 @@ class BertForPreTraining(BertPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], BertForPreTrainingOutput]:
-
         """
         Constructs the pre-training model for BERT.
         
@@ -2649,7 +2588,6 @@ input tensors.
         The construct method raises a NotImplementedError for cross-attention and past_key_value arguments, as these functionalities are not implemented yet.
     """
     def __init__(self, config, position_embedding_type=None):
-
         """
         Initializes an instance of the BertDualSelfAttention class.
         
@@ -2704,7 +2642,6 @@ input tensors.
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ):
-
         """
         This method 'construct' in the class 'BertDualSelfAttention' implements the dual self-attention mechanism for the BERT model.
         
@@ -2796,7 +2733,6 @@ class BertDualSelfOutput(nn.Cell):
         construct(hidden_states, input_tensor): Constructs the dual self-attention mechanism using the provided hidden states and input tensor.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the BertDualSelfOutput class.
         
@@ -2817,7 +2753,6 @@ class BertDualSelfOutput(nn.Cell):
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
     def construct(self, hidden_states, input_tensor):
-
         """
         Method 'construct' in the class 'BertDualSelfOutput'.
         
@@ -2873,7 +2808,6 @@ models.
         outputs: Tuple containing the attention output and optional additional outputs.
     """
     def __init__(self, config, position_embedding_type=None):
-
         """
         Initializes the BertDualAttention class with the provided configuration and position embedding type.
         
@@ -2922,7 +2856,6 @@ models.
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ):
-
         """
         Constructs the attention mechanism for the BertDualAttention class.
         
@@ -2999,7 +2932,6 @@ and intermediate size. The class initializes the hidden size and intermediate si
         output = dual_intermediate.construct(hidden_states)
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the BertDualIntermediate class.
         
@@ -3026,7 +2958,6 @@ and intermediate size. The class initializes the hidden size and intermediate si
             self.intermediate_act_fn = config.hidden_act
 
     def construct(self, hidden_states):
-
         """
         The construct method in the BertDualIntermediate class processes the hidden_states tensor to produce an intermediate representation.
         
@@ -3072,7 +3003,6 @@ class BertDualOutput(nn.Cell):
     This class is designed to be used as a component in BERT models for handling dual outputs efficiently.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the BertDualOutput class.
         
@@ -3099,7 +3029,6 @@ class BertDualOutput(nn.Cell):
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
     def construct(self, hidden_states, input_tensor):
-
         """
         This method 'construct' is a member of the class 'BertDualOutput' and is used to process hidden states and input tensors in a specific manner.
         
@@ -3151,7 +3080,6 @@ class BertDualLayer(nn.Cell):
     Note: The class assumes that the imported modules (BertDualAttention, BertAttention, BertDualIntermediate, BertDualOutput) are available and properly implemented.
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the BertDualLayer class.
         
@@ -3193,7 +3121,6 @@ class BertDualLayer(nn.Cell):
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ):
-
         """
         This method constructs a BertDualLayer by performing self-attention and potentially cross-attention operations.
         
@@ -3298,7 +3225,6 @@ class BertDualEncoder(nn.Cell):
             Returns the final hidden states, past key values, hidden states at all layers, self-attentions at all layers, and cross-attentions at all layers.
     """
     def __init__(self, config):
-
         """Initialize the BertDualEncoder class.
         
         Args:
@@ -3332,7 +3258,6 @@ class BertDualEncoder(nn.Cell):
         output_hidden_states: Optional[bool] = False,
         return_dict: Optional[bool] = True,
     ):
-
         """
         This method constructs the BertDualEncoder model.
         
@@ -3421,7 +3346,6 @@ class BertDualModel(BertPreTrainedModel):
     """
 
     def __init__(self, config, add_pooling_layer=True):
-
         """
         Initializes an instance of the BertDualModel class.
         
@@ -3448,7 +3372,6 @@ class BertDualModel(BertPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings from the BertDualModel instance.
         
@@ -3473,7 +3396,6 @@ suitable for processing by the model.
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the BertDualModel.
         
@@ -3642,7 +3564,6 @@ inputs_embeds, labels, and additional parameters for controlling the output form
     Note: This docstring is based on the provided code and may need to be updated with additional information about the class attributes, methods, and usage.
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the BertDualForSequenceClassification class.
         
@@ -3689,7 +3610,6 @@ inputs_embeds, labels, and additional parameters for controlling the output form
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ):
-
         """
         This method constructs a dual BERT model for sequence classification.
         

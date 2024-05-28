@@ -443,7 +443,6 @@ class LongformerEmbeddings(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the LongformerEmbeddings class.
         
@@ -480,7 +479,6 @@ class LongformerEmbeddings(nn.Cell):
         )
 
     def construct(self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None):
-
         '''
         Constructs the LongformerEmbeddings.
         
@@ -565,7 +563,6 @@ also provides functions for matrix multiplication with sliding window attention 
     For detailed information on each method and its functionality, refer to the specific method documentation within the class implementation.
     """
     def __init__(self, config, layer_id):
-
         """
         Initializes the LongformerSelfAttention class.
         
@@ -886,7 +883,6 @@ Type: object. Restrictions: Must contain the specified configuration parameters.
 
     @staticmethod
     def _mask_invalid_locations(input_tensor, affected_seq_len) -> mindspore.Tensor:
-
         """
         The '_mask_invalid_locations' method in the class 'LongformerSelfAttention' applies masks to invalidate certain locations in the input tensor.
         
@@ -1063,7 +1059,6 @@ Type: object. Restrictions: Must contain the specified configuration parameters.
         is_local_index_global_attn_nonzero,
         is_local_index_no_global_attn_nonzero,
     ):
-
         """
         This method concatenates the global key attention probabilities with query vectors.
         
@@ -1113,7 +1108,6 @@ Type: object. Restrictions: Must contain the specified configuration parameters.
         is_index_global_attn_nonzero,
         is_local_index_global_attn_nonzero,
     ):
-
         """
         Compute the attention output with global indices.
         
@@ -1169,7 +1163,6 @@ Type: object. Restrictions: Must contain the specified configuration parameters.
         is_local_index_no_global_attn_nonzero,
         is_index_masked,
     ):
-
         '''
         Method: _compute_global_attn_output_from_hidden
         
@@ -1314,7 +1307,6 @@ tensor.
     
     """
     def __init__(self, config):
-
         """
         Initializes the LongformerSelfOutput class.
         
@@ -1338,7 +1330,6 @@ tensor.
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method 'construct' is a part of the class 'LongformerSelfOutput' and is used to perform a series of operations on the input 'hidden_states' and 'input_tensor' to construct a new tensor.
         
@@ -1380,7 +1371,6 @@ class LongformerAttention(nn.Cell):
             Constructs the attention outputs based on the given inputs and optional masks.
     """
     def __init__(self, config, layer_id=0):
-
         """
         Initializes a LongformerAttention object.
         
@@ -1401,7 +1391,6 @@ class LongformerAttention(nn.Cell):
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
-
         """
         Method to prune attention heads in the LongformerAttention class.
         
@@ -1449,7 +1438,6 @@ class LongformerAttention(nn.Cell):
         is_global_attn=None,
         output_attentions=False,
     ):
-
         """
         Constructs the LongformerAttention.
         
@@ -1505,7 +1493,6 @@ class LongformerIntermediate(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the LongformerIntermediate class.
         
@@ -1527,7 +1514,6 @@ class LongformerIntermediate(nn.Cell):
             self.intermediate_act_fn = config.hidden_act
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Method 'construct' in the class 'LongformerIntermediate'.
         
@@ -1569,7 +1555,6 @@ class LongformerOutput(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes a LongformerOutput instance.
         
@@ -1592,7 +1577,6 @@ class LongformerOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Construct method in the LongformerOutput class.
         
@@ -1640,7 +1624,6 @@ given the input hidden states and optional masks.
     
     """
     def __init__(self, config, layer_id=0):
-
         """
         Initializes a LongformerLayer instance.
         
@@ -1672,7 +1655,6 @@ given the input hidden states and optional masks.
         is_global_attn=None,
         output_attentions=False,
     ):
-
         """
         This method constructs the Longformer layer.
         
@@ -1711,7 +1693,6 @@ given the input hidden states and optional masks.
         return outputs
 
     def ff_chunk(self, attn_output):
-
         """
         Method ff_chunk in the class LongformerLayer.
         
@@ -1772,7 +1753,6 @@ attention tensors if applicable.
     
     """
     def __init__(self, config):
-
         """
         Initializes a LongformerEncoder object with the provided configuration.
         
@@ -1805,7 +1785,6 @@ attention tensors if applicable.
         output_hidden_states=False,
         return_dict=True,
     ):
-
         """
         This method constructs the LongformerEncoder by processing the provided input parameters.
         
@@ -1909,7 +1888,6 @@ class LongformerPooler(nn.Cell):
             
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the LongformerPooler class.
         
@@ -1928,7 +1906,6 @@ class LongformerPooler(nn.Cell):
         self.activation = nn.Tanh()
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs a pooled output tensor from the given hidden states.
         
@@ -1963,7 +1940,6 @@ class LongformerLMHead(nn.Cell):
     """Longformer Head for masked language modeling."""
 
     def __init__(self, config):
-
         """
         Initializes the LongformerLMHead instance.
         
@@ -1991,7 +1967,6 @@ class LongformerLMHead(nn.Cell):
         self.decoder.bias = self.bias
 
     def construct(self, features, **kwargs):
-
         """
         Construct method in the LongformerLMHead class.
         
@@ -2015,7 +1990,6 @@ class LongformerLMHead(nn.Cell):
         return x
 
     def _tie_weights(self):
-
         """
         Method _tie_weights in the class LongformerLMHead.
         
@@ -2079,7 +2053,6 @@ class LongformerModel(LongformerPreTrainedModel):
     """
 
     def __init__(self, config, add_pooling_layer=True):
-
         """
         Initializes a new instance of the LongformerModel class.
         
@@ -2122,7 +2095,6 @@ class LongformerModel(LongformerPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Returns the input embeddings of the LongformerModel.
         
@@ -2140,7 +2112,6 @@ class LongformerModel(LongformerPreTrainedModel):
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, value):
-
         """
         Set input embeddings for the LongformerModel.
         
@@ -2215,7 +2186,6 @@ class LongformerModel(LongformerPreTrainedModel):
         return padding_len, input_ids, attention_mask, token_type_ids, position_ids, inputs_embeds
 
     def _merge_to_attention_mask(self, attention_mask: mindspore.Tensor, global_attention_mask: mindspore.Tensor):
-
         """
         Merges attention_mask and global_attention_mask to create a unified attention mask.
         
@@ -2373,7 +2343,6 @@ the tokenizer and model, as well as performing masked language modeling tasks wi
     _tied_weights_keys = ["lm_head.decoder"]
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the LongformerForMaskedLM class.
         
@@ -2396,7 +2365,6 @@ the tokenizer and model, as well as performing masked language modeling tasks wi
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings for the Longformer model.
         
@@ -2412,7 +2380,6 @@ the tokenizer and model, as well as performing masked language modeling tasks wi
         return self.lm_head.decoder
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         This method sets the output embeddings for the LongformerForMaskedLM model.
         
@@ -2529,7 +2496,6 @@ LongformerSequenceClassifierOutput object containing detailed classification res
     Overall, the LongformerForSequenceClassification class provides a comprehensive solution for leveraging Longformer models in sequence classification tasks within the specified framework.
     """
     def __init__(self, config):
-
         """
         Initializes a LongformerForSequenceClassification instance.
         
@@ -2635,7 +2601,6 @@ class LongformerClassificationHead(nn.Cell):
     """Head for sentence-level classification tasks."""
 
     def __init__(self, config):
-
         """
         Initialize the LongformerClassificationHead class.
         
@@ -2658,7 +2623,6 @@ class LongformerClassificationHead(nn.Cell):
         self.out_proj = nn.Dense(config.hidden_size, config.num_labels)
 
     def construct(self, hidden_states, **kwargs):
-
         """Constructs the Longformer classification head.
         
         Args:
@@ -2703,7 +2667,6 @@ answer span given a question and a passage.
     Please refer to the example code for more details on how to use the LongformerForQuestionAnswering class for question answering tasks.
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the LongformerForQuestionAnswering class.
         
@@ -2860,7 +2823,6 @@ outputs, based on the return_dict parameter.
 can be used in various natural language processing applications.
     """
     def __init__(self, config):
-
         """
         Initializes a LongformerForTokenClassification object.
         
@@ -2961,7 +2923,6 @@ output.
 LongformerForMultipleChoice model with the given inputs and returns the model output.
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the LongformerForMultipleChoice class.
         

@@ -385,7 +385,6 @@ BondAngle = collections.namedtuple(
 
 
 def map_structure_with_atom_order(in_list: list, first_call: bool = True) -> list:
-
     """
     Maps the structure of a nested list based on atom order.
     
@@ -974,7 +973,6 @@ restype_atom14_ambiguous_atoms_swap_idx: np.ndarray = np.tile(np.arange(14, dtyp
 
 
 def _make_atom14_ambiguity_feats() -> None:
-
     """
     Updates a data structure to indicate ambiguity between specific atom pairs for each residue type.
     
@@ -1002,7 +1000,6 @@ _make_atom14_ambiguity_feats()
 
 
 def aatype_to_str_sequence(aatype: Sequence[int]) -> str:
-
     """
     Converts a list of integer amino acid types to a string sequence.
     

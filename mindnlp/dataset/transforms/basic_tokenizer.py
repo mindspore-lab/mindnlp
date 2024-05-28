@@ -55,7 +55,6 @@ class BasicTokenizer(TextTensorOperation, PyTensorOperation):
 
     # @check_decode
     def __init__(self, lower_case=False, py_transform=False):
-
         r"""
         Initializes an instance of the BasicTokenizer class.
         
@@ -106,7 +105,6 @@ class BasicTokenizer(TextTensorOperation, PyTensorOperation):
         return np.array(tokens)
 
     def parse(self):
-
         r"""Parse the input using the BasicTokenizerOperation.
         
         This method applies the BasicTokenizerOperation to the input data, which tokenizes the input text into a list of tokens.

@@ -42,7 +42,6 @@ class MusicgenMelodyProcessor(ProcessorMixin):
     tokenizer_class = ("T5Tokenizer", "T5TokenizerFast")
 
     def __init__(self, feature_extractor, tokenizer):
-
         """
         Initializes a MusicgenMelodyProcessor object.
         
@@ -61,7 +60,6 @@ class MusicgenMelodyProcessor(ProcessorMixin):
 
     # Copied from transformers.models.musicgen.processing_musicgen.MusicgenProcessor.get_decoder_prompt_ids
     def get_decoder_prompt_ids(self, task=None, language=None, no_timestamps=True):
-
         """
         This method retrieves decoder prompt IDs for the MusicgenMelodyProcessor class.
         

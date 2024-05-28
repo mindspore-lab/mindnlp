@@ -208,7 +208,6 @@ class HubertConfig(PretrainedConfig):
         eos_token_id=2,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the HubertConfig class.
         
@@ -315,7 +314,6 @@ class HubertConfig(PretrainedConfig):
 
     @property
     def inputs_to_logits_ratio(self):
-
         """
         Calculates the ratio of inputs to logits based on the convolutional strides in the Hubert configuration.
         

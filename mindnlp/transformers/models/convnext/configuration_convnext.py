@@ -98,7 +98,6 @@ class ConvNextConfig(BackboneConfigMixin, PretrainedConfig):
         out_indices=None,
         **kwargs,
     ):
-
         """
         Initialize a ConvNextConfig object.
         

@@ -88,7 +88,6 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
         tokenizer: "PreTrainedTokenizerBase",
         decoder: "BeamSearchDecoderCTC",
     ):
-
         """
         Initializes a Wav2Vec2ProcessorWithLM object.
         
@@ -125,7 +124,6 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
         self._in_target_context_manager = False
 
     def save_pretrained(self, save_directory):
-
         """
         Save the Wav2Vec2ProcessorWithLM instance and the associated language model to the specified directory.
         
@@ -216,7 +214,6 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
 
     @staticmethod
     def _set_language_model_attribute(decoder: "BeamSearchDecoderCTC", attribute: str, value: float):
-
         """
         Sets the specified attribute of the language model within the Wav2Vec2ProcessorWithLM using the given decoder.
         
@@ -235,7 +232,6 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
 
     @property
     def language_model(self):
-
         """
         This method returns the language model associated with the Wav2Vec2ProcessorWithLM instance.
         
@@ -252,7 +248,6 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
 
     @staticmethod
     def get_missing_alphabet_tokens(decoder, tokenizer):
-
         """
         This method 'get_missing_alphabet_tokens' is defined in the class 'Wav2Vec2ProcessorWithLM' and is responsible for identifying missing alphabet tokens by comparing the tokenizer's vocabulary with the
 decoder's alphabet labels.

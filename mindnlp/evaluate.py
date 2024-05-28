@@ -38,7 +38,6 @@ def load(
     revision: Optional[Union[str, Version]] = None,
     **init_kwargs,
 ) -> EvaluationModule:
-
     r"""
     Args:
         path (str): The path to the file or directory to be loaded.

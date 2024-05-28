@@ -240,7 +240,6 @@ class Conv2d(_UniformOperator):
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  data_format: str = 'NCHW',
                  has_diagonal_form: bool = False) -> None:
-
         r"""
         Initializes a Conv2d object.
         
@@ -461,7 +460,6 @@ class Conv1d(_UniformOperator):
                  weight_init: Union[Tensor, str, Initializer, numbers.Number] = 'normal',
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  has_diagonal_form: bool = False) -> None:
-
         r"""
         Initializes an instance of the Conv1d class.
         
@@ -720,8 +718,6 @@ class Conv3d(_UniformOperator):
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  data_format: str = 'NCDHW',
                  has_diagonal_form: bool = False) -> None:
-
-        
         """
         Initializes a 3D convolution layer.
         
@@ -899,7 +895,6 @@ class BatchNorm1d(_UniformOperator):
                  moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones',
                  use_batch_statistics: bool = True,
                  has_diagonal_form: bool = False) -> None:
-
         r"""
         Initialize a BatchNorm1d layer.
         
@@ -1072,7 +1067,6 @@ class BatchNorm2d(_UniformOperator):
                  use_batch_statistics: bool = True,
                  has_diagonal_form: bool = False,
                  data_format='NCHW') -> None:
-
         r"""
         Initializes a BatchNorm2d object.
         
@@ -1097,7 +1091,6 @@ class BatchNorm2d(_UniformOperator):
             None
         """
 
-        
         def __init__(self, num_features: int, eps: float = 1e-05, momentum: float = 0.9, affine: bool = True, gamma_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones', beta_init: Union[Tensor, str,
 Initializer, numbers.Number] = 'zeros', moving_mean_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros', moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones',
 use_batch_statistics: bool = True, has_diagonal_form: bool = False, data_format='NCHW') -> None:
@@ -1280,7 +1273,6 @@ class BatchNorm3d(_UniformOperator):
                  use_batch_statistics: bool = True,
                  has_diagonal_form: bool = False,
                  data_format='NCDHW') -> None:
-
         r"""
         Initializes an instance of the BatchNorm3d class.
         
@@ -1432,7 +1424,6 @@ class Dense(_UniformOperator):
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  has_bias: bool = True,
                  has_diagonal_form: bool = False) -> None:
-
         r"""
         Initializes a new instance of the Dense class.
         
@@ -1529,7 +1520,6 @@ class ReLU(nn.Cell):
     """
 
     def __init__(self, has_diagonal_form: bool = False) -> None:
-
         r"""
         Initializes an instance of the ReLU class.
         
@@ -1550,7 +1540,6 @@ class ReLU(nn.Cell):
             self.relu = nn.ReLU()
 
     def construct(self, u: Tensor) -> Tensor:
-
         r"""
         Constructs and applies the rectified linear unit (ReLU) function on the input tensor.
         

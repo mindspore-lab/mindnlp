@@ -58,7 +58,6 @@ class GPTNeoXConfig(PretrainedConfig):
         attention_bias=True,
         **kwargs,
     ):
-
         """
         Initialize a new GPTNeoXConfig instance.
         

@@ -43,7 +43,6 @@ logger = logging.get_logger(__name__)
 # However, because the pipeline may evolve from what layoutlmv3 currently does, it's copied (vs. imported) to avoid creating an
 # unnecessary dependency.
 def normalize_box(box, width, height):
-
     """
     This function normalizes the coordinates of a bounding box relative to a given width and height.
     
@@ -236,7 +235,6 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
     """
 
     def __init__(self, *args, **kwargs):
-
         """
         Initializes a new instance of the DocumentQuestionAnsweringPipeline class.
         
@@ -284,7 +282,6 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
             timeout=None,
             **kwargs,
     ):
-
         """
         This method '_sanitize_parameters' is a part of the 'DocumentQuestionAnsweringPipeline' class and is used to sanitize and validate the input parameters for the document question answering pipeline.
         
@@ -422,7 +419,6 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
             tesseract_config="",
             timeout=None,
     ):
-
         """
         Preprocesses inputs for document question answering.
         
@@ -580,7 +576,6 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
                 }
 
     def _forward(self, model_inputs):
-
         """
         This method '_forward' in the class 'DocumentQuestionAnsweringPipeline' processes the model inputs and generates the model outputs.
         
@@ -623,7 +618,6 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
         return model_outputs
 
     def postprocess(self, model_outputs, top_k=1, **kwargs):
-
         """
         This method 'postprocess' is defined in the class 'DocumentQuestionAnsweringPipeline' and is used to process the model outputs and return the top-k answers.
         
@@ -648,7 +642,6 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
         return answers
 
     def postprocess_encoder_decoder_single(self, model_outputs, **kwargs):
-
         """
         This method postprocesses the output from the encoder-decoder model to extract the answer.
         
@@ -682,7 +675,6 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
     def postprocess_extractive_qa(
             self, model_outputs, top_k=1, handle_impossible_answer=False, max_answer_len=15, **kwargs
     ):
-
         """
         This method postprocess_extractive_qa is defined within the class DocumentQuestionAnsweringPipeline. It post-processes the model outputs for extractive question answering.
         

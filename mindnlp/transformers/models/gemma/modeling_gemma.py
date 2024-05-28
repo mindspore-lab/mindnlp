@@ -40,7 +40,6 @@ _CONFIG_FOR_DOC = "GemmaConfig"
 
 
 def _get_unpad_data(attention_mask):
-
     """
     This function retrieves un-padded data from the attention_mask.
     
@@ -77,7 +76,6 @@ class GemmaRMSNorm(nn.Cell):
     The construct method applies the normalization and weight parameters to the input data to generate the final output.
     """
     def __init__(self, dim: int, eps: float = 1e-6):
-
         """
         Initializes a GemmaRMSNorm instance.
         
@@ -97,7 +95,6 @@ class GemmaRMSNorm(nn.Cell):
         self.weight = Parameter(ops.zeros(dim))
 
     def _norm(self, x):
-
         """
         Calculates the normalized value of a given input tensor 'x' using the root mean square (RMS) normalization method.
         
@@ -132,7 +129,6 @@ class GemmaRMSNorm(nn.Cell):
         return x * ops.rsqrt(x.pow(2).mean(-1, keep_dims=True) + self.eps)
 
     def construct(self, x):
-
         """
         Constructs a normalized tensor using the GemmaRMSNorm algorithm.
         
@@ -188,7 +184,6 @@ embeddings are computed as the cosine and sine of the frequency values derived f
                 Tensor: The constructed rotary embeddings as the cosine and sine of the frequency values, casted to the same data type as the input tensor.
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
-
         """
         Initialize GemmaRotaryEmbedding object with specified parameters.
         
@@ -212,7 +207,6 @@ embeddings are computed as the cosine and sine of the frequency values derived f
         self.inv_freq = None
 
     def construct(self, x, position_ids, seq_len=None):
-
         """
         Constructs GemmaRotaryEmbedding for positional encoding.
         
@@ -299,7 +293,6 @@ class GemmaMLP(nn.Cell):
         construct(x): Constructs the multi-layer perceptron using the given input x by applying the specified operations.
     """
     def __init__(self, config):
-
         """
         Initializes a GemmaMLP instance with the provided configuration.
         
@@ -327,7 +320,6 @@ class GemmaMLP(nn.Cell):
         self.act_fn = ACT2FN[config.hidden_act]
 
     def construct(self, x):
-
         """
         Constructs a multi-layer perceptron using the GemmaMLP class.
         
@@ -363,7 +355,6 @@ class GemmaAttention(nn.Cell):
 
     # Ignore copy
     def __init__(self, config: GemmaConfig, layer_idx: Optional[int] = None):
-
         """
         Initializes a new instance of the GemmaAttention class.
         
@@ -464,7 +455,6 @@ class GemmaAttention(nn.Cell):
         cache_position: Optional[mindspore.Tensor] = None,
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
-
         '''
         This method constructs attention output using the given hidden states and optional attention mask, position ids, past key value, and other parameters.
         
@@ -579,7 +569,6 @@ attention is used.
         Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: The resulting hidden states and optionally the attention weights and present key value.
     """
     def __init__(self, config: GemmaConfig, layer_idx: int):
-
         """
         Initializes a new instance of the GemmaDecoderLayer class.
         
@@ -711,7 +700,6 @@ cache, and resetting cache.
             cell.weight.set_data(Tensor(weight, cell.weight.dtype))
 
     def _setup_cache(self, cache_cls, max_batch_size, max_cache_len: Optional[int] = None):
-
         """
         This method initializes the cache for the GemmaPreTrainedModel.
         
@@ -746,7 +734,6 @@ https://github.com/huggingface/transformers.
             )
 
     def _reset_cache(self):
-
         """
         Resets the cache for the GemmaPreTrainedModel.
         
@@ -773,7 +760,6 @@ class GemmaModel(GemmaPreTrainedModel):
     """
 
     def __init__(self, config: GemmaConfig):
-
         """
         Initializes a GemmaModel instance.
         
@@ -814,7 +800,6 @@ class GemmaModel(GemmaPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Get the input embeddings for the GemmaModel.
         
@@ -830,7 +815,6 @@ class GemmaModel(GemmaPreTrainedModel):
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Set the input embeddings for the GemmaModel.
         
@@ -860,7 +844,6 @@ class GemmaModel(GemmaPreTrainedModel):
         return_dict: Optional[bool] = None,
         cache_position: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
-
         """
         Constructs GemmaModel.
         
@@ -982,7 +965,6 @@ instance of BaseModelOutputWithPast containing the last hidden state, cache valu
     # (`recording cudagraph tree for symint key 13`, etc.), which is VERY slow. A workaround is `@torch.compiler.disable`, but this prevents using
     # `fullgraph=True`. See more context in https://github.com/huggingface/transformers/pull/29114
     def _update_causal_mask(self, attention_mask, input_tensor):
-
         '''
         Updates the causal mask used for self-attention in the GemmaModel class.
         
@@ -1059,7 +1041,6 @@ text generation.
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of the GemmaForCausalLM class.
         
@@ -1082,7 +1063,6 @@ text generation.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Retrieves the input embeddings from the GemmaForCausalLM model.
         
@@ -1098,7 +1078,6 @@ text generation.
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
             Set the input embeddings for the GemmaForCausalLM model.
         
@@ -1125,7 +1104,6 @@ text generation.
         self.model.embed_tokens = value
 
     def get_output_embeddings(self):
-
         """
         Method to retrieve the output embeddings from a GemmaForCausalLM model.
         
@@ -1143,7 +1121,6 @@ text generation.
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the GemmaForCausalLM model.
         
@@ -1160,7 +1137,6 @@ text generation.
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
-
         """
         Sets the decoder for the GemmaForCausalLM model.
         
@@ -1177,7 +1153,6 @@ text generation.
         self.model = decoder
 
     def get_decoder(self):
-
         """
         Returns the decoder model used for causal language modeling in the GemmaForCausalLM class.
         
@@ -1281,7 +1256,6 @@ text generation.
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
-
         """
         Prepare inputs for generation.
         
@@ -1383,7 +1357,6 @@ text generation.
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Reorders the cache for the given beam index.
         
@@ -1454,7 +1427,6 @@ classification and returns the model outputs.
     Note: This class assumes that the GemmaPreTrainedModel class is already defined and imported.
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the GemmaForSequenceClassification class.
         
@@ -1478,7 +1450,6 @@ classification and returns the model outputs.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings from the GemmaForSequenceClassification model.
         
@@ -1494,7 +1465,6 @@ classification and returns the model outputs.
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the GemmaForSequenceClassification model.
         

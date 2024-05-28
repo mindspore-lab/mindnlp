@@ -36,7 +36,6 @@ class WhisperProcessor(ProcessorMixin):
     tokenizer_class = "WhisperTokenizer"
 
     def __init__(self, feature_extractor, tokenizer):
-
         """
         Initializes a new instance of the WhisperProcessor class.
         
@@ -58,7 +57,6 @@ class WhisperProcessor(ProcessorMixin):
         self._in_target_context_manager = False
 
     def get_decoder_prompt_ids(self, task=None, language=None, no_timestamps=True):
-
         """
         Method: get_decoder_prompt_ids
         
@@ -136,7 +134,6 @@ returned by this method.
         return self.tokenizer.decode(*args, **kwargs)
 
     def get_prompt_ids(self, text: str, return_tensors="np"):
-
         """
         This method retrieves prompt IDs for the given text using the WhisperProcessor class.
         

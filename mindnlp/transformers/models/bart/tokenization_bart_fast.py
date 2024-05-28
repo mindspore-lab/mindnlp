@@ -173,7 +173,6 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
         trim_offsets=True,
         **kwargs,
     ):
-
         """
         This method initializes an instance of the BartTokenizerFast class.
         
@@ -286,7 +285,6 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
         self._mask_token = value
 
     def _batch_encode_plus(self, *args, **kwargs) -> BatchEncoding:
-
         """
         This method '_batch_encode_plus' is defined in the class 'BartTokenizerFast' and is responsible for batch encoding input sequences.
         
@@ -311,7 +309,6 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
         return super()._batch_encode_plus(*args, **kwargs)
 
     def _encode_plus(self, *args, **kwargs) -> BatchEncoding:
-
         """
         This method encodes inputs into a batch encoding using the BartTokenizerFast class.
         
@@ -341,7 +338,6 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
         return super()._encode_plus(*args, **kwargs)
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         '''
         Save the vocabulary files for the tokenizer.
         
@@ -360,7 +356,6 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
         return tuple(files)
 
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
-
         """
         This method builds inputs with special tokens for the BartTokenizerFast class.
         

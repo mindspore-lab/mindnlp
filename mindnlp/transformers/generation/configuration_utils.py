@@ -37,7 +37,6 @@ class GenerationConfig:
     Class that holds a configuration for a generation task.
     """
     def __init__(self, **kwargs):
-
         r"""
         Initialize the GenerationConfig object with the provided keyword arguments.
         
@@ -580,7 +579,6 @@ class GenerationConfig:
         config = cls.from_dict(config_dict, **kwargs)
         return config
 
-
     def save_pretrained(
         self,
         save_directory: Union[str, os.PathLike],
@@ -670,7 +668,6 @@ class GenerationConfig:
 
         return json.dumps(config_dict, indent=2, sort_keys=True) + "\n"
 
-
     def to_diff_dict(self) -> Dict[str, Any]:
         """
         Removes all attributes from config which correspond to the default config attributes for better readability and
@@ -726,7 +723,6 @@ class GenerationConfig:
 
     @classmethod
     def _dict_from_json_file(cls, json_file: Union[str, os.PathLike]):
-
         r"""
         Method to load and parse JSON data from a specified file into a Python dictionary.
         

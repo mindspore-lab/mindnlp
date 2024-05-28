@@ -117,7 +117,6 @@ also handles the configuration dictionary and checks for model type compatibilit
         use_cache=True,
         **kwargs,
     ):
-
         """
         Initializes a BarkSubModelConfig object.
         
@@ -161,7 +160,6 @@ also handles the configuration dictionary and checks for model type compatibilit
         local_files_only: bool = False,
         **kwargs,
     ) -> "PretrainedConfig":
-
         """
         This method is used to instantiate a 'BarkSubModelConfig' object from a pretrained model.
         
@@ -296,7 +294,6 @@ number of codes given.
     model_type = "fine_acoustics"
 
     def __init__(self, tie_word_embeddings=True, n_codes_total=8, n_codes_given=1, **kwargs):
-
         """Initializes a new instance of the BarkFineConfig class.
         
         Args:
@@ -381,7 +378,6 @@ class BarkConfig(PretrainedConfig):
         initializer_range=0.02,
         **kwargs,
     ):
-
         """
         Initializes a BarkConfig object with the provided configurations.
         

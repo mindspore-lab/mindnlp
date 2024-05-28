@@ -112,7 +112,6 @@ class CpmBeeConfig(PretrainedConfig):
         half: bool = False,
         **kwargs,
     ):
-
         """
         __init__
         

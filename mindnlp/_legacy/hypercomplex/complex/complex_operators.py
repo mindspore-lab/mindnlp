@@ -233,7 +233,6 @@ class Conv2d(_UniformOperator):
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  data_format: str = 'NCHW',
                  use_karatsuba: bool = False) -> None:
-
         r"""
         Initializes a Conv2d layer.
         
@@ -450,8 +449,6 @@ class Conv1d(_UniformOperator):
                  weight_init: Union[Tensor, str, Initializer, numbers.Number] = 'normal',
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  use_karatsuba: bool = False) -> None:
-
-        
         """
         Initializes a 1D convolutional layer.
         
@@ -706,8 +703,6 @@ class Conv3d(_UniformOperator):
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  data_format: str = 'NCDHW',
                  use_karatsuba: bool = False) -> None:
-
-        
         """
         Initializes a Conv3d instance.
         
@@ -859,7 +854,6 @@ class BatchNorm1d(_UniformOperator):
                  moving_mean_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones',
                  use_batch_statistics: bool = True) -> None:
-
         r"""
         Initializes an instance of the BatchNorm1d class.
         
@@ -886,7 +880,6 @@ class BatchNorm1d(_UniformOperator):
             None
         """
 
-        
         def __init__(self, num_features: int, eps: float = 1e-05, momentum: float = 0.9, affine: bool = True, gamma_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones', beta_init: Union[Tensor, str,
 Initializer, numbers.Number] = 'zeros', moving_mean_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros', moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones',
 use_batch_statistics: bool = True) -> None:
@@ -1025,8 +1018,6 @@ class BatchNorm2d(_UniformOperator):
                  moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones',
                  use_batch_statistics: bool = True,
                  data_format='NCHW') -> None:
-
-        
         """
         Initializes a BatchNorm2d layer.
         
@@ -1159,7 +1150,6 @@ class BatchNorm3d(_UniformOperator):
                  moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones',
                  use_batch_statistics: bool = True,
                  data_format='NCDHW') -> None:
-
         r"""
         Initializes a BatchNorm3d layer.
         
@@ -1286,8 +1276,6 @@ class Dense(_UniformOperator):
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  has_bias: bool = True,
                  use_karatsuba: bool = False) -> None:
-
-        
         """
         Initializes a Dense layer.
         

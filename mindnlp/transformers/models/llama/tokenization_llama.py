@@ -150,7 +150,6 @@ class LlamaTokenizer(PreTrainedTokenizer):
         legacy=None,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the LlamaTokenizer class.
         
@@ -219,7 +218,6 @@ Only set this if you understand the implications and have thoroughly read the re
 
     @property
     def unk_token_length(self):
-
         """
         Returns the length of the unknown token in the LlamaTokenizer.
         
@@ -244,7 +242,6 @@ the encoded unknown token is then determined using the len() function and return
 
     # Copied from transformers.models.t5.tokenization_t5.T5Tokenizer.get_spm_processor
     def get_spm_processor(self, from_slow=False):
-
         """
         Retrieves the SentencePieceProcessor instance for the LlamaTokenizer.
         
@@ -275,7 +272,6 @@ the encoded unknown token is then determined using the len() function and return
         return tokenizer
 
     def __getstate__(self):
-
         """
         Method to serialize the state of the LlamaTokenizer instance for pickling.
         
@@ -296,7 +292,6 @@ the encoded unknown token is then determined using the len() function and return
         return state
 
     def __setstate__(self, d):
-
         """
         This method '__setstate__' in the class 'LlamaTokenizer' is responsible for restoring the state of the object from a dictionary representation.
         
@@ -422,7 +417,6 @@ the encoded unknown token is then determined using the len() function and return
         return (out_vocab_file,)
 
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
-
         '''
         This method builds inputs with special tokens for a LlamaTokenizer.
         

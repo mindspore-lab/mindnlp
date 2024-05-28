@@ -48,7 +48,6 @@ class RDropLoss(nn.Cell):
     """
 
     def __init__(self, reduction='none'):
-
         r"""
         Initialize an instance of the RDropLoss class.
         
@@ -126,7 +125,6 @@ class CMRC2018Loss(nn.Cell):
     """
 
     def __init__(self, reduction='mean'):
-
         r"""
         Initializes an instance of the CMRC2018Loss class.
         

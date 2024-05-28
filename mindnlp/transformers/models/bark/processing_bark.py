@@ -57,7 +57,6 @@ class BarkProcessor(ProcessorMixin):
     }
 
     def __init__(self, tokenizer, speaker_embeddings=None):
-
         """Initialize the BarkProcessor class.
         
         Args:
@@ -181,7 +180,6 @@ class BarkProcessor(ProcessorMixin):
         super().save_pretrained(save_directory, **kwargs)
 
     def _load_voice_preset(self, voice_preset: str = None, **kwargs):
-
         """
         This method '_load_voice_preset' is a member of the class 'BarkProcessor' and is responsible for loading voice presets.
         
@@ -232,7 +230,6 @@ class BarkProcessor(ProcessorMixin):
         return voice_preset_dict
 
     def _validate_voice_preset_dict(self, voice_preset: Optional[dict] = None):
-
         """
         Validates the voice preset dictionary provided as input.
         

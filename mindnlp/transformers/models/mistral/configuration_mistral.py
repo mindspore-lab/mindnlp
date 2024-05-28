@@ -123,7 +123,6 @@ class MistralConfig(PretrainedConfig):
         attention_dropout=0.0,
         **kwargs,
     ):
-
         """Initializes a MistralConfig object.
         
         Args:

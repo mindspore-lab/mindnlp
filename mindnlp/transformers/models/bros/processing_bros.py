@@ -39,7 +39,6 @@ class BrosProcessor(ProcessorMixin):
     tokenizer_class = ("BertTokenizer", "BertTokenizerFast")
 
     def __init__(self, tokenizer=None, **kwargs):
-
         """
         Initializes an instance of the BrosProcessor class.
         
@@ -119,7 +118,6 @@ class BrosProcessor(ProcessorMixin):
 
     @property
     def model_input_names(self):
-
         """
         This method returns a list of unique model input names used by the BrosProcessor's tokenizer.
         

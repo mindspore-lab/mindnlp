@@ -70,7 +70,6 @@ class ErnieEmbeddings(nn.Cell):
     """Construct the embeddings from word, position and token_type embeddings."""
 
     def __init__(self, config):
-
         """
         Initializes an instance of the ErnieEmbeddings class.
         
@@ -120,7 +119,6 @@ class ErnieEmbeddings(nn.Cell):
         inputs_embeds: Optional[mindspore.Tensor] = None,
         past_key_values_length: int = 0,
     ) -> mindspore.Tensor:
-
         """
         Constructs the embeddings for the ERNIE model.
         
@@ -190,7 +188,6 @@ class ErnieSelfAttention(nn.Cell):
     The class inherits from nn.Cell and includes methods for initializing the self-attention mechanism, transposing tensors for scoring calculations, and constructing the attention mechanism outputs.
     """
     def __init__(self, config, position_embedding_type=None):
-
         """
         Initialize the ErnieSelfAttention class.
         
@@ -239,7 +236,6 @@ class ErnieSelfAttention(nn.Cell):
         self.is_decoder = config.is_decoder
 
     def transpose_for_scores(self, x: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Transpose the input tensor for calculating attention scores.
         
@@ -268,7 +264,6 @@ class ErnieSelfAttention(nn.Cell):
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         """
         Constructs the self-attention mechanism for the ERNIE model.
         
@@ -400,7 +395,6 @@ class ErnieSelfOutput(nn.Cell):
             Applies dense, dropout, and layer normalization operations to the input tensor's hidden states and returns the output tensor.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the ErnieSelfOutput class.
         
@@ -421,7 +415,6 @@ class ErnieSelfOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the output of the ERNIE self-attention layer.
         
@@ -454,7 +447,6 @@ class ErnieAttention(nn.Cell):
     This class inherits from nn.Cell and is designed to be used within the ERNIE model architecture for natural language processing tasks.
     '''
     def __init__(self, config, position_embedding_type=None):
-
         """
         Initializes an instance of the ErnieAttention class.
         
@@ -475,7 +467,6 @@ class ErnieAttention(nn.Cell):
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
-
         """
         This method 'prune_heads' is defined within the class 'ErnieAttention' and is responsible for pruning the attention heads based on the provided 'heads' parameter.
         
@@ -519,7 +510,6 @@ class ErnieAttention(nn.Cell):
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         """
         This method constructs the attention mechanism for the Ernie model.
         
@@ -570,7 +560,6 @@ class ErnieIntermediate(nn.Cell):
         construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor: Constructs the intermediate layer by applying dense and activation functions to the input hidden states.
     '''
     def __init__(self, config):
-
         """
         Initialize the ErnieIntermediate class with the provided configuration.
         
@@ -596,7 +585,6 @@ class ErnieIntermediate(nn.Cell):
             self.intermediate_act_fn = config.hidden_act
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the intermediate layer of the ERNIE model.
         
@@ -630,7 +618,6 @@ class ErnieOutput(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes an instance of ErnieOutput.
         
@@ -654,7 +641,6 @@ class ErnieOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the output tensor for the Ernie model.
         
@@ -705,7 +691,6 @@ class ErnieLayer(nn.Cell):
         Tuple: Outputs of the layer's construct method, including the layer output and present key value if the layer is a decoder model.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the ErnieLayer class.
         
@@ -749,7 +734,6 @@ class ErnieLayer(nn.Cell):
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         """
         Constructs an ERNIE (Enhanced Representation through kNowledge Integration) layer.
         
@@ -825,7 +809,6 @@ class ErnieLayer(nn.Cell):
         return outputs
 
     def feed_forward_chunk(self, attention_output):
-
         """
         This method calculates the feed-forward output for a chunk in the ErnieLayer.
         
@@ -865,7 +848,6 @@ class ErnieEncoder(nn.Cell):
         - The class supports gradient checkpointing when enabled during training.
     """
     def __init__(self, config):
-
         """
         Initialize the ErnieEncoder class.
         
@@ -898,7 +880,6 @@ class ErnieEncoder(nn.Cell):
         output_hidden_states: Optional[bool] = False,
         return_dict: Optional[bool] = True,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]:
-
         '''
         Constructs the ErnieEncoder.
         
@@ -1012,7 +993,6 @@ output.
         construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor: Constructs the pooled output from the hidden states input.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the ErniePooler class.
         
@@ -1034,7 +1014,6 @@ output.
         self.activation = nn.Tanh()
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs a pooled output tensor from the given hidden states.
         
@@ -1079,7 +1058,6 @@ input hidden states.
     
     """
     def __init__(self, config):
-
         """Initializes an instance of the ErniePredictionHeadTransform class.
         
         Args:
@@ -1101,7 +1079,6 @@ input hidden states.
         self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the ErniePredictionHeadTransform.
         
@@ -1146,7 +1123,6 @@ class ErnieLMPredictionHead(nn.Cell):
         predictions = prediction_head.construct(hidden_states)
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the ErnieLMPredictionHead class.
         
@@ -1174,7 +1150,6 @@ class ErnieLMPredictionHead(nn.Cell):
         self.decoder.bias = self.bias
 
     def construct(self, hidden_states):
-
         """
         This method 'construct' is part of the class 'ErnieLMPredictionHead' and is responsible for constructing the hidden states using transformation and decoding.
         
@@ -1204,7 +1179,6 @@ class ErnieOnlyMLMHead(nn.Cell):
     It inherits from the nn.Cell class and contains methods for initializing the class and constructing MLM predictions based on the input sequence output.
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the ErnieOnlyMLMHead class.
         
@@ -1222,7 +1196,6 @@ class ErnieOnlyMLMHead(nn.Cell):
         self.predictions = ErnieLMPredictionHead(config)
 
     def construct(self, sequence_output: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the masked language model (MLM) head for the ERNIE model.
         
@@ -1263,7 +1236,6 @@ class ErnieOnlyNSPHead(nn.Cell):
     - seq_relationship: A Dense layer with hidden_size neurons for predicting the relationship between sequences.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the ErnieOnlyNSPHead class.
         
@@ -1285,7 +1257,6 @@ class ErnieOnlyNSPHead(nn.Cell):
         self.seq_relationship = nn.Dense(config.hidden_size, 2)
 
     def construct(self, pooled_output):
-
         """
         Constructs the sequence relationship score based on the pooled output.
         
@@ -1324,7 +1295,6 @@ initializing the prediction heads and making predictions.
     - seq_relationship: Dense layer for predicting sequence relationships.
     """
     def __init__(self, config):
-
         """
         Initialize the ErniePreTrainingHeads class.
         
@@ -1344,7 +1314,6 @@ initializing the prediction heads and making predictions.
         self.seq_relationship = nn.Dense(config.hidden_size, 2)
 
     def construct(self, sequence_output, pooled_output):
-
         """
         Constructs the prediction scores and sequence relationship scores for the ErniePreTrainingHeads model.
         
@@ -1439,7 +1408,6 @@ class ErnieForPreTrainingOutput(ModelOutput):
     attentions: Optional[Tuple[mindspore.Tensor]] = None
 
 
-
 class ErnieModel(ErniePreTrainedModel):
     """
 
@@ -1455,7 +1423,6 @@ class ErnieModel(ErniePreTrainedModel):
 
     # Copied from transformers.models.bert.modeling_bert.BertModel.__init__ with Bert->Ernie
     def __init__(self, config, add_pooling_layer=True):
-
         """
         Initializes an instance of the ErnieModel class.
         
@@ -1483,7 +1450,6 @@ class ErnieModel(ErniePreTrainedModel):
 
     # Copied from transformers.models.bert.modeling_bert.BertModel.get_input_embeddings
     def get_input_embeddings(self):
-
         """
         This method returns the input embeddings for the ErnieModel.
         
@@ -1500,7 +1466,6 @@ class ErnieModel(ErniePreTrainedModel):
 
     # Copied from transformers.models.bert.modeling_bert.BertModel.set_input_embeddings
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the ErnieModel.
         
@@ -1674,7 +1639,6 @@ and access specific logits from the model.
 
     # Copied from transformers.models.bert.modeling_bert.BertForPreTraining.__init__ with Bert->Ernie,bert->ernie
     def __init__(self, config):
-
         """Initializes an instance of the ErnieForPreTraining class.
         
         Args:
@@ -1697,7 +1661,6 @@ and access specific logits from the model.
 
     # Copied from transformers.models.bert.modeling_bert.BertForPreTraining.get_output_embeddings
     def get_output_embeddings(self):
-
         """
         Method to retrieve the output embeddings from the ErnieForPreTraining model.
         
@@ -1714,7 +1677,6 @@ and access specific logits from the model.
 
     # Copied from transformers.models.bert.modeling_bert.BertForPreTraining.set_output_embeddings
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the ErnieForPreTraining model.
         
@@ -1838,7 +1800,6 @@ mask, past key values, and use_cache flag.
 
     # Copied from transformers.models.bert.modeling_bert.BertLMHeadModel.__init__ with BertLMHeadModel->ErnieForCausalLM,Bert->Ernie,bert->ernie
     def __init__(self, config):
-
         """
         Initializes an instance of the `ErnieForCausalLM` class.
         
@@ -1868,7 +1829,6 @@ mask, past key values, and use_cache flag.
 
     # Copied from transformers.models.bert.modeling_bert.BertLMHeadModel.get_output_embeddings
     def get_output_embeddings(self):
-
         """
         Retrieve the output embeddings from the ErnieForCausalLM model.
         
@@ -1885,7 +1845,6 @@ mask, past key values, and use_cache flag.
 
     # Copied from transformers.models.bert.modeling_bert.BertLMHeadModel.set_output_embeddings
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the ErnieForCausalLM model.
         
@@ -1999,7 +1958,6 @@ mask, past key values, and use_cache flag.
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, use_cache=True, **model_kwargs
     ):
-
         """
         Prepare inputs for generation.
         
@@ -2043,7 +2001,6 @@ mask, past key values, and use_cache flag.
 
     # Copied from transformers.models.bert.modeling_bert.BertLMHeadModel._reorder_cache
     def _reorder_cache(self, past_key_values, beam_idx):
-
         """
         This method '_reorder_cache' reorders the past states based on the provided beam indices.
         
@@ -2090,7 +2047,6 @@ output_hidden_states, return_dict): Constructs the model for training or inferen
 
     # Copied from transformers.models.bert.modeling_bert.BertForMaskedLM.__init__ with Bert->Ernie,bert->ernie
     def __init__(self, config):
-
         """
         Initializes an instance of the 'ErnieForMaskedLM' class.
         
@@ -2128,7 +2084,6 @@ output_hidden_states, return_dict): Constructs the model for training or inferen
 
     # Copied from transformers.models.bert.modeling_bert.BertForMaskedLM.get_output_embeddings
     def get_output_embeddings(self):
-
         """
         Retrieve the output embeddings from the ErnieForMaskedLM model.
         
@@ -2146,7 +2101,6 @@ output_hidden_states, return_dict): Constructs the model for training or inferen
 
     # Copied from transformers.models.bert.modeling_bert.BertForMaskedLM.set_output_embeddings
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the ErnieForMaskedLM model.
         
@@ -2224,7 +2178,6 @@ output_hidden_states, return_dict): Constructs the model for training or inferen
 
     # Copied from transformers.models.bert.modeling_bert.BertForMaskedLM.prepare_inputs_for_generation
     def prepare_inputs_for_generation(self, input_ids, attention_mask=None, **model_kwargs):
-
         """
         Prepare inputs for generation.
         
@@ -2297,7 +2250,6 @@ next sequence prediction loss if labels are provided.
     """
     # Copied from transformers.models.bert.modeling_bert.BertForNextSentencePrediction.__init__ with Bert->Ernie,bert->ernie
     def __init__(self, config):
-
         """
         Initializes an instance of ErnieForNextSentencePrediction.
         
@@ -2437,7 +2389,6 @@ pass of the ERNIE model and returns the output.
     """
     # Copied from transformers.models.bert.modeling_bert.BertForSequenceClassification.__init__ with Bert->Ernie,bert->ernie
     def __init__(self, config):
-
         """
         Initializes an instance of the 'ErnieForSequenceClassification' class.
         
@@ -2569,7 +2520,6 @@ dimension of the input tensors (input_ids).
     """
     # Copied from transformers.models.bert.modeling_bert.BertForMultipleChoice.__init__ with Bert->Ernie,bert->ernie
     def __init__(self, config):
-
         """
         Initializes an instance of the ErnieForMultipleChoice class.
         
@@ -2682,7 +2632,6 @@ The method supports various optional parameters for controlling the model's beha
     """
     # Copied from transformers.models.bert.modeling_bert.BertForTokenClassification.__init__ with Bert->Ernie,bert->ernie
     def __init__(self, config):
-
         """
         Initializes an instance of the ErnieForTokenClassification class.
         
@@ -2790,7 +2739,6 @@ performing inference.
     """
     # Copied from transformers.models.bert.modeling_bert.BertForQuestionAnswering.__init__ with Bert->Ernie,bert->ernie
     def __init__(self, config):
-
         """
         Initializes an instance of the ErnieForQuestionAnswering class.
         
@@ -2934,7 +2882,6 @@ class UIE(ErniePreTrainedModel):
     """
 
     def __init__(self, config: ErnieConfig):
-
         """
         Initializes an instance of the UIE class.
         

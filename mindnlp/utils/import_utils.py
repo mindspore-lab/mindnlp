@@ -42,7 +42,6 @@ logger = logging.get_logger(__name__)
 def _is_package_available(
         pkg_name: str, return_version: bool = False
 ) -> Union[Tuple[bool, str], bool]:
-
     """
     Checks if a specified package is available and optionally returns its version.
     
@@ -105,7 +104,6 @@ except importlib_metadata.PackageNotFoundError:
     _essentia_version = False
 
 def is_sudachi_available():
-
     """
     Checks if SudachiPy is available for use.
     
@@ -117,7 +115,6 @@ def is_sudachi_available():
 
 
 def get_sudachi_version():
-
     '''
     Returns the version of SudachiPy.
     
@@ -131,7 +128,6 @@ def get_sudachi_version():
 
 
 def is_sudachi_projection_available():
-
     """
     Checks if Sudachi projection is available.
     
@@ -151,7 +147,6 @@ def is_sudachi_projection_available():
     return version.parse(_sudachipy_version) >= version.parse("0.6.8")
 
 def is_sacremoses_available():
-
     """
     Checks if the sacremoses library is available in the current environment.
     
@@ -165,7 +160,6 @@ def is_sacremoses_available():
 
 
 def is_mindspore_available():
-
     '''
     Checks if MindSpore is available.
     
@@ -182,7 +176,6 @@ def is_mindspore_available():
 
 
 def get_mindspore_version():
-
     """
     Returns the current version of MindSpore.
     
@@ -198,7 +191,6 @@ def get_mindspore_version():
 
 
 def is_datasets_available():
-
     """
     Checks if datasets are available.
     
@@ -212,7 +204,6 @@ def is_datasets_available():
 
 
 def is_sentencepiece_available():
-
     """
     Checks if SentencePiece library is available.
     
@@ -226,7 +217,6 @@ def is_sentencepiece_available():
 
 
 def is_tokenizers_available():
-
     """Check if tokenizers are available.
     
     This function checks if tokenizers are available for use. It does not take any parameters.
@@ -241,7 +231,6 @@ def is_tokenizers_available():
 
 
 def is_safetensors_available():
-
     """
     Checks if SafeTensors is available in the current environment.
     
@@ -253,7 +242,6 @@ def is_safetensors_available():
 
 
 def is_modelscope_available():
-
     '''
     Checks if the model scope is available.
     
@@ -264,7 +252,6 @@ def is_modelscope_available():
 
 
 def is_cython_available():
-
     """
     Checks if Cython is available in the current environment.
     
@@ -278,7 +265,6 @@ def is_cython_available():
 
 
 def is_protobuf_available():
-
     """
     Checks if the Google Protocol Buffers (protobuf) library is available.
     
@@ -294,7 +280,6 @@ def is_protobuf_available():
 
 
 def is_pytest_available():
-
     """
     Check if the pytest library is available.
     
@@ -306,7 +291,6 @@ def is_pytest_available():
 
 
 def is_pretty_midi_available():
-
     """
     Checks if the 'pretty_midi' library is available.
     
@@ -320,7 +304,6 @@ def is_pretty_midi_available():
 
 
 def is_librosa_available():
-
     """
     Checks if the 'librosa' library is available.
     
@@ -334,7 +317,6 @@ def is_librosa_available():
 
 
 def is_essentia_available():
-
     """
     Checks if the 'essentia' library is available.
     
@@ -348,7 +330,6 @@ def is_essentia_available():
 
 
 def is_pyctcdecode_available():
-
     """
     Check if the PyCTCDecode library is available.
     
@@ -362,7 +343,6 @@ def is_pyctcdecode_available():
 
 
 def is_scipy_available():
-
     """
     Checks if the SciPy library is available.
     
@@ -376,7 +356,6 @@ def is_scipy_available():
 
 
 def is_jieba_available():
-
     ''' 
     Checks if the Jieba library is available.
     
@@ -388,7 +367,6 @@ def is_jieba_available():
 
 
 def is_pytesseract_available():
-
     """
     Check if pytesseract library is available.
     
@@ -403,7 +381,6 @@ def is_pytesseract_available():
 
 @lru_cache()
 def is_vision_available():
-
     """
     Checks if the Pillow library is available for image processing.
     
@@ -427,7 +404,6 @@ def is_vision_available():
 
 
 def is_in_notebook():
-
     """
     This function checks if the code is running in a Jupyter notebook environment by examining the current execution environment and relevant environment variables.
     
@@ -576,7 +552,6 @@ BACKENDS_MAPPING = OrderedDict(
 
 
 def requires_backends(obj, backends):
-
     """
     Function to check if the specified backends are available for the given object.
     
@@ -608,7 +583,6 @@ class DummyObject(type):
     """
 
     def __getattribute__(cls, key):
-
         """
         This method is called automatically when an attribute is accessed on the 'DummyObject' class or any of its subclasses.
         
@@ -628,7 +602,6 @@ class DummyObject(type):
 
 
 def mindspore_required(func):
-
     """
     This function decorates another function to require the presence of MindSpore framework. 
     

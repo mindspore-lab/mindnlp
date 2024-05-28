@@ -64,7 +64,6 @@ BARK_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 # Copied from transformers.models.llama.modeling_llama._get_unpad_data
 def _get_unpad_data(attention_mask):
-
     '''
     This function retrieves unpad data from the attention_mask.
     
@@ -122,7 +121,6 @@ parameters and returns the outputs.
     # BarkSelfAttention can have two attention type, i.e full attention or causal attention
 
     def __init__(self, config, is_causal=False):
-
         """
         Initialize the BarkSelfAttention class.
         
@@ -189,7 +187,6 @@ parameters and returns the outputs.
         return tensor
 
     def _attn(self, query, key, value, attention_mask=None, head_mask=None):
-
         """
         Performs self-attention mechanism on the given query, key, and value tensors.
         
@@ -247,7 +244,6 @@ parameters and returns the outputs.
         use_cache=False,
         output_attentions=False,
     ):
-
         """
         This method constructs the self-attention mechanism in the BarkSelfAttention class.
         
@@ -308,7 +304,6 @@ class BarkLayerNorm(nn.Cell):
     """LayerNorm but with an optional bias. PyTorch doesn't support simply bias=False."""
 
     def __init__(self, hidden_size, bias=True):
-
         """
         The __init__ method initializes an instance of the BarkLayerNorm class.
         
@@ -330,7 +325,6 @@ class BarkLayerNorm(nn.Cell):
                                         begin_params_axis=-1,
                                         epsilon=1e-5)
     def construct(self, inputs):
-
         """
         Constructs a normalized layer in the BarkLayerNorm class.
         
@@ -370,7 +364,6 @@ class BarkMLP(nn.Cell):
         The 'BarkMLP' class inherits from 'nn.Cell' for compatibility with MindSpore neural network modules.
     """
     def __init__(self, config):
-
         """
         Initializes a BarkMLP instance.
         
@@ -396,7 +389,6 @@ class BarkMLP(nn.Cell):
         self.gelu = nn.GELU(approximate=False)
 
     def construct(self, hidden_states):
-
         """
         Constructs the hidden states by applying a series of transformations.
         
@@ -442,7 +434,6 @@ and optional arguments.
         outputs = block.construct(hidden_states, attention_mask=torch.ones(1, 10))
     """
     def __init__(self, config, is_causal=False):
-
         """
         Initializes a new instance of BarkBlock.
         
@@ -482,7 +473,6 @@ and optional arguments.
         use_cache=False,
         output_attentions=False,
     ):
-
         """
         This method constructs a BarkBlock by processing the given hidden states through attention mechanisms.
         
@@ -587,7 +577,6 @@ output_hidden_states=None, return_dict=None)`: Constructs the model output based
     config_class = BarkSubModelConfig
 
     def __init__(self, config):
-
         """
         Initializes an instance of the BarkCausalModel class.
         
@@ -627,7 +616,6 @@ output_hidden_states=None, return_dict=None)`: Constructs the model output based
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings from the BarkCausalModel.
         
@@ -643,7 +631,6 @@ output_hidden_states=None, return_dict=None)`: Constructs the model output based
         return self.input_embeds_layer
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Set input embeddings for the BarkCausalModel.
         
@@ -660,7 +647,6 @@ output_hidden_states=None, return_dict=None)`: Constructs the model output based
         self.input_embeds_layer = new_embeddings
 
     def prepare_inputs_for_generation(self, input_ids, past_key_values=None, **kwargs):
-
         """
         This method prepares inputs for generation in the BarkCausalModel class.
         
@@ -753,7 +739,6 @@ input_embeds is not provided and use_cache is False.
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], CausalLMOutputWithPast]:
-
         '''
         Constructs the BarkCausalModel.
         
@@ -1357,7 +1342,6 @@ class BarkFineModel(BarkPreTrainedModel):
     main_input_name = "codebook_idx"
 
     def __init__(self, config):
-
         """
         Initializes a BarkFineModel object.
         
@@ -1410,7 +1394,6 @@ class BarkFineModel(BarkPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings for the BarkFineModel.
         
@@ -1427,7 +1410,6 @@ class BarkFineModel(BarkPreTrainedModel):
         return self.input_embeds_layers
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Sets the input embeddings for the BarkFineModel.
         
@@ -1445,7 +1427,6 @@ class BarkFineModel(BarkPreTrainedModel):
         self.input_embeds_layers = new_embeddings
 
     def get_output_embeddings(self):
-
         """
         Method: get_output_embeddings
         
@@ -1464,7 +1445,6 @@ class BarkFineModel(BarkPreTrainedModel):
         return self.lm_heads
 
     def set_output_embeddings(self, new_output_embeddings):
-
         """
         Method to set new output embeddings for the BarkFineModel.
         
@@ -1482,7 +1462,6 @@ class BarkFineModel(BarkPreTrainedModel):
         self.lm_heads = new_output_embeddings
 
     def _resize_token_embeddings(self, new_num_tokens, pad_to_multiple_of=None):
-
         """
         Resize the token embeddings for the BarkFineModel.
         
@@ -1590,7 +1569,6 @@ class BarkFineModel(BarkPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], MaskedLMOutput]:
-
         """
         Construct and process the input data for the BarkFineModel.
         
@@ -1895,7 +1873,6 @@ Generates audio from an input prompt and an optional speaker prompt.
     config_class = BarkConfig
 
     def __init__(self, config):
-
         """
         Initializes a new instance of BarkModel.
         

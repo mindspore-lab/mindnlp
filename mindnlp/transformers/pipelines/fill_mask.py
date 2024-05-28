@@ -21,7 +21,6 @@ from mindnlp.utils import is_mindspore_available,logging
 from .base import GenericTensor, Pipeline, PipelineException
 
 
-
 if is_mindspore_available():
     from mindspore import ops
 
@@ -95,7 +94,6 @@ class FillMaskPipeline(Pipeline):
 
     """
     def get_masked_index(self, input_ids: GenericTensor) -> np.ndarray:
-
         """
         This method returns the indices of the masked tokens in the input tensor.
         
@@ -113,7 +111,6 @@ class FillMaskPipeline(Pipeline):
         return masked_index
 
     def _ensure_exactly_one_mask_token(self, input_ids: GenericTensor) -> np.ndarray:
-
         """
         Ensure that there is exactly one mask token in the input and return the masked index as a NumPy array.
         
@@ -142,7 +139,6 @@ class FillMaskPipeline(Pipeline):
             )
 
     def ensure_exactly_one_mask_token(self, model_inputs: GenericTensor):
-
         """
         Ensure that there is exactly one mask token in the input tensor(s) provided to the FillMaskPipeline.
         
@@ -172,7 +168,6 @@ class FillMaskPipeline(Pipeline):
     def preprocess(
         self, inputs, return_tensors=None, tokenizer_kwargs=None, **preprocess_parameters
     ) -> Dict[str, GenericTensor]:
-
         """
         This method preprocesses the inputs using the tokenizer and returns the preprocessed model inputs.
         
@@ -200,7 +195,6 @@ class FillMaskPipeline(Pipeline):
         return model_inputs
 
     def _forward(self, model_inputs):
-
         """
         Method _forward in the FillMaskPipeline class.
         
@@ -220,7 +214,6 @@ class FillMaskPipeline(Pipeline):
         return model_outputs
 
     def postprocess(self, model_outputs, top_k=5, target_ids=None):
-
         ''' 
         Method: postprocess
         
@@ -287,7 +280,6 @@ considered.
         return result
 
     def get_target_ids(self, targets, top_k=None):
-
         """
         Method: get_target_ids
         
@@ -360,7 +352,6 @@ considered.
         return target_ids
 
     def _sanitize_parameters(self, top_k=None, targets=None, tokenizer_kwargs=None):
-
         """
         This method '_sanitize_parameters' is defined in the class 'FillMaskPipeline'. It is responsible for sanitizing the input parameters for the FillMaskPipeline.
         

@@ -56,7 +56,6 @@ class BioGptLearnedPositionalEmbedding(nn.Embedding):
     """
 
     def __init__(self, num_embeddings: int, embedding_dim: int):
-
         """
         Initializes a new instance of BioGptLearnedPositionalEmbedding.
         
@@ -103,7 +102,6 @@ class BioGptAttention(nn.Cell):
         is_causal: bool = False,
         config: Optional[BioGptConfig] = None,
     ):
-
         """
         Initializes an instance of the BioGptAttention class.
         
@@ -146,7 +144,6 @@ class BioGptAttention(nn.Cell):
         self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-
         """
         This method '_shape' in the class 'BioGptAttention' reshapes the input tensor to match the desired shape for multi-head attention computation.
         
@@ -306,7 +303,6 @@ class BioGptDecoderLayer(nn.Cell):
     
     """
     def __init__(self, config: BioGptConfig):
-
         """
         Initializes a BioGptDecoderLayer object.
         
@@ -453,7 +449,6 @@ class BioGptModel(BioGptPreTrainedModel):
     Additionally, the class supports gradient checkpointing and caching for efficient training. 
     """
     def __init__(self, config: BioGptConfig):
-
         """
         Initializes a BioGptModel instance with the provided configuration.
         
@@ -489,7 +484,6 @@ class BioGptModel(BioGptPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method: get_input_embeddings
         
@@ -508,7 +502,6 @@ class BioGptModel(BioGptPreTrainedModel):
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Set the input embeddings for the BioGptModel.
         
@@ -536,7 +529,6 @@ class BioGptModel(BioGptPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]:
-
         """
         Constructs the BioGptModel.
         
@@ -707,7 +699,6 @@ given input parameters and returns the model output.
     _tied_weights_keys = ["output_projection.weight"]
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the BioGptForCausalLM class.
         
@@ -731,7 +722,6 @@ given input parameters and returns the model output.
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         This method retrieves the output embeddings from the BioGptForCausalLM model.
         
@@ -747,7 +737,6 @@ given input parameters and returns the model output.
         return self.output_projection
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Method to set new output embeddings for the BioGptForCausalLM model.
         
@@ -824,7 +813,6 @@ given input parameters and returns the model output.
     def prepare_inputs_for_generation(
         self, input_ids, attention_mask, inputs_embeds=None, past_key_values=None, **kwargs
     ):
-
         '''
         This method prepares inputs for generation in the BioGptForCausalLM class.
         
@@ -874,7 +862,6 @@ input_ids shape is greater than the past_length.
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Reorders the cache of past key values based on the given beam index.
         
@@ -905,7 +892,6 @@ input data. The model utilizes a transformer architecture for processing input s
 and actual labels, as well as handling optional parameters for caching, attention masks, and return dictionary configurations.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the BioGptForTokenClassification class.
         
@@ -1018,7 +1004,6 @@ handles different problem types such as regression, single-label classification,
     Note: The class inherits from BioGptPreTrainedModel and includes additional methods not provided in the given code snippet.
     '''
     def __init__(self, config: BioGptConfig):
-
         """
         Initializes a BioGptForSequenceClassification instance.
         
@@ -1130,7 +1115,6 @@ handles different problem types such as regression, single-label classification,
         )
 
     def get_input_embeddings(self):
-
         """
         Method to retrieve the input embeddings from BioGptForSequenceClassification.
         
@@ -1147,7 +1131,6 @@ handles different problem types such as regression, single-label classification,
         return self.biogpt.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Set the input embeddings for the BioGptForSequenceClassification model.
         

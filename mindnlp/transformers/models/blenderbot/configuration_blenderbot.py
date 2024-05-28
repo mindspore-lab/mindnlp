@@ -125,7 +125,6 @@ class BlenderbotConfig(PretrainedConfig):
         forced_eos_token_id=2,
         **kwargs,
     ):
-
         """Initialize a BlenderbotConfig instance.
         
         Args:

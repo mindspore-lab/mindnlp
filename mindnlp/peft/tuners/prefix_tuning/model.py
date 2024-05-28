@@ -55,7 +55,6 @@ class PrefixEncoder(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes the PrefixEncoder class.
         
@@ -92,7 +91,6 @@ class PrefixEncoder(nn.Cell):
             self.embedding = nn.Embedding(num_virtual_tokens, num_layers * 2 * token_dim)
 
     def construct(self, prefix: mindspore.Tensor):
-
         """
         This method constructs the past key values based on the provided prefix for the PrefixEncoder.
         

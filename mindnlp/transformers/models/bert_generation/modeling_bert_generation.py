@@ -53,7 +53,6 @@ class BertGenerationSelfOutput(nn.Cell):
     Note: This class inherits from nn.Cell.
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the BertGenerationSelfOutput class.
         
@@ -76,7 +75,6 @@ class BertGenerationSelfOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method constructs the output of a BERT generation self-attention layer.
         
@@ -117,7 +115,6 @@ encoder_attention_mask, and past_key_value. It also provides an option to output
     
     """
     def __init__(self, config, position_embedding_type=None):
-
         ''' 
         Initializes the BertGenerationSelfAttention class.
         
@@ -158,7 +155,6 @@ encoder_attention_mask, and past_key_value. It also provides an option to output
         self.is_decoder = config.is_decoder
 
     def swapaxes_for_scores(self, x: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method 'swapaxes_for_scores' in the class 'BertGenerationSelfAttention' swaps axes of a given tensor to prepare it for scoring calculations.
         
@@ -187,7 +183,6 @@ encoder_attention_mask, and past_key_value. It also provides an option to output
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         '''
         Constructs the attention mechanism for the BertGenerationSelfAttention class.
         
@@ -315,7 +310,6 @@ flag. It returns a tuple containing the attention output and other optional outp
     
     """
     def __init__(self, config, position_embedding_type=None):
-
         """
         Initializes a new instance of the BertGenerationAttention class.
         
@@ -336,7 +330,6 @@ flag. It returns a tuple containing the attention output and other optional outp
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
-
         """
         This method 'prune_heads' is defined within the class 'BertGenerationAttention' and is responsible for pruning the attention heads based on the provided list of 'heads'.
         
@@ -382,7 +375,6 @@ specified 'heads' to be pruned.
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         """
         Args:
             self (BertGenerationAttention): The instance of the BertGenerationAttention class.
@@ -432,7 +424,6 @@ class BertGenerationIntermediate(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the BertGenerationIntermediate class.
         
@@ -458,7 +449,6 @@ class BertGenerationIntermediate(nn.Cell):
             self.intermediate_act_fn = config.hidden_act
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the intermediate generation output for the BERT model.
         
@@ -509,7 +499,6 @@ class BertGenerationOutput(nn.Cell):
     Note: This class is designed for use within a BERT model architecture and is intended to be used as part of a neural network.
     """
     def __init__(self, config):
-
         """
         Initializes a BertGenerationOutput instance.
         
@@ -533,7 +522,6 @@ class BertGenerationOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the BertGenerationOutput by applying a series of operations on the given hidden_states and input_tensor.
         
@@ -583,7 +571,6 @@ mechanisms and feed-forward neural networks. It can be used as part of a decoder
         - Proper instantiation and configuration of the layer are essential for correct functionality and model compatibility.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the BertGenerationLayer class.
         
@@ -624,7 +611,6 @@ attention is added.
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         """
         This method constructs the BertGenerationLayer by performing self-attention and potentially cross-attention operations.
         
@@ -700,7 +686,6 @@ attention is added.
         return outputs
 
     def feed_forward_chunk(self, attention_output):
-
         """
         This method 'feed_forward_chunk' is a part of the class 'BertGenerationLayer' and is responsible for performing a feed-forward operation on the input attention output.
         
@@ -736,7 +721,6 @@ specified output settings.
     For detailed usage instructions and additional information, refer to the specific method and attribute documentation within the class implementation.
     """
     def __init__(self, config):
-
         """Initialize the BertEncoder class.
         
         Args:
@@ -770,7 +754,6 @@ specified output settings.
         output_hidden_states: Optional[bool] = False,
         return_dict: Optional[bool] = True,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]:
-
         """
         This method constructs the BertEncoder with the given input parameters and returns the output along with optional hidden states and attentions.
         
@@ -872,7 +855,6 @@ class BertGenerationEmbeddings(nn.Cell):
     """Construct the embeddings from word and position embeddings."""
 
     def __init__(self, config):
-
         """
         Initializes the BertGenerationEmbeddings class.
         
@@ -911,7 +893,6 @@ class BertGenerationEmbeddings(nn.Cell):
         self.position_ids = ops.arange(config.max_position_embeddings).expand((1, -1))
 
     def construct(self, input_ids=None, position_ids=None, inputs_embeds=None, past_key_values_length=0):
-
         """
         Args:
             self (BertGenerationEmbeddings): The instance of the BertGenerationEmbeddings class.
@@ -999,7 +980,6 @@ class BertGenerationEncoder(BertGenerationPreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes a BertGenerationEncoder instance.
         
@@ -1024,7 +1004,6 @@ class BertGenerationEncoder(BertGenerationPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings from the BertGenerationEncoder.
         
@@ -1040,7 +1019,6 @@ class BertGenerationEncoder(BertGenerationPreTrainedModel):
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the BertGenerationEncoder class.
         
@@ -1199,7 +1177,6 @@ class BertGenerationOnlyLMHead(nn.Cell):
         - _tie_weights(): Ties the bias parameter to the decoder's bias for weight sharing.
     """
     def __init__(self, config):
-
         """
         Initializes the BertGenerationOnlyLMHead class.
         
@@ -1219,7 +1196,6 @@ class BertGenerationOnlyLMHead(nn.Cell):
         self.decoder.bias = self.bias
 
     def construct(self, hidden_states):
-
         """
         Method to construct logits for generation in BertGenerationOnlyLMHead.
         
@@ -1238,7 +1214,6 @@ class BertGenerationOnlyLMHead(nn.Cell):
         return logits
 
     def _tie_weights(self):
-
         """
         Method to tie the weights of the decoder bias in the BertGenerationOnlyLMHead class.
         
@@ -1267,7 +1242,6 @@ and provides essential functionality for decoding and generating outputs based o
     _tied_weights_keys = ["lm_head.decoder.weight", "lm_head.decoder.bias"]
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the BertGenerationDecoder class.
         
@@ -1295,7 +1269,6 @@ and provides essential functionality for decoding and generating outputs based o
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         This method returns the output embeddings of the BertGenerationDecoder.
         
@@ -1311,7 +1284,6 @@ and provides essential functionality for decoding and generating outputs based o
         return self.lm_head.decoder
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Method to set new output embeddings for the decoder in BertGenerationDecoder.
         
@@ -1430,7 +1402,6 @@ and provides essential functionality for decoding and generating outputs based o
         )
 
     def prepare_inputs_for_generation(self, input_ids, past_key_values=None, attention_mask=None, **model_kwargs):
-
         """
         Method: prepare_inputs_for_generation
         
@@ -1470,7 +1441,6 @@ and provides essential functionality for decoding and generating outputs based o
         return {"input_ids": input_ids, "attention_mask": attention_mask, "past_key_values": past_key_values}
 
     def _reorder_cache(self, past_key_values, beam_idx):
-
         """
         Reorders the cache for the BertGenerationDecoder.
         

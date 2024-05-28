@@ -57,7 +57,6 @@ class ASTEmbeddings(nn.Cell):
     """
 
     def __init__(self, config: ASTConfig) -> None:
-
         """
         Initialize the ASTEmbeddings class.
         
@@ -85,7 +84,6 @@ class ASTEmbeddings(nn.Cell):
         self.config = config
 
     def get_shape(self, config):
-
         """
         A method to calculate the output dimensions of the shape based on the provided configuration.
         
@@ -113,7 +111,6 @@ class ASTEmbeddings(nn.Cell):
         return frequency_out_dimension, time_out_dimension
 
     def construct(self, input_values: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Method to construct AST embeddings.
         
@@ -150,7 +147,6 @@ class ASTPatchEmbeddings(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the ASTRPatchEmbeddings class.
         
@@ -182,7 +178,6 @@ class ASTPatchEmbeddings(nn.Cell):
         )
 
     def construct(self, input_values: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs patch embeddings for the input tensor.
         
@@ -224,7 +219,6 @@ output attention probabilities along with the context layer.
     Note: Ensure that the hidden size is a multiple of the number of attention heads to avoid a ValueError during initialization.
     """
     def __init__(self, config: ASTConfig) -> None:
-
         """
         Initializes an instance of the 'ASTSelfAttention' class.
         
@@ -257,7 +251,6 @@ output attention probabilities along with the context layer.
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
     def swapaxes_for_scores(self, x: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Performs a tensor transformation by swapping axes to prepare the input tensor for self-attention scoring in the ASTSelfAttention class.
         
@@ -282,7 +275,6 @@ output attention probabilities along with the context layer.
     def construct(
         self, hidden_states, head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False
     ) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]:
-
         """
         Constructs the self-attention mechanism in the ASTSelfAttention class.
         
@@ -341,7 +333,6 @@ class ASTSelfOutput(nn.Cell):
     """
 
     def __init__(self, config: ASTConfig) -> None:
-
         """
         Initializes an instance of the ASTSelfOutput class.
         
@@ -363,7 +354,6 @@ class ASTSelfOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the ASTSelfOutput.
         
@@ -417,7 +407,6 @@ class ASTAttention(nn.Cell):
     
     """
     def __init__(self, config: ASTConfig) -> None:
-
         """
         Initializes an instance of the ASTAttention class.
         
@@ -439,7 +428,6 @@ class ASTAttention(nn.Cell):
         self.pruned_heads = set()
 
     def prune_heads(self, heads: Set[int]) -> None:
-
         """
         This method, prune_heads, is a member of the ASTAttention class and is used to prune specific attention heads from the self-attention mechanism.
         
@@ -477,7 +465,6 @@ class ASTAttention(nn.Cell):
         head_mask: Optional[mindspore.Tensor] = None,
         output_attentions: bool = False,
     ) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]:
-
         """
         Constructs the attention output of the ASTAttention class.
         
@@ -521,7 +508,6 @@ class ASTIntermediate(nn.Cell):
         construct(self, hidden_states: mindspore.Tensor): Applies intermediate transformations on the input hidden states and returns the transformed tensor.
     """
     def __init__(self, config: ASTConfig) -> None:
-
         """
         Initializes an instance of the ASTIntermediate class.
         
@@ -564,7 +550,6 @@ ACT2FN dictionary. Otherwise, it sets it to the value of the 'hidden_act' attrib
             self.intermediate_act_fn = config.hidden_act
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs an intermediate layer of the ASTIntermediate class.
         
@@ -617,7 +602,6 @@ class ASTOutput(nn.Cell):
                 mindspore.Tensor: The output tensor of the AST model.
     """
     def __init__(self, config: ASTConfig) -> None:
-
         """
         Initializes an instance of the ASTOutput class.
         
@@ -638,7 +622,6 @@ class ASTOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method constructs a new tensor by performing operations on the input hidden_states and input_tensor.
         
@@ -666,7 +649,6 @@ class ASTLayer(nn.Cell):
     """This corresponds to the Block class in the timm implementation."""
 
     def __init__(self, config: ASTConfig) -> None:
-
         """
         Initializes an instance of the ASTLayer class.
         
@@ -695,7 +677,6 @@ class ASTLayer(nn.Cell):
         head_mask: Optional[mindspore.Tensor] = None,
         output_attentions: bool = False,
     ) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]:
-
         """
         Constructs the output of the ASTLayer.
         
@@ -769,7 +750,6 @@ Union[tuple, BaseModelOutput]:
         - If return_dict is set to False, the output will be returned as a tuple instead of a BaseModelOutput object.
     """
     def __init__(self, config: ASTConfig) -> None:
-
         """
         Initializes an instance of the ASTEncoder class.
         
@@ -798,7 +778,6 @@ Union[tuple, BaseModelOutput]:
         output_hidden_states: bool = False,
         return_dict: bool = True,
     ) -> Union[tuple, BaseModelOutput]:
-
         """
         This method constructs the AST encoder using the provided parameters and returns the hidden states, hidden layers, and self-attentions.
         
@@ -902,7 +881,6 @@ return_dict: Optional[bool] = None) -> Union[Tuple, BaseModelOutputWithPooling]:
 ASTModel provides a comprehensive solution for AST-based tasks.
     """
     def __init__(self, config: ASTConfig) -> None:
-
         """
         Initializes an instance of the ASTModel class.
         
@@ -928,7 +906,6 @@ ASTModel provides a comprehensive solution for AST-based tasks.
         self.post_init()
 
     def get_input_embeddings(self) -> ASTPatchEmbeddings:
-
         """
         Retrieve the input embeddings from the AST model.
         
@@ -962,7 +939,6 @@ ASTModel provides a comprehensive solution for AST-based tasks.
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
-
         '''
         This method constructs the ASTModel by processing the input values through the model's layers.
         
@@ -1039,7 +1015,6 @@ constructing the MLP head.
         The ASTMLPHead class is designed to be used in conjunction with an AST model for processing abstract syntax trees in natural language processing tasks.
     """
     def __init__(self, config: ASTConfig):
-
         """
         Initializes an instance of the ASTMLPHead class.
         
@@ -1061,7 +1036,6 @@ constructing the MLP head.
         self.dense = nn.Dense(config.hidden_size, config.num_labels) if config.num_labels > 0 else nn.Identity()
 
     def construct(self, hidden_state):
-
         """
         Constructs the hidden state of the ASTMLPHead.
         
@@ -1109,7 +1083,6 @@ Optional[bool], return_dict: Optional[bool]) -> Union[tuple, SequenceClassifierO
         - post_init(self): Additional initialization method to be called after the main initialization.
     """
     def __init__(self, config: ASTConfig) -> None:
-
         """
         Initializes an instance of the ASTForAudioClassification class.
         

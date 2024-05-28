@@ -22,7 +22,6 @@ from ...tokenization_utils_fast import PreTrainedTokenizerFast
 from .convbert_tokenizer import ConvBertTokenizer
 
 
-
 VOCAB_FILES_NAMES = {"vocab_file": "vocab.txt"}
 
 PRETRAINED_VOCAB_FILES_MAP = {
@@ -110,7 +109,6 @@ class ConvBertTokenizerFast(PreTrainedTokenizerFast):
         strip_accents=None,
         **kwargs,
     ):
-
         """
         This method initializes an instance of the ConvBertTokenizerFast class.
         
@@ -218,7 +216,6 @@ class ConvBertTokenizerFast(PreTrainedTokenizerFast):
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary files for the ConvBertTokenizerFast model.
         

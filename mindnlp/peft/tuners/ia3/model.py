@@ -80,7 +80,6 @@ class IA3Model(BaseTuner):
     prefix: str = "ia3_"
 
     def __init__(self, model, config, adapter_name):
-
         r"""
         Initializes an instance of the IA3Model class.
         
@@ -100,7 +99,6 @@ class IA3Model(BaseTuner):
 
     @staticmethod
     def _create_new_cell(ia3_config, adapter_name, target, **kwargs):
-
         r"""
         Creates a new cell based on the provided parameters.
         
@@ -196,7 +194,6 @@ class IA3Model(BaseTuner):
 
     @staticmethod
     def _check_target_cell_exists(ia3_config, key):
-
         r"""
         Checks if the target cell exists in the IA3 configuration.
         
@@ -216,7 +213,6 @@ class IA3Model(BaseTuner):
         return check_target_cell_exists(ia3_config, key)
 
     def _mark_only_adapters_as_trainable(self, model: nn.Cell) -> None:
-
         r"""
         Marks only the adapters in the given model as trainable.
         
@@ -243,7 +239,6 @@ class IA3Model(BaseTuner):
         parent,
         **optionnal_kwargs,
     ):
-
         r"""
         Creates a new cell and replaces the target cell with it.
         
@@ -262,7 +257,6 @@ class IA3Model(BaseTuner):
             None
         """
 
-        
         def _create_and_replace(self, ia3_config, adapter_name, target, target_name, parent):
             """
             Creates a new cell and replaces the target cell with it.
@@ -293,7 +287,6 @@ class IA3Model(BaseTuner):
                 if adapter_name not in self.active_adapters:
                     new_cell.requires_grad = False
                 self._replace_cell(parent, target_name, new_cell, target)
-        
         
         # check if target cell is in feedforward_cells
         current_key = optionnal_kwargs.pop("current_key")
@@ -331,7 +324,6 @@ class IA3Model(BaseTuner):
         return is_feedforward
 
     def _replace_cell(self, parent, child_name, new_cell, child):
-
         r"""
         Replaces a specified child object in the parent object with a new object.
         
@@ -372,7 +364,6 @@ class IA3Model(BaseTuner):
             else:
                 new_cell.state = child.state
 
-
     def __getattr__(self, name: str):
         """Forward missing attributes to the wrapped cell."""
         try:
@@ -391,7 +382,6 @@ class IA3Model(BaseTuner):
         return config
 
     def _set_adapter_layers(self, enabled=True):
-
         r"""
         Method to set the adapter layers in the IA3Model.
         
@@ -449,7 +439,6 @@ class IA3Model(BaseTuner):
         self.active_adapter = adapter_name
 
     def _prepare_adapter_config(self, peft_config, model_config):
-
         r"""
         Prepare the adapter configuration for the IA3Model.
         

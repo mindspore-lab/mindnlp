@@ -104,7 +104,6 @@ method generates the positional embedding based on the given positional sequence
     # Reference: https://github.com/kimiyoung/transformer-xl/blob/master/pytorch/mem_transformer.py#L15
 
     def __init__(self, config):
-
         """
         Initializes an instance of the BrosPositionalEmbedding1D class.
         
@@ -131,7 +130,6 @@ method generates the positional embedding based on the given positional sequence
         self.inv_freq = inv_freq
 
     def construct(self, pos_seq: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method constructs a positional embedding for 1D bounding box position sequences.
         
@@ -176,7 +174,6 @@ class BrosPositionalEmbedding2D(nn.Cell):
     - The positional embeddings for x and y axes are created separately using BrosPositionalEmbedding1D instances and concatenated along the last axis.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of BrosPositionalEmbedding2D.
         
@@ -200,7 +197,6 @@ class BrosPositionalEmbedding2D(nn.Cell):
         self.y_pos_emb = BrosPositionalEmbedding1D(config)
 
     def construct(self, bbox: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs a positional embedding for a 2D bounding box.
         
@@ -244,7 +240,6 @@ applies the positional embedding and projection layers to obtain the positional 
     This class provides functionality for generating positional embeddings specifically tailored for bounding boxes, which can be used in various machine learning applications.
     """
     def __init__(self, config):
-
         """
         Initializes a BrosBboxEmbeddings instance.
         
@@ -265,7 +260,6 @@ applies the positional embedding and projection layers to obtain the positional 
         self.bbox_projection = nn.Dense(config.dim_bbox_sinusoid_emb_2d, config.dim_bbox_projection, has_bias=False)
 
     def construct(self, bbox: mindspore.Tensor):
-
         """
         Constructs the bounding box embeddings for the BrosBboxEmbeddings class.
         
@@ -294,7 +288,6 @@ class BrosTextEmbeddings(nn.Cell):
     """Construct the embeddings from word, position and token_type embeddings."""
 
     def __init__(self, config):
-
         """
         Initializes the BrosTextEmbeddings class with the given configuration.
         
@@ -336,7 +329,6 @@ class BrosTextEmbeddings(nn.Cell):
         inputs_embeds: Optional[mindspore.Tensor] = None,
         past_key_values_length: int = 0,
     ) -> mindspore.Tensor:
-
         """
         This method constructs text embeddings based on the provided input data and optional parameters.
         
@@ -408,7 +400,6 @@ the context layer and optional attention scores or past key-value pairs.
     
     """
     def __init__(self, config):
-
         """
         Initializes a BrosSelfAttention instance.
         
@@ -455,7 +446,6 @@ the context layer and optional attention scores or past key-value pairs.
         self.is_decoder = config.is_decoder
 
     def swapaxes_for_scores(self, x: mindspore.Tensor):
-
         """
         Performs axis swapping and reshaping operations on a given tensor for self-attention scoring in the BrosSelfAttention class.
         
@@ -501,7 +491,6 @@ self.attention_head_size).
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[mindspore.Tensor] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         '''
         This method constructs self-attention mechanism for the BrosSelfAttention class.
         
@@ -635,7 +624,6 @@ returns the resulting hidden_states tensor.
 framework documentation.
     """
     def __init__(self, config):
-
         """
         Initializes a BrosSelfOutput instance.
         
@@ -660,7 +648,6 @@ framework documentation.
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method constructs the self-attention output for the BrosSelfOutput class.
         
@@ -725,7 +712,6 @@ class BrosAttention(nn.Cell):
                 Tuple[mindspore.Tensor]: A tuple containing the attention output and other optional outputs.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the BrosAttention class.
         
@@ -745,7 +731,6 @@ class BrosAttention(nn.Cell):
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
-
         """
         This method 'prune_heads' belongs to the class 'BrosAttention' and is used to perform pruning on the attention heads in a neural network model.
         
@@ -795,7 +780,6 @@ class BrosAttention(nn.Cell):
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         """
         Constructs the attention mechanism for the BrosAttention class.
         
@@ -848,7 +832,6 @@ class BrosIntermediate(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes a BrosIntermediate object with the provided configuration.
         
@@ -876,7 +859,6 @@ class BrosIntermediate(nn.Cell):
             self.intermediate_act_fn = config.hidden_act
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Method to construct hidden states in the BrosIntermediate class.
         
@@ -939,7 +921,6 @@ class BrosOutput(nn.Cell):
         output = output_layer.construct(hidden_states, input_tensor)
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the BrosOutput class.
         
@@ -962,7 +943,6 @@ class BrosOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the output tensor by applying a series of transformations to the hidden states and input tensor.
         
@@ -1011,7 +991,6 @@ Tuple[mindspore.Tensor]:
             Processes the attention output through intermediate and output layers for feed-forward processing.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the BrosLayer class.
         
@@ -1052,7 +1031,6 @@ Tuple[mindspore.Tensor]:
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         """
         This method constructs a BrosLayer by processing the input hidden states and additional parameters.
         
@@ -1132,7 +1110,6 @@ Tuple[mindspore.Tensor]:
         return outputs
 
     def feed_forward_chunk(self, attention_output):
-
         """
         Method to perform feed forward computation on a chunk of data in the BrosLayer class.
         
@@ -1175,7 +1152,6 @@ class BrosEncoder(nn.Cell):
         and cross-attentions if enabled, based on the specified return format.
     """
     def __init__(self, config):
-
         """
         Initializes a BrosEncoder object with the provided configuration.
         
@@ -1210,7 +1186,6 @@ class BrosEncoder(nn.Cell):
         output_hidden_states: Optional[bool] = False,
         return_dict: Optional[bool] = True,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]:
-
         """
         Constructs the BrosEncoder.
         
@@ -1334,7 +1309,6 @@ class BrosPooler(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes an instance of BrosPooler.
         
@@ -1358,7 +1332,6 @@ class BrosPooler(nn.Cell):
         self.activation = nn.Tanh()
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs a pooled output tensor based on the given hidden states.
         
@@ -1408,7 +1381,6 @@ class BrosRelationExtractor(nn.Cell):
         relation_scores = relation_extractor.construct(query_layer, key_layer)
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the BrosRelationExtractor class.
         
@@ -1441,7 +1413,6 @@ class BrosRelationExtractor(nn.Cell):
         self.dummy_node = Parameter(ops.zeros(1, self.backbone_hidden_size))
 
     def construct(self, query_layer: mindspore.Tensor, key_layer: mindspore.Tensor):
-
         """
         Method to construct a relation score matrix based on query and key layers.
         
@@ -1539,7 +1510,6 @@ output_hidden_states, return_dict): Constructs the model with the given input an
         >>> last_hidden_states = outputs.last_hidden_state
     """
     def __init__(self, config, add_pooling_layer=True):
-
         """
         Initializes the BrosModel.
         
@@ -1566,7 +1536,6 @@ output_hidden_states, return_dict): Constructs the model with the given input an
         self.init_weights()
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings from the BrosModel class.
         
@@ -1582,7 +1551,6 @@ output_hidden_states, return_dict): Constructs the model with the given input an
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the BrosModel.
         
@@ -1773,7 +1741,6 @@ entity recognition or part-of-speech tagging.
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of the BrosForTokenClassification class.
         
@@ -1908,7 +1875,6 @@ logits. Optionally, it can also return hidden states and attentions if specified
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
 
     def __init__(self, config):
-
         """
         Initializes a BrosSpadeEEForTokenClassification instance.
         
@@ -2054,7 +2020,6 @@ logits. Optionally, it can also return hidden states and attentions if specified
         )
 
 
-
 class BrosSpadeELForTokenClassification(BrosPreTrainedModel):
 
     """
@@ -2099,7 +2064,6 @@ Constructs the model and performs token classification.
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of the BrosSpadeELForTokenClassification class.
         

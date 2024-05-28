@@ -96,7 +96,6 @@ class _BaseDenseImpl(_DenseImpl):
                  weight_init: Union[Tensor, str, Initializer, numbers.Number],
                  weight_shape: tuple,
                  **factory_kwargs) -> None:
-
         r"""
         Initializes a new instance of the '_BaseDenseImpl' class.
         

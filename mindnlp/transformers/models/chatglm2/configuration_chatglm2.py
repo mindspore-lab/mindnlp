@@ -47,7 +47,6 @@ class ChatGLM2Config(PretrainedConfig):
         prefix_projection=False,
         **kwargs
     ):
-
         """Initialize a ChatGLM2Config object.
         
         Args:

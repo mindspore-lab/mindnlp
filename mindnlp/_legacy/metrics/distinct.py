@@ -77,7 +77,6 @@ class Distinct(Metric):
 
     """
     def __init__(self, n_size=2, name='Distinct'):
-
         r"""
         Initialize the Distinct object with the specified parameters.
         

@@ -18,7 +18,6 @@ class _DualAlgebraImpl(_MatrixImpl, _VectorImpl, _ScalarImpl):
             a_y: np.ndarray,
             b_x: Union[np.ndarray, np.float64],
             b_y: Union[np.ndarray, np.float64]) -> Tuple[np.ndarray, np.ndarray]:
-
         r"""
         Multiply two arrays or an array and a scalar element-wise.
         
@@ -47,7 +46,6 @@ class _DualAlgebraImpl(_MatrixImpl, _VectorImpl, _ScalarImpl):
             a_y: np.ndarray,
             b_x: Union[np.ndarray, np.float64],
             b_y: Union[np.ndarray, np.float64]) -> Tuple[np.ndarray, np.ndarray]:
-
         r"""
         Divides two arrays and returns the result as a tuple of two arrays.
         
@@ -76,7 +74,6 @@ class _DualAlgebraImpl(_MatrixImpl, _VectorImpl, _ScalarImpl):
                a_y: np.ndarray,
                b_x: np.ndarray,
                b_y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-
         r"""
         Performs matrix multiplication between two pairs of arrays.
         
@@ -105,7 +102,6 @@ class _DualAlgebraImpl(_MatrixImpl, _VectorImpl, _ScalarImpl):
                     a_y: np.ndarray,
                     b_x: np.ndarray,
                     b_y: np.ndarray) -> Tuple[np.float64, np.float64]:
-
         r"""
         Calculates the dot product of two vectors in a dual algebra.
         
@@ -132,7 +128,6 @@ class _DualAlgebraImpl(_MatrixImpl, _VectorImpl, _ScalarImpl):
         )
 
     def sqrt(self, x: np.float64, y: np.float64) -> Tuple[np.float64, np.float64]:
-
         r""" 
         Calculate the square root of a number and its division with another number.
         
@@ -152,7 +147,6 @@ class _DualAlgebraImpl(_MatrixImpl, _VectorImpl, _ScalarImpl):
         return x_sqrt, y_sqrt
 
     def special_element(self) -> str:
-
         r"""
         This method 'special_element' in the class '_DualAlgebraImpl' returns a special element 'ε'.
         
@@ -168,7 +162,6 @@ class _DualAlgebraImpl(_MatrixImpl, _VectorImpl, _ScalarImpl):
         return u'\u03b5'
 
     def visit(self, scalar, visitor, *args, **kwargs) -> None:
-
         r"""
         This method 'visit' in the class '_DualAlgebraImpl' processes a scalar value by invoking a corresponding method in the provided visitor object.
         
@@ -190,7 +183,6 @@ class _DualAlgebraImpl(_MatrixImpl, _VectorImpl, _ScalarImpl):
                    y1: np.float64,
                    x2: np.float64,
                    y2: np.float64) -> Tuple[np.float64, np.float64]:
-
         r"""
         Multiplies two scalar values and returns the result as a tuple.
         
@@ -221,7 +213,6 @@ class _DualAlgebraImpl(_MatrixImpl, _VectorImpl, _ScalarImpl):
                    y1: np.float64,
                    x2: np.float64,
                    y2: np.float64) -> Tuple[np.float64, np.float64]:
-
         r"""
         div_scalar(self, x1: np.float64, y1: np.float64, x2: np.float64, y2: np.float64) -> Tuple[np.float64, np.float64]
         

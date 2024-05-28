@@ -30,7 +30,6 @@ class MSBertEmbeddings(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the MSBertEmbeddings class.
         
@@ -85,7 +84,6 @@ class MSBertEmbeddings(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, input_ids, token_type_ids, position_ids):
-
         """
         This method constructs the embeddings for MSBert model.
         
@@ -116,7 +114,6 @@ class MSBertSelfAttention(nn.Cell):
     """
 
     def __init__(self, config, causal, init_cache=False):
-
         """Initializes an instance of the MSBertSelfAttention class.
         
         Args:
@@ -218,7 +215,6 @@ class MSBertSelfAttention(nn.Cell):
             self.cache_index = Parameter(Tensor(0, mstype.int32))
 
     def _concatenate_to_cache(self, key, value, query, attention_mask):
-
         """
         Concatenates the given key, value, query, and attention mask to the cache in the MSBertSelfAttention class.
         
@@ -267,7 +263,6 @@ class MSBertSelfAttention(nn.Cell):
         return input_x.transpose(0, 2, 1, 3)
 
     def construct(self, hidden_states, attention_mask=None, head_mask=None):
-
         """
         Constructs the self-attention layer for the MSBert model.
         
@@ -384,7 +379,6 @@ class MSBertSelfOutput(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the MSBertSelfOutput class.
         
@@ -409,7 +403,6 @@ class MSBertSelfOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states, input_tensor):
-
         """
         This method 'construct' is a part of the 'MSBertSelfOutput' class and is responsible for processing the hidden states and input tensor.
         
@@ -438,7 +431,6 @@ class MSBertAttention(nn.Cell):
     """
 
     def __init__(self, config, causal, init_cache=False):
-
         """
         Initializes an instance of MSBertAttention.
         
@@ -459,7 +451,6 @@ class MSBertAttention(nn.Cell):
         self.output = MSBertSelfOutput(config)
 
     def construct(self, hidden_states, attention_mask=None, head_mask=None):
-
         """
         Constructs the attention mechanism for a multi-head self-attention layer in MSBertAttention.
         
@@ -496,7 +487,6 @@ class MSBertIntermediate(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the MSBertIntermediate class.
         
@@ -522,7 +512,6 @@ class MSBertIntermediate(nn.Cell):
         self.intermediate_act_fn = ACT2FN[config.hidden_act]
 
     def construct(self, hidden_states):
-
         """
         Constructs the intermediate layer of the MSBert model.
         
@@ -550,7 +539,6 @@ class MSBertOutput(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the MSBertOutput class.
         
@@ -573,7 +561,6 @@ class MSBertOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states, input_tensor):
-
         """
         This method constructs the output of the MSBert model.
         
@@ -603,7 +590,6 @@ class MSBertLayer(nn.Cell):
     """
 
     def __init__(self, config, init_cache=False):
-
         """
         Initializes an instance of the MSBertLayer class.
         
@@ -628,7 +614,6 @@ class MSBertLayer(nn.Cell):
     def construct(self, hidden_states, attention_mask=None, head_mask=None,
                 encoder_hidden_states = None,
                 encoder_attention_mask = None):
-
         """
         Constructs the MSBertLayer.
         
@@ -670,7 +655,6 @@ class MSBertEncoder(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the MSBertEncoder class.
         
@@ -695,7 +679,6 @@ class MSBertEncoder(nn.Cell):
         )
 
     def _set_recompute(self):
-
         """
         Sets the recompute flag for each layer in the MSBertEncoder.
         
@@ -725,7 +708,6 @@ indicate whether the layer needs to be recomputed during the forward pass of the
     def construct(self, hidden_states, attention_mask=None, head_mask=None,
                 encoder_hidden_states = None,
                 encoder_attention_mask = None):
-
         """
         Constructs the MSBertEncoder.
         
@@ -798,7 +780,6 @@ class MSBertPooler(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the MSBertPooler class.
         
@@ -823,7 +804,6 @@ class MSBertPooler(nn.Cell):
         self.activation = nn.Tanh()
 
     def construct(self, hidden_states):
-
         """
         This method constructs a pooled output from the given hidden states.
         
@@ -852,7 +832,6 @@ class MSBertPredictionHeadTransform(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the MSBertPredictionHeadTransform class.
         
@@ -882,7 +861,6 @@ class MSBertPredictionHeadTransform(nn.Cell):
         )
 
     def construct(self, hidden_states):
-
         """
         This method 'construct' is part of the 'MSBertPredictionHeadTransform' class and is used to perform transformations on hidden states.
         
@@ -917,7 +895,6 @@ class MSBertLMPredictionHead(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the MSBertLMPredictionHead class.
         
@@ -948,7 +925,6 @@ class MSBertLMPredictionHead(nn.Cell):
         self.bias = Parameter(initializer("zeros", config.vocab_size), "bias")
 
     def construct(self, hidden_states, masked_lm_positions):
-
         """
         Constructs the MSBertLMPredictionHead.
         
@@ -985,7 +961,6 @@ class MSBertPreTrainingHeads(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initialize the MSBertPreTrainingHeads class.
         
@@ -1007,7 +982,6 @@ class MSBertPreTrainingHeads(nn.Cell):
         self.seq_relationship = nn.Dense(config.hidden_size, 2)
 
     def construct(self, sequence_output, pooled_output, masked_lm_positions):
-
         """
         Construct method in the MSBertPreTrainingHeads class.
         
@@ -1070,7 +1044,6 @@ class MSBertModel(MSBertPreTrainedModel):
     """
 
     def __init__(self, config, add_pooling_layer=True):
-
         """
         Initializes the MSBertModel class with the provided configuration and optional pooling layer.
         
@@ -1092,7 +1065,6 @@ class MSBertModel(MSBertPreTrainedModel):
         self.num_hidden_layers = config.num_hidden_layers
 
     def get_input_embeddings(self):
-
         """
         This method returns the input embeddings of the MSBertModel.
         
@@ -1108,7 +1080,6 @@ class MSBertModel(MSBertPreTrainedModel):
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Set the input embeddings for the MSBertModel.
         
@@ -1134,7 +1105,6 @@ class MSBertModel(MSBertPreTrainedModel):
         encoder_hidden_states = None,
         encoder_attention_mask = None
     ):
-
         """
         Construct method in the MSBertModel class.
         
@@ -1209,7 +1179,6 @@ class MSBertForPretraining(MSBertPreTrainedModel):
     """
 
     def __init__(self, config, *args, **kwargs):
-
         """
         __init__
         
@@ -1244,7 +1213,6 @@ MSBertForPretraining model.
         head_mask=None,
         masked_lm_positions=None,
     ):
-
         """
         This method constructs the pretraining model for MSBertForPretraining.
         
@@ -1290,7 +1258,6 @@ class MSBertForSequenceClassification(MSBertPreTrainedModel):
     """Bert Model for classification tasks"""
 
     def __init__(self, config):
-
         """
         Initializes an instance of the MSBertForSequenceClassification class.
         
@@ -1331,7 +1298,6 @@ class MSBertForSequenceClassification(MSBertPreTrainedModel):
         head_mask=None,
         **kwargs
     ):
-
         """
         Constructs the MSBertForSequenceClassification model for a given input.
         

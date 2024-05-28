@@ -56,7 +56,6 @@ class MobileBertConfig(PretrainedConfig):
         classifier_dropout=None,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the MobileBertConfig class.
         

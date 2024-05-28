@@ -21,7 +21,6 @@ from mindspore import ops
 
 
 def _calculate_bin_centers(boundaries: mindspore.Tensor) -> mindspore.Tensor:
-
     """
     Args:
         boundaries (mindspore.Tensor): A 1D tensor representing the boundaries of the bins. It defines the range for binning data. It should be a sorted tensor.
@@ -42,7 +41,6 @@ def _calculate_expected_aligned_error(
     alignment_confidence_breaks: mindspore.Tensor,
     aligned_distance_error_probs: mindspore.Tensor,
 ) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
-
     """
     Args:
         alignment_confidence_breaks (mindspore.Tensor): A tensor containing the confidence breaks for alignment.
@@ -104,7 +102,6 @@ def compute_tm(
     eps: float = 1e-8,
     **kwargs,
 ) -> mindspore.Tensor:
-
     """
     Compute the predicted transmembrane (TM) term for a given set of logits.
     

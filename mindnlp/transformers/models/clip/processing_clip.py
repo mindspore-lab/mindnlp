@@ -42,7 +42,6 @@ class CLIPProcessor(ProcessorMixin):
     tokenizer_class = ("CLIPTokenizer", "CLIPTokenizerFast")
 
     def __init__(self, image_processor=None, tokenizer=None, **kwargs):
-
         """
         Initialize a CLIPProcessor object.
         
@@ -145,7 +144,6 @@ class CLIPProcessor(ProcessorMixin):
 
     @property
     def model_input_names(self):
-
         """
         This method, 'model_input_names', is a property of the 'CLIPProcessor' class. It returns a list of unique model input names derived from the tokenizer and image processor model input names.
         
@@ -164,7 +162,6 @@ class CLIPProcessor(ProcessorMixin):
 
     @property
     def feature_extractor_class(self):
-
         """
         This method returns the image processor class used for extracting features in the CLIPProcessor class.
         
@@ -194,7 +191,6 @@ class CLIPProcessor(ProcessorMixin):
 
     @property
     def feature_extractor(self):
-
         """
         This method is deprecated and will be removed in v5. Use `image_processor` instead.
         

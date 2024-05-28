@@ -116,7 +116,6 @@ class XLMRobertaConfig(PretrainedConfig):
         classifier_dropout=None,
         **kwargs,
     ):
-
         """
         The __init__ method initializes an instance of the XLMRobertaConfig class.
         

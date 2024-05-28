@@ -76,7 +76,6 @@ class Wav2Vec2FeatureExtractor(SequenceFeatureExtractor):
         do_normalize=True,
         **kwargs,
     ):
-
         """
         Initialize the Wav2Vec2FeatureExtractor class.
         

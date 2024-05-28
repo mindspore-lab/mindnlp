@@ -142,7 +142,6 @@ class MiniCPMConfig(PretrainedConfig):
         scale_depth=1,
         **kwargs,
     ):
-
         """
         Initializes an instance of the MiniCPMConfig class.
         

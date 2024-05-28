@@ -55,7 +55,6 @@ class NezhaConfig(PretrainedConfig):
         use_cache=True,
         **kwargs,
     ):
-
         '''
         Initializes a new instance of the NezhaConfig class.
         

@@ -99,7 +99,6 @@ class GemmaTokenizerFast(PreTrainedTokenizerFast):
         add_eos_token=False,
         **kwargs,
     ):
-
         """
         Initialize GemmaTokenizerFast object.
         
@@ -140,7 +139,6 @@ class GemmaTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def can_save_slow_tokenizer(self) -> bool:
-
         """
         Checks if the slow tokenizer can be saved.
         
@@ -184,7 +182,6 @@ class GemmaTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def add_eos_token(self):
-
         """
         Adds an end-of-sentence (EOS) token to the GemmaTokenizerFast object.
         
@@ -204,7 +201,6 @@ language modeling and text generation. By adding an EOS token, the GemmaTokenize
 
     @property
     def add_bos_token(self):
-
         """
         This method adds the beginning of sentence (BOS) token to the tokenizer.
         
@@ -221,7 +217,6 @@ language modeling and text generation. By adding an EOS token, the GemmaTokenize
 
     @add_eos_token.setter
     def add_eos_token(self, value):
-
         """Sets the value of the add_eos_token property in the GemmaTokenizerFast class.
         
         Args:
@@ -240,7 +235,6 @@ language modeling and text generation. By adding an EOS token, the GemmaTokenize
 
     @add_bos_token.setter
     def add_bos_token(self, value):
-
         """
         Method: add_bos_token
         
@@ -262,7 +256,6 @@ language modeling and text generation. By adding an EOS token, the GemmaTokenize
 
     # Copied from transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast.save_vocabulary
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary of the GemmaTokenizerFast instance to the specified directory with an optional filename prefix.
         
@@ -299,7 +292,6 @@ language modeling and text generation. By adding an EOS token, the GemmaTokenize
 
     # Copied from transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast.build_inputs_with_special_tokens
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
-
         """
                 Build inputs with special tokens for the GemmaTokenizerFast.
         

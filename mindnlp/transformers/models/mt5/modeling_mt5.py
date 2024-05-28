@@ -74,7 +74,6 @@ class MT5LayerNorm(nn.Cell):
         self.variance_epsilon = eps
 
     def construct(self, hidden_states):
-
         """
         Method to perform layer normalization on hidden states.
         
@@ -122,7 +121,6 @@ class MT5DenseActDense(nn.Cell):
     The final processed hidden states are returned as the output of the module.
     """
     def __init__(self, config: MT5Config):
-
         """
         Initializes an instance of the MT5DenseActDense class.
         
@@ -148,7 +146,6 @@ class MT5DenseActDense(nn.Cell):
         self.act = ACT2FN[config.dense_act_fn]
 
     def construct(self, hidden_states):
-
         """
         This method constructs the hidden states by applying operations and transformations.
         
@@ -205,7 +202,6 @@ class MT5DenseGatedActDense(nn.Cell):
     
     """
     def __init__(self, config: MT5Config):
-
         """
         Initializes an instance of the MT5DenseGatedActDense class.
         
@@ -230,7 +226,6 @@ class MT5DenseGatedActDense(nn.Cell):
         self.act = ACT2FN[config.dense_act_fn]
 
     def construct(self, hidden_states):
-
         """
         This method constructs the hidden states by applying a series of transformations.
         
@@ -276,7 +271,6 @@ accordingly. Additionally, it sets up layer normalization and dropout.
     
     """
     def __init__(self, config: MT5Config):
-
         """
         Initializes an instance of the MT5LayerFF class.
         
@@ -302,7 +296,6 @@ accordingly. Additionally, it sets up layer normalization and dropout.
         self.dropout = nn.Dropout(p=config.dropout_rate)
 
     def construct(self, hidden_states):
-
         """
         Constructs the forward pass of the feed-forward layer in the MT5 model.
         
@@ -367,7 +360,6 @@ the attention mechanism by applying self-attention (if `key_value_states` is Non
     Please refer to the method docstrings for more detailed information on each method and its parameters.
     """
     def __init__(self, config: MT5Config, has_relative_attention_bias=False):
-
         """
         Initializes an instance of the MT5Attention class.
         
@@ -412,7 +404,6 @@ the attention mechanism by applying self-attention (if `key_value_states` is Non
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
-
         """
         This method 'prune_heads' is defined in the class 'MT5Attention' and is used to prune specific heads in the attention mechanism of a MT5 model.
         
@@ -669,7 +660,6 @@ class MT5LayerSelfAttention(nn.Cell):
         - The method returns a tuple containing the updated hidden states and additional outputs depending on the configuration.
     """
     def __init__(self, config, has_relative_attention_bias=False):
-
         """
         Args:
             self (object): The instance of the class.
@@ -698,7 +688,6 @@ class MT5LayerSelfAttention(nn.Cell):
         use_cache=False,
         output_attentions=False,
     ):
-
         """
         Constructs the self-attention layer of the MT5 model.
         
@@ -771,7 +760,6 @@ Constructs the cross-attention mechanism using the given parameters and returns 
     
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the MT5LayerCrossAttention class.
         
@@ -803,7 +791,6 @@ Constructs the cross-attention mechanism using the given parameters and returns 
         query_length=None,
         output_attentions=False,
     ):
-
         """
         This method constructs the cross-attention mechanism in the MT5 model.
         
@@ -879,7 +866,6 @@ outputs, such as present key-value states and attention outputs, depending on th
     
     """
     def __init__(self, config, has_relative_attention_bias=False):
-
         """
         Initializes a new instance of the MT5Block class.
         
@@ -917,7 +903,6 @@ outputs, such as present key-value states and attention outputs, depending on th
         use_cache=False,
         output_attentions=False,
     ):
-
         """
         Constructs the MT5Block.
         
@@ -1051,7 +1036,6 @@ class MT5ClassificationHead(nn.Cell):
     """Head for sentence-level classification tasks."""
 
     def __init__(self, config: MT5Config):
-
         """
         Initializes the MT5ClassificationHead class with the provided configuration.
         
@@ -1075,7 +1059,6 @@ class MT5ClassificationHead(nn.Cell):
         self.out_proj = nn.Dense(config.d_model, config.num_labels)
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the classification head for an MT5 model.
         
@@ -1112,7 +1095,6 @@ class MT5PreTrainedModel(PreTrainedModel):
 
     @property
     def dummy_inputs(self):
-
         """
         This method generates dummy inputs for the MT5PreTrainedModel class.
         
@@ -1215,7 +1197,6 @@ class MT5PreTrainedModel(PreTrainedModel):
                                                     cell.relative_attention_bias.weight.shape, cell.relative_attention_bias.weight.dtype))
 
     def _shift_right(self, input_ids):
-
         """
         This method, _shift_right, is a member of the MT5PreTrainedModel class. It shifts the input_ids to the right and adds a decoder start token at the beginning.
         
@@ -1286,7 +1267,6 @@ use_cache=None, output_attentions=None, output_hidden_states=None, return_dict=N
         
     """
     def __init__(self, config, embed_tokens=None):
-
         """
         Initializes an instance of the MT5Stack class.
         
@@ -1316,7 +1296,6 @@ use_cache=None, output_attentions=None, output_hidden_states=None, return_dict=N
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method: get_input_embeddings
         
@@ -1335,7 +1314,6 @@ use_cache=None, output_attentions=None, output_hidden_states=None, return_dict=N
         return self.embed_tokens
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Method to set new input embeddings for the MT5Stack.
         
@@ -1370,7 +1348,6 @@ use_cache=None, output_attentions=None, output_hidden_states=None, return_dict=N
         output_hidden_states=None,
         return_dict=None,
     ):
-
         """
         This method constructs the MT5 model by processing the input data through multiple transformer layers.
         
@@ -1578,7 +1555,6 @@ class MT5Model(MT5PreTrainedModel):
 
     # Copied from transformers.models.t5.modeling_t5.T5Model.__init__ with T5->MT5
     def __init__(self, config: MT5Config):
-
         """
         Initializes an instance of the MT5Model class.
         
@@ -1612,7 +1588,6 @@ class MT5Model(MT5PreTrainedModel):
 
     # Copied from transformers.models.t5.modeling_t5.T5Model.get_input_embeddings
     def get_input_embeddings(self):
-
         """
         Retrieves the input embeddings for the MT5Model.
         
@@ -1629,7 +1604,6 @@ class MT5Model(MT5PreTrainedModel):
 
     # Copied from transformers.models.t5.modeling_t5.T5Model.set_input_embeddings
     def set_input_embeddings(self, new_embeddings):
-
         """Set the input embeddings for the MT5Model.
         
         This method sets the shared input embeddings for both the encoder and decoder modules in the MT5Model.
@@ -1650,7 +1624,6 @@ class MT5Model(MT5PreTrainedModel):
 
     # Copied from transformers.models.t5.modeling_t5.T5Model.get_encoder
     def get_encoder(self):
-
         """
         Returns the encoder of the MT5Model.
         
@@ -1667,7 +1640,6 @@ class MT5Model(MT5PreTrainedModel):
 
     # Copied from transformers.models.t5.modeling_t5.T5Model.get_decoder
     def get_decoder(self):
-
         """
         This method returns the decoder associated with the MT5Model instance.
         
@@ -1818,7 +1790,6 @@ class MT5ForConditionalGeneration(MT5PreTrainedModel):
 
     # Copied from transformers.models.t5.modeling_t5.T5ForConditionalGeneration.__init__ with T5->MT5
     def __init__(self, config: MT5Config):
-
         """
         Initializes an instance of the MT5ForConditionalGeneration class.
         
@@ -1862,7 +1833,6 @@ class MT5ForConditionalGeneration(MT5PreTrainedModel):
 
     # Copied from transformers.models.t5.modeling_t5.T5ForConditionalGeneration.get_input_embeddings
     def get_input_embeddings(self):
-
         """
         Retrieves the input embeddings for the MT5 model.
         
@@ -1879,7 +1849,6 @@ class MT5ForConditionalGeneration(MT5PreTrainedModel):
 
     # Copied from transformers.models.t5.modeling_t5.T5ForConditionalGeneration.set_input_embeddings
     def set_input_embeddings(self, new_embeddings):
-
         """
         Set input embeddings for the MT5 model for conditional generation.
         
@@ -1904,7 +1873,6 @@ class MT5ForConditionalGeneration(MT5PreTrainedModel):
 
     # Copied from transformers.models.t5.modeling_t5.T5ForConditionalGeneration.set_output_embeddings
     def set_output_embeddings(self, new_embeddings):
-
         """
         Set the output embeddings for the MT5 model.
         
@@ -1922,7 +1890,6 @@ class MT5ForConditionalGeneration(MT5PreTrainedModel):
 
     # Copied from transformers.models.t5.modeling_t5.T5ForConditionalGeneration.get_output_embeddings
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings of the MT5 model.
         
@@ -1939,7 +1906,6 @@ class MT5ForConditionalGeneration(MT5PreTrainedModel):
 
     # Copied from transformers.models.t5.modeling_t5.T5ForConditionalGeneration.get_encoder
     def get_encoder(self):
-
         """
         Retrieve the encoder object used for conditional generation in the MT5ForConditionalGeneration class.
         
@@ -1957,7 +1923,6 @@ class MT5ForConditionalGeneration(MT5PreTrainedModel):
 
     # Copied from transformers.models.t5.modeling_t5.T5ForConditionalGeneration.get_decoder
     def get_decoder(self):
-
         """
         Method to retrieve the decoder used in the MT5ForConditionalGeneration class.
         
@@ -2117,7 +2082,6 @@ class MT5ForConditionalGeneration(MT5PreTrainedModel):
         encoder_outputs=None,
         **kwargs,
     ):
-
         """
         This method prepares inputs for generation in the MT5ForConditionalGeneration class.
         
@@ -2168,7 +2132,6 @@ class MT5ForConditionalGeneration(MT5PreTrainedModel):
 
     # Copied from transformers.models.t5.modeling_t5.T5ForConditionalGeneration.prepare_decoder_input_ids_from_labels
     def prepare_decoder_input_ids_from_labels(self, labels: mindspore.Tensor):
-
         """
         Prepare decoder input IDs from labels for conditional generation.
         
@@ -2186,7 +2149,6 @@ class MT5ForConditionalGeneration(MT5PreTrainedModel):
 
     # Copied from transformers.models.t5.modeling_t5.T5ForConditionalGeneration._reorder_cache
     def _reorder_cache(self, past_key_values, beam_idx):
-
         """
         Reorders the cache for the specified `beam_idx` in the `MT5ForConditionalGeneration` class.
         
@@ -2254,7 +2216,6 @@ class MT5EncoderModel(MT5PreTrainedModel):
 
     # Copied from transformers.models.t5.modeling_t5.T5EncoderModel.__init__ with T5->MT5
     def __init__(self, config: MT5Config):
-
         """
         Initializes an instance of the MT5EncoderModel class.
         
@@ -2284,7 +2245,6 @@ class MT5EncoderModel(MT5PreTrainedModel):
 
     # Copied from transformers.models.t5.modeling_t5.T5EncoderModel.get_input_embeddings
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings for the MT5EncoderModel.
         
@@ -2301,7 +2261,6 @@ class MT5EncoderModel(MT5PreTrainedModel):
 
     # Copied from transformers.models.t5.modeling_t5.T5EncoderModel.set_input_embeddings
     def set_input_embeddings(self, new_embeddings):
-
         """
         Sets the input embeddings for the MT5EncoderModel.
         
@@ -2321,7 +2280,6 @@ class MT5EncoderModel(MT5PreTrainedModel):
 
     # Copied from transformers.models.t5.modeling_t5.T5EncoderModel.get_encoder
     def get_encoder(self):
-
         """
         Returns the encoder of the MT5EncoderModel.
         
@@ -2419,7 +2377,6 @@ generating predictions.
 
     # Copied from transformers.models.t5.modeling_t5.T5ForSequenceClassification.__init__ with T5->MT5
     def __init__(self, config: MT5Config):
-
         """
         Initializes an instance of MT5ForSequenceClassification.
         
@@ -2572,7 +2529,6 @@ decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, retur
 
     # Copied from transformers.models.t5.modeling_t5.T5ForQuestionAnswering.__init__ with T5->MT5
     def __init__(self, config: MT5Config):
-
         """Initialize an instance of the MT5ForQuestionAnswering class.
         
         Args:
@@ -2612,7 +2568,6 @@ decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, retur
 
     # Copied from transformers.models.t5.modeling_t5.T5ForQuestionAnswering.get_input_embeddings
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings from the MT5 model for question answering.
         
@@ -2629,7 +2584,6 @@ decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, retur
 
     # Copied from transformers.models.t5.modeling_t5.T5ForQuestionAnswering.set_input_embeddings
     def set_input_embeddings(self, new_embeddings):
-
         """
         Set the input embeddings for both encoder and decoder in the MT5ForQuestionAnswering model.
         
@@ -2651,7 +2605,6 @@ decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, retur
 
     # Copied from transformers.models.t5.modeling_t5.T5ForQuestionAnswering.get_encoder
     def get_encoder(self):
-
         """
         Get the encoder object used in the MT5ForQuestionAnswering class.
         
@@ -2669,7 +2622,6 @@ decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, retur
 
     # Copied from transformers.models.t5.modeling_t5.T5ForQuestionAnswering.get_decoder
     def get_decoder(self):
-
         """
         Method to retrieve the decoder object.
         

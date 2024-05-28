@@ -38,7 +38,6 @@ logger = logging.get_logger(__name__)
 _CHECKPOINT_FOR_DOC = "Salesforce/blip-vqa-base"
 
 def normalize(input, p=2.0, dim=1):
-
     """
     Normalize the input along a specified dimension using the specified p-norm.
     
@@ -60,7 +59,6 @@ def normalize(input, p=2.0, dim=1):
 
 # Copied from transformers.models.clip.modeling_clip.contrastive_loss
 def contrastive_loss(logits: mindspore.Tensor) -> mindspore.Tensor:
-
     """
     Args:
         logits (mindspore.Tensor): The input logits for the contrastive loss function.
@@ -75,7 +73,6 @@ def contrastive_loss(logits: mindspore.Tensor) -> mindspore.Tensor:
 
 # Copied from transformers.models.clip.modeling_clip.clip_loss with clip->blip
 def blip_loss(similarity: mindspore.Tensor) -> mindspore.Tensor:
-
     """
     Calculate Blip loss based on contrastive losses for caption and image similarities.
     
@@ -131,7 +128,6 @@ class BlipForConditionalGenerationModelOutput(ModelOutput):
 
     @property
     def decoder_logits(self):
-
         """
         This method is part of the 'BlipForConditionalGenerationModelOutput' class and is used to retrieve the decoder logits attribute.
         
@@ -263,7 +259,6 @@ class BlipOutput(ModelOutput):
     vision_model_output: BaseModelOutputWithPooling = None
 
     def to_tuple(self) -> Tuple[Any]:
-
         """
         Converts the BlipOutput object to a tuple representation.
         
@@ -304,7 +299,6 @@ class BlipVisionEmbeddings(nn.Cell):
     
     """
     def __init__(self, config: BlipVisionConfig):
-
         """
         Initializes an instance of the BlipVisionEmbeddings class.
         
@@ -341,7 +335,6 @@ class BlipVisionEmbeddings(nn.Cell):
         self.position_embedding = Parameter(ops.randn(1, self.num_positions, self.embed_dim))
 
     def construct(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
-
         '''
         Constructs the embeddings for the BlipVisionEmbeddings class.
         
@@ -384,7 +377,6 @@ class BlipTextEmbeddings(nn.Cell):
 information.
     """
     def __init__(self, config: BlipTextConfig):
-
         """
         Initializes an instance of the BlipTextEmbeddings class.
         
@@ -416,7 +408,6 @@ information.
         position_ids: Optional[mindspore.Tensor] = None,
         inputs_embeds: Optional[mindspore.Tensor] = None,
     ) -> mindspore.Tensor:
-
         ''' 
         Constructs BlipTextEmbeddings with given input_ids, position_ids, and inputs_embeds.
         
@@ -451,7 +442,6 @@ class BlipAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(self, config):
-
         """
         Initializes the BlipAttention class with the provided configuration.
         
@@ -486,7 +476,6 @@ class BlipAttention(nn.Cell):
         self.projection = nn.Dense(self.embed_dim, self.embed_dim)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-
         """
         This method '_shape' is a part of the 'BlipAttention' class and is used to reshape the input tensor for attention calculation.
         
@@ -568,7 +557,6 @@ class BlipMLP(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the BlipMLP class.
         
@@ -592,7 +580,6 @@ class BlipMLP(nn.Cell):
         self.fc2 = nn.Dense(config.intermediate_size, config.hidden_size)
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs a multi-layer perceptron (MLP) using the given hidden states.
         
@@ -651,7 +638,6 @@ class BlipEncoderLayer(nn.Cell):
         - When output_attentions is True, the method returns the attention weights along with the hidden states.
     """
     def __init__(self, config: BlipConfig):
-
         """
         Args:
             self (BlipEncoderLayer): The instance of the BlipEncoderLayer class.
@@ -755,7 +741,6 @@ class BlipEncoder(nn.Cell):
     """
 
     def __init__(self, config: BlipConfig):
-
         """
         Initializes a BlipEncoder object with the provided configuration.
         
@@ -868,7 +853,6 @@ Union[Tuple, BaseModelOutputWithPooling]: Constructs the BlipVisionModel and ret
     config_class = BlipVisionConfig
 
     def __init__(self, config: BlipVisionConfig):
-
         """
         Initializes a new instance of the BlipVisionModel class.
         
@@ -938,7 +922,6 @@ Union[Tuple, BaseModelOutputWithPooling]: Constructs the BlipVisionModel and ret
         )
 
     def get_input_embeddings(self):
-
         """
         Returns the input embeddings from the BlipVisionModel.
         
@@ -993,7 +976,6 @@ BlipOutput]
     config_class = BlipConfig
 
     def __init__(self, config: BlipConfig):
-
         """
         Initializes an instance of the BlipModel class.
         
@@ -1265,7 +1247,6 @@ generate function to enable the model to be used as a conditional generator.
     main_input_name = "pixel_values"
 
     def __init__(self, config: BlipConfig):
-
         """
         Initializes an instance of the BlipForConditionalGeneration class.
         
@@ -1295,7 +1276,6 @@ generate function to enable the model to be used as a conditional generator.
         self.post_init()
 
     def get_input_embeddings(self) -> nn.Cell:
-
         """
         This method returns the input embeddings for the BlipForConditionalGeneration class.
         
@@ -1486,7 +1466,6 @@ attention_mask: Optional[mindspore.Tensor] = None, output_attentions: Optional[b
     _tied_weights_keys = ["text_decoder.cls.predictions.decoder.bias"]
 
     def __init__(self, config: BlipConfig):
-
         """
         Initializes an instance of BlipForQuestionAnswering.
         
@@ -1515,7 +1494,6 @@ attention_mask: Optional[mindspore.Tensor] = None, output_attentions: Optional[b
         self.post_init()
 
     def get_input_embeddings(self) -> nn.Cell:
-
         """
         This method returns the input embeddings from the vision model for question answering.
         
@@ -1739,7 +1717,6 @@ input text. Depending on the 'use_itm_head' parameter, the method either compute
     config_class = BlipConfig
 
     def __init__(self, config: BlipConfig):
-
         """
         Initializes an instance of the BlipForImageTextRetrieval class.
         
@@ -1783,7 +1760,6 @@ input text. Depending on the 'use_itm_head' parameter, the method either compute
         self.post_init()
 
     def get_input_embeddings(self) -> nn.Cell:
-
         """
         Method to get the input embeddings from the vision model for image-text retrieval.
         

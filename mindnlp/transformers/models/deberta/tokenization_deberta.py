@@ -193,7 +193,6 @@ class DebertaTokenizer(PreTrainedTokenizer):
         add_bos_token=False,
         **kwargs,
     ):
-
         """
         Initialize a DebertaTokenizer object.
         
@@ -263,7 +262,6 @@ class DebertaTokenizer(PreTrainedTokenizer):
     @property
     # Copied from transformers.models.gpt2.tokenization_gpt2.GPT2Tokenizer.vocab_size
     def vocab_size(self):
-
         """
         Returns the size of the vocabulary used by the DebertaTokenizer.
         
@@ -280,7 +278,6 @@ class DebertaTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.gpt2.tokenization_gpt2.GPT2Tokenizer.get_vocab
     def get_vocab(self):
-
         """
         Returns the vocabulary of the DebertaTokenizer.
         
@@ -297,7 +294,6 @@ class DebertaTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.gpt2.tokenization_gpt2.GPT2Tokenizer.bpe
     def bpe(self, token):
-
         """
         Performs Byte Pair Encoding (BPE) on the given token.
         
@@ -483,7 +479,6 @@ are obtained from 'word' and the process is repeated until 'word' is of length 1
 
     # Copied from transformers.models.gpt2.tokenization_gpt2.GPT2Tokenizer.save_vocabulary
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary to files in the specified directory with an optional filename prefix.
         
@@ -529,7 +524,6 @@ are obtained from 'word' and the process is repeated until 'word' is of length 1
         return vocab_file, merge_file
 
     def prepare_for_tokenization(self, text, is_split_into_words=False, **kwargs):
-
         """
         This method prepares the input text for tokenization by potentially adding a prefix space based on the provided parameters.
         

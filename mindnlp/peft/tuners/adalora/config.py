@@ -53,7 +53,6 @@ class AdaLoraConfig(LoraConfig):
     rank_pattern: Optional[dict] = field(default=None, metadata={"help": "The saved rank pattern."})
 
     def __post_init__(self):
-
         r"""
         Performs post-initialization actions for the AdaLoraConfig class.
         

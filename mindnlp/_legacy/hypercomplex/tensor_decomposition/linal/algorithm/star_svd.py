@@ -18,7 +18,6 @@ class StarSVD(DualSVD):
 
     @staticmethod
     def decompose(matrix: Matrix) -> Tuple[Matrix, Matrix, Matrix]:
-
         r"""
         This method decomposes the input matrix into three matrices using Singular Value Decomposition (SVD).
         

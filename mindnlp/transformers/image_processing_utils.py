@@ -464,7 +464,6 @@ class ImageProcessingMixin:
             writer.write(self.to_json_string())
 
     def __repr__(self):
-
         """
         __repr__
         
@@ -552,7 +551,6 @@ class BaseImageProcessor(ImageProcessingMixin):
         return self.preprocess(images, **kwargs)
 
     def preprocess(self, images, **kwargs) -> BatchFeature:
-
         """
         Preprocess the given images using the implemented image processor.
         
@@ -682,7 +680,6 @@ VALID_SIZE_DICT_KEYS = ({"height", "width"}, {"shortest_edge"}, {"shortest_edge"
 
 
 def is_valid_size_dict(size_dict):
-
     """
     Args:
         size_dict (dict): A dictionary containing size information.
@@ -707,7 +704,6 @@ def is_valid_size_dict(size_dict):
 def convert_to_size_dict(
     size, max_size: Optional[int] = None, default_to_square: bool = True, height_width_order: bool = True
 ):
-
     """
     Converts a size input into a dictionary representation.
     

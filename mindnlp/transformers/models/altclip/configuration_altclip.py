@@ -126,7 +126,6 @@ class AltCLIPTextConfig(PretrainedConfig):
         project_dim=768,
         **kwargs,
     ):
-
         """
         Initializes an instance of the AltCLIPTextConfig class.
         
@@ -252,7 +251,6 @@ class AltCLIPVisionConfig(PretrainedConfig):
         initializer_factor=1.0,
         **kwargs,
     ):
-
         """
         Initializes an instance of the AltCLIPVisionConfig class.
         
@@ -296,7 +294,6 @@ class AltCLIPVisionConfig(PretrainedConfig):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
-
         """
         This method creates an instance of the AltCLIPVisionConfig class from a pretrained model.
         
@@ -375,7 +372,6 @@ class AltCLIPConfig(PretrainedConfig):
     def __init__(
         self, text_config=None, vision_config=None, projection_dim=768, logit_scale_init_value=2.6592, **kwargs
     ):
-
         """
         Initializes an instance of the AltCLIPConfig class.
         

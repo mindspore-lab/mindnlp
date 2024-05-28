@@ -155,7 +155,6 @@ class T5Tokenizer(PreTrainedTokenizer):
         legacy=None,
         **kwargs,
     ) -> None:
-
         """
         Initializes a T5Tokenizer instance.
         
@@ -238,7 +237,6 @@ class T5Tokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.t5.tokenization_t5.T5Tokenizer.get_spm_processor
     def get_spm_processor(self, from_slow=False):
-
         """
         This method is responsible for retrieving the SentencePieceProcessor for the T5Tokenizer class.
         
@@ -273,7 +271,6 @@ class T5Tokenizer(PreTrainedTokenizer):
 
     @staticmethod
     def _eventually_correct_t5_max_length(pretrained_model_name_or_path, max_model_length, init_max_model_length):
-
         """
         This method is a static method in the `T5Tokenizer` class and is named `_eventually_correct_t5_max_length`.
         
@@ -312,7 +309,6 @@ instantiate the tokenizer with `model_max_length` or pass `max_length` when enco
 
     @property
     def vocab_size(self):
-
         """
         Method to get the vocabulary size of the T5Tokenizer instance.
         
@@ -329,7 +325,6 @@ instantiate the tokenizer with `model_max_length` or pass `max_length` when enco
         return self.sp_model.get_piece_size()
 
     def get_vocab(self):
-
         """
         Retrieves the vocabulary of the T5Tokenizer.
         
@@ -377,7 +372,6 @@ instantiate the tokenizer with `model_max_length` or pass `max_length` when enco
         return ([0] * len(token_ids_0)) + [1] + ([0] * len(token_ids_1)) + [1]
 
     def get_sentinel_tokens(self):
-
         """
         This method, get_sentinel_tokens, belongs to the class T5Tokenizer and retrieves sentinel tokens from the additional_special_tokens list.
         
@@ -401,7 +395,6 @@ instantiate the tokenizer with `model_max_length` or pass `max_length` when enco
         )
 
     def get_sentinel_token_ids(self):
-
         """
         Method to retrieve the token IDs for sentinel tokens in the T5Tokenizer class.
         
@@ -478,7 +471,6 @@ instantiate the tokenizer with `model_max_length` or pass `max_length` when enco
         return token_ids_0 + token_ids_1
 
     def __getstate__(self):
-
         """
         This method __getstate__ is defined in the class T5Tokenizer and is used to retrieve the state of the tokenizer.
         
@@ -496,7 +488,6 @@ instantiate the tokenizer with `model_max_length` or pass `max_length` when enco
         return state
 
     def __setstate__(self, d):
-
         """
         Method '__setstate__' in the class 'T5Tokenizer'.
         
@@ -540,7 +531,6 @@ instantiate the tokenizer with `model_max_length` or pass `max_length` when enco
 
     @property
     def unk_token_length(self):
-
         """
         This method returns the length of the encoded form of the unknown token in the T5Tokenizer.
         
@@ -607,7 +597,6 @@ instantiate the tokenizer with `model_max_length` or pass `max_length` when enco
         return out_string.strip()
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         '''
         Save the vocabulary to the specified directory with an optional filename prefix.
         

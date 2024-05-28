@@ -149,7 +149,6 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
         predict_timestamps=False,
         **kwargs,
     ):
-
         """
         This method initializes an instance of the WhisperTokenizerFast class.
         
@@ -228,7 +227,6 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
 
     # Copied from transformers.models.gpt2.tokenization_gpt2_fast.GPT2TokenizerFast._batch_encode_plus
     def _batch_encode_plus(self, *args, **kwargs) -> BatchEncoding:
-
         """ 
         Method _batch_encode_plus in the class WhisperTokenizerFast.
         
@@ -252,7 +250,6 @@ add_prefix_space=True to use it with pretokenized inputs.
 
     # Copied from transformers.models.gpt2.tokenization_gpt2_fast.GPT2TokenizerFast._encode_plus
     def _encode_plus(self, *args, **kwargs) -> BatchEncoding:
-
         """
         Encode the input sequence into a batch encoding using the WhisperTokenizerFast class.
         
@@ -391,7 +388,6 @@ add_prefix_space=True for use with pretokenized inputs.
 
     # Copied from transformers.models.whisper.tokenization_whisper.WhisperTokenizer._filter_timestamp_ids
     def _filter_timestamp_ids(self, token_ids):
-
         """
         Filters out timestamp IDs from a given list of token IDs.
         
@@ -487,7 +483,6 @@ add_prefix_space=True for use with pretokenized inputs.
     def _decode(
         self, *args, normalize: bool = False, basic_normalize: bool = False, remove_diacritics: bool = False, **kwargs
     ) -> str:
-
         """
         Decodes the text passed as input with optional normalization and diacritics removal.
         
@@ -520,7 +515,6 @@ add_prefix_space=True for use with pretokenized inputs.
 
     # Copied from transformers.models.whisper.tokenization_whisper.WhisperTokenizer._normalize
     def _normalize(self, text):
-
         """
         Normalize the input text using the Whisper English normalizer.
         
@@ -555,7 +549,6 @@ encouraged to use the `normalize` method to normalize the input string.
 
     # Copied from transformers.models.whisper.tokenization_whisper.WhisperTokenizer._basic_normalize
     def _basic_normalize(self, text, remove_diacritics=False):
-
         """
         This method '_basic_normalize' in the class 'WhisperTokenizerFast' is deprecated and will be removed in v5 of Transformers. It is recommended to use the 'basic_normalize' method for string
 normalization.
@@ -597,7 +590,6 @@ normalization.
         return normalizer(text)
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary to the specified directory.
         
@@ -669,7 +661,6 @@ normalization.
     @property
     # Copied from transformers.models.whisper.tokenization_whisper.WhisperTokenizer.prefix_tokens
     def prefix_tokens(self) -> List[int]:
-
         """
         This method, prefix_tokens, is a member of the class WhisperTokenizerFast and is responsible for generating a list of token IDs that represent the prefix of a transcription or translation sequence. It
 takes the following parameter:
@@ -771,7 +762,6 @@ and the valid options for language and task, respectively.
 
     # Copied from transformers.models.whisper.tokenization_whisper.WhisperTokenizer.get_decoder_prompt_ids
     def get_decoder_prompt_ids(self, task=None, language=None, no_timestamps=True):
-
         """
         This method retrieves the decoder prompt IDs for the WhisperTokenizerFast class.
         
@@ -797,7 +787,6 @@ and the valid options for language and task, respectively.
         return forced_decoder_ids
 
     def _decode_asr(self, model_outputs, *, return_timestamps, return_language, time_precision):
-
         """
         This method is used to decode ASR (Automatic Speech Recognition) outputs. It takes model outputs as input and decodes them based on specified parameters.
         
@@ -843,7 +832,6 @@ and the valid options for language and task, respectively.
     @staticmethod
     # Copied from transformers.models.whisper.tokenization_whisper.WhisperTokenizer._strip_prompt
     def _strip_prompt(token_ids: List[int], prompt_token_id: int, decoder_start_token_id: int):
-
         """
         Removes the prompt from the given token IDs and returns the remaining tokens.
         

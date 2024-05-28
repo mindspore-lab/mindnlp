@@ -146,7 +146,6 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
         use_default_system_prompt=False,
         **kwargs,
     ):
-
         """
         This method initializes an instance of the CodeLlamaTokenizer class.
         
@@ -219,7 +218,6 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
 
     @property
     def unk_token_length(self):
-
         """
         Returns the length of the unknown token in the CodeLlamaTokenizer.
         
@@ -236,7 +234,6 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
         return len(self.sp_model.encode(str(self.unk_token)))
 
     def get_spm_processor(self):
-
         """
         This method initializes and returns a SentencePieceProcessor object for tokenizing text using the SentencePiece library.
         
@@ -267,7 +264,6 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
 
     @property
     def prefix_token(self):
-
         """
         Returns the prefix token used for tokenizing code in the CodeLlamaTokenizer class.
         
@@ -296,7 +292,6 @@ the underlying implementation of the class if necessary.
 
     @property
     def prefix_id(self):
-
         """
         Method to retrieve the ID associated with the prefix token in the CodeLlamaTokenizer class.
         
@@ -315,7 +310,6 @@ the underlying implementation of the class if necessary.
 
     @property
     def middle_token(self):
-
         """
         This method 'middle_token' is a property method defined in the class 'CodeLlamaTokenizer' that retrieves the middle token stored in the instance.
         
@@ -333,7 +327,6 @@ the underlying implementation of the class if necessary.
 
     @property
     def middle_id(self):
-
         """
         Get the middle ID of the CodeLlamaTokenizer instance.
         
@@ -355,7 +348,6 @@ using the 'convert_tokens_to_ids' method.
 
     @property
     def suffix_token(self):
-
         """
         Method to retrieve the suffix token associated with the CodeLlamaTokenizer instance.
         
@@ -374,7 +366,6 @@ using the 'convert_tokens_to_ids' method.
 
     @property
     def suffix_id(self):
-
         """
         Returns the ID of the suffix token.
         
@@ -396,7 +387,6 @@ using the convert_tokens_to_ids method.
 
     @property
     def eot_token(self):
-
         """
         This method 'eot_token' in the class 'CodeLlamaTokenizer' retrieves the end-of-text token.
         
@@ -413,7 +403,6 @@ using the convert_tokens_to_ids method.
 
     @property
     def eot_id(self):
-
         """
         This method 'eot_id' is a property in the 'CodeLlamaTokenizer' class.
         
@@ -444,7 +433,6 @@ using the convert_tokens_to_ids method.
         return vocab
 
     def tokenize(self, prefix, suffix=None, suffix_first=False, **kwargs) -> List[int]:
-
         """
         Tokenizes the given prefix and suffix to generate a list of integers representing tokens.
         
@@ -575,7 +563,6 @@ using the convert_tokens_to_ids method.
 
     # Copied from transformers.models.llama.tokenization_llama.LlamaTokenizer.build_inputs_with_special_tokens
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
-
         """
         Method to build inputs with special tokens in the CodeLlamaTokenizer class.
         
@@ -734,7 +721,6 @@ using the convert_tokens_to_ids method.
         return template
 
     def __getstate__(self):
-
         """
         Method: __getstate__
         
@@ -756,7 +742,6 @@ using the convert_tokens_to_ids method.
         return state
 
     def __setstate__(self, d):
-
         """
         This method '__setstate__' is defined within the 'CodeLlamaTokenizer' class to set the internal state of the object based on the provided dictionary 'd'. It reconstructs the object's state including
 the SentencePiece model by loading it from a serialized proto.

@@ -29,7 +29,6 @@ class BaseMapFunction:
     
     """
     def __init__(self, input_colums, output_columns):
-
         r"""
         Initializes an instance of the BaseMapFunction class.
         
@@ -48,7 +47,6 @@ class BaseMapFunction:
         self.output_columns = output_columns
 
     def __call__(self, *args):
-
         r"""
         The '__call__' method in the 'BaseMapFunction' class takes '1' parameter, which is 'self'.
         

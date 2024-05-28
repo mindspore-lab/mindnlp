@@ -21,7 +21,6 @@ from functools import wraps
 class Register():
     """Register abstract class"""
     def __init__(self, name, map_rule):
-
         r"""
         Args:
             self (object): The instance of the Register class.
@@ -49,7 +48,6 @@ class Register():
         return wrapper
 
     def __call__(self, name, *args, **kwargs):
-
         r"""
         This method, named '__call__', is part of the 'Register' class and is used to retrieve a registered item from the memory dictionary based on the provided name and then call it with the given arguments
 and keyword arguments.

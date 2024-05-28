@@ -100,7 +100,6 @@ class ConfusionMatrix(Metric):
 
     """
     def __init__(self, class_num=2, name='ConfusionMatrix'):
-
         r"""
         Initializes a ConfusionMatrix object.
         

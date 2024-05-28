@@ -50,7 +50,6 @@ class RNNEncoder(EncoderBase):
     """
 
     def __init__(self, embedding, rnn):
-
         r"""
         Initializes an instance of the 'RNNEncoder' class.
         

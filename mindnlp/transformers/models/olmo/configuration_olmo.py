@@ -130,7 +130,6 @@ class OlmoConfig(PretrainedConfig):
         clip_qkv=None,
         **kwargs,
     ):
-
         """
         Initializes an instance of the OlmoConfig class.
         

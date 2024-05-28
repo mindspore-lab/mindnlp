@@ -103,7 +103,6 @@ class T5Config(PretrainedConfig):
         classifier_dropout=0.0,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the T5Config class.
         

@@ -72,7 +72,6 @@ class TinyBertSelfAttention(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the TinyBertSelfAttention class.
         
@@ -113,7 +112,6 @@ class TinyBertSelfAttention(nn.Cell):
         return x.transpose(0, 2, 1, 3)
 
     def construct(self, hidden_states, attention_mask):
-
         """
         This method constructs the self-attention mechanism for the TinyBERT model.
         
@@ -169,7 +167,6 @@ class TinyBertAttention(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the TinyBertAttention class.
         
@@ -190,7 +187,6 @@ class TinyBertAttention(nn.Cell):
         self.output = TinyBertSelfOutput(config)
 
     def construct(self, input_tensor, attention_mask):
-
         """
         Constructs the attention output and layer attention for the TinyBertAttention class.
         
@@ -216,7 +212,6 @@ class TinyBertSelfOutput(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initialize the TinyBertSelfOutput class.
         
@@ -239,7 +234,6 @@ class TinyBertSelfOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states, input_tensor):
-
         """
         Constructs the output of the TinyBertSelf layer.
         
@@ -271,7 +265,6 @@ class TinyBertIntermediate(nn.Cell):
     """
 
     def __init__(self, config, intermediate_size=-1):
-
         """
         This method initializes a TinyBertIntermediate instance.
         
@@ -306,7 +299,6 @@ class TinyBertIntermediate(nn.Cell):
             self.intermediate_act_fn = config.hidden_act
 
     def construct(self, hidden_states):
-
         """
         This method constructs the intermediate layer of a TinyBERT model.
         
@@ -332,7 +324,6 @@ class TinyBertOutput(nn.Cell):
     """
 
     def __init__(self, config, intermediate_size=-1):
-
         """
         Initializes an instance of the TinyBertOutput class.
         
@@ -357,7 +348,6 @@ class TinyBertOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states, input_tensor):
-
         """
         Method 'construct' in the class 'TinyBertOutput'.
         
@@ -390,7 +380,6 @@ class TinyBertLayer(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the TinyBertLayer class.
         
@@ -410,7 +399,6 @@ class TinyBertLayer(nn.Cell):
         self.output = TinyBertOutput(config)
 
     def construct(self, hidden_states, attention_mask):
-
         """
         Constructs a TinyBertLayer by applying attention mechanism and generating layer output.
         
@@ -442,7 +430,6 @@ class TinyBertEncoder(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes a TinyBertEncoder object with the given configuration.
         
@@ -464,7 +451,6 @@ class TinyBertEncoder(nn.Cell):
                                   for _ in range(config.num_hidden_layers)])
 
     def construct(self, hidden_states, attention_mask):
-
         """
         Method 'construct' in the class 'TinyBertEncoder'.
         
@@ -499,7 +485,6 @@ class TinyBertPooler(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initialize the TinyBertPooler class.
         
@@ -520,7 +505,6 @@ class TinyBertPooler(nn.Cell):
         self.config = config
 
     def construct(self, hidden_states):
-
         """
         Constructs the TinyBertPooler by calculating the pooled output from the given hidden states.
         
@@ -552,7 +536,6 @@ class TinyBertPredictionHeadTransform(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes a TinyBertPredictionHeadTransform object.
         
@@ -581,7 +564,6 @@ class TinyBertPredictionHeadTransform(nn.Cell):
         self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=1e-12)
 
     def construct(self, hidden_states):
-
         """
         Constructs the TinyBertPredictionHeadTransform.
         
@@ -609,7 +591,6 @@ class TinyBertLMPredictionHead(nn.Cell):
     """
 
     def __init__(self, config, bert_model_embedding_weights):
-
         """
         Initializes the TinyBertLMPredictionHead.
         
@@ -638,7 +619,6 @@ class TinyBertLMPredictionHead(nn.Cell):
             bert_model_embedding_weights.shape[0]))
 
     def construct(self, hidden_states):
-
         """
         Method to construct the prediction head for TinyBERT LM.
         
@@ -664,7 +644,6 @@ class TinyBertOnlyMLMHead(nn.Cell):
     """
 
     def __init__(self, config, bert_model_embedding_weights):
-
         """
         Initializes an instance of the TinyBertOnlyMLMHead class.
         
@@ -684,7 +663,6 @@ class TinyBertOnlyMLMHead(nn.Cell):
             config, bert_model_embedding_weights)
 
     def construct(self, sequence_output):
-
         """
         This method constructs the prediction scores based on the provided sequence output for the TinyBertOnlyMLMHead class.
         
@@ -710,7 +688,6 @@ class TinyBertOnlyNSPHead(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes the TinyBertOnlyNSPHead class.
         
@@ -728,7 +705,6 @@ class TinyBertOnlyNSPHead(nn.Cell):
         self.seq_relationship = nn.Dense(config.hidden_size, 2)
 
     def construct(self, pooled_output):
-
         """
         Method: construct
         
@@ -755,7 +731,6 @@ class TinyBertPreTrainingHeads(nn.Cell):
     """
 
     def __init__(self, config, bert_model_embedding_weights):
-
         """
         Initializes the TinyBertPreTrainingHeads class.
         
@@ -777,7 +752,6 @@ class TinyBertPreTrainingHeads(nn.Cell):
         self.seq_relationship = nn.Dense(config.hidden_size, 2)
 
     def construct(self, sequence_output, pooled_output):
-
         """
         This method constructs prediction scores and sequence relationship scores for pre-training heads in TinyBert.
         
@@ -808,7 +782,6 @@ class TinyBertPreTrainedModel(PreTrainedModel):
     base_model_prefix = 'bert'
 
     def __init__(self, config):
-
         """
         Initializes a TinyBertPreTrainedModel instance.
         
@@ -896,7 +869,6 @@ class TinyBertModel(TinyBertPreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the TinyBertModel class.
         
@@ -969,7 +941,6 @@ class TinyBertForPreTraining(TinyBertPreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initialize the TinyBertForPreTraining class.
         
@@ -1020,7 +991,6 @@ class TinyBertFitForPreTraining(TinyBertPreTrainedModel):
     """
 
     def __init__(self, config, fit_size=768):
-
         """
         Initialize a TinyBertFitForPreTraining object.
         
@@ -1061,7 +1031,6 @@ class TinyBertForMaskedLM(TinyBertPreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the TinyBertForMaskedLM class.
         
@@ -1112,7 +1081,6 @@ class TinyBertForNextSentencePrediction(TinyBertPreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes the TinyBertForNextSentencePrediction class.
         
@@ -1155,7 +1123,6 @@ class TinyBertForSentencePairClassification(TinyBertPreTrainedModel):
     """
 
     def __init__(self, config, num_labels):
-
         """
         Initializes a new instance of the TinyBertForSentencePairClassification class.
         
@@ -1206,7 +1173,6 @@ class TinyBertForSequenceClassification(TinyBertPreTrainedModel):
     """
 
     def __init__(self, config, num_labels, fit_size=768):
-
         """
         Initializes a TinyBertForSequenceClassification instance.
         

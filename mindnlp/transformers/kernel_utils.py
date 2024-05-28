@@ -24,7 +24,6 @@ logger = logging.get_logger(__name__)
 
 
 def _find_cuda_home():
-
     """
     Find the CUDA home directory.
     
@@ -52,7 +51,6 @@ def _find_cuda_home():
 
 
 def _get_nvcc_info(cuda_home):
-
     """
     This function retrieves the nvcc information for the specified CUDA installation.
     

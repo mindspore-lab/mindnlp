@@ -110,8 +110,6 @@ class _BaseConvImpl(_ConvImpl):
                  weight_init: Union[Tensor, str, Initializer, numbers.Number],
                  weight_shape: tuple,
                  **factory_kwargs) -> None:
-
-        
         """
         Initializes a _BaseConvImpl instance with the specified weight initialization and shape.
         

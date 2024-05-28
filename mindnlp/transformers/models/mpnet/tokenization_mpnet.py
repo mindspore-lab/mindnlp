@@ -151,7 +151,6 @@ class MPNetTokenizer(PreTrainedTokenizer):
         strip_accents=None,
         **kwargs,
     ):
-
         """
         This method initializes an instance of the MPNetTokenizer class.
         
@@ -223,7 +222,6 @@ class MPNetTokenizer(PreTrainedTokenizer):
 
     @property
     def do_lower_case(self):
-
         """
         Method 'do_lower_case' in the class 'MPNetTokenizer'.
         This method converts the text to lowercase using the basic tokenizer provided by the MPNetTokenizer.
@@ -241,7 +239,6 @@ class MPNetTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
-
         """
         Returns the size of the vocabulary.
         
@@ -257,7 +254,6 @@ class MPNetTokenizer(PreTrainedTokenizer):
         return len(self.vocab)
 
     def get_vocab(self):
-
         """
         Method to retrieve the vocabulary from the MPNetTokenizer.
         
@@ -276,7 +272,6 @@ class MPNetTokenizer(PreTrainedTokenizer):
         return vocab
 
     def _tokenize(self, text):
-
         """
         Method to tokenize the input text using basic or wordpiece tokenizer.
         
@@ -392,7 +387,6 @@ class MPNetTokenizer(PreTrainedTokenizer):
         return len(cls + token_ids_0 + sep + sep + token_ids_1 + sep) * [0]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary to a file in the specified directory with an optional filename prefix.
         
@@ -459,7 +453,6 @@ class BasicTokenizer(object):
         strip_accents=None,
         do_split_on_punc=True,
     ):
-
         """
         Initializes a BasicTokenizer object with the specified parameters.
         
@@ -612,7 +605,6 @@ class WordpieceTokenizer(object):
     """Runs WordPiece tokenization."""
 
     def __init__(self, vocab, unk_token, max_input_chars_per_word=100):
-
         """
         Initializes a new instance of the WordpieceTokenizer class.
         

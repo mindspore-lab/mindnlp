@@ -83,7 +83,6 @@ class BasicTokenizer():
         strip_accents=None,
         do_split_on_punc=True,
     ):
-
         """
         Initializes an instance of the BasicTokenizer class.
         
@@ -286,7 +285,6 @@ class GPTTokenizer(PreTrainedTokenizer):
     model_input_names = ["input_ids", "attention_mask"]
 
     def __init__(self, vocab_file, merges_file, unk_token="<unk>", **kwargs):
-
         """
         This method initializes an instance of the GPTTokenizer class.
         
@@ -330,7 +328,6 @@ class GPTTokenizer(PreTrainedTokenizer):
 
     @property
     def do_lower_case(self):
-
         """
         Toggle the lower case flag for the GPTTokenizer object.
         
@@ -358,7 +355,6 @@ default, the lower case flag is set to True.
 
     @property
     def vocab_size(self):
-
         """
         Method to retrieve the vocabulary size of the GPTTokenizer instance.
         
@@ -377,7 +373,6 @@ default, the lower case flag is set to True.
         return len(self.encoder)
 
     def get_vocab(self):
-
         """
         This method returns the vocabulary of the GPTTokenizer.
         
@@ -393,7 +388,6 @@ default, the lower case flag is set to True.
         return dict(self.encoder, **self.added_tokens_encoder)
 
     def bpe(self, token):
-
         """
         This method is part of the GPTTokenizer class and performs Byte Pair Encoding (BPE) on a given token.
         
@@ -478,7 +472,6 @@ default, the lower case flag is set to True.
         return out_string
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary files to the specified directory.
         

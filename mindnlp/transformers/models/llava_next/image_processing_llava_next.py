@@ -99,7 +99,6 @@ def expand_to_square(image: np.array, background_color, input_data_format) -> np
 
 
 def _get_patch_output_size(image, target_resolution, input_data_format):
-
     """
     Args:
         image (object): The input image for which the patch output size needs to be calculated.
@@ -191,7 +190,6 @@ class LlavaNextImageProcessor(BaseImageProcessor):
         do_convert_rgb: bool = True,
         **kwargs,
     ) -> None:
-
         """
         __init__
         

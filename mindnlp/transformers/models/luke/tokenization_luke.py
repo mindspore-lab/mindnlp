@@ -315,7 +315,6 @@ class LukeTokenizer(PreTrainedTokenizer):
         add_prefix_space=False,
         **kwargs,
     ):
-
         """Initialize the LukeTokenizer class.
         
         This method initializes an instance of the LukeTokenizer class. It takes the following parameters:
@@ -443,7 +442,6 @@ class LukeTokenizer(PreTrainedTokenizer):
     @property
     # Copied from transformers.models.roberta.tokenization_roberta.RobertaTokenizer.vocab_size with Roberta->Luke, RoBERTa->LUKE
     def vocab_size(self):
-
         """
         Returns the size of the vocabulary.
         
@@ -460,7 +458,6 @@ class LukeTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.roberta.tokenization_roberta.RobertaTokenizer.get_vocab with Roberta->Luke, RoBERTa->LUKE
     def get_vocab(self):
-
         """
         Retrieves the vocabulary dictionary for the 'LukeTokenizer' class.
         
@@ -480,7 +477,6 @@ class LukeTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.roberta.tokenization_roberta.RobertaTokenizer.bpe with Roberta->Luke, RoBERTa->LUKE
     def bpe(self, token):
-
         """ 
         This method 'bpe' in the class 'LukeTokenizer' performs Byte Pair Encoding (BPE) on the input token.
         
@@ -643,7 +639,6 @@ class LukeTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.roberta.tokenization_roberta.RobertaTokenizer.prepare_for_tokenization with Roberta->Luke, RoBERTa->LUKE
     def prepare_for_tokenization(self, text, is_split_into_words=False, **kwargs):
-
         """
         Prepares the input text for tokenization by adding a prefix space if necessary.
         
@@ -834,7 +829,6 @@ class LukeTokenizer(PreTrainedTokenizer):
         verbose: bool = True,
         **kwargs,
     ) -> BatchEncoding:
-
         """Encodes the inputs for the LukeTokenizer.
         
         Args:
@@ -951,7 +945,6 @@ class LukeTokenizer(PreTrainedTokenizer):
         verbose: bool = True,
         **kwargs,
     ) -> BatchEncoding:
-
         """
         Performs batch encoding of text and entity inputs for the LukeTokenizer class.
         
@@ -1068,7 +1061,6 @@ encoded. Defaults to None.
         return BatchEncoding(batch_outputs)
 
     def _check_entity_input_format(self, entities: Optional[EntityInput], entity_spans: Optional[EntitySpanInput]):
-
         """
         This method '_check_entity_input_format' in the class 'LukeTokenizer' validates the input format for entities and entity spans.
         
@@ -1116,7 +1108,6 @@ character indices.
         entity_spans_pair: Optional[EntitySpanInput] = None,
         **kwargs,
     ) -> Tuple[list, list, list, list, list, list]:
-
         """
         Create input sequences for the LukeTokenizer.
         
@@ -1891,7 +1882,6 @@ character indices.
         return encoded_inputs
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary to specified directory with an optional filename prefix.
         

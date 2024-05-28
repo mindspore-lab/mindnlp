@@ -130,7 +130,6 @@ class BigBirdConfig(PretrainedConfig):
         classifier_dropout=None,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the BigBirdConfig class.
         

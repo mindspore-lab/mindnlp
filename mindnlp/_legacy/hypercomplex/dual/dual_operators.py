@@ -206,7 +206,6 @@ class Conv2d(_UniformOperator):
                  weight_init: Union[Tensor, str, Initializer, numbers.Number] = 'normal',
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  data_format: str = 'NCHW') -> None:
-
         r"""
         Initializes a Conv2d layer.
         
@@ -384,7 +383,6 @@ class Conv1d(_UniformOperator):
                  has_bias: bool = False,
                  weight_init: Union[Tensor, str, Initializer, numbers.Number] = 'normal',
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros') -> None:
-
         r"""
         Initializes a 1D convolutional layer.
         
@@ -600,7 +598,6 @@ class Conv3d(_UniformOperator):
                  weight_init: Union[Tensor, str, Initializer, numbers.Number] = 'normal',
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  data_format: str = 'NCDHW') -> None:
-
         r"""
         Initializes a Conv3d layer.
         
@@ -730,7 +727,6 @@ class BatchNorm1d(_UniformOperator):
                  moving_mean_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones',
                  use_batch_statistics: bool = True) -> None:
-
         r"""
         Initialize the BatchNorm1d layer.
         
@@ -857,7 +853,6 @@ class BatchNorm2d(_UniformOperator):
                  moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones',
                  use_batch_statistics: bool = True,
                  data_format='NCHW') -> None:
-
         r"""
         Initializes a BatchNorm2d object.
         
@@ -986,8 +981,6 @@ class BatchNorm3d(_UniformOperator):
                  moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones',
                  use_batch_statistics: bool = True,
                  data_format='NCDHW') -> None:
-
-        
         """
         Initializes a BatchNorm3d instance.
         
@@ -1094,7 +1087,6 @@ class Dense(_UniformOperator):
                  weight_init: Union[Tensor, str, Initializer, numbers.Number] = 'normal',
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  has_bias: bool = True) -> None:
-
         r"""
         __init__
         

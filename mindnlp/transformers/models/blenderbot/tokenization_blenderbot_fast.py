@@ -174,7 +174,6 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
         add_prefix_space=False,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the BlenderbotTokenizer class.
         
@@ -252,7 +251,6 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
     @property
     # Copied from transformers.models.roberta.tokenization_roberta.RobertaTokenizer.vocab_size with Roberta->Blenderbot, RoBERTa->Blenderbot
     def vocab_size(self):
-
         """
         This method returns the size of the vocabulary used in the BlenderbotTokenizer.
         
@@ -271,7 +269,6 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.roberta.tokenization_roberta.RobertaTokenizer.get_vocab with Roberta->Blenderbot, RoBERTa->Blenderbot
     def get_vocab(self):
-
         """
         This method returns the vocabulary as a dictionary containing the encoder tokens and any added tokens.
         
@@ -290,7 +287,6 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.roberta.tokenization_roberta.RobertaTokenizer.bpe with Roberta->Blenderbot, RoBERTa->Blenderbot
     def bpe(self, token):
-
         """
         Performs byte pair encoding (BPE) on a given token.
         
@@ -375,7 +371,6 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.roberta.tokenization_roberta.RobertaTokenizer.save_vocabulary with Roberta->Blenderbot, RoBERTa->Blenderbot
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Saves the vocabulary files of the BlenderbotTokenizer.
         
@@ -475,7 +470,6 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.roberta.tokenization_roberta.RobertaTokenizer.prepare_for_tokenization with Roberta->Blenderbot, RoBERTa->Blenderbot
     def prepare_for_tokenization(self, text, is_split_into_words=False, **kwargs):
-
         """
         Prepare for tokenization.
         

@@ -124,7 +124,6 @@ class BlenderbotSmallConfig(PretrainedConfig):
         forced_eos_token_id=2,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the BlenderbotSmallConfig class.
         

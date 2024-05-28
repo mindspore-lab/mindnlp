@@ -145,7 +145,6 @@ class Perplexity(Metric):
 
     """
     def __init__(self, ignore_label=None, name='Perplexity'):
-
         r"""
         Initializes an instance of the Perplexity class.
         

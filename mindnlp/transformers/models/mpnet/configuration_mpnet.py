@@ -55,7 +55,6 @@ class MPNetConfig(PretrainedConfig):
         eos_token_id=2,
         **kwargs,
     ):
-
         """Initializes a new instance of the MPNetConfig class.
         
         Args:

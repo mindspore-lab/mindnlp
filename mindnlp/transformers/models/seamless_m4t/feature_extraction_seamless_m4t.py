@@ -63,7 +63,6 @@ class SeamlessM4TFeatureExtractor(SequenceFeatureExtractor):
         stride=2,
         **kwargs,
     ):
-
         """
         Initializes an instance of the SeamlessM4TFeatureExtractor class.
         

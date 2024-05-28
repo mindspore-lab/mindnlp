@@ -20,7 +20,6 @@
 from ...configuration_utils import PretrainedConfig
 
 
-
 RWKV_PRETRAINED_CONFIG_ARCHIVE_MAP = {
     "RWKV/rwkv-4-169m-pile": "https://hf-mirror.com/RWKV/rwkv-4-169m-pile/resolve/main/config.json",
     "RWKV/rwkv-4-430m-pile": "https://hf-mirror.com/RWKV/rwkv-4-430m-pile/resolve/main/config.json",
@@ -113,7 +112,6 @@ class RwkvConfig(PretrainedConfig):
         use_cache=True,
         **kwargs,
     ):
-
         """
         Initializes an instance of RwkvConfig.
         

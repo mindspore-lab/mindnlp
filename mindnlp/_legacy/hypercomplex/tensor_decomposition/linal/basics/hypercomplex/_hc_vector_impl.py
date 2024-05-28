@@ -35,7 +35,6 @@ class _VectorImpl(_MathObjImpl, ABC):
                     a_y: np.ndarray,
                     b_x: np.ndarray,
                     b_y: np.ndarray) -> Tuple[np.float64, np.float64]:
-
         r"""
         Method to calculate the dot product of two vectors.
         

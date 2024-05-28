@@ -102,7 +102,6 @@ class MusicgenDecoderConfig(PretrainedConfig):
         tie_word_embeddings=False,
         **kwargs,
     ):
-
         """
         Initializes a MusicgenDecoderConfig object.
         
@@ -225,7 +224,6 @@ class MusicgenConfig(PretrainedConfig):
     is_composition = True
 
     def __init__(self, **kwargs):
-
         """
         Initializes a new instance of the MusicgenConfig class.
         
@@ -282,7 +280,6 @@ class MusicgenConfig(PretrainedConfig):
     @property
     # This is a property because you might want to change the codec model on the fly
     def sampling_rate(self):
-
         """
         Returns the sampling rate of the audio encoder.
         

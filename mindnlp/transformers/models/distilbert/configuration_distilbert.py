@@ -121,7 +121,6 @@ class DistilBertConfig(PretrainedConfig):
         pad_token_id=0,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the DistilBertConfig class.
         

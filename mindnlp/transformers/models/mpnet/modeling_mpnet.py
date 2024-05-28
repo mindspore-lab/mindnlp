@@ -87,7 +87,6 @@ class MPNetPreTrainedModel(PreTrainedModel):
 class MPNetEmbeddings(nn.Cell):
     """construct the embeddings from word, position and token_type embeddings."""
     def __init__(self, config):
-
         """
         Initializes an instance of the MPNetEmbeddings class.
         
@@ -113,7 +112,6 @@ class MPNetEmbeddings(nn.Cell):
         self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
 
     def construct(self, input_ids=None, position_ids=None, inputs_embeds=None, **kwargs):
-
         """
         Method 'construct' in the class 'MPNetEmbeddings'.
         
@@ -178,7 +176,6 @@ class MPNetEmbeddings(nn.Cell):
 class MPNetSelfAttention(nn.Cell):
     """SelfAttention Model"""
     def __init__(self, config):
-
         """
         Initializes a new instance of the MPNetSelfAttention class.
         
@@ -232,7 +229,6 @@ class MPNetSelfAttention(nn.Cell):
         output_attentions=False,
         **kwargs,
     ):
-
         """
         This method constructs self-attention mechanism for MPNetSelfAttention.
         
@@ -296,7 +292,6 @@ class MPNetAttention(nn.Cell):
     Multi-head self-attention mechanism for MPNet.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the MPNetAttention class.
         
@@ -343,7 +338,6 @@ class MPNetAttention(nn.Cell):
         output_attentions=False,
         **kwargs,
     ):
-
         """
         Constructs the attention layer for the MPNetAttention class.
         
@@ -378,7 +372,6 @@ layer.
 class MPNetIntermediate(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertIntermediate"""
     def __init__(self, config):
-
         """
         Initializes an instance of the MPNetIntermediate class.
         
@@ -404,7 +397,6 @@ class MPNetIntermediate(nn.Cell):
             self.intermediate_act_fn = config.hidden_act
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the intermediate layer of the MPNet model.
         
@@ -427,7 +419,6 @@ class MPNetIntermediate(nn.Cell):
 class MPNetOutput(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertOutput"""
     def __init__(self, config):
-
         """
         Initializes an instance of the MPNetOutput class.
         
@@ -451,7 +442,6 @@ class MPNetOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the MPNetOutput.
         
@@ -482,7 +472,6 @@ class MPNetOutput(nn.Cell):
 class MPNetLayer(nn.Cell):
     """Single layer in the MPNet model architecture."""
     def __init__(self, config):
-
         """
         Initializes an instance of the MPNetLayer class.
         
@@ -511,7 +500,6 @@ class MPNetLayer(nn.Cell):
         output_attentions=False,
         **kwargs,
     ):
-
         """
         Constructs an MPNetLayer.
         
@@ -550,7 +538,6 @@ class MPNetLayer(nn.Cell):
 class MPNetEncoder(nn.Cell):
     """Encoder module for the MPNet model."""
     def __init__(self, config):
-
         """
         Initializes an instance of the MPNetEncoder class.
         
@@ -583,7 +570,6 @@ class MPNetEncoder(nn.Cell):
         return_dict: bool = False,
         **kwargs,
     ):
-
         """
         Construct method in the MPNetEncoder class.
         
@@ -702,7 +688,6 @@ class MPNetEncoder(nn.Cell):
 class MPNetPooler(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertPooler"""
     def __init__(self, config):
-
         """
         Initializes an instance of the MPNetPooler class.
         
@@ -722,7 +707,6 @@ class MPNetPooler(nn.Cell):
         self.activation = nn.Tanh()
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method constructs a pooled output from the hidden states of the MPNet model.
         
@@ -748,7 +732,6 @@ batch size, sequence_length is the length of the input sequence, and hidden_size
 class MPNetModel(MPNetPreTrainedModel):
     """MPNet model architecture."""
     def __init__(self, config, add_pooling_layer=True):
-
         """
         Initializes an instance of the MPNetModel class.
         
@@ -774,7 +757,6 @@ class MPNetModel(MPNetPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings from the MPNetModel.
         
@@ -790,7 +772,6 @@ class MPNetModel(MPNetPreTrainedModel):
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, value):
-
         """
         Method to set the input embeddings in the MPNetModel class.
         
@@ -827,7 +808,6 @@ class MPNetModel(MPNetPreTrainedModel):
         return_dict: Optional[bool] = None,
         **kwargs,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPooling]:
-
         """
         Constructs the MPNet model.
         
@@ -909,7 +889,6 @@ class MPNetForMaskedLM(MPNetPreTrainedModel):
     _tied_weights_keys = ["lm_head.decoder"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of the MPNetForMaskedLM class.
         
@@ -932,7 +911,6 @@ class MPNetForMaskedLM(MPNetPreTrainedModel):
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         Retrieve the output embeddings from the decoder of the language model head.
         
@@ -949,7 +927,6 @@ class MPNetForMaskedLM(MPNetPreTrainedModel):
         return self.lm_head.decoder
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Set the output embeddings for MPNetForMaskedLM model.
         
@@ -1019,7 +996,6 @@ class MPNetLMHead(nn.Cell):
     """MPNet Head for masked and permuted language modeling."""
 
     def __init__(self, config):
-
         """
         This method initializes an instance of the MPNetLMHead class.
         
@@ -1048,7 +1024,6 @@ class MPNetLMHead(nn.Cell):
         self.decoder.bias = self.bias
 
     def construct(self, features, **kwargs):
-
         """
         This method constructs the output by processing the input features through various layers.
         
@@ -1075,7 +1050,6 @@ class MPNetLMHead(nn.Cell):
 class MPNetForSequenceClassification(MPNetPreTrainedModel):
     """MPNet model for sequence classification tasks."""
     def __init__(self, config):
-
         """
         Initializes an instance of MPNetForSequenceClassification.
         
@@ -1169,7 +1143,6 @@ class MPNetForSequenceClassification(MPNetPreTrainedModel):
 class MPNetForMultipleChoice(MPNetPreTrainedModel):
     """MPNet model for multiple choice tasks."""
     def __init__(self, config):
-
         """
         Initializes an instance of the MPNetForMultipleChoice class.
         
@@ -1258,7 +1231,6 @@ class MPNetForMultipleChoice(MPNetPreTrainedModel):
 class MPNetForTokenClassification(MPNetPreTrainedModel):
     """MPNet model for token classification tasks."""
     def __init__(self, config):
-
         """
         Initializes a new instance of the MPNetForTokenClassification class.
         
@@ -1337,7 +1309,6 @@ class MPNetClassificationHead(nn.Cell):
     """Head for sentence-level classification tasks."""
 
     def __init__(self, config):
-
         """
         Initializes an instance of the MPNetClassificationHead class.
         
@@ -1361,7 +1332,6 @@ class MPNetClassificationHead(nn.Cell):
         self.out_proj = nn.Dense(config.hidden_size, config.num_labels)
 
     def construct(self, features, **kwargs):
-
         """
         Constructs the MPNetClassificationHead by performing a series of operations on the input features.
         
@@ -1387,7 +1357,6 @@ class MPNetClassificationHead(nn.Cell):
 class MPNetForQuestionAnswering(MPNetPreTrainedModel):
     """MPNet model for question answering tasks."""
     def __init__(self, config):
-
         """
         Initialize the MPNetForQuestionAnswering class.
         

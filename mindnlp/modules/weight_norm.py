@@ -52,7 +52,6 @@ includes a method to remove the weight bias and a wrapper function for transposi
     dim: int
 
     def __init__(self, name: str, dim: int) -> None:
-
         r"""
         Initializes an instance of the WeightNorm class.
         
@@ -74,8 +73,6 @@ includes a method to remove the weight bias and a wrapper function for transposi
 
     # TODO Make return type more specific
     def compute_weight(self, module: nn.Cell) -> Any:
-
-        
         """
         Method to compute the weight using weight normalization for a given module.
         
@@ -138,7 +135,6 @@ includes a method to remove the weight bias and a wrapper function for transposi
         setattr(cell, self.name, Parameter(weight.data))
 
     def __call__(self, module: nn.Cell, inputs: Any) -> None:
-
         r"""
         This method '__call__' in the class 'WeightNorm' applies weight normalization to a neural network module.
         

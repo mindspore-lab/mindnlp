@@ -146,7 +146,6 @@ class XLMRobertaTokenizer(PreTrainedTokenizer):
         sp_model_kwargs: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> None:
-
         """
         Initialize XLMRobertaTokenizer class.
         
@@ -207,7 +206,6 @@ class XLMRobertaTokenizer(PreTrainedTokenizer):
         )
 
     def __getstate__(self):
-
         """
         Returns the state of the XLMRobertaTokenizer object for serialization.
         
@@ -227,7 +225,6 @@ The 'sp_model' attribute is set to None, and the 'sp_model_proto' attribute is s
         return state
 
     def __setstate__(self, d):
-
         """
         __setstate__
         
@@ -336,7 +333,6 @@ The 'sp_model' attribute is set to None, and the 'sp_model_proto' attribute is s
 
     @property
     def vocab_size(self):
-
         """
         Returns the size of the vocabulary used by the XLMRobertaTokenizer.
         
@@ -352,7 +348,6 @@ The 'sp_model' attribute is set to None, and the 'sp_model_proto' attribute is s
         return len(self.sp_model) + self.fairseq_offset + 1  # Add the <mask> token
 
     def get_vocab(self):
-
         """
         Method to retrieve the vocabulary mapping from token indices to tokens in the XLMRobertaTokenizer class.
         
@@ -372,7 +367,6 @@ The 'sp_model' attribute is set to None, and the 'sp_model_proto' attribute is s
         return vocab
 
     def _tokenize(self, text: str) -> List[str]:
-
         """
         Tokenizes the given text into a list of strings using the XLMRobertaTokenizer.
         
@@ -413,7 +407,6 @@ as a list of strings.
         return out_string
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         ''' 
         Save the vocabulary to the specified directory.
         

@@ -176,7 +176,6 @@ class AutoformerConfig(PretrainedConfig):
         autocorrelation_factor: int = 3,
         **kwargs,
     ):
-
         """Initialize the AutoformerConfig.
         
             Args:
@@ -282,7 +281,6 @@ match.
 
     @property
     def _number_of_features(self) -> int:
-
         """
         Returns the total number of features used in the Autoformer model.
         

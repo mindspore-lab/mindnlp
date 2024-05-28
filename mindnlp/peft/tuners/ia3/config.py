@@ -86,7 +86,6 @@ class IA3Config(PeftConfig):
     )
 
     def __post_init__(self):
-
         r"""
         This method initializes the IA3Config class after its instance has been created.
         

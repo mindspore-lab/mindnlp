@@ -125,7 +125,6 @@ def load_balancing_loss_func(
 
 # Copied from transformers.models.llama.modeling_llama._get_unpad_data
 def _get_unpad_data(attention_mask):
-
     """
     This function takes in an attention_mask tensor and performs several operations to retrieve un-padded data.
     
@@ -178,7 +177,6 @@ functionality for normalizing input hidden states using the RMS normalization te
         self.variance_epsilon = eps
 
     def construct(self, hidden_states):
-
         """
         Constructs the JambaRMSNorm layer.
         
@@ -221,7 +219,6 @@ class JambaAttention(nn.Cell):
     """
 
     def __init__(self, config: JambaConfig, layer_idx: Optional[int] = None):
-
         ''' 
         Initializes a new instance of the JambaAttention class.
         
@@ -266,7 +263,6 @@ this class.
         self.o_proj = nn.Dense(self.num_heads * self.head_dim, self.hidden_size, has_bias=False)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-
         """
         Args:
             self (JambaAttention): The instance of the JambaAttention class.
@@ -294,7 +290,6 @@ this class.
             use_cache: bool = False,
             **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
-
         """
         This method constructs the JambaAttention mechanism for processing hidden states.
         
@@ -407,7 +402,6 @@ class HybridMambaAttentionDynamicCache(DynamicCache):
     """
 
     def __init__(self) -> None:
-
         """
         Initializes an instance of the HybridMambaAttentionDynamicCache class.
         
@@ -496,7 +490,6 @@ attribute of the instance to None.
 
     @staticmethod
     def _is_attn_layer(key_states: mindspore.Tensor, value_states: mindspore.Tensor):
-
         """
         This method checks if the key and value states have the same last dimension size, which is crucial for attention layers.
         
@@ -541,7 +534,6 @@ class JambaMambaMixer(nn.Cell):
     """
 
     def __init__(self, config: JambaConfig, layer_idx):
-
         """
         Initializes an instance of the JambaMambaMixer class.
         
@@ -608,7 +600,6 @@ class JambaMambaMixer(nn.Cell):
             self.C_layernorm = None
 
     def _apply_layernorms(self, dt, B, C):
-
         """
         Applies layer normalization to the given inputs.
         

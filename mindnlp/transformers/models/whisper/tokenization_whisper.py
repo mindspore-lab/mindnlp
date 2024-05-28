@@ -277,7 +277,6 @@ class WhisperTokenizer(PreTrainedTokenizer):
         predict_timestamps=False,
         **kwargs,
     ):
-
         """
         __init__
         
@@ -370,7 +369,6 @@ class WhisperTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self) -> int:
-
         """
         This method returns the size of the vocabulary used by the WhisperTokenizer.
         
@@ -386,7 +384,6 @@ class WhisperTokenizer(PreTrainedTokenizer):
         return len(self.encoder)
 
     def get_vocab(self):
-
         """
         Returns the vocabulary of the WhisperTokenizer instance.
         
@@ -418,7 +415,6 @@ special tokens as well as any added tokens.
 
     # Copied from transformers.models.gpt2.tokenization_gpt2.GPT2Tokenizer.bpe with GPT2 -> Whisper
     def bpe(self, token):
-
         """
         This method, named 'bpe', is part of the class 'WhisperTokenizer' and performs a Byte Pair Encoding (BPE) algorithm on the given 'token' parameter.
         
@@ -521,7 +517,6 @@ returned.
 
     @property
     def prefix_tokens(self) -> List[int]:
-
         """
         This method generates a list of integer tokens representing the prefix sequence for tokenization.
         
@@ -743,7 +738,6 @@ returned.
         return token_ids
 
     def _filter_timestamp_ids(self, token_ids):
-
         """
         This method removes timestamp patterns from the given token IDs.
         
@@ -844,7 +838,6 @@ returned.
         remove_diacritics: bool = False,
         **kwargs,
     ) -> str:
-
         """
         Decodes a sequence of token IDs into a string representation.
         
@@ -924,7 +917,6 @@ returned.
         return text
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary to specified directory.
         
@@ -980,7 +972,6 @@ returned.
 
     # Copied from transformers.models.gpt2.tokenization_gpt2.GPT2Tokenizer.prepare_for_tokenization with GPT2 -> Whisper
     def prepare_for_tokenization(self, text, is_split_into_words=False, **kwargs):
-
         """
         This method prepares the input text for tokenization by potentially adding a prefix space.
         
@@ -1015,7 +1006,6 @@ returned.
         return "{% for message in messages %}" "{{ message.content }}{{ eos_token }}" "{% endfor %}"
 
     def get_decoder_prompt_ids(self, task=None, language=None, no_timestamps=True):
-
         """
         Retrieve the decoder prompt IDs for the WhisperTokenizer.
         
@@ -1046,7 +1036,6 @@ timestamps from the decoder prompt. The decoder prompt IDs are returned as a lis
         return forced_decoder_ids
 
     def _decode_asr(self, model_outputs, *, return_timestamps, return_language, time_precision):
-
         """
         This method decodes the output of an Automatic Speech Recognition (ASR) model.
         
@@ -1089,7 +1078,6 @@ timestamps from the decoder prompt. The decoder prompt IDs are returned as a lis
 
     @staticmethod
     def _strip_prompt(token_ids: List[int], prompt_token_id: int, decoder_start_token_id: int):
-
         """
         Removes the prompt from a list of token IDs.
         
@@ -1346,7 +1334,6 @@ def _decode_asr(tokenizer, model_outputs, *, return_timestamps, return_language,
 
 
 def _find_longest_common_sequence(sequences, token_timestamp_sequences=None):
-
     """
     This function finds the longest common sequence between multiple sequences.
     
@@ -1465,7 +1452,6 @@ def _find_longest_common_sequence(sequences, token_timestamp_sequences=None):
 
 
 def _collate_word_timestamps(tokenizer, tokens, token_timestamps, language):
-
     """
     Collates the word timestamps based on the given tokenizer, tokens, token timestamps, and language.
     

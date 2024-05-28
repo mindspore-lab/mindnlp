@@ -27,7 +27,6 @@ class EncoderBase(nn.Cell):
     """
 
     def __init__(self, embedding):
-
         r"""
         Initializes an instance of the EncoderBase class.
         

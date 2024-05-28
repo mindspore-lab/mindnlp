@@ -93,7 +93,6 @@ class BlipImageProcessor(BaseImageProcessor):
         do_convert_rgb: bool = True,
         **kwargs,
     ) -> None:
-
         """
         Initializes a BlipImageProcessor object.
         

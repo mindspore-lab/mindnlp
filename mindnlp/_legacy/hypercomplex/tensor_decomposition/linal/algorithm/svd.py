@@ -25,7 +25,6 @@ analysis and decomposition.
                   iterations: int = 10,
                   qr_alg: Callable[[Matrix], Tuple[Matrix, Matrix]] = QR.decompose_householder
                   ) -> Tuple[Matrix, Matrix, Matrix]:
-
         r"""
         This method decomposes a given matrix using Singular Value Decomposition (SVD).
         
@@ -74,7 +73,6 @@ analysis and decomposition.
     @staticmethod
     def _divide_rows_by_singular_values(sigma: List[Scalar],
                                         conj_transposed_u_or_v: Matrix) -> Matrix:
-
         r"""
         Method _divide_rows_by_singular_values in the SVD class.
         
@@ -106,7 +104,6 @@ analysis and decomposition.
     @staticmethod
     def _sort_singular_values(sigma: List[Scalar],
                               conj_transposed_u_or_v: Matrix) -> Tuple[List[Scalar], Matrix]:
-
         r"""
         This method sorts the singular values and corresponding columns of U or V in the Singular Value Decomposition (SVD).
         
@@ -130,7 +127,6 @@ analysis and decomposition.
 
     @staticmethod
     def _remove_column(m: Matrix, idx: int) -> Matrix:
-
         r"""
         Method to remove a specific column from a matrix.
         
@@ -156,7 +152,6 @@ analysis and decomposition.
     def _find_singular_values(m: Matrix,
                               iterations: int,
                               qr_alg: Callable[[Matrix], Tuple[Matrix, Matrix]]) -> Tuple[List[Scalar], Matrix]:
-
         r"""
         Finds the singular values of a given matrix using the specified QR algorithm.
         

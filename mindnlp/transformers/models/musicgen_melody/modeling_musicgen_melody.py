@@ -119,7 +119,6 @@ class MusicgenMelodySinusoidalPositionalEmbedding(nn.Cell):
     """This module produces sinusoidal positional embeddings of any length."""
 
     def __init__(self, num_positions: int, embedding_dim: int):
-
         """
         Initializes an instance of the MusicgenMelodySinusoidalPositionalEmbedding class.
         
@@ -144,7 +143,6 @@ class MusicgenMelodySinusoidalPositionalEmbedding(nn.Cell):
         self.make_weights(num_positions, embedding_dim)
 
     def make_weights(self, num_embeddings: int, embedding_dim: int):
-
         """
         make_weights method in the MusicgenMelodySinusoidalPositionalEmbedding class.
         
@@ -186,7 +184,6 @@ class MusicgenMelodySinusoidalPositionalEmbedding(nn.Cell):
         return emb.to(get_default_dtype())
 
     def construct(self, inputs_embeds: mindspore.Tensor, past_key_values_length: int = 0):
-
         """
         Constructs the sinusoidal positional embedding for the MusicgenMelodySinusoidalPositionalEmbedding model.
         
@@ -224,7 +221,6 @@ class MusicgenMelodyAttention(nn.Cell):
         is_causal: bool = False,
         config: Optional[MusicgenMelodyConfig] = None,
     ):
-
         """Initialize the MusicgenMelodyAttention class.
         
         Args:
@@ -265,7 +261,6 @@ class MusicgenMelodyAttention(nn.Cell):
         self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-
         """
         Reshapes the input tensor to match the expected shape for the attention mechanism in the MusicgenMelodyAttention class.
         
@@ -437,7 +432,6 @@ class MusicgenMelodyDecoderLayer(nn.Cell):
                 outputs (Tuple[mindspore.Tensor]): The outputs of the layer, which includes the hidden states and optionally the self-attention weights and present key value.
     """
     def __init__(self, config: MusicgenMelodyDecoderConfig):
-
         """
         Initializes an instance of the MusicgenMelodyDecoderLayer class.
         
@@ -548,7 +542,6 @@ class MusicgenMelodyPreTrainedModel(PreTrainedModel):
     _no_split_modules = ["MusicgenMelodyDecoderLayer", "MusicgenMelodyAttention"]
 
     def _init_weights(self, cell):
-
         """
         Initializes the weights of a given cell.
         
@@ -584,7 +577,6 @@ class MusicgenMelodyDecoder(MusicgenMelodyPreTrainedModel):
     """
 
     def __init__(self, config: MusicgenMelodyDecoderConfig):
-
         """
         Initializes the MusicgenMelodyDecoder class.
         
@@ -624,7 +616,6 @@ class MusicgenMelodyDecoder(MusicgenMelodyPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Retrieves the input embeddings for the MusicgenMelodyDecoder class.
         
@@ -640,7 +631,6 @@ class MusicgenMelodyDecoder(MusicgenMelodyPreTrainedModel):
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Method to set the input embeddings for the MusicgenMelodyDecoder class.
         
@@ -670,7 +660,6 @@ class MusicgenMelodyDecoder(MusicgenMelodyPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
-
         """
         Constructs the MusicgenMelodyDecoder.
         
@@ -844,7 +833,6 @@ Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_s
 for decoding melodies using the provided input arguments. Returns the decoder outputs as a tuple or BaseModelOutputWithPast if return_dict is True.
     """
     def __init__(self, config: MusicgenMelodyDecoderConfig):
-
         """
         Initializes a MusicgenMelodyModel instance.
         
@@ -864,7 +852,6 @@ for decoding melodies using the provided input arguments. Returns the decoder ou
         self.post_init()
 
     def get_input_embeddings(self):
-
         """ 
         This method retrieves the input embeddings from the decoder of the MusicgenMelodyModel.
         
@@ -880,7 +867,6 @@ for decoding melodies using the provided input arguments. Returns the decoder ou
         return self.decoder.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the MusicgenMelodyModel.
         
@@ -908,7 +894,6 @@ embedding space. The embedding_dim should match the hidden size of the model.
         self.decoder.embed_tokens = value
 
     def get_decoder(self):
-
         """
         Method to retrieve the decoder object associated with the MusicgenMelodyModel instance.
         
@@ -939,7 +924,6 @@ embedding space. The embedding_dim should match the hidden size of the model.
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
-
         """
         Constructs the MusicgenMelodyModel.
         
@@ -1013,7 +997,6 @@ sequences.
     For more information on the parameters and return types of the methods, please refer to the method docstrings or the official documentation.
     """
     def __init__(self, config: MusicgenMelodyDecoderConfig):
-
         """
         Initializes a MusicgenMelodyForCausalLM object.
         
@@ -1040,7 +1023,6 @@ sequences.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method: get_input_embeddings
         
@@ -1065,7 +1047,6 @@ sequences.
         return self.model.decoder.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         This method sets the input embeddings for the MusicgenMelodyForCausalLM class.
         
@@ -1082,7 +1063,6 @@ sequences.
         self.model.decoder.embed_tokens = value
 
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings for the MusicgenMelodyForCausalLM model.
         
@@ -1098,7 +1078,6 @@ sequences.
         return self.lm_heads
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Set the output embeddings for the MusicgenMelodyForCausalLM model.
         
@@ -1115,7 +1094,6 @@ sequences.
         self.lm_heads = new_embeddings
 
     def set_decoder(self, decoder):
-
         """
         Sets the decoder for the MusicgenMelodyForCausalLM class.
         
@@ -1132,7 +1110,6 @@ sequences.
         self.model.decoder = decoder
 
     def get_decoder(self):
-
         """
         Returns the decoder model used in the MusicgenMelodyForCausalLM class.
         
@@ -1223,7 +1200,6 @@ sequences.
         guidance_scale=None,
         **kwargs,
     ):
-
         """
         Prepare inputs for generation.
         
@@ -1676,7 +1652,6 @@ provided in the class's code.
         audio_encoder: Optional[PreTrainedModel] = None,
         decoder: Optional[MusicgenMelodyForCausalLM] = None,
     ):
-
         """
         Initializes a new instance of the MusicgenMelodyForConditionalGeneration class.
         
@@ -1750,7 +1725,6 @@ or default values.
         self.post_init()
 
     def _init_weights(self, cell):
-
         """
         Initializes the weights of a given cell for the MusicgenMelodyForConditionalGeneration model.
         
@@ -1777,7 +1751,6 @@ or default values.
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
     def tie_weights(self):
-
         """
         This method 'tie_weights' is defined within the 'MusicgenMelodyForConditionalGeneration' class.
         
@@ -1802,7 +1775,6 @@ or default values.
             )
 
     def get_text_encoder(self):
-
         """
         This method returns the text encoder used for encoding text data.
         
@@ -1818,7 +1790,6 @@ or default values.
         return self.text_encoder
 
     def get_encoder(self):
-
         """
         Method to get the text encoder for MusicgenMelodyForConditionalGeneration.
         
@@ -1836,7 +1807,6 @@ or default values.
         return self.get_text_encoder()
 
     def get_decoder(self):
-
         """
         Returns the decoder used for generating music melody for conditional generation.
         
@@ -1852,7 +1822,6 @@ or default values.
         return self.decoder
 
     def get_input_embeddings(self):
-
         """
         Method Name: get_input_embeddings
         
@@ -1872,7 +1841,6 @@ or default values.
         return self.text_encoder.get_input_embeddings()
 
     def get_output_embeddings(self):
-
         """
         Method: get_output_embeddings
         
@@ -1894,7 +1862,6 @@ or default values.
         return self.decoder.get_output_embeddings()
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the MusicgenMelodyForConditionalGeneration model.
         
@@ -2272,7 +2239,6 @@ or default values.
         guidance_scale=None,
         **kwargs,
     ):
-
         """
         Prepare inputs for generation.
         
@@ -2393,7 +2359,6 @@ use_cache.
         model_input_name: Optional[str] = None,
         guidance_scale: Optional[float] = None,
     ) -> Dict[str, Any]:
-
         """
         Prepare encoder hidden states kwargs for generation.
         
@@ -2499,7 +2464,6 @@ use_cache.
         return model_kwargs
 
     def prepare_decoder_input_ids_from_labels(self, labels: mindspore.Tensor):
-
         """
         Prepare_decoder_input_ids_from_labels
         
@@ -2522,7 +2486,6 @@ use_cache.
         return shift_tokens_right(labels, self.config.pad_token_id, self.config.decoder_start_token_id)
 
     def resize_token_embeddings(self, *args, **kwargs):
-
         """
         Resize the token embeddings for the MusicgenMelodyForConditionalGeneration class.
         
@@ -2882,7 +2845,6 @@ use_cache.
         standardize_cache_format: bool = False,
         model_inputs: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-
         """
         This method updates the model keyword arguments for generation based on the provided outputs and model inputs.
         

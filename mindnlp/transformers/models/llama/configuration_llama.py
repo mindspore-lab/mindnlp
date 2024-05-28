@@ -138,7 +138,6 @@ class LlamaConfig(PretrainedConfig):
         attention_dropout=0.0,
         **kwargs,
     ):
-
         """
         This method initializes an instance of the LlamaConfig class.
         

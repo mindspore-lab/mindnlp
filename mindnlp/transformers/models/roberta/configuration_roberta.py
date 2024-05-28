@@ -45,7 +45,6 @@ class RobertaConfig(PretrainedConfig):
         classifier_dropout=None,
         **kwargs,
     ):
-
         """
         This method initializes an instance of the RobertaConfig class.
         

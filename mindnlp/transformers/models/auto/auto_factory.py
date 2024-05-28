@@ -27,7 +27,6 @@ logger = logging.get_logger(__name__)
 
 
 def _get_model_class(config, model_mapping):
-
     """
     This function retrieves the model class based on the provided configuration and model mapping.
     
@@ -81,7 +80,6 @@ class _BaseAutoModelClass:
     _model_mapping = None
 
     def __init__(self, *args, **kwargs):
-
         """
         Initializes an instance of the _BaseAutoModelClass class.
         
@@ -106,7 +104,6 @@ class _BaseAutoModelClass:
 
     @classmethod
     def from_config(cls, config, **kwargs):
-
         """
         Converts a configuration object into an instance of the current `_BaseAutoModelClass` class.
         
@@ -143,7 +140,6 @@ class _BaseAutoModelClass:
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
-
         """
         Performs a series of operations to load a pretrained model from either a local file or a remote repository.
         
@@ -251,7 +247,6 @@ for a comprehensive understanding.
 
 
 def insert_head_doc(docstring, head_doc=""):
-
     """
     Inserts a specified 'head_doc' into the provided 'docstring' to modify the description of a model class in the library.
     
@@ -276,7 +271,6 @@ def insert_head_doc(docstring, head_doc=""):
 
 
 def get_values(model_mapping):
-
     """
     This function takes a dictionary called 'model_mapping' as a parameter and returns a list of values from the dictionary. 
     
@@ -301,7 +295,6 @@ def get_values(model_mapping):
 
 
 def getattribute_from_module(module, attr):
-
     """
     This function retrieves an attribute from a given module.
     
@@ -344,7 +337,6 @@ class _LazyAutoMapping(OrderedDict):
     """
 
     def __init__(self, config_mapping, model_mapping):
-
         """
         Initializes a new instance of the _LazyAutoMapping class.
         
@@ -367,7 +359,6 @@ class _LazyAutoMapping(OrderedDict):
         self._modules = {}
 
     def __len__(self):
-
         """
         Returns the length of the _LazyAutoMapping object.
         
@@ -389,7 +380,6 @@ class _LazyAutoMapping(OrderedDict):
         return len(common_keys) + len(self._extra_content)
 
     def __getitem__(self, key):
-
         """
         Args:
             self (object): The instance of the '_LazyAutoMapping' class.
@@ -417,7 +407,6 @@ class _LazyAutoMapping(OrderedDict):
         raise KeyError(key)
 
     def _load_attr_from_module(self, model_type, attr):
-
         """
         Load attribute from module based on model type.
         
@@ -439,7 +428,6 @@ class _LazyAutoMapping(OrderedDict):
         return getattribute_from_module(self._modules[module_name], attr)
 
     def keys(self):
-
         """
         This method retrieves the keys from the _LazyAutoMapping instance.
         
@@ -460,7 +448,6 @@ class _LazyAutoMapping(OrderedDict):
         return mapping_keys + list(self._extra_content.keys())
 
     def get(self, key, default):
-
         """
         This method retrieves the value associated with the specified key from the _LazyAutoMapping instance, and returns a default value if the key is not present.
         
@@ -481,7 +468,6 @@ class _LazyAutoMapping(OrderedDict):
             return default
 
     def __bool__(self):
-
         """
         This method '__bool__' in the class '_LazyAutoMapping' returns a boolean value indicating whether the mapping object has any keys.
         
@@ -497,7 +483,6 @@ class _LazyAutoMapping(OrderedDict):
         return bool(self.keys())
 
     def values(self):
-
         """
         Method 'values' in the class '_LazyAutoMapping' retrieves values from the mapping and extra content.
         
@@ -518,7 +503,6 @@ class _LazyAutoMapping(OrderedDict):
         return mapping_values + list(self._extra_content.values())
 
     def items(self):
-
         """
         items(self)
             This method returns a list of tuples representing the mapping items between the config and model mappings along with any extra content.
@@ -543,7 +527,6 @@ class _LazyAutoMapping(OrderedDict):
         return mapping_items + list(self._extra_content.items())
 
     def __iter__(self):
-
         """
         Method '__iter__' in the class '_LazyAutoMapping'.
         
@@ -560,7 +543,6 @@ class _LazyAutoMapping(OrderedDict):
         return iter(self.keys())
 
     def __contains__(self, item):
-
         ''' 
             This method checks if an item is present in the '_extra_content' attribute or if the item's name is present in the '_reverse_config_mapping' attribute of the '_LazyAutoMapping' class instance.
         

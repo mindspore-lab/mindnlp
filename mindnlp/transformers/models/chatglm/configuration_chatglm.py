@@ -91,7 +91,6 @@ class ChatGLMConfig(PretrainedConfig):
             prefix_projection=False,
             **kwargs
     ):
-
         """
         Initializes a ChatGLMConfig object with the specified configuration parameters.
         

@@ -117,7 +117,6 @@ class F1Score(Metric):
 
     """
     def __init__(self, name='F1Score'):
-
         r"""
         Initializes an instance of the F1Score class.
         

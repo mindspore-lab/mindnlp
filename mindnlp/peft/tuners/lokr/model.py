@@ -138,7 +138,6 @@ class LoKrModel(BaseTuner):
     def _create_new_cell(
         cls, config: LoKrConfig, adapter_name: str, target: nn.Cell, **kwargs
     ) -> LoKrLayer:
-
         r"""
         This method creates a new LoKrLayer instance based on the provided parameters.
         
@@ -208,7 +207,6 @@ class LoKrModel(BaseTuner):
             return getattr(self.model, name)
 
     def _replace_cell(self, parent, child_name, new_cell, child):
-
         r"""
         Replaces a cell in the LoKrModel with a new cell.
         
@@ -244,7 +242,6 @@ class LoKrModel(BaseTuner):
                 new_cell.state = child.state
 
     def _mark_only_adapters_as_trainable(self, model: nn.Cell) -> None:
-
         r"""
         The _mark_only_adapters_as_trainable method in the LoKrModel class marks only the adapters in the provided model as trainable, by setting the requires_grad attribute to False for parameters not
 containing the specified prefix.
@@ -264,7 +261,6 @@ containing the specified prefix.
                 p.requires_grad = False
 
     def _set_adapter_layers(self, enabled=True):
-
         r"""
         Sets the adapter layers in the LoKrModel by enabling or disabling them.
         
@@ -289,8 +285,6 @@ containing the specified prefix.
         safe_merge: bool = False,
         adapter_names: Optional[List[str]] = None,
     ):
-
-        
         """
         Method to unload and optionally merge the model.
         
@@ -348,7 +342,6 @@ containing the specified prefix.
         return self.model
 
     def _unloading_checks(self, adapter_names: Optional[List[str]]):
-
         r"""
         Perform unloading checks for the LoKrModel class.
         
@@ -378,7 +371,6 @@ containing the specified prefix.
 
     @staticmethod
     def _prepare_adapter_config(peft_config, model_config):
-
         r"""
         Prepare adapter configuration based on PEFT and model configurations.
         
@@ -400,7 +392,6 @@ containing the specified prefix.
 
     @staticmethod
     def _check_target_cell_exists(LoKR_config, key):
-
         r"""
         Checks if a target cell exists in the LoKR configuration.
         

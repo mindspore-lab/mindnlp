@@ -44,7 +44,6 @@ CHATGLM2_6B_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 
 def default_init(cls, *args, **kwargs):
-
     """
     Args:
         cls (class): The class to be instantiated.
@@ -91,7 +90,6 @@ class InvalidScoreLogitsProcessor(LogitsProcessor):
         ...
     """
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Applies the InvalidScoreLogitsProcessor to the input scores.
         
@@ -135,7 +133,6 @@ class PrefixEncoder(nn.Cell):
     """
 
     def __init__(self, config: ChatGLM2Config):
-
         """Initialize the PrefixEncoder object.
         
             Args:
@@ -169,7 +166,6 @@ class PrefixEncoder(nn.Cell):
                                           config.num_layers * config.kv_channels * config.multi_query_group_num * 2)
 
     def construct(self, prefix: mindspore.Tensor):
-
         """
         Construct the past key values for the PrefixEncoder.
         
@@ -258,7 +254,6 @@ ability to understand the order and relationships between elements in a sequence
     https://github.com/labmlai/annotated_deep_learning_paper_implementations/blob/master/license
     """
     def __init__(self, dim, original_impl=False, dtype=None):
-
         """
         Initializes a RotaryEmbedding object.
         
@@ -306,7 +301,6 @@ ability to understand the order and relationships between elements in a sequence
         return cache
 
     def construct(self, max_seq_len, offset=0):
-
         """
         Constructs a rotary embedding for a given maximum sequence length.
         
@@ -325,7 +319,6 @@ ability to understand the order and relationships between elements in a sequence
 
 
 def apply_rotary_pos_emb(x: mindspore.Tensor, rope_cache: mindspore.Tensor) -> mindspore.Tensor:
-
     """
     Apply rotary positional embedding to the input tensor.
     
@@ -383,7 +376,6 @@ class inherits from the nn.LayerNorm class, which provides the basic functionali
     """
     def __init__(self, normalized_shape, begin_norm_axis=-1, begin_params_axis=-1,
                  gamma_init='ones', beta_init='zeros', eps=1e-7, dtype=mindspore.float32):
-
         """
         Initializes an instance of the LayerNorm class.
         
@@ -441,7 +433,6 @@ class RMSNorm(nn.Cell):
     
     """
     def __init__(self, normalized_shape, eps=1e-5, dtype=None, **kwargs):
-
         '''
         Initializes an instance of the RMSNorm class.
         
@@ -462,7 +453,6 @@ class RMSNorm(nn.Cell):
         self.eps = eps
 
     def construct(self, hidden_states: mindspore.Tensor):
-
         """
         Constructs the RMSNorm of the given hidden states.
         
@@ -520,7 +510,6 @@ optionally applies the attention mask.
     Note: This docstring is generated based on the provided information. Please add any additional information as needed.
     """
     def __init__(self, config: ChatGLM2Config, layer_number):
-
         """
         Initializes a CoreAttention object with the provided configuration and layer number.
         
@@ -560,7 +549,6 @@ optionally applies the attention mask.
         self.attention_dropout = nn.Dropout(p=config.attention_dropout)
 
     def construct(self, query_layer, key_layer, value_layer, attention_mask):
-
         """
         Constructs the attention layer of the CoreAttention class.
         
@@ -681,7 +669,6 @@ class SelfAttention(nn.Cell):
     """
 
     def __init__(self, config: ChatGLM2Config, layer_number):
-
         """
         Initializes a new instance of the SelfAttention class.
         
@@ -725,7 +712,6 @@ class SelfAttention(nn.Cell):
     def construct(
             self, hidden_states, attention_mask, rotary_pos_emb, kv_cache=None, use_cache=True
     ):
-
         """
         Constructs the self-attention mechanism for the SelfAttention class.
         
@@ -843,7 +829,6 @@ class SelfAttention(nn.Cell):
 
 
 def _config_to_kwargs(args):
-
     """
     This function converts configuration arguments to keyword arguments for a function. 
     
@@ -871,7 +856,6 @@ class MLP(nn.Cell):
     """
 
     def __init__(self, config: ChatGLM2Config):
-
         """
         Initializes an instance of the MLP class.
         
@@ -912,7 +896,6 @@ class MLP(nn.Cell):
         )
 
     def construct(self, hidden_states):
-
         """
         Constructs the output of the MLP.
         
@@ -944,7 +927,6 @@ class GLMBlock(nn.Cell):
     """
 
     def __init__(self, config: ChatGLM2Config, layer_number):
-
         """
         Initializes a new instance of the GLMBlock class.
         
@@ -988,7 +970,6 @@ class GLMBlock(nn.Cell):
     def construct(
             self, hidden_states, attention_mask, rotary_pos_emb, kv_cache=None, use_cache=True,
     ):
-
         """
         Constructs a GLMBlock by performing a series of operations on the input data.
         
@@ -1061,7 +1042,6 @@ class GLMTransformer(nn.Cell):
     """Transformer class."""
 
     def __init__(self, config: ChatGLM2Config):
-
         '''
         Initializes a GLMTransformer object.
         
@@ -1101,7 +1081,6 @@ class GLMTransformer(nn.Cell):
         self.gradient_checkpointing = False
 
     def _get_layer(self, layer_number):
-
         """
         This method retrieves a specific layer from the GLMTransformer.
         
@@ -1123,7 +1102,6 @@ class GLMTransformer(nn.Cell):
             use_cache: Optional[bool] = True,
             output_hidden_states: Optional[bool] = False,
     ):
-
         """
         Constructs the hidden states of the GLMTransformer model.
         
@@ -1195,7 +1173,6 @@ class ChatGLM2PreTrainedModel(PreTrainedModel):
         return
 
     def get_masks(self, input_ids, past_key_values, padding_mask=None):
-
         '''
             This method calculates the attention masks for the input sequence in the context of the ChatGLM2PreTrainedModel class.
         
@@ -1229,7 +1206,6 @@ tokens and 1's for padding tokens. Defaults to None.
         return full_attention_mask
 
     def get_position_ids(self, input_ids):
-
         """
         Returns the position IDs corresponding to input IDs.
         
@@ -1253,7 +1229,6 @@ class Embedding(nn.Cell):
     """Language model embeddings."""
 
     def __init__(self, config: ChatGLM2Config):
-
         """
         Initializes an Embedding object.
         
@@ -1283,7 +1258,6 @@ class Embedding(nn.Cell):
         self.fp32_residual_connection = config.fp32_residual_connection
 
     def construct(self, input_ids):
-
         """
         Construct word embeddings from input_ids.
         
@@ -1318,7 +1292,6 @@ prefix projection, prefix tokens, prefix encoder, and dropout.
     The methods included are __init__, get_input_embeddings, get_prompt, construct, and quantize.
     """
     def __init__(self, config: ChatGLM2Config, empty_init=True):
-
         """
         This method initializes an instance of the ChatGLM2Model class.
         
@@ -1365,7 +1338,6 @@ prefix projection, prefix tokens, prefix encoder, and dropout.
             self.dropout = nn.Dropout(p=0.1)
 
     def get_input_embeddings(self):
-
         """
         Retrieves the input embeddings for the ChatGLM2Model.
         
@@ -1381,7 +1353,6 @@ prefix projection, prefix tokens, prefix encoder, and dropout.
         return self.embedding.word_embeddings
 
     def get_prompt(self, batch_size, dtype=mindspore.float16):
-
         """
         Retrieves the prompt for the ChatGLM2Model.
         
@@ -1422,7 +1393,6 @@ prefix projection, prefix tokens, prefix encoder, and dropout.
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ):
-
         """
         Constructs the ChatGLM2Model.
         
@@ -1493,7 +1463,6 @@ prefix projection, prefix tokens, prefix encoder, and dropout.
         )
 
     def quantize(self, weight_bit_width: int):
-
         """Quantize the weights of the ChatGLM2Model.
         
         This method quantizes the weights of the ChatGLM2Model object according to the specified weight bit width.
@@ -1523,7 +1492,6 @@ cache, process response, build inputs, build stream inputs, chat, stream chat, s
     For detailed information on the methods and their parameters, please refer to the method docstrings within the class implementation.
     """
     def __init__(self, config: ChatGLM2Config, empty_init=True):
-
         """
         Initializes an instance of the ChatGLM2ForConditionalGeneration class.
         
@@ -1555,7 +1523,6 @@ cache, process response, build inputs, build stream inputs, chat, stream chat, s
             is_encoder_decoder: bool = False,
             standardize_cache_format: bool = False,
     ) -> Dict[str, Any]:
-
         '''
         Updates the model keyword arguments for generation in the `ChatGLM2ForConditionalGeneration` class.
         
@@ -1606,7 +1573,6 @@ cache, process response, build inputs, build stream inputs, chat, stream chat, s
             is_first_forward: bool = True,
             **kwargs
     ) -> dict:
-
         """
         Prepares input tensors for generation during ChatGLM2ForConditionalGeneration model training.
         
@@ -1662,7 +1628,6 @@ GPT-2.
             return_dict: Optional[bool] = None,
             return_last_logit: Optional[bool] = False,
     ):
-
         '''
         Constructs a ChatGLM2ForConditionalGeneration object.
         
@@ -1752,7 +1717,6 @@ GPT-2.
         )
 
     def process_response(self, response):
-
         """
         Process the response received from the chat model.
         
@@ -1771,7 +1735,6 @@ GPT-2.
         return response
 
     def build_inputs(self, tokenizer, query: str, history: List[Tuple[str, str]] = None):
-
         """
         Builds the input tensors for the ChatGLM2ForConditionalGeneration model.
         
@@ -1798,7 +1761,6 @@ GPT-2.
         return inputs
 
     def build_stream_inputs(self, tokenizer, query: str, history: List[Tuple[str, str]] = None):
-
         """
         This method builds stream inputs for the ChatGLM2ForConditionalGeneration class.
         
@@ -1828,7 +1790,6 @@ GPT-2.
 
     def chat(self, tokenizer, query: str, history: List[Tuple[str, str]] = None, max_length: int = 8192, num_beams=1,
              do_sample=True, top_p=0.8, temperature=0.8, logits_processor=None, **kwargs):
-
         """
         This method 'chat' is defined in the class 'ChatGLM2ForConditionalGeneration' and is used for generating a response to a given query in a chat scenario.
         
@@ -1871,7 +1832,6 @@ GPT-2.
     def stream_chat(self, tokenizer, query: str, history: List[Tuple[str, str]] = None, past_key_values=None,
                     max_length: int = 8192, do_sample=True, top_p=0.8, temperature=0.8, logits_processor=None,
                     return_past_key_values=False, **kwargs):
-
         """
         Method to perform streaming chat using the ChatGLM2ForConditionalGeneration model.
         
@@ -1938,7 +1898,6 @@ GPT-2.
             return_past_key_values=False,
             **kwargs,
     ):
-
         """
         Generates a stream of conditional text based on the given input_ids using the ChatGLM2 model.
         
@@ -2059,7 +2018,6 @@ instead.
                 break
 
     def quantize(self, bits: int, empty_init=False, **kwargs):
-
         """
         This method quantizes the input data to a specified number of bits.
         
@@ -2096,7 +2054,6 @@ set, or a tuple of tensors including logits and transformer outputs. The method 
     
     """
     def __init__(self, config: ChatGLM2Config, empty_init=True):
-
         """
         Initializes an instance of the ChatGLM2ForSequenceClassification class.
         
@@ -2139,7 +2096,6 @@ set, or a tuple of tensors including logits and transformer outputs. The method 
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor, ...], SequenceClassifierOutputWithPast]:
-
         '''
         Constructs the ChatGLM2ForSequenceClassification model.
         

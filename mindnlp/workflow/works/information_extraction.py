@@ -165,7 +165,6 @@ class UIEWork(Work):
     }
 
     def __init__(self, work, model, schema=None, **kwargs):
-
         """
         Initialize a new instance of the UIEWork class.
         
@@ -499,7 +498,6 @@ class UIEWork(Work):
         return concat_results
 
     def _run_model(self, inputs):
-
         """
         Method _run_model in class UIEWork.
         
@@ -522,7 +520,6 @@ class UIEWork(Work):
         return inputs
 
     def _parse_inputs(self, inputs):
-
         """
         This method '_parse_inputs' in the class 'UIEWork' processes the input data for further use.
         

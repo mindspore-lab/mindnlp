@@ -212,7 +212,6 @@ def model_info(
     securityStatus: Optional[bool] = None,
     files_metadata: bool = False,
 ):
-
     """
     This function retrieves information about a model from the specified repository.
     
@@ -244,7 +243,6 @@ def model_info(
     return ADDict(**data)
 
 def get_task(model: str) -> str:
-
     """
     This function retrieves the task associated with the input model.
     
@@ -324,7 +322,6 @@ def check_task(task: str) -> Tuple[str, Dict, Any]:
 
 
 def clean_custom_task(task_info):
-
     """
     This function cleans a custom task by performing the following steps:
     - Checks if the 'impl' key is present in the 'task_info' dictionary. If not, it raises a RuntimeError indicating that the model introduces a custom pipeline without specifying its implementation.

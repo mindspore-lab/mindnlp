@@ -114,7 +114,6 @@ class CLIPTextConfig(PretrainedConfig):
         eos_token_id=49407,
         **kwargs,
     ):
-
         """
         Initialize CLIPTextConfig.
         
@@ -159,7 +158,6 @@ class CLIPTextConfig(PretrainedConfig):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
-
         """
         Creates a CLIPTextConfig instance from a pretrained model.
         
@@ -264,7 +262,6 @@ class CLIPVisionConfig(PretrainedConfig):
         initializer_factor=1.0,
         **kwargs,
     ):
-
         """
         Initialize a CLIPVisionConfig object with the provided configuration parameters.
         
@@ -307,7 +304,6 @@ class CLIPVisionConfig(PretrainedConfig):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
-
         """
         Load a pretrained configuration from a given model name or path.
         
@@ -407,7 +403,6 @@ class CLIPConfig(PretrainedConfig):
     def __init__(
         self, text_config=None, vision_config=None, projection_dim=512, logit_scale_init_value=2.6592, **kwargs
     ):
-
         """
         Initializes a new instance of CLIPConfig.
         

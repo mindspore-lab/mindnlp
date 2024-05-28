@@ -42,7 +42,6 @@ class _UniformOperator(Cell):
                  hc_op,
                  hc_impl,
                  **kwargs) -> None:
-
         r"""
         Initializes an instance of the '_UniformOperator' class.
         
@@ -75,7 +74,6 @@ class _UniformOperator(Cell):
         self.op = hc_op(hc_impl, **kwargs)
 
     def construct(self, x):
-
         r"""
         Construct a new instance of the _UniformOperator class.
         

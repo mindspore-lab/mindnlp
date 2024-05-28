@@ -44,7 +44,6 @@ _CONFIG_FOR_DOC = "Starcoder2Config"
 
 # Copied from transformers.models.llama.modeling_llama._get_unpad_data
 def _get_unpad_data(attention_mask):
-
     '''
     This function retrieves unpad data from the attention mask.
     
@@ -86,7 +85,6 @@ inverse frequency and sets the cosine and sine cache for positional encoding.
     Note: This docstring is a detailed summary of the Starcoder2RotaryEmbedding class and its methods, providing an overview of its functionality and purpose within the context of neural network modeling.
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
-
         """
         Initialize the Starcoder2RotaryEmbedding object.
         
@@ -118,7 +116,6 @@ inverse frequency and sets the cosine and sine cache for positional encoding.
         )
 
     def _set_cos_sin_cache(self, seq_len, dtype):
-
         """
         Sets the cosine and sine cache for the Starcoder2RotaryEmbedding class.
         
@@ -143,7 +140,6 @@ inverse frequency and sets the cosine and sine cache for positional encoding.
         self.sin_cached = emb.sin().to(dtype)
 
     def construct(self, x, seq_len=None):
-
         """
         Construct and return the cosine and sine embeddings for the given sequence length.
         
@@ -230,7 +226,6 @@ class Starcoder2MLP(nn.Cell):
     
     '''
     def __init__(self, config: Starcoder2Config):
-
         """
         Initializes a Starcoder2MLP instance.
         
@@ -253,7 +248,6 @@ class Starcoder2MLP(nn.Cell):
         self.residual_dropout = config.residual_dropout
 
     def construct(self, hidden_states: Optional[Tuple[mindspore.Tensor]]) -> mindspore.Tensor:
-
         """
         This method constructs the forward pass of the Starcoder2MLP model.
         
@@ -295,7 +289,6 @@ class Starcoder2Attention(nn.Cell):
     """
 
     def __init__(self, config: Starcoder2Config, layer_idx: Optional[int] = None):
-
         """
         Initializes a new instance of the Starcoder2Attention class.
         
@@ -360,7 +353,6 @@ caching is used.
         use_cache: bool = False,
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
-
         '''
         This method constructs the Starcoder2Attention layer.
         
@@ -493,7 +485,6 @@ class Starcoder2DecoderLayer(nn.Cell):
         - The input hidden_states should be of shape (batch, seq_len, embed_dim).
     """
     def __init__(self, config: Starcoder2Config, layer_idx: int):
-
         """
         Initializes a new instance of the Starcoder2DecoderLayer class.
         
@@ -624,7 +615,6 @@ class Starcoder2Model(Starcoder2PreTrainedModel):
     """
 
     def __init__(self, config: Starcoder2Config):
-
         """
         Initializes a new instance of the Starcoder2Model class.
         
@@ -662,7 +652,6 @@ class Starcoder2Model(Starcoder2PreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings for the Starcoder2Model.
         
@@ -678,7 +667,6 @@ class Starcoder2Model(Starcoder2PreTrainedModel):
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Set the input embeddings for the Starcoder2Model.
         
@@ -706,7 +694,6 @@ class Starcoder2Model(Starcoder2PreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
-
         """
         Constructs the Starcoder2Model.
         
@@ -868,7 +855,6 @@ inputs for generation, and reorder the cache.
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
-
         """
         This method initializes an instance of the Starcoder2ForCausalLM class.
         
@@ -891,7 +877,6 @@ inputs for generation, and reorder the cache.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Returns the input embeddings from the model.
         
@@ -908,7 +893,6 @@ inputs for generation, and reorder the cache.
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the Starcoder2ForCausalLM model.
         
@@ -925,7 +909,6 @@ inputs for generation, and reorder the cache.
         self.model.embed_tokens = value
 
     def get_output_embeddings(self):
-
         """
         Method to retrieve the output embeddings from the Starcoder2ForCausalLM class.
         
@@ -946,7 +929,6 @@ inputs for generation, and reorder the cache.
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Set the output embeddings for Starcoder2ForCausalLM.
         
@@ -965,7 +947,6 @@ inputs for generation, and reorder the cache.
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
-
         """
         Sets the decoder for the Starcoder2ForCausalLM class.
         
@@ -982,7 +963,6 @@ inputs for generation, and reorder the cache.
         self.model = decoder
 
     def get_decoder(self):
-
         """
         This method returns the decoder model associated with the Starcoder2ForCausalLM instance.
         
@@ -1085,7 +1065,6 @@ inputs for generation, and reorder the cache.
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
-
         """
         Prepare inputs for generation.
         
@@ -1169,7 +1148,6 @@ attention_mask.
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Reorders the cache of past key values based on the given beam index.
         
@@ -1202,7 +1180,6 @@ class Starcoder2ForSequenceClassification(Starcoder2PreTrainedModel):
     The class provides flexibility to handle different problem types and batch sizes, ensuring efficient training and inference for sequence classification tasks.
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the Starcoder2ForSequenceClassification class.
         
@@ -1225,7 +1202,6 @@ class Starcoder2ForSequenceClassification(Starcoder2PreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Retrieves the input embeddings from the 'Starcoder2ForSequenceClassification' model.
         
@@ -1242,7 +1218,6 @@ class Starcoder2ForSequenceClassification(Starcoder2PreTrainedModel):
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings of the Starcoder2ForSequenceClassification model.
         

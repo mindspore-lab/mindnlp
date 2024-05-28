@@ -83,7 +83,6 @@ class InternLMConfig(PretrainedConfig):
         attn_implementation="eager",
         **kwargs,
     ):
-
         """
         This method initializes an instance of the InternLMConfig class with the provided configuration parameters.
         

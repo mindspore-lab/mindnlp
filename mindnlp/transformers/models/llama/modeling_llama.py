@@ -69,7 +69,6 @@ normalized hidden states are then multiplied by the weight parameter to obtain t
         self.variance_epsilon = eps
 
     def construct(self, hidden_states):
-
         """Constructs the RMS normalization of the hidden states.
         
         Args:
@@ -119,7 +118,6 @@ class LlamaRotaryEmbedding(nn.Cell):
             Constructs the positional embedding for the input tensor `x`.
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
-
         """
         Initializes a new instance of the LlamaRotaryEmbedding class.
         
@@ -148,7 +146,6 @@ class LlamaRotaryEmbedding(nn.Cell):
         )
 
     def _set_cos_sin_cache(self, seq_len, dtype):
-
         """
         Sets the cosine and sine caches for LlamaRotaryEmbedding.
         
@@ -190,7 +187,6 @@ where frequency_dim is the dimension of the 'inv_freq' tensor.
         self.sin_cached = emb.sin().to(dtype)
 
     def construct(self, x, seq_len=None):
-
         """
         Constructs a subset of the cached cosine and sine values based on the given sequence length.
         
@@ -226,7 +222,6 @@ class LlamaLinearScalingRotaryEmbedding(LlamaRotaryEmbedding):
     """LlamaRotaryEmbedding extended with linear scaling. Credits to the Reddit user /u/kaiokendev"""
 
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
-
         """
         Initializes a new instance of the LlamaLinearScalingRotaryEmbedding class.
         
@@ -247,7 +242,6 @@ class LlamaLinearScalingRotaryEmbedding(LlamaRotaryEmbedding):
         super().__init__(dim, max_position_embeddings, base)
 
     def _set_cos_sin_cache(self, seq_len, dtype):
-
         """
         Sets the cosine and sine caches for the LlamaLinearScalingRotaryEmbedding class.
         
@@ -277,7 +271,6 @@ class LlamaDynamicNTKScalingRotaryEmbedding(LlamaRotaryEmbedding):
     """LlamaRotaryEmbedding extended with Dynamic NTK scaling. Credits to the Reddit users /u/bloc97 and /u/emozilla"""
 
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
-
         """
         Initializes an instance of the LlamaDynamicNTKScalingRotaryEmbedding class.
         
@@ -298,7 +291,6 @@ class LlamaDynamicNTKScalingRotaryEmbedding(LlamaRotaryEmbedding):
         super().__init__(dim, max_position_embeddings, base)
 
     def _set_cos_sin_cache(self, seq_len, dtype):
-
         """
         Method to set the cosine and sine cache for dynamic NTK scaling rotary embedding in the LlamaDynamicNTKScalingRotaryEmbedding class.
         
@@ -399,7 +391,6 @@ transform the input data and produce the final output.
 computations are performed in a single path.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the LlamaMLP class.
         
@@ -427,7 +418,6 @@ computations are performed in a single path.
         self.act_fn = ACT2FN[config.hidden_act]
 
     def construct(self, x):
-
         """
         Constructs the output of the LlamaMLP model based on the input and configuration settings.
         
@@ -481,7 +471,6 @@ class LlamaAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(self, config: LlamaConfig):
-
         """
         Initializes an instance of the LlamaAttention class.
         
@@ -533,7 +522,6 @@ class LlamaAttention(nn.Cell):
         self._init_rope()
 
     def _init_rope(self):
-
         """
         Initializes the Rotary Positional Encoding (RoPE) based on the provided configuration.
         
@@ -573,7 +561,6 @@ class LlamaAttention(nn.Cell):
                 raise ValueError(f"Unknown RoPE scaling type {scaling_type}")
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-
         """
         Reshapes the input tensor according to the specified dimensions for the LlamaAttention class.
         
@@ -601,7 +588,6 @@ class LlamaAttention(nn.Cell):
         use_cache: bool = False,
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
-
         """
         This method constructs the LlamaAttention layer.
         
@@ -752,7 +738,6 @@ the attention weights tensor. If `use_cache` is True, the tuple also includes th
         output = decoder_layer.construct(hidden_states, attention_mask)
     """
     def __init__(self, config: LlamaConfig):
-
         """
         Initializes a LlamaDecoderLayer instance.
         
@@ -881,7 +866,6 @@ class LlamaModel(LlamaPreTrainedModel):
     """
 
     def __init__(self, config: LlamaConfig):
-
         """
         Initializes a new instance of the LlamaModel class.
         
@@ -909,7 +893,6 @@ class LlamaModel(LlamaPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method: get_input_embeddings
         
@@ -929,7 +912,6 @@ class LlamaModel(LlamaPreTrainedModel):
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
             Sets the input embeddings for the LlamaModel instance.
         
@@ -958,7 +940,6 @@ class LlamaModel(LlamaPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
-
         """
         Constructs the LlamaModel.
         
@@ -1105,7 +1086,6 @@ model construction and preparing inputs for generation. The class inherits from 
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of the LlamaForCausalLM class.
         
@@ -1133,7 +1113,6 @@ model construction and preparing inputs for generation. The class inherits from 
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method to retrieve input embeddings from the 'LlamaForCausalLM' class model.
         
@@ -1150,7 +1129,6 @@ model construction and preparing inputs for generation. The class inherits from 
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Method: set_input_embeddings
         
@@ -1178,7 +1156,6 @@ model construction and preparing inputs for generation. The class inherits from 
         self.model.embed_tokens = value
 
     def get_output_embeddings(self):
-
         """
         Retrieve the output embeddings from the LlamaForCausalLM model.
         
@@ -1194,7 +1171,6 @@ model construction and preparing inputs for generation. The class inherits from 
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the LlamaForCausalLM model.
         
@@ -1215,7 +1191,6 @@ embeddings.
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
-
         """
         Sets the decoder for the LlamaForCausalLM model.
         
@@ -1235,7 +1210,6 @@ embeddings.
         self.model = decoder
 
     def get_decoder(self):
-
         """
         This method returns the decoder model used for the LlamaForCausalLM class.
         
@@ -1343,7 +1317,6 @@ embeddings.
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
-
         """
         Method to prepare inputs for generation in the LlamaForCausalLM class.
         
@@ -1401,7 +1374,6 @@ embeddings.
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Reorders the cache of past key values for a given beam index in the LlamaForCausalLM class.
         
@@ -1468,7 +1440,6 @@ class LlamaForSequenceClassification(LlamaPreTrainedModel):
                 Union[Tuple, SequenceClassifierOutputWithPast]: The output tuple or a SequenceClassifierOutputWithPast object.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the LlamaForSequenceClassification class.
         
@@ -1494,7 +1465,6 @@ class LlamaForSequenceClassification(LlamaPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Returns the input embeddings of the given sequence for the LlamaForSequenceClassification model.
         
@@ -1520,7 +1490,6 @@ the model uses for further processing. These embeddings capture the contextual i
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """Set the embedding layer of the LlamaForSequenceClassification model with a specified value.
         
         Args:

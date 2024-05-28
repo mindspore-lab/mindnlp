@@ -79,7 +79,6 @@ class ASTFeatureExtractor(SequenceFeatureExtractor):
         return_attention_mask=False,
         **kwargs,
     ):
-
         """
         Initializes an instance of the ASTFeatureExtractor class.
         
@@ -166,7 +165,6 @@ class ASTFeatureExtractor(SequenceFeatureExtractor):
         return fbank
 
     def normalize(self, input_values: np.ndarray) -> np.ndarray:
-
         """
         Normalize the input values using the mean and standard deviation stored in the ASTFeatureExtractor instance.
         

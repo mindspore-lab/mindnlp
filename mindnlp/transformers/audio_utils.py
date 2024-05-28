@@ -118,7 +118,6 @@ def _create_triangular_filter_bank(fft_freqs: np.ndarray, filter_freqs: np.ndarr
     return np.maximum(np.zeros(1), np.minimum(down_slopes, up_slopes))
 
 
-
 def hertz_to_octave(
     freq: Union[float, np.ndarray], tuning: Optional[float] = 0.0, bins_per_octave: Optional[int] = 12
 ):

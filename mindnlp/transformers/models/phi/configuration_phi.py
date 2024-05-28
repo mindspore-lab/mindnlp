@@ -139,7 +139,6 @@ class PhiConfig(PretrainedConfig):
         eos_token_id=2,
         **kwargs,
     ):
-
         """
         Initializes an instance of the PhiConfig class.
         

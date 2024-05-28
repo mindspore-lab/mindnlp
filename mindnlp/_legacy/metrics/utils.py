@@ -110,7 +110,6 @@ def _check_shape(y_pred, y_true, n_class=None):
 
 
 def _get_rank(raw_list):
-
     r"""
     This function calculates the rank of each element in the given raw_list.
     

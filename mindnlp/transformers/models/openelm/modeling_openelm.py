@@ -138,7 +138,6 @@ padding index, the weight corresponding to the padding index is set to zero.
 
 
 def _rotate_half(x: Tensor) -> Tensor:
-
     """
     Rotates the input tensor by half its elements.
     
@@ -159,7 +158,6 @@ def _rotate_half(x: Tensor) -> Tensor:
 
 
 def _apply_rotary_pos_emb(x: Tensor, pos_sin: Tensor, pos_cos: Tensor) -> Tensor:
-
     """
     Applies rotary positional embeddings to the input tensor.
     
@@ -194,7 +192,6 @@ class OpenELMRotaryEmbedding(nn.Cell):
     def __init__(
         self, model_dim: int, max_seq_length: int, freq_constant: int = 10000
     ) -> None:
-
         """
         Initializes the OpenELMRotaryEmbedding instance with the specified parameters.
         
@@ -227,7 +224,6 @@ class OpenELMRotaryEmbedding(nn.Cell):
         self._compute_sin_cos_embeddings(max_seq_length)
 
     def extra_repr(self) -> str:
-
         """
         This method generates a string representation that includes specific attributes of the OpenELMRotaryEmbedding class instance.
         
@@ -366,7 +362,6 @@ output projection and returns the attention output along with optional attention
     Note: This class assumes the existence of certain related classes and functions like OpenELMConfig, OpenELMRotaryEmbedding, OpenELMRMSNorm, Cache, nn.Dense, and _scaled_dot_product_attention.
     """
     def __init__(self, config: OpenELMConfig, layer_idx: int) -> None:
-
         '''
         Initializes an instance of the OpenELMMultiHeadCausalAttention class.
         
@@ -425,7 +420,6 @@ output projection and returns the attention output along with optional attention
         self.num_groups = self.num_q_heads // self.num_k_heads
 
     def extra_repr(self) -> str:
-
         """
         Returns a string representation of the OpenELMMultiHeadCausalAttention object, including the number of query, key, and value heads.
         
@@ -553,7 +547,6 @@ activation functions based on the configuration, and returns a tensor of the sam
     
     """
     def __init__(self, config: OpenELMConfig, layer_idx: int) -> None:
-
         """
         Initializes an instance of the OpenELMFeedForwardNetwork class.
         
@@ -608,7 +601,6 @@ activation functions based on the configuration, and returns a tensor of the sam
         self.act = ACT2FN[config.activation_fn_name]
 
     def extra_repr(self) -> str:
-
         """
         This method generates a string representation of the OpenELMFeedForwardNetwork object with additional information about the feedforward network configuration.
         
@@ -674,7 +666,6 @@ key_sequence_length)` if default attention is used.
 states, depending on the specified arguments.
     """
     def __init__(self, config: OpenELMConfig, layer_idx: int) -> None:
-
         """Initialize an instance of the OpenELMDecoderLayer class.
         
         Args:
@@ -777,7 +768,6 @@ additional functionality and pre-trained model weights.
     config_class = OpenELMConfig
 
     def __init__(self, config: OpenELMConfig):
-
         """
         Initializes an instance of the OpenELMModel class.
         
@@ -831,7 +821,6 @@ additional functionality and pre-trained model weights.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Returns the input embeddings for the OpenELMModel.
         
@@ -852,7 +841,6 @@ additional functionality and pre-trained model weights.
         return self.token_embeddings
 
     def set_input_embeddings(self, new_embeddings: mindspore.Tensor):
-
         """
         Set the input embeddings for the OpenELMModel.
         
@@ -881,7 +869,6 @@ additional functionality and pre-trained model weights.
         return_dict: Optional[bool] = None,
         cache_position: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
-
         """
         Constructs the OpenELMModel.
         
@@ -1021,7 +1008,6 @@ additional functionality and pre-trained model weights.
         )
 
     def _update_causal_mask(self, attention_mask, input_tensor):
-
         """
         Updates the causal mask used in the OpenELMModel for attention computations.
         
@@ -1084,7 +1070,6 @@ reordering cache during generation. The class inherits from OpenELMPreTrainedMod
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config: OpenELMConfig):
-
         """
         Initializes an instance of the OpenELMForCausalLM class.
         
@@ -1125,7 +1110,6 @@ reordering cache during generation. The class inherits from OpenELMPreTrainedMod
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Retrieve the input embeddings from the OpenELMForCausalLM model.
         
@@ -1141,7 +1125,6 @@ reordering cache during generation. The class inherits from OpenELMPreTrainedMod
         return self.transformer.token_embeddings
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the OpenELMForCausalLM model.
         
@@ -1158,7 +1141,6 @@ reordering cache during generation. The class inherits from OpenELMPreTrainedMod
         self.transformer.token_embeddings = value
 
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings of the OpenELMForCausalLM model.
         
@@ -1174,7 +1156,6 @@ reordering cache during generation. The class inherits from OpenELMPreTrainedMod
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         This method sets the output embeddings for the OpenELMForCausalLM class.
         
@@ -1191,7 +1172,6 @@ reordering cache during generation. The class inherits from OpenELMPreTrainedMod
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
-
         """Set the decoder for the OpenELMForCausalLM instance.
         
         This method allows setting the decoder for the OpenELMForCausalLM instance. The decoder is used to transform the input data.
@@ -1209,7 +1189,6 @@ reordering cache during generation. The class inherits from OpenELMPreTrainedMod
         self.transformer = decoder
 
     def get_decoder(self):
-
         """
         This method returns the transformer for OpenELMForCausalLM.
         
@@ -1238,7 +1217,6 @@ reordering cache during generation. The class inherits from OpenELMPreTrainedMod
         return_dict: Optional[bool] = None,
         cache_position: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
-
         """
         This method constructs a Causal Language Model for OpenELM.
         
@@ -1329,7 +1307,6 @@ reordering cache during generation. The class inherits from OpenELMPreTrainedMod
         inputs_embeds=None,
         **kwargs,
     ):
-
         """
         Prepares the inputs for generation in the OpenELMForCausalLM class.
         
@@ -1433,7 +1410,6 @@ reordering cache during generation. The class inherits from OpenELMPreTrainedMod
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Reorders the cache of past key values based on the provided beam index.
         

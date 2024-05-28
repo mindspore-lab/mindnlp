@@ -147,7 +147,6 @@ class LayoutLMv2Config(PretrainedConfig):
             detectron2_config_args=None,
             **kwargs,
     ):
-
         """
         Initializes a LayoutLMv2Config object with the specified parameters.
         
@@ -221,7 +220,6 @@ class LayoutLMv2Config(PretrainedConfig):
 
     @classmethod
     def get_default_detectron2_config(cls):
-
         '''
         This method returns a dictionary containing the default configuration for the Detectron2 model. The configuration includes various settings related to the model's architecture, backbone, region of
 interest (ROI) heads, and other parameters.
@@ -265,7 +263,6 @@ interest (ROI) heads, and other parameters.
         }
 
     def get_detectron2_config(self):
-
         """
         This method generates a Detectron2 configuration for the LayoutLMv2 model.
         

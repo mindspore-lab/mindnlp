@@ -23,7 +23,6 @@ representing the result of the matrix multiplication operation.
                a_y: np.ndarray,
                b_x: np.ndarray,
                b_y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-
         r"""
         This method performs matrix multiplication by taking two pairs of input arrays and returning the resulting matrix product.
         

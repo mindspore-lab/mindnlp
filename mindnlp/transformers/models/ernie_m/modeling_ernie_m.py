@@ -55,7 +55,6 @@ class ErnieMEmbeddings(nn.Cell):
     """Construct the embeddings from word and position embeddings."""
 
     def __init__(self, config):
-
         """
         Args:
             self (object): The instance of the ErnieMEmbeddings class.
@@ -86,7 +85,6 @@ normalization epsilon, and hidden dropout probability.
         inputs_embeds: Optional[mindspore.Tensor] = None,
         past_key_values_length: int = 0,
     ) -> mindspore.Tensor:
-
         """
         This method 'construct' in the class 'ErnieMEmbeddings' constructs the embeddings for the input tokens.
         
@@ -161,7 +159,6 @@ scores and producing the context layer.
     
         """
     def __init__(self, config, position_embedding_type=None):
-
         """
         Initializes the ErnieMSelfAttention class.
         
@@ -202,7 +199,6 @@ scores and producing the context layer.
         self.is_decoder = config.is_decoder
 
     def transpose_for_scores(self, x: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Transposes the input tensor for calculating attention scores in the ErnieMSelfAttention class.
         
@@ -230,7 +226,6 @@ scores and producing the context layer.
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         """
         This method constructs the self-attention mechanism for the ErnieMSelfAttention class.
         
@@ -356,7 +351,6 @@ class ErnieMAttention(nn.Cell):
     The `construct` method processes input hidden states through the self-attention mechanism and output projection layer to generate attention outputs.
     """
     def __init__(self, config, position_embedding_type=None):
-
         """
         Initialize the ErnieMAttention class.
         
@@ -377,7 +371,6 @@ class ErnieMAttention(nn.Cell):
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
-
         """
         This method 'prune_heads' belongs to the class 'ErnieMAttention' and is responsible for pruning specific attention heads in the model based on the provided list of heads.
         
@@ -419,7 +412,6 @@ exceptions related to input validation or processing errors.
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         """
         This method constructs the ErnieMAttention module.
         
@@ -486,7 +478,6 @@ dropout.
                 mindspore.Tensor or Tuple[mindspore.Tensor]: The processed hidden states and optionally the attention weights.
     """
     def __init__(self, config):
-
         """
         Initialize an instance of the ErnieMEncoderLayer class.
         
@@ -532,7 +523,6 @@ dropout.
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = True,
     ):
-
         """
         Constructs an ErnieMEncoderLayer.
         
@@ -604,7 +594,6 @@ for initializing the model and processing input data through its layers.
     Please note that the actual code implementation is not included in this docstring.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the ErnieMEncoder class.
         
@@ -635,7 +624,6 @@ for initializing the model and processing input data through its layers.
         output_hidden_states: Optional[bool] = False,
         return_dict: Optional[bool] = True,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]:
-
         """
         Constructs the ErnieMEncoder.
         
@@ -705,7 +693,6 @@ class ErnieMPooler(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the ErnieMPooler class.
         
@@ -725,7 +712,6 @@ class ErnieMPooler(nn.Cell):
         self.activation = nn.Tanh()
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the pooled output tensor for the ERNIE model.
         
@@ -789,7 +775,6 @@ encoder, and optional pooling layer. The class provides methods for initializing
 The class inherits from ErnieMPreTrainedModel and extends its functionality to support specific ERNIE-M model architecture and operations.
     """
     def __init__(self, config, add_pooling_layer=True):
-
         """
         Initializes the ErnieMModel.
         
@@ -812,7 +797,6 @@ The class inherits from ErnieMPreTrainedModel and extends its functionality to s
         self.post_init()
 
     def get_input_embeddings(self):
-
         """  
         This method returns the input embeddings from the ErnieMModel.
         
@@ -828,7 +812,6 @@ The class inherits from ErnieMPreTrainedModel and extends its functionality to s
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, value):
-
         """
         Set the input embeddings for the ErnieMModel.
         
@@ -865,7 +848,6 @@ The class inherits from ErnieMPreTrainedModel and extends its functionality to s
         output_attentions: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPoolingAndCrossAttentions]:
-
         """
         Constructs the ERNIE-M model.
         
@@ -994,7 +976,6 @@ class ErnieMForSequenceClassification(ErnieMPreTrainedModel):
     """
     # Copied from transformers.models.bert.modeling_bert.BertForSequenceClassification.__init__ with Bert->ErnieM,bert->ernie_m
     def __init__(self, config):
-
         """
         Initializes an instance of the ErnieMForSequenceClassification class.
         
@@ -1121,7 +1102,6 @@ answering and computes the classification loss.
     """
     # Copied from transformers.models.bert.modeling_bert.BertForMultipleChoice.__init__ with Bert->ErnieM,bert->ernie_m
     def __init__(self, config):
-
         """
         Initializes an instance of the ErnieMForMultipleChoice class.
         
@@ -1241,7 +1221,6 @@ model. It takes various input tensors and returns the token classification outpu
     """
     # Copied from transformers.models.bert.modeling_bert.BertForTokenClassification.__init__ with Bert->ErnieM,bert->ernie_m
     def __init__(self, config):
-
         """
         Initializes an instance of the ErnieMForTokenClassification class.
         
@@ -1347,7 +1326,6 @@ attributes.
     """
     # Copied from transformers.models.bert.modeling_bert.BertForQuestionAnswering.__init__ with Bert->ErnieM,bert->ernie_m
     def __init__(self, config):
-
         """Initializes a new instance of the ErnieMForQuestionAnswering class.
         
         Args:
@@ -1479,7 +1457,6 @@ class ErnieMForInformationExtraction(ErnieMPreTrainedModel):
     
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the ErnieMForInformationExtraction class.
         

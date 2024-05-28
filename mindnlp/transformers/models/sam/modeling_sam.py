@@ -111,7 +111,6 @@ class SamPatchEmbeddings(nn.Cell):
     """
 
     def __init__(self, config):
-
         """Initializes an instance of the SamPatchEmbeddings class.
         
         Args:
@@ -142,7 +141,6 @@ class SamPatchEmbeddings(nn.Cell):
         self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, pad_mode='valid', has_bias=True)
 
     def construct(self, pixel_values):
-
         """
         Construct method in the SamPatchEmbeddings class.
         
@@ -192,7 +190,6 @@ class SamMLPBlock(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the SamMLPBlock class.
         
@@ -217,7 +214,6 @@ class SamMLPBlock(nn.Cell):
         self.act = ACT2FN[config.hidden_act]
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs a multi-layer perceptron block.
         
@@ -245,7 +241,6 @@ class SamLayerNorm(nn.Cell):
     """
 
     def __init__(self, normalized_shape, eps=1e-6, data_format="channels_last"):
-
         """
         Initializes a new instance of the SamLayerNorm class.
         
@@ -278,7 +273,6 @@ data_format parameter specifies the layout of the input tensor, which can be eit
                                       epsilon=self.eps)
 
     def construct(self, x: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs a layer normalization operation for the SamLayerNorm class.
         
@@ -314,7 +308,6 @@ class SamAttention(nn.Cell):
     """
 
     def __init__(self, config, downsample_rate=None):
-
         """
         Initializes a new instance of the SamAttention class.
         
@@ -346,7 +339,6 @@ class SamAttention(nn.Cell):
         self.out_proj = nn.Dense(self.internal_dim, self.hidden_size)
 
     def _separate_heads(self, hidden_states: Tensor, num_attention_heads: int) -> Tensor:
-
         """
         Method to separate heads in the attention mechanism.
         
@@ -370,7 +362,6 @@ class SamAttention(nn.Cell):
         return hidden_states.swapaxes(1, 2)
 
     def _recombine_heads(self, hidden_states: Tensor, point_batch_size: int) -> Tensor:
-
         """
         Recombines the heads in the hidden states tensor for self attention in the SamAttention class.
         
@@ -397,7 +388,6 @@ class SamAttention(nn.Cell):
         return hidden_states.reshape(batch // point_batch_size, point_batch_size, n_tokens, n_heads * c_per_head)
 
     def construct(self, query: Tensor, key: Tensor, value: Tensor, attention_similarity: Tensor = None) -> Tensor:
-
         '''
         Constructs a self-attention mechanism for the SamAttention class.
         
@@ -524,7 +514,6 @@ class SamTwoWayAttentionBlock(nn.Cell):
         attention_similarity: Tensor,
         output_attentions: bool = False,
     ):
-
         """
         This method constructs a two-way attention block for processing queries and keys in a neural network model.
         
@@ -609,7 +598,6 @@ returns a tuple containing the queries, keys, and optionally, all the attention 
     
     """
     def __init__(self, config: SamMaskDecoderConfig):
-
         """
         Initializes a new instance of the SamTwoWayTransformer class.
         
@@ -646,7 +634,6 @@ returns a tuple containing the queries, keys, and optionally, all the attention 
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutput]:
-
         """
         Constructs the SamTwoWayTransformer.
         
@@ -753,7 +740,6 @@ option of applying a sigmoid activation function to the output layer.
     def __init__(
         self, input_dim: int, hidden_dim: int, output_dim: int, num_layers: int, sigmoid_output: bool = False
     ):
-
         """
         Initializes an instance of the SamFeedForward class.
         
@@ -780,7 +766,6 @@ option of applying a sigmoid activation function to the output layer.
         self.sigmoid_output = sigmoid_output
 
     def construct(self, hidden_states):
-
         """
         This method constructs a feedforward neural network using the provided hidden states.
         
@@ -836,7 +821,6 @@ Predicts masks based on input embeddings and returns the generated masks along w
     For more details on the functionality and usage of the Mask Decoder class, refer to the method descriptions and class attributes above.
     """
     def __init__(self, config: SamMaskDecoderConfig):
-
         """
         Initialize the SamMaskDecoder class.
         
@@ -1000,7 +984,6 @@ class SamPositionalEmbedding(nn.Cell):
         construct(input_coords, input_shape=None): Positionally encodes normalized points and returns the encoded coordinates as a concatenation of sinusoidal and cosine functions.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the SamPositionalEmbedding class.
         
@@ -1054,7 +1037,6 @@ producing dense embeddings. The class inherits from nn.Cell.
         - construct(masks): Processes the input masks through the convolutional and normalization layers to generate dense embeddings
     """
     def __init__(self, config: SamPromptEncoderConfig):
-
         """
         Initializes the SamMaskEmbedding object with the provided configuration.
         
@@ -1082,7 +1064,6 @@ producing dense embeddings. The class inherits from nn.Cell.
         )
 
     def construct(self, masks):
-
         """
         Constructs dense embeddings from masks using convolutional layers.
         
@@ -1150,7 +1131,6 @@ class SamPromptEncoder(nn.Cell):
     
     """
     def __init__(self, config: SamPromptEncoderConfig, shared_patch_embedding):
-
         """
         Initializes a new instance of SamPromptEncoder.
         
@@ -1280,7 +1260,6 @@ class SamVisionAttention(nn.Cell):
     """Multi-head Attention block with relative position embeddings."""
 
     def __init__(self, config, window_size):
-
         """
         Initializes a SamVisionAttention object.
         
@@ -1399,7 +1378,6 @@ class SamVisionAttention(nn.Cell):
         return attn
 
     def construct(self, hidden_states: mindspore.Tensor, output_attentions=False) -> mindspore.Tensor:
-
         """
         Method 'construct' in the class 'SamVisionAttention'.
         
@@ -1480,7 +1458,6 @@ image tokens.
     
     """
     def __init__(self, config, window_size):
-
         """
         Initializes a new instance of SamVisionLayer.
         
@@ -1567,7 +1544,6 @@ image tokens.
         hidden_states: mindspore.Tensor,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         '''
         This method constructs the SamVisionLayer by applying attention mechanism and multi-layer perceptron (MLP) to the input hidden states.
         
@@ -1629,7 +1605,6 @@ class SamVisionNeck(nn.Cell):
     
     """
     def __init__(self, config: SamVisionConfig):
-
         """
         Initialize the SamVisionNeck class.
         
@@ -1654,7 +1629,6 @@ class SamVisionNeck(nn.Cell):
         self.layer_norm2 = SamLayerNorm(config.output_channels, data_format="channels_first")
 
     def construct(self, hidden_states):
-
         """Constructs the hidden states in the SamVisionNeck class.
         
         This method takes in two parameters: self and hidden_states. The hidden_states parameter represents the input hidden states and should be a tensor. The purpose of this parameter is to provide the input
@@ -1705,7 +1679,6 @@ during training for efficient memory usage.
 MindSpore framework.
     """
     def __init__(self, config: SamVisionConfig):
-
         """
         Initializes a SamVisionEncoder object.
         
@@ -1750,7 +1723,6 @@ MindSpore framework.
         self.gradient_checkpointing = False
 
     def get_input_embeddings(self):
-
         """
         Retrieves the input embeddings of the SamVisionEncoder.
         
@@ -1774,7 +1746,6 @@ MindSpore framework.
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SamVisionEncoderOutput]:
-
         """
         Constructs the SamVisionEncoder.
         
@@ -1877,7 +1848,6 @@ class SamPreTrainedModel(PreTrainedModel):
     main_input_name = "pixel_values"
 
     def _init_weights(self, cell):
-
         '''
         This method initializes the weights and biases of the provided cell based on the specified configuration.
         
@@ -1932,7 +1902,6 @@ outputs.
     _tied_weights_keys = ["prompt_encoder.shared_embedding.positional_embedding"]
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the SamModel class.
         
@@ -1958,7 +1927,6 @@ outputs.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method 'get_input_embeddings' in the class 'SamModel' retrieves the input embeddings from the vision encoder.
         
@@ -1974,7 +1942,6 @@ outputs.
         return self.vision_encoder.get_input_embeddings()
 
     def get_image_wide_positional_embeddings(self):
-
         """
         This method calculates wide positional embeddings for an image in the SamModel class.
         

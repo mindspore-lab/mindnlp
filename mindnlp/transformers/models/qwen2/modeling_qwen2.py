@@ -50,7 +50,6 @@ QWEN2_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 # Copied from transformers.models.llama.modeling_llama._get_unpad_data
 def _get_unpad_data(attention_mask):
-
     """
     Args:
         attention_mask (Tensor): A tensor representing the attention mask for the input sequences.
@@ -100,7 +99,6 @@ weight parameter to produce the final output.
         self.variance_epsilon = eps
 
     def construct(self, hidden_states):
-
         """
         Constructs the RMS normalization of hidden states.
         
@@ -142,7 +140,6 @@ class Qwen2RotaryEmbedding(nn.Cell):
         The Qwen2RotaryEmbedding module provides functionality for Qwen2Rotary embedding calculation, including setting cosine and sine cache and constructing the embedding.
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
-
         """
         Initializes a new instance of the Qwen2RotaryEmbedding class.
         
@@ -175,7 +172,6 @@ and stores it in the 'inv_freq' attribute. Additionally, it sets the cosine and 
         )
 
     def _set_cos_sin_cache(self, seq_len, dtype):
-
         """
         Sets the cosine and sine cache for the Qwen2RotaryEmbedding class.
         
@@ -200,7 +196,6 @@ and stores it in the 'inv_freq' attribute. Additionally, it sets the cosine and 
         self.sin_cached = emb.sin().to(dtype)
 
     def construct(self, x, seq_len=None):
-
         """
         Constructs the Qwen2RotaryEmbedding for the given input tensor 'x' and sequence length 'seq_len'.
         
@@ -287,7 +282,6 @@ class Qwen2MLP(nn.Cell):
         The Qwen2MLP class is intended to be used as part of a larger neural network model and provides a configurable multi-layer perceptron with specific projection and activation settings.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the Qwen2MLP class.
         
@@ -314,7 +308,6 @@ class Qwen2MLP(nn.Cell):
         self.act_fn = ACT2FN[config.hidden_act]
 
     def construct(self, x):
-
         """
         Constructs a new object using the Qwen2MLP class.
         
@@ -355,7 +348,6 @@ class Qwen2Attention(nn.Cell):
     """
 
     def __init__(self, config: Qwen2Config, layer_idx: Optional[int] = None):
-
         """
         Initializes an instance of the Qwen2Attention class.
         
@@ -416,7 +408,6 @@ valid layer index when creating the class.
         output_attentions: bool = False,
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
-
         '''
         This method constructs the Qwen2Attention layer.
         
@@ -540,7 +531,6 @@ output_attentions: Optional[bool] = False, use_cache: Optional[bool] = False, **
         Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: The output tensor and optional additional tensors based on the input arguments.
     """
     def __init__(self, config: Qwen2Config, layer_idx: int):
-
         """
         Initializes a Qwen2DecoderLayer object.
         
@@ -684,7 +674,6 @@ class Qwen2Model(Qwen2PreTrainedModel):
     """
 
     def __init__(self, config: Qwen2Config):
-
         """
         Initializes a Qwen2Model instance.
         
@@ -721,7 +710,6 @@ class Qwen2Model(Qwen2PreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method to retrieve the input embeddings from the Qwen2Model class.
         
@@ -740,7 +728,6 @@ class Qwen2Model(Qwen2PreTrainedModel):
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the Qwen2Model.
         
@@ -770,7 +757,6 @@ class Qwen2Model(Qwen2PreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
-
         """
         Construct method in the Qwen2Model class.
         
@@ -972,7 +958,6 @@ attention_mask, inputs_embeds, and additional keyword arguments as input and ret
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the Qwen2ForCausalLM class.
         
@@ -996,7 +981,6 @@ attention_mask, inputs_embeds, and additional keyword arguments as input and ret
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Returns the input embeddings from the model.
         
@@ -1013,7 +997,6 @@ attention_mask, inputs_embeds, and additional keyword arguments as input and ret
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the Qwen2ForCausalLM model.
         
@@ -1030,7 +1013,6 @@ attention_mask, inputs_embeds, and additional keyword arguments as input and ret
         self.model.embed_tokens = value
 
     def get_output_embeddings(self):
-
         """
         Method: get_output_embeddings
         
@@ -1051,7 +1033,6 @@ attention_mask, inputs_embeds, and additional keyword arguments as input and ret
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """Sets the output embeddings for the Qwen2ForCausalLM model.
         
         Args:
@@ -1068,7 +1049,6 @@ attention_mask, inputs_embeds, and additional keyword arguments as input and ret
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
-
         """
         Sets the decoder for the Qwen2ForCausalLM object.
         
@@ -1093,7 +1073,6 @@ attention_mask, inputs_embeds, and additional keyword arguments as input and ret
         self.model = decoder
 
     def get_decoder(self):
-
         """
         Method to retrieve the decoder model from the Qwen2ForCausalLM class.
         
@@ -1197,7 +1176,6 @@ attention_mask, inputs_embeds, and additional keyword arguments as input and ret
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
-
         """
         Prepare inputs for generation.
         
@@ -1279,7 +1257,6 @@ attention_mask, inputs_embeds, and additional keyword arguments as input and ret
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Method to reorder the cache based on the beam index.
         
@@ -1341,7 +1318,6 @@ model with the specified inputs and returns the sequence classifier output with 
 specific usage instructions may be available in the official documentation or source code.
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the Qwen2ForSequenceClassification class.
         
@@ -1364,7 +1340,6 @@ specific usage instructions may be available in the official documentation or so
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings from the Qwen2ForSequenceClassification model.
         
@@ -1380,7 +1355,6 @@ specific usage instructions may be available in the official documentation or so
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Set the input embeddings for the Qwen2ForSequenceClassification model.
         

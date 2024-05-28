@@ -137,7 +137,6 @@ class PegasusConfig(PretrainedConfig):
         forced_eos_token_id=1,
         **kwargs,
     ):
-
         """
         Initializes a new PegasusConfig object with the provided configuration parameters.
         
@@ -206,7 +205,6 @@ class PegasusConfig(PretrainedConfig):
 
     @property
     def num_attention_heads(self) -> int:
-
         """
         Returns the number of attention heads in the Pegasus model's encoder.
         
@@ -242,7 +240,6 @@ attention heads (12 in this case) is printed.
 
     @property
     def hidden_size(self) -> int:
-
         """
         Returns the hidden size of the PegasusConfig object.
         

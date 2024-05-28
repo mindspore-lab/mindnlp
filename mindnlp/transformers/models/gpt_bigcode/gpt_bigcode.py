@@ -70,7 +70,6 @@ class GPTBigCodeAttention(nn.Cell):
     """GPT BigCode Attention"""
 
     def __init__(self, config, is_cross_attention=False, layer_idx=None):
-
         """
         Initializes the GPTBigCodeAttention class.
         
@@ -132,7 +131,6 @@ class GPTBigCodeAttention(nn.Cell):
         self.resid_dropout = nn.Dropout(p=config.resid_pdrop)
 
     def _get_mask_value(self, dtype):
-
         """
         Method _get_mask_value in the class GPTBigCodeAttention.
         
@@ -155,7 +153,6 @@ class GPTBigCodeAttention(nn.Cell):
         return self.mask_value
 
     def _attn(self, query, key, value, attention_mask=None, head_mask=None):
-
         """
         This method calculates and applies attention mechanism to the input query, key, and value tensors in the GPTBigCodeAttention class.
         
@@ -271,7 +268,6 @@ attention scores. Default is None.
         Tuple[mindspore.Tensor, Optional[mindspore.Tensor],
               Tuple[mindspore.Tensor, ...]],
     ]:
-
         """
         Construct method in the GPTBigCodeAttention class.
         
@@ -347,7 +343,6 @@ class GPTBigCodeMLP(nn.Cell):
     """GPT BigCode MLP"""
 
     def __init__(self, intermediate_size, config):
-
         """
         Initializes an instance of the GPTBigCodeMLP class.
         
@@ -370,7 +365,6 @@ class GPTBigCodeMLP(nn.Cell):
         self.dropout = nn.Dropout(p=config.resid_pdrop)
 
     def construct(self, hidden_states: Optional[Tuple[mindspore.Tensor]]) -> mindspore.Tensor:
-
         """
         This method constructs a multi-layer perceptron for the GPT (Generative Pretrained Transformer) model using the provided hidden states.
         
@@ -396,7 +390,6 @@ class GPTBigCodeBlock(nn.Cell):
     """GPT BigCode Block"""
 
     def __init__(self, config, layer_idx=None):
-
         """
         Initializes an instance of the GPTBigCodeBlock class.
         
@@ -447,7 +440,6 @@ class GPTBigCodeBlock(nn.Cell):
         Tuple[mindspore.Tensor], Tuple[mindspore.Tensor,
                                        mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]
     ]:
-
         """
         This method constructs a GPT (Generative Pre-trained Transformer) big code block.
         
@@ -534,7 +526,6 @@ class GPTBigCodePreTrainedModel(PreTrainedModel):
     _no_split_modules = ["GPTBigCodeBlock"]
     _skip_keys_device_placement = "past_key_values"
 
-
     def _init_weights(self, cell):
         """Initialize the weights."""
         if isinstance(cell, (GPTBigCodeMLP, GPTBigCodeAttention)):
@@ -560,7 +551,6 @@ class GPTBigCodePreTrainedModel(PreTrainedModel):
                 'zeros', cell.bias.shape, cell.bias.dtype))
 
     def _set_gradient_checkpointing(self, module, value=False):
-
         """
         Set the gradient checkpointing for a given module in the GPTBigCodePreTrainedModel.
         
@@ -579,7 +569,6 @@ class GPTBigCodePreTrainedModel(PreTrainedModel):
             module.gradient_checkpointing = value
 
     def _set_gradient_checkpointing(self, module, value=False):
-
         """
         Sets the gradient checkpointing flag for a specific module in a GPTBigCodePreTrainedModel instance.
         
@@ -602,7 +591,6 @@ class GPTBigCodePreTrainedModel(PreTrainedModel):
         """
         if isinstance(module, GPTBigCodeModel):
             module.gradient_checkpointing = value
-
 
     def _backward_compatibility_gradient_checkpointing(self):
         """
@@ -628,7 +616,6 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
     """GPT BigCode Model"""
 
     def __init__(self, config):
-
         """
         __init__
         
@@ -684,7 +671,6 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method returns the input embeddings for the GPTBigCodeModel.
         
@@ -700,7 +686,6 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
         return self.wte
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Sets the input embeddings for the GPTBigCodeModel.
         
@@ -732,7 +717,6 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]:
-
         """
         Constructs the GPTBigCodeModel.
         
@@ -918,7 +902,6 @@ class GPTBigCodeForCausalLM(GPTBigCodePreTrainedModel):
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
-
         """
         Initializes the GPTBigCodeForCausalLM class.
         
@@ -941,7 +924,6 @@ class GPTBigCodeForCausalLM(GPTBigCodePreTrainedModel):
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings of the GPTBigCodeForCausalLM model.
         
@@ -957,7 +939,6 @@ class GPTBigCodeForCausalLM(GPTBigCodePreTrainedModel):
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the GPTBigCodeForCausalLM model.
         
@@ -974,7 +955,6 @@ class GPTBigCodeForCausalLM(GPTBigCodePreTrainedModel):
         self.lm_head = new_embeddings
 
     def prepare_inputs_for_generation(self, input_ids, past_key_values=None, inputs_embeds=None, **kwargs):
-
         '''
         Prepare inputs for generation.
         
@@ -1127,7 +1107,6 @@ class GPTBigCodeForSequenceClassification(GPTBigCodePreTrainedModel):
     """GPT BigCode for Sequence Classification"""
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the GPTBigCodeForSequenceClassification class.
         
@@ -1248,7 +1227,6 @@ class GPTBigCodeForTokenClassification(GPTBigCodePreTrainedModel):
     """GPT BigCode for Token Classification"""
 
     def __init__(self, config):
-
         """
         Initializes an instance of the GPTBigCodeForTokenClassification class.
         

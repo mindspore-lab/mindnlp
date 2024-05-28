@@ -43,7 +43,6 @@ PRETRAINED_VOCAB_FILES_MAP = {
 }
 
 def token_time_to_note(number, cutoff_time_idx, current_idx):
-
     """
     Args:
         number (int): The amount to increment the current index by.
@@ -63,7 +62,6 @@ def token_time_to_note(number, cutoff_time_idx, current_idx):
     return current_idx
 
 def token_note_to_note(number, current_velocity, default_velocity, note_onsets_ready, current_idx, notes):
-
     """
     This function updates the notes list based on the given parameters.
     
@@ -125,7 +123,6 @@ class Pop2PianoTokenizer(PreTrainedTokenizer):
         bos_token="2",
         **kwargs,
     ):
-
         """
         This method initializes an instance of the Pop2PianoTokenizer class.
         

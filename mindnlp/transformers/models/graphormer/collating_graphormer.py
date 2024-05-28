@@ -93,7 +93,6 @@ class GraphormerDataCollator:
     Converts graph dataset into the format accepted by Graphormer model
     """
     def __init__(self, spatial_pos_max=20, on_the_fly_processing=False):
-
         """
         Initializes a new instance of the GraphormerDataCollator class.
         
@@ -124,7 +123,6 @@ class GraphormerDataCollator:
                              "labels"]
 
     def __call__(self, edge_index, edge_attr, y, num_nodes, node_feat, batch_info):
-
         """
         This method, named '__call__', is defined within the class 'GraphormerDataCollator' and is used to process data for graph neural network models. It takes the following parameters:
         

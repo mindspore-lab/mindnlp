@@ -54,7 +54,6 @@ class GPTPanguAttention(nn.Cell):
 hidden_states and optional past layers, masks, custom query, cache usage, and attention output flag.
     """
     def __init__(self, config):
-
         """
         Initializes the GPTPanguAttention class.
         
@@ -100,9 +99,7 @@ hidden_states and optional past layers, masks, custom query, cache usage, and at
         self.attn_dropout = nn.Dropout(p=config.attn_pdrop)
         self.resid_dropout = nn.Dropout(p=config.resid_pdrop)
 
-
     def _attn(self, query, key, value, attention_mask=None, head_mask=None):
-
         ''' 
         Method _attn in the GPTPanguAttention class.
         
@@ -187,7 +184,6 @@ hidden_states and optional past layers, masks, custom query, cache usage, and at
         use_cache=False,
         output_attentions=False,
     ):
-
         """
         Constructs the attention mechanism used in the GPTPangu model.
         
@@ -266,7 +262,6 @@ class GPTPanguMLP(nn.Cell):
     
     """
     def __init__(self, intermediate_size, config):  # in MLP: intermediate_size= 4 * hidden_size
-
         """
         Initializes the GPTPanguMLP class.
         
@@ -289,7 +284,6 @@ class GPTPanguMLP(nn.Cell):
         self.dropout = nn.Dropout(p=config.resid_pdrop)
 
     def construct(self, hidden_states):
-
         """
         This method constructs the hidden states by applying a series of transformations.
         
@@ -336,7 +330,6 @@ class GPTPanguBlock(nn.Cell):
     - nn.Cell
     """
     def __init__(self, config):
-
         """
         Initialize a GPTPanguBlock instance with the provided configuration.
         
@@ -373,7 +366,6 @@ class GPTPanguBlock(nn.Cell):
         use_cache=False,
         output_attentions=False,
     ):
-
         """
         Constructs the GPTPanguBlock.
         
@@ -488,7 +480,6 @@ GPTPanguModel class inherits from the GPTPanguPreTrainedModel class.
         gradient_checkpointing (bool): Whether to use gradient checkpointing.
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the GPTPanguModel class.
         
@@ -522,7 +513,6 @@ GPTPanguModel class inherits from the GPTPanguPreTrainedModel class.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method to retrieve input embeddings from the GPTPanguModel.
         
@@ -538,7 +528,6 @@ GPTPanguModel class inherits from the GPTPanguPreTrainedModel class.
         return self.wte
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Set the input embeddings for the GPTPanguModel.
         
@@ -570,7 +559,6 @@ GPTPanguModel class inherits from the GPTPanguPreTrainedModel class.
         output_hidden_states=None,
         return_dict=None,
     ):
-
         """
         Constructs the GPTPanguModel.
         
@@ -735,7 +723,6 @@ construct method constructs outputs based on input data, including handling labe
 step.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the GPTPanguForCausalLM class.
         
@@ -760,7 +747,6 @@ step.
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         This method returns the output embeddings of the GPTPanguForCausalLM model.
         
@@ -776,7 +762,6 @@ step.
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the GPTPanguForCausalLM model.
         
@@ -793,7 +778,6 @@ step.
         self.lm_head = new_embeddings
 
     def prepare_inputs_for_generation(self, input_ids, past=None, **kwargs):
-
         """
         Prepare inputs for generation.
         

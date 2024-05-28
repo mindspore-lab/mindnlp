@@ -210,7 +210,6 @@ class _BaseBatchNormImpl(_BatchNormImpl):
                  gamma_init: Union[Tensor, str, Initializer, numbers.Number],
                  beta_init: Union[Tensor, str, Initializer, numbers.Number],
                  num_features: int) -> None:
-
         r"""
         Initializes a new instance of the _BaseBatchNormImpl class.
         
@@ -330,7 +329,6 @@ class _BaseBatchNormImpl(_BatchNormImpl):
 
     @abstractmethod
     def get_norm(self, u: Tensor) -> Tensor:
-
         r"""
         This method calculates the norm of the input tensor 'u' in the '_BaseBatchNormImpl' class.
         
@@ -348,7 +346,6 @@ class _BaseBatchNormImpl(_BatchNormImpl):
 
     @abstractmethod
     def get_square_norm(self, u: Tensor) -> Tensor:
-
         r"""
         Calculates the square norm of a given tensor.
         
@@ -372,7 +369,6 @@ class _BaseBatchNormImpl(_BatchNormImpl):
                         scale_y: Tensor,
                         shift_x: Tensor,
                         shift_y: Tensor) -> Tuple[Tensor, Tensor]:
-
         r"""
         The 'scale_and_shift' method in the '_BaseBatchNormImpl' class performs scaling and shifting operations on input tensors.
         

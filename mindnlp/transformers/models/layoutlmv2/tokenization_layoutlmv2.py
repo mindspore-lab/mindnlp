@@ -251,7 +251,6 @@ class LayoutLMv2Tokenizer(PreTrainedTokenizer):
             additional_special_tokens: Optional[List[str]] = None,
             **kwargs,
     ):
-
         """
         Initializes a LayoutLMv2Tokenizer object.
         
@@ -341,7 +340,6 @@ class LayoutLMv2Tokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
-
         """Return the size of the vocabulary used by the LayoutLMv2Tokenizer.
         
         Args:
@@ -356,7 +354,6 @@ class LayoutLMv2Tokenizer(PreTrainedTokenizer):
         return len(self.vocab)
 
     def get_vocab(self):
-
         """
         Returns the combined vocabulary of the LayoutLMv2Tokenizer instance and any additional tokens that have been added.
         
@@ -373,7 +370,6 @@ class LayoutLMv2Tokenizer(PreTrainedTokenizer):
         return dict(self.vocab, **self.added_tokens_encoder)
 
     def _tokenize(self, text):
-
         """
         This method '_tokenize' is defined within the 'LayoutLMv2Tokenizer' class and is responsible for tokenizing the input text.
         
@@ -490,7 +486,6 @@ class LayoutLMv2Tokenizer(PreTrainedTokenizer):
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary to a file in the specified directory.
         
@@ -697,7 +692,6 @@ class LayoutLMv2Tokenizer(PreTrainedTokenizer):
             verbose: bool = True,
             **kwargs,
     ) -> BatchEncoding:
-
         """
         Encodes a batch of text or text pairs using the LayoutLMv2 model.
         
@@ -795,7 +789,6 @@ pair, or a pre-tokenized input.
             verbose: bool = True,
             **kwargs,
     ) -> BatchEncoding:
-
         """
         Batch encodes a batch of text or text pairs using the LayoutLMv2Tokenizer.
         
@@ -949,7 +942,6 @@ pair, or a pre-tokenized input.
             verbose: bool = True,
             **kwargs,
     ) -> List[int]:
-
         """
         This method encodes the input text and returns a list of integer input ids.
         
@@ -1093,7 +1085,6 @@ pair, or a pre-tokenized input.
             verbose: bool = True,
             **kwargs,
     ) -> BatchEncoding:
-
         """Encodes the given inputs into a batch of tensors with additional special tokens for LayoutLMv2 model.
         
         Args:
@@ -1607,7 +1598,6 @@ class BasicTokenizer:
             strip_accents=None,
             do_split_on_punc=True,
     ):
-
         """
         Initializes a new instance of the BasicTokenizer class.
         
@@ -1760,7 +1750,6 @@ class WordpieceTokenizer:
     """Runs WordPiece tokenization."""
 
     def __init__(self, vocab, unk_token, max_input_chars_per_word=100):
-
         """
         Initializes a new instance of the WordpieceTokenizer class.
         

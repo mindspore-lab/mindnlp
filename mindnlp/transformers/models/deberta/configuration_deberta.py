@@ -124,7 +124,6 @@ class DebertaConfig(PretrainedConfig):
         pooler_hidden_act="gelu",
         **kwargs,
     ):
-
         """
         Initialize a DebertaConfig object.
         

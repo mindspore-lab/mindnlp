@@ -29,7 +29,6 @@ class Seq2vecModel(BaseModel):
     """
 
     def __init__(self, encoder, head, dropout: float = None):
-
         r""" 
         Initializes a Seq2vecModel instance.
         

@@ -154,7 +154,6 @@ class Qwen2Tokenizer(PreTrainedTokenizer):
         split_special_tokens=False,
         **kwargs,
     ):
-
         """
         Initializes an instance of the Qwen2Tokenizer class.
         
@@ -241,7 +240,6 @@ class Qwen2Tokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self) -> int:
-
         """Get the size of the vocabulary.
         
         This method returns the number of unique tokens in the tokenizer's encoder.
@@ -259,7 +257,6 @@ class Qwen2Tokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.gpt2.tokenization_gpt2.GPT2Tokenizer.get_vocab
     def get_vocab(self):
-
         """
         Returns the vocabulary of the tokenizer.
         
@@ -279,7 +276,6 @@ class Qwen2Tokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.gpt2.tokenization_gpt2.GPT2Tokenizer.bpe
     def bpe(self, token):
-
         """
         Perform Byte Pair Encoding (BPE) on a given token.
         
@@ -396,7 +392,6 @@ class Qwen2Tokenizer(PreTrainedTokenizer):
         spaces_between_special_tokens: bool = False,
         **kwargs,
     ) -> str:
-
         """
         Decodes a list of token IDs into a string representation.
         
@@ -432,7 +427,6 @@ class Qwen2Tokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.gpt2.tokenization_gpt2.GPT2Tokenizer.save_vocabulary
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save vocabulary to a specified directory with an optional filename prefix.
         
@@ -479,7 +473,6 @@ class Qwen2Tokenizer(PreTrainedTokenizer):
         return vocab_file, merge_file
 
     def prepare_for_tokenization(self, text, **kwargs):
-
         """
         Prepares the given text for tokenization.
         

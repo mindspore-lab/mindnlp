@@ -156,7 +156,6 @@ class QuestionAnsweringArgumentHandler(ArgumentHandler):
     """
 
     def normalize(self, item):
-
         """
         Method: normalize
         
@@ -191,7 +190,6 @@ of type SquadExample or dict.
         raise ValueError(f"{item} argument needs to be of type (SquadExample, dict)")
 
     def __call__(self, *args, **kwargs):
-
         """
         This method handles various input types and formats for Question Answering (QA) arguments and normalizes them for processing.
         
@@ -279,7 +277,6 @@ class QuestionAnsweringPipeline(ChunkPipeline):
             task: str = "",
             **kwargs,
     ):
-
         """
         Initializes a QuestionAnsweringPipeline object.
         
@@ -344,7 +341,6 @@ class QuestionAnsweringPipeline(ChunkPipeline):
             align_to_words=None,
             **kwargs,
     ):
-
         """
         Sanitizes the parameters for the QuestionAnsweringPipeline class.
         
@@ -451,7 +447,6 @@ class QuestionAnsweringPipeline(ChunkPipeline):
         return super().__call__(examples, **kwargs)
 
     def preprocess(self, example, padding="do_not_pad", doc_stride=None, max_question_len=64, max_seq_len=None):
-
         ''' 
         The preprocess method performs preprocessing for a Question Answering task and yields processed features.
         
@@ -578,7 +573,6 @@ smaller.
             yield {"example": example, "is_last": is_last, **fw_args, **others}
 
     def _forward(self, inputs):
-
         """
         Forward method for the QuestionAnsweringPipeline class.
         
@@ -611,7 +605,6 @@ smaller.
             max_answer_len=15,
             align_to_words=True,
     ):
-
         """
         This method postprocess is a part of the class QuestionAnsweringPipeline.
         
@@ -709,7 +702,6 @@ smaller.
     def get_indices(
             self, enc: "tokenizers.Encoding", s: int, e: int, sequence_index: int, align_to_words: bool
     ) -> Tuple[int, int]:
-
         """
         This method retrieves the start and end character indices corresponding to the specified token indices within a given sequence.
         

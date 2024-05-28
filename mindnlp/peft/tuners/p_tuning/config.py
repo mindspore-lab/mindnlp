@@ -89,7 +89,6 @@ class PromptEncoderConfig(PromptLearningConfig):
     )
 
     def __post_init__(self):
-
         """
         Method for initializing PromptEncoderConfig instances after creation.
         

@@ -46,7 +46,6 @@ class Wav2Vec2Processor(ProcessorMixin):
     tokenizer_class = "AutoTokenizer"
 
     def __init__(self, feature_extractor, tokenizer):
-
         """
         Initializes a new instance of the Wav2Vec2Processor class.
         
@@ -67,7 +66,6 @@ class Wav2Vec2Processor(ProcessorMixin):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, **kwargs):
-
         """
         This method creates an instance of the Wav2Vec2Processor class from a pre-trained model.
         

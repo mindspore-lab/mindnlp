@@ -66,7 +66,6 @@ class BlenderbotSmallLearnedPositionalEmbedding(nn.Embedding):
     """
 
     def __init__(self, num_embeddings: int, embedding_dim: int):
-
         """
         Initializes an instance of the BlenderbotSmallLearnedPositionalEmbedding class.
         
@@ -109,7 +108,6 @@ class BlenderbotSmallAttention(nn.Cell):
         is_causal: bool = False,
         config: Optional[BlenderbotSmallConfig] = None,
     ):
-
         """
         Initializes an instance of the BlenderbotSmallAttention class.
         
@@ -152,7 +150,6 @@ class BlenderbotSmallAttention(nn.Cell):
         self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-
         """
         This method reshapes the input tensor for the attention mechanism in the BlenderbotSmall model.
         
@@ -321,7 +318,6 @@ Optional[mindspore.Tensor]]: Processes the input hidden states through the self-
         - final_layer_norm: Layer normalization for the final output of the layer.
     """
     def __init__(self, config: BlenderbotSmallConfig):
-
         """
         Initializes a new instance of the BlenderbotSmallEncoderLayer class.
         
@@ -451,7 +447,6 @@ class BlenderbotSmallDecoderLayer(nn.Cell):
         None
     """
     def __init__(self, config: BlenderbotSmallConfig):
-
         """
         Initialize a BlenderbotSmallDecoderLayer object.
         
@@ -624,10 +619,8 @@ with the second row having a padding token represented by `self.config.pad_token
 
             cell.weight.set_data(Tensor(weight, cell.weight.dtype))
 
-
     @property
     def dummy_inputs(self):
-
         """
         This method returns a dictionary of dummy inputs for the BlenderbotSmallPreTrainedModel.
         
@@ -666,7 +659,6 @@ class BlenderbotSmallEncoder(BlenderbotSmallPreTrainedModel):
     """
 
     def __init__(self, config: BlenderbotSmallConfig, embed_tokens: Optional[nn.Embedding] = None):
-
         """
         Initializes the BlenderbotSmallEncoder.
         
@@ -850,7 +842,6 @@ class BlenderbotSmallDecoder(BlenderbotSmallPreTrainedModel):
     """
 
     def __init__(self, config: BlenderbotSmallConfig, embed_tokens: Optional[nn.Embedding] = None):
-
         """
         Initializes a BlenderbotSmallDecoder instance.
         
@@ -889,7 +880,6 @@ class BlenderbotSmallDecoder(BlenderbotSmallPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method to retrieve the input embeddings from the BlenderbotSmallDecoder class.
         
@@ -905,7 +895,6 @@ class BlenderbotSmallDecoder(BlenderbotSmallPreTrainedModel):
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Set the input embeddings for the BlenderbotSmallDecoder.
         
@@ -1191,7 +1180,6 @@ decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, retur
     _tied_weights_keys = ["decoder.embed_tokens.weight", "encoder.embed_tokens.weight"]
 
     def __init__(self, config: BlenderbotSmallConfig):
-
         """
         Initializes a new instance of BlenderbotSmallModel with the provided configuration.
         
@@ -1219,7 +1207,6 @@ decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, retur
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method to retrieve the input embeddings from the BlenderbotSmallModel.
         
@@ -1240,7 +1227,6 @@ decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, retur
         return self.shared
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the BlenderbotSmallModel.
         
@@ -1259,7 +1245,6 @@ decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, retur
         self.decoder.embed_tokens = self.shared
 
     def get_encoder(self):
-
         """
         Method to retrieve the encoder of the BlenderbotSmallModel instance.
         
@@ -1276,7 +1261,6 @@ decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, retur
         return self.encoder
 
     def get_decoder(self):
-
         """
         This method returns the decoder attribute of the BlenderbotSmallModel.
         
@@ -1397,7 +1381,6 @@ and computing loss during training.
     _tied_weights_keys = ["decoder.embed_tokens.weight", "encoder.embed_tokens.weight", "lm_head.weight"]
 
     def __init__(self, config: BlenderbotSmallConfig):
-
         """
         __init__
         
@@ -1422,7 +1405,6 @@ and computing loss during training.
         self.post_init()
 
     def get_encoder(self):
-
         """
         Method: get_encoder
         
@@ -1442,7 +1424,6 @@ and computing loss during training.
         return self.model.get_encoder()
 
     def get_decoder(self):
-
         '''
         This method returns the decoder component from the BlenderbotSmallForConditionalGeneration model.
         
@@ -1458,7 +1439,6 @@ and computing loss during training.
         return self.model.get_decoder()
 
     def resize_token_embeddings(self, new_num_tokens: int, pad_to_multiple_of: Optional[int] = None) -> nn.Embedding:
-
         """
         Resize the token embeddings for the BlenderbotSmallForConditionalGeneration model.
         
@@ -1478,7 +1458,6 @@ and computing loss during training.
         return new_embeddings
 
     def _resize_final_logits_bias(self, new_num_tokens: int) -> None:
-
         """
         Resizes the final logits bias based on the number of tokens in the input.
         
@@ -1501,7 +1480,6 @@ and computing loss during training.
         self.final_logits_bias = new_bias
 
     def get_output_embeddings(self):
-
         """
         Method to retrieve the output embeddings of the model.
         
@@ -1517,7 +1495,6 @@ and computing loss during training.
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the BlenderbotSmallForConditionalGeneration model.
         
@@ -1623,7 +1600,6 @@ and computing loss during training.
         encoder_outputs=None,
         **kwargs,
     ):
-
         '''
         Prepare inputs for generation.
         
@@ -1680,7 +1656,6 @@ and computing loss during training.
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Reorders the cache for a specific beam index in the BlenderbotSmallForConditionalGeneration class.
         
@@ -1712,7 +1687,6 @@ class BlenderbotSmallDecoderWrapper(BlenderbotSmallPreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the BlenderbotSmallDecoderWrapper class.
         
@@ -1731,7 +1705,6 @@ class BlenderbotSmallDecoderWrapper(BlenderbotSmallPreTrainedModel):
         self.decoder = BlenderbotSmallDecoder(config)
 
     def construct(self, *args, **kwargs):
-
         """
         Constructs a BlenderbotSmallDecoderWrapper object.
         
@@ -1764,7 +1737,6 @@ usage and expected outputs are provided for the 'construct' method.
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the BlenderbotSmallForCausalLM class.
         
@@ -1794,7 +1766,6 @@ usage and expected outputs are provided for the 'construct' method.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings from the BlenderbotSmallForCausalLM model.
         
@@ -1810,7 +1781,6 @@ usage and expected outputs are provided for the 'construct' method.
         return self.model.decoder.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Set the input embeddings for the BlenderbotSmallForCausalLM model.
         
@@ -1827,7 +1797,6 @@ usage and expected outputs are provided for the 'construct' method.
         self.model.decoder.embed_tokens = value
 
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings for the BlenderbotSmallForCausalLM model.
         
@@ -1847,7 +1816,6 @@ be useful for various natural language processing tasks.
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the BlenderbotSmallForCausalLM model.
         
@@ -1864,7 +1832,6 @@ be useful for various natural language processing tasks.
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
-
         """
         Sets the decoder for the BlenderbotSmallForCausalLM model.
         
@@ -1881,7 +1848,6 @@ be useful for various natural language processing tasks.
         self.model.decoder = decoder
 
     def get_decoder(self):
-
         """
         This method returns the decoder component of the BlenderbotSmallForCausalLM model.
         
@@ -2041,7 +2007,6 @@ be useful for various natural language processing tasks.
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, use_cache=None, **kwargs
     ):
-
         """
         This method prepares inputs for generation in the BlenderbotSmallForCausalLM class.
         
@@ -2084,7 +2049,6 @@ be useful for various natural language processing tasks.
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Reorders the cache based on the provided beam index.
         

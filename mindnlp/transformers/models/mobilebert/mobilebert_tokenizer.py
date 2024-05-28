@@ -80,7 +80,6 @@ class MobileBertTokenizer(PreTrainedTokenizer):
         strip_accents=None,
         **kwargs
     ):
-
         """
         Initialize the MobileBertTokenizer class.
         
@@ -136,7 +135,6 @@ obtained directly from vocab.vocab. If vocab is a path to a file, the file is lo
         self.return_token = return_token
         self.implementation = Implementation.PY
 
-
     def execute_py(self, text_input):
         """
         Execute method.
@@ -166,7 +164,6 @@ obtained directly from vocab.vocab. If vocab is a path to a file, the file is lo
         raise ValueError(f"Unsupported string type: {type(text_input)}, {text_input.dtype}")
 
     def _convert_token_to_id(self, token):
-
         """
         Converts a token to its corresponding token ID using the MobileBERT Tokenizer.
         

@@ -133,7 +133,6 @@ class MatthewsCorrelation(Metric):
 
     """
     def __init__(self, name='MatthewsCorrelation'):
-
         r"""
         Initialize the MatthewsCorrelation object.
         

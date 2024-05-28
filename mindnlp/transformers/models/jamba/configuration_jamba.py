@@ -159,7 +159,6 @@ class JambaConfig(PretrainedConfig):
             mamba_inner_layernorms=True,
             **kwargs,
     ):
-
         """
         Initializes a new instance of the JambaConfig class.
         

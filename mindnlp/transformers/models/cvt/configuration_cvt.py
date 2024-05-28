@@ -21,7 +21,6 @@ from ....utils import logging
 logger = logging.get_logger(__name__)
 
 
-
 class CvtConfig(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`CvtModel`]. It is used to instantiate a CvT model
@@ -120,7 +119,6 @@ class CvtConfig(PretrainedConfig):
         layer_norm_eps=1e-12,
         **kwargs,
     ):
-
         '''
         This method initializes an instance of the CvtConfig class with the provided parameters.
         

@@ -37,7 +37,6 @@ class PeftConfigMixin():
 
     @property
     def __dict__(self):
-
         r"""
         Method '__dict__' in the class 'PeftConfigMixin' returns a dictionary representation of the object using the 'asdict' function.
         
@@ -82,8 +81,6 @@ class PeftConfigMixin():
         # save it
         with open(output_path, "w", encoding='utf-8') as writer:
             writer.write(json.dumps(output_dict, indent=2, sort_keys=True))
-
-
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, subfolder=None, **kwargs):
@@ -130,7 +127,6 @@ class PeftConfigMixin():
             json_object = json.load(file)
 
         return json_object
-
 
     @property
     def is_prompt_learning(self):

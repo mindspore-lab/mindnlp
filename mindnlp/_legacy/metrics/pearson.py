@@ -117,7 +117,6 @@ class PearsonCorrelation(Metric):
 
     """
     def __init__(self, name='PearsonCorrelation'):
-
         r"""
         Initializes a new instance of PearsonCorrelation.
         

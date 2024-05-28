@@ -136,7 +136,6 @@ class BarthezTokenizer(PreTrainedTokenizer):
         sp_model_kwargs: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> None:
-
         """
         __init__
         
@@ -261,7 +260,6 @@ class BarthezTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
-
         """
         Returns the size of the vocabulary used by the BarthezTokenizer instance.
         
@@ -277,7 +275,6 @@ class BarthezTokenizer(PreTrainedTokenizer):
         return len(self.sp_model)
 
     def get_vocab(self):
-
         """
         Get the vocabulary of the BarthezTokenizer.
         
@@ -297,7 +294,6 @@ class BarthezTokenizer(PreTrainedTokenizer):
         return vocab
 
     def _tokenize(self, text: str) -> List[str]:
-
         """
         This method '_tokenize' in the class 'BarthezTokenizer' tokenizes the input text using the SentencePiece model.
         
@@ -342,7 +338,6 @@ class BarthezTokenizer(PreTrainedTokenizer):
         return out_string.strip()
 
     def __getstate__(self):
-
         """
         __getstate__
         
@@ -363,7 +358,6 @@ class BarthezTokenizer(PreTrainedTokenizer):
         return state
 
     def __setstate__(self, d):
-
         """
         Sets the state of the BarthezTokenizer object by restoring its attributes from a dictionary.
         
@@ -387,7 +381,6 @@ class BarthezTokenizer(PreTrainedTokenizer):
         self.sp_model.Load(self.vocab_file)
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary of the BarthezTokenizer to a specified directory.
         

@@ -141,7 +141,6 @@ class BigBirdPegasusConfig(PretrainedConfig):
         use_bias=False,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the BigBirdPegasusConfig class.
         

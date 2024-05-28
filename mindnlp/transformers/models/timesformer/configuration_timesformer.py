@@ -115,7 +115,6 @@ class TimesformerConfig(PretrainedConfig):
         drop_path_rate=0,
         **kwargs,
     ):
-
         """
         Initializes an instance of the TimesformerConfig class.
         

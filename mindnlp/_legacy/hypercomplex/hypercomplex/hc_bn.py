@@ -269,7 +269,6 @@ class _BatchNorm(nn.Cell):
 
     @abstractmethod
     def _check_input_dim(self, shape: tuple, dtype: Any):
-
         r"""
         This method '_check_input_dim' is responsible for validating the input dimensions and data type.
         
@@ -388,7 +387,6 @@ class BatchNorm1d(_BatchNorm):
                         use_batch_statistics)
 
     def _check_input_dim(self, shape: tuple, dtype: Any):
-
         r"""
         Checks the input dimensions for the BatchNorm1d class.
         
@@ -499,7 +497,6 @@ class BatchNorm2d(_BatchNorm):
     """
 
     def _check_input_dim(self, shape: tuple, dtype: Any):
-
         r"""
         This method '_check_input_dim' in the class 'BatchNorm2d' is used to validate the input dimensions of the shape based on the data type provided.
         

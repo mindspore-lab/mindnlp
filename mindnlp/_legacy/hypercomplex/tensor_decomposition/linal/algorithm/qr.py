@@ -62,7 +62,6 @@ class QR:
 
     @staticmethod
     def decompose_gram_schmidt(matrix: Matrix) -> Tuple[Matrix, Matrix]:
-
         r"""
         This method decomposes a square matrix using the Gram-Schmidt process into an orthogonal matrix 'q' and an upper triangular matrix 'r'.
         
@@ -87,7 +86,6 @@ class QR:
 
     @staticmethod
     def decompose_householder(matrix: Matrix) -> Tuple[Matrix, Matrix]:
-
         r"""
         Decompose the given square matrix into its QR decomposition using Householder reflection.
         
@@ -113,7 +111,6 @@ class QR:
 
     @staticmethod
     def _householder(m: Matrix):
-
         r"""
         Performs the Householder transformation on a given matrix.
         
@@ -184,7 +181,6 @@ class QR:
 
     @staticmethod
     def _gram_schmidt(m: Matrix) -> Matrix:
-
         r"""
         Performs the Gram-Schmidt process on a given matrix.
         

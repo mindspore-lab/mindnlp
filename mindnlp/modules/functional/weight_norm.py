@@ -48,8 +48,6 @@ def _weight_norm(weight_v:Tensor, weight_g:Tensor, dim:int=-1) -> Tensor:
 
 
 def recompute_weight(cell:nn.Cell):
-
-    
     """
     Recomputes the weight of a neural network cell.
     
@@ -73,7 +71,6 @@ def recompute_weight(cell:nn.Cell):
 
 
 def weight_norm(cell:nn.Cell, name:str='weight', dim:int=-1, axis:int=None) -> nn.Cell:
-
     r"""
     Applies weight normalization to a neural network cell.
     
@@ -112,7 +109,6 @@ def weight_norm(cell:nn.Cell, name:str='weight', dim:int=-1, axis:int=None) -> n
 
 
 def remove_weight_norm(cell:nn.Cell) -> nn.Cell:
-
     r"""
     Removes weight normalization from the given neural network cell.
     

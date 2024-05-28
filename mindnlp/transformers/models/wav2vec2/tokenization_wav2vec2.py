@@ -136,7 +136,6 @@ class Wav2Vec2CTCTokenizer(PreTrainedTokenizer):
         target_lang=None,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the Wav2Vec2CTCTokenizer class.
         
@@ -238,7 +237,6 @@ class Wav2Vec2CTCTokenizer(PreTrainedTokenizer):
 
     @word_delimiter_token.setter
     def word_delimiter_token(self, value):
-
         """
         Sets the word delimiter token for the Wav2Vec2CTCTokenizer.
         
@@ -256,7 +254,6 @@ class Wav2Vec2CTCTokenizer(PreTrainedTokenizer):
 
     @word_delimiter_token_id.setter
     def word_delimiter_token_id(self, value):
-
         """
         Sets the word delimiter token ID for the Wav2Vec2CTCTokenizer.
         
@@ -275,7 +272,6 @@ class Wav2Vec2CTCTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self) -> int:
-
         """
         Returns the size of the vocabulary used by the Wav2Vec2CTCTokenizer.
         
@@ -296,7 +292,6 @@ class Wav2Vec2CTCTokenizer(PreTrainedTokenizer):
         return len(self.decoder)
 
     def get_vocab(self) -> Dict:
-
         """
         Returns the vocabulary used by the Wav2Vec2CTCTokenizer.
         
@@ -317,7 +312,6 @@ maps tokens to unique integer IDs, while the added_tokens_encoder dictionary con
         return vocab
 
     def _add_tokens(self, new_tokens: Union[List[str], List[AddedToken]], special_tokens: bool = False) -> int:
-
         """
         Add tokens to the Wav2Vec2CTCTokenizer's vocabulary.
         
@@ -431,7 +425,6 @@ it will be added as is. The method then calls the super()._add_tokens() method t
     def _compute_offsets(
         char_repetitions: List[int], chars: List[str], ctc_token: int
     ) -> List[Dict[str, Union[str, int]]]:
-
         """
         Compute offsets for characters based on char repetitions and tokens.
         
@@ -461,7 +454,6 @@ it will be added as is. The method then calls the super()._add_tokens() method t
     def _get_word_offsets(
         offsets: Dict[str, Union[str, float]], word_delimiter_char: str = " "
     ) -> Dict[str, Union[str, float]]:
-
         """
         Method to extract word offsets from a given set of character offsets.
         
@@ -509,7 +501,6 @@ it will be added as is. The method then calls the super()._add_tokens() method t
         return word_offsets
 
     def prepare_for_tokenization(self, text, is_split_into_words=False, **kwargs):
-
         """
         Prepare the input text for tokenization.
         
@@ -760,7 +751,6 @@ it will be added as is. The method then calls the super()._add_tokens() method t
         )
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary to a specified directory.
         
@@ -861,7 +851,6 @@ class Wav2Vec2Tokenizer(PreTrainedTokenizer):
         return_attention_mask=False,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the Wav2Vec2Tokenizer class.
         
@@ -934,7 +923,6 @@ class Wav2Vec2Tokenizer(PreTrainedTokenizer):
 
     @word_delimiter_token.setter
     def word_delimiter_token(self, value):
-
         """
         word_delimiter_token
         
@@ -954,7 +942,6 @@ class Wav2Vec2Tokenizer(PreTrainedTokenizer):
 
     @word_delimiter_token_id.setter
     def word_delimiter_token_id(self, value):
-
         """
         Method to set the token ID for word delimiter in the Wav2Vec2Tokenizer class.
         
@@ -1032,7 +1019,6 @@ class Wav2Vec2Tokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self) -> int:
-
         """
         Method to retrieve the vocabulary size of the Wav2Vec2Tokenizer instance.
         
@@ -1051,7 +1037,6 @@ class Wav2Vec2Tokenizer(PreTrainedTokenizer):
         return len(self.decoder)
 
     def get_vocab(self) -> Dict:
-
         """
         This method returns a vocabulary dictionary containing the encoder and added tokens encoder.
         
@@ -1127,7 +1112,6 @@ class Wav2Vec2Tokenizer(PreTrainedTokenizer):
             return text
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Saves the vocabulary of the Wav2Vec2Tokenizer to a file.
         

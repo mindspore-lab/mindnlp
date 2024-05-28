@@ -97,7 +97,6 @@ class SegformerDropPath(nn.Cell):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
 
     def __init__(self, drop_prob: Optional[float] = None) -> None:
-
         """
         Initialize an instance of SegformerDropPath.
         
@@ -116,7 +115,6 @@ class SegformerDropPath(nn.Cell):
         self.drop_prob = drop_prob
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs a drop path operation on the hidden states.
         
@@ -138,7 +136,6 @@ class SegformerDropPath(nn.Cell):
         return drop_path(hidden_states, self.drop_prob, self.training)
 
     def extra_repr(self) -> str:
-
         """
         This method returns a string representation of the drop probability for a SegformerDropPath instance.
         
@@ -158,7 +155,6 @@ class SegformerOverlapPatchEmbeddings(nn.Cell):
     """Construct the overlapping patch embeddings."""
 
     def __init__(self, patch_size, stride, num_channels, hidden_size):
-
         """Initialize the SegformerOverlapPatchEmbeddings class.
         
             Args:
@@ -188,7 +184,6 @@ class SegformerOverlapPatchEmbeddings(nn.Cell):
         self.layer_norm = nn.LayerNorm(hidden_size)
 
     def construct(self, pixel_values):
-
         """
         Constructs the overlap patch embeddings for the input pixel values.
         
@@ -223,7 +218,6 @@ class SegformerEfficientSelfAttention(nn.Cell):
     paper](https://arxiv.org/abs/2102.12122)."""
 
     def __init__(self, config, hidden_size, num_attention_heads, sequence_reduction_ratio):
-
         """Initializes an instance of the SegformerEfficientSelfAttention class.
         
         Args:
@@ -267,7 +261,6 @@ class SegformerEfficientSelfAttention(nn.Cell):
             self.layer_norm = nn.LayerNorm(hidden_size)
 
     def swapaxes_for_scores(self, hidden_states):
-
         """
         Swaps axes and reshapes the input tensor for calculating attention scores in the SegformerEfficientSelfAttention class.
         
@@ -292,7 +285,6 @@ class SegformerEfficientSelfAttention(nn.Cell):
         width,
         output_attentions=False,
     ):
-
         """
         Constructs the self-attention mechanism for the SegformerEfficientSelfAttention class.
         
@@ -365,7 +357,6 @@ class SegformerSelfOutput(nn.Cell):
     
     """
     def __init__(self, config, hidden_size):
-
         """
         Initializes an instance of the SegformerSelfOutput class.
         
@@ -401,7 +392,6 @@ prevent overfitting.
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states, input_tensor):
-
         """
         Constructs the output of the SegformerSelfOutput class.
         
@@ -460,7 +450,6 @@ class SegformerAttention(nn.Cell):
                 tuple: A tuple containing the attention output and any additional outputs.
     """
     def __init__(self, config, hidden_size, num_attention_heads, sequence_reduction_ratio):
-
         """
         Initializes the SegformerAttention class.
         
@@ -500,7 +489,6 @@ class SegformerAttention(nn.Cell):
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
-
         """
         This method 'prune_heads' is defined in the class 'SegformerAttention' and is used to prune the attention heads and corresponding linear layers based on the provided 'heads' input.
         
@@ -534,7 +522,6 @@ class SegformerAttention(nn.Cell):
         self.pruned_heads = self.pruned_heads.union(heads)
 
     def construct(self, hidden_states, height, width, output_attentions=False):
-
         """
             Construct the attention output of the SegformerAttention module.
         
@@ -580,7 +567,6 @@ class SegformerDWConv(nn.Cell):
         output = seg_dwconv.construct(hidden_states, height, width)
     """
     def __init__(self, dim=768):
-
         """
         Initializes a SegformerDWConv instance.
         
@@ -600,7 +586,6 @@ class SegformerDWConv(nn.Cell):
         self.dwconv = nn.Conv2d(dim, dim, 3, 1, pad_mode='pad', padding=1, has_bias=True, group=dim)
 
     def construct(self, hidden_states, height, width):
-
         """
         Constructs the SegformerDWConv.
         
@@ -649,7 +634,6 @@ class SegformerMixFFN(nn.Cell):
     Note: This docstring is a representation of the class attributes and methods. Please refer to the source code for the most accurate and up-to-date information.
     """
     def __init__(self, config, in_features, hidden_features=None, out_features=None):
-
         """
         Initializes an instance of the SegformerMixFFN class.
         
@@ -678,7 +662,6 @@ class SegformerMixFFN(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states, height, width):
-
         '''
         This method constructs the feed-forward network for the SegformerMixFFN class.
         
@@ -707,7 +690,6 @@ class SegformerLayer(nn.Cell):
     """This corresponds to the Block class in the original implementation."""
 
     def __init__(self, config, hidden_size, num_attention_heads, drop_path, sequence_reduction_ratio, mlp_ratio):
-
         """
         Initializes a new instance of the SegformerLayer class.
         
@@ -740,7 +722,6 @@ class SegformerLayer(nn.Cell):
         self.mlp = SegformerMixFFN(config, in_features=hidden_size, hidden_features=mlp_hidden_size)
 
     def construct(self, hidden_states, height, width, output_attentions=False):
-
         """
         This method constructs a Segformer layer by performing self-attention and multi-layer perceptron (mlp) operations.
         
@@ -805,7 +786,6 @@ tasks.
     
     """
     def __init__(self, config):
-
         """
         This method initializes a SegformerEncoder instance with the provided configuration.
         
@@ -884,7 +864,6 @@ tasks.
         output_hidden_states: Optional[bool] = False,
         return_dict: Optional[bool] = True,
     ) -> Union[Tuple, BaseModelOutput]:
-
         """
         Method to construct the SegformerEncoder.
         
@@ -985,7 +964,6 @@ attention maps and hidden states.
     
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the SegformerModel class.
         
@@ -1032,7 +1010,6 @@ attention maps and hidden states.
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutput]:
-
         """
         Constructs the SegformerModel.
         
@@ -1125,7 +1102,6 @@ attentions.
     Note: This docstring does not include the function signatures or any other code.
     """
     def __init__(self, config):
-
         """
         Initializes a new SegformerForImageClassification instance.
         
@@ -1228,7 +1204,6 @@ class SegformerMLP(nn.Cell):
     """
 
     def __init__(self, config: SegformerConfig, input_dim):
-
         """
         Initializes the SegformerMLP class.
         
@@ -1249,7 +1224,6 @@ class SegformerMLP(nn.Cell):
         self.proj = nn.Dense(input_dim, config.decoder_hidden_size)
 
     def construct(self, hidden_states: mindspore.Tensor):
-
         """
         Constructs the SegformerMLP.
         
@@ -1299,7 +1273,6 @@ class SegformerDecodeHead(SegformerPreTrainedModel):
         - The `SegformerDecodeHead` class is designed to be used in conjunction with the Segformer model for semantic segmentation tasks.
     """
     def __init__(self, config):
-
         """
         Initializes the SegformerDecodeHead class.
         
@@ -1343,7 +1316,6 @@ class SegformerDecodeHead(SegformerPreTrainedModel):
         self.config = config
 
     def construct(self, encoder_hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         ''' 
         Constructs the decode head for Segformer.
         
@@ -1447,7 +1419,6 @@ is computed (Cross-Entropy).
         
     """
     def __init__(self, config):
-
         """
         Initializes an instance of SegformerForSemanticSegmentation.
         

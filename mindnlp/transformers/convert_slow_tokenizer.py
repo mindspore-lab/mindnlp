@@ -33,7 +33,6 @@ from mindnlp.utils.import_utils import PROTOBUF_IMPORT_ERROR
 
 
 def import_protobuf(error_message=""):
-
     """
     Imports the protobuf module and returns the sentencepiece_model_pb2 if available.
     
@@ -58,7 +57,6 @@ class SentencePieceExtractor:
     """
 
     def __init__(self, model: str):
-
         """
         Initializes a new instance of the SentencePieceExtractor class.
         
@@ -114,7 +112,6 @@ class SentencePieceExtractor:
 
 
 def check_number_comma(piece: str) -> bool:
-
     """
     Check if the input piece is a valid number with a trailing comma.
     
@@ -149,7 +146,6 @@ tokenizer.
         This class is not meant to be instantiated directly as it raises a NotImplementedError for the converted method, which should be implemented by subclasses.
     """
     def __init__(self, original_tokenizer):
-
         """
         Initializes a new instance of the Converter class.
         
@@ -167,7 +163,6 @@ tokenizer.
         self.original_tokenizer = original_tokenizer
 
     def converted(self) -> Tokenizer:
-
         """
         This method 'converted' in the class 'Converter' converts the input to a Tokenizer object.
         
@@ -196,7 +191,6 @@ pre_tokenizer, post_processor, and decoder for the new Tokenizer object.
     This class serves as a crucial component in adapting an existing tokenizer to be compatible with BERT models, enabling seamless integration and usage within BERT-based applications.
     """
     def converted(self) -> Tokenizer:
-
         """
         Converts the original tokenizer to a new tokenizer.
         
@@ -254,7 +248,6 @@ method to convert tokens with specific configurations such as handling Chinese c
 the template for token processing. The resulting Tokenizer object utilizes WordPiece tokenization and decoding with the provided settings for token conversion.
     """
     def converted(self) -> Tokenizer:
-
         """
         Converts the original tokenizer to a new Tokenizer with specific configurations.
         
@@ -335,7 +328,6 @@ to configure the post_processor of the new tokenizer with TemplateProcessing. Fi
     The method returns the configured Tokenizer object for Funnel tokenization.
     """
     def converted(self) -> Tokenizer:
-
         """
         Converts the original tokenizer into a new tokenizer with specific configurations.
         
@@ -398,7 +390,6 @@ the WordPiece vocabulary. It sets the unk_token for the new tokenizer based on t
     The Tokenizer object with the defined attributes is then returned by the converted method.
     """
     def converted(self) -> Tokenizer:
-
         """
         This method converts the original tokenizer to a Tokenizer object.
         
@@ -463,7 +454,6 @@ components such as normalizer, pre_tokenizer, and decoder.
 generation tasks.
     """
     def converted(self) -> Tokenizer:
-
         """
         Converts the original tokenizer to a Tokenizer object.
         
@@ -518,7 +508,6 @@ Tokenizer can then be used for tokenizing text for GPT-2 model input.
     Note: The GPT2Converter class assumes that the original_tokenizer has the necessary attributes and methods as required by the conversion process.
     """
     def converted(self) -> Tokenizer:
-
         """
         Converts the original tokenizer to a Tokenizer object.
         
@@ -574,7 +563,6 @@ class HerbertConverter(Converter):
     The converted method returns the modified Tokenizer instance ready for use with Herbert models.
     """
     def converted(self) -> Tokenizer:
-
         """
         Converts the original tokenizer to a new Tokenizer using the provided information.
         
@@ -625,7 +613,6 @@ class RobertaConverter(Converter):
 post-processor settings.
     """
     def converted(self) -> Tokenizer:
-
         """
         Converts the original tokenizer to a Tokenizer object using specific configurations.
         
@@ -725,7 +712,6 @@ special_tokens are defined as a list of tuples containing the special tokens '[C
     Note: It is assumed that the parent class 'Converter' provides the necessary functionality for the 'converted' method to work correctly.
     """
     def converted(self) -> Tokenizer:
-
         """
         This method 'converted' in the class 'DebertaConverter' takes 1 parameter: self.
         
@@ -794,7 +780,6 @@ sentencepiece version would convert these unknown tokens into a sequence of byte
     
     """
     def __init__(self, *args):
-
         """
         __init__
         
@@ -832,7 +817,6 @@ sentencepiece version would convert these unknown tokens into a sequence of byte
                 )
 
     def vocab(self, proto):
-
         """
         Converts the given protocol buffer to a list of tuples containing pieces and their scores.
         
@@ -849,7 +833,6 @@ sentencepiece version would convert these unknown tokens into a sequence of byte
         return [(piece.piece, piece.score) for piece in proto.pieces]
 
     def unk_id(self, proto):
-
         """
         This method 'unk_id' in the class 'SpmConverter' returns the unknown token ID from the specified proto object.
         
@@ -866,7 +849,6 @@ sentencepiece version would convert these unknown tokens into a sequence of byte
         return proto.trainer_spec.unk_id
 
     def tokenizer(self, proto):
-
         """
         This method 'tokenizer' in the class 'SpmConverter' tokenizes input data based on the specified model type.
         
@@ -908,7 +890,6 @@ sentencepiece version would convert these unknown tokens into a sequence of byte
         )
 
     def normalizer(self, proto):
-
         """
         This method normalizer in the SpmConverter class processes the input proto object for normalization.
         
@@ -930,7 +911,6 @@ sentencepiece version would convert these unknown tokens into a sequence of byte
         )
 
     def pre_tokenizer(self, replacement, add_prefix_space):
-
         """
         This method pre_tokenizer in the SpmConverter class processes tokenization using the Metaspace pre_tokenizer.
         
@@ -948,7 +928,6 @@ sentencepiece version would convert these unknown tokens into a sequence of byte
         return pre_tokenizers.Metaspace(replacement=replacement, add_prefix_space=add_prefix_space)
 
     def post_processor(self):
-
         """
         Perform post-processing on the converted data in the SpmConverter class.
         
@@ -971,7 +950,6 @@ any other necessary adjustments to ensure the accuracy and integrity of the conv
         return None
 
     def decoder(self, replacement, add_prefix_space):
-
         """
         This method decodes a given input using the specified replacement and prefix space settings.
         
@@ -989,7 +967,6 @@ any other necessary adjustments to ensure the accuracy and integrity of the conv
         return decoders.Metaspace(replacement=replacement, add_prefix_space=add_prefix_space)
 
     def converted(self) -> Tokenizer:
-
         """
         Converts the proto object to a Tokenizer object with specified configurations.
         
@@ -1035,7 +1012,6 @@ class AlbertConverter(SpmConverter):
     - post_processor(): Generate a post-processor template for text data, including special token mappings for '[CLS]' and '[SEP]'.
     """
     def vocab(self, proto):
-
         """
         This method, 'vocab', is a member of the 'AlbertConverter' class and is used to process a 'proto' object and extract vocabulary information.
         
@@ -1069,7 +1045,6 @@ resulting tuple in the new list will contain 'piece.piece' and 'piece.score'. Ot
         ]
 
     def normalizer(self, proto):
-
         """
         Normalize the given proto using a sequence of normalizers.
         
@@ -1102,7 +1077,6 @@ resulting tuple in the new list will contain 'piece.piece' and 'piece.score'. Ot
         return normalizers.Sequence(list_normalizers)
 
     def post_processor(self):
-
         """
         Post-processes the converted tokens using a template processing method.
         
@@ -1149,7 +1123,6 @@ respective token IDs using the 'original_tokenizer'.
     
     """
     def unk_id(self, proto):
-
         """
         The 'unk_id' method in the 'BarthezConverter' class takes two parameters: self and proto.
         
@@ -1167,7 +1140,6 @@ respective token IDs using the 'original_tokenizer'.
         return unk_id
 
     def post_processor(self):
-
         """
         post_processor method in the BarthezConverter class.
         
@@ -1202,7 +1174,6 @@ class CamembertConverter(SpmConverter):
     The post_processor method returns the post-processor for the Camembert model, which includes template processing with special tokens. 
     """
     def vocab(self, proto):
-
         """
         This method 'vocab' is defined in the class 'CamembertConverter' and takes two parameters: self and proto.
         
@@ -1229,7 +1200,6 @@ class CamembertConverter(SpmConverter):
         return vocab
 
     def unk_id(self, proto):
-
         """
         This method 'unk_id' in the class 'CamembertConverter' takes two parameters: self and proto.
         
@@ -1247,7 +1217,6 @@ class CamembertConverter(SpmConverter):
         return 3
 
     def post_processor(self):
-
         """
         Method post_processor in the class CamembertConverter.
         
@@ -1286,7 +1255,6 @@ class DebertaV2Converter(SpmConverter):
     Each method in this class performs a specific step in preparing text data for input to the DeBERTa V2 model, ensuring optimal performance and accuracy.
     """
     def pre_tokenizer(self, replacement, add_prefix_space):
-
         """
         This method pre_tokenizer is responsible for setting up the pre-tokenization process in the DebertaV2Converter class.
         
@@ -1309,7 +1277,6 @@ process.
         return pre_tokenizers.Sequence(list_pretokenizers)
 
     def normalizer(self, proto):
-
         """
         The normalizer method applies a series of normalization steps to the input proto.
         
@@ -1336,7 +1303,6 @@ process.
         return normalizers.Sequence(list_normalizers)
 
     def post_processor(self):
-
         """
         Performs post-processing on the input data in the DebertaV2Converter class.
         
@@ -1397,7 +1363,6 @@ class MBartConverter(SpmConverter):
     
     """
     def vocab(self, proto):
-
         """
         This method 'vocab' is defined within the class 'MBartConverter' and is used to generate a vocabulary list based on the provided 'proto' parameter.
         
@@ -1450,7 +1415,6 @@ class MBartConverter(SpmConverter):
         return vocab
 
     def unk_id(self, proto):
-
         """
         Converts an 'unk_id' to a specific value in the MBartConverter class.
         
@@ -1467,7 +1431,6 @@ class MBartConverter(SpmConverter):
         return 3
 
     def post_processor(self):
-
         """
         This method post_processor is a part of the MBartConverter class and is responsible for performing post-processing operations on the input data.
         
@@ -1518,7 +1481,6 @@ tokens as a list of tuples, where each tuple contains the token and its correspo
     Note: The above methods do not include any code signatures or implementation details as per the provided information.
     """
     def vocab(self, proto):
-
         """
         This method is part of the 'MBart50Converter' class and is used to generate a vocabulary list based on the provided 'proto' parameter.
         
@@ -1560,7 +1522,6 @@ special token '<mask>' used for masking during tokenization.
         return vocab
 
     def unk_id(self, proto):
-
         """
         Method unk_id in the MBart50Converter class.
         
@@ -1577,7 +1538,6 @@ special token '<mask>' used for masking during tokenization.
         return 3
 
     def post_processor(self):
-
         """
         Method post_processor in class MBart50Converter.
         
@@ -1644,7 +1604,6 @@ the 'eng_Latn' language. The method returns the constructed post-processor objec
     
     """
     def vocab(self, proto):
-
         '''
         This method generates a vocabulary list based on the input 'proto'.
         
@@ -1714,7 +1673,6 @@ the 'eng_Latn' language. The method returns the constructed post-processor objec
         return vocab
 
     def unk_id(self, proto):
-
         """
         This method 'unk_id' in the class 'NllbConverter' takes two parameters: self and proto.
         
@@ -1739,7 +1697,6 @@ the 'eng_Latn' language. The method returns the constructed post-processor objec
         return 3
 
     def post_processor(self):
-
         """
         This method post_processor in the class NllbConverter is responsible for performing template processing. 
         
@@ -1776,7 +1733,6 @@ the unknown token ID, and defining post-processing templates.
     Note: This docstring does not include the method signatures or any other code, as per the provided instructions.
     """
     def vocab(self, proto):
-
         """
         This method 'vocab' is a member of the class 'SeamlessM4TConverter' and is used to generate a vocabulary list from a given protocol.
         
@@ -1809,7 +1765,6 @@ the unknown token ID, and defining post-processing templates.
         return vocab
 
     def unk_id(self, proto):
-
         """
         This method 'unk_id' is defined in the class 'SeamlessM4TConverter' and is used to retrieve the unknown token id from the original tokenizer.
         
@@ -1826,7 +1781,6 @@ the unknown token ID, and defining post-processing templates.
         return self.original_tokenizer.unk_token_id
 
     def post_processor(self):
-
         """
         This method post_processor is used in the class SeamlessM4TConverter to perform post-processing tasks on text data.
         
@@ -1868,7 +1822,6 @@ class XLMRobertaConverter(SpmConverter):
             Returns the post-processor for the XLM-Roberta model, including template processing and special tokens conversion.
     """
     def vocab(self, proto):
-
         """
         Converts a Proto object to a vocabulary list.
         
@@ -1893,7 +1846,6 @@ class XLMRobertaConverter(SpmConverter):
         return vocab
 
     def unk_id(self, proto):
-
         """
         Method unk_id in the class XLMRobertaConverter.
         
@@ -1911,7 +1863,6 @@ class XLMRobertaConverter(SpmConverter):
         return unk_id
 
     def post_processor(self):
-
         """
         This method post_processor is a part of the XLMRobertaConverter class and is responsible for performing template processing.
         
@@ -1948,7 +1899,6 @@ class XLNetConverter(SpmConverter):
     Note: This class assumes input data conforms to XLNet model requirements and is intended for use in XLNet data processing tasks.
     """
     def vocab(self, proto):
-
         """
         This method, vocab, is defined within the XLNetConverter class and takes two parameters: self and proto.
         
@@ -1968,7 +1918,6 @@ class XLNetConverter(SpmConverter):
         ]
 
     def normalizer(self, proto):
-
         """
         Normalizes the given 'proto' using a sequence of normalizers.
         
@@ -2023,7 +1972,6 @@ class XLNetConverter(SpmConverter):
         return normalizers.Sequence(list_normalizers)
 
     def post_processor(self):
-
         """
         Post-processes the output of the XLNetConverter.
         
@@ -2093,7 +2041,6 @@ class RemBertConverter(SpmConverter):
     """
     # Inspired from AlbertConverter
     def normalizer(self, proto):
-
         """
         This method normalizes text according to the specified rules.
         
@@ -2129,7 +2076,6 @@ class RemBertConverter(SpmConverter):
         return normalizers.Sequence(list_normalizers)
 
     def post_processor(self):
-
         """
         Method post_processor in the class RemBertConverter.
         
@@ -2197,7 +2143,6 @@ specified special tokens.
     Please refer to the code implementation for more details on the class structure and usage.
     """
     def vocab(self, proto):
-
         """
         Method 'vocab' in the class 'PegasusConverter'.
         
@@ -2239,7 +2184,6 @@ specified special tokens.
         return vocab
 
     def unk_id(self, proto):
-
         """
         Returns the unknown id of a given proto object.
         
@@ -2256,7 +2200,6 @@ specified special tokens.
         return proto.trainer_spec.unk_id + self.original_tokenizer.offset
 
     def pre_tokenizer(self, replacement, add_prefix_space):
-
         """
         pre_tokenizer method in the PegasusConverter class.
         
@@ -2285,7 +2228,6 @@ specified special tokens.
         )
 
     def post_processor(self):
-
         """
         Post-processes the tokenized output of the PegasusConverter class.
         
@@ -2336,7 +2278,6 @@ class T5Converter(SpmConverter):
     Note: Ensure to properly initialize an instance of T5Converter with the necessary tokenizer and configurations before utilizing its methods for token conversion.
     """
     def vocab(self, proto):
-
         """
         This method 'vocab' is defined in the class 'T5Converter'. It takes 2 parameters: self and proto.
         
@@ -2356,7 +2297,6 @@ class T5Converter(SpmConverter):
         return vocab
 
     def post_processor(self):
-
         """
         Post-processes the output of the T5 model.
         
@@ -2406,7 +2346,6 @@ responsible for mapping the tokenized sequence back to the original text.
     
     """
     def converted(self) -> Tokenizer:
-
         """
         This method converts the original tokenizer to a Tokenizer object.
         
@@ -2463,7 +2402,6 @@ class BigBirdConverter(SpmConverter):
 method returns a processors.TemplateProcessing object configured with single and pair token templates, as well as special tokens mapped to their respective token IDs using the original_tokenizer provided. 
     """
     def post_processor(self):
-
         """
         Method to perform post-processing for BigBirdConverter.
         
@@ -2501,7 +2439,6 @@ class CLIPConverter(Converter):
     
     """
     def converted(self) -> Tokenizer:
-
         """
         Converts the original tokenizer to a new Tokenizer.
         
@@ -2564,7 +2501,6 @@ and decoder, based on the configurations of the original tokenizer. The method t
     
     """
     def converted(self) -> Tokenizer:
-
         """
         Converts the original tokenizer to a new Tokenizer with specific configurations for LayoutLMv2.
         
@@ -2632,7 +2568,6 @@ pre-tokenizer, decoder, and post-processor attributes of the Tokenizer.
     Note: The BlenderbotConverter class assumes that the original_tokenizer attribute is properly initialized before calling the 'converted' method.
     """
     def converted(self) -> Tokenizer:
-
         """
         Converts the original tokenizer to a new Tokenizer object.
         
@@ -2688,7 +2623,6 @@ tokens in the model. The 'post_processor' method returns a processor object for 
     Note: Ensure to provide the necessary proto object when calling the methods of this class for proper functionality.
     """
     def vocab(self, proto):
-
         """
         This method 'vocab' is defined in the class 'XGLMConverter'.
         
@@ -2716,7 +2650,6 @@ derived from the 'proto' object's pieces. Lastly, it includes additional made-up
         return vocab
 
     def unk_id(self, proto):
-
         """
         This method 'unk_id' is defined in the class 'XGLMConverter' and is responsible for returning an unknown ID value.
         
@@ -2734,7 +2667,6 @@ derived from the 'proto' object's pieces. Lastly, it includes additional made-up
         return unk_id
 
     def post_processor(self):
-
         """
         This method post_processor is defined within the XGLMConverter class to perform template processing.
         
@@ -2767,7 +2699,6 @@ converting text data into a format suitable for language model training and infe
     handle_byte_fallback = True
 
     def vocab(self, proto):
-
         """
         This method is a part of the 'LlamaConverter' class and is used to generate a vocabulary list based on the given 'proto' input.
         
@@ -2794,7 +2725,6 @@ converting text data into a format suitable for language model training and infe
         return vocab
 
     def unk_id(self, proto):
-
         """
         unk_id method in the LlamaConverter class.
         
@@ -2812,7 +2742,6 @@ converting text data into a format suitable for language model training and infe
         return unk_id
 
     def decoder(self, replacement, add_prefix_space):
-
         """
         Decodes the input using a sequence of decoders.
         
@@ -2837,7 +2766,6 @@ converting text data into a format suitable for language model training and infe
         )
 
     def tokenizer(self, proto):
-
         """
         This method tokenizes the input proto using different tokenization algorithms based on the model type specified in the proto.
         
@@ -2882,7 +2810,6 @@ converting text data into a format suitable for language model training and infe
         return tokenizer
 
     def normalizer(self, proto):
-
         """
         This method normalizer is defined within the class LlamaConverter. It takes two parameters: self, which refers to the instance of the class itself, and proto, which represents the input data to be
 normalized.
@@ -2908,7 +2835,6 @@ normalized.
         )
 
     def pre_tokenizer(self, replacement, add_prefix_space):
-
         """
         Method to pre-process text before tokenization.
         
@@ -2926,7 +2852,6 @@ normalized.
         return None
 
     def post_processor(self):
-
         """
         Method to perform post-processing after conversion in the LlamaConverter class.
         
@@ -2969,7 +2894,6 @@ token IDs from the original tokenizer. The single template is set to "{cls} $A {
     
     """
     def converted(self) -> Tokenizer:
-
         """
         Converts the original tokenizer into a new tokenizer of type 'Tokenizer'.
         

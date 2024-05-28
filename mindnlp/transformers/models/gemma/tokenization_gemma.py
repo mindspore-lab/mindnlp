@@ -99,7 +99,6 @@ class GemmaTokenizer(PreTrainedTokenizer):
         spaces_between_special_tokens=False,
         **kwargs,
     ):
-
         """
         This method initializes an instance of GemmaTokenizer.
         
@@ -156,7 +155,6 @@ class GemmaTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.llama.tokenization_llama.LlamaTokenizer.__getstate__
     def __getstate__(self):
-
         """
         Get the state of the GemmaTokenizer object for serialization.
         
@@ -176,7 +174,6 @@ class GemmaTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.llama.tokenization_llama.LlamaTokenizer.__setstate__
     def __setstate__(self, d):
-
         """
         This method '__setstate__' in the class 'GemmaTokenizer' is used to set the internal state of the tokenizer object based on the provided dictionary 'd'.
         
@@ -234,7 +231,6 @@ class GemmaTokenizer(PreTrainedTokenizer):
         spaces_between_special_tokens: bool = False,
         **kwargs,
     ) -> str:
-
         """
         Decodes a list of token IDs into a string representation.
         
@@ -329,7 +325,6 @@ class GemmaTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.llama.tokenization_llama.LlamaTokenizer.build_inputs_with_special_tokens
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
-
         ''' 
         build_inputs_with_special_tokens method in GemmaTokenizer class.
         

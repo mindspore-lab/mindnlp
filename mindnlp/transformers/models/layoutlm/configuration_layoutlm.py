@@ -48,7 +48,6 @@ class LayoutLMConfig(PretrainedConfig):
         max_2d_position_embeddings=1024,
         **kwargs,
     ):
-
         """
         Initializes a LayoutLMConfig object.
         

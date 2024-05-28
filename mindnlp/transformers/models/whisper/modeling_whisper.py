@@ -53,7 +53,6 @@ WHISPER_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 # Copied from transformers.models.llama.modeling_llama._get_unpad_data
 def _get_unpad_data(attention_mask):
-
     """
     This function takes an attention_mask as input and performs the following operations:
     
@@ -336,7 +335,6 @@ class WhisperPositionalEmbedding(nn.Embedding):
     
     """
     def __init__(self, num_positions: int, embedding_dim: int, padding_idx: Optional[int] = None):
-
         """
         Initializes a WhisperPositionalEmbedding instance.
         
@@ -356,7 +354,6 @@ class WhisperPositionalEmbedding(nn.Embedding):
         super().__init__(num_positions, embedding_dim)
 
     def construct(self, input_ids, past_key_values_length=0):
-
         """
         Constructs the positional embeddings for the input_ids.
         
@@ -389,7 +386,6 @@ class WhisperAttention(nn.Cell):
         is_causal: bool = False,
         config: Optional[WhisperConfig] = None,
     ):
-
         """
         Initializes the WhisperAttention class.
         
@@ -432,7 +428,6 @@ class WhisperAttention(nn.Cell):
 
     # Copied from transformers.models.bart.modeling_bart.BartAttention._shape with BART->whisper
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-
         """
         Reshapes the input tensor for attention computation.
         
@@ -611,7 +606,6 @@ input hidden states.
     - The construct method does not include the signatures or any other code.
     """
     def __init__(self, config: WhisperConfig):
-
         """
         Initializes a new instance of the WhisperEncoderLayer class.
         
@@ -722,7 +716,6 @@ transformations. The method allows for caching of key-value states and optionall
     Please refer to the method docstrings for detailed information on the input and output parameters, as well as their respective shapes and purposes.
     """
     def __init__(self, config: WhisperConfig):
-
         """
         Initializes a WhisperDecoderLayer object.
         
@@ -878,7 +871,6 @@ and feature extraction output length computations.
     _supports_flash_attn_2 = True
 
     def _init_weights(self, cell):
-
         """
         Initializes weights for the specified cell based on the configuration settings of the WhisperPreTrainedModel.
         
@@ -930,7 +922,6 @@ class WhisperEncoder(WhisperPreTrainedModel):
     """
 
     def __init__(self, config: WhisperConfig):
-
         """Initialize a WhisperEncoder object.
         
         Args:
@@ -973,7 +964,6 @@ class WhisperEncoder(WhisperPreTrainedModel):
         self.post_init()
 
     def _freeze_parameters(self):
-
         """
         Freeze the parameters of the WhisperEncoder.
         
@@ -990,7 +980,6 @@ class WhisperEncoder(WhisperPreTrainedModel):
             param.requires_grad = False
 
     def get_input_embeddings(self) -> nn.Cell:
-
         """
         Get the input embeddings for the WhisperEncoder.
         
@@ -1006,7 +995,6 @@ class WhisperEncoder(WhisperPreTrainedModel):
         return self.conv1
 
     def set_input_embeddings(self, value: nn.Cell):
-
         """
         Method to set input embeddings for the WhisperEncoder class.
         
@@ -1138,7 +1126,6 @@ class WhisperDecoder(WhisperPreTrainedModel):
     main_input_name = "input_ids"
 
     def __init__(self, config: WhisperConfig):
-
         """
         Initializes the WhisperDecoder class.
         
@@ -1181,7 +1168,6 @@ class WhisperDecoder(WhisperPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Returns the input embeddings for the WhisperDecoder class.
         
@@ -1197,7 +1183,6 @@ class WhisperDecoder(WhisperPreTrainedModel):
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the WhisperDecoder class.
         
@@ -1425,7 +1410,6 @@ and constructing the model with various input parameters.
         [1, 2, 512]
     """
     def __init__(self, config: WhisperConfig):
-
         """
         Initializes an instance of the WhisperModel class.
         
@@ -1449,7 +1433,6 @@ and constructing the model with various input parameters.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method returns the input embeddings for the WhisperModel.
         
@@ -1465,7 +1448,6 @@ and constructing the model with various input parameters.
         return self.decoder.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the WhisperModel.
         
@@ -1482,7 +1464,6 @@ and constructing the model with various input parameters.
         self.decoder.embed_tokens = value
 
     def get_encoder(self):
-
         """
         This method returns the encoder associated with the WhisperModel.
         
@@ -1498,7 +1479,6 @@ and constructing the model with various input parameters.
         return self.encoder
 
     def get_decoder(self):
-
         """
         Retrieve the decoder used in the WhisperModel.
         
@@ -1677,7 +1657,6 @@ tokens.
     _tied_weights_keys = ["proj_out.weight"]
 
     def __init__(self, config: WhisperConfig):
-
         """
         Initializes an instance of the WhisperForConditionalGeneration class.
         
@@ -1700,7 +1679,6 @@ tokens.
         self.post_init()
 
     def get_encoder(self):
-
         """
         Retrieves the encoder from the model instance.
         
@@ -1717,7 +1695,6 @@ tokens.
         return self.model.get_encoder()
 
     def get_decoder(self):
-
         """
         This method 'get_decoder' is part of the class 'WhisperForConditionalGeneration' and retrieves the decoder from the model.
         
@@ -1738,7 +1715,6 @@ tokens.
         return self.model.get_decoder()
 
     def get_output_embeddings(self):
-
         """
         Method to retrieve the output embeddings from the WhisperForConditionalGeneration class.
         
@@ -1759,7 +1735,6 @@ tokens.
         return self.proj_out
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         This method sets the output embeddings for the WhisperForConditionalGeneration class.
         
@@ -1776,7 +1751,6 @@ tokens.
         self.proj_out = new_embeddings
 
     def get_input_embeddings(self) -> nn.Cell:
-
         """
         Returns the input embeddings for the WhisperForConditionalGeneration model.
         
@@ -2175,7 +2149,6 @@ tokens.
         attention_mask=None,
         **kwargs,
     ):
-
         """
         Prepare inputs for generation.
         
@@ -2229,7 +2202,6 @@ tokens.
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Reorders the cache according to the provided beam index.
         
@@ -2305,7 +2277,6 @@ class WhisperDecoderWrapper(WhisperPreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the WhisperDecoderWrapper class.
         
@@ -2328,7 +2299,6 @@ class WhisperDecoderWrapper(WhisperPreTrainedModel):
         self.decoder = WhisperDecoder(config)
 
     def get_input_embeddings(self):
-
         """
         Get input embeddings for the WhisperDecoderWrapper.
         
@@ -2344,7 +2314,6 @@ class WhisperDecoderWrapper(WhisperPreTrainedModel):
         return self.decoder.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the WhisperDecoderWrapper.
         
@@ -2361,7 +2330,6 @@ class WhisperDecoderWrapper(WhisperPreTrainedModel):
         self.decoder.embed_tokens = value
 
     def construct(self, *args, **kwargs):
-
         """
         Method to construct a WhisperDecoderWrapper object by invoking the decoder with the provided arguments.
         
@@ -2422,7 +2390,6 @@ Union[Tuple, CausalLMOutputWithCrossAttentions]: Constructs the model architectu
     main_input_name = "input_ids"
 
     def __init__(self, config):
-
         """
         Initializes an instance of the WhisperForCausalLM class.
         
@@ -2446,7 +2413,6 @@ Union[Tuple, CausalLMOutputWithCrossAttentions]: Constructs the model architectu
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         This method returns the output embeddings for WhisperForCausalLM model.
         
@@ -2462,7 +2428,6 @@ Union[Tuple, CausalLMOutputWithCrossAttentions]: Constructs the model architectu
         return self.proj_out
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Set the output embeddings for the WhisperForCausalLM model.
         
@@ -2480,7 +2445,6 @@ Union[Tuple, CausalLMOutputWithCrossAttentions]: Constructs the model architectu
         self.proj_out = new_embeddings
 
     def get_input_embeddings(self) -> nn.Cell:
-
         """
         Retrieves the input embeddings from the underlying model.
         
@@ -2508,7 +2472,6 @@ model's 'get_input_embeddings' function is called to retrieve these embeddings.
         return self.model.get_input_embeddings()
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the WhisperForCausalLM model.
         
@@ -2528,7 +2491,6 @@ model's 'get_input_embeddings' function is called to retrieve these embeddings.
         self.model.set_input_embeddings(value)
 
     def set_decoder(self, decoder):
-
         """
         Method to set the decoder for the WhisperForCausalLM model.
         
@@ -2545,7 +2507,6 @@ model's 'get_input_embeddings' function is called to retrieve these embeddings.
         self.model.decoder = decoder
 
     def get_decoder(self):
-
         """
         Returns the decoder of the WhisperForCausalLM model.
         
@@ -2708,7 +2669,6 @@ model's 'get_input_embeddings' function is called to retrieve these embeddings.
         attention_mask=None,
         **kwargs,
     ):
-
         """
         Prepare inputs for generation.
         
@@ -2750,7 +2710,6 @@ model's 'get_input_embeddings' function is called to retrieve these embeddings.
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Reorders the cache of past key values for the beam search in the WhisperForCausalLM class.
         
@@ -2823,7 +2782,6 @@ forward pass of the model for audio classification.
     For more details on the class methods and attributes, refer to the individual method docstrings.
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the WhisperForAudioClassification class.
         
@@ -2859,7 +2817,6 @@ forward pass of the model for audio classification.
         self.encoder._freeze_parameters()
 
     def get_input_embeddings(self) -> nn.Cell:
-
         """
         This method returns the input embeddings from the encoder for audio classification.
         
@@ -2875,7 +2832,6 @@ forward pass of the model for audio classification.
         return self.encoder.get_input_embeddings()
 
     def set_input_embeddings(self, value: nn.Cell):
-
         """
         Method to set the input embeddings for the WhisperForAudioClassification class.
         

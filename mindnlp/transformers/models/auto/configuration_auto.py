@@ -650,7 +650,6 @@ class _LazyConfigMapping(OrderedDict):
     """
 
     def __init__(self, mapping):
-
         """
         Initializes a new instance of the _LazyConfigMapping class.
         
@@ -671,7 +670,6 @@ class _LazyConfigMapping(OrderedDict):
         self._modules = {}
 
     def __getitem__(self, key):
-
         """
         __getitem__
         
@@ -709,7 +707,6 @@ performing necessary module imports and attribute retrieval.
         return getattr(transformers_module, value)
 
     def keys(self):
-
         """
         This method returns a list of all the keys in the _LazyConfigMapping object.
         
@@ -725,7 +722,6 @@ performing necessary module imports and attribute retrieval.
         return list(self._mapping.keys()) + list(self._extra_content.keys())
 
     def values(self):
-
         """
         This method returns a list containing the values of the mapping and any extra content in the _LazyConfigMapping class.
         
@@ -744,7 +740,6 @@ performing necessary module imports and attribute retrieval.
         )
 
     def items(self):
-
         """
         items(self)
             This method returns a list of key-value pairs from the _LazyConfigMapping instance.
@@ -763,7 +758,6 @@ performing necessary module imports and attribute retrieval.
         )
 
     def __iter__(self):
-
         """
         Iterates over the keys of the '_LazyConfigMapping' instance.
         
@@ -779,7 +773,6 @@ performing necessary module imports and attribute retrieval.
         return iter(list(self._mapping.keys()) + list(self._extra_content.keys()))
 
     def __contains__(self, item):
-
         """
         Check if the given item is contained within the '_LazyConfigMapping' object.
         
@@ -819,7 +812,6 @@ class _LazyLoadAllMappings(OrderedDict):
     """
 
     def __init__(self, mapping):
-
         """
         Initializes an instance of the '_LazyLoadAllMappings' class.
         
@@ -838,7 +830,6 @@ class _LazyLoadAllMappings(OrderedDict):
         self._data = {}
 
     def _initialize(self):
-
         """
         Initializes the lazy loading of all mappings for the _LazyLoadAllMappings class.
         
@@ -869,7 +860,6 @@ class _LazyLoadAllMappings(OrderedDict):
         self._initialized = True
 
     def __getitem__(self, key):
-
         """
         __getitem__
         
@@ -889,7 +879,6 @@ class _LazyLoadAllMappings(OrderedDict):
         return self._data[key]
 
     def keys(self):
-
         """
         Returns a list of all the keys in the mappings.
         
@@ -906,7 +895,6 @@ class _LazyLoadAllMappings(OrderedDict):
         return self._data.keys()
 
     def values(self):
-
         """
         Method 'values' in the class '_LazyLoadAllMappings' returns the values of the internal data dictionary after initialization.
         
@@ -927,7 +915,6 @@ class _LazyLoadAllMappings(OrderedDict):
         return self._data.values()
 
     def items(self):
-
         """
         Method 'items' in the class '_LazyLoadAllMappings' retrieves the keys of the data after initialization.
         
@@ -947,7 +934,6 @@ class _LazyLoadAllMappings(OrderedDict):
         return self._data.keys()
 
     def __iter__(self):
-
         """
         __iter__
         
@@ -966,7 +952,6 @@ class _LazyLoadAllMappings(OrderedDict):
         return iter(self._data)
 
     def __contains__(self, item):
-
         """
         This method '__contains__' in the class '_LazyLoadAllMappings' determines if the specified item is contained within the data structure.
         
@@ -994,7 +979,6 @@ ALL_PRETRAINED_CONFIG_ARCHIVE_MAP = _LazyLoadAllMappings(
 
 
 def _get_class_name(model_class: Union[str, List[str]]):
-
     """
     This function returns a formatted string representing the class name or names provided as the 'model_class' parameter.
     
@@ -1021,7 +1005,6 @@ def _get_class_name(model_class: Union[str, List[str]]):
 
 
 def _list_model_options(indent, config_to_class=None, use_model_types=True):
-
     """
     Args:
         indent (str): The string used for indentation in the output.
@@ -1075,7 +1058,6 @@ def _list_model_options(indent, config_to_class=None, use_model_types=True):
 
 
 def replace_list_option_in_docstrings(config_to_class=None, use_model_types=True):
-
     """
     This function decorates another function's docstring to include a section for listing options related to model types. 
     
@@ -1123,7 +1105,6 @@ class AutoConfig:
     """
 
     def __init__(self):
-
         """
         Initialize AutoConfig.
         
@@ -1146,7 +1127,6 @@ class AutoConfig:
 
     @classmethod
     def for_model(cls, model_type: str, *args, **kwargs):
-
         """
         This class method 'for_model' in the 'AutoConfig' class is used to instantiate a configuration class based on the provided model type.
         

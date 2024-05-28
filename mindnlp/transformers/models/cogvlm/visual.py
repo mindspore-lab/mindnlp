@@ -12,7 +12,6 @@ class PatchEmbedding(nn.Cell):
     patch embedding
     """
     def __init__(self, config):
-
         """Initializes a PatchEmbedding object with the provided configuration settings.
         
         Args:
@@ -36,7 +35,6 @@ class PatchEmbedding(nn.Cell):
         self.position_embedding = nn.Embedding(config.num_positions, config.hidden_size)
 
     def construct(self, images: "tensor(B, C, H, W)") -> "tensor(B, L, D)":
-
         """
         Construct method in the PatchEmbedding class.
         
@@ -65,7 +63,6 @@ class Attention(nn.Cell):
     attention
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the Attention class.
         
@@ -95,7 +92,6 @@ class Attention(nn.Cell):
         self.output_dropout = nn.Dropout(p = config.dropout_prob)
 
     def construct(self, x: "tensor(B, L, D)") -> "tensor(B, L, D)":
-
         """
         This method 'construct' is a part of the 'Attention' class and is used to construct the output tensor based on the input tensor.
         
@@ -119,7 +115,6 @@ class Attention(nn.Cell):
         return output
 
     def attention(self, q, k, v):
-
         """
         Performs attention mechanism on the input tensors q, k, and v.
         
@@ -147,7 +142,6 @@ class MLP(nn.Cell):
     MLP
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the MLP class.
         
@@ -172,7 +166,6 @@ class MLP(nn.Cell):
         self.fc2 = nn.Dense(config.intermediate_size, config.hidden_size)
 
     def construct(self, x: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method constructs a multi-layer perceptron (MLP) by applying linear transformations and activation functions to the input tensor.
         
@@ -198,7 +191,6 @@ class TransformerLayer(nn.Cell):
     transformer layer
     """
     def __init__(self, config):
-
         """
         Initializes a TransformerLayer object with the provided configuration.
         
@@ -223,7 +215,6 @@ class TransformerLayer(nn.Cell):
         self.post_attention_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
 
     def construct(self, hidden_states):
-
         """
         Constructs the TransformerLayer.
         
@@ -274,7 +265,6 @@ series of Transformer layers to the input hidden states, resulting in transforme
     This class provides an efficient and flexible implementation of the Transformer model for various natural language processing tasks, such as machine translation and language modeling.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the Transformer class.
         
@@ -295,7 +285,6 @@ series of Transformer layers to the input hidden states, resulting in transforme
         self.layers = nn.CellList([TransformerLayer(config) for _ in range(config.num_hidden_layers)])
 
     def construct(self, hidden_states):
-
         """
         Constructs the output by passing the hidden states through each layer module in the Transformer.
         
@@ -346,7 +335,6 @@ normalization, activation functions, and dense transformations.
     
     """
     def __init__(self, config, in_features):
-
         """
         Initializes an instance of the GLU class.
         
@@ -371,7 +359,6 @@ normalization, activation functions, and dense transformations.
         self.dense_4h_to_h = nn.Dense(config.intermediate_size, config.hidden_size, has_bias=False)
 
     def construct(self, x):
-
         """
         Constructs a GLU (Gated Linear Unit) using the given input.
         
@@ -414,7 +401,6 @@ class EVA2CLIPModel(nn.Cell):
         output = model.construct(images)
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the EVA2CLIPModel class.
         
@@ -437,7 +423,6 @@ class EVA2CLIPModel(nn.Cell):
         self.eoi = mindspore.Parameter(ops.zeros((1, 1, config.hidden_size)))
 
     def construct(self, images: "tensor(B, C, H, W)") -> "tensor(B, L, D)":
-
         """
         Constructs the EVA2CLIP model by processing the input images.
         

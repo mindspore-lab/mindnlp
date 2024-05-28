@@ -61,7 +61,6 @@ class FalconConfig(PretrainedConfig):
         eos_token_id=11,
         **kwargs,
     ):
-
         """
         Initializes an instance of the FalconConfig class.
         

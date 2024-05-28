@@ -103,7 +103,6 @@ PROCESSOR_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, PROCESSOR_MAPPING_NAM
 
 
 def processor_class_from_name(class_name: str):
-
     """
     This function retrieves a processor class based on the provided class name.
     
@@ -149,7 +148,6 @@ class AutoProcessor:
     """
 
     def __init__(self):
-
         """
         Class: AutoProcessor
         

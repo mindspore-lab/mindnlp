@@ -94,7 +94,6 @@ the split_letters flag is True. Returns the normalized text.
     
     """
     def __init__(self, remove_diacritics: bool = False, split_letters: bool = False):
-
         """
         Initializes an instance of the BasicTextNormalizer class.
         
@@ -113,7 +112,6 @@ the split_letters flag is True. Returns the normalized text.
         self.split_letters = split_letters
 
     def __call__(self, s: str):
-
         """
         This method normalizes the input text by converting it to lowercase, removing certain patterns and characters, and optionally splitting the text into individual letters.
         
@@ -152,7 +150,6 @@ class EnglishNumberNormalizer:
     """
 
     def __init__(self):
-
         """Initializes an instance of the EnglishNumberNormalizer class.
         
         Args:
@@ -293,7 +290,6 @@ class EnglishNumberNormalizer:
         self.literal_words = {"one", "ones"}
 
     def process_words(self, words: List[str]) -> Iterator[str]:
-
         """
         Process a list of words to normalize English numbers.
         
@@ -536,7 +532,6 @@ class EnglishNumberNormalizer:
             yield output(value)
 
     def preprocess(self, s: str):
-
         """
         This method preprocesses the input string 's' to normalize English number representations.
         
@@ -579,7 +574,6 @@ class EnglishNumberNormalizer:
         return s
 
     def postprocess(self, s: str):
-
         """
             This method postprocesses a given string to normalize English numbers and currencies.
         
@@ -623,7 +617,6 @@ class EnglishNumberNormalizer:
         return s
 
     def __call__(self, s: str):
-
         """
         This method normalizes English numbers in a given string.
         
@@ -652,7 +645,6 @@ class EnglishSpellingNormalizer:
     """
 
     def __init__(self, english_spelling_mapping):
-
         """
         Initialize a new instance of the EnglishSpellingNormalizer class.
         
@@ -669,7 +661,6 @@ class EnglishSpellingNormalizer:
         self.mapping = english_spelling_mapping
 
     def __call__(self, s: str):
-
         """
         The '__call__' method in the 'EnglishSpellingNormalizer' class normalizes the spelling of English words in a given string.
         
@@ -707,7 +698,6 @@ input text.
         normalized_text = english_normalizer("He won't be able to make it. Let's go!")
     """
     def __init__(self, english_spelling_mapping):
-
         """
         Args:
             self (object): The instance of the EnglishTextNormalizer class.
@@ -780,7 +770,6 @@ is used to initialize the EnglishSpellingNormalizer.
         self.standardize_spellings = EnglishSpellingNormalizer(english_spelling_mapping)
 
     def __call__(self, s: str):
-
         """
         This method '__call__' in the class 'EnglishTextNormalizer' normalizes English text by applying various transformations to the input string 's'.
         

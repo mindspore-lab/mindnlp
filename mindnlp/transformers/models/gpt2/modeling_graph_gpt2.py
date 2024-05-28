@@ -45,7 +45,6 @@ class GPT2Attention(nn.Cell):
     """
 
     def __init__(self, config, is_cross_attention=False, layer_idx=None):
-
         """
         Initialize the GPT2Attention class.
         
@@ -102,7 +101,6 @@ class GPT2Attention(nn.Cell):
         self.matmul = Matmul()
         self.mask_value = Tensor(np.finfo(np.float32).min, dtype=mindspore.float32)
 
-
     def prune_heads(self, heads):
         """
         Prunes heads of the model.
@@ -122,7 +120,6 @@ class GPT2Attention(nn.Cell):
         self.pruned_heads = self.pruned_heads.union(heads)
 
     def _attn(self, query, key, value, attention_mask=None, head_mask=None):
-
         """
         Method _attn in the class GPT2Attention.
         
@@ -188,7 +185,6 @@ class GPT2Attention(nn.Cell):
         return attn_output, attn_weights
 
     def _upcast_and_reordered_attn(self, query, key, value, attention_mask=None, head_mask=None):
-
         """
         This method '_upcast_and_reordered_attn' is a part of the 'GPT2Attention' class and performs upcasting and reordering operations on the provided query, key, and value tensors to compute the attention
 weights and output. The method takes the following parameters:
@@ -276,7 +272,6 @@ weights and output. The method takes the following parameters:
             encoder_attention_mask: Optional[Tensor] = None,
             use_cache: Optional[bool] = False,
     ):
-
         """
         This method 'construct' is a part of the 'GPT2Attention' class and is responsible for constructing the attention mechanism with various parameters.
         
@@ -345,7 +340,6 @@ class GPT2MLP(nn.Cell):
     """
 
     def __init__(self, intermediate_size, config):
-
         """
         Initializes an instance of the GPT2MLP class.
         
@@ -368,7 +362,6 @@ class GPT2MLP(nn.Cell):
         self.dropout = Dropout(p=config.resid_pdrop)
 
     def construct(self, hidden_states: Tuple[Tensor]):
-
         """
         Constructs the hidden states in the GPT2MLP class.
         
@@ -395,7 +388,6 @@ class GPT2Block(nn.Cell):
     """
 
     def __init__(self, config, layer_idx=None):
-
         """
         Initializes a GPT2Block object.
         
@@ -440,7 +432,6 @@ class GPT2Block(nn.Cell):
             encoder_attention_mask: Optional[Tensor] = None,
             use_cache: Optional[bool] = False,
     ):
-
         """
         Constructs a GPT2Block.
         
@@ -548,7 +539,6 @@ class GPT2PreTrainedModel(PreTrainedModel):
         head_mask = head_mask.astype(dtype=self.dtype)  # switch to float if need + fp16 compatibility
         return head_mask
 
-
     def _init_weights(self, cell):
         """Initialize the weights"""
         if isinstance(cell, (nn.Dense, Conv1D)):
@@ -588,7 +578,6 @@ class GPT2Model(GPT2PreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the GPT2Model class.
         
@@ -664,7 +653,6 @@ class GPT2Model(GPT2PreTrainedModel):
             encoder_hidden_states: Optional[Tensor] = None,
             encoder_attention_mask: Optional[Tensor] = None,
     ):
-
         """
         Constructs the GPT2Model.
         
@@ -796,7 +784,6 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
     """
 
     def __init__(self, config, **kwargs):
-
         """
         Initializes a GPT2LMHeadModel instance.
         
@@ -820,7 +807,6 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
         self.loss_fct = nn.CrossEntropyLoss(ignore_index=ignore_index)
         # Initialize weights and apply final processing
         self.post_init()
-
 
     def get_output_embeddings(self):
         """
@@ -878,7 +864,6 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
             encoder_attention_mask: Optional[Tensor] = None,
             labels: Optional[Tensor] = None,
     ):
-
         """
         This method 'construct' is defined within the 'GPT2LMHeadModel' class and is responsible for processing input data through a transformer model and generating relevant outputs.
         
@@ -950,7 +935,6 @@ class GPT2DoubleHeadsModel(GPT2PreTrainedModel):
     _keys_to_ignore_on_load_missing = [r"attn.masked_bias", r"attn.bias", r"lm_head.weight"]
 
     def __init__(self, config):
-
         """Initializes a new instance of the GPT2DoubleHeadsModel class.
         
         Args:
@@ -970,7 +954,6 @@ class GPT2DoubleHeadsModel(GPT2PreTrainedModel):
         self.multiple_choice_head = SequenceSummary(config)
         # Initialize weights and apply final processing
         self.post_init()
-
 
     def get_output_embeddings(self):
         """
@@ -1018,7 +1001,6 @@ class GPT2DoubleHeadsModel(GPT2PreTrainedModel):
 
     def construct(self, input_ids, past_key_values=None, attention_mask=None, token_type_ids=None,
                   position_ids=None, head_mask=None, inputs_embeds=None, mc_token_ids=None, labels=None, mc_labels=None):
-
         """
         Constructs the GPT2DoubleHeadsModel.
         
@@ -1077,7 +1059,6 @@ hidden states of the transformer.
 
     @staticmethod
     def _reorder_cache(past, beam_idx):
-
         '''
         This method '_reorder_cache' belongs to the class 'GPT2DoubleHeadsModel' and is used to reorder the cache based on the provided beam index.
         
@@ -1106,7 +1087,6 @@ class GPT2ForSequenceClassification(GPT2PreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the GPT2ForSequenceClassification class.
         
@@ -1130,7 +1110,6 @@ class GPT2ForSequenceClassification(GPT2PreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-
     def construct(
             self,
             input_ids: Tensor,
@@ -1142,7 +1121,6 @@ class GPT2ForSequenceClassification(GPT2PreTrainedModel):
             inputs_embeds: Optional[Tensor] = None,
             labels: Optional[Tensor] = None,
     ):
-
         """
         Method 'construct' in the class 'GPT2ForSequenceClassification'.
         
@@ -1231,7 +1209,6 @@ class GPT2ForTokenClassification(GPT2PreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the GPT2ForTokenClassification class.
         
@@ -1266,7 +1243,6 @@ class GPT2ForTokenClassification(GPT2PreTrainedModel):
 
     def construct(self, input_ids=None, past_key_values=None, attention_mask=None, token_type_ids=None,
                   position_ids=None, head_mask=None, inputs_embeds=None, labels=None):
-
         """
         Args:
             self (object): The instance of the class.

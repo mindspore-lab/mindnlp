@@ -102,7 +102,6 @@ def is_pipeline_test(test_case):
             return pytest.mark.is_pipeline_test()(test_case)
 
 def parse_flag_from_env(key, default=False):
-
     """
     Parses a flag value from the environment variable.
     
@@ -159,7 +158,6 @@ def tooslow(test_case):
     return unittest.skipUnless(_run_too_slow_tests, "test is too slow")(test_case)
 
 def parse_int_from_env(key, default=None):
-
     """Parses an integer value from the specified environment variable.
     
     Args:
@@ -264,7 +262,6 @@ def require_pytesseract(test_case):
 
 
 def cmd_exists(cmd):
-
     """
     Check if a command exists in the system PATH.
     
@@ -294,7 +291,6 @@ def cmd_exists(cmd):
 # final message
 # it can handle a single string or a multiline buffer
 def apply_print_resets(buf):
-
     """
     Apply print resets by removing any characters before the last carriage return in the given buffer.
     
@@ -311,7 +307,6 @@ def apply_print_resets(buf):
 
 
 def assert_screenout(out, what):
-
     """
     This function asserts the presence of a specified string within the provided output.
     
@@ -380,7 +375,6 @@ class CaptureStd:
     ```"""
 
     def __init__(self, out=True, err=True, replay=True):
-
         """Initialize a CaptureStd object.
         
         Args:
@@ -421,7 +415,6 @@ was called too early.
             self.err = "not capturing stderr"
 
     def __enter__(self):
-
         """
         The '__enter__' method is used as a context manager to redirect the standard output and standard error streams to the provided buffers.
         
@@ -445,7 +438,6 @@ was called too early.
         return self
 
     def __exit__(self, *exc):
-
         """
         This method __exit__ is called automatically when exiting a 'with' block that uses the CaptureStd context manager.
         
@@ -473,7 +465,6 @@ was called too early.
             self.err = captured
 
     def __repr__(self):
-
         """
         Returns a string representation of the CaptureStd object.
         
@@ -521,7 +512,6 @@ class CaptureStdout(CaptureStd):
     """Same as CaptureStd but captures only stdout"""
 
     def __init__(self, replay=True):
-
         """
         Initializes an instance of the CaptureStdout class.
         
@@ -544,7 +534,6 @@ class CaptureStderr(CaptureStd):
     """Same as CaptureStd but captures only stderr"""
 
     def __init__(self, replay=True):
-
         """
         Initializes an instance of the CaptureStderr class.
         
@@ -586,7 +575,6 @@ class CaptureLogger:
      ```
      """
     def __init__(self, logger):
-
         """
         Initializes a new instance of the CaptureLogger class.
         
@@ -606,7 +594,6 @@ class CaptureLogger:
         self.out = ""
 
     def __enter__(self):
-
         """
         This method is an implementation of the context manager protocol for the CaptureLogger class.
         
@@ -624,7 +611,6 @@ configuration of the logging system.
         return self
 
     def __exit__(self, *exc):
-
         """
         This method __exit__ is called automatically when exiting a 'with' block in the CaptureLogger class.
         
@@ -641,7 +627,6 @@ configuration of the logging system.
         self.out = self.io.getvalue()
 
     def __repr__(self):
-
         """
         Return a string representation of the CaptureLogger object.
         
@@ -780,7 +765,6 @@ class TestCasePlus(unittest.TestCase):
     ```"""
 
     def setUp(self):
-
         """
         Set up the necessary environment for the TestCasePlus class.
         
@@ -834,7 +818,6 @@ method performs the following steps:
 
     @property
     def test_file_path(self):
-
         """
         Returns the test file path.
         
@@ -851,7 +834,6 @@ method performs the following steps:
 
     @property
     def test_file_path_str(self):
-
         """
         Method to retrieve the string representation of the test file path.
         
@@ -873,7 +855,6 @@ method performs the following steps:
 
     @property
     def test_file_dir(self):
-
         """
         This method retrieves the directory path where test files are located.
         
@@ -891,7 +872,6 @@ method performs the following steps:
 
     @property
     def test_file_dir_str(self):
-
         """
         Method test_file_dir_str in the class TestCasePlus.
         
@@ -908,7 +888,6 @@ method performs the following steps:
 
     @property
     def tests_dir(self):
-
         """
         Method: tests_dir
         
@@ -928,7 +907,6 @@ method performs the following steps:
 
     @property
     def tests_dir_str(self):
-
         """
         Returns the tests directory as a string.
         
@@ -953,7 +931,6 @@ the tests directory.
 
     @property
     def examples_dir(self):
-
         """
         Method to get the examples directory path.
         
@@ -970,7 +947,6 @@ the tests directory.
 
     @property
     def examples_dir_str(self):
-
         """
         Method examples_dir_str in the class TestCasePlus returns the string representation of the _examples_dir attribute.
         
@@ -990,7 +966,6 @@ the tests directory.
 
     @property
     def repo_root_dir(self):
-
         """
         Method to retrieve the root directory of the repository.
         
@@ -1008,7 +983,6 @@ the tests directory.
 
     @property
     def repo_root_dir_str(self):
-
         """
         Method to retrieve the repository root directory as a string.
         
@@ -1027,7 +1001,6 @@ the tests directory.
 
     @property
     def src_dir(self):
-
         """
         Returns the source directory path for the TestCasePlus class.
         
@@ -1044,7 +1017,6 @@ the tests directory.
 
     @property
     def src_dir_str(self):
-
         """
         Method to retrieve the source directory path as a string representation.
         
@@ -1185,7 +1157,6 @@ the tests directory.
         return max_rss
 
     def tearDown(self):
-
         """
         Tears down the test case by cleaning up temporary directories.
         
@@ -1420,7 +1391,6 @@ class _RunOutput:
         stderr (str): The standard error captured from the command execution.
     """
     def __init__(self, returncode, stdout, stderr):
-
         """
         __init__(self, returncode, stdout, stderr)
         
@@ -1444,7 +1414,6 @@ class _RunOutput:
 
 
 async def _read_stream(stream, callback):
-
     """
     Docstring for _read_stream function:
     
@@ -1467,7 +1436,6 @@ async def _read_stream(stream, callback):
 
 
 async def _stream_subprocess(cmd, env=None, stdin=None, timeout=None, quiet=False, echo=False) -> _RunOutput:
-
     """
     This function runs a subprocess and captures its standard output and error streams.
     
@@ -1527,7 +1495,6 @@ async def _stream_subprocess(cmd, env=None, stdin=None, timeout=None, quiet=Fals
 
 
 def execute_subprocess_async(cmd, env=None, stdin=None, timeout=180, quiet=False, echo=True) -> _RunOutput:
-
     """
     Args:
         cmd (List[str]): A list of strings representing the command and its arguments to be executed.
@@ -1614,7 +1581,6 @@ def nested_simplify(obj, decimals=3):
 
 
 def to_2tuple(x):
-
     """
     Converts the input value to a 2-tuple.
     
@@ -1673,7 +1639,6 @@ class RequestCounter:
     """
 
     def __enter__(self):
-
         """
         __enter__
         
@@ -1692,7 +1657,6 @@ class RequestCounter:
         return self
 
     def __exit__(self, *args, **kwargs) -> None:
-
         """
         This method '__exit__' in the class 'RequestCounter' is called upon exiting a context manager. It updates the request counters based on the logged HTTP methods.
         
@@ -1714,7 +1678,6 @@ class RequestCounter:
         self.patcher.stop()
 
     def __getitem__(self, key: str) -> int:
-
         """
         Retrieve the count associated with the specified key from the RequestCounter.
         
@@ -1732,7 +1695,6 @@ class RequestCounter:
 
     @property
     def total_calls(self) -> int:
-
         """ 
         Method to calculate the total number of calls made to the RequestCounter instance.
         
@@ -1918,7 +1880,6 @@ class HfDoctestModule(Module):
     """
 
     def collect(self) -> Iterable[DoctestItem]:
-
         """
         Collects doctests from the specified module.
         
@@ -2002,7 +1963,6 @@ class HfDoctestModule(Module):
 
 
 def _device_agnostic_dispatch(device: str, dispatch_table: Dict[str, Callable], *args, **kwargs):
-
     """
     Executes a device-agnostic dispatch based on the given device and dispatch table.
     
@@ -2049,7 +2009,6 @@ def get_tests_dir(append_path=None):
     return tests_dir
 
 def check_json_file_has_correct_format(file_path):
-
     '''
     Check if the provided JSON file has the correct format.
     

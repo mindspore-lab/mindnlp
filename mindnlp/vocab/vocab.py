@@ -33,7 +33,6 @@ class Vocab:
     def __init__(self, list_or_dict: Union[list, dict],
                  special_tokens: Union[list, tuple] = None,
                  special_first: bool = True):
-
         """
         Initialize the Vocab class with the provided list or dictionary of tokens along with optional special tokens.
         
@@ -102,9 +101,7 @@ values must be integers representing token indices.
 
         return self._token_dict.get(token, None)
 
-
     def __call__(self, token_or_id):
-
         """
         The __call__ method in the Vocab class retrieves token information based on the provided token or token ID.
         

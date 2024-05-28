@@ -70,7 +70,6 @@ class BigBirdPegasusLearnedPositionalEmbedding(nn.Embedding):
     """
 
     def __init__(self, num_embeddings: int, embedding_dim: int):
-
         """Initialize the BigBirdPegasusLearnedPositionalEmbedding class.
         
         This method initializes an instance of the BigBirdPegasusLearnedPositionalEmbedding class with the given parameters.
@@ -127,7 +126,6 @@ class BigBirdPegasusSelfAttention(nn.Cell):
         tuple: A tuple containing the context layer and optionally attention probabilities and past key-value pairs.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the BigBirdPegasusSelfAttention class.
         
@@ -167,7 +165,6 @@ class BigBirdPegasusSelfAttention(nn.Cell):
         self.is_decoder = config.is_decoder
 
     def swapaxes_for_scores(self, x):
-
         """
         Performs axis swapping and reshaping operations on the input tensor to prepare it for BigBirdPegasusSelfAttention.
         
@@ -195,7 +192,6 @@ class BigBirdPegasusSelfAttention(nn.Cell):
         past_key_value=None,
         output_attentions=False,
     ):
-
         """
         This method constructs the self-attention mechanism for the BigBirdPegasus model.
         
@@ -318,7 +314,6 @@ attention for a single block row.
     This class provides a comprehensive implementation of the block sparse attention mechanism for efficient text generation tasks.
     """
     def __init__(self, config, seed=None):
-
         """
         Initializes a BigBirdPegasusBlockSparseAttention object.
         
@@ -362,7 +357,6 @@ attention for a single block row.
         self.value = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.use_bias)
 
     def swapaxes_for_scores(self, x):
-
         """
         Performs the axis swapping operation on the input tensor for bigbird's block-sparse attention.
         
@@ -401,7 +395,6 @@ specified permutation order (0, 2, 1, 3).
         to_blocked_mask=None,
         output_attentions=None,
     ):
-
         """
         This method 'construct' is a part of the class 'BigBirdPegasusBlockSparseAttention'. It takes the following parameters:
         
@@ -504,7 +497,6 @@ specified permutation order (0, 2, 1, 3).
         plan_num_rand_blocks,
         output_attentions,
     ):
-
         """
         This method calculates the context layer and attention probabilities using the BigBird block-sparse attention mechanism.
         
@@ -960,7 +952,6 @@ specified permutation order (0, 2, 1, 3).
 
     @staticmethod
     def ms_gather_b2(params, indices):
-
         """
         Performs block sparse attention gathering using the given parameters and indices.
         
@@ -1345,7 +1336,6 @@ class BigBirdPegasusEncoderAttention(nn.Cell):
         ValueError: If an invalid attention type is provided or if the attention type cannot be set to the specified value.
     """
     def __init__(self, config, seed=None):
-
         """
         Initializes the BigBirdPegasusEncoderAttention class.
         
@@ -1379,7 +1369,6 @@ class BigBirdPegasusEncoderAttention(nn.Cell):
         self.output = nn.Dense(config.hidden_size, config.hidden_size, has_bias=config.use_bias)
 
     def set_attention_type(self, value: str):
-
         """
         This method sets the attention type for the BigBirdPegasusEncoderAttention class.
         
@@ -1431,7 +1420,6 @@ class BigBirdPegasusEncoderAttention(nn.Cell):
         from_blocked_mask=None,
         to_blocked_mask=None,
     ):
-
         """
         Args:
             self: The instance of the class.
@@ -1487,7 +1475,6 @@ class BigBirdPegasusDecoderAttention(nn.Cell):
         is_causal: bool = False,
         config: Optional[BigBirdPegasusConfig] = None,
     ):
-
         """
         Initializes the BigBirdPegasusDecoderAttention class.
         
@@ -1529,7 +1516,6 @@ class BigBirdPegasusDecoderAttention(nn.Cell):
         self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-
         """
         This method '_shape' in the class 'BigBirdPegasusDecoderAttention' reshapes the input tensor to match the required dimensions for decoder attention in the BigBird Pegasus model.
         
@@ -1687,7 +1673,6 @@ and adjusts the self-attention mechanism accordingly.
 complex patterns in the data.
     """
     def __init__(self, config: BigBirdPegasusConfig, seed=None):
-
         """
         __init__
         
@@ -1778,7 +1763,6 @@ complex patterns in the data.
         return outputs
 
     def set_attention_type(self, value: str):
-
         """
         Sets the attention type for the BigBirdPegasusEncoderLayer.
         
@@ -1824,7 +1808,6 @@ projection states and returning attention weights if specified.
     This class provides a comprehensive implementation of a decoder layer for the BigBirdPegasus model with detailed parameter and method descriptions.
     """
     def __init__(self, config: BigBirdPegasusConfig):
-
         """Initializes an instance of the BigBirdPegasusDecoderLayer class.
         
         Args:
@@ -1985,7 +1968,6 @@ class BigBirdPegasusClassificationHead(nn.Cell):
         num_classes: int,
         pooler_dropout: float,
     ):
-
         """
         Args:
             self (object): The instance of the class.
@@ -2007,7 +1989,6 @@ class BigBirdPegasusClassificationHead(nn.Cell):
         self.out_proj = nn.Dense(inner_dim, num_classes)
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method constructs the classification head for the BigBirdPegasus model.
         
@@ -2068,7 +2049,6 @@ the input sequences.
 
     @property
     def dummy_inputs(self):
-
         """
         Retrieves dummy inputs for the 'BigBirdPegasusPreTrainedModel' class.
         
@@ -2104,7 +2084,6 @@ class BigBirdPegasusEncoder(BigBirdPegasusPreTrainedModel):
     """
 
     def __init__(self, config: BigBirdPegasusConfig, embed_tokens: Optional[nn.Embedding] = None):
-
         """
         Initializes a new instance of the BigBirdPegasusEncoder class.
         
@@ -2334,7 +2313,6 @@ class BigBirdPegasusEncoder(BigBirdPegasusPreTrainedModel):
         )
 
     def set_attention_type(self, value: str):
-
         '''
         Sets the attention type for the BigBirdPegasusEncoder.
         
@@ -2361,7 +2339,6 @@ class BigBirdPegasusEncoder(BigBirdPegasusPreTrainedModel):
 
     @staticmethod  # Copied from transformers.models.big_bird.modeling_big_bird.BigBirdModel.create_masks_for_block_sparse_attn
     def create_masks_for_block_sparse_attn(attention_mask: mindspore.Tensor, block_size: int):
-
         """
         Method: create_masks_for_block_sparse_attn
         
@@ -2453,7 +2430,6 @@ class BigBirdPegasusDecoder(BigBirdPegasusPreTrainedModel):
     """
 
     def __init__(self, config: BigBirdPegasusConfig, embed_tokens: Optional[nn.Embedding] = None):
-
         """
         Initializes an instance of the BigBirdPegasusDecoder class.
         
@@ -2492,7 +2468,6 @@ class BigBirdPegasusDecoder(BigBirdPegasusPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method returns the input embeddings for the BigBirdPegasusDecoder.
         
@@ -2508,7 +2483,6 @@ class BigBirdPegasusDecoder(BigBirdPegasusPreTrainedModel):
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """Set the input embeddings for the BigBirdPegasusDecoder.
         
         Args:
@@ -2764,7 +2738,6 @@ complete information.
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
     def __init__(self, config: BigBirdPegasusConfig):
-
         """
         Initializes a new instance of the BigBirdPegasusModel class.
         
@@ -2793,7 +2766,6 @@ complete information.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings for the BigBirdPegasusModel.
         
@@ -2809,7 +2781,6 @@ complete information.
         return self.shared
 
     def set_input_embeddings(self, value):
-
         """
         Set the input embeddings for the BigBirdPegasusModel.
         
@@ -2828,7 +2799,6 @@ complete information.
         self.decoder.embed_tokens = self.shared
 
     def _tie_weights(self):
-
         """
         Ties the weights of the encoder and decoder token embeddings if the tie_word_embeddings flag is set to True.
         
@@ -2850,7 +2820,6 @@ the model and improves training efficiency.
             self._tie_or_clone_weights(self.decoder.embed_tokens, self.shared)
 
     def get_encoder(self):
-
         """
         This method returns the encoder associated with the BigBirdPegasusModel.
         
@@ -2866,7 +2835,6 @@ the model and improves training efficiency.
         return self.encoder
 
     def get_decoder(self):
-
         """
         Returns the decoder of the BigBirdPegasusModel.
         
@@ -2900,7 +2868,6 @@ the model and improves training efficiency.
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Seq2SeqModelOutput]:
-
         """
         Constructs the BigBirdPegasusModel.
         
@@ -3033,7 +3000,6 @@ use_cache=None, encoder_outputs=None, **kwargs): Prepares the input tensors for 
     _keys_to_ignore_on_load_unexpected = ["final_logits_bias"]
 
     def __init__(self, config: BigBirdPegasusConfig):
-
         """
         Initializes an instance of the BigBirdPegasusForConditionalGeneration class.
         
@@ -3056,7 +3022,6 @@ use_cache=None, encoder_outputs=None, **kwargs): Prepares the input tensors for 
         self.post_init()
 
     def get_encoder(self):
-
         """
         Retrieve the encoder component from the model.
         
@@ -3072,7 +3037,6 @@ use_cache=None, encoder_outputs=None, **kwargs): Prepares the input tensors for 
         return self.model.get_encoder()
 
     def get_decoder(self):
-
         """
         This method returns the decoder from the BigBirdPegasusForConditionalGeneration model.
         
@@ -3088,7 +3052,6 @@ use_cache=None, encoder_outputs=None, **kwargs): Prepares the input tensors for 
         return self.model.get_decoder()
 
     def resize_token_embeddings(self, new_num_tokens: int, pad_to_multiple_of: Optional[int] = None) -> nn.Embedding:
-
         """
         Resize the token embeddings for the model.
         
@@ -3110,7 +3073,6 @@ use_cache=None, encoder_outputs=None, **kwargs): Prepares the input tensors for 
         return new_embeddings
 
     def _resize_final_logits_bias(self, new_num_tokens: int) -> None:
-
         """
         Resizes the final logits bias tensor in the BigBirdPegasusForConditionalGeneration class.
         
@@ -3138,7 +3100,6 @@ tokens in `final_logits_bias`, the tensor is sliced to retain only the first `ne
         self.final_logits_bias = new_bias
 
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings for the BigBirdPegasus model.
         
@@ -3154,7 +3115,6 @@ tokens in `final_logits_bias`, the tensor is sliced to retain only the first `ne
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the BigBirdPegasusForConditionalGeneration model.
         
@@ -3262,7 +3222,6 @@ tokens in `final_logits_bias`, the tensor is sliced to retain only the first `ne
         encoder_outputs=None,
         **kwargs,
     ):
-
         """
         This method prepares inputs for generation in the BigBirdPegasusForConditionalGeneration class.
         
@@ -3312,7 +3271,6 @@ tokens in `final_logits_bias`, the tensor is sliced to retain only the first `ne
         }
 
     def prepare_decoder_input_ids_from_labels(self, labels: mindspore.Tensor):
-
         """
         Prepare decoder input IDs from labels.
         
@@ -3332,7 +3290,6 @@ tokens in `final_logits_bias`, the tensor is sliced to retain only the first `ne
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Reorders the past key values based on the provided beam index.
         
@@ -3366,7 +3323,6 @@ problem types such as regression, single label classification, and multi-label c
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
     def __init__(self, config: BigBirdPegasusConfig, **kwargs):
-
         """
         Initializes a new instance of the BigBirdPegasusForSequenceClassification class.
         
@@ -3508,7 +3464,6 @@ desired format based on the return_dict parameter.
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the BigBirdPegasusForQuestionAnswering class.
         
@@ -3639,7 +3594,6 @@ class BigBirdPegasusDecoderWrapper(BigBirdPegasusPreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initialize the BigBirdPegasusDecoderWrapper class.
         
@@ -3660,7 +3614,6 @@ class BigBirdPegasusDecoderWrapper(BigBirdPegasusPreTrainedModel):
         self.decoder = BigBirdPegasusDecoder(config)
 
     def construct(self, *args, **kwargs):
-
         """
         Method to construct a decoder using the BigBirdPegasusDecoderWrapper.
         
@@ -3698,7 +3651,6 @@ reorders the cache for beam search.
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
-
         """
         Initializes the BigBirdPegasusForCausalLM class.
         
@@ -3727,7 +3679,6 @@ for initializing the model. The 'is_decoder' and 'is_encoder_decoder' attributes
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method: get_input_embeddings
         
@@ -3746,7 +3697,6 @@ for initializing the model. The 'is_decoder' and 'is_encoder_decoder' attributes
         return self.model.decoder.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the BigBirdPegasusForCausalLM model.
         
@@ -3771,7 +3721,6 @@ for initializing the model. The 'is_decoder' and 'is_encoder_decoder' attributes
         self.model.decoder.embed_tokens = value
 
     def get_output_embeddings(self):
-
         """
         Method to retrieve the output embeddings from the BigBirdPegasusForCausalLM model.
         
@@ -3788,7 +3737,6 @@ for initializing the model. The 'is_decoder' and 'is_encoder_decoder' attributes
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """Set the output embeddings for the BigBirdPegasusForCausalLM model.
         
         Args:
@@ -3804,7 +3752,6 @@ for initializing the model. The 'is_decoder' and 'is_encoder_decoder' attributes
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
-
         """
         Sets the decoder for the BigBirdPegasusForCausalLM model.
         
@@ -3821,7 +3768,6 @@ for initializing the model. The 'is_decoder' and 'is_encoder_decoder' attributes
         self.model.decoder = decoder
 
     def get_decoder(self):
-
         """
         Retrieve the decoder component from the BigBirdPegasusForCausalLM model.
         
@@ -3982,7 +3928,6 @@ for initializing the model. The 'is_decoder' and 'is_encoder_decoder' attributes
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, use_cache=None, **kwargs
     ):
-
         """
         Prepare inputs for generation.
         
@@ -4022,7 +3967,6 @@ for initializing the model. The 'is_decoder' and 'is_encoder_decoder' attributes
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Method to reorder the cache values according to the given beam index.
         

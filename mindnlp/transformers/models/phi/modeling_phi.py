@@ -50,7 +50,6 @@ PHI_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 # Copied from transformers.models.llama.modeling_llama._get_unpad_data
 def _get_unpad_data(attention_mask):
-
     """
     This function extracts necessary data from the attention_mask tensor for further processing.
     
@@ -104,7 +103,6 @@ input sequences and sequence lengths.
     Note: This docstring is based on the provided code snippet and may need additional details or context to fully describe the class and its functionality.
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
-
         """
         Initializes an instance of the PhiRotaryEmbedding class.
         
@@ -136,7 +134,6 @@ input sequences and sequence lengths.
         )
 
     def _set_cos_sin_cache(self, seq_len, dtype):
-
         """Sets the cosine and sine cache for PhiRotaryEmbedding.
         
         This method sets the cosine and sine cache for PhiRotaryEmbedding based on the given sequence length and data type.
@@ -162,7 +159,6 @@ input sequences and sequence lengths.
         self.sin_cached = emb.sin().to(dtype)
 
     def construct(self, x, seq_len=None):
-
         """
         Constructs a PhiRotaryEmbedding.
         
@@ -200,7 +196,6 @@ class PhiLinearScalingRotaryEmbedding(PhiRotaryEmbedding):
     """PhiRotaryEmbedding extended with linear scaling. Credits to the Reddit user /u/kaiokendev"""
 
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
-
         """
         Initializes the PhiLinearScalingRotaryEmbedding object.
         
@@ -221,7 +216,6 @@ class PhiLinearScalingRotaryEmbedding(PhiRotaryEmbedding):
         super().__init__(dim, max_position_embeddings, base)
 
     def _set_cos_sin_cache(self, seq_len, dtype):
-
         """Sets the cosine and sine cache for the PhiLinearScalingRotaryEmbedding layer.
         
         Args:
@@ -254,7 +248,6 @@ class PhiDynamicNTKScalingRotaryEmbedding(PhiRotaryEmbedding):
     """PhiRotaryEmbedding extended with Dynamic NTK scaling. Credits to the Reddit users /u/bloc97 and /u/emozilla"""
 
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
-
         """
         Initializes an instance of PhiDynamicNTKScalingRotaryEmbedding.
         
@@ -275,7 +268,6 @@ class PhiDynamicNTKScalingRotaryEmbedding(PhiRotaryEmbedding):
         super().__init__(dim, max_position_embeddings, base)
 
     def _set_cos_sin_cache(self, seq_len, dtype):
-
         ''' 
         _set_cos_sin_cache method in the PhiDynamicNTKScalingRotaryEmbedding class.
         
@@ -372,7 +364,6 @@ class PhiMLP(nn.Cell):
         mindspore.Tensor: The output tensor of the forward pass through the MLP.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the PhiMLP class.
         
@@ -396,7 +387,6 @@ class PhiMLP(nn.Cell):
         self.fc2 = nn.Dense(config.intermediate_size, config.hidden_size)
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the forward pass of the PhiMLP model.
         
@@ -435,7 +425,6 @@ class PhiAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(self, config: PhiConfig, layer_idx: Optional[int] = None):
-
         """
         Initializes an instance of the PhiAttention class.
         
@@ -502,7 +491,6 @@ class PhiAttention(nn.Cell):
         self._init_rope()
 
     def _init_rope(self):
-
         """
         Initializes the RoPE (Rotary Position Embedding) for PhiAttention.
         
@@ -560,7 +548,6 @@ scaling_factor, and base.
         output_attentions: bool = False,
         use_cache: bool = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
-
         '''
         This method, named 'construct', is defined in the class 'PhiAttention'.
         
@@ -688,7 +675,6 @@ dropout.
 method also computes the feed-forward hidden states and returns the final layer outputs, optionally including attention weights and key-value states in the output tuple.
     """
     def __init__(self, config: PhiConfig, layer_idx: int):
-
         """
         This method initializes a PhiDecoderLayer object.
         
@@ -788,7 +774,6 @@ weight value at that index is set to 0. The weight data is then set for the cell
     _supports_cache_class = True
 
     def _init_weights(self, cell):
-
         """
         Initializes the weights and biases of a neural network cell based on the specified configuration.
         
@@ -825,7 +810,6 @@ class PhiModel(PhiPreTrainedModel):
     """
 
     def __init__(self, config: PhiConfig):
-
         """
         Initializes an instance of the PhiModel class.
         
@@ -878,7 +862,6 @@ class PhiModel(PhiPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Returns the input embeddings for the PhiModel.
         
@@ -894,7 +877,6 @@ class PhiModel(PhiPreTrainedModel):
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Set the input embeddings for the PhiModel.
         
@@ -923,7 +905,6 @@ class PhiModel(PhiPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
-
         """
         This method constructs the PhiModel using the specified input parameters and returns the output as a tuple or a BaseModelOutputWithPast object.
         
@@ -1070,7 +1051,6 @@ using the model.
 
     # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.__init__ with Llama->Phi,bias=False->has_bias=True
     def __init__(self, config):
-
         """
         Initializes an instance of the 'PhiForCausalLM' class.
         
@@ -1095,7 +1075,6 @@ using the model.
 
     # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.get_input_embeddings
     def get_input_embeddings(self):
-
         """
         Method to retrieve the input embeddings from the PhiForCausalLM model.
         
@@ -1113,7 +1092,6 @@ using the model.
 
     # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.set_input_embeddings
     def set_input_embeddings(self, value):
-
         """
         This method sets the input embeddings for the PhiForCausalLM model.
         
@@ -1131,7 +1109,6 @@ using the model.
 
     # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.get_output_embeddings
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings for the PhiForCausalLM model.
         
@@ -1149,7 +1126,6 @@ using the model.
 
     # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.set_output_embeddings
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the PhiForCausalLM model.
         
@@ -1171,7 +1147,6 @@ using the model.
 
     # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.set_decoder
     def set_decoder(self, decoder):
-
         """
         Args:
             self (PhiForCausalLM): The instance of the PhiForCausalLM class.
@@ -1187,7 +1162,6 @@ using the model.
 
     # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.get_decoder
     def get_decoder(self):
-
         """
         Returns the decoder model used for PhiForCausalLM.
         
@@ -1297,7 +1271,6 @@ using the model.
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
-
         """
         Prepares inputs for generating output sequences using PhiForCausalLM model.
         
@@ -1376,7 +1349,6 @@ using the model.
     @staticmethod
     # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM._reorder_cache
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Reorders the cache of past key values based on the given beam index.
         
@@ -1421,7 +1393,6 @@ classification.
     
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the PhiForSequenceClassification class.
         
@@ -1447,7 +1418,6 @@ classification.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Retrieves the input embeddings from the PhiForSequenceClassification model.
         
@@ -1463,7 +1433,6 @@ classification.
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the PhiForSequenceClassification model.
         
@@ -1591,7 +1560,6 @@ computes the loss using the logits and the ground truth labels.
     
     """
     def __init__(self, config: PhiConfig):
-
         """
         Initializes a new instance of the PhiForTokenClassification class.
         

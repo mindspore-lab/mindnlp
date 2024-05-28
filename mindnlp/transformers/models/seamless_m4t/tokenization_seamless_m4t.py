@@ -146,7 +146,6 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
         additional_special_tokens=None,
         **kwargs,
     ):
-
         """
         Initializes an instance of the SeamlessM4TTokenizer class.
         
@@ -219,7 +218,6 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.nllb.tokenization_nllb.NllbTokenizer.__getstate__
     def __getstate__(self):
-
         """
         Return the state of the SeamlessM4TTokenizer object.
         
@@ -242,7 +240,6 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.nllb.tokenization_nllb.NllbTokenizer.__setstate__
     def __setstate__(self, d):
-
         """
         Method to set the state of the SeamlessM4TTokenizer instance.
         
@@ -267,7 +264,6 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
-
         """
         This method returns the size of the vocabulary used by the SeamlessM4TTokenizer.
         
@@ -358,7 +354,6 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
     @property
     # Copied from transformers.models.nllb.tokenization_nllb.NllbTokenizer.src_lang
     def src_lang(self) -> str:
-
         """
         Returns the source language of the SeamlessM4TTokenizer instance.
         
@@ -387,7 +382,6 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
 
     @src_lang.setter
     def src_lang(self, new_src_lang: str) -> None:
-
         """
         Sets the source language for the SeamlessM4TTokenizer instance.
         
@@ -409,7 +403,6 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
 
     @property
     def tgt_lang(self) -> str:
-
         """
         Returns the target language of the SeamlessM4TTokenizer instance.
         
@@ -427,7 +420,6 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
 
     @tgt_lang.setter
     def tgt_lang(self, new_tgt_lang: str) -> None:
-
         """
         Set the target language for the SeamlessM4TTokenizer.
         
@@ -549,7 +541,6 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
         return inputs
 
     def get_vocab(self):
-
         """
         Method: get_vocab
         
@@ -573,7 +564,6 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
 
     @property
     def unk_token_length(self):
-
         """
         Returns the length of the unknown token.
         
@@ -601,7 +591,6 @@ attribute using the 'sp_model' encoding method. The length of the resulting enco
 
     # Copied from transformers.models.t5.tokenization_t5.T5Tokenizer.get_spm_processor
     def get_spm_processor(self, from_slow=False):
-
         """
         Retrieves the SentencePieceProcessor tokenizer for the SeamlessM4TTokenizer class.
         
@@ -688,7 +677,6 @@ attribute using the 'sp_model' encoding method. The length of the resulting enco
 
     # Copied from transformers.models.nllb.tokenization_nllb.NllbTokenizer.save_vocabulary
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary of the SeamlessM4TTokenizer object to a specified directory.
         
@@ -741,7 +729,6 @@ attribute using the 'sp_model' encoding method. The length of the resulting enco
         tgt_lang: str = "fra",
         **kwargs,
     ) -> BatchEncoding:
-
         """
         Prepare Seq2Seq Batch method in the SeamlessM4TTokenizer class.
         
@@ -768,7 +755,6 @@ attribute using the 'sp_model' encoding method. The length of the resulting enco
 
     # Copied from transformers.models.nllb.tokenization_nllb.NllbTokenizer._switch_to_input_mode
     def _switch_to_input_mode(self):
-
         """
         Switches the tokenizer to input mode.
         
@@ -796,7 +782,6 @@ attribute using the 'sp_model' encoding method. The length of the resulting enco
 
     # Copied from transformers.models.nllb.tokenization_nllb.NllbTokenizer._switch_to_target_mode
     def _switch_to_target_mode(self):
-
         """
         Switches the tokenizer to the target mode for the SeamlessM4TTokenizer class.
         

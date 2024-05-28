@@ -80,7 +80,6 @@ setting the prompt type to MULTITASK_PROMPT_TUNING.
     num_tasks: Optional[int] = field(default=1, metadata={"help": "number of tasks"})
 
     def __post_init__(self):
-
         """
         This method is called immediately after the instance of the MultitaskPromptTuningConfig class is created.
         

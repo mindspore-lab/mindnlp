@@ -44,7 +44,6 @@ if is_mindspore_available():
     from mindspore import ops
 
 
-
 def to_channel_dimension_format(
     image: np.ndarray,
     channel_dim: Union[ChannelDimension, str],
@@ -497,7 +496,6 @@ def center_crop(
 
 
 def _center_to_corners_format(bboxes_center: "mindspore.Tensor") -> "mindspore.Tensor":
-
     """
     Converts bounding boxes from center format to corners format.
     
@@ -522,7 +520,6 @@ def _center_to_corners_format(bboxes_center: "mindspore.Tensor") -> "mindspore.T
 
 
 def _center_to_corners_format_numpy(bboxes_center: np.ndarray) -> np.ndarray:
-
     """
     Converts bounding boxes from center format to corners format using NumPy operations.
     
@@ -567,7 +564,6 @@ def center_to_corners_format(bboxes_center: TensorType) -> TensorType:
 
 
 def _corners_to_center_format(bboxes_corners: "mindspore.Tensor") -> "mindspore.Tensor":
-
     """
     Converts bounding box coordinates from the corners format to the center format.
     
@@ -595,7 +591,6 @@ def _corners_to_center_format(bboxes_corners: "mindspore.Tensor") -> "mindspore.
 
 
 def _corners_to_center_format_numpy(bboxes_corners: np.ndarray) -> np.ndarray:
-
     """
     Converts bounding box corners format to center format using numpy.
     

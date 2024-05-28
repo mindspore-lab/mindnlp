@@ -39,7 +39,6 @@ class SeamlessM4TProcessor(ProcessorMixin):
     tokenizer_class = ("SeamlessM4TTokenizer", "SeamlessM4TTokenizerFast")
 
     def __init__(self, feature_extractor, tokenizer):
-
         """
         Initializes a SeamlessM4TProcessor instance.
         
@@ -124,7 +123,6 @@ class SeamlessM4TProcessor(ProcessorMixin):
 
     @property
     def model_input_names(self):
-
         """
         Returns a list of unique model input names required by the SeamlessM4TProcessor.
         

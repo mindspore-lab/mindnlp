@@ -101,7 +101,6 @@ class Pop2PianoConfig(PretrainedConfig):
         dense_act_fn="relu",
         **kwargs,
     ):
-
         """
         Initializes a Pop2PianoConfig object.
         

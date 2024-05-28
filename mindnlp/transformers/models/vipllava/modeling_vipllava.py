@@ -98,7 +98,6 @@ class VipLlavaMultiModalProjector(nn.Cell):
     
     """
     def __init__(self, config: VipLlavaConfig):
-
         """
         Initializes an instance of the VipLlavaMultiModalProjector class.
         
@@ -128,7 +127,6 @@ class VipLlavaMultiModalProjector(nn.Cell):
             config.text_config.hidden_size, config.text_config.hidden_size, has_bias=True)
 
     def construct(self, hidden_states):
-
         """
         
         construct(self, hidden_states)
@@ -194,7 +192,6 @@ bias tensor with zeros. If the module is an instance of nn.Embedding, it sets th
     _supports_flash_attn_2 = True
 
     def _init_weights(self, module):
-
         """
         This method '_init_weights' initializes the weights of the provided 'module' based on the specified standard deviation.
         
@@ -330,7 +327,6 @@ model, and reordering cache.
     The class also includes methods for handling input and output embeddings, decoder settings, tying weights, and resizing token embeddings.
     """
     def __init__(self, config: VipLlavaConfig):
-
         """
         Initializes an instance of the VipLlavaForConditionalGeneration class.
         
@@ -359,7 +355,6 @@ model, and reordering cache.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Returns the input embeddings of the language model used for conditional generation.
         
@@ -376,7 +371,6 @@ model.
         return self.language_model.get_input_embeddings()
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the VipLlavaForConditionalGeneration language model.
         
@@ -393,7 +387,6 @@ model.
         self.language_model.set_input_embeddings(value)
 
     def get_output_embeddings(self):
-
         """
         This method returns the output embeddings from the language model for the VipLlavaForConditionalGeneration class.
         
@@ -409,7 +402,6 @@ model.
         return self.language_model.get_output_embeddings()
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the VipLlavaForConditionalGeneration model.
         
@@ -427,7 +419,6 @@ model.
         self.language_model.set_output_embeddings(new_embeddings)
 
     def set_decoder(self, decoder):
-
         """
         Sets the decoder for the VipLlavaForConditionalGeneration instance.
         
@@ -444,7 +435,6 @@ model.
         self.language_model.set_decoder(decoder)
 
     def get_decoder(self):
-
         """
         This method returns the decoder from the language model associated with the VipLlavaForConditionalGeneration class.
         
@@ -462,7 +452,6 @@ model.
         return self.language_model.get_decoder()
 
     def tie_weights(self):
-
         """
         Method to tie weights for the VipLlavaForConditionalGeneration class.
         
@@ -478,7 +467,6 @@ model.
         return self.language_model.tie_weights()
 
     def resize_token_embeddings(self, new_num_tokens: Optional[int] = None, pad_to_multiple_of=None) -> nn.Embedding:
-
         """
         Resizes the token embeddings of the VipLlavaForConditionalGeneration model.
         
@@ -505,7 +493,6 @@ token embeddings as an instance of nn.Embedding.
         return model_embeds
 
     def _merge_input_ids_with_image_features(self, image_features, inputs_embeds, input_ids, attention_mask, labels):
-
         """
         This method '_merge_input_ids_with_image_features' in the class 'VipLlavaForConditionalGeneration' merges input ids with image features to create final embeddings for conditional generation.
         
@@ -598,7 +585,6 @@ token embeddings as an instance of nn.Embedding.
         nonzero = ops.nonzero(input_ids == self.pad_token_id)
         batch_indices, pad_indices = ops.tensor_split(nonzero, 2, -1)
         indices_to_mask = new_token_positions[batch_indices, pad_indices]
-
 
         if batch_indices.asnumpy() != []:
             final_embedding[batch_indices, indices_to_mask] = 0
@@ -770,7 +756,6 @@ token embeddings as an instance of nn.Embedding.
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, inputs_embeds=None, pixel_values=None, attention_mask=None, **kwargs
     ):
-
         """
         Method to prepare inputs for generation in the VipLlavaForConditionalGeneration class.
         
@@ -844,7 +829,6 @@ token embeddings as an instance of nn.Embedding.
         return model_inputs
 
     def _reorder_cache(self, *args, **kwargs):
-
         """
         Method _reorder_cache in class VipLlavaForConditionalGeneration.
         

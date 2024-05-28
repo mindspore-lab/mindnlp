@@ -121,7 +121,6 @@ class BlipTextConfig(PretrainedConfig):
         label_smoothing=0.0,
         **kwargs,
     ):
-
         """
         Initializes a BlipTextConfig object with the given parameters.
         
@@ -181,7 +180,6 @@ class BlipTextConfig(PretrainedConfig):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
-
         """
         This method 'from_pretrained' in the class 'BlipTextConfig' is used to instantiate a model configuration object based on a pretrained model name or path.
         
@@ -280,7 +278,6 @@ class BlipVisionConfig(PretrainedConfig):
         initializer_range=1e-10,
         **kwargs,
     ):
-
         '''
         Initializes a BlipVisionConfig instance.
         
@@ -320,7 +317,6 @@ class BlipVisionConfig(PretrainedConfig):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
-
         """
         This method 'from_pretrained' in the class 'BlipVisionConfig' is used to create a new instance of the class by loading a pretrained model configuration.
         
@@ -418,7 +414,6 @@ class BlipConfig(PretrainedConfig):
         label_smoothing=0.0,
         **kwargs,
     ):
-
         """
         Initializes a BlipConfig object with the provided parameters.
         

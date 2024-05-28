@@ -60,7 +60,6 @@ class _DenseImpl(BaseDenseImpl):
     def construct(self,
                   real: Tensor,
                   dual: Tensor) -> Tuple[Tensor, Tensor]:
-
         r"""
         This method constructs the output tensors based on the given input tensors.
         

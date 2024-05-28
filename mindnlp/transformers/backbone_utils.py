@@ -189,7 +189,6 @@ output features and indices, accessing feature channels, and serializing the ins
         self._out_features, self._out_indices = out_features, out_indices
 
     def _init_transformers_backbone(self, config) -> None:
-
         r"""
         This method initializes the transformers backbone.
         
@@ -236,7 +235,6 @@ output features and indices, accessing feature channels, and serializing the ins
 
     @property
     def out_features(self):
-
         r"""
         This method returns the value of the attribute 'out_features' in the BackboneMixin class.
         
@@ -262,7 +260,6 @@ output features and indices, accessing feature channels, and serializing the ins
 
     @property
     def out_indices(self):
-
         r"""
         Retrieve the output indices from the BackboneMixin.
         
@@ -289,7 +286,6 @@ output features and indices, accessing feature channels, and serializing the ins
 
     @property
     def out_feature_channels(self):
-
         r"""
         Returns a dictionary containing the number of feature channels for each stage in the backbone.
         
@@ -313,7 +309,6 @@ output features and indices, accessing feature channels, and serializing the ins
 
     @property
     def channels(self):
-
         r"""
         This method retrieves the feature channels from the BackboneMixin instance.
         
@@ -329,7 +324,6 @@ output features and indices, accessing feature channels, and serializing the ins
         return [self.out_feature_channels[name] for name in self.out_features]
 
     def forward_with_filtered_kwargs(self, *args, **kwargs):
-
         """
         Forward with Filtered Kwargs
         
@@ -345,8 +339,6 @@ output features and indices, accessing feature channels, and serializing the ins
             None. This method does not raise any exceptions.
         """
 
-
-
         signature = dict(inspect.signature(self.forward).parameters)
         filtered_kwargs = {k: v for k, v in kwargs.items() if k in signature}
         return self(*args, **filtered_kwargs) # pylint: disable=not-callable
@@ -358,7 +350,6 @@ output features and indices, accessing feature channels, and serializing the ins
         output_attentions: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ):
-
         r"""
         This method, named 'forward', is defined in the class 'BackboneMixin' and is responsible for performing a forward pass through the network.
         
@@ -395,7 +386,6 @@ class BackboneConfigMixin:
 
     @property
     def out_features(self):
-
         r"""
         Method 'out_features' in the class 'BackboneConfigMixin'.
         
@@ -422,7 +412,6 @@ class BackboneConfigMixin:
 
     @property
     def out_indices(self):
-
         r"""
         Method 'out_indices' in the class 'BackboneConfigMixin'.
         

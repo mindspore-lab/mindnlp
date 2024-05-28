@@ -88,7 +88,6 @@ class CellDict(Cell):
             self.update(cells)
 
     def __getitem__(self, key: str) -> Cell:
-
         r"""
         Retrieve a cell from the CellDict by its key.
         
@@ -105,7 +104,6 @@ class CellDict(Cell):
         return self._cells[key]
 
     def __setitem__(self, key: str, cell: Cell) -> None:
-
         r"""
         __setitem__
         
@@ -126,7 +124,6 @@ class CellDict(Cell):
         self.insert_child_to_cell(key, cell)
 
     def __delitem__(self, key: str) -> None:
-
         r"""
         Deletes an item from the CellDict based on the provided key.
         
@@ -153,7 +150,6 @@ class CellDict(Cell):
         self._cells = temp_dict
 
     def __bool__(self):
-
         r"""
         Method '__bool__' in the class 'CellDict'.
         
@@ -171,7 +167,6 @@ class CellDict(Cell):
         return len(self._cells) != 0
 
     def __len__(self):
-
         r"""
         This method '__len__' in the class 'CellDict' returns the length of the '_cells' attribute.
         
@@ -189,7 +184,6 @@ class CellDict(Cell):
         return len(self._cells)
 
     def __iter__(self):
-
         r"""
         Iterates over the CellDict object and returns an iterator.
         
@@ -205,7 +199,6 @@ class CellDict(Cell):
         return iter(self._cells)
 
     def contains(self, key: str) -> bool:
-
         r"""
         Method Name: contains
         
@@ -225,7 +218,6 @@ class CellDict(Cell):
         return key in self._cells
 
     def keys(self):
-
         r"""
         Method 'keys' in the class 'CellDict' returns the keys in the CellDict object.
         
@@ -243,7 +235,6 @@ class CellDict(Cell):
         return self._cells.keys()
 
     def values(self):
-
         r"""
         This method returns a view object that displays a list of all the values in the CellDict.
         
@@ -259,7 +250,6 @@ class CellDict(Cell):
         return self._cells.values()
 
     def items(self):
-
         r"""
         Method 'items' in the class 'CellDict'.
         
@@ -303,7 +293,6 @@ class CellDict(Cell):
             #     self[m[0]] = m[1]  # type: ignore[assignment]
 
     def set_grad(self, flag=True):
-
         r"""
         Sets the gradient flag for the 'CellDict' object and all its cells.
         
@@ -324,7 +313,6 @@ class CellDict(Cell):
             cell.set_grad(flag)
 
     def construct(self, *inputs):
-
         r"""
         Method to construct a CellDict object.
         
@@ -367,7 +355,6 @@ element should be an iterable of length 2 representing a key/value pair.
     _params: Dict[str, Parameter]
 
     def __init__(self, parameters: Dict[str, Parameter] = None):
-
         r"""
         Initializes a new instance of the ParameterDict class.
         
@@ -412,7 +399,6 @@ the values are instances of the Parameter class.
             self.update(parameters)
 
     def __getitem__(self, key):
-
         r"""
         __getitem__
         
@@ -431,7 +417,6 @@ the values are instances of the Parameter class.
         return self._params[key]
 
     def __setitem__(self, key, parameter):
-
         r"""
         Sets the value of a key in the ParameterDict object.
         
@@ -449,7 +434,6 @@ the values are instances of the Parameter class.
         self.insert_param_to_cell(key, parameter)
 
     def __delitem__(self, key):
-
         r"""
         Deletes an item with the specified key from the ParameterDict instance.
         
@@ -469,7 +453,6 @@ the values are instances of the Parameter class.
         del self._params[key]
 
     def __len__(self):
-
         r"""
         This method '__len__' in the class 'ParameterDict' returns the length of the '_params' attribute.
         
@@ -485,7 +468,6 @@ the values are instances of the Parameter class.
         return len(self._params)
 
     def __iter__(self):
-
         r"""
         Docstring for the '__iter__' method in the 'ParameterDict' class.
         
@@ -502,7 +484,6 @@ the values are instances of the Parameter class.
         return iter(self._params.keys())
 
     def __contains__(self, key):
-
         r"""
         Method '__contains__' in the class 'ParameterDict' checks if a given key is present in the ParameterDict instance.
         
@@ -519,7 +500,6 @@ the values are instances of the Parameter class.
         return key in self._params
 
     def clear(self):
-
         r"""
         This method clears all parameters in the ParameterDict.
         
@@ -535,7 +515,6 @@ the values are instances of the Parameter class.
         self._params.clear()
 
     def pop(self, key):
-
         r"""
         Method to remove and return the value associated with the specified key from the ParameterDict.
         
@@ -554,7 +533,6 @@ the values are instances of the Parameter class.
         return v
 
     def keys(self):
-
         r"""
         Returns a list of all the keys in the ParameterDict object.
         
@@ -570,7 +548,6 @@ the values are instances of the Parameter class.
         return self._params.keys()
 
     def items(self):
-
         r"""
         Returns a list of key-value pairs in the ParameterDict object.
         
@@ -591,7 +568,6 @@ the values are instances of the Parameter class.
         return self._params.values()
 
     def update(self, parameters):
-
         r"""Updates the ParameterDict object with the specified key-value pairs.
         
         Args:

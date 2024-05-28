@@ -20,8 +20,6 @@ from mindspore.ops.primitive import _run_op
 class AllGather(msAllGather):
     """AllGather op."""
     def __call__(self, *args):
-
-        
         """
         __call__ method in the AllGather class.
         

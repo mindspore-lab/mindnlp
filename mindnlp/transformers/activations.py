@@ -25,7 +25,6 @@ class QuickGELUActivation(nn.Cell):
     """
 
     def construct(self, input: Tensor) -> Tensor:
-
         r"""
         Constructs the QuickGELU activation function.
         
@@ -56,7 +55,6 @@ class ClippedGELUActivation(nn.Cell):
     """
 
     def __init__(self, min: float, max: float):
-
         r"""
         Initializes an instance of the ClippedGELUActivation class.
         
@@ -81,7 +79,6 @@ class ClippedGELUActivation(nn.Cell):
         self.max = max
 
     def construct(self, x: Tensor) -> Tensor:
-
         r"""
         Constructs a ClippedGELUActivation function with input clipping.
         
@@ -111,7 +108,6 @@ class AccurateGELUActivation(nn.Cell):
     """
 
     def __init__(self):
-
         r"""
         Initializes an instance of the AccurateGELUActivation class.
         
@@ -128,7 +124,6 @@ class AccurateGELUActivation(nn.Cell):
         self.precomputed_constant = math.sqrt(2 / math.pi)
 
     def construct(self, input: Tensor) -> Tensor:
-
         r"""
         This method 'construct' is responsible for applying the Accurate Gaussian Error Linear Unit (GELU) activation function to the input tensor.
         
@@ -156,7 +151,6 @@ class MishActivation(nn.Cell):
     """
 
     def construct(self, input: Tensor) -> Tensor:
-
         r"""
         Constructs a Mish activation function on the input tensor.
         
@@ -185,7 +179,6 @@ class LinearActivation(nn.Cell):
     """
 
     def construct(self, input: Tensor) -> Tensor:
-
         r"""
         Construct method in the LinearActivation class.
         
@@ -211,7 +204,6 @@ class LaplaceActivation(nn.Cell):
     """
 
     def construct(self, input, mu=0.707107, sigma=0.282095):
-
         r"""
         This method 'construct' in the class 'LaplaceActivation' performs a Laplace activation function transformation on the input data.
         
@@ -239,7 +231,6 @@ class ReLUSquaredActivation(nn.Cell):
     """
 
     def construct(self, input):
-
         r"""
         Constructs the ReLU squared activation of the input.
         
@@ -258,14 +249,12 @@ class ReLUSquaredActivation(nn.Cell):
         return squared
 
 
-
 class ClassInstantier(OrderedDict):
     r"""
     Class Instantier
     """
 
     def __getitem__(self, key):
-
         r"""
         Retrieve an item from the ClassInstantier object using the specified key.
         

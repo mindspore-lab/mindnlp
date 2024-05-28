@@ -81,7 +81,6 @@ outputs.
     Note: This class inherits from nn.Cell, which is a base class for neural network cells in the MindSpore framework.
     """
     def __init__(self, config):
-
         '''
         Initializes the XLNetRelativeAttention class.
         
@@ -128,7 +127,6 @@ outputs.
         self.dropout = nn.Dropout(p=config.dropout)
 
     def prune_heads(self, heads):
-
         """
         This method prunes the given heads in the XLNetRelativeAttention class.
         
@@ -159,7 +157,6 @@ outputs.
 
     @staticmethod
     def rel_shift_bnij(x, klen=-1):
-
         """
         Applies a relative shift to the input tensor along the batch and head dimensions in XLNetRelativeAttention class.
         
@@ -276,7 +273,6 @@ outputs.
             head_mask=None,
             output_attentions=False,
     ):
-
         """
         Constructs the attention vectors for the XLNetRelativeAttention module.
         
@@ -435,7 +431,6 @@ parameters.
 tensor, and returns the output tensor after the feed-forward processing.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the XLNetFeedForward class.
         
@@ -485,7 +480,6 @@ a string, it is looked up in the ACT2FN mapping, which maps activation function 
             self.activation_function = config.ff_activation
 
     def construct(self, inp):
-
         """
         Constructs the XLNet feed-forward layer.
         
@@ -550,7 +544,6 @@ class XLNetLayer(nn.Cell):
             Applies chunking to the forward pass for the provided output_x.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the XLNetLayer class.
         
@@ -584,7 +577,6 @@ class XLNetLayer(nn.Cell):
             head_mask=None,
             output_attentions=False,
     ):
-
         """
         This method constructs the XLNet layer.
         
@@ -633,7 +625,6 @@ class XLNetLayer(nn.Cell):
         return outputs
 
     def ff_chunk(self, output_x):
-
         """
         Performs a forward pass through the XLNetLayer for a given input chunk.
         
@@ -968,7 +959,6 @@ relative positional encoding. The class methods are designed to handle various i
 flexible and efficient for handling different use cases and scenarios.
     """
     def __init__(self, config):
-
         """
         This method initializes an instance of the XLNetModel class with the provided configuration.
         
@@ -1014,7 +1004,6 @@ flexible and efficient for handling different use cases and scenarios.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings from the XLNetModel.
         
@@ -1031,7 +1020,6 @@ flexible and efficient for handling different use cases and scenarios.
         return self.word_embedding
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Method to set new input embeddings for the XLNetModel.
         
@@ -1050,7 +1038,6 @@ flexible and efficient for handling different use cases and scenarios.
         self.word_embedding = new_embeddings
 
     def _prune_heads(self, heads_to_prune):
-
         """
         This method `_prune_heads` is a part of the `XLNetModel` class and is used to prune specific heads from the model.
         
@@ -1095,7 +1082,6 @@ flexible and efficient for handling different use cases and scenarios.
         return mask
 
     def cache_mem(self, curr_out, prev_mem):
-
         """
         Caches memory for the XLNetModel.
         
@@ -1133,7 +1119,6 @@ flexible and efficient for handling different use cases and scenarios.
 
     @staticmethod
     def positional_embedding(pos_seq, inv_freq, bsz=None):
-
         """
         This method is a static method in the class 'XLNetModel' and is used to generate positional embeddings for input sequences.
         
@@ -1171,7 +1156,6 @@ flexible and efficient for handling different use cases and scenarios.
         return pos_emb
 
     def relative_positional_encoding(self, qlen, klen, bsz=None):
-
         """
         Encodes relative positional information for the XLNetModel.
         
@@ -1242,7 +1226,6 @@ flexible and efficient for handling different use cases and scenarios.
             return_dict: Optional[bool] = None,
             **kwargs,  # delete after depreciation warning is removed
     ) -> Union[Tuple, XLNetModelOutput]:
-
         """
         Args:
         - self: The instance of the XLNetModel class.
@@ -1493,7 +1476,6 @@ during beam search or beam sample generation.
     _tied_weights_keys = ["lm_loss.weight"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of the XLNetLMHeadModel class.
         
@@ -1519,7 +1501,6 @@ during beam search or beam sample generation.
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings of the XLNet language model head.
         
@@ -1535,7 +1516,6 @@ during beam search or beam sample generation.
         return self.lm_loss
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         This method sets the output embeddings for the XLNetLMHeadModel.
         
@@ -1553,7 +1533,6 @@ during beam search or beam sample generation.
         self.lm_loss = new_embeddings
 
     def prepare_inputs_for_generation(self, input_ids, past_key_values=None, use_mems=None, **kwargs):
-
         ''' 
         Args:
             self (XLNetLMHeadModel): The instance of the XLNetLMHeadModel class.
@@ -1788,7 +1767,6 @@ Loss (BCEWithLogitsLoss) for multi-label classification.
         
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the XLNetForSequenceClassification class.
         
@@ -1942,7 +1920,6 @@ class XLNetForTokenClassification(XLNetPreTrainedModel):
             outputs = model.construct(input_ids=input_tensor, attention_mask=attention_mask, labels=label_tensor)
     """
     def __init__(self, config):
-
         """
         Initializes an instance of XLNetForTokenClassification.
         
@@ -2040,7 +2017,6 @@ tasks. The class includes methods for initializing the model with configuration,
 SequenceSummary modules for processing input data and generating model outputs. The class also incorporates various input and output options to customize the model behavior during training and evaluation.
     """
     def __init__(self, config):
-
         """
         Initialize the XLNetForMultipleChoice class.
         
@@ -2176,7 +2152,6 @@ available, the tuple contains only the logits and optional outputs.
     
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the 'XLNetForQuestionAnsweringSimple' class.
         
@@ -2317,7 +2292,6 @@ answer. Additionally, it provides functionality for handling optional masks of t
     
     """
     def __init__(self, config):
-
         """
         Initializes an instance of XLNetForQuestionAnswering.
         

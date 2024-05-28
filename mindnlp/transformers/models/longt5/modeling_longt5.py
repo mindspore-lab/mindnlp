@@ -221,7 +221,6 @@ class LongT5LayerNorm(nn.Cell):
         self.variance_epsilon = eps
 
     def construct(self, hidden_states):
-
         """
         Constructs the LongT5LayerNorm for normalization of hidden states.
         
@@ -248,7 +247,6 @@ ALL_LAYERNORM_LAYERS.append(LongT5LayerNorm)
 class LongT5DenseActDense(nn.Cell):
     """LongT5DenseActDense"""
     def __init__(self, config: LongT5Config):
-
         """
         This method initializes an instance of the LongT5DenseActDense class.
         
@@ -272,7 +270,6 @@ rate and activation function to be used.
         self.act = ACT2FN[config.dense_act_fn]
 
     def construct(self, hidden_states):
-
         """
         This method constructs and processes hidden states in the LongT5DenseActDense class.
         
@@ -298,7 +295,6 @@ rate and activation function to be used.
 class LongT5DenseGatedActDense(nn.Cell):
     """LongT5DenseGatedActDense"""
     def __init__(self, config: LongT5Config):
-
         """
         Initializes an instance of the LongT5DenseGatedActDense class.
         
@@ -324,7 +320,6 @@ class LongT5DenseGatedActDense(nn.Cell):
         self.act = ACT2FN[config.dense_act_fn]
 
     def construct(self, hidden_states):
-
         """
         Constructs the hidden states of the LongT5DenseGatedActDense model.
         
@@ -348,7 +343,6 @@ class LongT5DenseGatedActDense(nn.Cell):
 class LongT5LayerFF(nn.Cell):
     """LongT5LayerFF"""
     def __init__(self, config: LongT5Config):
-
         """
         Initializes the LongT5LayerFF class.
         
@@ -373,7 +367,6 @@ class LongT5LayerFF(nn.Cell):
         self.dropout = nn.Dropout(p=config.dropout_rate)
 
     def construct(self, hidden_states):
-
         """
         Method to construct the forward pass through the LongT5LayerFF feed-forward layer.
         
@@ -397,7 +390,6 @@ class LongT5LayerFF(nn.Cell):
 class LongT5Attention(nn.Cell):
     """LongT5Attention"""
     def __init__(self, config: LongT5Config, has_relative_attention_bias=False):
-
         """
         Initializes an instance of the LongT5Attention class.
         
@@ -435,7 +427,6 @@ class LongT5Attention(nn.Cell):
         self.gradient_checkpointing = False
 
     def prune_heads(self, heads):
-
         """
         This method 'prune_heads' is defined within the class 'LongT5Attention' and is responsible for pruning the attention heads in the LongT5 model based on the provided 'heads'.
         
@@ -467,7 +458,6 @@ class LongT5Attention(nn.Cell):
         self.pruned_heads = self.pruned_heads.union(heads)
     @staticmethod
     def _relative_position_bucket(relative_position, bidirectional=True, num_buckets=32, max_distance=128):
-
         """
         This method calculates the relative position bucket for the LongT5Attention class.
         
@@ -657,7 +647,6 @@ class LongT5Attention(nn.Cell):
 class LongT5LocalAttention(nn.Cell):
     """LongT5LocalAttention"""
     def __init__(self, config: LongT5Config, has_relative_attention_bias=False):
-
         """
         Initializes an instance of the LongT5LocalAttention class.
         
@@ -698,7 +687,6 @@ class LongT5LocalAttention(nn.Cell):
 
     @staticmethod
     def _relative_position_bucket(relative_position, bidirectional=True, num_buckets=32, max_distance=128):
-
         """
         This method computes the relative position bucket for a given relative position in the LongT5LocalAttention class.
         
@@ -780,7 +768,6 @@ class LongT5LocalAttention(nn.Cell):
         layer_head_mask=None,
         output_attentions=False,
     ):
-
         '''
         Constructs the local attention mechanism for the LongT5 model.
         
@@ -877,7 +864,6 @@ class LongT5LocalAttention(nn.Cell):
 class LongT5TransientGlobalAttention(nn.Cell):
     """LongT5TransientGlobalAttention"""
     def __init__(self, config: LongT5Config, has_relative_attention_bias=False):
-
         """
         Initializes an instance of the LongT5TransientGlobalAttention class.
         
@@ -923,7 +909,6 @@ class LongT5TransientGlobalAttention(nn.Cell):
 
     @staticmethod
     def _relative_position_bucket(relative_position, bidirectional=True, num_buckets=32, max_distance=128):
-
         """
         Method to calculate the relative position bucket for LongT5TransientGlobalAttention.
         
@@ -992,7 +977,6 @@ class LongT5TransientGlobalAttention(nn.Cell):
         return values
 
     def compute_side_bias(self, mask: mindspore.Tensor, global_segment_ids: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method computes the side bias for attention calculation in the LongT5TransientGlobalAttention class.
         
@@ -1036,7 +1020,6 @@ class LongT5TransientGlobalAttention(nn.Cell):
         layer_head_mask=None,
         output_attentions=False,
     ):
-
         """
         This method constructs the transient global attention mechanism for the LongT5 model.
         
@@ -1150,7 +1133,6 @@ class LongT5TransientGlobalAttention(nn.Cell):
             # (batch_size, num_blocks, num_heads, block_len, 3 * block_len + global_seq_len)
             position_bias = ops.cat([position_bias, side_position_bias], axis=-1)
 
-
         scores += position_bias
         # (batch_size, num_blocks, n_heads, block_len, 3 * block_len)
         attn_weights = ops.softmax(scores.astype(mindspore.float32), axis=-1).astype(
@@ -1181,7 +1163,6 @@ class LongT5TransientGlobalAttention(nn.Cell):
 class LongT5LayerSelfAttention(nn.Cell):
     """LongT5LayerSelfAttention"""
     def __init__(self, config, has_relative_attention_bias=False):
-
         """
         Initializes a LongT5LayerSelfAttention object.
         
@@ -1211,7 +1192,6 @@ class LongT5LayerSelfAttention(nn.Cell):
         use_cache=False,
         output_attentions=False,
     ):
-
         """
         Method 'construct' in the class 'LongT5LayerSelfAttention'.
         
@@ -1252,7 +1232,6 @@ class LongT5LayerSelfAttention(nn.Cell):
 class LongT5LayerLocalSelfAttention(nn.Cell):
     """LongT5LayerSelfAttention"""
     def __init__(self, config, has_relative_attention_bias=False):
-
         """
         Args:
             self (object): The instance of the class.
@@ -1279,7 +1258,6 @@ class LongT5LayerLocalSelfAttention(nn.Cell):
         layer_head_mask=None,
         output_attentions=False,
     ):
-
         """
         This method constructs the LongT5LayerLocalSelfAttention and performs the local self-attention operation.
         
@@ -1314,7 +1292,6 @@ class LongT5LayerLocalSelfAttention(nn.Cell):
 class LongT5LayerTransientGlobalSelfAttention(nn.Cell):
     """LongT5LayerSelfAttention"""
     def __init__(self, config, has_relative_attention_bias=False):
-
         """
         Initializes the LongT5LayerTransientGlobalSelfAttention instance.
         
@@ -1344,7 +1321,6 @@ class LongT5LayerTransientGlobalSelfAttention(nn.Cell):
         layer_head_mask=None,
         output_attentions=False,
     ):
-
         """
         Method 'construct' in the class 'LongT5LayerTransientGlobalSelfAttention'.
         This method constructs the output of the layer by applying transient global self-attention mechanism.
@@ -1380,7 +1356,6 @@ class LongT5LayerTransientGlobalSelfAttention(nn.Cell):
 class LongT5LayerCrossAttention(nn.Cell):
     """LongT5LayerCrossAttention"""
     def __init__(self, config):
-
         """
         Initialize the LongT5LayerCrossAttention class.
         
@@ -1414,7 +1389,6 @@ class LongT5LayerCrossAttention(nn.Cell):
         query_length=None,
         output_attentions=False,
     ):
-
         """
         Constructs the cross-attention layer for the LongT5 model.
         
@@ -1460,7 +1434,6 @@ output_attentions=True.
 class LongT5Block(nn.Cell):
     """LongT5Block"""
     def __init__(self, config, has_relative_attention_bias=False):
-
         """
         Initialize the LongT5Block.
         
@@ -1512,7 +1485,6 @@ class LongT5Block(nn.Cell):
         output_attentions=False,
         # return_dict=True,
     ):
-
         """
         Constructs a LongT5Block layer.
         
@@ -1641,7 +1613,6 @@ class LongT5PreTrainedModel(PreTrainedModel):
 
     @property
     def dummy_inputs(self):
-
         """
         This method generates dummy inputs for the LongT5PreTrainedModel class.
         
@@ -1723,7 +1694,6 @@ class LongT5PreTrainedModel(PreTrainedModel):
                                                                              cell.global_relative_attention_bias.weight.dtype))
 
     def _shift_right(self, input_ids):
-
         """
         Shifts the input_ids to the right by one position and fills the shifted position with the decoder_start_token_id.
         
@@ -1762,7 +1732,6 @@ class LongT5PreTrainedModel(PreTrainedModel):
 class LongT5Stack(LongT5PreTrainedModel):
     """LongT5Stack"""
     def __init__(self, config, embed_tokens=None):
-
         """
         Initializes an instance of the LongT5Stack class.
         
@@ -1821,9 +1790,7 @@ the first block in the list.
         # Initialize weights and apply final processing
         self.post_init()
 
-
     def get_input_embeddings(self):
-
         """
         Method: get_input_embeddings
         
@@ -1842,7 +1809,6 @@ the first block in the list.
         return self.embed_tokens
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Sets the input embeddings for the LongT5Stack class.
         
@@ -1873,7 +1839,6 @@ the first block in the list.
         output_hidden_states=None,
         return_dict=None,
     ):
-
         '''
         This method constructs the LongT5Stack model. It takes 13 parameters:
         
@@ -1936,7 +1901,6 @@ provided.
         if attention_mask is None:
             attention_mask = ops.ones((batch_size, mask_seq_length), mindspore.float32)
 
-
         if self.is_decoder and encoder_attention_mask is None and encoder_hidden_states is not None:
             encoder_seq_length = encoder_hidden_states.shape[1]
             encoder_attention_mask = ops.ones(
@@ -1988,7 +1952,6 @@ provided.
             cross_attn_layer_head_mask = cross_attn_head_mask[i]
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
-
 
             layer_outputs = layer_module(
                 hidden_states,
@@ -2062,9 +2025,7 @@ class LongT5Model(LongT5PreTrainedModel):
     ]
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
-
     def __init__(self, config: LongT5Config):
-
         """
         Initializes a LongT5Model instance.
         
@@ -2095,7 +2056,6 @@ class LongT5Model(LongT5PreTrainedModel):
         self.decoder = LongT5Stack(decoder_config)
 
     def get_input_embeddings(self):
-
         """
         Method to retrieve input embeddings in the LongT5Model class.
         
@@ -2111,7 +2071,6 @@ class LongT5Model(LongT5PreTrainedModel):
         return self.shared
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Sets the input embeddings for the LongT5Model.
         
@@ -2133,7 +2092,6 @@ class LongT5Model(LongT5PreTrainedModel):
         # self.decoder.set_input_embeddings(new_embeddings)
 
     def _tie_weights(self):
-
         """
         Tie the weights of the encoder and decoder word embeddings if specified in the configuration.
         
@@ -2184,7 +2142,6 @@ class LongT5Model(LongT5PreTrainedModel):
         output_hidden_states = None,
         return_dict = None,
     ):
-
         """
         This method constructs a LongT5 model with the specified parameters.
         
@@ -2278,9 +2235,7 @@ class LongT5ForConditionalGeneration(LongT5PreTrainedModel):
     ]
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight", "lm_head.weight"]
 
-
     def __init__(self, config: LongT5Config):
-
         """
         Args:
             self: The instance of the LongT5ForConditionalGeneration class.
@@ -2313,7 +2268,6 @@ settings.
         self.lm_head = nn.Dense(config.d_model, config.vocab_size, has_bias=False)
 
     def get_input_embeddings(self):
-
         """
         Method to retrieve the input embeddings from the LongT5ForConditionalGeneration model.
         
@@ -2341,7 +2295,6 @@ settings.
         # self.decoder.set_input_embeddings(new_embeddings)
 
     def _tie_weights(self):
-
         """
         This method ties the weights of the encoder and decoder embeddings if the configuration specifies to tie the word embeddings.
         
@@ -2393,7 +2346,6 @@ settings.
         output_hidden_states = None,
         return_dict = None,
     ):
-
         """
         This method constructs a LongT5 model for conditional generation.
         
@@ -2494,7 +2446,6 @@ settings.
             encoder_attentions=encoder_outputs.attentions,
         )
 
-
     def prepare_inputs_for_generation(
         self,
         input_ids,
@@ -2538,7 +2489,6 @@ settings.
         return self._shift_right(labels)
 
     def _reorder_cache(self, past_key_values, beam_idx):
-
         '''
         This method '_reorder_cache' is defined within the class 'LongT5ForConditionalGeneration' and is responsible for reordering the cache for the T5 model during decoding.
         
@@ -2584,7 +2534,6 @@ class LongT5EncoderModel(LongT5PreTrainedModel):
     _keys_to_ignore_on_load_unexpected = [r"decoder"]
 
     def __init__(self, config: LongT5Config):
-
         """
         Initializes a new instance of the LongT5EncoderModel class.
         
@@ -2612,7 +2561,6 @@ class LongT5EncoderModel(LongT5PreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Retrieves the input embeddings for the LongT5EncoderModel.
         
@@ -2628,7 +2576,6 @@ class LongT5EncoderModel(LongT5PreTrainedModel):
         return self.shared
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Set the input embeddings for the LongT5EncoderModel.
         
@@ -2646,7 +2593,6 @@ class LongT5EncoderModel(LongT5PreTrainedModel):
         self.encoder.set_input_embeddings(new_embeddings)
 
     def _tie_weights(self):
-
         """
         Ties the word embeddings weights with the shared layer weights if specified in the configuration.
         
@@ -2674,7 +2620,6 @@ class LongT5EncoderModel(LongT5PreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.block[layer].layer[0].SelfAttention.prune_heads(heads)
 
-
     def construct(
         self,
         input_ids = None,
@@ -2685,7 +2630,6 @@ class LongT5EncoderModel(LongT5PreTrainedModel):
         output_hidden_states = None,
         return_dict = None,
     ):
-
         """
         This method constructs the LongT5EncoderModel by passing the input parameters to the encoder.
         

@@ -83,7 +83,6 @@ class LongT5Tokenizer(PreTrainedTokenizer):
         legacy=None,
         **kwargs,
     ) -> None:
-
         """
         Initializes a LongT5Tokenizer object.
         
@@ -166,7 +165,6 @@ class LongT5Tokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.t5.tokenization_t5.T5Tokenizer.get_spm_processor
     def get_spm_processor(self, from_slow=False):
-
         """
         This method retrieves a SentencePieceProcessor object for tokenization.
         
@@ -198,7 +196,6 @@ class LongT5Tokenizer(PreTrainedTokenizer):
 
     @staticmethod
     def _eventually_correct_t5_max_length(pretrained_model_name_or_path, max_model_length, init_max_model_length):
-
         """
         This method '_eventually_correct_t5_max_length' is defined in the 'LongT5Tokenizer' class and is used to handle the correction of the maximum model length for T5 tokenizer. 
         
@@ -241,7 +238,6 @@ warning and properly handle the model max length.
 
     @property
     def vocab_size(self):
-
         """
         Method to retrieve the vocabulary size of the LongT5Tokenizer.
         
@@ -258,7 +254,6 @@ warning and properly handle the model max length.
         return self.sp_model.get_piece_size()
 
     def get_vocab(self):
-
         """
         Retrieves the vocabulary dictionary used by the LongT5Tokenizer.
         
@@ -316,7 +311,6 @@ are included in the vocabulary dictionary with their respective indices.
         return ([0] * len(token_ids_0)) + [1] + ([0] * len(token_ids_1)) + [1]
 
     def get_sentinel_tokens(self):
-
         """
             Retrieves sentinel tokens from the additional special tokens of the LongT5Tokenizer class.
         
@@ -338,7 +332,6 @@ are included in the vocabulary dictionary with their respective indices.
         )
 
     def get_sentinel_token_ids(self):
-
         """
         Returns a list of token IDs corresponding to the sentinel tokens in the input sequence.
         
@@ -418,7 +411,6 @@ method. The resulting token IDs are then returned as a list.
         return token_ids_0 + token_ids_1
 
     def __getstate__(self):
-
         """
         __getstate__
         
@@ -438,7 +430,6 @@ method. The resulting token IDs are then returned as a list.
         return state
 
     def __setstate__(self, d):
-
         """
         This method '__setstate__' in the class 'LongT5Tokenizer' allows for setting the state of the tokenizer object.
         
@@ -479,7 +470,6 @@ state attributes or loading the vocab file using SentencePieceProcessor. It is r
 
     @property
     def unk_token_length(self):
-
         """
         This method returns the length of the encoded unknown token in the LongT5Tokenizer.
         
@@ -547,7 +537,6 @@ state attributes or loading the vocab file using SentencePieceProcessor. It is r
         return out_string.strip()
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Saves the vocabulary files to the specified directory with an optional filename prefix.
         

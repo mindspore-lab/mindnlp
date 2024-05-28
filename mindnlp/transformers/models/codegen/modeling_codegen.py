@@ -55,7 +55,6 @@ CODEGEN_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 # Copied from transformers.models.gptj.modeling_gptj.create_sinusoidal_positions
 def create_sinusoidal_positions(num_pos: int, dim: int) -> mindspore.Tensor:
-
     """
     Create sinusoidal positions within a tensor.
     
@@ -77,7 +76,6 @@ def create_sinusoidal_positions(num_pos: int, dim: int) -> mindspore.Tensor:
 # Copied from transformers.models.gptj.modeling_gptj.rotate_every_two
 @mindspore.jit
 def rotate_every_two(x: mindspore.Tensor) -> mindspore.Tensor:
-
     """
     Rotate every two elements of the input tensor along the last dimension.
     
@@ -99,7 +97,6 @@ def rotate_every_two(x: mindspore.Tensor) -> mindspore.Tensor:
 
 # Copied from transformers.models.gptj.modeling_gptj.apply_rotary_pos_emb
 def apply_rotary_pos_emb(tensor: mindspore.Tensor, sin: mindspore.Tensor, cos: mindspore.Tensor) -> mindspore.Tensor:
-
     """
     Apply rotary positional embedding to the input tensor.
     
@@ -143,7 +140,6 @@ inputs and optional configurations.
 configurations.
     '''
     def __init__(self, config):
-
         """
         Initializes an instance of the CodeGenAttention class.
         
@@ -184,7 +180,6 @@ configurations.
         self.embed_positions = create_sinusoidal_positions(max_positions, pos_embd_dim)
 
     def _split_heads(self, x, n_head, dim_head, mp_num):
-
         """
         Splits the input tensor into multiple heads for parallel processing in the CodeGenAttention class.
         
@@ -227,7 +222,6 @@ configurations.
         attention_mask=None,
         head_mask=None,
     ):
-
         """
         This method computes the attention mechanism for the CodeGenAttention class.
         
@@ -293,7 +287,6 @@ configurations.
         Tuple[mindspore.Tensor, Tuple[mindspore.Tensor]],
         Optional[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, ...]]],
     ]:
-
         """
                 Constructs the attention mechanism for code generation.
         
@@ -416,7 +409,6 @@ operations to transform and refine the data.
         output = mlp.construct(hidden_states)
     """
     def __init__(self, intermediate_size, config):  # in MLP: intermediate_size= 4 * embed_dim
-
         """
         Initializes an instance of the CodeGenMLP class.
         
@@ -445,7 +437,6 @@ operations to transform and refine the data.
         self.dropout = nn.Dropout(p=config.resid_pdrop)
 
     def construct(self, hidden_states: Optional[mindspore.Tensor]) -> mindspore.Tensor:
-
         """
         Constructs the forward pass of the CodeGenMLP model.
         
@@ -511,7 +502,6 @@ class CodeGenBlock(nn.Cell):
                 The constructed block outputs, which include the final hidden states and optionally attention matrices.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the CodeGenBlock class.
         
@@ -544,7 +534,6 @@ class CodeGenBlock(nn.Cell):
         use_cache: Optional[bool] = False,
         output_attentions: Optional[bool] = False,
     ) -> Union[Tuple[mindspore.Tensor], Optional[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor, ...]]]]:
-
         """ 
         Constructs a CodeGenBlock by processing the input hidden states through attention mechanism and feed forward network.
         
@@ -647,7 +636,6 @@ BaseModelOutputWithPast]`: Constructs the code generation model.
     
     """
     def __init__(self, config):
-
         """Initializes an instance of the CodeGenModel class.
         
         Args:
@@ -685,7 +673,6 @@ BaseModelOutputWithPast]`: Constructs the code generation model.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method is part of the CodeGenModel class and is named get_input_embeddings. It takes 1 parameter, self, which refers to the instance of the class.
         
@@ -701,7 +688,6 @@ BaseModelOutputWithPast]`: Constructs the code generation model.
         return self.wte
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Sets the input embeddings for the CodeGenModel.
         
@@ -731,7 +717,6 @@ BaseModelOutputWithPast]`: Constructs the code generation model.
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
-
         """
         Constructs the CodeGenModel.
         
@@ -904,7 +889,6 @@ class CodeGenForCausalLM(CodeGenPreTrainedModel):
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of the CodeGenForCausalLM class.
         
@@ -926,7 +910,6 @@ class CodeGenForCausalLM(CodeGenPreTrainedModel):
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         This method 'get_output_embeddings' in the class 'CodeGenForCausalLM' retrieves the output embeddings from the model's head.
         
@@ -942,7 +925,6 @@ class CodeGenForCausalLM(CodeGenPreTrainedModel):
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the CodeGenForCausalLM.
         
@@ -965,7 +947,6 @@ class CodeGenForCausalLM(CodeGenPreTrainedModel):
         self.lm_head = new_embeddings
 
     def prepare_inputs_for_generation(self, input_ids, past_key_values=None, **kwargs):
-
         """
         Prepare inputs for generation.
         

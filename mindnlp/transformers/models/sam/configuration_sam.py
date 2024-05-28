@@ -58,7 +58,6 @@ class SamPromptEncoderConfig(PretrainedConfig):
         layer_norm_eps=1e-6,
         **kwargs,
     ):
-
         """
         Initializes an instance of the SamPromptEncoderConfig class.
         
@@ -137,7 +136,6 @@ class SamMaskDecoderConfig(PretrainedConfig):
         layer_norm_eps=1e-6,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the SamMaskDecoderConfig class.
         
@@ -248,7 +246,6 @@ class SamVisionConfig(PretrainedConfig):
         mlp_dim=None,
         **kwargs,
     ):
-
         """
         Initializes an instance of the SamVisionConfig class.
         
@@ -363,7 +360,6 @@ class SamConfig(PretrainedConfig):
         initializer_range=0.02,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the SamConfig class.
         

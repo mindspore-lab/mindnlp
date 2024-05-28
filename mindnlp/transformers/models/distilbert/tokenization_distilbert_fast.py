@@ -143,7 +143,6 @@ class DistilBertTokenizerFast(PreTrainedTokenizerFast):
         strip_accents=None,
         **kwargs,
     ):
-
         """
         This method initializes an instance of the DistilBertTokenizerFast class.
         
@@ -254,7 +253,6 @@ class DistilBertTokenizerFast(PreTrainedTokenizerFast):
 
     # Copied from transformers.models.bert.tokenization_bert_fast.BertTokenizerFast.save_vocabulary
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary of the DistilBertTokenizerFast model to the specified directory.
         

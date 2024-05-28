@@ -38,7 +38,6 @@ class LukeEmbeddings(nn.Cell):
     """
 
     def __init__(self, config: LukeConfig):
-
         """
         Initializes an instance of the LukeEmbeddings class.
         
@@ -79,7 +78,6 @@ class LukeEmbeddings(nn.Cell):
             position_ids=None,
             inputs_embeds=None,
     ):
-
         """
         Args:
             self (LukeEmbeddings): The instance of the LukeEmbeddings class.
@@ -142,7 +140,6 @@ class LukeEntityEmbeddings(nn.Cell):
     """
 
     def __init__(self, config: LukeConfig):
-
         """
         Initializes the LukeEntityEmbeddings class.
         
@@ -174,7 +171,6 @@ class LukeEntityEmbeddings(nn.Cell):
     def construct(
             self, entity_ids, position_ids, token_type_ids=None
     ):
-
         """
         This method constructs entity embeddings by combining entity, position, and token type embeddings.
         
@@ -221,7 +217,6 @@ class LukeSelfAttention(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the LukeSelfAttention class.
         
@@ -286,7 +281,6 @@ class LukeSelfAttention(nn.Cell):
             head_mask=None,
             output_attentions=False,
     ):
-
         '''
         Constructs the self-attention mechanism for the LukeSelfAttention class.
         
@@ -392,7 +386,6 @@ class LukeSelfOutput(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the LukeSelfOutput class.
         
@@ -415,7 +408,6 @@ class LukeSelfOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: Tensor, input_tensor: Tensor) -> Tensor:
-
         """
         Constructs the output of the self-attention layer in the Luke model.
         
@@ -445,7 +437,6 @@ class LukeAttention(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the LukeAttention class.
         
@@ -478,7 +469,6 @@ class LukeAttention(nn.Cell):
             head_mask=None,
             output_attentions=False,
     ):
-
         """
         Constructs the attention mechanism in the LukeAttention class.
         
@@ -536,7 +526,6 @@ class LukeIntermediate(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the LukeIntermediate class.
         
@@ -562,7 +551,6 @@ class LukeIntermediate(nn.Cell):
             self.intermediate_act_fn = config.hidden_act
 
     def construct(self, hidden_states: Tensor) -> Tensor:
-
         """
         Constructs the intermediate hidden states in the LukeIntermediate class.
         
@@ -592,7 +580,6 @@ class LukeOutput(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the LukeOutput class.
         
@@ -618,7 +605,6 @@ class LukeOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: Tensor, input_tensor: Tensor) -> Tensor:
-
         """
         Constructs the output tensor for the LukeOutput class.
         
@@ -657,7 +643,6 @@ class LukeLayer(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the LukeLayer class.
         
@@ -688,7 +673,6 @@ class LukeLayer(nn.Cell):
             head_mask=None,
             output_attentions=False,
     ):
-
         """
         Constructs the LukeLayer.
         
@@ -754,7 +738,6 @@ class LukeEncoder(nn.Cell):
     """
 
     def __init__(self, config):
-
         """Initialize a LukeEncoder object.
         
         Args:
@@ -782,7 +765,6 @@ class LukeEncoder(nn.Cell):
             output_hidden_states=False,
             return_dict=True,
     ):
-
         """
         This method constructs the hidden states and attentions for a LukeEncoder model.
         
@@ -876,7 +858,6 @@ class LukePooler(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the LukePooler class.
         
@@ -898,7 +879,6 @@ class LukePooler(nn.Cell):
         self.activation = nn.Tanh()
 
     def construct(self, hidden_states: Tensor) -> Tensor:
-
         """
         This method constructs a pooled output tensor based on the hidden states provided.
         
@@ -928,7 +908,6 @@ class EntityPredictionHeadTransform(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes the EntityPredictionHeadTransform class.
         
@@ -955,7 +934,6 @@ class EntityPredictionHeadTransform(nn.Cell):
         self.layer_norm = nn.LayerNorm([config.entity_emb_size, ], epsilon=config.layer_norm_eps)
 
     def construct(self, hidden_states):
-
         """
         Method to construct the entity prediction head transformation.
         
@@ -985,7 +963,6 @@ class EntityPredictionHead(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initialize the EntityPredictionHead instance.
         
@@ -1010,7 +987,6 @@ class EntityPredictionHead(nn.Cell):
         self.bias = mindspore.Parameter(ops.zeros((config.entity_vocab_size,)))
 
     def construct(self, hidden_states):
-
         """
         Method to construct the entity prediction head using the given hidden states.
         
@@ -1043,7 +1019,6 @@ class LukePreTrainedModel(PreTrainedModel):
     _no_split_modules = ["LukeAttention", "LukeEntityEmbeddings"]
 
     def get_input_embeddings(self) -> "nn.Cell":
-
         """
         Method to retrieve the input embeddings for the LukePreTrainedModel.
         
@@ -1063,7 +1038,6 @@ class LukePreTrainedModel(PreTrainedModel):
         pass
 
     def set_input_embeddings(self, new_embeddings: "nn.Cell"):
-
         """
         This method sets the input embeddings for the LukePreTrainedModel.
         
@@ -1080,7 +1054,6 @@ class LukePreTrainedModel(PreTrainedModel):
         pass
 
     def resize_position_embeddings(self, new_num_position_embeddings: int):
-
         """
         Resize the position embeddings to accommodate a new number of position embeddings in the LukePreTrainedModel.
         
@@ -1097,7 +1070,6 @@ class LukePreTrainedModel(PreTrainedModel):
         pass
 
     def get_position_embeddings(self):
-
         """
         This method retrieves the position embeddings for the LukePreTrainedModel.
         
@@ -1143,7 +1115,6 @@ class LukeModel(LukePreTrainedModel):
     _keys_to_ignore_on_load_missing = [r"position_ids"]
 
     def __init__(self, config: LukeConfig, add_pooling_layer: bool = True):
-
         """
         Initializes a new LukeModel instance.
         
@@ -1169,7 +1140,6 @@ class LukeModel(LukePreTrainedModel):
         self.pooler = LukePooler(config) if add_pooling_layer else None
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings from the LukeModel class.
         
@@ -1185,7 +1155,6 @@ class LukeModel(LukePreTrainedModel):
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Sets the input embeddings of the LukeModel.
         
@@ -1210,7 +1179,6 @@ class LukeModel(LukePreTrainedModel):
         self.entity_embeddings.entity_embeddings = new_embeddings
 
     def _prune_heads(self, heads_to_prune):
-
         """
         Method to prune attention heads in a LUKE model.
         
@@ -1244,7 +1212,6 @@ class LukeModel(LukePreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ):
-
         ''' 
         The 'construct' method in the 'LukeModel' class is responsible for constructing the model based on the provided inputs and configuration.
         
@@ -1349,7 +1316,6 @@ class LukeModel(LukePreTrainedModel):
     def get_extended_attention_mask(
             self, attention_mask: Tensor, input_shape: Tuple[int], dtype=None
     ):
-
         """
         This method 'get_extended_attention_mask' in the class 'LukeModel' takes 4 parameters:
         
@@ -1398,7 +1364,6 @@ class LukeLMHead(nn.Cell):
     """LukeLMead"""
 
     def __init__(self, config):
-
         """
         Initializes the LukeLMHead class.
         
@@ -1425,7 +1390,6 @@ class LukeLMHead(nn.Cell):
         self.decoder.bias = self.bias
 
     def construct(self, features, **kwargs):
-
         """
         Constructs the output of the LukeLMHead model by performing a series of operations on the input features.
         
@@ -1450,7 +1414,6 @@ class LukeLMHead(nn.Cell):
         return x
 
     def _tie_weights(self):
-
         '''
         This method ties the weights of the LukeLMHead model's decoder with its bias.
         
@@ -1488,7 +1451,6 @@ class LukeForMaskedLM(LukePreTrainedModel):
     ]
 
     def __init__(self, config):
-
         """
         Initializes an instance of the 'LukeForMaskedLM' class.
         
@@ -1542,7 +1504,6 @@ class LukeForMaskedLM(LukePreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ):
-
         """
         Constructs the outputs for the LukeForMaskedLM model.
         
@@ -1634,7 +1595,6 @@ class LukeForEntityClassification(LukePreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the LukeForEntityClassification class.
         
@@ -1678,7 +1638,6 @@ class LukeForEntityClassification(LukePreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ):
-
         """
         Constructs the LukeForEntityClassification model.
         
@@ -1747,7 +1706,6 @@ class LukeForEntityPairClassification(LukePreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes a new instance of LukeForEntityPairClassification.
         
@@ -1789,7 +1747,6 @@ class LukeForEntityPairClassification(LukePreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ):
-
         """
         This method 'construct' in the class 'LukeForEntityPairClassification' is responsible for constructing the model and performing entity pair classification.
         
@@ -1861,7 +1818,6 @@ class LukeForEntitySpanClassification(LukePreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the LukeForEntitySpanClassification class.
         
@@ -1904,7 +1860,6 @@ class LukeForEntitySpanClassification(LukePreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ):
-
         """
         Constructs the forward pass of LukeForEntitySpanClassification model.
         
@@ -1981,7 +1936,6 @@ class LukeForSequenceClassification(LukePreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes a LukeForSequenceClassification instance.
         
@@ -2026,7 +1980,6 @@ class LukeForSequenceClassification(LukePreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ):
-
         """
         Method 'construct' in the class 'LukeForSequenceClassification'.
         
@@ -2114,7 +2067,6 @@ class LukeForTokenClassification(LukePreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the LukeForTokenClassification class.
         
@@ -2159,7 +2111,6 @@ class LukeForTokenClassification(LukePreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ):
-
         """
         Constructs the model for token classification using the Luke architecture.
         
@@ -2224,7 +2175,6 @@ class LukeForQuestionAnswering(LukePreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes the LukeForQuestionAnswering class.
         
@@ -2267,7 +2217,6 @@ class LukeForQuestionAnswering(LukePreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ):
-
         """
         Constructs the forward pass of the LukeForQuestionAnswering model.
         
@@ -2362,7 +2311,6 @@ class LukeForMultipleChoice(LukePreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the LukeForMultipleChoice class.
         
@@ -2403,7 +2351,6 @@ class LukeForMultipleChoice(LukePreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ):
-
         """
         Constructs the LukeForMultipleChoice model.
         

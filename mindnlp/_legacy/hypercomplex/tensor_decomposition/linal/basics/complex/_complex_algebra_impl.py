@@ -7,7 +7,6 @@ from mindnlp._legacy.hypercomplex.tensor_decomposition.linal.basics.hypercomplex
 
 class _ComplexAlgebraImpl(_MatrixImpl, _VectorImpl, _ScalarImpl):
 
-    
     """
     Represents a class for implementing complex algebra operations.
     
@@ -28,13 +27,11 @@ class _ComplexAlgebraImpl(_MatrixImpl, _VectorImpl, _ScalarImpl):
     For detailed information on each method's parameters and return values, refer to the method docstrings within the class.
     """
       
-
     def mul(self,
             a_x: np.ndarray,
             a_y: np.ndarray,
             b_x: Union[np.ndarray, np.float64],
             b_y: Union[np.ndarray, np.float64]) -> Tuple[np.ndarray, np.ndarray]:
-
         r"""
         Performs complex multiplication of two numbers.
         
@@ -68,7 +65,6 @@ class _ComplexAlgebraImpl(_MatrixImpl, _VectorImpl, _ScalarImpl):
             a_y: np.ndarray,
             b_x: Union[np.ndarray, np.float64],
             b_y: Union[np.ndarray, np.float64]) -> Tuple[np.ndarray, np.ndarray]:
-
         r"""
         Performs division of complex numbers based on the given inputs.
         
@@ -106,7 +102,6 @@ class _ComplexAlgebraImpl(_MatrixImpl, _VectorImpl, _ScalarImpl):
                a_y: np.ndarray,
                b_x: np.ndarray,
                b_y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-
         r"""
         Performs matrix multiplication for complex algebra.
         
@@ -134,7 +129,6 @@ class _ComplexAlgebraImpl(_MatrixImpl, _VectorImpl, _ScalarImpl):
                     a_y: np.ndarray,
                     b_x: np.ndarray,
                     b_y: np.ndarray) -> Tuple[np.float64, np.float64]:
-
         r"""
         Calculates the dot product of two complex vectors.
         
@@ -162,7 +156,6 @@ class _ComplexAlgebraImpl(_MatrixImpl, _VectorImpl, _ScalarImpl):
         )
 
     def sqrt(self, x: np.float64, y: np.float64) -> Tuple[np.float64, np.float64]:
-
         r"""
         This method calculates the square root of a complex number given its real and imaginary parts.
         
@@ -189,7 +182,6 @@ class _ComplexAlgebraImpl(_MatrixImpl, _VectorImpl, _ScalarImpl):
         return x_sqrt, y_sqrt
 
     def special_element(self) -> str:
-
         r"""
         This method returns a special element as a string.
         
@@ -205,7 +197,6 @@ class _ComplexAlgebraImpl(_MatrixImpl, _VectorImpl, _ScalarImpl):
         return 'i'
 
     def visit(self, scalar, visitor, *args, **kwargs) -> None:
-
         r"""
         This method 'visit' in the class '_ComplexAlgebraImpl' is used to perform a visit operation on a scalar value using a visitor object.
         
@@ -227,8 +218,6 @@ class _ComplexAlgebraImpl(_MatrixImpl, _VectorImpl, _ScalarImpl):
                    y1: np.float64,
                    x2: np.float64,
                    y2: np.float64) -> Tuple[np.float64, np.float64]:
-
-        
         """
         Performs scalar multiplication of two complex numbers.
         
@@ -256,7 +245,6 @@ class _ComplexAlgebraImpl(_MatrixImpl, _VectorImpl, _ScalarImpl):
                    y1: np.float64,
                    x2: np.float64,
                    y2: np.float64) -> Tuple[np.float64, np.float64]:
-
         r"""
         The method 'div_scalar' in the class '_ComplexAlgebraImpl' divides the complex number represented by (x1, y1) by the complex number represented by (x2, y2).
         

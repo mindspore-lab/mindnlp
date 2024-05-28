@@ -30,8 +30,6 @@ logger = logging.get_logger(__name__)
 
 @constexpr
 def _init_state(shape, dtype, is_lstm):
-
-    
     """
     Args:
         shape (tuple): The shape of the tensors to be initialized.
@@ -73,7 +71,6 @@ def gru_cell(inputs, hidden, w_ih, w_hh, b_ih=None, b_hh=None):
 class SingleGRULayer_CPU(nn.Cell):
     """Single layer gru on CPU."""
     def __init__(self, input_size, hidden_size, has_bias, bidirectional):
-
         r""" 
         Initializes a SingleGRULayer_CPU object.
         
@@ -123,7 +120,6 @@ class SingleGRULayer_CPU(nn.Cell):
 
         return outputs, h.view(h_shape)
 
-
     def bidirection(self, inputs, h, weights, biases):
         """bidirectional."""
         rev_inputs = reverse(inputs, [0])
@@ -139,7 +135,6 @@ class SingleGRULayer_CPU(nn.Cell):
             biases_f = None
             biases_b = None
 
-
         outputs_f, hn_f = self.forward(inputs, h_f, weights_f, biases_f)
         outputs_b, hn_b = self.forward(rev_inputs, h_b, weights_b, biases_b)
 
@@ -150,7 +145,6 @@ class SingleGRULayer_CPU(nn.Cell):
         return outputs, hn
 
     def construct(self, inputs, h, weights, biases):
-
         r"""
         Constructs a single GRU layer in the CPU.
         
@@ -175,7 +169,6 @@ class SingleGRULayer_CPU(nn.Cell):
 class SingleLSTMLayerBase(nn.Cell):
     """Single LSTM Layer"""
     def __init__(self, input_size, hidden_size, has_bias, bidirectional):
-
         r"""
         Initializes a SingleLSTMLayerBase object.
         
@@ -201,7 +194,6 @@ class SingleLSTMLayerBase(nn.Cell):
         self.rnn = ops.LSTM(input_size, hidden_size, 1, has_bias, bidirectional, 0.0)
 
     def _flatten_weights(self, weights, biases):
-
         r"""
         SingleLSTMLayerBase._flatten_weights method
         
@@ -219,7 +211,6 @@ class SingleLSTMLayerBase(nn.Cell):
         raise NotImplementedError
 
     def construct(self, inputs, h, weights, biases):
-
         r"""
         Method to construct a single LSTM layer.
         
@@ -249,7 +240,6 @@ class SingleLSTMLayerBase(nn.Cell):
 class SingleLSTMLayer_CPU(SingleLSTMLayerBase):
     """Single LSTM Layer CPU"""
     def _flatten_weights(self, weights, biases):
-
         r"""
         This method flattens the weights and biases for a single LSTM layer.
         
@@ -285,7 +275,6 @@ class SingleLSTMLayer_CPU(SingleLSTMLayerBase):
 class SingleLSTMLayer_GPU(SingleLSTMLayerBase):
     """Single LSTM Layer GPU"""
     def _flatten_weights(self, weights, biases):
-
         r"""
         This method '_flatten_weights' in the class 'SingleLSTMLayer_GPU' flattens the weights and biases for a single LSTM layer.
         
@@ -325,7 +314,6 @@ class MultiLayerRNN(nn.Cell):
     """Multilayer RNN."""
     def __init__(self, mode, input_size, hidden_size, num_layers, has_bias, \
                  bidirectional, dropout):
-
         r"""
         Initializes a MultiLayerRNN object.
         
@@ -416,7 +404,6 @@ class StaticGRU_GPU(nn.Cell):
     """Static GRU on GPU"""
     def __init__(self, input_size, hidden_size, num_layers, has_bias, \
                  bidirectional, dropout):
-
         r"""
         Initializes a StaticGRU_GPU object.
         
@@ -444,7 +431,6 @@ class StaticGRU_GPU(nn.Cell):
         self.dropout = dropout
 
     def construct(self, inputs, h, weights, biases):
-
         r"""
         Constructs a StaticGRU_GPU object.
         
@@ -479,7 +465,6 @@ class _RNNBase(nn.Cell):
     '''Basic class for RNN operators'''
     def __init__(self, mode, input_size, hidden_size, num_layers=1, has_bias=True,
                  batch_first=False, dropout=0., bidirectional=False):
-
         r"""
         This method initializes the _RNNBase class with the specified parameters.
         
@@ -649,7 +634,6 @@ class StaticGRU(_RNNBase):
         (3, 5, 16)
     """
     def __init__(self, *args, **kwargs):
-
         r"""
         Initializes a new instance of the StaticGRU class.
         
@@ -747,7 +731,6 @@ class StaticLSTM(_RNNBase):
     """
 
     def __init__(self, *args, **kwargs):
-
         r"""
         Initializes a StaticLSTM object.
         

@@ -62,7 +62,6 @@ class GPTBigCodeConfig(PretrainedConfig):
         multi_query=True,
         **kwargs,
     ):
-
         """
         __init__
         

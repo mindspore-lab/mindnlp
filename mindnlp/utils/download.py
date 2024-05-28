@@ -51,7 +51,6 @@ _CACHED_NO_EXIST_T = Any
 _is_offline_mode = os.environ.get("MINDNLP_OFFLINE", "0").upper() in ENV_VARS_TRUE_VALUES
 
 def is_offline_mode():
-
     """
     This function checks if the application is running in offline mode.
     
@@ -62,7 +61,6 @@ def is_offline_mode():
     return _is_offline_mode
 
 def is_remote_url(url_or_filename):
-
     """
     Args:
         url_or_filename (str): The URL or filename to be checked for being a remote URL.
@@ -386,7 +384,6 @@ def get_file_from_repo(
         _raise_exceptions_for_missing_entries=False,
         _raise_exceptions_for_connection_errors=False,
     )
-
 
 
 def cached_file(

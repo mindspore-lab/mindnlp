@@ -18,7 +18,6 @@ MindNLP defined functional methods
 from mindspore import ops
 
 def normalize(input, p=2.0, dim=1):
-
     r"""
     Normalize a tensor along a specified dimension.
     

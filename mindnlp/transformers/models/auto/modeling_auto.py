@@ -1623,7 +1623,6 @@ class AutoModelWithLMHead(_AutoModelWithLMHead):
     """
     @classmethod
     def from_config(cls, config):
-
         """
         This method creates an instance of the 'AutoModelWithLMHead' class based on the provided 'config' parameter.
         
@@ -1648,7 +1647,6 @@ class AutoModelWithLMHead(_AutoModelWithLMHead):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
-
         """
         Loads a pretrained model from a given model name or path.
         

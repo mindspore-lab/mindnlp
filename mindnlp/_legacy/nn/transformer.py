@@ -112,7 +112,6 @@ class MultiheadAttention(nn.Cell):
 
     def __init__(self, embed_dim, num_heads, dropout=0., bias=True, add_bias_kv=False, add_zero_attn=False,
                  kdim=None, vdim=None, batch_first=False) -> None:
-
         r"""Initialize the MultiheadAttention class.
         
         Args:
@@ -174,7 +173,6 @@ class MultiheadAttention(nn.Cell):
         self.q_is_k = False
 
     def __call__(self, *args, **kwargs):
-
         r"""
         This method is the '__call__' method of the 'MultiheadAttention' class.
         
@@ -200,7 +198,6 @@ class MultiheadAttention(nn.Cell):
 
     def construct(self, query: Tensor, key: Tensor, value: Tensor, key_padding_mask: Optional[Tensor] = None,
                   need_weights: bool = True, attn_mask: Optional[Tensor] = None, average_attn_weights: bool = True):
-
         r"""
         Method 'construct' in the class 'MultiheadAttention'.
         
@@ -316,7 +313,6 @@ class TransformerEncoderLayer(nn.Cell):
     def __init__(self, d_model: int, nhead: int, dim_feedforward: int = 2048, dropout: float = 0.1,
                  activation = 'relu',
                  layer_norm_eps: float = 1e-5, batch_first: bool = False, norm_first: bool = False):
-
         r"""
         Args:
             self: The instance of the class.
@@ -364,7 +360,6 @@ class TransformerEncoderLayer(nn.Cell):
         self.activation = activation
 
     def construct(self, src, src_mask=None, src_key_padding_mask=None):
-
         r"""
         This method 'construct' is part of the 'TransformerEncoderLayer' class and is used to construct the transformer encoder layer.
         
@@ -405,7 +400,6 @@ class TransformerEncoderLayer(nn.Cell):
 
     # self-attention block
     def _sa_block(self, x, attn_mask, key_padding_mask):
-
         r"""
         This method represents a self-attention block within a Transformer Encoder Layer.
         
@@ -430,7 +424,6 @@ class TransformerEncoderLayer(nn.Cell):
 
     # feed forward block
     def _ff_block(self, x: Tensor):
-
         r"""
         TransformEncoderLayer._ff_block
         
@@ -501,7 +494,6 @@ class TransformerDecoderLayer(nn.Cell):
     def __init__(self, d_model: int, nhead: int, dim_feedforward: int = 2048, dropout: float = 0.1,
                  activation = 'relu',
                  layer_norm_eps: float = 1e-5, batch_first: bool = False, norm_first: bool = False):
-
         r"""
         Initialize a Transformer Decoder Layer.
         
@@ -546,7 +538,6 @@ class TransformerDecoderLayer(nn.Cell):
 
     def construct(self, tgt, memory, tgt_mask = None, memory_mask = None,
                   tgt_key_padding_mask = None, memory_key_padding_mask = None):
-
         r"""
         Constructs a single layer of the Transformer Decoder.
         
@@ -588,7 +579,6 @@ class TransformerDecoderLayer(nn.Cell):
 
     # self-attention block
     def _sa_block(self, x, attn_mask, key_padding_mask):
-
         r"""
         Method _sa_block in class TransformerDecoderLayer.
         
@@ -613,7 +603,6 @@ class TransformerDecoderLayer(nn.Cell):
 
     # multihead attention block
     def _mha_block(self, x, mem, attn_mask, key_padding_mask):
-
         r"""
         This method `_mha_block` is defined within the class `TransformerDecoderLayer` and is used to perform multi-head attention block operations.
         
@@ -640,7 +629,6 @@ class TransformerDecoderLayer(nn.Cell):
 
     # feed forward block
     def _ff_block(self, x: Tensor):
-
         r"""
         Method _ff_block in the TransformerDecoderLayer class.
         
@@ -693,7 +681,6 @@ class TransformerEncoder(nn.Cell):
     __constants__ = ['norm']
 
     def __init__(self, encoder_layer, num_layers, norm=None):
-
         r"""
         Initializes a TransformerEncoder object.
         
@@ -716,7 +703,6 @@ class TransformerEncoder(nn.Cell):
         self.norm = norm
 
     def construct(self, src: Tensor, src_mask = None, src_key_padding_mask = None):
-
         r"""
         This method constructs the Transformer encoder by applying the specified layers to the source input, with optional masking and padding.
         
@@ -784,7 +770,6 @@ class TransformerDecoder(nn.Cell):
     __constants__ = ['norm']
 
     def __init__(self, decoder_layer, num_layers, norm=None):
-
         r"""
         Initializes a TransformerDecoder object.
         
@@ -808,7 +793,6 @@ class TransformerDecoder(nn.Cell):
     def construct(self, tgt, memory, tgt_mask = None,
                   memory_mask = None, tgt_key_padding_mask = None,
                   memory_key_padding_mask = None):
-
         r"""
         Constructs the output of the TransformerDecoder.
         
@@ -894,7 +878,6 @@ class Transformer(nn.Cell):
                  activation = 'relu',
                  custom_encoder = None, custom_decoder = None,
                  layer_norm_eps: float = 1e-5, batch_first: bool = False, norm_first: bool = False):
-
         r"""
         Initializes a Transformer model with the specified parameters.
         
@@ -953,7 +936,6 @@ class Transformer(nn.Cell):
     def construct(self, src, tgt, src_mask = None, tgt_mask = None,
                 memory_mask = None, src_key_padding_mask = None,
                 tgt_key_padding_mask = None, memory_key_padding_mask = None):
-
         r"""
         Args:
             self (object): The instance of the Transformer class.
@@ -1000,7 +982,6 @@ class Transformer(nn.Cell):
                 p.set_data(initializer('xavier_uniform', p.shape, p.dtype))
 
 def _get_activation_fn(activation: str):
-
     r"""
     Args:
         activation (str): Specifies the type of activation function to retrieve. 
@@ -1020,7 +1001,6 @@ def _get_activation_fn(activation: str):
     raise RuntimeError(f"activation should be relu/gelu, not {activation}")
 
 def _get_clones(module, N):
-
     r"""
     Args:
         module: The module to be cloned. Type should be a valid module object. This parameter specifies the module that needs to be cloned.

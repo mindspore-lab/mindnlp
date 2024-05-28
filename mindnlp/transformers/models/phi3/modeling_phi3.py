@@ -79,7 +79,6 @@ class Phi3RMSNorm(nn.Cell):
         self.variance_epsilon = eps
 
     def construct(self, hidden_states):
-
         """
         This method constructs Phi3RMSNorm by performing normalization on the hidden_states.
         
@@ -102,7 +101,6 @@ class Phi3RMSNorm(nn.Cell):
 
 # Copied from transformers.models.llama.modeling_llama._get_unpad_data
 def _get_unpad_data(attention_mask):
-
     """
     This function takes an attention_mask as input and returns three values: indices, cu_seqlens, and max_seqlen_in_batch.
     
@@ -159,7 +157,6 @@ properties.
                 Tensor: The cosine and sine embeddings, converted to the same data type as the input tensor.
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
-
         """
         Initializes a new instance of the Phi3RotaryEmbedding class.
         
@@ -183,7 +180,6 @@ properties.
         self.inv_freq = None
 
     def construct(self, x, position_ids, seq_len=None):
-
         '''
         This method constructs the rotary embedding for the Phi3RotaryEmbedding class.
         
@@ -245,7 +241,6 @@ class Phi3SuScaledRotaryEmbedding(Phi3RotaryEmbedding):
                 - `sin` (tensor): The sine component of the scaled rotary embedding.
     """
     def __init__(self, dim, config):
-
         """
         Initializes an instance of the Phi3SuScaledRotaryEmbedding class.
         
@@ -267,7 +262,6 @@ class Phi3SuScaledRotaryEmbedding(Phi3RotaryEmbedding):
         self.original_max_position_embeddings = config.original_max_position_embeddings
 
     def construct(self, x, position_ids, seq_len=None):
-
         """
         Constructs the scaled rotary embedding for the Phi3SuScaledRotaryEmbedding.
         
@@ -331,7 +325,6 @@ class Phi3YarnScaledRotaryEmbedding(Phi3RotaryEmbedding):
     
     """
     def __init__(self, dim, config):
-
         """
         Initializes a Phi3YarnScaledRotaryEmbedding object with the specified dimension and configuration.
         
@@ -354,7 +347,6 @@ class Phi3YarnScaledRotaryEmbedding(Phi3RotaryEmbedding):
         self.original_max_position_embeddings = config.original_max_position_embeddings
 
     def construct(self, x, position_ids, seq_len=None):
-
         """
         Constructs the Phi3YarnScaledRotaryEmbedding.
         
@@ -463,7 +455,6 @@ class Phi3MLP(nn.Cell):
                 mindspore.Tensor: The output tensor after applying the Phi3MLP module.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the Phi3MLP class.
         
@@ -489,7 +480,6 @@ class Phi3MLP(nn.Cell):
         self.activation_fn = ACT2FN[config.hidden_act]
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method constructs and processes the hidden states using the Phi3MLP class.
         
@@ -528,7 +518,6 @@ class Phi3Attention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(self, config: Phi3Config, layer_idx: Optional[int] = None):
-
         """
         Initializes an instance of the `Phi3Attention` class.
         
@@ -601,7 +590,6 @@ creating this class.
         self._init_rope()
 
     def _init_rope(self):
-
         """
         Initializes the RoPE (Rotary Positional Encoding) for the Phi3Attention class.
         
@@ -660,7 +648,6 @@ options for the Rotary Positional Encoding.
         output_attentions: bool = False,
         use_cache: bool = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
-
         """
         This method constructs the Phi3Attention mechanism.
         
@@ -790,7 +777,6 @@ based on the provided arguments.
             The resulting hidden states, and optionally, the self-attention weights and present key-value states if requested.
     '''
     def __init__(self, config: Phi3Config, layer_idx: int):
-
         """
         Initializes a new instance of the Phi3DecoderLayer class.
         
@@ -840,7 +826,6 @@ based on the provided arguments.
         use_cache: Optional[bool] = False,
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
-
         '''
         Constructs a Phi3DecoderLayer object.
         
@@ -959,7 +944,6 @@ class Phi3PreTrainedModel(PreTrainedModel):
     _supports_cache_class = True
 
     def _init_weights(self, module):
-
         """
         Initializes the weights of a given module.
         
@@ -994,7 +978,6 @@ class Phi3Model(Phi3PreTrainedModel):
     """
 
     def __init__(self, config: Phi3Config):
-
         """
         Initializes a new instance of the Phi3Model class.
         
@@ -1048,7 +1031,6 @@ normalization to the hidden states.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings for the Phi3Model.
         
@@ -1064,7 +1046,6 @@ normalization to the hidden states.
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the Phi3Model.
         
@@ -1092,7 +1073,6 @@ normalization to the hidden states.
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
-
         """
             Constructs the Phi3Model.
         
@@ -1283,7 +1263,6 @@ and preparing inputs for generation.
 
     # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.__init__ with Llama->Phi3
     def __init__(self, config):
-
         """
         Initializes a new instance of the Phi3ForCausalLM class.
         
@@ -1310,7 +1289,6 @@ and preparing inputs for generation.
 
     # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.get_input_embeddings
     def get_input_embeddings(self):
-
         """
         Method to retrieve the input embeddings from the Phi3ForCausalLM model.
         
@@ -1330,7 +1308,6 @@ and preparing inputs for generation.
 
     # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.set_input_embeddings
     def set_input_embeddings(self, value):
-
         """
         Method to set input embeddings for the Phi3ForCausalLM model.
         
@@ -1348,7 +1325,6 @@ and preparing inputs for generation.
 
     # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.get_output_embeddings
     def get_output_embeddings(self):
-
         """Returns the output embeddings of the Phi3ForCausalLM model.
         
         This method takes no additional parameters.
@@ -1363,7 +1339,6 @@ and preparing inputs for generation.
 
     # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.set_output_embeddings
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings of the Phi3ForCausalLM model.
         
@@ -1381,7 +1356,6 @@ and preparing inputs for generation.
 
     # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.set_decoder
     def set_decoder(self, decoder):
-
         """
         Sets the decoder for the Phi3ForCausalLM class.
         
@@ -1399,7 +1373,6 @@ and preparing inputs for generation.
 
     # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.get_decoder
     def get_decoder(self):
-
         """
         This method returns the decoder model used in the Phi3ForCausalLM class.
         
@@ -1503,7 +1476,6 @@ and preparing inputs for generation.
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
-
         """
         This method prepares inputs for generation in the Phi3ForCausalLM class.
         
@@ -1583,7 +1555,6 @@ and preparing inputs for generation.
     @staticmethod
     # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM._reorder_cache
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Reorders the cache based on the beam index for the Phi3ForCausalLM class.
         
@@ -1628,7 +1599,6 @@ classification.
     
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the Phi3ForSequenceClassification class.
         
@@ -1653,7 +1623,6 @@ classification.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Retrieves the input embeddings from the Phi3ForSequenceClassification model.
         
@@ -1680,7 +1649,6 @@ classification.
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Set the input embeddings for the Phi3ForSequenceClassification model.
         
@@ -1807,7 +1775,6 @@ using cross-entropy and returns the loss along with logits and hidden states if 
     Note: Ensure to set the appropriate labels for computing the loss, and handle the return_dict parameter for controlling the output format.
     """
     def __init__(self, config: Phi3Config):
-
         """
         Initializes an instance of Phi3ForTokenClassification with the provided configuration.
         

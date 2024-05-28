@@ -271,8 +271,6 @@ class LoraConfig(PeftConfig):
     )
 
     def __post_init__(self):
-
-        
         """
         Performs post-initialization operations for the LoraConfig class.
         

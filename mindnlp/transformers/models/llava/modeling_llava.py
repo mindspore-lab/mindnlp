@@ -96,7 +96,6 @@ class LlavaMultiModalProjector(nn.Cell):
         hidden_states = projector.construct(image_features)
     """
     def __init__(self, config: LlavaConfig):
-
         """
         Initializes an instance of the LlavaMultiModalProjector class.
         
@@ -120,7 +119,6 @@ class LlavaMultiModalProjector(nn.Cell):
         self.linear_2 = nn.Dense(config.text_config.hidden_size, config.text_config.hidden_size, has_bias=True)
 
     def construct(self, image_features):
-
         ''' 
         This method constructs a multi-modal projector within the LlavaMultiModalProjector class.
         
@@ -165,7 +163,6 @@ element in the weight matrix is set to zero.
     _skip_keys_device_placement = "past_key_values"
 
     def _init_weights(self, cell):
-
         """
         Initializes the weights of a given cell in the LlavaPreTrainedModel.
         
@@ -270,7 +267,6 @@ Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inp
     
     """
     def __init__(self, config: LlavaConfig):
-
         """
         Initializes an instance of the LlavaForConditionalGeneration class.
         
@@ -296,7 +292,6 @@ Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inp
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Get the input embeddings from the language model.
         
@@ -312,7 +307,6 @@ Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inp
         return self.language_model.get_input_embeddings()
 
     def set_input_embeddings(self, value):
-
         """
         Set the input embeddings for the LlavaForConditionalGeneration language model.
         
@@ -329,7 +323,6 @@ Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inp
         self.language_model.set_input_embeddings(value)
 
     def get_output_embeddings(self):
-
         """
         Retrieve the output embeddings from the language model used for conditional generation.
         
@@ -345,7 +338,6 @@ Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inp
         return self.language_model.get_output_embeddings()
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the LlavaForConditionalGeneration model.
         
@@ -364,7 +356,6 @@ Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inp
         self.language_model.set_output_embeddings(new_embeddings)
 
     def set_decoder(self, decoder):
-
         """
         Sets the decoder for the language model used in LlavaForConditionalGeneration.
         
@@ -382,7 +373,6 @@ Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inp
         self.language_model.set_decoder(decoder)
 
     def get_decoder(self):
-
         """
         Returns the decoder of the LlavaForConditionalGeneration model.
         
@@ -398,7 +388,6 @@ Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inp
         return self.language_model.get_decoder()
 
     def tie_weights(self):
-
         """
         Ties the weights of the language model used for conditional generation in the LlavaForConditionalGeneration class.
         
@@ -414,7 +403,6 @@ Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inp
         return self.language_model.tie_weights()
 
     def resize_token_embeddings(self, new_num_tokens: Optional[int] = None, pad_to_multiple_of=None) -> nn.Embedding:
-
         """
         Resize the token embeddings for conditional generation in the LlavaForConditionalGeneration class.
         
@@ -441,7 +429,6 @@ Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inp
         return model_embeds
 
     def _merge_input_ids_with_image_features(self, image_features, inputs_embeds, input_ids, attention_mask, labels):
-
         """
         Merges image features with input embeddings and applies necessary modifications.
         
@@ -687,7 +674,6 @@ Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inp
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, inputs_embeds=None, pixel_values=None, attention_mask=None, **kwargs
     ):
-
         '''
         Prepares inputs for text generation in the LlavaForConditionalGeneration class.
         
@@ -757,7 +743,6 @@ Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inp
         return model_inputs
 
     def _reorder_cache(self, *args, **kwargs):
-
         """
         Method _reorder_cache in class LlavaForConditionalGeneration.
         

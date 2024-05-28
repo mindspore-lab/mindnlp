@@ -135,7 +135,6 @@ class AlignOutput(ModelOutput):
     vision_model_output: BaseModelOutputWithPoolingAndNoAttention = None
 
     def to_tuple(self) -> Tuple[Any]:
-
         """
         Converts the AlignOutput instance to a tuple representation.
         
@@ -158,7 +157,6 @@ class AlignOutput(ModelOutput):
 # contrastive loss function, adapted from
 # https://sachinruk.github.io/blog/pytorch/pytorch%20lightning/loss%20function/gpu/2021/03/07/CLIP.html
 def contrastive_loss(logits: mindspore.Tensor) -> mindspore.Tensor:
-
     '''
     This function calculates the contrastive loss used in deep learning models.
     
@@ -176,7 +174,6 @@ the softmax function.
 
 
 def align_loss(similarity: mindspore.Tensor) -> mindspore.Tensor:
-
     """
     Args:
         similarity (mindspore.Tensor): A tensor representing the similarity between two sets of embeddings. It is used to calculate the contrastive loss for alignment. The tensor should have the shape
@@ -236,7 +233,6 @@ class AlignVisionEmbeddings(nn.Cell):
     """
 
     def __init__(self, config: AlignVisionConfig):
-
         """
         Initializes an instance of the AlignVisionEmbeddings class.
         
@@ -282,7 +278,6 @@ an object of type AlignVisionConfig.
         self.activation = ACT2FN[config.hidden_act]
 
     def construct(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the aligned vision embeddings for the given pixel values.
         
@@ -345,7 +340,6 @@ whether to include bias, and the padding mode. The depthwise convolutional layer
         has_bias=True,
         pad_mode="zeros",
     ):
-
         """
         Initializes an instance of the AlignVisionDepthwiseConv2d class.
         
@@ -388,7 +382,6 @@ class AlignVisionExpansionLayer(nn.Cell):
     """
 
     def __init__(self, config: AlignVisionConfig, in_dim: int, out_dim: int):
-
         """
         Initialize the AlignVisionExpansionLayer.
         
@@ -418,7 +411,6 @@ class AlignVisionExpansionLayer(nn.Cell):
         self.expand_act = ACT2FN[config.hidden_act]
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method constructs an expansion layer for align vision.
         
@@ -456,7 +448,6 @@ class AlignVisionDepthwiseLayer(nn.Cell):
         kernel_size: int,
         adjust_padding: bool,
     ):
-
         """
         Initializes an instance of the AlignVisionDepthwiseLayer class.
         
@@ -488,7 +479,6 @@ class AlignVisionDepthwiseLayer(nn.Cell):
         self.depthwise_act = ACT2FN[config.hidden_act]
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method constructs the depthwise convolutional layer for aligning vision, applying convolution, normalization, and activation operations.
         
@@ -520,7 +510,6 @@ class AlignVisionSqueezeExciteLayer(nn.Cell):
     """
 
     def __init__(self, config: AlignVisionConfig, in_dim: int, expand_dim: int, expand: bool = False):
-
         """
         Initialize the AlignVisionSqueezeExciteLayer.
         
@@ -561,7 +550,6 @@ class AlignVisionSqueezeExciteLayer(nn.Cell):
         self.act_expand = nn.Sigmoid()
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the AlignVisionSqueezeExciteLayer.
         
@@ -597,7 +585,6 @@ class AlignVisionFinalBlockLayer(nn.Cell):
     def __init__(
         self, config: AlignVisionConfig, in_dim: int, out_dim: int, stride: int, drop_rate: float, id_skip: bool
     ):
-
         """
         Initializes an instance of the AlignVisionFinalBlockLayer class.
         
@@ -631,7 +618,6 @@ class AlignVisionFinalBlockLayer(nn.Cell):
         self.dropout = nn.Dropout(p=drop_rate)
 
     def construct(self, embeddings: mindspore.Tensor, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the final block layer for alignment vision.
         
@@ -695,7 +681,6 @@ class AlignVisionBlock(nn.Cell):
         id_skip: bool,
         adjust_padding: bool,
     ):
-
         """
         Initializes an instance of the AlignVisionBlock class.
         
@@ -747,7 +732,6 @@ class AlignVisionBlock(nn.Cell):
         )
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the AlignVisionBlock for processing hidden states.
         
@@ -788,7 +772,6 @@ class AlignVisionEncoder(nn.Cell):
     """
 
     def __init__(self, config: AlignVisionConfig):
-
         """
         Initializes an instance of the AlignVisionEncoder class with the provided configuration.
         
@@ -860,7 +843,6 @@ class AlignVisionEncoder(nn.Cell):
         output_hidden_states: Optional[bool] = False,
         return_dict: Optional[bool] = True,
     ) -> BaseModelOutputWithPoolingAndNoAttention:
-
         """
         Construct method in the AlignVisionEncoder class.
         
@@ -897,7 +879,6 @@ class AlignTextEmbeddings(nn.Cell):
     """Construct the embeddings from word, position and token_type embeddings."""
 
     def __init__(self, config):
-
         """
         Initializes an instance of the AlignTextEmbeddings class.
         
@@ -941,7 +922,6 @@ class AlignTextEmbeddings(nn.Cell):
         inputs_embeds: Optional[mindspore.Tensor] = None,
         past_key_values_length: int = 0,
     ) -> mindspore.Tensor:
-
         """
         Construct the aligned text embeddings.
         
@@ -1035,7 +1015,6 @@ class AlignTextSelfAttention(nn.Cell):
                 Tuple[mindspore.Tensor]: The output context layer tensor, and optionally, the attention scores and past key-value pairs.
     """
     def __init__(self, config, position_embedding_type=None):
-
         """
         Initializes an instance of the AlignTextSelfAttention class.
         
@@ -1087,7 +1066,6 @@ class AlignTextSelfAttention(nn.Cell):
         self.is_decoder = config.is_decoder
 
     def swapaxes_for_scores(self, x: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Swaps and permutes axes of a given tensor to align the text self-attention scores in the class named 'AlignTextSelfAttention'.
         
@@ -1123,7 +1101,6 @@ scores.
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         '''
         Constructs the self-attention mechanism for aligning text in the AlignTextSelfAttention class.
         
@@ -1250,7 +1227,6 @@ class AlignTextSelfOutput(nn.Cell):
         transformed hidden states after applying dense transformation, dropout, and layer normalization.
         """
     def __init__(self, config):
-
         """
         This method initializes an instance of the AlignTextSelfOutput class.
         
@@ -1274,7 +1250,6 @@ class AlignTextSelfOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the aligned text self output.
         
@@ -1333,7 +1308,6 @@ class AlignTextAttention(nn.Cell):
     
     """
     def __init__(self, config, position_embedding_type=None):
-
         """
         Initializes an instance of the AlignTextAttention class.
         
@@ -1354,7 +1328,6 @@ class AlignTextAttention(nn.Cell):
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
-
         """
         This method 'prune_heads' is defined within the class 'AlignTextAttention'.
         
@@ -1399,7 +1372,6 @@ class AlignTextAttention(nn.Cell):
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         """
         This method constructs attention output based on the input hidden states and optional parameters for the AlignTextAttention class.
         
@@ -1456,7 +1428,6 @@ class AlignTextIntermediate(nn.Cell):
     Note: The class is designed for aligning text with intermediate processing steps in a neural network architecture.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the AlignTextIntermediate class.
         
@@ -1488,7 +1459,6 @@ class AlignTextIntermediate(nn.Cell):
             self.intermediate_act_fn = config.hidden_act
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method constructs the intermediate representation of hidden states for aligning text in the AlignTextIntermediate class.
         
@@ -1533,7 +1503,6 @@ class AlignTextOutput(nn.Cell):
             mindspore.Tensor: The aligned text output tensor.
     """
     def __init__(self, config):
-
         """
         Initialize the AlignTextOutput class with the provided configuration.
         
@@ -1559,7 +1528,6 @@ class AlignTextOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method constructs the output tensor by performing a series of operations on the input hidden states and tensor.
         
@@ -1618,7 +1586,6 @@ class AlignTextLayer(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the AlignTextLayer class.
         
@@ -1659,7 +1626,6 @@ class AlignTextLayer(nn.Cell):
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         """Constructs the AlignTextLayer.
         
         This layer is responsible for aligning text using self-attention and cross-attention mechanisms.
@@ -1738,7 +1704,6 @@ cross_attention_past_value)).
         return outputs
 
     def feed_forward_chunk(self, attention_output):
-
         """
         This method performs a feed-forward chunk operation on the given attention output.
         
@@ -1776,7 +1741,6 @@ optional outputs like next decoder cache, all hidden states, self-attentions, an
     This class provides a flexible and efficient way to encode text data using alignment techniques within a neural network architecture.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the AlignTextEncoder class.
         
@@ -1811,7 +1775,6 @@ optional outputs like next decoder cache, all hidden states, self-attentions, an
         output_hidden_states: Optional[bool] = False,
         return_dict: Optional[bool] = True,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]:
-
         """
         This method constructs the AlignTextEncoder model.
         
@@ -1929,7 +1892,6 @@ class AlignTextPooler(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes the AlignTextPooler class.
         
@@ -1951,7 +1913,6 @@ class AlignTextPooler(nn.Cell):
         self.activation = nn.Tanh()
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """Constructs the aligned text pooler.
         
         This method takes two parameters: self and hidden_states.
@@ -2030,7 +1991,6 @@ state and pooled output.
     config_class = AlignTextConfig
 
     def __init__(self, config: AlignTextConfig, add_pooling_layer: bool = True):
-
         """
         Initializes an instance of AlignTextModel.
         
@@ -2057,7 +2017,6 @@ state and pooled output.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings from the AlignTextModel.
         
@@ -2073,7 +2032,6 @@ state and pooled output.
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the AlignTextModel.
         
@@ -2210,7 +2168,6 @@ and pooled output for further analysis.
     supports_gradient_checkpointing = False
 
     def __init__(self, config: AlignVisionConfig):
-
         """
         Initializes an instance of the AlignVisionModel class.
         
@@ -2260,7 +2217,6 @@ with the specified axis and keep_dims parameters. If 'pooling_type' is set to 'm
         self.post_init()
 
     def get_input_embeddings(self) -> nn.Cell:
-
         """
         Retrieve the input embeddings from the AlignVisionModel.
         
@@ -2364,7 +2320,6 @@ similarity scores.
     config_class = AlignConfig
 
     def __init__(self, config: AlignConfig):
-
         '''
         Initializes the AlignModel with the specified configuration.
         

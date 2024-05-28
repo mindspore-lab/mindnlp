@@ -130,7 +130,6 @@ IMAGE_PROCESSOR_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, IMAGE_PROCESSOR
 
 
 def image_processor_class_from_name(class_name: str):
-
     """
     Args:
         class_name (str): The name of the image processor class to retrieve.
@@ -274,7 +273,6 @@ class AutoImageProcessor:
     """
 
     def __init__(self):
-
         """
         Initializes an instance of AutoImageProcessor.
         

@@ -50,7 +50,6 @@ class LayoutLMv2Processor(ProcessorMixin):
     tokenizer_class = ("LayoutLMv2Tokenizer", "LayoutLMv2TokenizerFast")
 
     def __init__(self, image_processor=None, tokenizer=None, **kwargs):
-
         """
         Initialize the LayoutLMv2Processor class.
         
@@ -209,7 +208,6 @@ class LayoutLMv2Processor(ProcessorMixin):
 
     @property
     def model_input_names(self):
-
         """
         This method returns a list of input names used by the LayoutLMv2Processor.
         

@@ -54,7 +54,6 @@ class LayoutLMEmbeddings(nn.Cell):
     """forward the embeddings from word, position and token_type embeddings."""
 
     def __init__(self, config):
-
         """
         Args:
             self (LayoutLMEmbeddings): The instance of the LayoutLMEmbeddings class.
@@ -81,7 +80,6 @@ class LayoutLMEmbeddings(nn.Cell):
 
         self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
 
-
     def construct(
         self,
         input_ids=None,
@@ -90,7 +88,6 @@ class LayoutLMEmbeddings(nn.Cell):
         position_ids=None,
         inputs_embeds=None,
     ):
-
         """
         Constructs the LayoutLM embeddings.
         
@@ -163,7 +160,6 @@ class LayoutLMSelfAttention(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertSelfAttention with Bert->LayoutLM"""
 
     def __init__(self, config, position_embedding_type=None):
-
         """
         Initializes a LayoutLMSelfAttention instance with the provided configuration and optional position embedding type.
         
@@ -213,7 +209,6 @@ class LayoutLMSelfAttention(nn.Cell):
         self.is_decoder = config.is_decoder
 
     def transpose_for_scores(self, x: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Transposes the input tensor `x` for calculating self-attention scores.
         
@@ -247,7 +242,6 @@ are obtained from the attributes `num_attention_heads` and `attention_head_size`
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         """
         This method constructs the self-attention mechanism for the LayoutLMSelfAttention class.
         
@@ -363,7 +357,6 @@ class LayoutLMSelfOutput(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertSelfOutput with Bert->LayoutLM"""
 
     def __init__(self, config):
-
         """
         Initializes the LayoutLMSelfOutput class.
         
@@ -387,7 +380,6 @@ class LayoutLMSelfOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the output of the LayoutLMSelfOutput layer.
         
@@ -415,7 +407,6 @@ class LayoutLMAttention(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertAttention with Bert->LayoutLM"""
 
     def __init__(self, config, position_embedding_type=None):
-
         """
         Initializes an instance of the LayoutLMAttention class.
         
@@ -443,7 +434,6 @@ class LayoutLMAttention(nn.Cell):
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
-
         """
         Prunes the attention heads in the LayoutLMAttention class.
         
@@ -494,7 +484,6 @@ attention heads, attention head size, and already pruned heads stored in the ins
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         ''' 
         This method constructs the LayoutLMAttention.
         
@@ -532,7 +521,6 @@ class LayoutLMIntermediate(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertIntermediate"""
 
     def __init__(self, config):
-
         """
         Initializes an instance of the LayoutLMIntermediate class.
         
@@ -555,7 +543,6 @@ class LayoutLMIntermediate(nn.Cell):
             self.intermediate_act_fn = config.hidden_act
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the intermediate layer in the LayoutLM model.
         
@@ -578,7 +565,6 @@ class LayoutLMOutput(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertOutput with Bert->LayoutLM"""
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the LayoutLMOutput class.
         
@@ -605,7 +591,6 @@ class LayoutLMOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Construct method in the LayoutLMOutput class.
         
@@ -630,7 +615,6 @@ class LayoutLMLayer(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertLayer with Bert->LayoutLM"""
 
     def __init__(self, config):
-
         """
         This method initializes an instance of the LayoutLMLayer class.
         
@@ -667,7 +651,6 @@ class LayoutLMLayer(nn.Cell):
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         """
         Constructs the LayoutLMLayer.
         
@@ -746,7 +729,6 @@ decoder, the tuple also includes the present key-value tensor(s) of shape (2, ba
         return outputs
 
     def feed_forward_chunk(self, attention_output):
-
         """
         Class: LayoutLMLayer
         
@@ -777,7 +759,6 @@ class LayoutLMEncoder(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertEncoder with Bert->LayoutLM"""
 
     def __init__(self, config):
-
         """Initializes an instance of the LayoutLMEncoder class.
         
         Args:
@@ -808,7 +789,6 @@ class LayoutLMEncoder(nn.Cell):
         output_hidden_states: Optional[bool] = False,
         return_dict: Optional[bool] = True,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]:
-
         """
         This method constructs the LayoutLM encoder using the specified parameters.
         
@@ -897,7 +877,6 @@ class LayoutLMPooler(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertPooler"""
 
     def __init__(self, config):
-
         """
         Initializes a LayoutLMPooler instance.
         
@@ -916,7 +895,6 @@ class LayoutLMPooler(nn.Cell):
         self.activation = nn.Tanh()
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method 'construct' in the class 'LayoutLMPooler' constructs a pooled output tensor based on the hidden states provided.
         
@@ -944,7 +922,6 @@ class LayoutLMPredictionHeadTransform(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertPredictionHeadTransform with Bert->LayoutLM"""
 
     def __init__(self, config):
-
         """
         Initialize the LayoutLMPredictionHeadTransform class.
         
@@ -972,7 +949,6 @@ class LayoutLMPredictionHeadTransform(nn.Cell):
         self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method 'construct' in the class 'LayoutLMPredictionHeadTransform' performs transformations on the input hidden states tensor.
         
@@ -997,7 +973,6 @@ class LayoutLMLMPredictionHead(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertLMPredictionHead with Bert->LayoutLM"""
 
     def __init__(self, config):
-
         """
         Initializes an instance of the LayoutLMLMPredictionHead class.
         
@@ -1025,7 +1000,6 @@ class LayoutLMLMPredictionHead(nn.Cell):
         self.decoder.bias = self.bias
 
     def construct(self, hidden_states):
-
         """
         Constructs the LayoutLMLMPredictionHead by transforming and decoding hidden states.
         
@@ -1048,7 +1022,6 @@ class LayoutLMOnlyMLMHead(nn.Cell):
     """Copied from transformers.models.bert.modeling_bert.BertOnlyMLMHead with Bert->LayoutLM"""
 
     def __init__(self, config):
-
         """
         Initializes a LayoutLMOnlyMLMHead object.
         
@@ -1066,7 +1039,6 @@ class LayoutLMOnlyMLMHead(nn.Cell):
         self.predictions = LayoutLMLMPredictionHead(config)
 
     def construct(self, sequence_output: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the LayoutLMOnlyMLMHead.
         
@@ -1121,7 +1093,6 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
     """LayoutLM Model"""
 
     def __init__(self, config):
-
         """
         Initializes a LayoutLMModel instance.
         
@@ -1147,7 +1118,6 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Retrieves the input embeddings from the LayoutLMModel.
         
@@ -1163,7 +1133,6 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the LayoutLMModel.
         
@@ -1312,7 +1281,6 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
     _tied_weights_keys = ["cls.predictions.decoder.bias", "cls.predictions.decoder.weight"]
 
     def __init__(self, config):
-
         """
         Initializes the LayoutLMForMaskedLM class.
         
@@ -1335,7 +1303,6 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method to retrieve the input embeddings from the LayoutLM model for Masked Language Modeling task.
         
@@ -1352,7 +1319,6 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
         return self.layoutlm.embeddings.word_embeddings
 
     def get_output_embeddings(self):
-
         '''
         Returns the output embeddings for the LayoutLM model.
         
@@ -1368,7 +1334,6 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
         return self.cls.predictions.decoder
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the LayoutLMForMaskedLM model.
         
@@ -1488,7 +1453,6 @@ class LayoutLMForSequenceClassification(LayoutLMPreTrainedModel):
     """LayoutLMForSequenceClassification Model"""
 
     def __init__(self, config):
-
         """
         __init__
         
@@ -1516,7 +1480,6 @@ class LayoutLMForSequenceClassification(LayoutLMPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """ 
         This method, get_input_embeddings, retrieves the input embeddings from the LayoutLM model for sequence classification.
         
@@ -1648,7 +1611,6 @@ class LayoutLMForTokenClassification(LayoutLMPreTrainedModel):
     """LayoutLMForTokenClassification Model"""
 
     def __init__(self, config):
-
         """
         Initializes an instance of the LayoutLMForTokenClassification class.
         
@@ -1675,7 +1637,6 @@ class LayoutLMForTokenClassification(LayoutLMPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method returns the word embeddings from the LayoutLM model for token classification.
         
@@ -1787,7 +1748,6 @@ class LayoutLMForQuestionAnswering(LayoutLMPreTrainedModel):
     """LayoutLMForQuestionAnswering Model"""
 
     def __init__(self, config, has_visual_segment_embedding=True):
-
         """
         Initializes an instance of the LayoutLMForQuestionAnswering class.
         
@@ -1813,7 +1773,6 @@ class LayoutLMForQuestionAnswering(LayoutLMPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method to retrieve the input embeddings from the LayoutLM model for question answering.
         

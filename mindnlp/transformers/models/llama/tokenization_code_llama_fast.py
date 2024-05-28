@@ -132,7 +132,6 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
         use_default_system_prompt=False,
         **kwargs,
     ):
-
         """
         Initializes an instance of the CodeLlamaTokenizerFast class.
         
@@ -199,7 +198,6 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def can_save_slow_tokenizer(self) -> bool:
-
         """
         Checks if the slow tokenizer can be saved.
         
@@ -247,7 +245,6 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def prefix_token(self):
-
         '''
         Returns the prefix token for the CodeLlamaTokenizerFast class.
         
@@ -264,7 +261,6 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def prefix_id(self):
-
         """
         Returns the prefix token converted to its corresponding ID.
         
@@ -284,7 +280,6 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def middle_token(self):
-
         """
         This method 'middle_token' is a property method in the class 'CodeLlamaTokenizerFast' that returns the middle token.
         
@@ -301,7 +296,6 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def middle_id(self):
-
         """
         Returns the middle token ID of the CodeLlamaTokenizerFast instance.
         
@@ -324,7 +318,6 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def suffix_token(self):
-
         """
         This method, 'suffix_token', is a property method defined in the 'CodeLlamaTokenizerFast' class.
         
@@ -342,7 +335,6 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def suffix_id(self):
-
         """
         This method is defined in the `CodeLlamaTokenizerFast` class and is named `suffix_id`. It takes one parameter, `self`, which refers to the instance of the class.
         
@@ -369,7 +361,6 @@ calls the `convert_tokens_to_ids` method to convert the `_suffix_token` to its c
 
     @property
     def eot_id(self):
-
         """
         Returns the ID representation of the end-of-text (EOT) token in the CodeLlamaTokenizerFast class.
         
@@ -392,7 +383,6 @@ corresponding ID representation and returns it.
 
     @property
     def eot_token(self):
-
         """
         eot_token method in the CodeLlamaTokenizerFast class.
         
@@ -409,7 +399,6 @@ corresponding ID representation and returns it.
 
     @property
     def add_eos_token(self):
-
         """
         Adds an end-of-sequence (EOS) token to the tokenizer.
         
@@ -426,7 +415,6 @@ corresponding ID representation and returns it.
 
     @property
     def add_bos_token(self):
-
         """
         Method to add a beginning of sentence (BOS) token to the tokenizer.
         
@@ -444,7 +432,6 @@ corresponding ID representation and returns it.
 
     @add_eos_token.setter
     def add_eos_token(self, value):
-
         """
         This method 'add_eos_token' is a setter method for the 'add_eos_token' property in the 'CodeLlamaTokenizerFast' class.
         
@@ -463,7 +450,6 @@ corresponding ID representation and returns it.
 
     @add_bos_token.setter
     def add_bos_token(self, value):
-
         """
         Sets the value of the 'add_bos_token' attribute in the CodeLlamaTokenizerFast class.
         
@@ -531,7 +517,6 @@ corresponding ID representation and returns it.
         )
 
     def encode_plus(self, text, text_pair=None, suffix_first=False, add_special_tokens=True, **kwargs):
-
         """
         Encodes the given text and text pair into tokens using the CodeLlamaTokenizerFast class.
         
@@ -572,7 +557,6 @@ corresponding ID representation and returns it.
 
     # Copied from transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast.save_vocabulary
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary for a fast tokenizer.
         

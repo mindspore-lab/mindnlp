@@ -36,7 +36,6 @@ class MSHTTPError(HTTPError):
     server_message: Optional[str] = None
 
     def __init__(self, message: str, response: Optional[Response] = None):
-
         """
         Initializes an instance of MSHTTPError.
         
@@ -160,7 +159,6 @@ class LocalEntryNotFoundError(EntryNotFoundError, FileNotFoundError, ValueError)
     """
 
     def __init__(self, message: str):
-
         """Initialize a LocalEntryNotFoundError object.
         
         Args:

@@ -118,7 +118,6 @@ class LlamaTokenizerFast(PreTrainedTokenizerFast):
         use_default_system_prompt=False,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the LlamaTokenizerFast class.
         
@@ -161,7 +160,6 @@ class LlamaTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def can_save_slow_tokenizer(self) -> bool:
-
         """
         This method checks whether the slow tokenizer can be saved based on the existence of a vocabulary file.
         
@@ -204,7 +202,6 @@ class LlamaTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def add_eos_token(self):
-
         """
         Adds an end-of-sentence (EOS) token to the tokenizer.
         
@@ -221,7 +218,6 @@ class LlamaTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def add_bos_token(self):
-
         """
         Method to add a beginning of sequence (BOS) token to the tokenizer.
         
@@ -239,7 +235,6 @@ class LlamaTokenizerFast(PreTrainedTokenizerFast):
 
     @add_eos_token.setter
     def add_eos_token(self, value):
-
         """
         Sets the value of the 'add_eos_token' attribute in the LlamaTokenizerFast class.
         
@@ -258,7 +253,6 @@ class LlamaTokenizerFast(PreTrainedTokenizerFast):
 
     @add_bos_token.setter
     def add_bos_token(self, value):
-
         """
         Adds a beginning-of-sequence (BOS) token to the LlamaTokenizerFast object.
         
@@ -276,7 +270,6 @@ class LlamaTokenizerFast(PreTrainedTokenizerFast):
         self.update_post_processor()
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Saves the vocabulary for a slow tokenizer.
         
@@ -382,7 +375,6 @@ class LlamaTokenizerFast(PreTrainedTokenizerFast):
     # TODO ArthurZ let's rely on the template processor instead, refactor all fast tokenizers
     # Copied from transformers.models.llama.tokenization_llama.LlamaTokenizer.build_inputs_with_special_tokens
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
-
         """
         This method builds inputs with special tokens for the LlamaTokenizerFast class.
         

@@ -53,7 +53,6 @@ class InvalidScoreLogitsProcessor(LogitsProcessor):
     This class ensures that the output tensor maintains the same shape as the input tensor, with invalid scores replaced accordingly.
     """
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method '__call__' in the class 'InvalidScoreLogitsProcessor' processes the given input_ids and scores to handle invalid score values.
         
@@ -88,7 +87,6 @@ class PrefixEncoder(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initialize a PrefixEncoder object.
         
@@ -124,7 +122,6 @@ class PrefixEncoder(nn.Cell):
             self.embedding = nn.Embedding(config.pre_seq_len, config.num_layers * config.hidden_size * 2)
 
     def construct(self, prefix: mindspore.Tensor):
-
         """
         This method constructs the past key values for the prefix encoder.
         
@@ -153,7 +150,6 @@ def gelu_impl(x):
 
 
 def gelu(x):
-
     """
     This function applies the Gaussian Error Linear Unit (GELU) activation function to the input tensor 'x'.
     
@@ -205,7 +201,6 @@ in a sequence.
     Note: The RotaryEmbedding layer caches the positional embeddings for efficiency. If the sequence length changes during training, the embeddings will be recomputed and cached accordingly.
     """
     def __init__(self, dim, base=10000, precision=mindspore.float16, learnable=False):
-
         """
         Initializes the RotaryEmbedding class.
         
@@ -238,7 +233,6 @@ in a sequence.
         self.precision = precision
 
     def construct(self, x, seq_dim=1, seq_len=None):
-
         """
         Constructs a RotaryEmbedding.
         
@@ -277,7 +271,6 @@ in a sequence.
         return self.cos_cached[:seq_len, ...], self.sin_cached[:seq_len, ...]
 
     def _apply(self, fn):
-
         """
         Apply the given function to the cached cosine and sine values.
         
@@ -299,7 +292,6 @@ in a sequence.
 
 
 def rotate_half(x):
-
     """
     Rotate the input array by half its length.
     
@@ -319,7 +311,6 @@ def rotate_half(x):
 
 
 def apply_rotary_pos_emb_index(q, k, cos, sin, position_id):
-
     """
     Applies rotary positional embedding index to the given inputs 'q' and 'k' based on the provided 'cos' and 'sin' values.
     
@@ -355,7 +346,6 @@ def attention_fn(
         scaling_attention_score=True,
         use_cache=False,
 ):
-
     """
     Args:
         self: The instance of the class.
@@ -461,7 +451,6 @@ def attention_fn(
 
 
 def default_init(cls, *args, **kwargs):
-
     """
     Args:
         cls (class): The class to be initialized with the provided arguments and keyword arguments.
@@ -496,7 +485,6 @@ positional information.
     def __init__(self, hidden_size, num_attention_heads,
                  layer_id, hidden_size_per_attention_head=None, bias=True,
                  params_dtype=mindspore.float32, position_encoding_2d=True):
-
         """
         Initializes a SelfAttention object.
         
@@ -559,7 +547,6 @@ positional information.
 
     @staticmethod
     def attention_mask_func(attention_scores, attention_mask):
-
         """
         This method applies an attention mask to attention scores.
         
@@ -681,7 +668,6 @@ class GEGLU(nn.Cell):
             >>> output = gelu.construct(x)
         """
     def __init__(self):
-
         """
         __init__
         
@@ -700,7 +686,6 @@ class GEGLU(nn.Cell):
         self.activation_fn = ops.gelu
 
     def construct(self, x):
-
         """
         Constructs the GEGLU (Gated Exponential Linear Unit) transformation of the input tensor.
         
@@ -761,7 +746,6 @@ class GLU(nn.Cell):
     """
     def __init__(self, hidden_size, inner_hidden_size=None,
                  layer_id=None, bias=True, activation_func=gelu, params_dtype=mindspore.float32):
-
         """
         Initializes an instance of the GLU class.
         
@@ -845,7 +829,6 @@ hidden states through self-attention and MLP layers.
             num_layers=28,
             position_encoding_2d=True,
     ):
-
         """
         Initializes a GLMBlock with the specified parameters.
         
@@ -973,7 +956,6 @@ class ChatGLMPreTrainedModel(PreTrainedModel):
         return
 
     def get_masks(self, input_ids):
-
         """
         This method named 'get_masks' is defined within the class 'ChatGLMPreTrainedModel'. It takes two parameters: self and input_ids.
         
@@ -1000,7 +982,6 @@ sequence.
         return attention_mask
 
     def get_position_ids(self, input_ids, mask_positions, use_gmasks=None):
-
         '''
             This method calculates the position ids for the given input sequence.
         
@@ -1056,7 +1037,6 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
     """
 
     def __init__(self, config: ChatGLMConfig):
-
         """
         Initializes a ChatGLMModel object with the provided configuration.
         
@@ -1135,7 +1115,6 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
             # print("Using p-tuning v2: # trainable_params = {} / {}".format(trainable_params, total_params))
 
     def get_input_embeddings(self):
-
         """
         Returns the word embeddings for the input data.
         
@@ -1163,7 +1142,6 @@ trained on a large corpus of text data to capture relationships between words.
         return self.word_embeddings
 
     def set_input_embeddings(self, new_embeddings: mindspore.Tensor):
-
         """
         This method sets the input embeddings for the ChatGLMModel.
         
@@ -1180,7 +1158,6 @@ trained on a large corpus of text data to capture relationships between words.
         self.word_embeddings = new_embeddings
 
     def get_prompt(self, batch_size, dtype=mindspore.float16):
-
         """
         This method retrieves the prompt for generating responses in the ChatGLMModel.
         
@@ -1224,7 +1201,6 @@ trained on a large corpus of text data to capture relationships between words.
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor, ...], BaseModelOutputWithPast]:
-
         '''
         Constructs the ChatGLMModel.
         
@@ -1277,7 +1253,6 @@ trained on a large corpus of text data to capture relationships between words.
                 attention_mask = self.get_masks(
                     input_ids,
                 )
-
 
             if position_ids is None:
                 MASK, gMASK = self.config.mask_token_id, self.config.gmask_token_id
@@ -1378,7 +1353,6 @@ sample, processing model responses, and facilitating chat interactions. It also 
     For a detailed understanding of the class functionality and methods, refer to the specific method descriptions.
     """
     def __init__(self, config: ChatGLMConfig):
-
         """
         Initializes the ChatGLMForConditionalGeneration class.
         
@@ -1419,7 +1393,6 @@ sample, processing model responses, and facilitating chat interactions. It also 
             self.quantize(self.config.quantization_bit)
 
     def get_output_embeddings(self):
-
         """
         Get the output embeddings for the ChatGLM model.
         
@@ -1435,7 +1408,6 @@ sample, processing model responses, and facilitating chat interactions. It also 
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Method to set new output embeddings for the ChatGLMForConditionalGeneration model.
         
@@ -1458,7 +1430,6 @@ sample, processing model responses, and facilitating chat interactions. It also 
         is_encoder_decoder: bool = False,
         standardize_cache_format: bool = False,
     ) -> Dict[str, Any]:
-
         """
         Updates the model keyword arguments for generation.
         
@@ -1512,7 +1483,6 @@ sample, processing model responses, and facilitating chat interactions. It also 
             position_ids: Optional[mindspore.Tensor] = None,
             **kwargs
     ) -> dict:
-
         """
         This method prepares inputs for generation in the ChatGLMForConditionalGeneration class.
         
@@ -1604,7 +1574,6 @@ sample, processing model responses, and facilitating chat interactions. It also 
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ):
-
         """
         Constructs the ChatGLMForConditionalGeneration model.
         
@@ -1689,7 +1658,6 @@ sample, processing model responses, and facilitating chat interactions. It also 
         )
 
     def process_response(self, response):
-
         """
         Processes the response received from the model.
         
@@ -1719,7 +1687,6 @@ sample, processing model responses, and facilitating chat interactions. It also 
 
     def chat(self, tokenizer, query: str, history: List[Tuple[str, str]] = None, max_length: int = 2048, num_beams=1,
              do_sample=True, top_p=0.7, temperature=0.95, logits_processor=None, **kwargs):
-
         """
         This method 'chat' is defined in the class 'ChatGLMForConditionalGeneration' and is used for generating a response to a given query using a conditional generation model. It takes the following
 parameters:
@@ -1769,7 +1736,6 @@ the method.
 
     def stream_chat(self, tokenizer, query: str, history: List[Tuple[str, str]] = None, max_length: int = 2048,
                     do_sample=True, top_p=0.7, temperature=0.95, logits_processor=None, **kwargs):
-
         """
         Stream chat method for generating responses based on a given query and history.
         
@@ -1821,7 +1787,6 @@ the method.
             prefix_allowed_tokens_fn: Optional[Callable[[int, mindspore.Tensor], List[int]]] = None,
             **kwargs,
     ):
-
         """
         Generates text using the ChatGLM model.
         
@@ -1934,7 +1899,6 @@ the method.
             yield input_ids
 
     def quantize(self, bits: int, **kwargs):
-
         """
         Perform quantization on the input data.
         

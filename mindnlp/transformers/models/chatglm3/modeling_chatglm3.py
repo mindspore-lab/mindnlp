@@ -40,7 +40,6 @@ class ChatGLM3Model(ChatGLM2Model):
 class ChatGLM3ForConditionalGeneration(ChatGLM2ForConditionalGeneration):
     """ChatGLM3ForConditionalGeneration"""
     def process_response(self, output, history):
-
         """
             Process the response by splitting it into metadata and content, updating the history, and replacing placeholders.
         
@@ -79,7 +78,6 @@ class ChatGLM3ForConditionalGeneration(ChatGLM2ForConditionalGeneration):
     def chat(self, tokenizer, query: str, history: List[Dict] = None, role: str = "user",
              max_length: int = 8192, num_beams=1, do_sample=True, top_p=0.8, temperature=0.8, logits_processor=None,
              **kwargs):
-
         """
         This method 'chat' in the class 'ChatGLM3ForConditionalGeneration' is used to generate a response based on the given query in a chat scenario.
         
@@ -124,7 +122,6 @@ class ChatGLM3ForConditionalGeneration(ChatGLM2ForConditionalGeneration):
     def stream_chat(self, tokenizer, query: str, history: List[Dict] = None, role: str = "user",
                     past_key_values=None,max_length: int = 8192, do_sample=True, top_p=0.8, temperature=0.8,
                     logits_processor=None, return_past_key_values=False, **kwargs):
-
         """
         This method streams a chat response based on the given input query and history using the ChatGLM3 model for conditional generation.
         
@@ -195,7 +192,6 @@ class ChatGLM3ForConditionalGeneration(ChatGLM2ForConditionalGeneration):
             return_past_key_values=False,
             **kwargs,
     ):
-
         """
             Generate sequences of tokens based on the provided input_ids using the ChatGLM3 model for conditional generation.
         

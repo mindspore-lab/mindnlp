@@ -103,7 +103,6 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
         add_prefix_space=False,
         **kwargs,
     ):
-
         """Initialize a new instance of the GPTNeoXTokenizerFast class.
         
         Args:
@@ -153,7 +152,6 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def add_eos_token(self):
-
         """
         Adds an end-of-sequence (EOS) token to the tokenizer.
         
@@ -172,7 +170,6 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def add_bos_token(self):
-
         """
         Adds a beginning of sentence (BOS) token to the tokenizer.
         
@@ -194,7 +191,6 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
 
     @add_eos_token.setter
     def add_eos_token(self, value):
-
         """
         Method to set the flag for adding an end-of-sequence token in the GPTNeoXTokenizerFast class.
         
@@ -215,7 +211,6 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
 
     @add_bos_token.setter
     def add_bos_token(self, value):
-
         """
         Sets the value of the 'add_bos_token' attribute and updates the post-processor.
         
@@ -317,7 +312,6 @@ necessary adjustments to the post-processing logic, if required.
 
     # Copied from transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast.build_inputs_with_special_tokens
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
-
         """
         This method builds inputs with special tokens for the GPTNeoXTokenizerFast class.
         
@@ -343,7 +337,6 @@ necessary adjustments to the post-processing logic, if required.
         return output
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary files of the GPTNeoXTokenizerFast model to the specified directory.
         

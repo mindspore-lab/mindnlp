@@ -62,7 +62,6 @@ XLM_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 
 def create_sinusoidal_embeddings(n_pos, dim, out):
-
     """
     Creates sinusoidal embeddings for positional encoding.
     
@@ -137,7 +136,6 @@ specific criteria, and constructing the attention output based on input, masks, 
     NEW_ID = itertools.count()
 
     def __init__(self, n_heads, dim, config):
-
         """Initialize a MultiHeadAttention object.
         
         Args:
@@ -167,7 +165,6 @@ specific criteria, and constructing the attention output based on input, masks, 
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
-
         """
         Prunes the attention heads in a MultiHeadAttention layer.
         
@@ -292,7 +289,6 @@ forward pass.
     Note: This class assumes the presence of nn, ops, and apply_chunking_to_forward functions and objects for neural network and tensor operations.
     """
     def __init__(self, in_dim, dim_hidden, out_dim, config):
-
         """
         Initializes an instance of the TransformerFFN class.
         
@@ -319,7 +315,6 @@ forward pass.
         self.seq_len_dim = 1
 
     def construct(self, input):
-
         """
         Method 'construct' in the class 'TransformerFFN'.
         
@@ -336,7 +331,6 @@ forward pass.
         return apply_chunking_to_forward(self.ff_chunk, self.chunk_size_feed_forward, self.seq_len_dim, input)
 
     def ff_chunk(self, input):
-
         """
         Method 'ff_chunk' in the class 'TransformerFFN'.
         
@@ -370,7 +364,6 @@ class XLMPreTrainedModel(PreTrainedModel):
 
     @property
     def dummy_inputs(self):
-
         """
         Generates dummy inputs for the XLMPreTrainedModel.
         
@@ -481,7 +474,6 @@ and returns the model output or a BaseModelOutput object depending on the return
     Overall, XLMModel provides a comprehensive implementation of the XLM transformer model for cross-lingual language tasks.
     """
     def __init__(self, config):
-
         """
         This method initializes an instance of the XLMModel class with the provided configuration.
         
@@ -575,7 +567,6 @@ and returns the model output or a BaseModelOutput object depending on the return
         self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
 
     def get_input_embeddings(self):
-
         """
         Retrieve the input embeddings from the XLMModel.
         
@@ -591,7 +582,6 @@ and returns the model output or a BaseModelOutput object depending on the return
         return self.embeddings
 
     def set_input_embeddings(self, new_embeddings):
-
         """Set the input embeddings for the XLMModel.
         
         This method sets the input embeddings for the XLMModel using the given new_embeddings.
@@ -632,7 +622,6 @@ and returns the model output or a BaseModelOutput object depending on the return
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutput]:
-
         '''
         Constructs the XLM model.
         
@@ -785,7 +774,6 @@ class XLMPredLayer(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initialize the XLMPredLayer class.
         
@@ -866,7 +854,6 @@ model for language modeling tasks and returns the masked language model output.
     _tied_weights_keys = ["pred_layer.proj.weight"]
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the XLMWithLMHeadModel class.
         
@@ -888,7 +875,6 @@ model for language modeling tasks and returns the masked language model output.
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings of the XLMWithLMHeadModel.
         
@@ -904,7 +890,6 @@ model for language modeling tasks and returns the masked language model output.
         return self.pred_layer.proj
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Method to set new output embeddings for the XLM model with a language modeling head.
         
@@ -924,7 +909,6 @@ model for language modeling tasks and returns the masked language model output.
         self.pred_layer.proj = new_embeddings
 
     def prepare_inputs_for_generation(self, input_ids, **kwargs):
-
         """
         Prepare the inputs for generation in XLMWithLMHeadModel.
         
@@ -1035,7 +1019,6 @@ class XLMForSequenceClassification(XLMPreTrainedModel):
         ValueError: If the number of labels is invalid or the problem type is not recognized.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the XLMForSequenceClassification class.
         
@@ -1151,7 +1134,6 @@ the expected behavior of the model during inference.
     Note: This class is intended for use with the MindSpore framework.
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the 'XLMForQuestionAnsweringSimple' class.
         
@@ -1287,7 +1269,6 @@ the predicted start and end positions, along with other optional outputs dependi
         
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the XLMForQuestionAnswering class.
         
@@ -1433,7 +1414,6 @@ XLMForTokenClassification model and performs token classification.
     
     """
     def __init__(self, config):
-
         """Initialize the XLMForTokenClassification class.
         
             Args:
@@ -1561,7 +1541,6 @@ choice classification loss.
         attentions = outputs.attentions
     """
     def __init__(self, config, *inputs, **kwargs):
-
         """
         Initializes the XLMForMultipleChoice class.
         

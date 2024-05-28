@@ -124,7 +124,6 @@ class BigBirdTokenizerFast(PreTrainedTokenizerFast):
         cls_token="[CLS]",
         **kwargs,
     ):
-
         """
         Initializes a new instance of the BigBirdTokenizerFast class.
         
@@ -201,7 +200,6 @@ class BigBirdTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def can_save_slow_tokenizer(self) -> bool:
-
         """
         Check if the slow tokenizer can be saved.
         
@@ -312,7 +310,6 @@ class BigBirdTokenizerFast(PreTrainedTokenizerFast):
     def save_vocabulary(
         self, save_directory: str, filename_prefix: Optional[str] = None
     ) -> Tuple[str]:
-
         """
         Saves the vocabulary for a slow tokenizer.
         

@@ -106,7 +106,6 @@ class SpearmanCorrelation(Metric):
 
     """
     def __init__(self, name='SpearmanCorrelation'):
-
         r"""
         Initializes a SpearmanCorrelation object.
         

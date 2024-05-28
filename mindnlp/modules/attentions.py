@@ -50,7 +50,6 @@ class ScaledDotAttention(nn.Cell):
     """
 
     def __init__(self, dropout=0.9):
-
         r"""
         Initializes an instance of the ScaledDotAttention class.
         
@@ -126,7 +125,6 @@ class AdditiveAttention(nn.Cell):
         (2, 32, 512) (2, 32, 20)
     """
     def __init__(self, hidden_dims, dropout=0.9):
-
         r"""
         Args:
             self (object): The instance of the class AdditiveAttention.
@@ -211,7 +209,6 @@ class LinearAttention(nn.Cell):
         (2, 32, 512) (2, 32, 20)
     """
     def __init__(self, query_dim, key_dim, hidden_dim, dropout=0.9):
-
         r"""
         Initializes an instance of the LinearAttention class.
         
@@ -298,7 +295,6 @@ class CosineAttention(nn.Cell):
         (2, 32, 512) (2, 32, 20)
     """
     def __init__(self, dropout=0.9):
-
         r"""
         Initializes an instance of the CosineAttention class.
         
@@ -411,7 +407,6 @@ class BinaryAttention(nn.Cell):
     """
 
     def __init__(self):
-
         r"""
         Initializes an instance of the BinaryAttention class.
         
@@ -477,7 +472,6 @@ class SelfAttention(nn.Cell):
         (2, 32, 512) (2, 32, 20)
     """
     def __init__(self, d_model=512, dropout_rate=0.1, bias=False, attention_mode="dot"):
-
         r"""
         Initializes a SelfAttention object.
         
@@ -576,7 +570,6 @@ class LocationAwareAttention(nn.Cell):
     """
 
     def __init__(self, hidden_dim, smoothing=False):
-
         r"""
         Initializes an instance of the LocationAwareAttention class.
         

@@ -50,7 +50,6 @@ class MambaMixer(nn.Cell):
     """
 
     def __init__(self, config, layer_idx):
-
         """
         Initializes a MambaMixer instance.
         

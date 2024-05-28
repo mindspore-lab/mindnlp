@@ -60,7 +60,6 @@ DISTILBERT_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 # Copied from transformers.models.llama.modeling_llama._get_unpad_data
 def _get_unpad_data(attention_mask):
-
     """
     This function takes an attention_mask as input and performs the following operations:
     
@@ -92,7 +91,6 @@ def _get_unpad_data(attention_mask):
 
 
 def create_sinusoidal_embeddings(n_pos: int, dim: int, out: mindspore.Tensor):
-
     """
     Create sinusoidal embeddings for given positions and dimensions.
     
@@ -143,7 +141,6 @@ included in the output.
     
     """
     def __init__(self, config: PretrainedConfig):
-
         """
         Initializes an instance of the Embeddings class.
         
@@ -236,7 +233,6 @@ class MultiHeadSelfAttention(nn.Cell):
           Constructs the attention weights and contextualized layer.
     """
     def __init__(self, config: PretrainedConfig):
-
         """
         Initializes the MultiHeadSelfAttention class.
         
@@ -274,7 +270,6 @@ class MultiHeadSelfAttention(nn.Cell):
         self.attention_head_size = self.dim // self.n_heads
 
     def prune_heads(self, heads: List[int]):
-
         """
         This method 'prune_heads' is defined within the 'MultiHeadSelfAttention' class and is used to prune specific attention heads in the multi-head self-attention mechanism.
         
@@ -395,7 +390,6 @@ class FFN(nn.Cell):
     
     """
     def __init__(self, config: PretrainedConfig):
-
         """
         Initializes an instance of the FFN (Feed Forward Network) class.
         
@@ -424,7 +418,6 @@ class FFN(nn.Cell):
         self.activation = get_activation(config.activation)
 
     def construct(self, input: mindspore.Tensor) -> mindspore.Tensor:
-
         """Constructs the feedforward network.
         
         Args:
@@ -440,7 +433,6 @@ class FFN(nn.Cell):
         return apply_chunking_to_forward(self.ff_chunk, self.chunk_size_feed_forward, self.seq_len_dim, input)
 
     def ff_chunk(self, input: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Performs a forward pass through the feedforward network (FFN) chunk.
         
@@ -516,7 +508,6 @@ class TransformerBlock(nn.Cell):
                 TypeError: If sa_output is not a tuple when output_attentions is True.
     """
     def __init__(self, config: PretrainedConfig):
-
         """
         Initialize a TransformerBlock instance with the provided configuration.
         
@@ -631,7 +622,6 @@ operations.
     
     """
     def __init__(self, config: PretrainedConfig):
-
         """
         Initializes an instance of the Transformer class.
         
@@ -682,7 +672,6 @@ operations.
         for i, layer_module in enumerate(self.layer):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_state,)
-
 
             layer_outputs = layer_module(
                 hidden_state,
@@ -764,7 +753,6 @@ to initialize the model, resize position embeddings, get position embeddings, re
     Note: This class assumes familiarity with the DistilBERT model architecture and its specific components.
     """
     def __init__(self, config: PretrainedConfig):
-
         """
         Initializes a new instance of the DistilBertModel class.
         
@@ -833,7 +821,6 @@ to initialize the model, resize position embeddings, get position embeddings, re
                 )
 
     def get_input_embeddings(self) -> nn.Embedding:
-
         """
         Retrieve the input embeddings for the DistilBertModel.
         
@@ -853,7 +840,6 @@ to initialize the model, resize position embeddings, get position embeddings, re
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, new_embeddings: nn.Embedding):
-
         """
         Sets the input embeddings for the DistilBertModel.
         
@@ -895,7 +881,6 @@ to initialize the model, resize position embeddings, get position embeddings, re
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[BaseModelOutput, Tuple[mindspore.Tensor, ...]]:
-
         """
         Constructs a DistilBertModel.
         
@@ -982,7 +967,6 @@ Tuple[mindspore.Tensor, ...]]: Constructs the DistilBertForMaskedLM model.
     _tied_weights_keys = ["vocab_projector.weight"]
 
     def __init__(self, config: PretrainedConfig):
-
         """
         Initializes a new instance of DistilBertForMaskedLM.
         
@@ -1032,7 +1016,6 @@ Tuple[mindspore.Tensor, ...]]: Constructs the DistilBertForMaskedLM model.
         self.distilbert.resize_position_embeddings(new_num_position_embeddings)
 
     def get_output_embeddings(self) -> nn.Cell:
-
         """
         Retrieves the output embeddings of the DistilBertForMaskedLM model.
         
@@ -1049,7 +1032,6 @@ Tuple[mindspore.Tensor, ...]]: Constructs the DistilBertForMaskedLM model.
         return self.vocab_projector
 
     def set_output_embeddings(self, new_embeddings: nn.Cell):
-
         """
         This method sets the output embeddings for the DistilBertForMaskedLM model.
         
@@ -1155,7 +1137,6 @@ class DistilBertForSequenceClassification(DistilBertPreTrainedModel):
                 If `return_dict` is `True`, returns a dictionary of outputs with keys `loss`, `logits`, `hidden_states`, and `attentions`.
     """
     def __init__(self, config: PretrainedConfig):
-
         """Initialize a DistilBertForSequenceClassification model.
         
         Args:
@@ -1295,7 +1276,6 @@ QuestionAnsweringModelOutput object or a tuple of tensors depending on the value
     Please note that this class assumes the existence of a DistilBERT model and a dense layer for question answering outputs (qa_outputs), which are initialized in the __init__ method.
     """
     def __init__(self, config: PretrainedConfig):
-
         """
         Initializes a new instance of the DistilBertForQuestionAnswering class.
         
@@ -1438,7 +1418,6 @@ Tuple[mindspore.Tensor, ...]]: Constructs the model for token classification tas
         This class is intended to be subclassed when implementing a custom DistilBERT model for token classification tasks.
     """
     def __init__(self, config: PretrainedConfig):
-
         """
         Initializes a new instance of the `DistilBertForTokenClassification` class.
         
@@ -1601,7 +1580,6 @@ of shape `(batch_size, num_heads, sequence_length, sequence_length)`.
         logits = outputs.logits
     """
     def __init__(self, config: PretrainedConfig):
-
         """
         __init__
         

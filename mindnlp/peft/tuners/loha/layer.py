@@ -55,7 +55,6 @@ adapter parameters, as well as to calculate delta weights and apply the adaptati
     # other_param_names is defined on parent class
 
     def __init__(self, base_layer: nn.Cell):
-
         r"""
         Initializes the LoHaLayer class.
         
@@ -82,8 +81,6 @@ adapter parameters, as well as to calculate delta weights and apply the adaptati
 
     @property
     def _available_adapters(self) -> Set[str]:
-
-        
         """
         Method to retrieve the set of available adapters in the LoHaLayer class.
         
@@ -109,7 +106,6 @@ adapter parameters, as well as to calculate delta weights and apply the adaptati
     def create_adapter_parameters(
         self, adapter_name: str, r: int, shape: Tuple[int, ...]
     ):
-
         r"""
         This method creates adapter parameters for the LoHaLayer class.
         
@@ -173,7 +169,6 @@ adapter parameters, as well as to calculate delta weights and apply the adaptati
 
     # TODO
     def reset_adapter_parameters(self, adapter_name: str):
-
         r"""
         Resets the adapter parameters for the specified adapter name.
         
@@ -227,7 +222,6 @@ adapter parameters, as well as to calculate delta weights and apply the adaptati
             )
 
     def reset_adapter_parameters_random(self, adapter_name: str):
-
         r"""
         Resets the adapter parameters randomly for the specified adapter name in the LoHaLayer class.
         
@@ -366,7 +360,6 @@ adapter parameters, as well as to calculate delta weights and apply the adaptati
         self.set_adapter(self.active_adapters)
 
     def get_delta_weight(self, adapter_name: str) -> mindspore.Tensor:
-
         r"""
         This method calculates the delta weight for a given adapter.
         
@@ -417,7 +410,6 @@ adapter parameters, as well as to calculate delta weights and apply the adaptati
         return weight
 
     def construct(self, x: mindspore.Tensor, *args, **kwargs) -> mindspore.Tensor:
-
         r"""
         This method constructs the output tensor by applying various operations based on the input tensor and layer configurations.
         
@@ -475,7 +467,6 @@ class Linear(LoHaLayer):
         init_weights: bool = True,
         **kwargs,
     ):
-
         r"""
         __init__
         
@@ -509,7 +500,6 @@ class Linear(LoHaLayer):
     def _get_delta_activations(
         self, adapter_name: str, input: mindspore.Tensor, *args: Any, **kwargs: Any
     ) -> mindspore.Tensor:
-
         r"""
         Get the delta activations for the specified adapter and input.
         
@@ -530,7 +520,6 @@ class Linear(LoHaLayer):
         return ops.dense(input, delta_weight)
 
     def __repr__(self) -> str:
-
         r"""
         Docstring for __repr__ method in the class Linear.
         
@@ -562,7 +551,6 @@ class Conv2d(LoHaLayer):
         init_weights: bool = True,
         **kwargs,
     ):
-
         r"""
         Initializes an instance of the Conv2d class.
         
@@ -602,7 +590,6 @@ class Conv2d(LoHaLayer):
     def _get_delta_activations(
         self, adapter_name: str, input: mindspore.Tensor, *args: Any, **kwargs: Any
     ) -> mindspore.Tensor:
-
         r"""
         This method calculates the delta activations for the given input tensor using the specified adapter_name.
         
@@ -632,7 +619,6 @@ class Conv2d(LoHaLayer):
         )
 
     def __repr__(self) -> str:
-
         r"""
         This method returns a string representation of the object.
         
@@ -671,7 +657,6 @@ input weights.
     """
 
     def __init__(self):
-
         r"""
         Initializes an instance of the HadaWeight class.
         
@@ -687,7 +672,6 @@ input weights.
         super().__init__()
 
     def construct(self, w1a, w1b, w2a, w2b, scale=mindspore.tensor(1)):
-
         r"""
         Constructs the Hadamard weight for the given inputs.
         
@@ -710,7 +694,6 @@ input weights.
         return diff_weight
 
     def bprop(self, w1a, w1b, w2a, w2b, scale, out, dout):
-
         r"""
         This method, bprop, is a part of the HadaWeight class and is used for backpropagation calculations. It takes in the following parameters:
         
@@ -762,7 +745,6 @@ einsum operations and computing gradients for w1a, w1b, t1, w2a, w2b, and t2.
     This class is designed to be used as a building block for neural network models that involve HadaWeightCP operations and provides an efficient and optimized implementation for such operations.
     """
     def __init__(self):
-
         r"""
         Initializes a new instance of the HadaWeightCP class.
         
@@ -778,7 +760,6 @@ einsum operations and computing gradients for w1a, w1b, t1, w2a, w2b, and t2.
         super().__init__()
 
     def construct(self, t1, w1a, w1b, t2, w2a, w2b, scale=mindspore.tensor(1)):
-
         r"""
         Constructs a weighted tensor product using the HadaWeightCP method.
         
@@ -803,7 +784,6 @@ einsum operations and computing gradients for w1a, w1b, t1, w2a, w2b, and t2.
         return rebuild1 * rebuild2 * scale
 
     def bprop(self, t1, w1a, w1b, t2, w2a, w2b, scale, out, dout):
-
         r"""
         This method calculates the backward propagation for the HadaWeightCP class.
         
@@ -859,8 +839,6 @@ einsum operations and computing gradients for w1a, w1b, t1, w2a, w2b, and t2.
 
 
 def make_weight(w1a, w1b, w2a, w2b, scale):
-
-    
     """
     Args:
         w1a (float): The weight value for the first item in the first set.
@@ -881,7 +859,6 @@ def make_weight(w1a, w1b, w2a, w2b, scale):
 
 
 def make_weight_cp(t1, w1a, w1b, t2, w2a, w2b, scale):
-
     r"""
     This function takes in seven parameters: t1, w1a, w1b, t2, w2a, w2b, and scale.
     

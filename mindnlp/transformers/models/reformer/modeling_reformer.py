@@ -68,7 +68,6 @@ ReformerEncoderOutput = namedtuple(
 
 
 def _stable_argsort(vector, dim):
-
     """
     Args:
         vector (ndarray): The input vector to be sorted.
@@ -89,7 +88,6 @@ def _stable_argsort(vector, dim):
 
 
 def _get_least_common_mult_chunk_len(config):
-
     """
     Args:
         config (object): The configuration object containing parameters for attention layers.
@@ -120,7 +118,6 @@ def _get_least_common_mult_chunk_len(config):
 
 
 def _get_min_chunk_len(config):
-
     """
     Args:
         config (object): A configuration object containing the following attributes:
@@ -154,7 +151,6 @@ class AxialPositionEmbeddings(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         This method initializes an instance of the AxialPositionEmbeddings class.
         
@@ -199,7 +195,6 @@ class AxialPositionEmbeddings(nn.Cell):
         self.weights = ParameterTuple(self.weights)
 
     def construct(self, position_ids):
-
         """
         This method constructs position encodings based on the given position IDs and axial position weights.
         
@@ -287,7 +282,6 @@ class PositionEmbeddings(nn.Cell):
     """Constructs conventional position embeddings of shape `[max_pos_embeddings, hidden_size]`."""
 
     def __init__(self, config):
-
         """
         Initializes an instance of the PositionEmbeddings class.
         
@@ -309,7 +303,6 @@ class PositionEmbeddings(nn.Cell):
         self.embedding = nn.Embedding(config.max_position_embeddings, config.hidden_size)
 
     def construct(self, position_ids):
-
         """
         Constructs position embeddings based on given position IDs.
         
@@ -334,7 +327,6 @@ class ReformerEmbeddings(nn.Cell):
     """Construct the embeddings from word, position and token_type embeddings."""
 
     def __init__(self, config):
-
         """
         Initializes the ReformerEmbeddings class.
         
@@ -363,7 +355,6 @@ class ReformerEmbeddings(nn.Cell):
         )
 
     def construct(self, input_ids=None, position_ids=None, inputs_embeds=None, start_idx_pos_encodings=0):
-
         """
         Constructs the embeddings for the Reformer model.
         
@@ -520,7 +511,6 @@ vectors, and other related operations.
     Note: This class is designed for implementing efficient self-attention mechanisms using Locality Sensitive Hashing.
     """
     def __init__(self, config):
-
         """
         Initializes the LSHSelfAttention class.
         
@@ -575,7 +565,6 @@ vectors, and other related operations.
         output_attentions=False,
         **kwargs,
     ):
-
         """
         Constructs the LSH self-attention mechanism.
         
@@ -826,7 +815,6 @@ vectors, and other related operations.
         return LSHSelfAttentionOutput(hidden_states=out_vectors, attention_probs=attention_probs, buckets=buckets)
 
     def _query_per_attn_head(self, hidden_states):
-
         """
         This method computes the query key vectors for each attention head.
         
@@ -849,7 +837,6 @@ vectors, and other related operations.
         return query_key_vectors
 
     def _value_per_attn_head(self, hidden_states):
-
         """
         This method calculates the value vectors per attention head in the LSHSelfAttention class.
         
@@ -872,7 +859,6 @@ vectors, and other related operations.
         return value_vectors
 
     def _hash_vectors(self, vectors, num_hashes, attention_mask, increase_num_buckets=False):
-
         """
         This method '_hash_vectors' is defined in the class 'LSHSelfAttention', and it performs hashing operations on input vectors.
         
@@ -967,7 +953,6 @@ vectors, and other related operations.
         return offset_buckets
 
     def _get_sorted_bucket_idx_and_undo_sorted_bucket_idx(self, sequence_length, buckets, num_hashes):
-
         """
         Method to get the sorted bucket indices and create an undo mapping for sorting purposes in LSHSelfAttention class.
         
@@ -1002,7 +987,6 @@ vectors, and other related operations.
         return sorted_bucket_idx, undo_sorted_bucket_idx
 
     def _set_num_buckets(self, sequence_length):
-
         """
         This method _set_num_buckets calculates the number of buckets to be used for locality-sensitive hashing (LSH) self-attention in the LSHSelfAttention class.
         
@@ -1046,7 +1030,6 @@ vectors, and other related operations.
         do_standard_self_attention,
         do_cached_attention,
     ):
-
         '''
         This method performs LSH (Locality Sensitive Hashing) self-attention calculation for the LSHSelfAttention class.
         

@@ -51,7 +51,6 @@ logger = logging.get_logger(__name__)
 
 
 def no_collate_fn(items):
-
     """
     This function checks if the input list 'items' has a length of 1, raising a ValueError if not. 
     It is intended to be used with a batch size of 1.
@@ -68,7 +67,6 @@ def no_collate_fn(items):
 
 
 def _pad(items, key, padding_value, padding_side):
-
     """
     Args:
         items (list): A list of dictionaries representing items, where each dictionary contains the key-value pair for the specified key.
@@ -132,7 +130,6 @@ def _pad(items, key, padding_value, padding_side):
 
 
 def pad_collate_fn(tokenizer, feature_extractor):
-
     """
     This function takes in two parameters, tokenizer and feature_extractor, and returns None.
     
@@ -372,7 +369,6 @@ class PipelineException(Exception):
     """
 
     def __init__(self, task: str, model: str, reason: str):
-
         """
         Initializes a new instance of PipelineException.
         
@@ -401,7 +397,6 @@ class ArgumentHandler(ABC):
 
     @abstractmethod
     def __call__(self, *args, **kwargs):
-
         """
         This method is an abstract method that should be implemented in a subclass. It is intended to serve as a generic callable interface for argument handling.
         
@@ -446,7 +441,6 @@ class PipelineDataFormat:
         column: Optional[str],
         overwrite: bool = False,
     ):
-
         """Initializes an instance of the PipelineDataFormat class.
         
         Args:
@@ -484,7 +478,6 @@ class PipelineDataFormat:
 
     @abstractmethod
     def __iter__(self):
-
         """
         This method '__iter__' in the class 'PipelineDataFormat' is used to define an iterator for instances of the class.
         
@@ -582,7 +575,6 @@ class CsvPipelineDataFormat(PipelineDataFormat):
         column: Optional[str],
         overwrite=False,
     ):
-
         """
         Initializes an instance of the CsvPipelineDataFormat class.
         
@@ -605,7 +597,6 @@ class CsvPipelineDataFormat(PipelineDataFormat):
         super().__init__(output_path, input_path, column, overwrite=overwrite)
 
     def __iter__(self):
-
         """
         Iterates over the rows of a CSV file and yields the specified columns as a dictionary.
         
@@ -683,7 +674,6 @@ class JsonPipelineDataFormat(PipelineDataFormat):
         column: Optional[str],
         overwrite=False,
     ):
-
         """
         Initializes a JsonPipelineDataFormat object.
         
@@ -708,7 +698,6 @@ class JsonPipelineDataFormat(PipelineDataFormat):
             self._entries = json.load(f)
 
     def __iter__(self):
-
         """
         Iterates over the entries of the JsonPipelineDataFormat object.
         
@@ -757,7 +746,6 @@ class PipedPipelineDataFormat(PipelineDataFormat):
     """
 
     def __iter__(self):
-
         '''
         Iterates over input lines from the standard input and yields formatted data.
         
@@ -801,7 +789,6 @@ are extracted from the corresponding line elements. If the column attribute is n
         print(data)
 
     def save_binary(self, data: Union[dict, List[dict]]) -> str:
-
         """
         Save binary data to an output file path.
         
@@ -833,7 +820,6 @@ class _ScikitCompat(ABC):
 
     @abstractmethod
     def transform(self, X):
-
         """
         This method named 'transform' in the class '_ScikitCompat' is an abstract method that must be implemented by subclasses.
         
@@ -851,7 +837,6 @@ class _ScikitCompat(ABC):
 
     @abstractmethod
     def predict(self, X):
-
         """
         Predicts the target values for the input data.
         
@@ -899,7 +884,6 @@ class Pipeline(_ScikitCompat):
         binary_output: bool = False,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the Pipeline class.
         
@@ -1062,7 +1046,6 @@ class Pipeline(_ScikitCompat):
         raise NotImplementedError("postprocess not implemented")
 
     def forward(self, model_inputs, **forward_params):
-
         """
         This method performs the forward pass of the pipeline model.
         
@@ -1080,7 +1063,6 @@ class Pipeline(_ScikitCompat):
         return model_outputs
 
     def __call__(self, inputs, *args, num_workers=None, batch_size=None, **kwargs):
-
         """
         Performs the main processing logic for the Pipeline class.
         
@@ -1136,7 +1118,6 @@ class Pipeline(_ScikitCompat):
             return self.run_single(inputs, preprocess_params, forward_params, postprocess_params)
 
     def run_multi(self, inputs, preprocess_params, forward_params, postprocess_params):
-
         """
         Method that runs a series of input items through the pipeline.
         
@@ -1156,7 +1137,6 @@ class Pipeline(_ScikitCompat):
         return [self.run_single(item, preprocess_params, forward_params, postprocess_params) for item in inputs]
 
     def run_single(self, inputs, preprocess_params, forward_params, postprocess_params):
-
         """
         This method 'run_single' is a member of the 'Pipeline' class and is responsible for executing a single run of the pipeline.
         
@@ -1179,7 +1159,6 @@ class Pipeline(_ScikitCompat):
         return outputs
 
     def iterate(self, inputs, preprocess_params, forward_params, postprocess_params):
-
         """
         Iterates through the input data and yields the result of running each input through the pipeline.
         
@@ -1240,7 +1219,6 @@ the preprocess_params.
         - The preprocess_params, forward_params, and postprocess_params should be provided as dictionaries with the required parameters for each step of chunk processing.
     """
     def run_single(self, inputs, preprocess_params, forward_params, postprocess_params):
-
         """
         This method 'run_single' is part of the 'ChunkPipeline' class and is used to process inputs through a pipeline of preprocessing, forward pass, and postprocessing.
         
@@ -1297,7 +1275,6 @@ to a dictionary. The class maintains a dictionary of supported tasks and their r
         - The 'translation_XX_to_YY' format is expected for certain translation tasks.
     """
     def __init__(self, supported_tasks: Dict[str, Any], task_aliases: Dict[str, str]) -> None:
-
         """
         Initializes an instance of the PipelineRegistry class.
         
@@ -1316,7 +1293,6 @@ to a dictionary. The class maintains a dictionary of supported tasks and their r
         self.task_aliases = task_aliases
 
     def get_supported_tasks(self) -> List[str]:
-
         """
         Retrieve a list of supported tasks from the PipelineRegistry.
         
@@ -1336,7 +1312,6 @@ to a dictionary. The class maintains a dictionary of supported tasks and their r
         return supported_task
 
     def check_task(self, task: str) -> Tuple[str, Dict, Any]:
-
         """
         Checks if a given task is supported by the PipelineRegistry.
         
@@ -1388,7 +1363,6 @@ to a dictionary. The class maintains a dictionary of supported tasks and their r
         default: Optional[Dict] = None,
         type: Optional[str] = None,
     ) -> None:
-
         """
         Register a pipeline in the PipelineRegistry.
         
@@ -1442,7 +1416,6 @@ to a dictionary. The class maintains a dictionary of supported tasks and their r
         pipeline_class._registered_impl = {task: task_impl}
 
     def to_dict(self):
-
         """
         Converts the PipelineRegistry object into a dictionary representation.
         

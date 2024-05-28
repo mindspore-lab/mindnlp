@@ -72,7 +72,6 @@ def _get_default_logging_level():
 
 
 def _get_library_name() -> str:
-
     """
     Returns the name of the library based on the module name.
     
@@ -84,7 +83,6 @@ def _get_library_name() -> str:
 
 
 def _get_library_root_logger() -> logging.Logger:
-
     """
     Retrieves the root logger for the library.
     
@@ -98,7 +96,6 @@ def _get_library_root_logger() -> logging.Logger:
 
 
 def _configure_library_root_logger() -> None:
-
     """
     This function configures the root logger for the library.
     
@@ -134,7 +131,6 @@ def _configure_library_root_logger() -> None:
 
 
 def _reset_library_root_logger() -> None:
-
     """
     Resets the root logger of the library to its default state.
     
@@ -160,7 +156,6 @@ def _reset_library_root_logger() -> None:
 
 
 def get_log_levels_dict():
-
     """
     Returns a dictionary of log levels.
     
@@ -384,7 +379,6 @@ class EmptyTqdm:
     """Dummy tqdm which doesn't do anything."""
 
     def __init__(self, *args, **kwargs):
-
         """
         Initializes an instance of the EmptyTqdm class.
         
@@ -400,7 +394,6 @@ class EmptyTqdm:
         self._iterator = args[0] if args else None
 
     def __iter__(self):
-
         """
         This method implements the iterator protocol for the EmptyTqdm class.
         
@@ -423,7 +416,6 @@ class EmptyTqdm:
         return empty_fn
 
     def __enter__(self):
-
         """
         __enter__
         
@@ -441,7 +433,6 @@ class EmptyTqdm:
         return self
 
     def __exit__(self, type_, value, traceback):
-
         """
         __exit__ method in the EmptyTqdm class.
         
@@ -472,7 +463,6 @@ in conjunction with the tqdm_lib module for displaying progress bars during iter
 Otherwise, it falls back to using an EmptyTqdm instance for progress tracking. The set_lock method allows users to specify a lock for thread safety, and the get_lock method retrieves the current lock if one
 has been set."""
     def __call__(self, *args, **kwargs):
-
         """
         This method __call__ in the class _tqdm_cls is used to conditionally return either a tqdm object or an EmptyTqdm object based on the _tqdm_active flag.
         
@@ -491,7 +481,6 @@ exceptions may be raised.
         return EmptyTqdm(*args, **kwargs)
 
     def set_lock(self, *args, **kwargs):
-
         """
         Method to set the lock for the _tqdm_cls instance.
         
@@ -512,7 +501,6 @@ exceptions may be raised.
             return tqdm_lib.tqdm.set_lock(*args, **kwargs)
 
     def get_lock(self):
-
         """
         This method is used to retrieve the lock used by the _tqdm_cls class.
         

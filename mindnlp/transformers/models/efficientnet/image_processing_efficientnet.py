@@ -101,7 +101,6 @@ class EfficientNetImageProcessor(BaseImageProcessor):
         include_top: bool = True,
         **kwargs,
     ) -> None:
-
         """
             Initializes an instance of the EfficientNetImageProcessor class.
         

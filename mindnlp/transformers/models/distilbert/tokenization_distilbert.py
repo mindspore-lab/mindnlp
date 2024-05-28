@@ -150,7 +150,6 @@ class DistilBertTokenizer(PreTrainedTokenizer):
         strip_accents=None,
         **kwargs,
     ):
-
         """
         Args:
             self: The instance of the class.
@@ -206,7 +205,6 @@ class DistilBertTokenizer(PreTrainedTokenizer):
     @property
     # Copied from transformers.models.bert.tokenization_bert.BertTokenizer.do_lower_case
     def do_lower_case(self):
-
         """ 
         Method to get the flag indicating if the tokenizer should convert all text to lower case.
         
@@ -224,7 +222,6 @@ class DistilBertTokenizer(PreTrainedTokenizer):
     @property
     # Copied from transformers.models.bert.tokenization_bert.BertTokenizer.vocab_size
     def vocab_size(self):
-
         """
         Get the vocabulary size of the DistilBertTokenizer.
         
@@ -242,7 +239,6 @@ class DistilBertTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.bert.tokenization_bert.BertTokenizer.get_vocab
     def get_vocab(self):
-
         """
         Returns the vocabulary of the DistilBertTokenizer instance.
         
@@ -270,7 +266,6 @@ class DistilBertTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.bert.tokenization_bert.BertTokenizer._tokenize
     def _tokenize(self, text, split_special_tokens=False):
-
         """
         Tokenizes a given text into a list of tokens using the DistilBertTokenizer.
         
@@ -414,7 +409,6 @@ class DistilBertTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.bert.tokenization_bert.BertTokenizer.save_vocabulary
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Saves the vocabulary of the DistilBertTokenizer to a file.
         
@@ -494,7 +488,6 @@ class BasicTokenizer:
         strip_accents=None,
         do_split_on_punc=True,
     ):
-
         """
         Initializes an instance of the BasicTokenizer class.
         
@@ -647,7 +640,6 @@ class WordpieceTokenizer:
     """Runs WordPiece tokenization."""
 
     def __init__(self, vocab, unk_token, max_input_chars_per_word=100):
-
         """
         Initializes a WordpieceTokenizer object.
         

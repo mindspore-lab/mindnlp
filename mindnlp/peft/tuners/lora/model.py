@@ -49,8 +49,6 @@ from .layer import Conv2d, LoraLayer, dispatch_default
 
 
 def _adapter_names_pre_forward_hook(target, args, kwargs, adapter_names):
-
-    
     """
     Args:
         target (object): The target object to which the hook is applied.
@@ -162,7 +160,6 @@ class LoraModel(BaseTuner):
 
     @staticmethod
     def _check_target_cell_exists(lora_config, key):
-
         r"""
         Checks if the target cell exists in the LoRa configuration.
         
@@ -215,7 +212,6 @@ class LoraModel(BaseTuner):
         parent,
         current_key,
     ):
-
         r"""
         Creates a new cell and replaces an existing cell in the LoraModel.
         
@@ -299,7 +295,6 @@ class LoraModel(BaseTuner):
             self._replace_cell(parent, target_name, new_cell, target)
 
     def _replace_cell(self, parent, child_name, new_cell, child):
-
         r"""
         This method replaces a cell within the LoraModel by updating the specified child of the parent with a new cell.
         
@@ -336,7 +331,6 @@ class LoraModel(BaseTuner):
                 new_cell.state = child.state
 
     def _mark_only_adapters_as_trainable(self, model: nn.Module) -> None:
-
         r"""
         Marks only specific adapters in the model as trainable based on the specified bias configuration.
         
@@ -372,7 +366,6 @@ class LoraModel(BaseTuner):
 
     @staticmethod
     def _create_new_cell(lora_config, adapter_name, target, **kwargs):
-
         r"""
         Method to create a new cell based on the provided parameters.
         
@@ -406,7 +399,6 @@ class LoraModel(BaseTuner):
 
         return new_cell
 
-
     def __getattr__(self, name: str):
         """Forward missing attributes to the wrapped cell."""
         try:
@@ -415,7 +407,6 @@ class LoraModel(BaseTuner):
             return getattr(self.model, name)
 
     def get_peft_config_as_dict(self, inference: bool = False):
-
         r"""
         Returns a dictionary representation of the PEFT config.
         
@@ -456,7 +447,6 @@ class LoraModel(BaseTuner):
         return config
 
     def _set_adapter_layers(self, enabled: bool = True) -> None:
-
         r"""
         Sets the adapter layers for the LoraModel.
         
@@ -521,7 +511,6 @@ class LoraModel(BaseTuner):
 
     @contextmanager
     def _enable_peft_forward_hooks(self, *args, **kwargs):
-
         r"""
         Enable PEFT forward hooks for the LoraModel class.
         
@@ -568,7 +557,6 @@ class LoraModel(BaseTuner):
 
     @staticmethod
     def _prepare_adapter_config(peft_config, model_config):
-
         r"""
         Prepare the adapter configuration for a LoraModel.
         
@@ -602,7 +590,6 @@ class LoraModel(BaseTuner):
         safe_merge: bool = False,
         adapter_names: Optional[list[str]] = None,
     ):
-
         r"""
         Method to unload and optionally merge a LoraModel.
         
@@ -859,7 +846,6 @@ class LoraModel(BaseTuner):
         clamp=None,
         full_matrices=True,
     ):
-
         r"""Perform a Singular Value Decomposition (SVD) with various combination types on the given parameters.
         
         Args:
@@ -954,7 +940,6 @@ class LoraModel(BaseTuner):
         density,
         majority_sign_method,
     ):
-
         r"""
         Generalized Task Arithmetic Weighted Adapter.
         

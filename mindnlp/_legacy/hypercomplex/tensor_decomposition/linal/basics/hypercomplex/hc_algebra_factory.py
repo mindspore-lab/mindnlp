@@ -26,7 +26,6 @@ class AlgebraFactory(ABC):
 
     @abstractmethod
     def get_matrix_impl(self) -> _MatrixImpl:
-
         r"""
         Returns the implementation of the matrix class used by the AlgebraFactory.
         
@@ -47,7 +46,6 @@ AlgebraFactory. The returned implementation may vary depending on the specific r
 
     @abstractmethod
     def get_vector_impl(self) -> _VectorImpl:
-
         r"""
         Retrieve the vector implementation for the AlgebraFactory.
         
@@ -64,7 +62,6 @@ AlgebraFactory. The returned implementation may vary depending on the specific r
 
     @abstractmethod
     def get_scalar_impl(self) -> _ScalarImpl:
-
         r"""
         This method retrieves the implementation of a scalar from the AlgebraFactory.
         

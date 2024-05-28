@@ -73,7 +73,6 @@ class MBartLearnedPositionalEmbedding(nn.Embedding):
     """
 
     def __init__(self, num_embeddings: int, embedding_dim: int):
-
         """
         Initializes a new instance of the MBartLearnedPositionalEmbedding class.
         
@@ -115,7 +114,6 @@ class MBartAttention(nn.Cell):
             is_decoder: bool = False,
             bias: bool = True,
     ):
-
         '''
         This method initializes an instance of the MBartAttention class.
         
@@ -152,7 +150,6 @@ class MBartAttention(nn.Cell):
         self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-
         """
         This method '_shape' is defined within the class 'MBartAttention' and is used to reshape the input tensor for multi-head self-attention computation.
         
@@ -297,7 +294,6 @@ class MBartEncoderLayer(nn.Cell):
     """MBartEncoderLayer"""
 
     def __init__(self, config: MBartConfig):
-
         """
         Initializes an instance of the MBartEncoderLayer class.
         
@@ -335,7 +331,6 @@ class MBartEncoderLayer(nn.Cell):
             layer_head_mask: Tensor,
             output_attentions: bool = False,
     ) -> Tensor:
-
         """
         Constructs the MBartEncoderLayer.
         
@@ -390,7 +385,6 @@ class MBartDecoderLayer(nn.Cell):
     """MBartDecoderLayer"""
 
     def __init__(self, config: MBartConfig):
-
         """
         Initializes an instance of the MBartDecoderLayer class.
         
@@ -443,7 +437,6 @@ class MBartDecoderLayer(nn.Cell):
             output_attentions: Optional[bool] = False,
             use_cache: Optional[bool] = True,
     ) -> Tensor:
-
         """
         Constructs the MBartDecoderLayer.
         
@@ -539,7 +532,6 @@ class MBartClassificationHead(nn.Cell):
             num_classes: int,
             pooler_dropout: float,
     ):
-
         """
         Initializes an instance of the MBartClassificationHead class.
         
@@ -562,7 +554,6 @@ class MBartClassificationHead(nn.Cell):
         self.out_proj = nn.Dense(inner_dim, num_classes)
 
     def construct(self, hidden_states: Tensor) -> Tensor:
-
         """
         This method constructs the MBartClassificationHead by processing the input hidden_states.
         
@@ -592,7 +583,6 @@ class MBartPreTrainedModel(PreTrainedModel):
     _no_split_modules = ["MBartDecoderLayer", "MBartAttention"]
 
     def _init_weights(self, cell):
-
         """Initializes the weights of a cell in the MBartPreTrainedModel.
         
         Args:
@@ -642,7 +632,6 @@ class MBartEncoder(MBartPreTrainedModel):
     """
 
     def __init__(self, config: MBartConfig, embed_tokens: Optional[nn.Embedding] = None):
-
         """
         Initializes a new instance of the MBartEncoder class.
         
@@ -695,7 +684,6 @@ class MBartEncoder(MBartPreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutput]:
-
         ''' 
         Construct method in the MBartEncoder class.
         
@@ -814,7 +802,6 @@ class MBartDecoder(MBartPreTrainedModel):
     """
 
     def __init__(self, config: MBartConfig, embed_tokens: Optional[nn.Embedding] = None):
-
         """Initialize the MBartDecoder class.
         
         Args:
@@ -856,7 +843,6 @@ class MBartDecoder(MBartPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Returns the input embeddings used by the MBartDecoder.
         
@@ -872,7 +858,6 @@ class MBartDecoder(MBartPreTrainedModel):
         return self.embed_tokens
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         This method 'set_input_embeddings' is a member of the 'MBartDecoder' class and is used to set the input embeddings for the decoder.
         
@@ -903,7 +888,6 @@ class MBartDecoder(MBartPreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]:
-
         """
         This method constructs the MBartDecoder model.
         
@@ -1062,7 +1046,6 @@ class MBartModel(MBartPreTrainedModel):
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
     def __init__(self, config: MBartConfig):
-
         """Initialize an instance of the MBartModel class.
         
         Args:
@@ -1089,7 +1072,6 @@ class MBartModel(MBartPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method returns the shared input embeddings for the MBartModel.
         
@@ -1105,7 +1087,6 @@ class MBartModel(MBartPreTrainedModel):
         return self.shared
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Sets the input embeddings for the MBartModel.
         
@@ -1125,7 +1106,6 @@ class MBartModel(MBartPreTrainedModel):
         self.decoder.embed_tokens = self.shared
 
     def _tie_weights(self):
-
         """
         This method _tie_weights is a member of the class MBartModel and is used to tie the weights of word embeddings if the tie_word_embeddings configuration is set to True.
         
@@ -1168,7 +1148,6 @@ class MBartModel(MBartPreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ) -> Union[Seq2SeqModelOutput, Tuple[Tensor]]:
-
         """
         Constructs the MBartModel.
         
@@ -1264,7 +1243,6 @@ class MBartForConditionalGeneration(MBartPreTrainedModel):
     _tied_weights_keys = ["model.encoder.embed_tokens.weight", "model.decoder.embed_tokens.weight", "lm_head.weight"]
 
     def __init__(self, config: MBartConfig):
-
         """
         __init__
         
@@ -1297,7 +1275,6 @@ class MBartForConditionalGeneration(MBartPreTrainedModel):
         return self.model.get_decoder()
 
     def resize_token_embeddings(self, new_num_tokens: int, pad_to_multiple_of: Optional[int] = None) -> nn.Embedding:
-
         """
         Resizes the token embeddings of the MBartForConditionalGeneration model.
         
@@ -1358,7 +1335,6 @@ class MBartForConditionalGeneration(MBartPreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ) -> Union[Seq2SeqLMOutput, Tuple[Tensor]]:
-
         """
         Constructs the MBart model for conditional generation.
         
@@ -1450,7 +1426,6 @@ True, returns a Seq2SeqLMOutput object containing various model outputs.
             encoder_outputs=None,
             **kwargs,
     ):
-
         """
         Prepare inputs for generation.
         
@@ -1528,7 +1503,6 @@ class MBartForSequenceClassification(MBartPreTrainedModel):
     _tied_weights_keys = ["model.encoder.embed_tokens.weight", "model.decoder.embed_tokens.weight"]
 
     def __init__(self, config: MBartConfig):
-
         """
         Initializes an instance of the MBartForSequenceClassification class.
         
@@ -1573,7 +1547,6 @@ class MBartForSequenceClassification(MBartPreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Seq2SeqSequenceClassifierOutput]:
-
         """
         Constructs the MBart model for sequence classification.
         
@@ -1682,7 +1655,6 @@ class MBartForQuestionAnswering(MBartPreTrainedModel):
     _tied_weights_keys = ["model.encoder.embed_tokens.weight", "model.decoder.embed_tokens.weight"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of the MBartForQuestionAnswering class.
         
@@ -1726,7 +1698,6 @@ class MBartForQuestionAnswering(MBartPreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Seq2SeqQuestionAnsweringModelOutput]:
-
         """    
             Args:
                 self: The object instance.
@@ -1827,7 +1798,6 @@ class MBartDecoderWrapper(MBartPreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the MBartDecoderWrapper class.
         
@@ -1847,7 +1817,6 @@ class MBartDecoderWrapper(MBartPreTrainedModel):
         self.decoder = MBartDecoder(config)
 
     def construct(self, *args, **kwargs):
-
         """
         Constructs a new instance of the MBartDecoderWrapper class.
         
@@ -1879,7 +1848,6 @@ class MBartForCausalLM(MBartPreTrainedModel):
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of the 'MBartForCausalLM' class.
         
@@ -1949,7 +1917,6 @@ class MBartForCausalLM(MBartPreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, CausalLMOutputWithCrossAttentions]:
-
         '''
         Constructs the model for the MBartForCausalLM class.
         
@@ -2020,7 +1987,6 @@ class MBartForCausalLM(MBartPreTrainedModel):
     def prepare_inputs_for_generation(
             self, input_ids, past_key_values=None, attention_mask=None, use_cache=None, **kwargs
     ):
-
         """
         This method prepares inputs for generation in the MBartForCausalLM class.
         
@@ -2064,7 +2030,6 @@ class MBartForCausalLM(MBartPreTrainedModel):
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Reorders the cache for the specified beam index.
         

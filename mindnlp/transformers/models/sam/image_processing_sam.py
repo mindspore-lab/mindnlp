@@ -121,7 +121,6 @@ class SamImageProcessor(BaseImageProcessor):
         do_convert_rgb: bool = True,
         **kwargs,
     ) -> None:
-
         """
         Initializes an instance of the SamImageProcessor class.
         
@@ -319,7 +318,6 @@ class SamImageProcessor(BaseImageProcessor):
         pad_size: Optional[Dict[str, int]] = None,
         input_data_format: Optional[Union[str, ChannelDimension]] = None,
     ):
-
         '''
         This method preprocesses the input image according to the specified operations such as resizing, rescaling, normalization, and padding.
         
@@ -379,7 +377,6 @@ input_data_format. Default is None.
         data_format: Optional[Union[str, ChannelDimension]] = None,
         input_data_format: Optional[Union[str, ChannelDimension]] = None,
     ) -> Tuple[np.ndarray, Tuple[int, int], Tuple[int, int]]:
-
         """
         This method preprocesses the input image with various transformations and returns the processed image, original size, and reshaped input size.
         
@@ -455,7 +452,6 @@ input_data_format. Default is None.
         mask_pad_size: Optional[Dict[str, int]] = None,
         input_data_format: Optional[Union[str, ChannelDimension]] = None,
     ) -> np.ndarray:
-
         """ 
         Method to preprocess a segmentation mask.
         
@@ -1000,7 +996,6 @@ input_data_format. Default is None.
 
 
 def _compute_stability_score(masks: "mindspore.Tensor", mask_threshold: float, stability_score_offset: int):
-
     '''
     Compute stability score based on given masks, threshold, and offset.
     
@@ -1184,7 +1179,6 @@ def _generate_crop_images(
 
 
 def _pad_masks(masks, crop_box: List[int], orig_height: int, orig_width: int):
-
     """
     This function pads the input masks based on the provided crop box and original image dimensions.
     
@@ -1379,7 +1373,6 @@ def _batched_nms_coordinate_trick(
     idxs: mindspore.Tensor,
     iou_threshold: float,
 ) -> mindspore.Tensor:
-
     """
     Performs non-maximum suppression (NMS) on a batch of bounding boxes using the coordinate trick.
     
@@ -1414,7 +1407,6 @@ def _batched_nms_vanilla(
     idxs: mindspore.Tensor,
     iou_threshold: float,
 ) -> mindspore.Tensor:
-
     """
     Args:
         boxes (mindspore.Tensor): A tensor containing bounding boxes coordinates of shape (N, 4) where N is the number of boxes. Each row represents a box in the format (x_min, y_min, x_max, y_max).
@@ -1439,7 +1431,6 @@ def _batched_nms_vanilla(
     return keep_indices[scores[keep_indices].sort(descending=True)[1]]
 
 def nms(boxes: mindspore.Tensor, scores: mindspore.Tensor, iou_threshold: float):
-
     """
     Performs non-maximum suppression (NMS) on a set of bounding boxes.
     

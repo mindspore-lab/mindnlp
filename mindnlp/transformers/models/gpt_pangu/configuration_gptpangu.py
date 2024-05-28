@@ -43,7 +43,6 @@ class GPTPanguConfig(PretrainedConfig):
         eos_token_id=9,
         **kwargs,
     ):
-
         """
         This method initializes an instance of the GPTPanguConfig class.
         

@@ -67,7 +67,6 @@ class CRF(nn.Cell):
     """
 
     def __init__(self, num_tags: int, batch_first: bool = False, reduction: str = 'sum') -> None:
-
         r"""
         Initializes an instance of the CRF (Conditional Random Field) class.
         
@@ -100,7 +99,6 @@ class CRF(nn.Cell):
                                      name='transitions')
 
     def __repr__(self) -> str:
-
         r"""
         Return a string representation of the CRF object.
         
@@ -116,7 +114,6 @@ class CRF(nn.Cell):
         return f'{self.__class__.__name__}(num_tags={self.num_tags})'
 
     def construct(self, emissions, tags=None, seq_length=None):
-
         r"""
         This method constructs the conditional random field (CRF) by decoding the emissions or constructing the CRF with given emissions, tags, and sequence length.
         
@@ -139,7 +136,6 @@ length as the maximum sequence length in the batch.
         return self._construct(emissions, tags, seq_length)
 
     def _construct(self, emissions, tags=None, seq_length=None):
-
         r"""
         This method '_construct' in the class 'CRF' is responsible for constructing the conditional random field (CRF) based on the provided emissions, tags, and sequence length.
         
@@ -214,7 +210,6 @@ based on the maximum length of sequences in the batch.
         return self._viterbi_decode(emissions, mask)
 
     def _compute_score(self, emissions, tags, seq_ends, mask):
-
         r"""
         This method computes the score of a given sequence of emissions and tags using the Conditional Random Field (CRF) algorithm.
         
@@ -265,7 +260,6 @@ based on the maximum length of sequences in the batch.
         return score
 
     def _compute_normalizer(self, emissions, mask):
-
         r"""
         Compute the normalizer value for the Conditional Random Field (CRF).
         
@@ -347,7 +341,6 @@ appropriate dimensions and adding them together. The logsumexp function is then 
         return ops.logsumexp(score, axis=1)
 
     def _viterbi_decode(self, emissions, mask):
-
         r"""
         Performs Viterbi decoding on a given sequence of emissions and a mask.
         

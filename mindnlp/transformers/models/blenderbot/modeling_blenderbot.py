@@ -88,7 +88,6 @@ class BlenderbotAttention(nn.Cell):
         is_causal: bool = False,
         config: Optional[BlenderbotConfig] = None,
     ):
-
         """
         Initializes the BlenderbotAttention class.
         
@@ -130,7 +129,6 @@ class BlenderbotAttention(nn.Cell):
         self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-
         """
         Reshapes the input tensor according to the specified dimensions.
         
@@ -310,7 +308,6 @@ normalization.
                 outputs (Tuple[mindspore.Tensor]): The processed hidden states. If output_attentions is True, the attention weights are also returned.
     """
     def __init__(self, config: BlenderbotConfig):
-
         """
         Initializes a new instance of the BlenderbotEncoderLayer class.
         
@@ -440,7 +437,6 @@ optional intermediate tensors such as attention weights and present key-value st
 the input arguments and the configuration of the layer.
     """
     def __init__(self, config: BlenderbotConfig):
-
         """
         Initialize a BlenderbotDecoderLayer object.
         
@@ -615,7 +611,6 @@ inputs.
 
     @property
     def dummy_inputs(self):
-
         """
         This method generates dummy inputs for the BlenderbotPreTrainedModel.
         
@@ -654,7 +649,6 @@ class BlenderbotEncoder(BlenderbotPreTrainedModel):
     """
 
     def __init__(self, config: BlenderbotConfig, embed_tokens: Optional[nn.Embedding] = None):
-
         """
         Initializes a BlenderbotEncoder instance.
         
@@ -839,7 +833,6 @@ class BlenderbotDecoder(BlenderbotPreTrainedModel):
     """
 
     def __init__(self, config: BlenderbotConfig, embed_tokens: Optional[nn.Embedding] = None):
-
         """
         Initializes a new instance of the BlenderbotDecoder class.
         
@@ -879,7 +872,6 @@ class BlenderbotDecoder(BlenderbotPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method to retrieve the input embeddings from the BlenderbotDecoder.
         
@@ -896,7 +888,6 @@ class BlenderbotDecoder(BlenderbotPreTrainedModel):
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Method to set input embeddings for the BlenderbotDecoder class.
         
@@ -1177,7 +1168,6 @@ encoder last hidden state, encoder hidden states, and encoder attentions.
     _tied_weights_keys = ["decoder.embed_tokens.weight", "encoder.embed_tokens.weight"]
 
     def __init__(self, config: BlenderbotConfig):
-
         """
         This method initializes a new instance of the BlenderbotModel class.
         
@@ -1203,7 +1193,6 @@ encoder last hidden state, encoder hidden states, and encoder attentions.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings from the BlenderbotModel.
         
@@ -1219,7 +1208,6 @@ encoder last hidden state, encoder hidden states, and encoder attentions.
         return self.shared
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the BlenderbotModel.
         
@@ -1238,7 +1226,6 @@ encoder last hidden state, encoder hidden states, and encoder attentions.
         self.decoder.embed_tokens = self.shared
 
     def get_encoder(self):
-
         """
         Returns the encoder used in the BlenderbotModel.
         
@@ -1254,7 +1241,6 @@ encoder last hidden state, encoder hidden states, and encoder attentions.
         return self.encoder
 
     def get_decoder(self):
-
         """
         This method returns the decoder used in the BlenderbotModel.
         
@@ -1395,7 +1381,6 @@ encoder_outputs=None, **kwargs): Prepares the inputs for generation.
     _tied_weights_keys = ["decoder.embed_tokens.weight", "encoder.embed_tokens.weight", "lm_head.weight"]
 
     def __init__(self, config: BlenderbotConfig):
-
         """
         Initializes a new instance of the BlenderbotForConditionalGeneration class.
         
@@ -1418,7 +1403,6 @@ encoder_outputs=None, **kwargs): Prepares the inputs for generation.
         self.post_init()
 
     def get_encoder(self):
-
         """
         This method returns the encoder of the BlenderbotForConditionalGeneration model.
         
@@ -1434,7 +1418,6 @@ encoder_outputs=None, **kwargs): Prepares the inputs for generation.
         return self.model.get_encoder()
 
     def get_decoder(self):
-
         """
         Returns the decoder of the BlenderbotForConditionalGeneration model.
         
@@ -1459,7 +1442,6 @@ encoder_outputs=None, **kwargs): Prepares the inputs for generation.
         return self.model.get_decoder()
 
     def resize_token_embeddings(self, new_num_tokens: int, pad_to_multiple_of: Optional[int] = None) -> nn.Embedding:
-
         """
         Resize the token embeddings of the Blenderbot model.
         
@@ -1479,7 +1461,6 @@ encoder_outputs=None, **kwargs): Prepares the inputs for generation.
         return new_embeddings
 
     def _resize_final_logits_bias(self, new_num_tokens: int) -> None:
-
         """
         Resizes the final logits bias of the BlenderbotForConditionalGeneration model.
         
@@ -1524,7 +1505,6 @@ the existing 'final_logits_bias' tensor using ops.cat() function along the last 
         self.final_logits_bias = new_bias
 
     def get_output_embeddings(self):
-
         """ 
         This method retrieves the output embeddings from the BlenderbotForConditionalGeneration model.
         
@@ -1541,7 +1521,6 @@ the existing 'final_logits_bias' tensor using ops.cat() function along the last 
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the Blenderbot model.
         
@@ -1646,7 +1625,6 @@ the existing 'final_logits_bias' tensor using ops.cat() function along the last 
         encoder_outputs=None,
         **kwargs,
     ):
-
         """
         This method prepares inputs for generation in the BlenderbotForConditionalGeneration class.
         
@@ -1695,7 +1673,6 @@ the existing 'final_logits_bias' tensor using ops.cat() function along the last 
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Reorders the past key values according to the beam index.
         
@@ -1732,7 +1709,6 @@ class BlenderbotDecoderWrapper(BlenderbotPreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the BlenderbotDecoderWrapper class.
         
@@ -1753,7 +1729,6 @@ class BlenderbotDecoderWrapper(BlenderbotPreTrainedModel):
         self.decoder = BlenderbotDecoder(config)
 
     def construct(self, *args, **kwargs):
-
         """
         Method 'construct' in the class 'BlenderbotDecoderWrapper'.
             
@@ -1789,7 +1764,6 @@ cache.
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the BlenderbotForCausalLM class.
         
@@ -1819,7 +1793,6 @@ cache.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Retrieves the input embeddings from the BlenderbotForCausalLM model.
         
@@ -1841,7 +1814,6 @@ embeddings capture the semantic meaning of the input tokens and are essential fo
         return self.model.decoder.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Method to set the input embeddings for the BlenderbotForCausalLM model.
         
@@ -1860,7 +1832,6 @@ embeddings capture the semantic meaning of the input tokens and are essential fo
         self.model.decoder.embed_tokens = value
 
     def get_output_embeddings(self):
-
         """
         Method to retrieve the output embeddings from the BlenderbotForCausalLM model.
         
@@ -1878,7 +1849,6 @@ embeddings capture the semantic meaning of the input tokens and are essential fo
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings of the BlenderbotForCausalLM model.
         
@@ -1897,7 +1867,6 @@ embeddings capture the semantic meaning of the input tokens and are essential fo
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
-
         """
         Method to set the decoder for the BlenderbotForCausalLM model.
         
@@ -1916,7 +1885,6 @@ embeddings capture the semantic meaning of the input tokens and are essential fo
         self.model.decoder = decoder
 
     def get_decoder(self):
-
         """
         Returns the decoder of the BlenderbotForCausalLM model.
         
@@ -2076,7 +2044,6 @@ embeddings capture the semantic meaning of the input tokens and are essential fo
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, use_cache=None, **kwargs
     ):
-
         """
         This method prepares inputs for generation in the BlenderbotForCausalLM class.
         
@@ -2119,7 +2086,6 @@ embeddings capture the semantic meaning of the input tokens and are essential fo
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Method to reorder cache for beam search in the BlenderbotForCausalLM class.
         

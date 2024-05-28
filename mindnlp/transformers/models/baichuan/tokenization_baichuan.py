@@ -66,7 +66,6 @@ class BaiChuanTokenizer(PreTrainedTokenizer):
         clean_up_tokenization_spaces=False,
         **kwargs,
     ):
-
         """
         __init__
         
@@ -123,7 +122,6 @@ class BaiChuanTokenizer(PreTrainedTokenizer):
         self.add_eos_token = add_eos_token
 
     def __getstate__(self):
-
         """Return a dictionary representing the state of the BaiChuanTokenizer instance.
         
         This method takes no additional parameters.
@@ -142,7 +140,6 @@ class BaiChuanTokenizer(PreTrainedTokenizer):
         return state
 
     def __setstate__(self, d):
-
         """
         __setstate__ method in the BaiChuanTokenizer class.
         
@@ -236,7 +233,6 @@ class BaiChuanTokenizer(PreTrainedTokenizer):
         return (out_vocab_file,)
 
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
-
         """
         Builds input sequences with special tokens for the BaiChuanTokenizer class.
         

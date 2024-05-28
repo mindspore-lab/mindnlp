@@ -68,7 +68,6 @@ class Protein:
 
 
 def from_proteinnet_string(proteinnet_str: str) -> Protein:
-
     """
     This function parses a ProteinNet string and extracts relevant information to create a Protein object.
     
@@ -131,7 +130,6 @@ def from_proteinnet_string(proteinnet_str: str) -> Protein:
 
 
 def get_pdb_headers(prot: Protein, chain_id: int = 0) -> List[str]:
-
     """
     Get PDB headers.
     

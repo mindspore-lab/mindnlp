@@ -38,8 +38,6 @@ if TYPE_CHECKING:
 logger = logging.get_logger(__name__)
 
 
-
-
 def rescale_stride(stride, ratio):
     """
     Rescales the stride values from audio space to tokens/logits space.
@@ -61,7 +59,6 @@ def rescale_stride(stride, ratio):
 
 
 def chunk_iter(inputs, feature_extractor, chunk_len, stride_left, stride_right, dtype=None):
-
     """
     Chunks the input data and processes each chunk using a specified feature extractor.
     
@@ -102,7 +99,6 @@ def chunk_iter(inputs, feature_extractor, chunk_len, stride_left, stride_right, 
 
 
 def _fast_find_longest_common_sequence(sequence_left, sequence_right):
-
     """
     Finds the longest common sequence between two given sequences.
     
@@ -138,7 +134,6 @@ def _fast_find_longest_common_sequence(sequence_left, sequence_right):
 
 
 def _find_longest_common_sequence(sequences, tokenizer):
-
     """
     Finds the longest common sequence among multiple sequences of tokens.
     
@@ -259,7 +254,6 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
         ms_dtype: Optional[str] = None,
         **kwargs,
     ):
-
         """
         This method initializes an instance of AutomaticSpeechRecognitionPipeline.
         
@@ -370,7 +364,6 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
         generate_kwargs=None,
         max_new_tokens=None,
     ):
-
         """
         This method '_sanitize_parameters' in the class 'AutomaticSpeechRecognitionPipeline' is responsible for sanitizing and validating input parameters for the Automatic Speech Recognition pipeline.
         
@@ -448,7 +441,6 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
         return preprocess_params, forward_params, postprocess_params
 
     def preprocess(self, inputs, chunk_length_s=0, stride_length_s=None):
-
         """
         This method preprocesses the input data for the AutomaticSpeechRecognitionPipeline.
         
@@ -566,7 +558,6 @@ provided, the first value represents the left stride and the second value repres
             yield {"is_last": True, **processed, **extra}
 
     def _forward(self, model_inputs, return_timestamps=False, **generate_kwargs):
-
         """
         Performs the forward pass for Automatic Speech Recognition (ASR) in the AutomaticSpeechRecognitionPipeline class.
         
@@ -668,7 +659,6 @@ provided, the first value represents the left stride and the second value repres
     def postprocess(
         self, model_outputs, decoder_kwargs: Optional[Dict] = None, return_timestamps=None, return_language=None
     ):
-
         """
         Method postprocess in the class AutomaticSpeechRecognitionPipeline.
         

@@ -86,7 +86,6 @@ class LlavaConfig(PretrainedConfig):
         vision_feature_layer=-2,
         **kwargs,
     ):
-
         """
         Initializes an instance of the LlavaConfig class.
         
@@ -168,7 +167,6 @@ class LlavaConfig(PretrainedConfig):
 
     @property
     def vocab_size(self):
-
         """
         Method to retrieve the vocabulary size.
         
@@ -192,7 +190,6 @@ class LlavaConfig(PretrainedConfig):
 
     @vocab_size.setter
     def vocab_size(self, value):
-
         """
         Sets the vocabulary size for the LlavaConfig class.
         
@@ -216,7 +213,6 @@ appropriate vocabulary size based on the application and the amount of available
         self._vocab_size = value
 
     def to_dict(self):
-
         """
         Converts the LlavaConfig object into a dictionary representation.
         

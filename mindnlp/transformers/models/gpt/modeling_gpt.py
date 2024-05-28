@@ -76,7 +76,6 @@ class Attention(nn.Cell):
         - The Attention class should be used as part of a larger model and is not intended to be used as a standalone component.
     """
     def __init__(self, nx, n_positions, config, scale=False):
-
         """
         Initialize the Attention class.
         
@@ -111,7 +110,6 @@ class Attention(nn.Cell):
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
-
         """
         Method: prune_heads
         
@@ -151,7 +149,6 @@ class Attention(nn.Cell):
         self.pruned_heads = self.pruned_heads.union(heads)
 
     def _attn(self, q, k, v, attention_mask=None, head_mask=None, output_attentions=False):
-
         """
         Method _attn in the class Attention calculates attention weights based on the input query (q), key (k), and value (v) tensors.
         
@@ -199,7 +196,6 @@ class Attention(nn.Cell):
         return outputs
 
     def merge_heads(self, x):
-
         """
         Merge the heads of the attention mechanism.
         
@@ -218,7 +214,6 @@ class Attention(nn.Cell):
         return x.view(*new_x_shape)  # in Tensorflow implementation: fct merge_states
 
     def split_heads(self, x, k=False):
-
         """
         Splits the input tensor into multiple "head" tensors along the last dimension.
         
@@ -241,7 +236,6 @@ function returns a tensor with shape (batch_size, seq_len, n_head, d_model/n_hea
         return x.permute(0, 2, 1, 3)
 
     def construct(self, x, attention_mask=None, head_mask=None, output_attentions=False):
-
         """
         This method 'construct' in the class 'Attention' processes the input data 'x' through attention mechanisms.
         
@@ -306,7 +300,6 @@ layer (self.c_fc), applies the second convolutional layer (self.c_proj) to the r
         output = mlp.construct(input_tensor)
     """
     def __init__(self, n_state, config):  # in MLP: n_state=3072 (4 * n_embd)
-
         """
         Initializes an instance of the MLP class.
         
@@ -329,7 +322,6 @@ layer (self.c_fc), applies the second convolutional layer (self.c_proj) to the r
         self.dropout = nn.Dropout(p=config.resid_pdrop)
 
     def construct(self, x):
-
         """
         Constructs the output of the Multi-Layer Perceptron (MLP) model.
         
@@ -381,7 +373,6 @@ class Block(nn.Cell):
                 outputs (list): A list containing the output tensor and optional attention weights.
     """
     def __init__(self, n_positions, config, scale=False):
-
         """
         Initializes a Block object.
         
@@ -405,7 +396,6 @@ class Block(nn.Cell):
         self.ln_2 = nn.LayerNorm([nx], epsilon=config.layer_norm_epsilon)
 
     def construct(self, x, attention_mask=None, head_mask=None, output_attentions=False):
-
         """
         Constructs a block in the given class.
         
@@ -540,7 +530,6 @@ generating text based on input sequences. The model includes methods for initial
 training based on the input data and configuration.
     """
     def __init__(self, config):
-
         """
         Initializes a GPTModel instance with the provided configuration.
         
@@ -572,7 +561,6 @@ training based on the input data and configuration.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings from the GPTModel.
         
@@ -588,7 +576,6 @@ training based on the input data and configuration.
         return self.tokens_embed
 
     def set_input_embeddings(self, new_embeddings):
-
         """
         Sets the input embeddings for the GPTModel.
         
@@ -637,7 +624,6 @@ data type and should contain the updated embeddings.
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutput]:
-
         '''
         Constructs the GPTModel.
         
@@ -767,7 +753,6 @@ on input features.
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the GPTLMHeadModel class.
         
@@ -791,7 +776,6 @@ on input features.
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         Method to retrieve the output embeddings from the GPTLMHeadModel.
         
@@ -808,7 +792,6 @@ on input features.
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         This method sets the output embeddings for the GPTLMHeadModel.
         
@@ -879,7 +862,6 @@ on input features.
         )
 
     def prepare_inputs_for_generation(self, input_ids: mindspore.Tensor, **kwargs) -> Dict[str, Any]:
-
         """
         Prepare inputs for generation.
         
@@ -936,7 +918,6 @@ modeling and multiple choice classification.
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of the GPTDoubleHeadsModel class.
         
@@ -961,7 +942,6 @@ modeling and multiple choice classification.
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings for the GPTDoubleHeadsModel.
         
@@ -977,7 +957,6 @@ modeling and multiple choice classification.
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings of the GPTDoubleHeadsModel.
         
@@ -1122,7 +1101,6 @@ the method calculates the loss using operations provided by the 'ops' module.
     Note: This docstring does not include method signatures or any other code for clarity.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of GPTForSequenceClassification.
         

@@ -47,7 +47,6 @@ _CONFIG_FOR_DOC = "OlmoConfig"
 
 # Copied from transformers.models.llama.modeling_llama._get_unpad_data
 def _get_unpad_data(attention_mask):
-
     """
     Args:
         attention_mask (Tensor): A 2D tensor representing the attention mask. Each element in the tensor
@@ -77,7 +76,6 @@ class OlmoLayerNorm(nn.Cell):
     """LayerNorm but with no learnable weight or bias."""
 
     def __init__(self, hidden_size: int) -> None:
-
         """
         Initializes a new instance of the OlmoLayerNorm class.
         
@@ -99,7 +97,6 @@ class OlmoLayerNorm(nn.Cell):
                                       epsilon=1e-5)
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the OlmoLayerNorm for the given hidden states.
         
@@ -130,7 +127,6 @@ class OlmoLayerNorm(nn.Cell):
         return y.to(orig_dtype)
 
 
-
 ALL_LAYERNORM_LAYERS.append(OlmoLayerNorm)
 
 
@@ -146,7 +142,6 @@ class OlmoRotaryEmbedding(nn.Cell):
     It is recommended to use the 'forward' method of RoPE instead of accessing these attributes directly.
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
-
         """
         Initializes an instance of the OlmoRotaryEmbedding class.
         
@@ -182,7 +177,6 @@ class OlmoRotaryEmbedding(nn.Cell):
 
     @property
     def sin_cached(self):
-
         """
         Returns the cached value of the sine of the input.
         
@@ -203,7 +197,6 @@ class OlmoRotaryEmbedding(nn.Cell):
 
     @property
     def cos_cached(self):
-
         """
         This method 'cos_cached' in the class 'OlmoRotaryEmbedding' retrieves the cached cosine similarity value.
         
@@ -223,7 +216,6 @@ class OlmoRotaryEmbedding(nn.Cell):
         return self._cos_cached
 
     def construct(self, x, position_ids):
-
         """
         Constructs the OlmoRotaryEmbedding.
         
@@ -259,7 +251,6 @@ class OlmoLinearScalingRotaryEmbedding(OlmoRotaryEmbedding):
     """OlmoRotaryEmbedding extended with linear scaling. Credits to the Reddit user /u/kaiokendev"""
 
     def construct(self, x, position_ids):
-
         """
         Constructs the cosine and sine embeddings for the given input tensor 'x' with positional encoding.
         
@@ -287,7 +278,6 @@ class OlmoDynamicNTKScalingRotaryEmbedding(OlmoRotaryEmbedding):
     """OlmoRotaryEmbedding extended with Dynamic NTK scaling. Credits to the Reddit users /u/bloc97 and /u/emozilla"""
 
     def construct(self, x, position_ids):
-
         """Constructs the OlmoDynamicNTKScalingRotaryEmbedding.
         
         This method initializes the OlmoDynamicNTKScalingRotaryEmbedding object by constructing the positional encodings for the input tensor.
@@ -386,7 +376,6 @@ class OlmoMLP(nn.Cell):
     The 'OlmoMLP' class assumes that the 'ACT2FN' dictionary is defined, which maps the activation function names to their corresponding functions.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the OlmoMLP class.
         
@@ -413,7 +402,6 @@ class OlmoMLP(nn.Cell):
         self.act_fn = ACT2FN[config.hidden_act]
 
     def construct(self, x):
-
         """
         Constructs a multi-layer perceptron using the specified input data.
         
@@ -450,7 +438,6 @@ class OlmoAttention(nn.Cell):
 
     # Copied from transformers.models.llama.modeling_llama.LlamaAttention.__init__ with Llama->Olmo
     def __init__(self, config: OlmoConfig, layer_idx: Optional[int] = None):
-
         """
         Initializes an instance of the OlmoAttention class.
         
@@ -501,7 +488,6 @@ class OlmoAttention(nn.Cell):
 
     # Copied from transformers.models.llama.modeling_llama.LlamaAttention._init_rope with Llama->Olmo
     def _init_rope(self):
-
         """
         Initializes the RoPE (Rotary Positional Encoding) for the OlmoAttention class.
         
@@ -575,7 +561,6 @@ the 'scaling_factor' parameter determines the scaling factor to be applied. The 
         cache_position: Optional[mindspore.Tensor] = None,
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
-
         '''
         Constructs the attention mechanism for OlmoAttention.
         
@@ -697,7 +682,6 @@ class OlmoDecoderLayer(nn.Cell):
         The construct method is the entry point for the decoder layer.
     """
     def __init__(self, config: OlmoConfig, layer_idx: int):
-
         """
         Initializes an instance of OlmoDecoderLayer.
         
@@ -817,7 +801,6 @@ attribute in the config attribute.
     _supports_cache_class = True
 
     def _init_weights(self, cell):
-
         """
         Initializes the weights of a cell in the OlmoPreTrainedModel.
         
@@ -844,7 +827,6 @@ attribute in the config attribute.
             cell.weight.set_data(Tensor(weight, cell.weight.dtype))
 
     def _setup_cache(self, cache_cls, max_batch_size, max_cache_len: Optional[int] = None):
-
         """
         This method initializes the cache for the model's past key-value pairs used in self-attention mechanisms.
         
@@ -877,7 +859,6 @@ attribute in the config attribute.
             )
 
     def _reset_cache(self):
-
         """
         Resets the cache for the self-attention layers in the OlmoPreTrainedModel.
         
@@ -903,7 +884,6 @@ class OlmoModel(OlmoPreTrainedModel):
     """
 
     def __init__(self, config: OlmoConfig):
-
         """
         Initializes an instance of the `OlmoModel` class.
         
@@ -936,7 +916,6 @@ class OlmoModel(OlmoPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Get the input embeddings for the OlmoModel class.
         
@@ -952,7 +931,6 @@ class OlmoModel(OlmoPreTrainedModel):
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         This method sets the input embeddings for the OlmoModel.
         
@@ -982,7 +960,6 @@ class OlmoModel(OlmoPreTrainedModel):
         return_dict: Optional[bool] = None,
         cache_position: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
-
         """
         Constructs the OlmoModel.
         
@@ -1116,7 +1093,6 @@ class OlmoModel(OlmoPreTrainedModel):
         cache_position: mindspore.Tensor,
         past_seen_tokens: int,
     ):
-
         """
         Update the causal mask for self-attention mechanism.
         
@@ -1216,7 +1192,6 @@ and returns the output.
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of the OlmoForCausalLM class.
         
@@ -1242,7 +1217,6 @@ and returns the output.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method is implemented in the 'OlmoForCausalLM' class and is used to retrieve the input embeddings from the model.
         
@@ -1258,7 +1232,6 @@ and returns the output.
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Set the input embeddings for the OlmoForCausalLM model.
         
@@ -1275,7 +1248,6 @@ and returns the output.
         self.model.embed_tokens = value
 
     def get_output_embeddings(self):
-
         """
         This method, 'get_output_embeddings', is defined in the class 'OlmoForCausalLM' and returns the 'lm_head' attribute.
         
@@ -1291,7 +1263,6 @@ and returns the output.
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings of the OlmoForCausalLM model.
         
@@ -1309,7 +1280,6 @@ the expected shape of the output layer.
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
-
         """
         Sets the decoder for the OlmoForCausalLM model.
         
@@ -1326,7 +1296,6 @@ the expected shape of the output layer.
         self.model = decoder
 
     def get_decoder(self):
-
         """
         This method returns the decoder model used for OlmoForCausalLM.
         
@@ -1432,7 +1401,6 @@ the expected shape of the output layer.
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, cache_position=None, **kwargs
     ):
-
         """
         This method prepares inputs for text generation for OlmoForCausalLM model.
         
@@ -1534,7 +1502,6 @@ the expected shape of the output layer.
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Method to reorder cached states for beam search in OlmoForCausalLM.
         

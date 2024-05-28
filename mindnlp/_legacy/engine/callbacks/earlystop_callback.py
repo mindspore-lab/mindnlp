@@ -27,7 +27,6 @@ class EarlyStopCallback(Callback):
         larger_better (bool): Whether the larger value of the metric is better. Default:True.
     """
     def __init__(self, patience=10, larger_better=True):
-
         r"""
         Initializes an instance of the EarlyStopCallback class.
         

@@ -60,7 +60,6 @@ class BigBirdEmbeddings(nn.Cell):
 
     # Copied from transformers.models.bert.modeling_bert.BertEmbeddings.__init__
     def __init__(self, config):
-
         """
         Initializes an instance of the BigBirdEmbeddings class.
         
@@ -104,7 +103,6 @@ class BigBirdEmbeddings(nn.Cell):
     def construct(
         self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None, past_key_values_length=0
     ):
-
         '''
         Constructs the embeddings for the BigBird model.
         
@@ -195,7 +193,6 @@ parameters.
     Note: This class is specifically designed for implementing self-attention mechanisms in neural networks based on the BigBird model.
     """
     def __init__(self, config):
-
         """
         Initializes the BigBirdSelfAttention class.
         
@@ -234,7 +231,6 @@ parameters.
         self.is_decoder = config.is_decoder
 
     def swapaxes_for_scores(self, x):
-
         """
         Method to rearrange the axes of the input tensor for BigBird self-attention scoring.
         
@@ -263,7 +259,6 @@ parameters.
         past_key_value=None,
         output_attentions=False,
     ):
-
         """
         This method constructs the self-attention mechanism in the BigBird model.
         
@@ -382,7 +377,6 @@ class BigBirdBlockSparseAttention(nn.Cell):
     """
     '''
     def __init__(self, config, seed=None):
-
         """
         Initializes an instance of the BigBirdBlockSparseAttention class.
         
@@ -427,7 +421,6 @@ class BigBirdBlockSparseAttention(nn.Cell):
         self.value = nn.Dense(config.hidden_size, self.all_head_size, has_bias=config.use_bias)
 
     def swapaxes_for_scores(self, x):
-
         """
         This method 'swapaxes_for_scores' is defined in the class 'BigBirdBlockSparseAttention'. It reshapes and transposes the input tensor 'x' to match the specified dimensions for attention calculations.
         
@@ -456,7 +449,6 @@ class BigBirdBlockSparseAttention(nn.Cell):
         to_blocked_mask=None,
         output_attentions=None,
     ):
-
         """
         The 'construct' method in the 'BigBirdBlockSparseAttention' class constructs the context layer using BigBird block sparse attention mechanism.
         
@@ -559,7 +551,6 @@ class BigBirdBlockSparseAttention(nn.Cell):
         plan_num_rand_blocks,
         output_attentions,
     ):
-
         """
         This method, 'bigbird_block_sparse_attention', is defined in the class 'BigBirdBlockSparseAttention' and is used to perform block-sparse attention computation in the BigBird model.
         
@@ -1021,7 +1012,6 @@ class BigBirdBlockSparseAttention(nn.Cell):
 
     @staticmethod
     def ms_gather_b2(params, indices):
-
         """
         Performs a block sparse attention operation on the given parameters and indices in the BigBirdBlockSparseAttention class.
         
@@ -1409,7 +1399,6 @@ returns the resulting hidden states.
     
     """
     def __init__(self, config):
-
         """
         Initializes the BigBirdSelfOutput class.
         
@@ -1433,7 +1422,6 @@ returns the resulting hidden states.
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the output of the BigBird self-attention layer.
         
@@ -1478,7 +1466,6 @@ from_mask=None, to_mask=None, from_blocked_mask=None, to_blocked_mask=None): Com
     
     """
     def __init__(self, config, seed=None):
-
         """
         Initialize the BigBirdAttention class.
         
@@ -1510,7 +1497,6 @@ from_mask=None, to_mask=None, from_blocked_mask=None, to_blocked_mask=None): Com
         self.output = BigBirdSelfOutput(config)
 
     def set_attention_type(self, value: str):
-
         """
         This method sets the attention type for the BigBirdAttention class.
         
@@ -1564,7 +1550,6 @@ from_mask=None, to_mask=None, from_blocked_mask=None, to_blocked_mask=None): Com
         from_blocked_mask=None,
         to_blocked_mask=None,
     ):
-
         """
         This method constructs the BigBird attention mechanism.
         
@@ -1639,7 +1624,6 @@ class BigBirdIntermediate(nn.Cell):
             mindspore.Tensor: The processed hidden states after applying the dense transformation and activation function.
     """
     def __init__(self, config):
-
         '''
         Initializes a new instance of the BigBirdIntermediate class.
         
@@ -1665,7 +1649,6 @@ class BigBirdIntermediate(nn.Cell):
             self.intermediate_act_fn = config.hidden_act
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         The 'construct' method in the 'BigBirdIntermediate' class applies transformations to the input hidden states.
         
@@ -1703,7 +1686,6 @@ class BigBirdOutput(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the BigBirdOutput class.
         
@@ -1727,7 +1709,6 @@ class BigBirdOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the output of the BigBird model.
         
@@ -1776,7 +1757,6 @@ past_key_value=None, output_attentions=False): Constructs the layer by performin
     
     """
     def __init__(self, config, seed=None):
-
         """
         Initializes a BigBirdLayer instance with the provided configuration and optional seed.
         
@@ -1808,7 +1788,6 @@ past_key_value=None, output_attentions=False): Constructs the layer by performin
         self.output = BigBirdOutput(config)
 
     def set_attention_type(self, value: str):
-
         """
         Sets the attention type for the BigBirdLayer.
         
@@ -1856,7 +1835,6 @@ without making any changes. Otherwise, the attention type is updated, and the se
         past_key_value=None,
         output_attentions=False,
     ):
-
         ''' 
         Constructs the BigBirdLayer.
         
@@ -1944,7 +1922,6 @@ without making any changes. Otherwise, the attention type is updated, and the se
         return outputs
 
     def feed_forward_chunk(self, attention_output):
-
         """
         Method: feed_forward_chunk
         
@@ -1996,7 +1973,6 @@ class BigBirdEncoder(nn.Cell):
         This class assumes the use of specific layer types and configurations as part of the BigBird model architecture.
     """
     def __init__(self, config):
-
         """
         Initializes the BigBirdEncoder class.
         
@@ -2022,7 +1998,6 @@ class BigBirdEncoder(nn.Cell):
         self.gradient_checkpointing = False
 
     def set_attention_type(self, value: str):
-
         """
         Sets the attention type for the BigBirdEncoder.
         
@@ -2069,7 +2044,6 @@ is the same as the current attention type, the method does nothing.
         blocked_encoder_mask=None,
         return_dict=True,
     ) -> Union[BaseModelOutputWithPastAndCrossAttentions, Tuple]:
-
         """
         Constructs the BigBird encoder layer.
         
@@ -2182,7 +2156,6 @@ class BigBirdPredictionHeadTransform(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes the BigBirdPredictionHeadTransform class.
         
@@ -2209,7 +2182,6 @@ class BigBirdPredictionHeadTransform(nn.Cell):
         self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the BigBirdPredictionHeadTransform.
         
@@ -2250,7 +2222,6 @@ class BigBirdLMPredictionHead(nn.Cell):
         - construct(hidden_states): Applies the transformation and decoding process to the input hidden states, returning the final predictions.
     """
     def __init__(self, config):
-
         """Initializes an instance of the BigBirdLMPredictionHead class.
         
         Args:
@@ -2279,7 +2250,6 @@ class BigBirdLMPredictionHead(nn.Cell):
         self.decoder.bias = self.bias
 
     def construct(self, hidden_states):
-
         """
         Constructs the hidden states for the BigBirdLMPredictionHead.
         
@@ -2343,7 +2313,6 @@ class BigBirdOnlyMLMHead(nn.Cell):
                 mindspore.Tensor: The prediction scores for the MLM tasks.
     """
     def __init__(self, config):
-
         """
         Initializes a BigBirdOnlyMLMHead object with the provided configuration.
         
@@ -2364,7 +2333,6 @@ class BigBirdOnlyMLMHead(nn.Cell):
         self.predictions = BigBirdLMPredictionHead(config)
 
     def construct(self, sequence_output: mindspore.Tensor) -> mindspore.Tensor:
-
         """Constructs the masked language model head for the BigBirdOnlyMLMHead class.
         
         Args:
@@ -2414,7 +2382,6 @@ class BigBirdOnlyNSPHead(nn.Cell):
                 seq_relationship_score (Tensor): A tensor representing the next sentence prediction score.
     """
     def __init__(self, config):
-
         """
         Initializes a BigBirdOnlyNSPHead object.
         
@@ -2433,7 +2400,6 @@ class BigBirdOnlyNSPHead(nn.Cell):
         self.seq_relationship = nn.Dense(config.hidden_size, 2)
 
     def construct(self, pooled_output):
-
         """
         This method constructs a BigBirdOnlyNSPHead by calculating the sequence relationship score based on the pooled output.
         
@@ -2460,7 +2426,6 @@ class BigBirdPreTrainingHeads(nn.Cell):
     This class inherits from nn.Cell and contains the necessary components for pre-training tasks in the BigBird model.
     """
     def __init__(self, config):
-
         """
         Initializes the BigBirdPreTrainingHeads class.
         
@@ -2482,7 +2447,6 @@ class BigBirdPreTrainingHeads(nn.Cell):
         self.seq_relationship = nn.Dense(config.hidden_size, 2)
 
     def construct(self, sequence_output, pooled_output):
-
         """
         Construct the prediction and relation scores for the BigBirdPreTrainingHeads model.
         
@@ -2678,7 +2642,6 @@ class BigBirdModel(BigBirdPreTrainedModel):
     """
 
     def __init__(self, config, add_pooling_layer=True):
-
         """
         Initializes a new instance of the BigBirdModel class.
         
@@ -2720,7 +2683,6 @@ class BigBirdModel(BigBirdPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method to retrieve the input embeddings from the BigBirdModel.
         
@@ -2736,7 +2698,6 @@ class BigBirdModel(BigBirdPreTrainedModel):
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, value):
-
         """
         Set the input embeddings of the BigBirdModel.
         
@@ -2765,7 +2726,6 @@ The 'value' parameter should be an instance of a compatible embedding object.
         self.embeddings.word_embeddings = value
 
     def set_attention_type(self, value: str):
-
         """
         Method to set the attention type for the BigBirdModel.
         
@@ -2984,7 +2944,6 @@ The 'value' parameter should be an instance of a compatible embedding object.
 
     @staticmethod
     def create_masks_for_block_sparse_attn(attention_mask: mindspore.Tensor, block_size: int):
-
         """
         Creates masks for block sparse attention in the BigBirdModel class.
         
@@ -3099,7 +3058,6 @@ prediction loss if labels are provided, and returns the pre-training outputs. An
     _tied_weights_keys = ["cls.predictions.decoder.weight", "cls.predictions.decoder.bias"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of the BigBirdForPreTraining class.
         
@@ -3124,7 +3082,6 @@ prediction loss if labels are provided, and returns the pre-training outputs. An
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         This method returns the output embeddings for the BigBirdForPreTraining model.
         
@@ -3140,7 +3097,6 @@ prediction loss if labels are provided, and returns the pre-training outputs. An
         return self.cls.predictions.decoder
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings of the BigBirdForPreTraining model.
         
@@ -3287,7 +3243,6 @@ for generation.
     _tied_weights_keys = ["cls.predictions.decoder.weight", "cls.predictions.decoder.bias"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of the BigBirdForMaskedLM class.
         
@@ -3316,7 +3271,6 @@ for generation.
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings for the BigBirdForMaskedLM model.
         
@@ -3332,7 +3286,6 @@ for generation.
         return self.cls.predictions.decoder
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         This method sets the output embeddings for the BigBirdForMaskedLM model.
         
@@ -3447,7 +3400,6 @@ for generation.
         )
 
     def prepare_inputs_for_generation(self, input_ids, attention_mask=None):
-
         """
         Prepares inputs for generation in the BigBirdForMaskedLM model.
         
@@ -3510,7 +3462,6 @@ output_attentions, output_hidden_states, return_dict): Constructs the model for 
     _tied_weights_keys = ["cls.predictions.decoder.weight", "cls.predictions.decoder.bias"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of the BigBirdForCausalLM class.
         
@@ -3543,7 +3494,6 @@ output_attentions, output_hidden_states, return_dict): Constructs the model for 
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings for the BigBirdForCausalLM model.
         
@@ -3559,7 +3509,6 @@ output_attentions, output_hidden_states, return_dict): Constructs the model for 
         return self.cls.predictions.decoder
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings of the BigBirdForCausalLM model.
         
@@ -3659,7 +3608,6 @@ output_attentions, output_hidden_states, return_dict): Constructs the model for 
         )
 
     def prepare_inputs_for_generation(self, input_ids, past_key_values=None, attention_mask=None):
-
         """
         This method prepares inputs for generation in the BigBirdForCausalLM class.
         
@@ -3704,7 +3652,6 @@ output_attentions, output_hidden_states, return_dict): Constructs the model for 
         return {"input_ids": input_ids, "attention_mask": attention_mask, "past_key_values": past_key_values}
 
     def _reorder_cache(self, past_key_values, beam_idx):
-
         """ 
         Reorders the cache for the BigBirdForCausalLM model based on the provided beam index.
         
@@ -3733,7 +3680,6 @@ class BigBirdClassificationHead(nn.Cell):
     """Head for sentence-level classification tasks."""
 
     def __init__(self, config):
-
         """
         Initializes a BigBirdClassificationHead instance.
         
@@ -3766,7 +3712,6 @@ class BigBirdClassificationHead(nn.Cell):
         self.config = config
 
     def construct(self, features, **kwargs):
-
         """
         Constructs the BigBird classification head.
         
@@ -3808,7 +3753,6 @@ class BigBirdForSequenceClassification(BigBirdPreTrainedModel):
     For detailed usage and examples, refer to the code snippets provided in the docstring.
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the BigBirdForSequenceClassification class.
         
@@ -3953,7 +3897,6 @@ class BigBirdForMultipleChoice(BigBirdPreTrainedModel):
 tasks.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the BigBirdForMultipleChoice class.
         
@@ -4063,7 +4006,6 @@ loss, logits, hidden states, and attentions.
     Note: This docstring is generated based on the provided code snippet and may need to be updated with additional details about the class and its methods.
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the BigBirdForTokenClassification class.
         
@@ -4147,7 +4089,6 @@ class BigBirdForQuestionAnsweringHead(nn.Cell):
     """Head for question answering tasks."""
 
     def __init__(self, config):
-
         """
         Initializes an instance of the BigBirdForQuestionAnsweringHead class.
         
@@ -4168,7 +4109,6 @@ class BigBirdForQuestionAnsweringHead(nn.Cell):
         self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
 
     def construct(self, encoder_output):
-
         """
         Constructs the question-answering head for the BigBird model.
         
@@ -4237,7 +4177,6 @@ return_dict)`: Constructs the model for question answering.
     
     """
     def __init__(self, config, add_pooling_layer=False):
-
         '''
         __init__
         
@@ -4402,7 +4341,6 @@ return_dict)`: Constructs the model for question answering.
 
     @staticmethod
     def prepare_question_mask(q_lengths: mindspore.Tensor, maxlen: int):
-
         """
         Prepare a binary mask for the question tokens in the BigBirdForQuestionAnswering class.
         

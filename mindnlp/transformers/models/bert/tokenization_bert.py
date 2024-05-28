@@ -196,7 +196,6 @@ class BertTokenizer(PreTrainedTokenizer):
         strip_accents=None,
         **kwargs,
     ):
-
         """
         This method initializes a BertTokenizer object.
         
@@ -255,7 +254,6 @@ class BertTokenizer(PreTrainedTokenizer):
 
     @property
     def do_lower_case(self):
-
         """
         This method 'do_lower_case' is a property in the class 'BertTokenizer' and returns the value of the 'do_lower_case' property of the 'basic_tokenizer' attribute.
         
@@ -272,7 +270,6 @@ class BertTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
-
         """
         Method to retrieve the size of the vocabulary used by the BertTokenizer.
         
@@ -290,7 +287,6 @@ class BertTokenizer(PreTrainedTokenizer):
         return len(self.vocab)
 
     def get_vocab(self):
-
         """
         Retrieve the vocabulary of the BertTokenizer including any added tokens.
         
@@ -307,7 +303,6 @@ class BertTokenizer(PreTrainedTokenizer):
         return dict(self.vocab, **self.added_tokens_encoder)
 
     def _tokenize(self, text, split_special_tokens=False):
-
         """
         This method _tokenize in the class BertTokenizer tokenizes the input text based on the specified tokenizer configurations.
         
@@ -432,7 +427,6 @@ class BertTokenizer(PreTrainedTokenizer):
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary of the tokenizer to a file.
         
@@ -511,7 +505,6 @@ class BasicTokenizer():
         strip_accents=None,
         do_split_on_punc=True,
     ):
-
         """
         Initializes a BasicTokenizer object.
         
@@ -663,7 +656,6 @@ class WordpieceTokenizer():
     """Runs WordPiece tokenization."""
 
     def __init__(self, vocab, unk_token, max_input_chars_per_word=100):
-
         """
         __init__
         

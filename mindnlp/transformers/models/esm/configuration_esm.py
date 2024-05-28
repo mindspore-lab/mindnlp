@@ -124,7 +124,6 @@ class EsmConfig(PretrainedConfig):
         vocab_list=None,
         **kwargs,
     ):
-
         """
         Initializes an instance of the `EsmConfig` class.
         
@@ -240,7 +239,6 @@ class EsmFoldConfig:
     trunk: "TrunkConfig" = None
 
     def __post_init__(self):
-
         """
         The '__post_init__' method is used in the 'EsmFoldConfig' class to initialize the 'trunk' attribute.
         
@@ -332,7 +330,6 @@ class TrunkConfig:
     structure_module: "StructureModuleConfig" = None
 
     def __post_init__(self):
-
         """
         This method initializes the TrunkConfig class after its instantiation.
         
@@ -453,7 +450,6 @@ class StructureModuleConfig:
     inf: float = 1e5
 
     def to_dict(self):
-
         """
         Converts the current instance of the StructureModuleConfig class to a dictionary.
         
@@ -470,7 +466,6 @@ class StructureModuleConfig:
 
 
 def get_default_vocab_list():
-
     '''
     This function returns a list of default vocabulary items including special tokens and characters used in natural language processing tasks.
     

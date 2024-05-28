@@ -571,7 +571,6 @@ class GenerationMode(ExplicitEnum):
     GROUP_BEAM_SEARCH = "group_beam_search"
 
 
-
 class GenerationMixin:
     """
     class GenerationMixin
@@ -706,7 +705,6 @@ class GenerationMixin:
     def _prepare_input_ids_for_generation(
         self, bos_token_id: Optional[int], encoder_outputs
     ) -> mindspore.Tensor:
-
         """
         This method _prepare_input_ids_for_generation is defined in the class GenerationMixin.
         
@@ -737,7 +735,6 @@ class GenerationMixin:
         pad_token_id: Optional[int],
         eos_token_id: Optional[Union[int, List[int]]],
     ) -> mindspore.Tensor:
-
         """
         Prepare the attention mask for generation.
         
@@ -773,7 +770,6 @@ class GenerationMixin:
     def _prepare_encoder_decoder_kwargs_for_generation(
         self, inputs_tensor: mindspore.Tensor, model_kwargs, model_input_name: Optional[str] = None
     ) -> Dict[str, Any]:
-
         """
         Prepares encoder-decoder keyword arguments for generation.
         
@@ -874,7 +870,6 @@ class GenerationMixin:
         return decoder_input_ids, model_kwargs
 
     def _get_decoder_start_token_id(self, decoder_start_token_id: int = None, bos_token_id: int = None) -> int:
-
         """
         This method, '_get_decoder_start_token_id', is defined in the 'GenerationMixin' class. It takes three parameters: self, decoder_start_token_id, and bos_token_id. The method returns an integer value.
         
@@ -936,7 +931,6 @@ raised.
         return input_ids, model_kwargs
 
     def _extract_past_from_model_output(self, outputs: ModelOutput, standardize_cache_format: bool = False):
-
         """
         Extracts the past key values from the model output based on specific criteria and standardizes the cache format if required.
         
@@ -973,7 +967,6 @@ raised.
         is_encoder_decoder: bool = False,
         standardize_cache_format: bool = False,
     ) -> Dict[str, Any]:
-
         """
         This method updates the model keyword arguments for generation.
         
@@ -1019,7 +1012,6 @@ raised.
         return model_kwargs
 
     def _reorder_cache(self, past, beam_idx):
-
         """
         Reorders the cache for beam search in the 'GenerationMixin' class.
         
@@ -1086,7 +1078,6 @@ raised.
         if generation_config.renormalize_logits is True:
             warpers.append(LogitNormalization())
         return warpers
-
 
     def _get_logits_processor(
         self,
@@ -1222,7 +1213,6 @@ raised.
     def _get_stopping_criteria(
         self, generation_config: GenerationConfig, stopping_criteria: Optional[StoppingCriteriaList]
     ) -> StoppingCriteriaList:
-
         """
         This method is responsible for generating the stopping criteria list based on the provided generation configuration and additional stopping criteria list.
         
@@ -1250,13 +1240,11 @@ raised.
         criteria = self._merge_criteria_processor_list(criteria, stopping_criteria)
         return criteria
 
-
     def _merge_criteria_processor_list(
         self,
         default_list: Union[LogitsProcessorList, StoppingCriteriaList],
         custom_list: Union[LogitsProcessorList, StoppingCriteriaList],
     ) -> Union[LogitsProcessorList, StoppingCriteriaList]:
-
         """
         Merges the default and custom criteria processor or stopping criteria lists.
         
@@ -1404,7 +1392,6 @@ the conflict.
         return generation_mode
 
     def _extend_attention_mask(self, model_kwargs: Dict[str, Any], new_mask_length: int) -> Dict[str, Any]:
-
         """
         This method extends the attention mask in the model keyword arguments to a specified length.
         
@@ -1442,7 +1429,6 @@ the conflict.
         return model_kwargs
 
     def _extend_token_type_ids(self, model_kwargs: Dict[str, Any], new_length: int) -> Dict[str, Any]:
-
         """
         Method to extend the token type IDs in the model's keyword arguments to match a new length.
         
@@ -1714,7 +1700,6 @@ the conflict.
                         " Make sure it has a `_setup_cache` function."
                     )
                 self._setup_cache(cache_cls, max_batch_size=batch_size, max_cache_len=generation_config.max_length)
-
 
         self._validate_generated_length(generation_config, input_ids_length, has_default_max_length)
 
@@ -2460,7 +2445,6 @@ the conflict.
                 )
         else:
             return input_ids
-
 
     def greedy_search(
         self,
@@ -3608,7 +3592,6 @@ the conflict.
                 )
         else:
             return sequence_outputs["sequences"]
-
 
     def group_beam_search(
         self,

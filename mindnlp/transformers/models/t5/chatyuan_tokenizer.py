@@ -37,7 +37,6 @@ class ChatYuanTokenizer(PreTrainedTokenizer):
     model_input_names = ["input_ids", "attention_mask"]
 
     def __init__(self, vocab_file, **kwargs):
-
         """
         __init__
         
@@ -62,7 +61,6 @@ class ChatYuanTokenizer(PreTrainedTokenizer):
         self.vocab_file = vocab_file
         self._tokenizer = self.get_spm_processor()
 
-
     def get_spm_processor(self):
         """Get SentencePieceProcessor Tokenizer."""
         tokenizer = spm.SentencePieceProcessor()
@@ -78,7 +76,6 @@ class ChatYuanTokenizer(PreTrainedTokenizer):
         return self._tokenize(text_input)
 
     def tokenize(self, text_input) -> List[str]:
-
         """
         This method tokenizes the input text using the ChatYuanTokenizer.
         

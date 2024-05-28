@@ -167,7 +167,6 @@ class LayerDropModuleList(nn.CellList):
     """
 
     def __init__(self, p_drop: float, modules: Optional[Iterable[nn.Cell]] = None):
-
         """
         Initialize a LayerDropModuleList object with the provided parameters.
         
@@ -187,7 +186,6 @@ class LayerDropModuleList(nn.CellList):
         self.p_drop = p_drop
 
     def __iter__(self) -> Iterator[nn.Cell]:
-
         """
         This method '__iter__' in the class 'LayerDropModuleList' serves as an iterator to iterate through the cells within the module list.
         
@@ -212,7 +210,6 @@ class GraphormerGraphNodeFeature(nn.Cell):
     """
 
     def __init__(self, config: GraphormerConfig):
-
         """
         Initialize the GraphormerGraphNodeFeature class.
         
@@ -252,7 +249,6 @@ class GraphormerGraphNodeFeature(nn.Cell):
         in_degree: Tensor,
         out_degree: Tensor,
     ) -> Tensor:
-
         """
         Constructs graph node features based on input nodes, in-degree, and out-degree information.
         
@@ -293,7 +289,6 @@ class GraphormerGraphAttnBias(nn.Cell):
     """
 
     def __init__(self, config: GraphormerConfig):
-
         """
         This method initializes the GraphormerGraphAttnBias class with the provided configuration.
         
@@ -334,7 +329,6 @@ class GraphormerGraphAttnBias(nn.Cell):
         input_edges: Tensor,
         attn_edge_type: Tensor,
     ) -> Tensor:
-
         """
         This method constructs the graph attention bias tensor for the Graphormer model.
         
@@ -409,7 +403,6 @@ class GraphormerMultiheadAttention(nn.Cell):
     """
 
     def __init__(self, config: GraphormerConfig):
-
         """
         Initializes an instance of the GraphormerMultiheadAttention class.
         
@@ -627,7 +620,6 @@ class GraphormerGraphEncoderLayer(nn.Cell):
     Graphormer Graph Encoder Layer
     """
     def __init__(self, config: GraphormerConfig) -> None:
-
         """
         Initializes a GraphormerGraphEncoderLayer object with the provided configuration.
         
@@ -742,7 +734,6 @@ class GraphormerGraphEncoder(nn.Cell):
     Graphormer Graph Encoder
     """
     def __init__(self, config: GraphormerConfig):
-
         """
         Initializes the GraphormerGraphEncoder class.
         
@@ -832,7 +823,6 @@ class GraphormerGraphEncoder(nn.Cell):
         token_embeddings: Optional[Tensor] = None,
         attn_mask: Optional[Tensor] = None,
     ) -> Tuple[Union[Tensor, List[Tensor]], Tensor]:
-
         ''' 
         Constructs the graph encoder for Graphormer model.
         
@@ -914,7 +904,6 @@ class GraphormerDecoderHead(nn.Cell):
     Graphormer Decoder Head
     """
     def __init__(self, embedding_dim: int, num_classes: int):
-
         """
         Initializes the GraphormerDecoderHead class.
         
@@ -936,7 +925,6 @@ class GraphormerDecoderHead(nn.Cell):
         self.num_classes = num_classes
 
     def construct(self, input_nodes: Tensor, **kwargs) -> Tensor:
-
         """
         Construct the GraphormerDecoderHead.
         
@@ -1019,7 +1007,6 @@ class GraphormerPreTrainedModel(PreTrainedModel):
                 cell.apply(self.init_graphormer_params)
 
     def _set_gradient_checkpointing(self, module, value=False):
-
         """
         Set the gradient checkpointing option for a given module in a GraphormerPreTrainedModel.
         
@@ -1047,7 +1034,6 @@ class GraphormerModel(GraphormerPreTrainedModel):
     """
 
     def __init__(self, config: GraphormerConfig):
-
         """
         Initializes a new instance of the GraphormerModel class.
         
@@ -1100,7 +1086,6 @@ class GraphormerModel(GraphormerPreTrainedModel):
         return_dict: Optional[bool] = None,
         **kwargs,
     ) -> Union[Tuple[Tensor], BaseModelOutputWithNoAttention]:
-
         """
         Construct method in the GraphormerModel class.
         
@@ -1160,7 +1145,6 @@ class GraphormerForGraphClassification(GraphormerPreTrainedModel):
     """
 
     def __init__(self, config: GraphormerConfig):
-
         """
         Initializes a new instance of GraphormerForGraphClassification.
         
@@ -1197,7 +1181,6 @@ class GraphormerForGraphClassification(GraphormerPreTrainedModel):
         return_dict: Optional[bool] = None,
         **kwargs,
     ) -> Union[Tuple[Tensor], SequenceClassifierOutput]:
-
         """Constructs a Graphormer for graph classification.
         
         This method takes the following parameters:

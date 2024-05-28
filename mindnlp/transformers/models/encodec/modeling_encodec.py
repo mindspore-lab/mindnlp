@@ -81,7 +81,6 @@ class EncodecConv1d(nn.Cell):
     def __init__(
         self, config, in_channels: int, out_channels: int, kernel_size: int, stride: int = 1, dilation: int = 1
     ):
-
         """Initialize the EncodecConv1d class.
         
         Args:
@@ -158,7 +157,6 @@ class EncodecConv1d(nn.Cell):
         return padded[..., :end]
 
     def construct(self, hidden_states):
-
         """
         Method 'construct' in the class 'EncodecConv1d'.
         
@@ -202,7 +200,6 @@ class EncodecConvTranspose1d(nn.Cell):
     """ConvTranspose1d with asymmetric or causal padding and normalization."""
 
     def __init__(self, config, in_channels: int, out_channels: int, kernel_size: int, stride: int = 1):
-
         """
         Args:
             self (object): The instance of the class.
@@ -238,7 +235,6 @@ class EncodecConvTranspose1d(nn.Cell):
             raise ValueError("`trim_right_ratio` != 1.0 only makes sense for causal convolutions")
 
     def construct(self, hidden_states):
-
         """
         This method constructs a 1D transposed convolutional layer for the EncodecConvTranspose1d class.
         
@@ -289,7 +285,6 @@ class EncodecLSTM(nn.Cell):
     """
 
     def __init__(self, config, dimension):
-
         """
         Initializes an instance of the EncodecLSTM class.
         
@@ -308,7 +303,6 @@ class EncodecLSTM(nn.Cell):
         self.lstm = nn.LSTM(dimension, dimension, config.num_lstm_layers)
 
     def construct(self, hidden_states):
-
         """
         Constructs the encoded hidden states using the Long Short-Term Memory (LSTM) algorithm.
         
@@ -340,7 +334,6 @@ class EncodecResnetBlock(nn.Cell):
     """
 
     def __init__(self, config: EncodecConfig, dim: int, dilations: List[int]):
-
         """
         Initialize the EncodecResnetBlock.
         
@@ -376,7 +369,6 @@ class EncodecResnetBlock(nn.Cell):
             self.shortcut = nn.Identity()
 
     def construct(self, hidden_states):
-
         """
         Constructs the EncodecResnetBlock.
         
@@ -403,7 +395,6 @@ class EncodecEncoder(nn.Cell):
     """SEANet encoder as used by EnCodec."""
 
     def __init__(self, config: EncodecConfig):
-
         """
         This method initializes an instance of the EncodecEncoder class.
         
@@ -447,7 +438,6 @@ class EncodecEncoder(nn.Cell):
         self.layers = nn.CellList(model)
 
     def construct(self, hidden_states):
-
         """
         Constructs the encoded hidden states by applying each layer in the EncodecEncoder.
         
@@ -473,7 +463,6 @@ class EncodecDecoder(nn.Cell):
     """SEANet decoder as used by EnCodec."""
 
     def __init__(self, config: EncodecConfig):
-
         """
         __init__
         
@@ -517,7 +506,6 @@ class EncodecDecoder(nn.Cell):
         self.layers = nn.CellList(model)
 
     def construct(self, hidden_states):
-
         """
         Construct method in the EncodecDecoder class.
         
@@ -542,7 +530,6 @@ class EncodecEuclideanCodebook(nn.Cell):
     """Codebook with Euclidean distance."""
 
     def __init__(self, config: EncodecConfig):
-
         """
         Initializes an instance of the EncodecEuclideanCodebook class.
         
@@ -567,7 +554,6 @@ class EncodecEuclideanCodebook(nn.Cell):
         self.embed_avg = embed.clone()
 
     def quantize(self, hidden_states):
-
         """
         Quantizes the given hidden states using the Euclidean codebook encoding method.
         
@@ -588,7 +574,6 @@ class EncodecEuclideanCodebook(nn.Cell):
         return embed_ind
 
     def encode(self, hidden_states):
-
         """
         Encodes the hidden states using the Euclidean Codebook method.
         
@@ -613,7 +598,6 @@ codebook.
         return embed_ind
 
     def decode(self, embed_ind):
-
         """
         Decodes an embedding index using the Euclidean codebook method.
         
@@ -637,7 +621,6 @@ class EncodecVectorQuantization(nn.Cell):
     """
 
     def __init__(self, config: EncodecConfig):
-
         """
         Initializes an instance of the EncodecVectorQuantization class.
         
@@ -655,7 +638,6 @@ class EncodecVectorQuantization(nn.Cell):
         self.codebook = EncodecEuclideanCodebook(config)
 
     def encode(self, hidden_states):
-
         """
         Method to encode hidden states using vector quantization.
         
@@ -674,7 +656,6 @@ class EncodecVectorQuantization(nn.Cell):
         return embed_in
 
     def decode(self, embed_ind):
-
         """
         Decode the embedded indices to obtain the quantized vectors.
         
@@ -698,7 +679,6 @@ class EncodecResidualVectorQuantizer(nn.Cell):
     """Residual Vector Quantizer."""
 
     def __init__(self, config: EncodecConfig):
-
         """
         Initializes an instance of the EncodecResidualVectorQuantizer class.
         
@@ -840,7 +820,6 @@ class EncodecModel(EncodecPreTrainedModel):
         audio_values = outputs.audio_values
     """
     def __init__(self, config: EncodecConfig):
-
         """
         Initializes an instance of the EncodecModel class.
         
@@ -873,7 +852,6 @@ class EncodecModel(EncodecPreTrainedModel):
         self.post_init()
 
     def get_encoder(self):
-
         """
         This method returns the encoder associated with the EncodecModel instance.
         
@@ -890,7 +868,6 @@ class EncodecModel(EncodecPreTrainedModel):
         return self.encoder
 
     def get_decoder(self):
-
         """
         This method returns the decoder object associated with the EncodecModel instance.
         
@@ -1007,7 +984,6 @@ class EncodecModel(EncodecPreTrainedModel):
 
     @staticmethod
     def _linear_overlap_add(frames: List[mindspore.Tensor], stride: int):
-
         """
         Method _linear_overlap_add in the EncodecModel class.
         
@@ -1070,7 +1046,6 @@ class EncodecModel(EncodecPreTrainedModel):
         return out / sum_weight
 
     def _decode_frame(self, codes: mindspore.Tensor, scale: Optional[mindspore.Tensor] = None) -> mindspore.Tensor:
-
         """
         This method decodes the input codes and returns the corresponding output tensor.
         

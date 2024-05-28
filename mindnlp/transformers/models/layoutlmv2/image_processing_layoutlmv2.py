@@ -137,7 +137,6 @@ class LayoutLMv2ImageProcessor(BaseImageProcessor):
             tesseract_config: Optional[str] = "",
             **kwargs,
     ) -> None:
-
         """
         Initializes a LayoutLMv2ImageProcessor object.
         

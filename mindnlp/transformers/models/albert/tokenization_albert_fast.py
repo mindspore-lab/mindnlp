@@ -139,7 +139,6 @@ class AlbertTokenizerFast(PreTrainedTokenizerFast):
         mask_token="[MASK]",
         **kwargs,
     ):
-
         """
         Initialize the AlbertTokenizerFast class.
         
@@ -195,7 +194,6 @@ class AlbertTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def can_save_slow_tokenizer(self) -> bool:
-
         """
         Method to check if the slow tokenizer can be saved.
         
@@ -268,7 +266,6 @@ class AlbertTokenizerFast(PreTrainedTokenizerFast):
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary file for a fast tokenizer.
         

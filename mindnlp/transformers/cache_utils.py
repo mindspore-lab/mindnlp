@@ -81,7 +81,6 @@ class DynamicCache(Cache):
     """
 
     def __init__(self) -> None:
-
         r"""
         Initializes an instance of the 'DynamicCache' class.
         
@@ -224,7 +223,6 @@ class SinkCache(Cache):
     """
 
     def __init__(self, window_length: int, num_sink_tokens: int) -> None:
-
         r"""
         Initializes an instance of the SinkCache class.
         
@@ -262,7 +260,6 @@ stored.
 
     @staticmethod
     def _rotate_half(x):
-
         r"""
         Rotate the input tensor 'x' by half of its length along the last dimension.
         
@@ -283,7 +280,6 @@ stored.
     def _apply_key_rotary_pos_emb(
         self, key_states: mindspore.Tensor, cos: mindspore.Tensor, sin: mindspore.Tensor
     ) -> mindspore.Tensor:
-
         r"""
         Applies key rotary positional embedding to the given key states.
         
@@ -308,7 +304,6 @@ cosine values, and element-wise multiplication of the half-rotated key states wi
     def _get_rerotation_cos_sin(
         self, key_states: mindspore.Tensor, cos: mindspore.Tensor, sin: mindspore.Tensor
     ) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
-
         r"""
         This method calculates the rerotation cosine and sine values based on the provided key states, cosine, and sine tensors.
         
@@ -459,7 +454,6 @@ class StaticCache(Cache):
     """
 
     def __init__(self, config: PretrainedConfig, max_batch_size: int, max_cache_len: int, dtype=None) -> None:
-
         r"""
         Initializes a StaticCache object.
         
@@ -537,7 +531,6 @@ class StaticCache(Cache):
         )
 
     def get_usable_length(self, new_sequence_length=None, layer_idx: Optional[int] = 0) -> int:
-
         r"""
         Returns the usable length of a sequence in the StaticCache layer.
         

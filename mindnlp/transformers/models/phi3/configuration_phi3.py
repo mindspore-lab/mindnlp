@@ -139,7 +139,6 @@ class Phi3Config(PretrainedConfig):
         sliding_window=None,
         **kwargs,
     ):
-
         """
         This method initializes an instance of the Phi3Config class with the provided parameters.
         

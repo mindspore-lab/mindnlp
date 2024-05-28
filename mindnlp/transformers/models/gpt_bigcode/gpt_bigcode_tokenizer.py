@@ -47,7 +47,6 @@ class GPTBigCodeTokenizer(PreTrainedTokenizer):
         add_prefix_space=False,
         **kwargs
     ):
-
         """
         Initializes a new instance of the GPTBigCodeTokenizer class.
         
@@ -114,7 +113,6 @@ class GPTBigCodeTokenizer(PreTrainedTokenizer):
             f"Unsupported string type: {type(text_input)}, {text_input.dtype}")
 
     def _convert_token_to_id(self, token):
-
         """
         Converts the given token to its corresponding ID using the GPTBigCodeTokenizer.
         

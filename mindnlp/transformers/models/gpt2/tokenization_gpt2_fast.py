@@ -131,7 +131,6 @@ class GPT2TokenizerFast(PreTrainedTokenizerFast):
         add_prefix_space=False,
         **kwargs,
     ):
-
         """
         __init__
         
@@ -175,7 +174,6 @@ class GPT2TokenizerFast(PreTrainedTokenizerFast):
         self.add_prefix_space = add_prefix_space
 
     def _batch_encode_plus(self, *args, **kwargs) -> BatchEncoding:
-
         """
         This method '_batch_encode_plus' is defined in the class 'GPT2TokenizerFast'. It takes the following parameters:
         
@@ -199,7 +197,6 @@ add_prefix_space=True to use it with pretokenized inputs'.
         return super()._batch_encode_plus(*args, **kwargs)
 
     def _encode_plus(self, *args, **kwargs) -> BatchEncoding:
-
         """Encodes the input text into a batch of numerical representations using the GPT2TokenizerFast.
         
         Args:
@@ -234,7 +231,6 @@ add_prefix_space=True to use it with pretokenized inputs'.
         return super()._encode_plus(*args, **kwargs)
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary of the GPT2TokenizerFast model to the specified directory.
         

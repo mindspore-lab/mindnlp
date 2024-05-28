@@ -47,7 +47,6 @@ class MoE(nn.Cell):
         activation=None,
         glu=True,
     ):
-
         """
         Initializes the MoE (Mixture of Experts) model with the specified parameters.
         
@@ -90,7 +89,6 @@ class MoE(nn.Cell):
         )
 
     def extra_repr(self):
-
         """
         This method generates a string representation of the MoE (Mixture of Experts) class instance.
         
@@ -117,7 +115,6 @@ class MoE(nn.Cell):
         return self.gate.get_aux_loss_and_clear()
 
     def compute_gate(self, x):
-
         """
         Compute the gate for selecting the expert to route the input data to.
         
@@ -185,7 +182,6 @@ class MoE(nn.Cell):
         return y, loss
 
     def single_forward(self, x):
-
         """
         This method performs a single forward pass through the Mixture of Experts (MoE) layer.
         
@@ -250,7 +246,6 @@ class MoE(nn.Cell):
             return self.batch_forward(x)
 
     def single_map(self, x):
-
         """
         This method 'single_map' is a part of the 'MoE' class and is used to perform a single mapping operation in the Mixture of Experts (MoE) model.
         
@@ -340,7 +335,6 @@ input sequence, and 'self.top_k' is the number of top-k expert indices, and '-1'
             return self.batch_map(x)
 
     def single_reduce(self, x):
-
         """
         Reduces the input tensor 'x' using a single mixture of experts (MoE) layer.
         

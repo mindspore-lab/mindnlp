@@ -19,7 +19,6 @@ Training arguments for Trainer.
 class TrainingArguments:
     """training arguments"""
     def __init__(self) -> None:
-
         r"""
         Initializes a new instance of the TrainingArguments class.
         

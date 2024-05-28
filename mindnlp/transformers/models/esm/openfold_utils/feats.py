@@ -27,7 +27,6 @@ from .tensor_utils import batched_gather
 
 @overload
 def pseudo_beta_fn(aatype: mindspore.Tensor, all_atom_positions: mindspore.Tensor, all_atom_masks: None) -> mindspore.Tensor:
-
     """
     This function calculates the pseudo beta value using the given input parameters.
     
@@ -49,7 +48,6 @@ def pseudo_beta_fn(aatype: mindspore.Tensor, all_atom_positions: mindspore.Tenso
 def pseudo_beta_fn(
     aatype: mindspore.Tensor, all_atom_positions: mindspore.Tensor, all_atom_masks: mindspore.Tensor
 ) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
-
     '''
     This function calculates pseudo beta values based on the provided amino acid type, atom positions, and atom masks.
     
@@ -68,7 +66,6 @@ def pseudo_beta_fn(
 
 
 def pseudo_beta_fn(aatype, all_atom_positions, all_atom_masks):
-
     """
     Args:
         aatype (ndarray): An array representing the amino acid type.
@@ -104,7 +101,6 @@ def pseudo_beta_fn(aatype, all_atom_positions, all_atom_masks):
 
 
 def atom14_to_atom37(atom14: mindspore.Tensor, batch: Dict[str, mindspore.Tensor]) -> mindspore.Tensor:
-
     """
     Args:
         atom14 (mindspore.Tensor): The input tensor representing the atom data in a 14-dimensional space.
@@ -129,7 +125,6 @@ def atom14_to_atom37(atom14: mindspore.Tensor, batch: Dict[str, mindspore.Tensor
 
 
 def build_template_angle_feat(template_feats: Dict[str, mindspore.Tensor]) -> mindspore.Tensor:
-
     '''
     This function builds a template angle feature tensor based on the input template features.
     
@@ -173,7 +168,6 @@ def build_template_pair_feat(
     eps: float = 1e-20,
     inf: float = 1e8,
 ) -> mindspore.Tensor:
-
     """
     Builds a template pair feature tensor based on the input batch data.
     
@@ -245,7 +239,6 @@ def build_template_pair_feat(
 
 
 def build_extra_msa_feat(batch: Dict[str, mindspore.Tensor]) -> mindspore.Tensor:
-
     """
     This function builds additional features using the input batch data for multiple sequence alignment (MSA).
     
@@ -276,7 +269,6 @@ def torsion_angles_to_frames(
     aatype: mindspore.Tensor,
     rrgdf: mindspore.Tensor,
 ) -> Rigid:
-
     """
     Converts torsion angles to frames in a Rigid object.
     
@@ -356,7 +348,6 @@ def frames_and_literature_positions_to_atom14_pos(
     atom_mask: mindspore.Tensor,
     lit_positions: mindspore.Tensor,
 ) -> mindspore.Tensor:
-
     """
     Converts frames and literature positions to atom14 positions.
     

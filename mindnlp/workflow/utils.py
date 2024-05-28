@@ -67,7 +67,6 @@ class SchemaTree:
     """
 
     def __init__(self, name="root", children=None):
-
         """
         Initializes an instance of the SchemaTree class.
         
@@ -97,7 +96,6 @@ the 'children' attribute. The 'prefix', 'parent_relations', and 'parent' attribu
                 self.add_child(child)
 
     def __repr__(self):
-
         """
         Args:
             self: SchemaTree

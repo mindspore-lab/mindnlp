@@ -54,7 +54,6 @@ class Trie:
     """
 
     def __init__(self):
-
         """
         Initializes an instance of the Trie class.
         
@@ -255,7 +254,6 @@ class Trie:
         return self.cut_text(text, offsets)
 
     def cut_text(self, text, offsets):
-
         """
         Method to cut a given text into tokens based on provided offsets.
         
@@ -371,7 +369,6 @@ class PreTrainedTokenizer(PreTrainedTokenizerBase):
     """
 
     def __init__(self, **kwargs):
-
         """
         Initialize the PreTrainedTokenizer class.
         
@@ -410,7 +407,6 @@ class PreTrainedTokenizer(PreTrainedTokenizerBase):
 
     @property
     def is_fast(self) -> bool:
-
         """
         Checks if the tokenizer is fast.
         
@@ -455,7 +451,6 @@ available. This information can be useful for optimizing the tokenization proces
 
     @added_tokens_decoder.setter
     def added_tokens_decoder(self, value: Dict[int, Union[AddedToken, str]]) -> Dict[int, AddedToken]:
-
         """
         Decodes added tokens and updates the internal state of the tokenizer.
         
@@ -577,7 +572,6 @@ available. This information can be useful for optimizing the tokenization proces
         return added_tokens
 
     def _update_trie(self, unique_no_split_tokens: Optional[str] = []):
-
         """
         Updates the tokens trie with unique tokens and unique_no_split_tokens.
         
@@ -734,7 +728,6 @@ available. This information can be useful for optimizing the tokenization proces
         return ids
 
     def _convert_token_to_id_with_added_voc(self, token):
-
         """
         Method _convert_token_to_id_with_added_voc in the PreTrainedTokenizer class.
         
@@ -756,7 +749,6 @@ available. This information can be useful for optimizing the tokenization proces
         return self._convert_token_to_id(token)
 
     def _convert_token_to_id(self, token):
-
         """
         Converts a token to its corresponding ID.
         
@@ -794,7 +786,6 @@ available. This information can be useful for optimizing the tokenization proces
         verbose: bool = True,
         **kwargs,
     ) -> BatchEncoding:
-
         """
         Method to encode text inputs for a transformer model.
         
@@ -906,7 +897,6 @@ available. This information can be useful for optimizing the tokenization proces
         verbose: bool = True,
         **kwargs,
     ) -> BatchEncoding:
-
         """
         This method '_batch_encode_plus' in the class 'PreTrainedTokenizer' performs batch encoding of text or text pairs.
         
@@ -1114,7 +1104,6 @@ transformers.PreTrainedTokenizerFast.
 
     @overload
     def convert_ids_to_tokens(self, ids: int, skip_special_tokens: bool = False) -> str:
-
         """
         Converts a list of token IDs to their corresponding tokens in the original text.
         
@@ -1144,7 +1133,6 @@ transformers.PreTrainedTokenizerFast.
 
     @overload
     def convert_ids_to_tokens(self, ids: List[int], skip_special_tokens: bool = False) -> List[str]:
-
         """
         Converts a sequence of token ids into a sequence of tokens.
         
@@ -1193,7 +1181,6 @@ transformers.PreTrainedTokenizerFast.
         return tokens
 
     def _convert_id_to_token(self, index: int) -> str:
-
         """
         Converts an index to its corresponding token in the tokenizer's vocabulary.
         
@@ -1210,7 +1197,6 @@ transformers.PreTrainedTokenizerFast.
         raise NotImplementedError
 
     def convert_tokens_to_string(self, tokens: List[str]) -> str:
-
         """
         Converts a list of tokens into a single string.
         
@@ -1234,7 +1220,6 @@ transformers.PreTrainedTokenizerFast.
         spaces_between_special_tokens: bool = True,
         **kwargs,
     ) -> str:
-
         """
         This method decodes the given token IDs into a string representation.
         

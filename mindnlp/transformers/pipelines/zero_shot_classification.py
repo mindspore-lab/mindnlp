@@ -34,7 +34,6 @@ class ZeroShotClassificationArgumentHandler(ArgumentHandler):
     """
 
     def _parse_labels(self, labels):
-
         """
         This method '_parse_labels' is a part of the class 'ZeroShotClassificationArgumentHandler' and is responsible for parsing and processing the input labels.
         
@@ -53,7 +52,6 @@ class ZeroShotClassificationArgumentHandler(ArgumentHandler):
         return labels
 
     def __call__(self, sequences, labels, hypothesis_template):
-
         """
         Class: ZeroShotClassificationArgumentHandler
         
@@ -94,7 +92,6 @@ class ZeroShotClassificationArgumentHandler(ArgumentHandler):
             sequence_pairs.extend([[sequence, hypothesis_template.format(label)] for label in labels])
 
         return sequence_pairs, sequences
-
 
 
 class ZeroShotClassificationPipeline(ChunkPipeline):
@@ -139,7 +136,6 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
     """
 
     def __init__(self, *args, args_parser=ZeroShotClassificationArgumentHandler(), **kwargs):
-
         """
         Initializes a new instance of the ZeroShotClassificationPipeline class.
         
@@ -165,7 +161,6 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
 
     @property
     def entailment_id(self):
-
         """
         Returns the index of the 'entailment' label in the label-to-identifier mapping of the ZeroShotClassificationPipeline's model configuration.
         
@@ -227,7 +222,6 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
         return inputs
 
     def _sanitize_parameters(self, **kwargs):
-
         """
         Sanitizes the parameters for the ZeroShotClassificationPipeline.
         
@@ -323,7 +317,6 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
         return super().__call__(sequences, **kwargs)
 
     def preprocess(self, inputs, candidate_labels=None, hypothesis_template="This example is {}."):
-
         """
         This method preprocesses inputs for zero-shot classification and generates model inputs for each candidate label.
         
@@ -350,7 +343,6 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
             }
 
     def _forward(self, inputs):
-
         """
         Executes the forward pass for the ZeroShotClassificationPipeline.
         
@@ -384,7 +376,6 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
         return model_outputs
 
     def postprocess(self, model_outputs, multi_label=False):
-
         """
         This method postprocesses the model outputs for a ZeroShotClassificationPipeline.
         

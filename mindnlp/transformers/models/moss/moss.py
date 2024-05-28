@@ -76,7 +76,6 @@ class MossAttention(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes a MossAttention object.
         
@@ -133,7 +132,6 @@ class MossAttention(nn.Cell):
             max_positions, pos_embd_dim)
 
     def _split_heads(self, input_tensor, n_head, dim_head, mp_num):
-
         """
         Splits the input tensor into multiple heads for multi-head attention in the MossAttention class.
         
@@ -178,7 +176,6 @@ class MossAttention(nn.Cell):
             attention_mask=None,
             head_mask=None,
     ):
-
         """
         Method _attn in the MossAttention class.
         
@@ -256,7 +253,6 @@ class MossAttention(nn.Cell):
         Optional[Tuple[Tensor, Tuple[Tensor],
         Tuple[Tensor, ...]]],
     ]:
-
         """
         Constructs the attention mechanism for the MossAttention class.
         
@@ -354,7 +350,6 @@ class MossMLP(nn.Cell):
     """
 
     def __init__(self, intermediate_size, config):  # in MLP: intermediate_size= 4 * embed_dim
-
         """
         Initializes an instance of the MossMLP class.
         
@@ -379,7 +374,6 @@ class MossMLP(nn.Cell):
         self.dropout = nn.Dropout(p=config.resid_pdrop)
 
     def construct(self, hidden_states: Optional[Tensor]) -> Tensor:
-
         """
         Constructs the forward pass of the MossMLP neural network.
         
@@ -408,7 +402,6 @@ class MossBlock(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes a MossBlock instance with the provided configuration.
         
@@ -443,7 +436,6 @@ class MossBlock(nn.Cell):
             use_cache: Optional[bool] = False,
             output_attentions: Optional[bool] = False,
     ) -> Union[Tuple[Tensor], Optional[Tuple[Tensor, Tuple[Tensor, ...]]]]:
-
         """
         Constructs a MossBlock by applying self-attention and feed-forward layers to the given hidden states.
         
@@ -530,7 +522,6 @@ class MossPreTrainedModel(PreTrainedModel):
                 One(), cell.weight.shape, cell.weight.dtype))
 
     def _set_gradient_checkpointing(self, cell, value=False):
-
         """
         Sets the gradient checkpointing flag for a given cell in the MossPreTrainedModel.
         
@@ -619,7 +610,6 @@ class MossModel(MossPreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the MossModel class.
         
@@ -843,7 +833,6 @@ class MossForCausalLM(MossPreTrainedModel):
     _keys_to_ignore_on_load_missing = [r"h\.\d+\.attn\.causal_mask"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of the MossForCausalLM class.
         

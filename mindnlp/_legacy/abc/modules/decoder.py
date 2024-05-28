@@ -26,7 +26,6 @@ class DecoderBase(nn.Cell):
     """
 
     def __init__(self, embedding):
-
         r"""
         Initializes a DecoderBase object.
         

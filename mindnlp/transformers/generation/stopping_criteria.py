@@ -28,7 +28,6 @@ class StoppingCriteria():
     """Abstract base class for all stopping criteria that can be applied during generation."""
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor, **kwargs) -> bool:
-
         """
         This method is the call method for the StoppingCriteria class.
         
@@ -57,7 +56,6 @@ class MaxLengthCriteria(StoppingCriteria):
     """
 
     def __init__(self, max_length: int):
-
         """
         Initializes a MaxLengthCriteria object with the specified maximum length.
         
@@ -74,7 +72,6 @@ class MaxLengthCriteria(StoppingCriteria):
         self.max_length = max_length
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor, **kwargs) -> bool:
-
         """
         This method evaluates whether the length of input_ids meets the maximum length criteria.
         
@@ -108,7 +105,6 @@ class MaxNewTokensCriteria(StoppingCriteria):
     """
 
     def __init__(self, start_length: int, max_new_tokens: int):
-
         """
         Initializes an instance of the MaxNewTokensCriteria class.
         
@@ -134,7 +130,6 @@ class MaxNewTokensCriteria(StoppingCriteria):
         self.max_length = start_length + max_new_tokens
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor, **kwargs) -> bool:
-
         """
         This method evaluates the condition for the maximum number of new tokens based on the input ids and scores.
         
@@ -167,7 +162,6 @@ class MaxTimeCriteria(StoppingCriteria):
     """
 
     def __init__(self, max_time: float, initial_timestamp: Optional[float] = None):
-
         """
         Initialize a MaxTimeCriteria object.
         
@@ -188,7 +182,6 @@ class MaxTimeCriteria(StoppingCriteria):
         self.initial_timestamp = time.time() if initial_timestamp is None else initial_timestamp
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor, **kwargs) -> bool:
-
         """
         This method represents the call functionality of the MaxTimeCriteria class.
         
@@ -213,7 +206,6 @@ class MaxTimeCriteria(StoppingCriteria):
 class StoppingCriteriaList(list):
     """StoppingCriteriaList"""
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor, **kwargs) -> bool:
-
         """
         This method '__call__' in the class 'StoppingCriteriaList' evaluates a list of stopping criteria against the input data.
         

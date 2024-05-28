@@ -76,7 +76,6 @@ class GPTPanguTokenizer(PreTrainedTokenizer):
             model_file,
             **kwargs
     ):
-
         """
         Initializes a new instance of the GPTPanguTokenizer class.
         
@@ -146,7 +145,6 @@ class GPTPanguTokenizer(PreTrainedTokenizer):
         return seg_list
 
     def convert_tokens_to_ids(self, tokens):
-
         """
         Converts a list of tokens into their corresponding token IDs using the GPTPanguTokenizer.
         
@@ -199,7 +197,6 @@ of token IDs.
         # # return tokens
 
     def _convert_token_to_id(self, token):
-
         """
         Converts a token to its corresponding ID using the GPTPanguTokenizer.
         
@@ -217,7 +214,6 @@ of token IDs.
         return self.sp.piece_to_id(token)
 
     def _convert_id_to_token(self, index):
-
         """
         Converts an index to its corresponding token using the GPTPanguTokenizer.
         
@@ -234,7 +230,6 @@ of token IDs.
         return self.sp.id_to_piece(index)
 
     def convert_ids_to_tokens(self, ids):
-
         """
         Converts a list of token IDs to their corresponding tokens using the GPTPanguTokenizer.
         
@@ -261,7 +256,6 @@ of token IDs.
         return self.decode(ids)
 
     def decode(self, ids, **kwargs):
-
         """
         Decode the given token IDs into text using the GPTPanguTokenizer.
         

@@ -45,7 +45,6 @@ class SamProcessor(ProcessorMixin):
     image_processor_class = "SamImageProcessor"
 
     def __init__(self, image_processor):
-
         """
         Initializes a new instance of the SamProcessor class.
         
@@ -116,7 +115,6 @@ class SamProcessor(ProcessorMixin):
         input_boxes=None,
         return_tensors="ms",
     ):
-
         """Normalize and convert input data for encoding image processing.
         
         Args:
@@ -282,7 +280,6 @@ class SamProcessor(ProcessorMixin):
 
     @property
     def model_input_names(self):
-
         """
         This method returns a list of unique model input names used in the SamProcessor class.
         
@@ -299,7 +296,6 @@ class SamProcessor(ProcessorMixin):
         return list(dict.fromkeys(image_processor_input_names))
 
     def post_process_masks(self, *args, **kwargs):
-
         """
         Post-processes masks using the image processor.
         

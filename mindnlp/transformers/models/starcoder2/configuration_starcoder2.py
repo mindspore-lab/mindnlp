@@ -122,7 +122,6 @@ class Starcoder2Config(PretrainedConfig):
         use_bias=True,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the Starcoder2Config class.
         

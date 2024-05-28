@@ -37,7 +37,6 @@ class MLP(nn.Cell):
 	"""
 
     def __init__(self, n_state, config):
-
         """
         Initializes an instance of the MLP class.
         
@@ -60,7 +59,6 @@ class MLP(nn.Cell):
         self.dropout = Dropout(p=config.resid_pdrop)
 
     def construct(self, x):
-
         """
         Constructs the output of the MLP (Multi-Layer Perceptron) for a given input.
         
@@ -104,7 +102,6 @@ class Attention(nn.Cell):
     """
 
     def __init__(self, nx, n_positions, config, scale=False):
-
         """
         Initializes an instance of the Attention class.
         
@@ -161,7 +158,6 @@ class Attention(nn.Cell):
         self.pruned_heads = self.pruned_heads.union(heads)
 
     def _attn(self, q, k, v, attention_mask=None, head_mask=None):
-
         """
         Method _attn in the Attention class.
         
@@ -199,7 +195,6 @@ class Attention(nn.Cell):
             outputs += (w,)
         return outputs
 
-
     def merge_heads(self, x):
         """merge heads"""
         x = x.transpose(0, 2, 1, 3)
@@ -215,7 +210,6 @@ class Attention(nn.Cell):
         return x.transpose(0, 2, 1, 3)
 
     def construct(self, x, attention_mask=None, head_mask=None):
-
         """
         Constructs the attention mechanism in the Attention class.
         
@@ -255,7 +249,6 @@ class Block(nn.Cell):
     """
 
     def __init__(self, n_positions, config, scale=False):
-
         """
         Initializes a new instance of the Block class.
         
@@ -279,7 +272,6 @@ class Block(nn.Cell):
         self.ln_2 = nn.LayerNorm((nx,), epsilon=config.layer_norm_epsilon)
 
     def construct(self, x, attention_mask=None, head_mask=None):
-
         """
         Construct a block by applying attention, normalization, and multi-layer perceptron operations on the input tensor.
         
@@ -342,7 +334,6 @@ class GPTModel(GPTPreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes a GPTModel instance with the specified configuration.
         
@@ -403,7 +394,6 @@ class GPTModel(GPTPreTrainedModel):
             head_mask=None,
             inputs_embeds=None,
     ):
-
         """
         This method constructs the GPT model based on the provided input parameters.
         
@@ -485,7 +475,6 @@ class GPTLMHeadModel(GPTPreTrainedModel):
     (linear layer with weights tied to the input embeddings).
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the GPTLMHeadModel class.
         
@@ -530,7 +519,6 @@ class GPTLMHeadModel(GPTPreTrainedModel):
         inputs_embeds = None,
         labels = None,
     ):
-
         """
         Constructs the GPTLMHeadModel.
         
@@ -589,7 +577,6 @@ class GPTDoubleHeadsModel(GPTPreTrainedModel):
     input sequence).
     """
     def __init__(self, config):
-
         """Initializes a GPTDoubleHeadsModel instance.
         
         Args:
@@ -634,7 +621,6 @@ class GPTDoubleHeadsModel(GPTPreTrainedModel):
         labels = None,
         mc_labels = None,
     ):
-
         """
         Constructs the GPTDoubleHeadsModel.
         
@@ -702,7 +688,6 @@ class GPTForSequenceClassification(GPTPreTrainedModel):
     the last value in each row of the batch).
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the GPTForSequenceClassification class.
         

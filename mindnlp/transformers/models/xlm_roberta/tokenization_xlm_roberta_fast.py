@@ -148,7 +148,6 @@ class XLMRobertaTokenizerFast(PreTrainedTokenizerFast):
         mask_token="<mask>",
         **kwargs,
     ):
-
         """
         Initializes an instance of the XLMRobertaTokenizerFast class.
         
@@ -191,7 +190,6 @@ class XLMRobertaTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def can_save_slow_tokenizer(self) -> bool:
-
         """
         This method checks whether the slow tokenizer can be saved.
         
@@ -260,7 +258,6 @@ class XLMRobertaTokenizerFast(PreTrainedTokenizerFast):
         return len(cls + token_ids_0 + sep + sep + token_ids_1 + sep) * [0]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary to a specified directory with an optional filename prefix.
         

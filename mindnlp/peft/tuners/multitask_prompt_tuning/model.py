@@ -36,7 +36,6 @@ class MultitaskPromptEmbedding(PromptEmbedding):
     
     """
     def __init__(self, config: MultitaskPromptTuningConfig, word_embeddings):
-
         """
         Initializes an instance of the MultitaskPromptEmbedding class.
         
@@ -134,7 +133,6 @@ class MultitaskPromptEmbedding(PromptEmbedding):
             self.load_state_dict(state_dict, strict=False)
 
     def construct(self, indices, task_ids):
-
         """
         Construct prompt embeddings for multiple tasks.
         

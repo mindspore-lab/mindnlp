@@ -79,7 +79,6 @@ class Trainer:
                  metrics: Optional[Metric] = None,
                  callbacks: Optional[Union[Callback, List]] = None,
                  **kwargs):
-
         r"""
         Initializes an instance of the 'Trainer' class.
         
@@ -153,7 +152,6 @@ class Trainer:
         self.callback_manager = CallbackManager(callbacks)
 
     def _prepare_train_func(self):
-
         r"""
         Prepares the training function for the Trainer class.
         
@@ -187,7 +185,6 @@ as gradient checking and automatic mixed precision (AMP) level.
                                                       self.check_gradients or self.amp_level != 'O0', self.jit, self.obj_network)
 
     def _prepare_callbacks(self, callbacks):
-
         r"""
         Prepare the list of callbacks for the Trainer.
         
@@ -213,7 +210,6 @@ as gradient checking and automatic mixed precision (AMP) level.
         raise TypeError(f"Expect callbacks to be list or Callback. Got {type(callbacks)}.")
 
     def _check_callbacks_type(self, callbacks):
-
         r"""
         This method '_check_callbacks_type' in the class 'Trainer' is used to verify the types of callbacks provided.
         
@@ -237,7 +233,6 @@ as gradient checking and automatic mixed precision (AMP) level.
                 raise ValueError("BestModelCallback is not effective when eval_dataset is None.")
 
     def _prepare_eval(self, eval_dataset, metrics, callbacks, jit):
-
         r"""
         Prepares the evaluation process during training in the 'Trainer' class.
         

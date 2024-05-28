@@ -91,7 +91,6 @@ class Pop2PianoFeatureExtractor(SequenceFeatureExtractor):
         num_bars: int = 2,
         **kwargs,
     ):
-
         """
         Initializes a Pop2PianoFeatureExtractor object.
         
@@ -256,7 +255,6 @@ class Pop2PianoFeatureExtractor(SequenceFeatureExtractor):
         return padded_batch, extrapolated_beatstep
 
     def _pad(self, features: np.ndarray, add_zero_line=True):
-
         """
         Method _pad in class Pop2PianoFeatureExtractor.
         

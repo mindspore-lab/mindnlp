@@ -122,7 +122,6 @@ class LoHaConfig(LycorisConfig):
     )
 
     def __post_init__(self):
-
         r"""
         This method initializes the attributes of a LoHaConfig object after its creation.
         

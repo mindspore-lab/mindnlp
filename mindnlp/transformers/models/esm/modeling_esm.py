@@ -50,7 +50,6 @@ ESM_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 
 def rotate_half(x):
-
     """
     Rotate the input array by half of its length.
     
@@ -68,7 +67,6 @@ def rotate_half(x):
 
 
 def apply_rotary_pos_emb(x, cos, sin):
-
     """
     Apply rotary positional embeddings to the input tensor.
     
@@ -121,7 +119,6 @@ class RotaryEmbedding(nn.Cell):
     """
 
     def __init__(self, dim: int):
-
         """
         Initializes a new instance of the RotaryEmbedding class.
         
@@ -146,7 +143,6 @@ class RotaryEmbedding(nn.Cell):
         self._sin_cached = None
 
     def _update_cos_sin_tables(self, x, seq_dimension=2):
-
         """
         Method to update cosine and sine tables for rotary embedding.
         
@@ -178,7 +174,6 @@ class RotaryEmbedding(nn.Cell):
         return self._cos_cached, self._sin_cached
 
     def construct(self, q: mindspore.Tensor, k: mindspore.Tensor) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
-
         """
         Constructs the rotary embedding for the given input tensors q and k.
         
@@ -220,7 +215,6 @@ class EsmContactPredictionHead(nn.Cell):
         bias=True,
         eos_idx: int = 2,
     ):
-
         """Initializes an instance of the EsmContactPredictionHead class.
         
         Args:
@@ -242,7 +236,6 @@ class EsmContactPredictionHead(nn.Cell):
         self.activation = nn.Sigmoid()
 
     def construct(self, tokens, attentions):
-
         """
         This method constructs attentions for contact prediction in the ESM model.
         
@@ -282,7 +275,6 @@ class EsmEmbeddings(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         __init__
         
@@ -331,7 +323,6 @@ class EsmEmbeddings(nn.Cell):
     def construct(
         self, input_ids=None, attention_mask=None, position_ids=None, inputs_embeds=None, past_key_values_length=0
     ):
-
         """
         This method constructs embeddings for the EsmEmbeddings class.
         
@@ -420,7 +411,6 @@ class EsmSelfAttention(nn.Cell):
     The class inherits from nn.Cell and includes methods for initializing the self-attention mechanism, swapping axes for attention scores, and constructing the attention mechanism.
     """
     def __init__(self, config, position_embedding_type=None):
-
         """
         Initializes a new instance of the EsmSelfAttention class.
         
@@ -470,7 +460,6 @@ class EsmSelfAttention(nn.Cell):
         self.is_decoder = config.is_decoder
 
     def swapaxes_for_scores(self, x: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method swaps and reshapes the input tensor to prepare it for self-attention calculation.
         
@@ -499,7 +488,6 @@ attention head size.
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         '''
         Constructs the self-attention mechanism for the EsmSelfAttention class.
         
@@ -633,7 +621,6 @@ class EsmSelfOutput(nn.Cell):
         output = esm_self_output.construct(hidden_states, input_tensor)
     """
     def __init__(self, config):
-
         """Initializes a new instance of the EsmSelfOutput class.
         
         Args:
@@ -653,7 +640,6 @@ class EsmSelfOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states, input_tensor):
-
         """
         The 'construct' method in the 'EsmSelfOutput' class processes the hidden states and input tensor to construct the output.
         
@@ -688,7 +674,6 @@ attention output.
 based on the provided input states and masks.
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the EsmAttention class.
         
@@ -709,7 +694,6 @@ based on the provided input states and masks.
         self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
 
     def prune_heads(self, heads):
-
         """
         Method to prune attention heads in the EsmAttention class.
         
@@ -750,7 +734,6 @@ based on the provided input states and masks.
         past_key_value=None,
         output_attentions=False,
     ):
-
         """
             Args:
                 self (EsmAttention): The instance of the EsmAttention class.
@@ -811,7 +794,6 @@ class EsmIntermediate(nn.Cell):
                 - mindspore.Tensor: The processed hidden states after going through the intermediate computations.
     """
     def __init__(self, config):
-
         """
         Initializes an EsmIntermediate object.
         
@@ -832,7 +814,6 @@ class EsmIntermediate(nn.Cell):
         self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method constructs the intermediate layer of the Esm model.
         
@@ -867,7 +848,6 @@ hidden_states are then returned.
     Note: This docstring is based on the provided information and does not include code signatures or any other code.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the EsmOutput class.
         
@@ -891,7 +871,6 @@ hidden_states are then returned.
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states, input_tensor):
-
         """
         Constructs the output of the EsmOutput class.
         
@@ -944,7 +923,6 @@ This class inherits from the nn.Cell class.
         AttributeError: If `encoder_hidden_states` are passed without instantiating cross-attention layers by setting `config.add_cross_attention=True`.
     """
     def __init__(self, config):
-
         """Initializes an instance of the EsmLayer class.
         
         Args:
@@ -986,7 +964,6 @@ This class inherits from the nn.Cell class.
         past_key_value=None,
         output_attentions=False,
     ):
-
         """
         Construct the EsmLayer.
         
@@ -1065,7 +1042,6 @@ This class inherits from the nn.Cell class.
         return outputs
 
     def feed_forward_chunk(self, attention_output):
-
         """
         Method: feed_forward_chunk
         
@@ -1122,7 +1098,6 @@ output_hidden_states=False, return_dict=True)`: Constructs the encoder layers an
     For more details on the purpose and functionality of the `EsmEncoder` class, please refer to the code implementation and associated documentation.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the EsmEncoder class.
         
@@ -1159,7 +1134,6 @@ output_hidden_states=False, return_dict=True)`: Constructs the encoder layers an
         output_hidden_states=False,
         return_dict=True,
     ):
-
         """
         This method constructs the EsmEncoder model with the given input parameters.
         
@@ -1275,7 +1249,6 @@ class EsmPooler(nn.Cell):
         pooled_output = pooler.construct(hidden_states)
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the EsmPooler class.
         
@@ -1299,7 +1272,6 @@ class EsmPooler(nn.Cell):
         self.activation = nn.Tanh()
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method constructs a pooled output from the hidden states of the ESM model.
         
@@ -1371,7 +1343,6 @@ class EsmModel(EsmPreTrainedModel):
     """
 
     def __init__(self, config, add_pooling_layer=True):
-
         """
         Initializes an instance of the EsmModel class.
         
@@ -1402,7 +1373,6 @@ class EsmModel(EsmPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method returns the input embeddings for the ESMM model.
         
@@ -1418,7 +1388,6 @@ class EsmModel(EsmPreTrainedModel):
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the EsmModel.
         
@@ -1563,7 +1532,6 @@ class EsmModel(EsmPreTrainedModel):
         )
 
     def predict_contacts(self, tokens, attention_mask):
-
         """
         Predicts contacts using the EsmModel.
         
@@ -1609,7 +1577,6 @@ the tokens with labels in `[0, ..., config.vocab_size]`.
     _tied_weights_keys = ["lm_head.decoder.weight"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of EsmForMaskedLM.
         
@@ -1638,7 +1605,6 @@ the tokens with labels in `[0, ..., config.vocab_size]`.
         self.init_weights()
 
     def get_output_embeddings(self):
-
         """
         This method returns the output embeddings for the language model head.
         
@@ -1654,7 +1620,6 @@ the tokens with labels in `[0, ..., config.vocab_size]`.
         return self.lm_head.decoder
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Set the output embeddings for the ESM model.
         
@@ -1726,7 +1691,6 @@ the tokens with labels in `[0, ..., config.vocab_size]`.
         )
 
     def predict_contacts(self, tokens, attention_mask):
-
         """
         This method predicts contacts using the ESM (Evolutionary Scale Modeling) for Masked Language Modeling.
         
@@ -1748,7 +1712,6 @@ class EsmLMHead(nn.Cell):
     """ESM Head for masked language modeling."""
 
     def __init__(self, config):
-
         """
         Initializes an instance of the EsmLMHead class.
         
@@ -1773,7 +1736,6 @@ class EsmLMHead(nn.Cell):
         self.bias = Parameter(ops.zeros(config.vocab_size))
 
     def construct(self, features, **kwargs):
-
         """
         Constructs the output of the EsmLMHead class.
         
@@ -1813,7 +1775,6 @@ class EsmForSequenceClassification(EsmPreTrainedModel):
     
     """
     def __init__(self, config):
-
         """
         Initializes an instance of EsmForSequenceClassification.
         
@@ -1920,7 +1881,6 @@ attentions based on the return_dict parameter.
     Note: This docstring is a high-level summary and does not include method signatures or implementation details.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the EsmForTokenClassification class.
         
@@ -2002,7 +1962,6 @@ class EsmClassificationHead(nn.Cell):
     """Head for sentence-level classification tasks."""
 
     def __init__(self, config):
-
         """
         Initializes an instance of the EsmClassificationHead class.
         
@@ -2025,7 +1984,6 @@ class EsmClassificationHead(nn.Cell):
         self.out_proj = nn.Dense(config.hidden_size, config.num_labels)
 
     def construct(self, features, **kwargs):
-
         """
         Constructs the classification head for ESM (Evoformer) model.
         

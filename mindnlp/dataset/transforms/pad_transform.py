@@ -39,7 +39,6 @@ class PadTransform(PyTensorOperation):
 
     # @check_decode
     def __init__(self, max_length: int, pad_value:int, return_length:bool = False):
-
         r"""
         Initializes an instance of the PadTransform class.
         

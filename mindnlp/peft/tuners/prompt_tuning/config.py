@@ -166,7 +166,6 @@ class PromptTuningConfig(PromptLearningConfig):
     )
 
     def __post_init__(self):
-
         r"""
         This method initializes the PromptTuningConfig object after its creation.
         

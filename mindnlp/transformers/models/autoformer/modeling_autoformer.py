@@ -181,7 +181,6 @@ class AutoformerFeatureEmbedder(nn.Cell):
     """
 
     def __init__(self, cardinalities: List[int], embedding_dims: List[int]) -> None:
-
         """
         Initializes the AutoformerFeatureEmbedder.
         
@@ -204,7 +203,6 @@ class AutoformerFeatureEmbedder(nn.Cell):
         self.embedders = nn.CellList([nn.Embedding(c, d) for c, d in zip(cardinalities, embedding_dims)])
 
     def construct(self, features: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs feature embeddings for the AutoformerFeatureEmbedder.
         
@@ -253,7 +251,6 @@ class AutoformerStdScaler(nn.Cell):
     """
 
     def __init__(self, config: AutoformerConfig):
-
         """
         Initializes an instance of AutoformerStdScaler.
         
@@ -277,7 +274,6 @@ class AutoformerStdScaler(nn.Cell):
         self.minimum_scale = config.minimum_scale if hasattr(config, "minimum_scale") else 1e-5
 
     def construct(self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
-
         """
         Constructs the AutoformerStdScaler.
         
@@ -324,7 +320,6 @@ class AutoformerMeanScaler(nn.Cell):
     """
 
     def __init__(self, config: AutoformerConfig):
-
         """
         Initializes an instance of the AutoformerMeanScaler class.
         
@@ -353,7 +348,6 @@ class AutoformerMeanScaler(nn.Cell):
     def construct(
         self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor
     ) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
-
         """
         Construct method in the AutoformerMeanScaler class.
         
@@ -421,7 +415,6 @@ class AutoformerNOPScaler(nn.Cell):
     """
 
     def __init__(self, config: AutoformerConfig):
-
         """
         Initializes an instance of the AutoformerNOPScaler class.
         
@@ -441,7 +434,6 @@ class AutoformerNOPScaler(nn.Cell):
 
     def construct(
         self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor      ) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
-
         ''' 
         Constructs the scaling parameters for the AutoformerNOPScaler.
         
@@ -499,7 +491,6 @@ class AutoformerSinusoidalPositionalEmbedding(nn.Embedding):
     """This module produces sinusoidal positional embeddings of any length."""
 
     def __init__(self, num_positions: int, embedding_dim: int, padding_idx: Optional[int] = None) -> None:
-
         """
         Initializes an instance of AutoformerSinusoidalPositionalEmbedding.
         
@@ -551,7 +542,6 @@ class AutoformerValueEmbedding(nn.Cell):
     #todo add docstring
     """
     def __init__(self, feature_size, d_model):
-
         """
         Initializes an instance of the AutoformerValueEmbedding class.
         
@@ -571,7 +561,6 @@ class AutoformerValueEmbedding(nn.Cell):
             in_channels=feature_size, out_channels=d_model, has_bias=False)
 
     def construct(self, x):
-
         """
         Constructs the value embedding for the given input.
         
@@ -599,7 +588,6 @@ class AutoformerSeriesDecompositionLayer(nn.Cell):
     """
 
     def __init__(self, config: AutoformerConfig):
-
         """
         Initializes an instance of the AutoformerSeriesDecompositionLayer class.
         
@@ -642,7 +630,6 @@ class AutoformerLayernorm(nn.Cell):
     """
 
     def __init__(self, config: AutoformerConfig):
-
         """
         Initializes a new instance of the AutoformerLayernorm class.
         
@@ -661,7 +648,6 @@ dimension.
         self.layernorm = nn.LayerNorm([config.d_model])
 
     def construct(self, x):
-
         """
         This method 'construct' is a part of the class 'AutoformerLayernorm' and is used to perform a specific data processing operation. 
         
@@ -696,7 +682,6 @@ class AutoformerAttention(nn.Cell):
         bias: bool = True,
         autocorrelation_factor: int = 3,
     ):
-
         """
         Initialize the AutoformerAttention class.
         
@@ -736,7 +721,6 @@ class AutoformerAttention(nn.Cell):
         self.autocorrelation_factor = autocorrelation_factor
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-
         """
         Reshapes a given tensor to match the desired shape for AutoformerAttention.
         
@@ -983,7 +967,6 @@ class AutoformerEncoderLayer(nn.Cell):
     #todo add docstring
     """
     def __init__(self, config: AutoformerConfig):
-
         """
         Initializes an instance of AutoformerEncoderLayer.
         
@@ -1076,7 +1059,6 @@ class AutoformerDecoderLayer(nn.Cell):
     #todo add docstring
     """
     def __init__(self, config: AutoformerConfig):
-
         """
         Initializes an instance of the AutoformerDecoderLayer class.
         
@@ -1254,7 +1236,6 @@ class AutoformerPreTrainedModel(PreTrainedModel):
     main_input_name = "past_values"
 
     def _init_weights(self, cell):
-
         """
         Initializes the weights of the given cell.
         
@@ -1294,7 +1275,6 @@ class AutoformerEncoder(AutoformerPreTrainedModel):
     """
 
     def __init__(self, config: AutoformerConfig):
-
         """
         Initializes the AutoformerEncoder.
         
@@ -1442,7 +1422,6 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
     """
 
     def __init__(self, config: AutoformerConfig):
-
         """
         Initializes an instance of the AutoformerDecoder class.
         
@@ -1663,7 +1642,6 @@ class AutoformerModel(AutoformerPreTrainedModel):
     # todo add docstring
     """
     def __init__(self, config: AutoformerConfig):
-
         """
         Initializes an instance of the AutoformerModel class.
         
@@ -1734,7 +1712,6 @@ initialized.
 
     @property
     def _past_length(self) -> int:
-
         """
         Method _past_length in class AutoformerModel.
         
@@ -2064,7 +2041,6 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
     # todo add docstring
     """
     def __init__(self, config: AutoformerConfig):
-
         """
         Initializes an instance of AutoformerForPrediction.
         
@@ -2258,7 +2234,6 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
             scale=outputs.scale,
             static_features=outputs.static_features,
         )
-
 
     def generate(
         self,

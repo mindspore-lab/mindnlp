@@ -42,7 +42,6 @@ logger = logging.get_logger(__name__)
 
 # Copied from transformers.models.llama.modeling_llama._get_unpad_data
 def _get_unpad_data(attention_mask):
-
     """
     Args:
         attention_mask (Tensor): A tensor representing the attention mask for the input data.
@@ -105,7 +104,6 @@ class MistralRMSNorm(nn.Cell):
         self.variance_epsilon = eps
 
     def construct(self, hidden_states):
-
         """
         Constructs the RMS normalization of the hidden states.
         
@@ -148,7 +146,6 @@ embeddings for input sequences.
         construct(self, x, seq_len=None): Constructs the embeddings for the input sequence, optionally updating the cache if the sequence length exceeds the cached values.
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
-
         """
         Initializes a new instance of the MistralRotaryEmbedding class.
         
@@ -177,7 +174,6 @@ embeddings for input sequences.
         )
 
     def _set_cos_sin_cache(self, seq_len, dtype):
-
         '''
         Set the cosine and sine cache for MistralRotaryEmbedding.
         
@@ -203,7 +199,6 @@ embeddings for input sequences.
         self.sin_cached = emb.sin().to(dtype)
 
     def construct(self, x, seq_len=None):
-
         """
         Constructs the MistralRotaryEmbedding.
         
@@ -290,7 +285,6 @@ class MistralMLP(nn.Cell):
                 Tensor: The output of the MLP after processing the input data.
     """
     def __init__(self, config):
-
         """
         Initializes a MistralMLP object with the provided configuration.
         
@@ -320,7 +314,6 @@ class MistralMLP(nn.Cell):
         self.act_fn = ACT2FN[config.hidden_act]
 
     def construct(self, x):
-
         """
         Constructs a new instance of the MistralMLP class.
         
@@ -357,7 +350,6 @@ class MistralAttention(nn.Cell):
     """
 
     def __init__(self, config: MistralConfig, layer_idx: Optional[int] = None):
-
         """
         Initializes an instance of the MistralAttention class.
         
@@ -411,7 +403,6 @@ always provide a `layer_idx` when creating this class.
         )
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-
         """
         This method '_shape' in the class 'MistralAttention' reshapes the input tensor based on the provided parameters.
         
@@ -439,7 +430,6 @@ always provide a `layer_idx` when creating this class.
         output_attentions: bool = False,
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
-
         """Constructs the MistralAttention.
         
         Args:
@@ -573,7 +563,6 @@ output_attentions: Optional[bool] = False, use_cache: Optional[bool] = False, **
         
     """
     def __init__(self, config: MistralConfig, layer_idx: int):
-
         """
         Initializes a MistralDecoderLayer object.
         
@@ -709,7 +698,6 @@ class MistralModel(MistralPreTrainedModel):
     """
 
     def __init__(self, config: MistralConfig):
-
         """
         __init__
         
@@ -745,7 +733,6 @@ class MistralModel(MistralPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method: get_input_embeddings
         
@@ -766,7 +753,6 @@ class MistralModel(MistralPreTrainedModel):
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Set the input embeddings for the MistralModel.
         
@@ -794,7 +780,6 @@ class MistralModel(MistralPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
-
         """
         This method constructs the MistralModel. It takes the following parameters:
         
@@ -920,7 +905,6 @@ forward pass, while the prepare_inputs_for_generation method prepares inputs for
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of MistralForCausalLM.
         
@@ -947,7 +931,6 @@ forward pass, while the prepare_inputs_for_generation method prepares inputs for
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method to retrieve the input embeddings from the MistralForCausalLM model.
         
@@ -965,7 +948,6 @@ forward pass, while the prepare_inputs_for_generation method prepares inputs for
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the MistralForCausalLM model.
         
@@ -982,7 +964,6 @@ forward pass, while the prepare_inputs_for_generation method prepares inputs for
         self.model.embed_tokens = value
 
     def get_output_embeddings(self):
-
         """
         This method returns the output embeddings for the MistralForCausalLM model.
         
@@ -998,7 +979,6 @@ forward pass, while the prepare_inputs_for_generation method prepares inputs for
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings for the MistralForCausalLM model.
         
@@ -1016,7 +996,6 @@ forward pass, while the prepare_inputs_for_generation method prepares inputs for
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
-
         """
         Sets the decoder for the MistralForCausalLM model.
         
@@ -1033,7 +1012,6 @@ forward pass, while the prepare_inputs_for_generation method prepares inputs for
         self.model = decoder
 
     def get_decoder(self):
-
         '''
         Method: get_decoder
         
@@ -1143,7 +1121,6 @@ forward pass, while the prepare_inputs_for_generation method prepares inputs for
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
-
         """
         Prepare inputs for generation.
         
@@ -1225,7 +1202,6 @@ forward pass, while the prepare_inputs_for_generation method prepares inputs for
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Reorders the cache for a causal language model.
         
@@ -1283,7 +1259,6 @@ class MistralForSequenceClassification(MistralPreTrainedModel):
                 Union[Tuple, SequenceClassifierOutputWithPast]: The classification output or a tuple with loss and output if loss is available.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the MistralForSequenceClassification class.
         
@@ -1309,7 +1284,6 @@ class MistralForSequenceClassification(MistralPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings from the MistralForSequenceClassification model.
         
@@ -1325,7 +1299,6 @@ class MistralForSequenceClassification(MistralPreTrainedModel):
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the MistralForSequenceClassification model.
         

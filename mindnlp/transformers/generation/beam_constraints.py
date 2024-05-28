@@ -36,7 +36,6 @@ class Constraint(ABC):
     """
 
     def __init__(self):
-
         """
         Initializes an instance of the Constraint class.
         
@@ -167,7 +166,6 @@ class PhrasalConstraint(Constraint):
     """
 
     def __init__(self, token_ids: List[int]):
-
         """
         __init__
         
@@ -198,7 +196,6 @@ class PhrasalConstraint(Constraint):
         self.completed = False
 
     def advance(self):
-
         """Advance to the next token in the PhrasalConstraint.
         
         Args:
@@ -216,7 +213,6 @@ class PhrasalConstraint(Constraint):
         return self.token_ids[self.fulfilled_idx + 1]
 
     def does_advance(self, token_id: int):
-
         """
         Checks if the given `token_id` can be advanced in the context of the PhrasalConstraint class.
         
@@ -239,7 +235,6 @@ class PhrasalConstraint(Constraint):
         return token_id == self.token_ids[self.fulfilled_idx + 1]
 
     def update(self, token_id: int):
-
         """
         Updates the state of the PhrasalConstraint object based on the given token ID.
         
@@ -279,7 +274,6 @@ class PhrasalConstraint(Constraint):
         return stepped, completed, reset
 
     def reset(self):
-
         """
         Resets the state of the PhrasalConstraint object.
         
@@ -297,7 +291,6 @@ class PhrasalConstraint(Constraint):
         self.fulfilled_idx = 0
 
     def remaining(self):
-
         """
         This method calculates the remaining length of the sequence that needs to be fulfilled for the phrasal constraint.
         
@@ -313,7 +306,6 @@ class PhrasalConstraint(Constraint):
         return self.seqlen - (self.fulfilled_idx + 1)
 
     def copy(self, stateful=False):
-
         """
         Copy a PhrasalConstraint.
         
@@ -378,7 +370,6 @@ class DisjunctiveTrie:
         return next_tokens
 
     def reached_leaf(self, current_seq):
-
         """
         This method is part of the DisjunctiveTrie class and is used to determine if the current sequence has reached a leaf node within the trie structure.
         
@@ -398,7 +389,6 @@ the sequence.
         return len(next_tokens) == 0
 
     def count_leaves(self, root):
-
         """
         Counts the number of leaves in a Disjunctive Trie starting from a given root node.
         
@@ -436,7 +426,6 @@ class DisjunctiveConstraint(Constraint):
     """
 
     def __init__(self, nested_token_ids: List[List[int]]):
-
         """
         Initialize a DisjunctiveConstraint object with the provided nested_token_ids.
         
@@ -477,7 +466,6 @@ class DisjunctiveConstraint(Constraint):
         self.completed = False
 
     def advance(self):
-
         """
         Advance the current sequence in the DisjunctiveConstraint object and return the next available token.
         
@@ -498,7 +486,6 @@ class DisjunctiveConstraint(Constraint):
         return token_list
 
     def does_advance(self, token_id: int):
-
         """
         Checks if a given token ID can be advanced in the DisjunctiveConstraint.
         
@@ -524,7 +511,6 @@ tokens from the trie associated with the current sequence. Finally, it returns w
         return token_id in next_tokens
 
     def update(self, token_id: int):
-
         """
         This method updates the state of the DisjunctiveConstraint object based on the provided token_id.
         
@@ -558,7 +544,6 @@ tokens from the trie associated with the current sequence. Finally, it returns w
         return stepped, completed, reset
 
     def reset(self):
-
         """
         Resets the state of the DisjunctiveConstraint.
         
@@ -575,7 +560,6 @@ tokens from the trie associated with the current sequence. Finally, it returns w
         self.current_seq = []
 
     def remaining(self):
-
         """
         Returns the remaining length of the current sequence in a DisjunctiveConstraint object.
         
@@ -594,7 +578,6 @@ tokens from the trie associated with the current sequence. Finally, it returns w
         return self.seqlen - len(self.current_seq)
 
     def copy(self, stateful=False):
-
         """
         Copy method creates a new instance of DisjunctiveConstraint and returns it. This method can be used to create a copy of an existing DisjunctiveConstraint object.
         
@@ -650,7 +633,6 @@ class ConstraintListState:
     """
 
     def __init__(self, constraints: List[Constraint]):
-
         """Initialize a ConstraintListState object.
         
         Args:
@@ -673,7 +655,6 @@ class ConstraintListState:
         self.init_state()
 
     def init_state(self):
-
         """
         This method initializes the state of the ConstraintListState object.
         
@@ -691,7 +672,6 @@ class ConstraintListState:
         self.pending_constraints = [constraint.copy(stateful=False) for constraint in self.constraints]
 
     def get_bank(self):
-
         """
         This method 'get_bank' is defined within the 'ConstraintListState' class and retrieves the bank value based on certain constraints.
         
@@ -765,7 +745,6 @@ class ConstraintListState:
                     break
 
     def add(self, token_id: int):
-
         """
         This method 'add' belongs to the class 'ConstraintListState' and is used to update the state based on the provided token_id.
         
@@ -868,7 +847,6 @@ class ConstraintListState:
         return complete, stepped
 
     def copy(self, stateful=True):
-
         """
         This method creates a copy of the ConstraintListState object with the option to include stateful constraints.
         

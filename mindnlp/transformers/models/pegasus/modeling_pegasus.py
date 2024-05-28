@@ -68,7 +68,6 @@ class PegasusSinusoidalPositionalEmbedding(nn.Embedding):
     """This module produces sinusoidal positional embeddings of any length."""
 
     def __init__(self, num_positions: int, embedding_dim: int, padding_idx: Optional[int] = None) -> None:
-
         """
         Initialize the PegasusSinusoidalPositionalEmbedding object.
         
@@ -128,7 +127,6 @@ class PegasusAttention(nn.Cell):
         is_causal: bool = False,
         config: Optional[PegasusConfig] = None,
     ):
-
         """
         Initializes the PegasusAttention class.
         
@@ -169,7 +167,6 @@ class PegasusAttention(nn.Cell):
         self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-
         """
         Method to reshape a tensor for Pegasus attention mechanism.
         
@@ -242,7 +239,6 @@ class PegasusAttention(nn.Cell):
             # can concat previous decoder key/value_states to current projected key/value_states (third "elif" case)
             # if encoder bi-directional self-attention `past_key_value` is always `None`
             past_key_value = (key_states, value_states)
-
 
         proj_shape = (bsz * self.num_heads, -1, self.head_dim)
         query_states = self._shape(query_states, tgt_len, bsz).view(*proj_shape)
@@ -340,7 +336,6 @@ class PegasusEncoderLayer(nn.Cell):
     - attn_weights: The attention weights if output_attentions is set to True
     '''
     def __init__(self, config: PegasusConfig):
-
         """
         Initialize a PegasusEncoderLayer object.
         
@@ -468,7 +463,6 @@ class PegasusDecoderLayer(nn.Cell):
             if output_attentions is True, and present key-value states if use_cache is True.
     """
     def __init__(self, config: PegasusConfig):
-
         """
         Initializes an instance of the PegasusDecoderLayer class.
         
@@ -613,7 +607,6 @@ for weights based on the specified standard deviation and initializes biases or 
     supports_gradient_checkpointing = False
 
     def _init_weights(self, cell):
-
         ''' 
         _init_weights method initializes the weights of the provided cell based on the specified configuration.
         
@@ -652,7 +645,6 @@ class PegasusEncoder(PegasusPreTrainedModel):
     """
 
     def __init__(self, config: PegasusConfig, embed_tokens: Optional[nn.Embedding] = None):
-
         '''
         Initializes a PegasusEncoder object.
         
@@ -866,7 +858,6 @@ class PegasusDecoder(PegasusPreTrainedModel):
     """
 
     def __init__(self, config: PegasusConfig, embed_tokens: Optional[nn.Embedding] = None):
-
         """
         Initializes a PegasusDecoder instance.
         
@@ -907,7 +898,6 @@ class PegasusDecoder(PegasusPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method returns the input embeddings for the PegasusDecoder.
         
@@ -923,7 +913,6 @@ class PegasusDecoder(PegasusPreTrainedModel):
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         This method sets the input embeddings for the PegasusDecoder.
         
@@ -1209,7 +1198,6 @@ Pegasus model by encoding the input and decoding it with the provided decoder in
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
     def __init__(self, config: PegasusConfig):
-
         """
         Initialize the PegasusModel with the provided configuration.
         
@@ -1237,7 +1225,6 @@ Pegasus model by encoding the input and decoding it with the provided decoder in
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Retrieves the input embeddings for the PegasusModel instance.
         
@@ -1253,7 +1240,6 @@ Pegasus model by encoding the input and decoding it with the provided decoder in
         return self.shared
 
     def set_input_embeddings(self, value):
-
         """
         This method sets the input embeddings for the PegasusModel.
         
@@ -1272,7 +1258,6 @@ Pegasus model by encoding the input and decoding it with the provided decoder in
         self.decoder.embed_tokens = self.shared
 
     def get_encoder(self):
-
         """
         This method returns the encoder associated with the PegasusModel.
         
@@ -1290,7 +1275,6 @@ Pegasus model by encoding the input and decoding it with the provided decoder in
         return self.encoder
 
     def get_decoder(self):
-
         """
         Method to retrieve the decoder attribute of a PegasusModel instance.
         
@@ -1459,7 +1443,6 @@ Union[Tuple, Seq2SeqLMOutput]: Constructs the Pegasus model.
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight", "lm_head.weight"]
 
     def __init__(self, config: PegasusConfig):
-
         """
         Initializes an instance of the 'PegasusForConditionalGeneration' class.
         
@@ -1482,7 +1465,6 @@ Union[Tuple, Seq2SeqLMOutput]: Constructs the Pegasus model.
         self.post_init()
 
     def get_encoder(self):
-
         """
         This method returns the encoder from the Pegasus model for conditional generation.
         
@@ -1498,7 +1480,6 @@ Union[Tuple, Seq2SeqLMOutput]: Constructs the Pegasus model.
         return self.model.get_encoder()
 
     def get_decoder(self):
-
         """
         Returns the decoder of the PegasusForConditionalGeneration model.
         
@@ -1514,7 +1495,6 @@ Union[Tuple, Seq2SeqLMOutput]: Constructs the Pegasus model.
         return self.model.get_decoder()
 
     def resize_token_embeddings(self, new_num_tokens: int, pad_to_multiple_of: Optional[int] = None) -> nn.Embedding:
-
         """
         Resize the token embeddings of the Pegasus model for conditional generation to accommodate a new number of tokens.
         
@@ -1538,7 +1518,6 @@ Finally, it returns the resized token embeddings as an instance of the nn.Embedd
         return new_embeddings
 
     def _resize_final_logits_bias(self, new_num_tokens: int) -> None:
-
         """
         Resizes the final logits bias tensor in the PegasusForConditionalGeneration class.
         
@@ -1565,7 +1544,6 @@ with the original tensor along the column axis. Finally, the self.final_logits_b
         self.final_logits_bias = new_bias
 
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings of the PegasusForConditionalGeneration model.
         
@@ -1581,7 +1559,6 @@ with the original tensor along the column axis. Finally, the self.final_logits_b
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         This method sets the output embeddings for the Pegasus model.
         
@@ -1710,7 +1687,6 @@ with the original tensor along the column axis. Finally, the self.final_logits_b
         encoder_outputs=None,
         **kwargs,
     ):
-
         '''
         Prepare inputs for generation.
         
@@ -1768,7 +1744,6 @@ with the original tensor along the column axis. Finally, the self.final_logits_b
         }
 
     def prepare_decoder_input_ids_from_labels(self, labels: mindspore.Tensor):
-
         """
         Prepare_decoder_input_ids_from_labels method in the PegasusForConditionalGeneration class.
         
@@ -1786,7 +1761,6 @@ with the original tensor along the column axis. Finally, the self.final_logits_b
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Reorders the cache for the PegasusForConditionalGeneration class.
         
@@ -1828,7 +1802,6 @@ class PegasusDecoderWrapper(PegasusPreTrainedModel):
     """
 
     def __init__(self, config):
-
         """
         Initializes an instance of the PegasusDecoderWrapper class.
         
@@ -1846,7 +1819,6 @@ class PegasusDecoderWrapper(PegasusPreTrainedModel):
         self.decoder = PegasusDecoder(config)
 
     def construct(self, *args, **kwargs):
-
         """
         Method 'construct' in the class 'PegasusDecoderWrapper'.
         
@@ -1905,7 +1877,6 @@ loss, past key values, hidden states, attentions, and cross attentions.
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
-
         """
         Initializes a new instance of the PegasusForCausalLM class.
         
@@ -1935,7 +1906,6 @@ loss, past key values, hidden states, attentions, and cross attentions.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method: get_input_embeddings
         
@@ -1954,7 +1924,6 @@ loss, past key values, hidden states, attentions, and cross attentions.
         return self.model.decoder.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         set_input_embeddings method in the PegasusForCausalLM class sets the input embeddings for the model.
         
@@ -1971,7 +1940,6 @@ loss, past key values, hidden states, attentions, and cross attentions.
         self.model.decoder.embed_tokens = value
 
     def get_output_embeddings(self):
-
         """
         Method to retrieve the output embeddings from the PegasusForCausalLM model.
         
@@ -1989,7 +1957,6 @@ loss, past key values, hidden states, attentions, and cross attentions.
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Set the output embeddings for PegasusForCausalLM model.
         
@@ -2006,7 +1973,6 @@ loss, past key values, hidden states, attentions, and cross attentions.
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
-
         """
         Sets the decoder of the PegasusForCausalLM model.
         
@@ -2023,7 +1989,6 @@ loss, past key values, hidden states, attentions, and cross attentions.
         self.model.decoder = decoder
 
     def get_decoder(self):
-
         """
         This method retrieves the decoder component of the PegasusForCausalLM model.
         
@@ -2205,7 +2170,6 @@ loss, past key values, hidden states, attentions, and cross attentions.
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, use_cache=None, **kwargs
     ):
-
         """
         Prepare inputs for generation in the PegasusForCausalLM class.
         
@@ -2254,7 +2218,6 @@ loss, past key values, hidden states, attentions, and cross attentions.
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Reorders the cache for beam search in the PegasusForCausalLM class.
         

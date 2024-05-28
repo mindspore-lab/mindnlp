@@ -59,7 +59,6 @@ original module for reference. The class includes methods for enabling and disab
     The class provides a flexible way to manage and switch between different modules within a neural network.
     """
     def __init__(self, cell_to_save, adapter_name):
-
         r"""
         Initializes an instance of the ModulesToSaveWrapper class.
         
@@ -94,7 +93,6 @@ original module for reference. The class includes methods for enabling and disab
 
     @property
     def disable_adapters(self) -> bool:
-
         r"""
         Method to retrieve the status of whether adapters are disabled in the ModulesToSaveWrapper class.
         
@@ -114,7 +112,6 @@ original module for reference. The class includes methods for enabling and disab
 
     @property
     def active_adapter(self) -> str:
-
         r"""
         This method retrieves the active adapter from the ModulesToSaveWrapper class.
         
@@ -132,7 +129,6 @@ original module for reference. The class includes methods for enabling and disab
 
     @property
     def weight(self):
-
         r"""
         This method 'weight' is a property method within the 'ModulesToSaveWrapper' class.
         
@@ -150,7 +146,6 @@ original module for reference. The class includes methods for enabling and disab
         return self.cells_to_save[self.active_adapter].weight
 
     def update(self, adapter_name):
-
         r"""
         Updates the ModulesToSaveWrapper with a new adapter.
         
@@ -198,7 +193,6 @@ original module for reference. The class includes methods for enabling and disab
     #     return new_hook
 
     def construct(self, *args, **kwargs):
-
         r"""
         This method constructs and returns the appropriate cell based on the active adapter within the ModulesToSaveWrapper class.
         
@@ -333,7 +327,6 @@ def _freeze_adapter(model, adapter_name):
 
 
 def _set_adapter(model, adapter_name):
-
     r"""
     Sets the active adapter for the given model.
     
@@ -353,7 +346,6 @@ def _set_adapter(model, adapter_name):
 
 
 def _prepare_prompt_learning_config(peft_config, model_config):
-
     r"""
     Args:
         peft_config (object): The PEFT configuration object containing the parameters for prompt learning.
@@ -444,7 +436,6 @@ class Conv1D(mindspore.nn.Cell):
     """
 
     def __init__(self, n_out, n_in):
-
         r"""
         Initializes an instance of the Conv1D class.
         
@@ -466,7 +457,6 @@ class Conv1D(mindspore.nn.Cell):
         self.matmul = Matmul()
 
     def construct(self, x):
-
         r"""
         Constructs the output of a 1D convolutional layer.
         

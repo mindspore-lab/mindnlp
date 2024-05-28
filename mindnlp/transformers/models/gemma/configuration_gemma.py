@@ -123,7 +123,6 @@ class GemmaConfig(PretrainedConfig):
         attention_dropout=0.0,
         **kwargs,
     ):
-
         """
         Initializes a new instance of GemmaConfig.
         

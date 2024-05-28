@@ -48,7 +48,6 @@ class CpmAntLayerNorm(nn.Cell):
     """
 
     def __init__(self, config: CpmAntConfig):
-
         """
         Initializes a new instance of the CpmAntLayerNorm class.
         
@@ -120,7 +119,6 @@ class CpmAntAttention(nn.Cell):
                 - past_key_values (Tuple[mindspore.Tensor, mindspore.Tensor]): The cached key-value states, if use_cache is set to True.
     """
     def __init__(self, config: CpmAntConfig):
-
         """
         Initializes an instance of CpmAntAttention.
         
@@ -270,7 +268,6 @@ Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None, use_cache: Optional[
                 Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]: A tuple containing the updated hidden states, attention weights, and current key-value states.
     """
     def __init__(self, config: CpmAntConfig):
-
         """
         This method initializes a CpmAntSelfAttentionBlock instance.
         
@@ -350,7 +347,6 @@ with gated activation.
     
     """
     def __init__(self, config: CpmAntConfig):
-
         """
         Initializes an instance of the CpmAntDenseGatedACT class.
         
@@ -414,7 +410,6 @@ class CpmAntFeedForward(nn.Cell):
         - The dropout layer is optional based on the dropout probability specified in the configuration.
     """
     def __init__(self, config: CpmAntConfig):
-
         """
         Initializes an instance of the CpmAntFeedForward class.
         
@@ -489,7 +484,6 @@ applies dropout regularization.
         
     """
     def __init__(self, config: CpmAntConfig):
-
         """
         Initializes a new instance of the CpmAntFFNBlock class.
         
@@ -544,7 +538,6 @@ Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None, use_cache: Optional[
     
     """
     def __init__(self, config: CpmAntConfig):
-
         """
         Initializes a new instance of the CpmAntTransformerBlock class.
         
@@ -638,7 +631,6 @@ specified optional outputs.
             - all_self_attns: Attention weights of all layers (if output_attentions is True)
     """
     def __init__(self, config: CpmAntConfig):
-
         """
         Initializes a new instance of the CpmAntEncoder class.
         
@@ -732,7 +724,6 @@ class CpmAntIntermediate(nn.Cell):
         construct(hidden_states: mindspore.Tensor) -> mindspore.Tensor: Applies dense transformation and activation function to the input hidden states.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the CpmAntIntermediate class.
         
@@ -757,7 +748,6 @@ class CpmAntIntermediate(nn.Cell):
             self.intermediate_act_fn = config.hidden_act
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Docstring for method 'construct' in class 'CpmAntIntermediate':
         
@@ -828,7 +818,6 @@ position bucket. Finally, it uses the computed embeddings to generate the segmen
     
     """
     def __init__(self, config: CpmAntConfig):
-
         """
         Initializes an instance of the CpmAntSegmentPositionEmbedding class.
         
@@ -868,7 +857,6 @@ position bucket. Finally, it uses the computed embeddings to generate the segmen
         key_segment: mindspore.Tensor,
         query_segment: mindspore.Tensor,
     ):
-
         """
         Constructs the segment position embedding for the CpmAntSegmentPositionEmbedding class.
         
@@ -932,7 +920,6 @@ position bucket. Finally, it uses the computed embeddings to generate the segmen
         return embeds
 
     def _segment_relative_position_bucket(self, query_segment, key_segment):
-
         """
         Method to calculate the relative position bucket between a query segment and a key segment.
         
@@ -950,7 +937,6 @@ position bucket. Finally, it uses the computed embeddings to generate the segmen
         return query_segment * self.num_segments + key_segment
 
     def _position_bucket(self, relative_position, num_buckets=32, max_distance=128):
-
         """
         Position bucket calculation.
         
@@ -1012,7 +998,6 @@ class CpmAntOutput(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the CpmAntOutput class.
         
@@ -1032,7 +1017,6 @@ class CpmAntOutput(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the CpmAntOutput by processing the given hidden states and input tensor.
         
@@ -1118,7 +1102,6 @@ output based on input tensors and optional configurations
     This class provides functionality for processing input data, calculating attention masks, and generating model outputs for CPM-ANT tasks.
     """
     def __init__(self, config: CpmAntConfig):
-
         """
         Initializes a new instance of the CpmAntModel class.
         
@@ -1147,7 +1130,6 @@ output based on input tensors and optional configurations
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Retrieve the input embeddings from the CpmAntModel.
         
@@ -1163,7 +1145,6 @@ output based on input tensors and optional configurations
         return self.input_embedding
 
     def set_input_embeddings(self, embeddings, **kwargs):
-
         """
         Method to set input embeddings for the CpmAntModel.
         
@@ -1183,7 +1164,6 @@ output based on input tensors and optional configurations
         self.input_embedding = embeddings
 
     def _prepare_attention_mask(self, input_ids, span, context, length):
-
         """
         Prepare attention mask for the CpmAntModel.
         
@@ -1227,7 +1207,6 @@ output based on input tensors and optional configurations
         return_dict: Optional[bool] = None,
         **kwargs,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPast]:
-
         """
         Constructs the CpmAntModel.
         
@@ -1389,7 +1368,6 @@ class CpmAntForCausalLM(CpmAntPreTrainedModel):
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config: CpmAntConfig):
-
         """
         Initializes an instance of the CpmAntForCausalLM class.
         
@@ -1493,7 +1471,6 @@ class CpmAntForCausalLM(CpmAntPreTrainedModel):
         )
 
     def get_input_embeddings(self):
-
         """
         Retrieve the input embeddings used by the CpmAntForCausalLM model.
         
@@ -1511,7 +1488,6 @@ class CpmAntForCausalLM(CpmAntPreTrainedModel):
         return self.cpmant.input_embedding
 
     def set_input_embeddings(self, embeddings):
-
         """
         Set the input embeddings for the CpmAntForCausalLM model.
         
@@ -1529,7 +1505,6 @@ class CpmAntForCausalLM(CpmAntPreTrainedModel):
         self.cpmant.input_embedding = embeddings
 
     def get_output_embeddings(self):
-
         """ 
             Retrieves the output embeddings of the language model head.
         
@@ -1545,7 +1520,6 @@ class CpmAntForCausalLM(CpmAntPreTrainedModel):
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets the output embeddings of the CpmAntForCausalLM model.
         
@@ -1571,7 +1545,6 @@ class CpmAntForCausalLM(CpmAntPreTrainedModel):
         self.lm_head = new_embeddings
 
     def prepare_inputs_for_generation(self, input_ids, **kwargs):
-
         """
         Prepare inputs for generation.
         
@@ -1606,7 +1579,6 @@ class CpmAntForCausalLM(CpmAntPreTrainedModel):
         }
 
     def _reorder_cache(self, past_key_values, beam_idx):
-
         """
         Reorders the cache for the specified beam index.
         

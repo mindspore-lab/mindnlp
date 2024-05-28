@@ -40,7 +40,6 @@ class BeamScorer(ABC):
         next_indices: mindspore.Tensor,
         **kwargs,
     ) -> Tuple[mindspore.Tensor]:
-
         r"""
         This method processes the input data to calculate the next scores, tokens, and indices for beam search.
         
@@ -68,7 +67,6 @@ class BeamScorer(ABC):
         max_length: int,
         **kwargs,
     ) -> mindspore.Tensor:
-
         r"""
         Finalizes the beam scoring process.
         
@@ -138,7 +136,6 @@ class BeamSearchScorer(BeamScorer):
         num_beam_groups: Optional[int] = 1,
         max_length: Optional[int] = None,
     ):
-
         r"""
         Initializes a new instance of the BeamSearchScorer class.
         
@@ -198,7 +195,6 @@ class BeamSearchScorer(BeamScorer):
 
     @property
     def is_done(self) -> bool:
-
         r"""
         Checks if the BeamSearchScorer instance is done.
         
@@ -230,7 +226,6 @@ class BeamSearchScorer(BeamScorer):
         beam_indices: Optional[mindspore.Tensor] = None,
         group_index: Optional[int] = 0,
     ) -> Dict[str, mindspore.Tensor]:
-
         r"""
         This method processes input data for beam search scoring in a BeamSearchScorer instance.
         
@@ -353,7 +348,6 @@ class BeamSearchScorer(BeamScorer):
         eos_token_id: Optional[Union[int, List[int]]] = None,
         beam_indices: Optional[mindspore.Tensor] = None,
     ) -> Tuple[mindspore.Tensor]:
-
         r"""
         This method finalizes the beam search process by selecting the best beam hypotheses and constructing the final output sequences.
         
@@ -506,7 +500,6 @@ class ConstrainedBeamSearchScorer(BeamScorer):
         num_beam_groups: Optional[int] = 1,
         max_length: Optional[int] = None,
     ):
-
         r"""
         Initializes an instance of the ConstrainedBeamSearchScorer class.
         
@@ -571,7 +564,6 @@ class ConstrainedBeamSearchScorer(BeamScorer):
 
     @property
     def is_done(self) -> bool:
-
         r"""
         Method to check if the ConstrainedBeamSearchScorer instance has completed processing.
         
@@ -589,7 +581,6 @@ class ConstrainedBeamSearchScorer(BeamScorer):
         return self._done.all()
 
     def make_constraint_states(self, n):
-
         r"""
         Generates a list of constraint states for a ConstrainedBeamSearchScorer object.
         
@@ -606,7 +597,6 @@ class ConstrainedBeamSearchScorer(BeamScorer):
         return [ConstraintListState([constraint.copy() for constraint in self.constraints]) for _ in range(n)]
 
     def check_completes_constraints(self, sequence):
-
         r"""
         This method checks if the given sequence completes constraints in the ConstrainedBeamSearchScorer class.
         
@@ -784,7 +774,6 @@ class ConstrainedBeamSearchScorer(BeamScorer):
         sent_beam_indices: mindspore.Tensor,
         push_progress: bool = False,
     ):
-
         r"""
         This method performs a step in the constrained beam search process to generate new sequences based on the input constraints.
         
@@ -945,7 +934,6 @@ class ConstrainedBeamSearchScorer(BeamScorer):
         eos_token_id: Optional[Union[int, List[int]]] = None,
         beam_indices: Optional[mindspore.Tensor] = None,
     ) -> Tuple[mindspore.Tensor]:
-
         r"""
         This method finalizes the beam search process in the ConstrainedBeamSearchScorer class.
         

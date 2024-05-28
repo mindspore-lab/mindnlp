@@ -103,7 +103,6 @@ class ErnieMConfig(PretrainedConfig):
         act_dropout=0.0,
         **kwargs,
     ):
-
         """
         This method initializes an instance of the ErnieMConfig class.
         

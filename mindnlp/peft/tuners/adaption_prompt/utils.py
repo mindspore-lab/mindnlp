@@ -47,8 +47,6 @@ def llama_apply_rotary_pos_emb(q, cos, sin, position_ids):
 
 
 def llama_compute_query_states(model: nn.Cell, **kwargs) -> Tensor:
-
-    
     """
     Computes query states for a neural network model.
     

@@ -163,7 +163,6 @@ class BeitConfig(BackboneConfigMixin, PretrainedConfig):
         reshape_hidden_states=True,
         **kwargs,
     ):
-
         """
         __init__
         

@@ -125,7 +125,6 @@ class XLNetConfig(PretrainedConfig):
 
     @property
     def max_position_embeddings(self):
-
         """
         This method returns the maximum position embeddings for the XLNet model.
         
@@ -143,7 +142,6 @@ class XLNetConfig(PretrainedConfig):
 
     @max_position_embeddings.setter
     def max_position_embeddings(self, value):
-
         """
         Sets the maximum position embeddings for the XLNetConfig class.
         

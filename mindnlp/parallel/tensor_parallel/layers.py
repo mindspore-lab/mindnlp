@@ -51,7 +51,6 @@ class VocabParallelEmbedding(nn.Cell):
         init_method: Union[str, Initializer] = Zero(),
         dtype: mindspore.dtype = mindspore.float32,
     ) -> None:
-
         r"""
         Args:
             vocab_size (int): The size of the vocabulary.
@@ -90,7 +89,6 @@ class VocabParallelEmbedding(nn.Cell):
                                 "weight")
 
     def construct(self, input_: Tensor) -> Tensor:  # type: ignore
-
         r"""
         Constructs a parallel embedding for the given input tensor.
         
@@ -158,7 +156,6 @@ class ParallelEmbedding(nn.Cell):
         init_method: Union[str, Initializer] = Zero(),
         dtype: mindspore.dtype = mindspore.float32,
     ) -> None:
-
         r"""Initialize the ParallelEmbedding class.
         
         Args:
@@ -193,7 +190,6 @@ class ParallelEmbedding(nn.Cell):
                                 "weight")
 
     def construct(self, input_: Tensor) -> Tensor:  # type: ignore
-
         r"""
         Constructs the parallel embedding for the given input tensor.
         
@@ -250,7 +246,6 @@ class ColumnParallelLinear(nn.Cell):
         stride: int = 1,
         keep_master_weight_for_test: bool = False,
     ) -> None:
-
         r"""
         __init__
         
@@ -304,7 +299,6 @@ class ColumnParallelLinear(nn.Cell):
         return gather_from_model_parallel_region(self.weight).swapaxes(0, 1)
 
     def construct(self, input_: Tensor) -> Tensor:  # type: ignore
-
         r"""
         Constructs the ColumnParallelLinear layer.
         
@@ -370,7 +364,6 @@ class RowParallelLinear(nn.Cell):
         stride: int = 1,
         keep_master_weight_for_test: bool = False,
     ):
-
         r"""
         Initializes a RowParallelLinear object.
         
@@ -425,7 +418,6 @@ class RowParallelLinear(nn.Cell):
         return gather_from_model_parallel_region(self.weight).swapaxes(0, 1)
 
     def construct(self, input_: Tensor) -> Tensor:  # type:ignore
-
         r"""
         This method constructs a linear layer operation in a row-parallel fashion.
         

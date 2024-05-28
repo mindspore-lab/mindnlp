@@ -50,7 +50,6 @@ Recognition (NER) recognition.
             print(tokens)  # Output: ['我', '爱', '自然', '自然语言', '言', '处理']
     """
     def __init__(self, dict_path='', custom_word_freq_dict=None):
-
         r"""
         Initializes a new instance of the JiebaTokenizer class.
         

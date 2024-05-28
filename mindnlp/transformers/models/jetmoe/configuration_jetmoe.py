@@ -110,7 +110,6 @@ class JetMoEConfig(PretrainedConfig):
         initializer_range=0.01,
         **kwargs,
     ):
-
         """
         __init__
         

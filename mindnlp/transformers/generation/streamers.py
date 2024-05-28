@@ -71,7 +71,6 @@ class TextStreamer(BaseStreamer):
     """
 
     def __init__(self, tokenizer: "AutoTokenizer", skip_prompt: bool = False, **decode_kwargs):
-
         """
         Initializes an instance of the TextStreamer class.
         
@@ -222,7 +221,6 @@ class TextIteratorStreamer(TextStreamer):
     def __init__(
         self, tokenizer: "AutoTokenizer", skip_prompt: bool = False, timeout: Optional[float] = None, **decode_kwargs
     ):
-
         """
         Initializes an instance of the TextIteratorStreamer class.
         
@@ -251,7 +249,6 @@ class TextIteratorStreamer(TextStreamer):
             self.text_queue.put(self.stop_signal, timeout=self.timeout)
 
     def __iter__(self):
-
         """
         Docstring for method '__iter__' in the class 'TextIteratorStreamer'.
         
@@ -267,7 +264,6 @@ class TextIteratorStreamer(TextStreamer):
         return self
 
     def __next__(self):
-
         """
         Method to retrieve the next value from the text queue in the TextIteratorStreamer class.
         

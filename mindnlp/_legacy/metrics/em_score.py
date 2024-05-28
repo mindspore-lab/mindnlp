@@ -20,7 +20,6 @@ from mindnlp._legacy.abc import Metric
 from .utils import _check_value_type
 
 def _compute_exact(y_pred, y_true):
-
     r"""
     Args:
         y_pred (str): The predicted text to be compared.
@@ -54,8 +53,6 @@ def _compute_exact(y_pred, y_true):
     return int(_normalize_answer(y_pred) == _normalize_answer(y_true))
 
 def _metric_max_over_ground_truths(metric_fn, pred, example):
-
-    
     """
     Calculates the maximum score obtained by a prediction over multiple ground truth values.
     
@@ -152,7 +149,6 @@ class EmScore(Metric):
 
     """
     def __init__(self, name='EmScore'):
-
         r"""
         This method initializes an instance of the EmScore class.
         

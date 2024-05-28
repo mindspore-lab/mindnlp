@@ -24,7 +24,6 @@ from ...tokenization_utils_base import EncodedInput, BatchEncoding
 class SPTokenizer:
     """SPTokenizer"""
     def __init__(self, model_path: str):
-
         """
         Initializes an instance of the SPTokenizer class.
         
@@ -58,7 +57,6 @@ class SPTokenizer:
             self.n_words += 1
 
     def tokenize(self, s: str):
-
         """
         Tokenizes a given string using the SentencePiece model.
         
@@ -86,7 +84,6 @@ instance with the tokenized result.
         return self.sp_model.EncodeAsPieces(s)
 
     def encode(self, s: str, bos: bool = False, eos: bool = False) -> List[int]:
-
         """
         Encodes a given string using the SentencePiece tokenizer.
         
@@ -117,7 +114,6 @@ instance with the tokenized result.
         return t
 
     def decode(self, t: List[int]) -> str:
-
         """
         Decode a list of token IDs into a string using the SentencePiece model.
         
@@ -136,7 +132,6 @@ instance with the tokenized result.
         return self.sp_model.decode(t)
 
     def decode_tokens(self, tokens: List[str]) -> str:
-
         """
         Decode the given list of tokens into a single text string using the SentencePiece model.
         
@@ -174,7 +169,6 @@ class ChatGLM2Tokenizer(PreTrainedTokenizer):
     model_input_names = ["input_ids", "attention_mask", "position_ids"]
 
     def __init__(self, vocab_file, padding_side="left", clean_up_tokenization_spaces=False, **kwargs):
-
         """
         Initializes a ChatGLM2Tokenizer object.
         
@@ -202,7 +196,6 @@ class ChatGLM2Tokenizer(PreTrainedTokenizer):
         super().__init__(padding_side=padding_side, clean_up_tokenization_spaces=clean_up_tokenization_spaces, **kwargs)
 
     def get_command(self, token):
-
         """
         This method `get_command` in the class `ChatGLM2Tokenizer` retrieves a command associated with a given token.
         
@@ -226,7 +219,6 @@ token for the instance.
 
     @property
     def unk_token(self) -> str:
-
         """
         Returns the unknown token.
         
@@ -243,7 +235,6 @@ token for the instance.
 
     @property
     def pad_token(self) -> str:
-
         """
         Method that returns the padding token for the ChatGLM2Tokenizer.
         
@@ -260,7 +251,6 @@ token for the instance.
 
     @property
     def pad_token_id(self):
-
         """
         This method retrieves the token ID for the '<pad>' token in the ChatGLM2Tokenizer class.
         
@@ -278,7 +268,6 @@ token for the instance.
 
     @property
     def eos_token(self) -> str:
-
         """
         Returns the end-of-sentence token.
         
@@ -297,7 +286,6 @@ token for the instance.
 
     @property
     def eos_token_id(self):
-
         """
         Returns the token ID for the end-of-sentence (EOS) token in the ChatGLM2Tokenizer class.
         
@@ -314,7 +302,6 @@ token for the instance.
 
     @property
     def vocab_size(self):
-
         """
         Returns the vocabulary size of the ChatGLM2Tokenizer.
         
@@ -336,7 +323,6 @@ token for the instance.
         return vocab
 
     def _tokenize(self, text, **kwargs):
-
         """
         Method to tokenize text using the tokenizer associated with the ChatGLM2Tokenizer class.
         
@@ -361,7 +347,6 @@ token for the instance.
         return self.tokenizer.convert_id_to_token(index)
 
     def convert_tokens_to_string(self, tokens: List[str]) -> str:
-
         """
         Converts a list of tokens into a single string representation using the ChatGLM2Tokenizer.
         
@@ -413,7 +398,6 @@ token for the instance.
         return (vocab_file,)
 
     def get_prefix_tokens(self):
-
         """
         Returns a list of prefix tokens used in the ChatGLM2Tokenizer class.
         
@@ -432,7 +416,6 @@ token for the instance.
         return prefix_tokens
 
     def build_prompt(self, query, history=None):
-
         """
         This method builds a prompt for a chat history in the ChatGLM2Tokenizer class.
         

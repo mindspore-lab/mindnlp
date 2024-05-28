@@ -98,7 +98,6 @@ class SegformerImageProcessor(BaseImageProcessor):
         do_reduce_labels: bool = False,
         **kwargs,
     ) -> None:
-
         """Initialize the SegformerImageProcessor.
         
         This method initializes the SegformerImageProcessor object with the provided parameters.
@@ -221,7 +220,6 @@ class SegformerImageProcessor(BaseImageProcessor):
 
     # Copied from transformers.models.beit.image_processing_beit.BeitImageProcessor.reduce_label
     def reduce_label(self, label: ImageInput) -> np.ndarray:
-
         """
         Reduces the label values in the input image for Segformer image processing.
         
@@ -256,7 +254,6 @@ class SegformerImageProcessor(BaseImageProcessor):
         image_std: Optional[Union[float, List[float]]] = None,
         input_data_format: Optional[Union[str, ChannelDimension]] = None,
     ):
-
         """
         Preprocesses an input image according to specified options.
         

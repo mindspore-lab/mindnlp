@@ -16,7 +16,6 @@ class Vector(ABC):
     """
 
     def __init__(self, size: int) -> None:
-
         r"""
         Initialize a new instance of the Vector class.
         
@@ -35,7 +34,6 @@ class Vector(ABC):
         self._size = size
 
     def __matmul__(self, that: 'Vector') -> Scalar:
-
         r"""
         __matmul__
         
@@ -54,7 +52,6 @@ class Vector(ABC):
         return self.dot_product(that)
 
     def __mul__(self, that: Union['Vector', Scalar, Any]) -> 'Vector':
-
         r"""
         Perform multiplication operation between a Vector object and another Vector, Scalar, or Any object.
         
@@ -77,7 +74,6 @@ class Vector(ABC):
             return self.mul_scalar(that)
 
     def __add__(self, that: Union['Vector', Scalar, Any]) -> 'Vector':
-
         r"""
         __add__ method in the Vector class.
         
@@ -104,7 +100,6 @@ class Vector(ABC):
             return self.add_scalar(that)
 
     def __sub__(self, that: Union['Vector', Scalar, Any]) -> 'Vector':
-
         r"""
         Subtracts the given value from the vector.
         
@@ -145,7 +140,6 @@ class Vector(ABC):
             return self.sub_scalar(that)
 
     def __truediv__(self, that: Union['Vector', Scalar, Any]) -> 'Vector':
-
         r"""
         Perform the true division operation on the Vector object.
         
@@ -166,7 +160,6 @@ scalar division.
             return self.div_scalar(that)
 
     def __str__(self) -> str:
-
         r"""
         Method '__str__' in the class 'Vector' converts the Vector object into a string representation.
         
@@ -191,7 +184,6 @@ size is greater than 6, it returns a string containing the first 3 elements, fol
 
     @staticmethod
     def full_like(m: 'Vector', items: Any) -> 'Vector':
-
         r"""
         This method creates a new Vector with the same shape and type as the input Vector m, filled with the specified items.
         
@@ -209,7 +201,6 @@ size is greater than 6, it returns a string containing the first 3 elements, fol
 
     @staticmethod
     def ones_like(m: 'Vector') -> 'Vector':
-
         r"""
         Generate a new Vector object with all elements set to 1.
         
@@ -226,7 +217,6 @@ size is greater than 6, it returns a string containing the first 3 elements, fol
 
     @staticmethod
     def zeros_like(m: 'Vector') -> 'Vector':
-
         r"""
         Returns a new Vector object with the same shape as the input Vector 'm', but with all elements initialized to zero.
         
@@ -254,7 +244,6 @@ size is greater than 6, it returns a string containing the first 3 elements, fol
 
     @abstractmethod
     def __getitem__(self, key):
-
         r"""
         __getitem__ method
         
@@ -275,7 +264,6 @@ size is greater than 6, it returns a string containing the first 3 elements, fol
 
     @abstractmethod
     def __neg__(self) -> 'Vector':
-
         r"""
         __neg__
         
@@ -293,7 +281,6 @@ size is greater than 6, it returns a string containing the first 3 elements, fol
         pass
 
     def get_size(self) -> int:
-
         r"""Get the size of the Vector.
         
         This method takes no additional parameters besides the 'self' parameter.
@@ -310,7 +297,6 @@ size is greater than 6, it returns a string containing the first 3 elements, fol
         return self._size
 
     def add(self, that: 'Vector') -> 'Vector':
-
         r"""
         Add a vector to another vector.
         
@@ -332,7 +318,6 @@ size is greater than 6, it returns a string containing the first 3 elements, fol
 
     @abstractmethod
     def add_scalar(self, that: Union[Scalar, Any]) -> 'Vector':
-
         r"""
         Adds a scalar value to the vector.
         
@@ -358,7 +343,6 @@ converted to the appropriate type before the addition takes place.
         pass
 
     def sub(self, that: 'Vector') -> 'Vector':
-
         r"""
         Subtracts a vector from the current vector and returns the result.
         
@@ -380,7 +364,6 @@ converted to the appropriate type before the addition takes place.
 
     @abstractmethod
     def sub_scalar(self, that: Union[Scalar, Any]) -> 'Vector':
-
         r"""
         This method performs scalar subtraction on the Vector object.
         
@@ -397,7 +380,6 @@ converted to the appropriate type before the addition takes place.
         pass
 
     def mul(self, that: 'Vector') -> 'Vector':
-
         r"""
         This method multiplies two vectors element-wise and returns a new vector.
         
@@ -422,7 +404,6 @@ converted to the appropriate type before the addition takes place.
 
     @abstractmethod
     def mul_scalar(self, that: Union[Scalar, Any]) -> 'Vector':
-
         r"""
         This method multiplies the vector by a scalar value.
         
@@ -439,7 +420,6 @@ converted to the appropriate type before the addition takes place.
         pass
 
     def div(self, that: 'Vector') -> 'Vector':
-
         r"""
         Divides the current Vector object by another Vector object of the same size.
         
@@ -462,7 +442,6 @@ converted to the appropriate type before the addition takes place.
 
     @abstractmethod
     def div_scalar(self, that: Union[Scalar, Any]) -> 'Vector':
-
         r"""
         Divides the vector by a scalar value.
         
@@ -480,7 +459,6 @@ converted to the appropriate type before the addition takes place.
     
     @abstractmethod
     def as_array(self) -> np.ndarray:
-
         r"""
         Converts the Vector to a numpy array.
         
@@ -497,7 +475,6 @@ converted to the appropriate type before the addition takes place.
 
     @abstractmethod
     def conjugate(self) -> 'Vector':
-
         r"""
         Method to calculate the conjugate of a Vector.
         
@@ -513,8 +490,6 @@ converted to the appropriate type before the addition takes place.
         pass
 
     def dot_product(self, that: 'Vector') -> Scalar:
-
-        
         """
         Calculates the dot product between this Vector and another Vector.
         
@@ -538,7 +513,6 @@ converted to the appropriate type before the addition takes place.
 
     @abstractmethod
     def _full_like(self, items: Any) -> 'Vector':
-
         r"""
         This method, '_full_like', is a member of the 'Vector' class and is used to create a new 'Vector' object with the same shape and data type as the input 'items', but with all elements set to the value
 specified by the 'items' parameter.
@@ -560,7 +534,6 @@ the result of the method.
 
     @abstractmethod
     def _ones_like(self) -> 'Vector':
-
         r"""
         Returns a new Vector object with all elements set to 1, having the same shape as the calling Vector object.
         
@@ -580,7 +553,6 @@ the result of the method.
 
     @abstractmethod
     def _zeros_like(self) -> 'Vector':
-
         r"""
         This method '_zeros_like' creates a new Vector object with the same shape as the current Vector object but filled with zeros.
         
@@ -597,7 +569,6 @@ the result of the method.
 
     @abstractmethod
     def _add(self, that: 'Vector') -> 'Vector':
-
         r"""
         This method adds the components of the current Vector instance with the components of another Vector instance.
         
@@ -616,7 +587,6 @@ the result of the method.
 
     @abstractmethod
     def _sub(self, that: 'Vector') -> 'Vector':
-
         r"""
         This method performs subtraction operation between two Vector objects.
         
@@ -635,7 +605,6 @@ the result of the method.
 
     @abstractmethod
     def _mul(self, that: 'Vector') -> 'Vector':
-
         r"""
         Method that multiplies this Vector with another Vector.
         
@@ -653,7 +622,6 @@ the result of the method.
 
     @abstractmethod
     def _div(self, that: 'Vector') -> 'Vector':
-
         r"""
         Divides the vector by another vector.
         
@@ -682,7 +650,6 @@ element of the resulting vector.
 
     @abstractmethod
     def _dot_product(self, that: 'Vector') -> Scalar:
-
         r"""
         Calculates the dot product between this vector and another vector.
         

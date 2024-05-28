@@ -126,7 +126,6 @@ class Workflow:
     def __init__(
         self, work, model=None, mode=None, device_id=0, from_hf_hub=False, **kwargs
     ):
-
         """
         Initialize a new instance of Workflow.
         

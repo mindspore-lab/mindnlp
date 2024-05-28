@@ -99,7 +99,6 @@ def onload_layer(layer):
     #     layer.base_layer._hf_hook.post_forward(layer.base_layer, torch.tensor([]))
 
 
-
 class BaseTuner(nn.Cell):
     r"""
     A base tuner model that provides the common methods and attributes for all tuners that are injectable into a
@@ -135,7 +134,6 @@ class BaseTuner(nn.Cell):
     """
 
     def __init__(self, model, peft_config: Union[PeftConfig, dict[str, PeftConfig]], adapter_name: str) -> None:
-
         r"""
         __init__
         
@@ -187,7 +185,6 @@ class BaseTuner(nn.Cell):
 
     @property
     def active_adapters(self) -> list[str]:
-
         r"""
         Method to retrieve the active adapters.
         
@@ -207,7 +204,6 @@ class BaseTuner(nn.Cell):
         return self.active_adapter
 
     def construct(self, *args: Any, **kwargs: Any):
-
         r"""
         This method constructs an instance of the BaseTuner class.
         
@@ -428,7 +424,6 @@ class BaseTunerLayer(ABC):
 
     @property
     def weight(self) -> Tensor:
-
         r"""
         Returns the weight of the base layer.
         
@@ -452,7 +447,6 @@ class BaseTunerLayer(ABC):
 
     @property
     def bias(self) -> Tensor:
-
         r"""
         This method retrieves the bias tensor from the base layer.
         
@@ -469,7 +463,6 @@ class BaseTunerLayer(ABC):
         return base_layer.bias
 
     def merge(self, safe_merge: bool = False, adapter_names: Optional[list[str]] = None) -> None:
-
         r"""
         Merge the current layer with other layers.
         
@@ -487,7 +480,6 @@ class BaseTunerLayer(ABC):
         raise NotImplementedError
 
     def unmerge(self) -> None:
-
         r"""
         unmerge(self)
             This method unmerges the current instance of BaseTunerLayer.
@@ -505,7 +497,6 @@ class BaseTunerLayer(ABC):
 
     @property
     def merged(self) -> bool:
-
         r"""
         Returns whether the current instance of the BaseTunerLayer class has merged adapters.
         
@@ -524,7 +515,6 @@ class BaseTunerLayer(ABC):
 
     @property
     def disable_adapters(self) -> bool:
-
         r"""
         Disables the adapters in the BaseTunerLayer.
         
@@ -554,7 +544,6 @@ enable_adapters method.
 
     @property
     def active_adapter(self) -> str | list[str]:
-
         r"""Return the active adapter.
         
         This method is a property of the BaseTunerLayer class. It returns the active adapter, which can be either a string or a list of strings.
@@ -574,7 +563,6 @@ enable_adapters method.
 
     @property
     def active_adapters(self):
-
         r"""
         Returns a list of active adapters.
         

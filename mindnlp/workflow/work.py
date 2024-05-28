@@ -38,7 +38,6 @@ class Work(metaclass=abc.ABCMeta):
     """
 
     def __init__(self, model, work, **kwargs):
-
         """
         The __init__ method initializes an instance of the Work class.
         
@@ -238,7 +237,6 @@ class Work(metaclass=abc.ABCMeta):
         print(f"Examples:\n{self._usage}")
 
     def __call__(self, *args):
-
         """ 
         Method '__call__' in the class 'Work'.
         

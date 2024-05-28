@@ -38,7 +38,6 @@ class AffineTransformed(TransformedDistribution):
     '''
 
     def __init__(self, base_distribution: Distribution, loc=None, scale=None, event_dim=0):
-
         """
         Initializes an instance of the AffineTransformed class.
         
@@ -60,7 +59,6 @@ class AffineTransformed(TransformedDistribution):
         super().__init__(AffineTransform(shift=self.loc, scale=self.scale), base_distribution)
 
     def _set_attr_for_tensor(self, name, value):
-
         """
         Sets an attribute for a tensor in the AffineTransformed class.
         
@@ -103,7 +101,6 @@ class ParameterProjection(nn.Cell):
     def __init__(
         self, in_features: int, args_dim: Dict[str, int], domain_map: Callable[..., Tuple[mindspore.Tensor]], **kwargs
     ) -> None:
-
         """
         Initializes an instance of the ParameterProjection class.
         
@@ -125,7 +122,6 @@ class ParameterProjection(nn.Cell):
         self.domain_map = domain_map
 
     def construct(self, x: mindspore.Tensor) -> Tuple[mindspore.Tensor]:
-
         """
         Constructs the parameter projection using the provided input tensor.
         
@@ -150,7 +146,6 @@ class LambdaLayer(nn.Cell):
     #todo
     """
     def __init__(self, function):
-
         """
         Initializes an instance of the LambdaLayer class.
         
@@ -168,7 +163,6 @@ class LambdaLayer(nn.Cell):
         self.function = function
 
     def construct(self, x, *args):
-
         """
         Constructs a LambdaLayer object.
         
@@ -199,7 +193,6 @@ class DistributionOutput:
     args_dim: Dict[str, int]
 
     def __init__(self, dim: int = 1) -> None:
-
         """
         Initializes an instance of the DistributionOutput class.
         
@@ -217,7 +210,6 @@ class DistributionOutput:
         self.args_dim = {k: dim * self.args_dim[k] for k in self.args_dim}
 
     def _base_distribution(self, distr_args):
-
         """
         Method: _base_distribution
         
@@ -321,7 +313,6 @@ class StudentTOutput(DistributionOutput):
 
     @classmethod
     def domain_map(cls, df: mindspore.Tensor, loc: mindspore.Tensor, scale: mindspore.Tensor):
-
         """
         Method to perform domain mapping on input tensors.
         
@@ -358,7 +349,6 @@ class NormalOutput(DistributionOutput):
 
     @classmethod
     def domain_map(cls, loc: mindspore.Tensor, scale: mindspore.Tensor):
-
         """
         This method 'domain_map' in the class 'NormalOutput' processes the location and scale tensors for domain mapping.
         

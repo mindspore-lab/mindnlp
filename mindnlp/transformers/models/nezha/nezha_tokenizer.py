@@ -41,7 +41,6 @@ class NezhaTokenizer(PreTrainedTokenizer):
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
 
     def __init__(self, vocab: str, **kwargs):
-
         """
         Initialize the NezhaTokenizer class with the provided vocabulary.
         
@@ -96,7 +95,6 @@ class NezhaTokenizer(PreTrainedTokenizer):
         raise ValueError(f"Unsupported string type: {type(text_input)}, {text_input.dtype}")
 
     def _convert_token_to_id(self, token):
-
         """
         Converts a given token to its corresponding ID using the NezhaTokenizer.
         

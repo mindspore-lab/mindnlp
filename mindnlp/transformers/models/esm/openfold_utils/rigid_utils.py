@@ -84,7 +84,6 @@ def identity_rot_mats(
     batch_dims: Tuple[int, ...],
     dtype = None,
 ) -> mindspore.Tensor:
-
     """
     Creates identity rotation matrices with batch dimensions.
     
@@ -110,7 +109,6 @@ def identity_trans(
     batch_dims: Tuple[int, ...],
     dtype = None,
 ) -> mindspore.Tensor:
-
     """
     Args:
         batch_dims (Tuple[int, ...]): A tuple representing the dimensions of the batch for the identity transformation.
@@ -131,7 +129,6 @@ def identity_quats(
     batch_dims: Tuple[int, ...],
     dtype = None,
 ) -> mindspore.Tensor:
-
     """
     This function returns a tensor of identity quaternions.
     
@@ -158,7 +155,6 @@ _qtr_ind_dict: Dict[str, int] = {key: ind for ind, key in enumerate(_qtr_keys)}
 
 
 def _to_mat(pairs: List[Tuple[str, int]]) -> np.ndarray:
-
     """
     This function creates a 4x4 numpy array from a list of key-value pairs.
     
@@ -216,7 +212,6 @@ def quat_to_rot(quat: mindspore.Tensor) -> mindspore.Tensor:
 
 
 def rot_to_quat(rot: mindspore.Tensor) -> mindspore.Tensor:
-
     """Converts a rotation matrix to a quaternion.
     
     Args:
@@ -297,7 +292,6 @@ _CACHED_QUATS: Dict[str, np.ndarray] = {
 
 @lru_cache(maxsize=None)
 def _get_quat(quat_key: str, dtype) -> mindspore.Tensor:
-
     """
     Function to retrieve a quaternion tensor based on the given quat_key and dtype.
     
@@ -330,7 +324,6 @@ def quat_multiply_by_vec(quat: mindspore.Tensor, vec: mindspore.Tensor) -> minds
 
 
 def invert_rot_mat(rot_mat: mindspore.Tensor) -> mindspore.Tensor:
-
     """
     Inverts the given rotation matrix by swapping the last two dimensions.
     
@@ -347,7 +340,6 @@ def invert_rot_mat(rot_mat: mindspore.Tensor) -> mindspore.Tensor:
 
 
 def invert_quat(quat: mindspore.Tensor) -> mindspore.Tensor:
-
     """
     Inverts the given quaternion tensor.
     
@@ -1088,7 +1080,6 @@ class Rigid:
 
     @staticmethod
     def from_tensor_7(t: mindspore.Tensor, normalize_quats: bool = False) -> Rigid:
-
         """
         Converts a 7-dimensional tensor into a Rigid object.
         

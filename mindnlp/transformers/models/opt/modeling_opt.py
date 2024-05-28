@@ -56,7 +56,6 @@ class OPTLearnedPositionalEmbedding(nn.Embedding):
     """
 
     def __init__(self, num_embeddings: int, embedding_dim: int):
-
         """
         Initializes an instance of the OPTLearnedPositionalEmbedding class with the given parameters.
         
@@ -104,7 +103,6 @@ class OPTAttention(nn.Cell):
         is_decoder: bool = False,
         bias: bool = True,
     ):
-
         """
         Initialize an OPTAttention object.
         
@@ -141,7 +139,6 @@ class OPTAttention(nn.Cell):
         self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-
         """
         Reshapes the input tensor according to the specified dimensions.
         
@@ -317,7 +314,6 @@ class OPTDecoderLayer(nn.Cell):
           If use_cache is True, present key value states are also included in the output.
     """
     def __init__(self, config: OPTConfig):
-
         """Initializes an instance of the OPTDecoderLayer class.
         
         Args:
@@ -461,7 +457,6 @@ corresponding weight is set to zero.
     _no_split_modules = ["OPTDecoderLayer"]
 
     def _init_weights(self, cell):
-
         """
         Initializes the weights of a neural network cell.
         
@@ -501,7 +496,6 @@ class OPTDecoder(OPTPreTrainedModel):
     """
 
     def __init__(self, config: OPTConfig):
-
         """
         Initializes an instance of the OPTDecoder class.
         
@@ -558,7 +552,6 @@ class OPTDecoder(OPTPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Returns the input embeddings.
         
@@ -576,7 +569,6 @@ class OPTDecoder(OPTPreTrainedModel):
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Method: set_input_embeddings
         
@@ -789,7 +781,6 @@ past key values, hidden states, and attentions.
     
     """
     def __init__(self, config: OPTConfig):
-
         """
         Initializes an OPTModel object with the provided configuration.
         
@@ -809,7 +800,6 @@ past key values, hidden states, and attentions.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method to retrieve the input embeddings from the OPTModel's decoder.
         
@@ -826,7 +816,6 @@ past key values, hidden states, and attentions.
         return self.decoder.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the OPTModel.
         
@@ -847,7 +836,6 @@ past key values, hidden states, and attentions.
         self.decoder.embed_tokens = value
 
     def get_decoder(self):
-
         """
         Returns the decoder of the OPTModel.
         
@@ -874,7 +862,6 @@ past key values, hidden states, and attentions.
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
-
         """
         Constructs the model for OPTModel.
         
@@ -964,7 +951,6 @@ with various input parameters and return the output.
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of OPTForCausalLM.
         
@@ -990,7 +976,6 @@ with various input parameters and return the output.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings from the OPTForCausalLM model.
         
@@ -1006,7 +991,6 @@ with various input parameters and return the output.
         return self.model.decoder.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         This method sets the input embeddings for the OPTForCausalLM model.
         
@@ -1023,7 +1007,6 @@ with various input parameters and return the output.
         self.model.decoder.embed_tokens = value
 
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings of the OPTForCausalLM model.
         
@@ -1048,7 +1031,6 @@ outputs based on the input sequences. The output embeddings capture the learned 
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Set the output embeddings for the OPTForCausalLM model.
         
@@ -1065,7 +1047,6 @@ outputs based on the input sequences. The output embeddings capture the learned 
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
-
         """
         Method to set the decoder for the OPTForCausalLM class.
         
@@ -1084,7 +1065,6 @@ outputs based on the input sequences. The output embeddings capture the learned 
         self.model.decoder = decoder
 
     def get_decoder(self):
-
         """
         Returns the decoder model used for the OPTForCausalLM instance.
         
@@ -1231,7 +1211,6 @@ outputs based on the input sequences. The output embeddings capture the learned 
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
-
         """
         Prepare inputs for generation.
         
@@ -1282,7 +1261,6 @@ outputs based on the input sequences. The output embeddings capture the learned 
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Reorders the cache for the OPTForCausalLM class based on the specified beam index.
         
@@ -1337,7 +1315,6 @@ SequenceClassifierOutputWithPast]: Constructs the sequence classification model 
     
     """
     def __init__(self, config: OPTConfig):
-
         """
         Initializes an instance of the OPTForSequenceClassification class.
         
@@ -1447,7 +1424,6 @@ SequenceClassifierOutputWithPast]: Constructs the sequence classification model 
         )
 
     def get_input_embeddings(self):
-
         """
         Returns the input embeddings for the OPTForSequenceClassification model.
         
@@ -1463,7 +1439,6 @@ SequenceClassifierOutputWithPast]: Constructs the sequence classification model 
         return self.model.decoder.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the OPTForSequenceClassification model.
         
@@ -1489,7 +1464,6 @@ question answering tasks. The construct method allows for flexible input options
 accessing and updating the input embeddings for the model.
     '''
     def __init__(self, config: OPTConfig):
-
         """
         Initializes an instance of the OPTForQuestionAnswering class with the provided configuration.
         
@@ -1617,7 +1591,6 @@ accessing and updating the input embeddings for the model.
         )
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings from the OPTForQuestionAnswering model.
         
@@ -1633,7 +1606,6 @@ accessing and updating the input embeddings for the model.
         return self.model.decoder.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Method to set the input embeddings for the OPTForQuestionAnswering class.
         

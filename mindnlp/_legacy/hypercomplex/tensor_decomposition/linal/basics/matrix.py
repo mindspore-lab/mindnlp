@@ -140,7 +140,6 @@ class Matrix(ABC):
     """
 
     def __init__(self, height: int, width: int) -> None:
-
         r"""
         Initializes a Matrix object with the given height and width.
         
@@ -161,7 +160,6 @@ class Matrix(ABC):
         self._width = width
 
     def __matmul__(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         __matmul__
         
@@ -181,8 +179,6 @@ class Matrix(ABC):
         return self.matmul(that)
 
     def __mul__(self, that: Union['Matrix', Scalar, Any]) -> 'Matrix':
-
-        
         """
         Performs multiplication with another matrix or a scalar.
         
@@ -204,7 +200,6 @@ class Matrix(ABC):
             return self.mul_scalar(that)
 
     def __add__(self, that: Union['Matrix', Scalar, Any]) -> 'Matrix':
-
         r"""
         Addition method for Matrix class.
         
@@ -228,7 +223,6 @@ class Matrix(ABC):
             return self.add_scalar(that)
 
     def __sub__(self, that: Union['Matrix', Scalar, Any]) -> 'Matrix':
-
         r"""
         Method '__sub__' in class 'Matrix' performs subtraction operation between the current Matrix object and another object.
         
@@ -256,7 +250,6 @@ class Matrix(ABC):
             return self.sub_scalar(that)
 
     def __truediv__(self, that: Union['Matrix', Scalar, Any]) -> 'Matrix':
-
         r"""
         Performs the division operation using the '__truediv__' operator on the 'Matrix' class.
         
@@ -277,7 +270,6 @@ class Matrix(ABC):
             return self.div_scalar(that)
 
     def __str__(self) -> str:
-
         r"""
         Args:
             self (Matrix): The Matrix object on which the __str__ method is called.
@@ -303,7 +295,6 @@ listed, separated by an ellipsis '...'.
 
     @staticmethod
     def full_like(m: 'Matrix', items: Any) -> 'Matrix':
-
         r"""
         This method creates a new Matrix object filled with the specified items, matching the shape of the input Matrix object.
         
@@ -321,7 +312,6 @@ listed, separated by an ellipsis '...'.
 
     @staticmethod
     def ones_like(m: 'Matrix') -> 'Matrix':
-
         r"""
         This method creates a new Matrix object with the same shape and data type as the input Matrix.
         
@@ -338,7 +328,6 @@ listed, separated by an ellipsis '...'.
 
     @staticmethod
     def zeros_like(m: 'Matrix') -> 'Matrix':
-
         r"""
         This method creates a new Matrix object with the same shape and data type as the input Matrix.
         
@@ -355,7 +344,6 @@ listed, separated by an ellipsis '...'.
 
     @staticmethod
     def identity_like(m: 'Matrix') -> 'Matrix':
-
         r"""
         This method creates an identity matrix with the same dimensions as the input matrix.
         
@@ -383,7 +371,6 @@ listed, separated by an ellipsis '...'.
 
     @abstractmethod
     def __getitem__(self, key):
-
         r"""
         Docstring for method '__getitem__' in the class 'Matrix':
         
@@ -406,7 +393,6 @@ listed, separated by an ellipsis '...'.
 
     @abstractmethod
     def __neg__(self) -> 'Matrix':
-
         r"""
         Negates the matrix by changing the sign of each element.
         
@@ -422,7 +408,6 @@ listed, separated by an ellipsis '...'.
         pass
 
     def get_height(self) -> int:
-
         r"""
         This method retrieves the height attribute of a Matrix object.
         
@@ -440,7 +425,6 @@ listed, separated by an ellipsis '...'.
         return self._height
 
     def get_width(self) -> int:
-
         r"""
         Retrieve the width of the matrix.
         
@@ -458,7 +442,6 @@ listed, separated by an ellipsis '...'.
         return self._width
 
     def add(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         Add a matrix of the same dimensions to this matrix.
         
@@ -484,7 +467,6 @@ listed, separated by an ellipsis '...'.
 
     @abstractmethod
     def add_scalar(self, that: Union[Scalar, Any]) -> 'Matrix':
-
         r"""
         Adds a scalar value to the matrix.
         
@@ -502,7 +484,6 @@ listed, separated by an ellipsis '...'.
         pass
 
     def sub(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         Method 'sub' in the class 'Matrix'.
         
@@ -525,7 +506,6 @@ listed, separated by an ellipsis '...'.
 
     @abstractmethod
     def sub_scalar(self, that: Union[Scalar, Any]) -> 'Matrix':
-
         r"""
         This method subtracts a scalar value from each element of the matrix.
         
@@ -542,7 +522,6 @@ listed, separated by an ellipsis '...'.
         pass
 
     def mul(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         This method performs matrix multiplication between the current Matrix object and another Matrix object.
         
@@ -566,7 +545,6 @@ dimensions.
 
     @abstractmethod
     def mul_scalar(self, that: Union[Scalar, Any]) -> 'Matrix':
-
         r"""
         This method multiplies the Matrix object by a scalar value.
         
@@ -583,7 +561,6 @@ dimensions.
         pass
 
     def div(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         Divides the current matrix by another matrix.
         
@@ -616,7 +593,6 @@ dimensions.
 
     @abstractmethod
     def div_scalar(self, that: Union[Scalar, Any]) -> 'Matrix':
-
         r"""
         Divides the elements of the current matrix by a scalar value.
         
@@ -645,7 +621,6 @@ scalar value is of any other data type, it will be divided by each corresponding
         pass
 
     def matmul(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         This method performs matrix multiplication between two Matrix objects.
         
@@ -675,7 +650,6 @@ scalar value is of any other data type, it will be divided by each corresponding
         return self._matmul(that)
 
     def concat_rows(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         Concatenates the rows of the current matrix with another matrix.
         
@@ -697,7 +671,6 @@ scalar value is of any other data type, it will be divided by each corresponding
         return self._concat_rows(that)
 
     def concat_cols(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         Concatenates the columns of this Matrix with another Matrix.
         
@@ -722,7 +695,6 @@ scalar value is of any other data type, it will be divided by each corresponding
 
     @abstractmethod
     def transpose(self) -> 'Matrix':
-
         r"""
         Transposes the matrix.
         
@@ -752,7 +724,6 @@ of the original matrix as its columns and the columns of the original matrix as 
 
     @abstractmethod
     def transpose_conjugate(self) -> 'Matrix':
-
         r"""
         Method to calculate the transpose conjugate of the current Matrix instance.
         
@@ -769,7 +740,6 @@ of the original matrix as its columns and the columns of the original matrix as 
 
     @abstractmethod
     def _full_like(self, items: Any) -> 'Matrix':
-
         r"""
         This method creates a new Matrix object with the same shape and data type as the input 'items'.
         
@@ -787,7 +757,6 @@ of the original matrix as its columns and the columns of the original matrix as 
 
     @abstractmethod
     def _ones_like(self) -> 'Matrix':
-
         r"""
         Method _ones_like in class Matrix.
         
@@ -806,7 +775,6 @@ of the original matrix as its columns and the columns of the original matrix as 
 
     @abstractmethod
     def _zeros_like(self) -> 'Matrix':
-
         r"""
         This method creates a new Matrix object with the same shape and dtype as the current Matrix object, but with all elements set to zero.
         
@@ -823,7 +791,6 @@ of the original matrix as its columns and the columns of the original matrix as 
 
     @abstractmethod
     def _identity_like(self) -> 'Matrix':
-
         r"""
         This method creates a new matrix that is an identity matrix with the same dimensions as the original matrix.
         
@@ -840,7 +807,6 @@ of the original matrix as its columns and the columns of the original matrix as 
 
     @abstractmethod
     def as_array(self) -> np.ndarray:
-
         r"""
         Converts the Matrix object into a NumPy array.
         
@@ -867,7 +833,6 @@ of the original matrix as its columns and the columns of the original matrix as 
 
     @abstractmethod
     def _add(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         This method, named '_add', is a private abstract method in the class 'Matrix'. It is used to perform addition between two matrix objects.
         
@@ -888,7 +853,6 @@ of the original matrix as its columns and the columns of the original matrix as 
 
     @abstractmethod
     def _sub(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         This method performs subtraction between two Matrix objects.
         
@@ -906,7 +870,6 @@ of the original matrix as its columns and the columns of the original matrix as 
 
     @abstractmethod
     def _mul(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         This method performs matrix multiplication between two matrices.
         
@@ -930,7 +893,6 @@ of the original matrix as its columns and the columns of the original matrix as 
 
     @abstractmethod
     def _div(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         This method performs division operation between two Matrix objects.
         
@@ -950,7 +912,6 @@ of the original matrix as its columns and the columns of the original matrix as 
 
     @abstractmethod
     def _matmul(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         Perform matrix multiplication with another Matrix object.
         
@@ -968,7 +929,6 @@ of the original matrix as its columns and the columns of the original matrix as 
 
     @abstractmethod
     def _concat_rows(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         This method concatenates the rows of the current Matrix instance with another Matrix instance.
         
@@ -987,7 +947,6 @@ of the original matrix as its columns and the columns of the original matrix as 
 
     @abstractmethod
     def _concat_cols(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         Concatenates the columns of the current Matrix with the columns of another Matrix.
         

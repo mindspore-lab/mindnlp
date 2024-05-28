@@ -36,7 +36,6 @@ logger = logging.get_logger(__name__)
 class InvalidScoreLogitsProcessor(LogitsProcessor):
     """Invalid Score Processer."""
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method processes invalid score logits in the InvalidScoreLogitsProcessor class.
         
@@ -66,7 +65,6 @@ class PrefixEncoder(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes the PrefixEncoder class.
         
@@ -100,7 +98,6 @@ class PrefixEncoder(nn.Cell):
             self.embedding = nn.Embedding(config.pre_seq_len, config.num_layers * config.hidden_size * 2)
 
     def construct(self, prefix: mindspore.Tensor):
-
         """
         Constructs past key values for the PrefixEncoder.
         
@@ -125,7 +122,6 @@ class PrefixEncoder(nn.Cell):
 class RotaryEmbedding(nn.Cell):
     """Rotary Embedding."""
     def __init__(self, dim, base=10000, precision=mindspore.float16, max_seq_len=2048):
-
         """
         Initializes an instance of the RotaryEmbedding class.
         
@@ -153,7 +149,6 @@ class RotaryEmbedding(nn.Cell):
         self.sin_cached = Tensor(self.sin_cached, precision)
 
     def construct(self, seq_len):
-
         """
         Constructs and returns the cached cosine and sine arrays of the specified length for the RotaryEmbedding class.
         
@@ -197,7 +192,6 @@ class SelfAttention(nn.Cell):
     def __init__(self, config, hidden_size, num_attention_heads,
                  layer_id, hidden_size_per_attention_head=None, bias=True,
                  params_dtype=mindspore.float32, position_encoding_2d=True):
-
         """
         Args:
             self (object): The instance of the class.
@@ -457,7 +451,6 @@ def gelu(x):
 class GEGLU(nn.Cell):
     """GEGLU"""
     def __init__(self):
-
         """
         Initializes an instance of the GEGLU class.
         
@@ -474,7 +467,6 @@ class GEGLU(nn.Cell):
         self.activation_fn = ops.gelu
 
     def construct(self, x):
-
         """
         Constructs a GEGLU object.
         
@@ -507,7 +499,6 @@ class GLU(nn.Cell):
     """GLU"""
     def __init__(self, hidden_size, inner_hidden_size=None,
                  layer_id=None, bias=True, activation_func=gelu, params_dtype=mindspore.float32):
-
         """
         Initializes an instance of the GLU class.
         
@@ -579,7 +570,6 @@ class GLMBlock(nn.Cell):
             num_layers=28,
             position_encoding_2d=True,
     ):
-
         """
         Initializes a GLMBlock object.
         
@@ -764,7 +754,6 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
     """
 
     def __init__(self, config: ChatGLMConfig):
-
         """Initializes an instance of the MSChatGLMModel class with the provided configuration.
         
         Args:
@@ -846,7 +835,6 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
             # print("Using p-tuning v2: # trainable_params = {} / {}".format(trainable_params, total_params))
 
     def get_input_embeddings(self):
-
         """
         Retrieve the input embeddings for the MSChatGLMModel.
         
@@ -862,7 +850,6 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
         return self.word_embeddings
 
     def set_input_embeddings(self, new_embeddings: mindspore.Tensor):
-
         """
         Sets the input embeddings for the MSChatGLMModel.
         
@@ -900,7 +887,6 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
         # past_key_values = [(v[0], v[1]) for v in past_key_values]
         return past_key_values
 
-
     def construct(
             self,
             input_ids: Optional[mindspore.Tensor] = None,
@@ -909,7 +895,6 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
             past_key_values: Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]] = None,
             inputs_embeds: Optional[mindspore.Tensor] = None,
     ) -> Tuple[mindspore.Tensor, ...]:
-
         """Constructs the MSChatGLMModel.
         
         This method is used to construct the MSChatGLMModel. It takes in several parameters and returns a tuple of tensors.
@@ -954,7 +939,6 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
                 attention_mask = self.get_masks(
                     input_ids,
                 )
-
 
             if position_ids is None:
                 MASK, gMASK = self.config.mask_token_id, self.config.gmask_token_id
@@ -1028,7 +1012,6 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
 class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
     """MSChatGLMForConditionalGeneration"""
     def __init__(self, config: ChatGLMConfig):
-
         """ 
         Initializes an instance of the MSChatGLMForConditionalGeneration class.
         
@@ -1062,7 +1045,6 @@ class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
             self.quantize(self.config.quantization_bit, empty_init=True)
 
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings of the MSChatGLMForConditionalGeneration model.
         
@@ -1081,7 +1063,6 @@ language model head. The embeddings are returned as a tensor.
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Set the output embeddings for the MSChatGLMForConditionalGeneration model.
         
@@ -1104,7 +1085,6 @@ language model head. The embeddings are returned as a tensor.
         is_encoder_decoder: bool = False,
         standardize_cache_format: bool = False,
     ) -> Dict[str, Any]:
-
         """
         This method '_update_model_kwargs_for_generation' in the class 'MSChatGLMForConditionalGeneration' updates the model_kwargs for generation based on the provided outputs and other parameters.
         
@@ -1159,7 +1139,6 @@ language model head. The embeddings are returned as a tensor.
             position_ids: Optional[mindspore.Tensor] = None,
             **kwargs
     ) -> dict:
-
         """
         This method prepares inputs for generation in the MSChatGLMForConditionalGeneration class.
         
@@ -1255,7 +1234,6 @@ language model head. The embeddings are returned as a tensor.
             past_key_values: Optional[Tuple[mindspore.Tensor]] = None,
             **kwargs
     ):
-
         """
         Constructs the MSChatGLMForConditionalGeneration model.
         
@@ -1298,7 +1276,6 @@ language model head. The embeddings are returned as a tensor.
                 'hidden_states': transformer_outputs[2],
                 'attentions': transformer_outputs[3]
             }
-
 
     @staticmethod
     def _reorder_cache(

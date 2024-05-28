@@ -39,7 +39,6 @@ PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
 
 
 def load_vocab_file(vocab_file):
-
     """
     Loads a vocabulary file and returns a list of stripped lines.
     
@@ -79,7 +78,6 @@ class EsmTokenizer(PreTrainedTokenizer):
         eos_token="<eos>",
         **kwargs,
     ):
-
         """
         Initializes an instance of the EsmTokenizer class.
         
@@ -117,7 +115,6 @@ class EsmTokenizer(PreTrainedTokenizer):
         self._update_trie(self.unique_no_split_tokens)
 
     def _convert_id_to_token(self, index: int) -> str:
-
         """
         Converts an index to a token using the mapping stored in the EsmTokenizer instance.
         
@@ -139,7 +136,6 @@ class EsmTokenizer(PreTrainedTokenizer):
         return self._id_to_token.get(index, self.unk_token)
 
     def _convert_token_to_id(self, token: str) -> int:
-
         """
         Converts a token to its corresponding ID using the provided token string.
         
@@ -157,7 +153,6 @@ class EsmTokenizer(PreTrainedTokenizer):
         return self._token_to_id.get(token, self._token_to_id.get(self.unk_token))
 
     def _tokenize(self, text, **kwargs):
-
         """
         Method _tokenize in the EsmTokenizer class tokenizes the input text.
         
@@ -174,7 +169,6 @@ class EsmTokenizer(PreTrainedTokenizer):
         return text.split()
 
     def get_vocab(self):
-
         """
         Method to retrieve the vocabulary from the EsmTokenizer instance.
         
@@ -196,7 +190,6 @@ class EsmTokenizer(PreTrainedTokenizer):
         return base_vocab
 
     def token_to_id(self, token: str) -> int:
-
         """
         Method to retrieve the ID corresponding to a given token from the EsmTokenizer instance.
         
@@ -214,7 +207,6 @@ class EsmTokenizer(PreTrainedTokenizer):
         return self._token_to_id.get(token, self._token_to_id.get(self.unk_token))
 
     def id_to_token(self, index: int) -> str:
-
         """
         Retrieve the token associated with the provided index from the EsmTokenizer.
         
@@ -235,7 +227,6 @@ class EsmTokenizer(PreTrainedTokenizer):
     def build_inputs_with_special_tokens(
         self, token_ids_0: List[int], token_ids_1: Optional[List[int]] = None
     ) -> List[int]:
-
         """
         This method builds inputs with special tokens for the EsmTokenizer class.
         
@@ -292,7 +283,6 @@ class EsmTokenizer(PreTrainedTokenizer):
         return mask
 
     def save_vocabulary(self, save_directory, filename_prefix):
-
         """
         Save the vocabulary to a text file.
         
@@ -316,7 +306,6 @@ class EsmTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self) -> int:
-
         """
         This method, vocab_size, in the class EsmTokenizer calculates the size of the vocabulary based on the number of unique tokens present.
         

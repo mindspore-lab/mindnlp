@@ -99,7 +99,6 @@ class PegasusTokenizerFast(PreTrainedTokenizerFast):
         offset=103,  # entries 2 - 104 are only used for pretraining
         **kwargs,
     ):
-
         """
         This method initializes an instance of the PegasusTokenizerFast class.
         
@@ -175,7 +174,6 @@ class PegasusTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def can_save_slow_tokenizer(self) -> bool:
-
         """
         Check whether the slow tokenizer can be saved.
         
@@ -191,7 +189,6 @@ class PegasusTokenizerFast(PreTrainedTokenizerFast):
         return os.path.isfile(self.vocab_file) if self.vocab_file else False
 
     def _special_token_mask(self, seq):
-
         """
         Special Token Mask method in the PegasusTokenizerFast class.
         
@@ -251,7 +248,6 @@ class PegasusTokenizerFast(PreTrainedTokenizerFast):
         return token_ids_0 + token_ids_1 + [self.eos_token_id]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary to the specified directory with an optional filename prefix.
         

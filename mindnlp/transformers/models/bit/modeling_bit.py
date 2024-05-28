@@ -50,7 +50,6 @@ _IMAGE_CLASS_CHECKPOINT = "google/bit-50"
 _IMAGE_CLASS_EXPECTED_OUTPUT = "tiger cat"
 
 
-
 def get_padding_value(padding=None, kernel_size=7, stride=1, dilation=1) -> Tuple[Tuple, bool]:
     r"""
     Utility function to get the tuple padding value given the kernel_size and padding.
@@ -111,7 +110,6 @@ class WeightStandardizedConv2d(nn.Conv2d):
         bias=False,
         eps=1e-6,
     ):
-
         """
         This method initializes an instance of the WeightStandardizedConv2d class.
         
@@ -154,7 +152,6 @@ class WeightStandardizedConv2d(nn.Conv2d):
         self.eps = eps
 
     def construct(self, hidden_state):
-
         """
         Constructs a weighted standardized convolutional operation.
         
@@ -188,7 +185,6 @@ class BitGroupNormActivation(nn.GroupNorm):
     """
 
     def __init__(self, config, num_channels, eps=1e-5, affine=True, apply_activation=True):
-
         """
         Initializes an instance of the BitGroupNormActivation class.
         
@@ -214,7 +210,6 @@ class BitGroupNormActivation(nn.GroupNorm):
             self.activation = nn.Identity()
 
     def construct(self, hidden_state):
-
         """
         Constructs the hidden state of the BitGroupNormActivation.
         
@@ -240,7 +235,6 @@ class DynamicPad2d(nn.Cell):
     """
 
     def __init__(self, kernel_size, stride, dilation, value=0):
-
         """Initializes an instance of the DynamicPad2d class.
         
         Args:
@@ -278,7 +272,6 @@ class DynamicPad2d(nn.Cell):
         self.compute_padding = compute_padding
 
     def __call__(self, input):
-
         """
         This method is called when an instance of the DynamicPad2d class is used as a function. It performs dynamic padding on the input tensor based on the kernel size, stride, dilation, and value specified
 in the class instance.
@@ -329,7 +322,6 @@ class BitMaxPool2d(nn.Cell):
         padding_value=0,
         use_dynamic_padding=True,
     ):
-
         """
         Initializes a BitMaxPool2d object.
         
@@ -363,7 +355,6 @@ class BitMaxPool2d(nn.Cell):
             self.pad = nn.Identity()
 
     def construct(self, hidden_states):
-
         """
         Constructs a BitMaxPool2d object.
         
@@ -398,7 +389,6 @@ class BitEmbeddings(nn.Cell):
     """
 
     def __init__(self, config: BitConfig):
-
         """
         Initializes an instance of the BitEmbeddings class.
         
@@ -439,7 +429,6 @@ class BitEmbeddings(nn.Cell):
         self.num_channels = config.num_channels
 
     def construct(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the bit embeddings for the given pixel values.
         
@@ -505,7 +494,6 @@ class BitDropPath(nn.Cell):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
 
     def __init__(self, drop_prob: Optional[float] = None) -> None:
-
         """
         Initializes a new instance of the BitDropPath class.
         
@@ -523,7 +511,6 @@ class BitDropPath(nn.Cell):
         self.drop_prob = drop_prob
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs a new tensor by applying drop path regularization to the given hidden states.
         
@@ -554,7 +541,6 @@ class BitDropPath(nn.Cell):
         return drop_path(hidden_states, self.drop_prob, self.training)
 
     def extra_repr(self) -> str:
-
         """
         Returns a string representation of the BitDropPath object.
         
@@ -574,7 +560,6 @@ probability of dropping a bit.
 
 
 def make_div(value, divisor=8):
-
     """
     Args:
         value (int): The input value for which the division needs to be performed.
@@ -614,7 +599,6 @@ class BitPreActivationBottleneckLayer(nn.Cell):
         drop_path_rate=0.0,
         is_first_layer=False,
     ):
-
         """
         Initializes a BitPreActivationBottleneckLayer instance.
         
@@ -669,7 +653,6 @@ class BitPreActivationBottleneckLayer(nn.Cell):
         self.drop_path = BitDropPath(drop_path_rate) if drop_path_rate > 0 else nn.Identity()
 
     def construct(self, hidden_states):
-
         """
         The 'construct' method initializes the BitPreActivationBottleneckLayer class.
         
@@ -716,7 +699,6 @@ class BitBottleneckLayer(nn.Cell):
         drop_path_rate=0.0,
         is_first_layer=False,
     ):
-
         """
         Initializes a BitBottleneckLayer object.
         
@@ -776,7 +758,6 @@ class BitBottleneckLayer(nn.Cell):
         self.activation = ACT2FN[config.hidden_act]
 
     def construct(self, hidden_states):
-
         """
         The 'construct' method in the class 'BitBottleneckLayer' performs a series of operations on the input 'hidden_states' to construct a new hidden state and returns the result.
         
@@ -851,7 +832,6 @@ otherwise BitGroupNormActivation is used for applying bit group normalization ac
         stride=1,
         preact=True,
     ):
-
         """
         Initializes an instance of the BitDownsampleConv class.
         
@@ -880,7 +860,6 @@ otherwise BitGroupNormActivation is used for applying bit group normalization ac
         )
 
     def construct(self, x):
-
         """
         Constructs the BitDownsampleConv object.
         
@@ -913,7 +892,6 @@ class BitStage(nn.Cell):
         bottle_ratio=0.25,
         layer_dropout=None,
     ):
-
         """
         Args:
             self (object): The instance of the class.
@@ -984,7 +962,6 @@ class BitStage(nn.Cell):
         return stride, drop_path_rate, is_first_layer
 
     def construct(self, input: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Construct method in the BitStage class.
         
@@ -1028,7 +1005,6 @@ class BitEncoder(nn.Cell):
     
     """
     def __init__(self, config: BitConfig):
-
         """
         Initializes an instance of the BitEncoder class.
         
@@ -1085,7 +1061,6 @@ class BitEncoder(nn.Cell):
             setattr(self.stages, str(stage_idx), stage)
 
     def _get_updated_hyperparameters(self, stage_idx, current_stride, current_hidden_size, dilation, config):
-
         """
         This method '_get_updated_hyperparameters' updates the hyperparameters based on the given parameters.
         
@@ -1113,7 +1088,6 @@ class BitEncoder(nn.Cell):
     def construct(
         self, hidden_state: mindspore.Tensor, output_hidden_states: bool = False, return_dict: bool = True
     ) -> BaseModelOutputWithNoAttention:
-
         """
         Constructs the BitEncoder model.
         
@@ -1164,7 +1138,6 @@ class BitPreTrainedModel(PreTrainedModel):
     main_input_name = "pixel_values"
 
     def _init_weights(self, cell):
-
         """
         This method initializes the weights of the given cell based on its type.
         
@@ -1187,7 +1160,6 @@ class BitPreTrainedModel(PreTrainedModel):
             cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 
-
 class BitModel(BitPreTrainedModel):
 
     """
@@ -1207,7 +1179,6 @@ constructing the model output with pooling and no attention.
 states and using a return dictionary.
     """
     def __init__(self, config):
-
         """Initializes a BitModel instance.
         
         Args:
@@ -1239,7 +1210,6 @@ states and using a return dictionary.
     def construct(
         self, pixel_values: mindspore.Tensor, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None
     ) -> BaseModelOutputWithPoolingAndNoAttention:
-
         """
         Constructs the BitModel by processing the given pixel values.
         
@@ -1319,7 +1289,6 @@ class BitForImageClassification(BitPreTrainedModel):
             - ImageClassifierOutputWithNoAttention: Output containing loss, logits, and hidden states if specified.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the BitForImageClassification class.
         
@@ -1423,7 +1392,6 @@ class BitBackbone(BitPreTrainedModel, BackboneMixin):
     Note: In the above example, the BitBackbone class is used to extract feature maps and hidden states from an image using a pre-trained Bit model.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the BitBackbone class.
         

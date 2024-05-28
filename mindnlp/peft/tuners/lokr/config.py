@@ -140,7 +140,6 @@ class LoKrConfig(PeftConfig):
     )
 
     def __post_init__(self):
-
         r"""
         Method to initialize the attributes of the LoKrConfig class after object creation.
         

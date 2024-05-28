@@ -111,7 +111,6 @@ class MegatronBertConfig(PretrainedConfig):
         use_cache=True,
         **kwargs,
     ):
-
         """
         Initialize a MegatronBertConfig object with the provided parameters.
         

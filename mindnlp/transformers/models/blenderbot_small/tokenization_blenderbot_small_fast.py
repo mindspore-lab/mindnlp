@@ -54,7 +54,6 @@ class BlenderbotSmallTokenizerFast(PreTrainedTokenizerFast):
         trim_offsets=True,
         **kwargs,
     ):
-
         """
         Initializes a BlenderbotSmallTokenizerFast object.
         
@@ -92,7 +91,6 @@ class BlenderbotSmallTokenizerFast(PreTrainedTokenizerFast):
         self.add_prefix_space = add_prefix_space
 
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
-
         """
         This method builds inputs with special tokens for the BlenderbotSmallTokenizerFast class.
         

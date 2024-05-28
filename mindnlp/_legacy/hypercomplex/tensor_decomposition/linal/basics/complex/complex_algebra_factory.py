@@ -14,7 +14,6 @@ class ComplexAlgebraFactory(AlgebraFactory):
     """
 
     def get_matrix_impl(self) -> _MatrixImpl:
-
         r"""
         Retrieves the implementation of the matrix for complex algebra operations.
         
@@ -30,7 +29,6 @@ class ComplexAlgebraFactory(AlgebraFactory):
         return _ComplexAlgebraImpl()
 
     def get_vector_impl(self) -> _VectorImpl:
-
         r"""
         Returns an instance of the _VectorImpl class that implements the complex algebra operations.
         
@@ -59,7 +57,6 @@ functionality to perform vector operations in complex algebra. The returned obje
         return _ComplexAlgebraImpl()
 
     def get_scalar_impl(self) -> _ScalarImpl:
-
         r"""
         This method retrieves the implementation of a scalar for the ComplexAlgebraFactory.
         

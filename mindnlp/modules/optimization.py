@@ -40,7 +40,6 @@ class LayerWiseDummyOptimizer(Optimizer):
     """
 
     def __init__(self, *args, optimizer_dict=None, **kwargs):
-
         r"""
         __init__
         
@@ -70,7 +69,6 @@ class LayerWiseDummyScheduler(LRScheduler):
     """
 
     def __init__(self, *args, **kwargs):
-
         r"""
         Initializes a new instance of the LayerWiseDummyScheduler class.
         
@@ -88,7 +86,6 @@ class LayerWiseDummyScheduler(LRScheduler):
         super().__init__(optimizer, last_epoch)
 
     def get_lr(self):
-
         r"""
         Get the learning rates of all parameter groups in the optimizer.
         
@@ -113,7 +110,6 @@ this method is to retrieve the learning rates of all parameter groups in the opt
         return [group["lr"] for group in self.optimizer.param_groups]
 
     def _get_closed_form_lr(self):
-
         r"""
         This method _get_closed_form_lr in the class LayerWiseDummyScheduler computes the closed form learning rate (LR).
         
@@ -130,7 +126,6 @@ this method is to retrieve the learning rates of all parameter groups in the opt
 
 
 def _get_constant_lambda(_=None):
-
     r"""
     This function returns a constant lambda value of 1.
     
@@ -182,7 +177,6 @@ def get_reduce_on_plateau_schedule(optimizer: Optimizer, **kwargs):
 
 
 def _get_constant_schedule_with_warmup_lr_lambda(current_step: int, *, num_warmup_steps: int):
-
     r"""
     Args:
         current_step (int): The current step in the learning rate schedule.
@@ -221,7 +215,6 @@ def get_constant_schedule_with_warmup(optimizer: Optimizer, num_warmup_steps: in
 
 
 def _get_linear_schedule_with_warmup_lr_lambda(current_step: int, *, num_warmup_steps: int, num_training_steps: int):
-
     r"""
     Args:
         current_step (int): The current step in the training process.
@@ -269,8 +262,6 @@ def get_linear_schedule_with_warmup(optimizer, num_warmup_steps, num_training_st
 def _get_cosine_schedule_with_warmup_lr_lambda(
     current_step: int, *, num_warmup_steps: int, num_training_steps: int, num_cycles: float
 ):
-
-    
     """
     Args:
         current_step (int): The current step in the training process.
@@ -328,7 +319,6 @@ def get_cosine_schedule_with_warmup(
 def _get_cosine_with_hard_restarts_schedule_with_warmup_lr_lambda(
     current_step: int, *, num_warmup_steps: int, num_training_steps: int, num_cycles: int
 ):
-
     r"""
     Calculates the learning rate lambda value for a cosine schedule with hard restarts and warm-up.
     
@@ -401,8 +391,6 @@ def _get_polynomial_decay_schedule_with_warmup_lr_lambda(
     power: float,
     lr_init: int,
 ):
-
-    
     """
     Args:
         current_step (int): The current step in the training process.
@@ -484,7 +472,6 @@ def get_polynomial_decay_schedule_with_warmup(
 
 
 def _get_inverse_sqrt_schedule_lr_lambda(current_step: int, *, num_warmup_steps: int, timescale: int = None):
-
     r"""
     This function calculates the learning rate decay based on the inverse square root schedule.
     
@@ -544,7 +531,6 @@ def get_inverse_sqrt_schedule(
 def _get_cosine_schedule_with_warmup_lr_lambda(
     current_step: int, *, num_warmup_steps: int, num_training_steps: int, num_cycles: float, min_lr_rate: float = 0.0
 ):
-
     r"""
     This function implements a cosine learning rate schedule with warmup for a given current step. The learning rate is adjusted based on the progress of the training.
     
@@ -729,7 +715,6 @@ class AdafactorSchedule(LambdaLR):
     """
 
     def __init__(self, optimizer, initial_lr=0.0):
-
         r"""
         Initialize the AdafactorSchedule class.
         
@@ -754,7 +739,6 @@ class AdafactorSchedule(LambdaLR):
             del group["initial_lr"]
 
     def get_lr(self):
-
         r"""
         This method retrieves the learning rates for the optimizer associated with the AdafactorSchedule class.
         

@@ -110,7 +110,6 @@ class ErnieMTokenizer(PreTrainedTokenizer):
         sp_model_kwargs: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> None:
-
         """
         Initialize the ErnieMTokenizer class.
         
@@ -171,7 +170,6 @@ class ErnieMTokenizer(PreTrainedTokenizer):
             self.SP_CHAR_MAPPING[chr(ch)] = chr(ch - 65248)
 
     def get_offset_mapping(self, text):
-
         """
         This method is part of the ErnieMTokenizer class and is used to obtain the offset mapping for the given text.
         
@@ -218,7 +216,6 @@ class ErnieMTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
-
         """
         Method to retrieve the size of the vocabulary stored in the ErnieMTokenizer instance.
         
@@ -236,7 +233,6 @@ class ErnieMTokenizer(PreTrainedTokenizer):
         return len(self.vocab)
 
     def get_vocab(self):
-
         """
         Get the vocabulary of the tokenizer.
         
@@ -253,7 +249,6 @@ class ErnieMTokenizer(PreTrainedTokenizer):
         return dict(self.vocab, **self.added_tokens_encoder)
 
     def __getstate__(self):
-
         """
         Method: __getstate__
         
@@ -275,7 +270,6 @@ class ErnieMTokenizer(PreTrainedTokenizer):
         return state
 
     def __setstate__(self, d):
-
         """
         Sets the state of the ErnieMTokenizer object from a serialized state dictionary.
         
@@ -374,7 +368,6 @@ class ErnieMTokenizer(PreTrainedTokenizer):
 
     # to mimic paddlenlp.transformers.ernie_m.tokenizer.ErnieMTokenizer functioning
     def _convert_token_to_id(self, token):
-
         """
         Converts a token to its corresponding ID using the provided vocabulary in the ErnieMTokenizer class.
         
@@ -528,7 +521,6 @@ class ErnieMTokenizer(PreTrainedTokenizer):
         return False
 
     def load_vocab(self, filepath):
-
         """
         This method loads a vocabulary from a specified file path into a token-to-index mapping within the ErnieMTokenizer class.
         
@@ -552,7 +544,6 @@ class ErnieMTokenizer(PreTrainedTokenizer):
         return token_to_idx
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary and tokenizer model.
         

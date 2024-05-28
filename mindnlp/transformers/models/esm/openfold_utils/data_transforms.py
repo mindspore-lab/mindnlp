@@ -87,7 +87,6 @@ def make_atom14_masks(protein: Dict[str, mindspore.Tensor]) -> Dict[str, mindspo
 
 
 def make_atom14_masks_np(batch: Dict[str, mindspore.Tensor]) -> Dict[str, np.ndarray]:
-
     """
     Converts a batch of MindSpore tensors to NumPy arrays and applies a function to create atom14 masks.
     

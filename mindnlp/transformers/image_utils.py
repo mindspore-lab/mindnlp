@@ -139,7 +139,6 @@ AnnotationType = Dict[str, Union[int, str, List[Dict]]]
 
 
 def is_pil_image(img):
-
     """
     This function checks if the input 'img' is a PIL Image. 
     
@@ -156,7 +155,6 @@ def is_pil_image(img):
 
 
 def is_valid_image(img):
-
     """
     Checks if the provided image is valid.
     
@@ -177,7 +175,6 @@ def is_valid_image(img):
 
 
 def valid_images(imgs):
-
     """Validate a list of images.
     
     Args:
@@ -202,7 +199,6 @@ def valid_images(imgs):
 
 
 def is_batched(img):
-
     """
     Checks if the input is a batch of images.
     
@@ -271,7 +267,6 @@ def make_list_of_images(images, expected_ndims: int = 3) -> List[ImageInput]:
 
 
 def to_numpy_array(img) -> np.ndarray:
-
     """
     Converts an image to a NumPy array.
     
@@ -374,7 +369,6 @@ def get_image_size(image: np.ndarray, channel_dim: ChannelDimension = None) -> T
 
 
 def is_valid_annotation_coco_detection(annotation: Dict[str, Union[List, Tuple]]) -> bool:
-
     """
     Args:
         annotation (dict): A dictionary representing an annotation with the following keys:
@@ -400,7 +394,6 @@ def is_valid_annotation_coco_detection(annotation: Dict[str, Union[List, Tuple]]
 
 
 def is_valid_annotation_coco_panoptic(annotation: Dict[str, Union[List, Tuple]]) -> bool:
-
     """
     Checks if the given COCO Panoptic annotation is valid.
     
@@ -430,7 +423,6 @@ def is_valid_annotation_coco_panoptic(annotation: Dict[str, Union[List, Tuple]])
 
 
 def valid_coco_detection_annotations(annotations: Iterable[Dict[str, Union[List, Tuple]]]) -> bool:
-
     """
     Check if a collection of COCO-style annotation dictionaries for object detection is valid.
     
@@ -455,7 +447,6 @@ def valid_coco_detection_annotations(annotations: Iterable[Dict[str, Union[List,
 
 
 def valid_coco_panoptic_annotations(annotations: Iterable[Dict[str, Union[List, Tuple]]]) -> bool:
-
     """
     Checks if the given Coco Panoptic annotations are valid.
     
@@ -563,7 +554,6 @@ class ImageFeatureExtractionMixin:
     """
 
     def _ensure_format_supported(self, image):
-
         """
         This method '_ensure_format_supported' in the class 'ImageFeatureExtractionMixin' ensures that the input image format is supported for further processing.
         
@@ -916,7 +906,6 @@ class ImageFeatureExtractionMixin:
 
 
 def promote_annotation_format(annotation_format: Union[AnnotionFormat, AnnotationFormat]) -> AnnotationFormat:
-
     """
     Promotes the given annotation format to a higher level.
     
@@ -939,7 +928,6 @@ def validate_annotations(
     supported_annotation_formats: Tuple[AnnotationFormat, ...],
     annotations: List[Dict],
 ) -> None:
-
     """
     Validate the given annotations against the specified annotation format and supported formats.
     
@@ -983,7 +971,6 @@ def validate_annotations(
 
 
 def validate_kwargs(valid_processor_keys: List[str], captured_kwargs: List[str]):
-
     """
     Validate the captured keyword arguments against the valid processor keys.
     

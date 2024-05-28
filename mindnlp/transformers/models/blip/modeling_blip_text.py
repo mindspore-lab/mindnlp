@@ -45,7 +45,6 @@ class BlipTextEmbeddings(nn.Cell):
     """Construct the embeddings from word and position embeddings."""
 
     def __init__(self, config):
-
         """
         Initializes a BlipTextEmbeddings instance.
         
@@ -89,7 +88,6 @@ class BlipTextEmbeddings(nn.Cell):
         inputs_embeds: Optional[mindspore.Tensor] = None,
         past_key_values_length: int = 0,
     ) -> mindspore.Tensor:
-
         """
         Constructs the BlipTextEmbeddings.
         
@@ -158,7 +156,6 @@ class BlipTextSelfAttention(nn.Cell):
     
     """
     def __init__(self, config, is_cross_attention):
-
         """
         Initialize the BlipTextSelfAttention class.
         
@@ -206,7 +203,6 @@ class BlipTextSelfAttention(nn.Cell):
             self.distance_embedding = nn.Embedding(2 * config.max_position_embeddings - 1, self.attention_head_size)
 
     def save_attn_gradients(self, attn_gradients):
-
         """
         Save the attention gradients in the BlipTextSelfAttention class.
         
@@ -225,7 +221,6 @@ class BlipTextSelfAttention(nn.Cell):
         self.attn_gradients = attn_gradients
 
     def get_attn_gradients(self):
-
         """
         Returns the attention gradients of the BlipTextSelfAttention layer.
         
@@ -241,7 +236,6 @@ class BlipTextSelfAttention(nn.Cell):
         return self.attn_gradients
 
     def save_attention_map(self, attention_map):
-
         """
         Save the attention map in the BlipTextSelfAttention class.
         
@@ -258,7 +252,6 @@ class BlipTextSelfAttention(nn.Cell):
         self.attention_map = attention_map
 
     def get_attention_map(self):
-
         """
         This method returns the attention map for BlipTextSelfAttention.
         
@@ -274,7 +267,6 @@ class BlipTextSelfAttention(nn.Cell):
         return self.attention_map
 
     def swapaxes_for_scores(self, x):
-
         """
         Performs a swap axes operation on the given input tensor to prepare it for self-attention scoring in the BlipTextSelfAttention class.
         
@@ -309,7 +301,6 @@ class BlipTextSelfAttention(nn.Cell):
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         """
         Constructs the BlipTextSelfAttention.
         
@@ -440,7 +431,6 @@ dense linear transformation, dropout, layer normalization, and residual connecti
         final_hidden_states = self_output.construct(hidden_states, input_tensor)
     """
     def __init__(self, config):
-
         """Initialize the BlipTextSelfOutput class.
         
         Args:
@@ -459,7 +449,6 @@ dense linear transformation, dropout, layer normalization, and residual connecti
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the self-attention output of the BlipText model.
         
@@ -503,7 +492,6 @@ class BlipTextAttention(nn.Cell):
     
     """
     def __init__(self, config, is_cross_attention=False):
-
         """
         Initializes a new instance of the BlipTextAttention class.
         
@@ -524,7 +512,6 @@ class BlipTextAttention(nn.Cell):
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
-
         """
         Prunes specified attention heads from the BlipTextAttention layer.
         
@@ -590,7 +577,6 @@ obtained from the 'find_pruneable_heads_and_indices' function.
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         """
         This method constructs the attention mechanism for the BlipTextAttention class.
         
@@ -640,7 +626,6 @@ class BlipTextIntermediate(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the BlipTextIntermediate class.
         
@@ -665,7 +650,6 @@ class BlipTextIntermediate(nn.Cell):
             self.intermediate_act_fn = config.hidden_act
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the BlipTextIntermediate.
         
@@ -718,7 +702,6 @@ input tensor to the hidden states.
     
     """
     def __init__(self, config):
-
         """
         Initializes a BlipTextOutput instance.
         
@@ -745,7 +728,6 @@ input tensor to the hidden states.
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs a BlipTextOutput by applying a series of operations on the given hidden states and input tensor.
         
@@ -792,7 +774,6 @@ optional arguments.
 processing.
     """
     def __init__(self, config, layer_num):
-
         """
         Initializes a BlipTextLayer object.
         
@@ -828,7 +809,6 @@ processing.
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         """
         Constructs the BlipTextLayer.
         
@@ -883,7 +863,6 @@ processing.
         return outputs
 
     def feed_forward_chunk(self, attention_output):
-
         """
         This method 'feed_forward_chunk' is a part of the 'BlipTextLayer' class and is used to perform the feed-forward chunk operation.
         
@@ -936,7 +915,6 @@ and cross-attentions. The method also allows for customization of the output for
     - The BlipTextEncoder module is designed to be used within a larger model architecture for natural language processing tasks.
     """
     def __init__(self, config):
-
         """
         Initializes a BlipTextEncoder object.
         
@@ -972,7 +950,6 @@ and cross-attentions. The method also allows for customization of the output for
         output_hidden_states: Optional[bool] = False,
         return_dict: Optional[bool] = True,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]:
-
         """
         Constructs the BlipTextEncoder.
         
@@ -1096,7 +1073,6 @@ the pooled output after applying dense and activation operations.
     
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the BlipTextPooler class.
         
@@ -1118,7 +1094,6 @@ the pooled output after applying dense and activation operations.
         self.activation = nn.Tanh()
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the pooled output tensor for the BlipTextPooler class.
         
@@ -1171,7 +1146,6 @@ class BlipTextPredictionHeadTransform(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the BlipTextPredictionHeadTransform class.
         
@@ -1198,7 +1172,6 @@ activation function itself.
         self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method 'construct' is a part of the class 'BlipTextPredictionHeadTransform' and is used to perform transformations on the input hidden states tensor.
         
@@ -1247,7 +1220,6 @@ class BlipTextLMPredictionHead(nn.Cell):
                 The output hidden states after transformation and applying the decoder layer.
     """
     def __init__(self, config):
-
         """
         Initializes the BlipTextLMPredictionHead.
         
@@ -1275,7 +1247,6 @@ class BlipTextLMPredictionHead(nn.Cell):
         self.decoder.bias = self.bias
 
     def construct(self, hidden_states):
-
         """
         This method constructs the prediction head for the BlipTextLMPredictionHead class.
         
@@ -1310,7 +1281,6 @@ class BlipTextOnlyMLMHead(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the BlipTextOnlyMLMHead class.
         
@@ -1328,7 +1298,6 @@ class BlipTextOnlyMLMHead(nn.Cell):
         self.predictions = BlipTextLMPredictionHead(config)
 
     def construct(self, sequence_output: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Method 'construct' in the class 'BlipTextOnlyMLMHead'.
         
@@ -1382,7 +1351,6 @@ class BlipTextModel(BlipTextPreTrainedModel):
     """
 
     def __init__(self, config, add_pooling_layer=True):
-
         """
         Initializes a BlipTextModel object.
         
@@ -1409,7 +1377,6 @@ class BlipTextModel(BlipTextPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method returns the input embeddings from the BlipTextModel.
         
@@ -1425,7 +1392,6 @@ class BlipTextModel(BlipTextPreTrainedModel):
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the BlipTextModel.
         
@@ -1674,7 +1640,6 @@ output_hidden_states, return_dict, return_logits, is_decoder, reduction): Constr
     
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the BlipTextLMHeadModel class.
         
@@ -1695,7 +1660,6 @@ output_hidden_states, return_dict, return_logits, is_decoder, reduction): Constr
         self.label_smoothing = config.label_smoothing
 
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings of the BlipTextLMHeadModel.
         
@@ -1721,7 +1685,6 @@ or further analysis.
         return self.cls.predictions.decoder
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Method to set new output embeddings for the BlipTextLMHeadModel.
         
@@ -1830,7 +1793,6 @@ or further analysis.
         )
 
     def prepare_inputs_for_generation(self, input_ids, past_key_values=None, attention_mask=None, **model_kwargs):
-
         """
         This method prepares inputs for text generation in the BlipTextLMHeadModel class.
         
@@ -1880,7 +1842,6 @@ or further analysis.
         }
 
     def _reorder_cache(self, past_key_values, beam_idx):
-
         """
         Reorders the cache based on the beam index.
         

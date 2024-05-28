@@ -27,7 +27,6 @@ from .utils import concat_tensor_along_last_dim, split_tensor_along_last_dim, ge
 
 @constexpr
 def _get_rank(group=GlobalComm.WORLD_COMM_GROUP):
-
     r"""
     This function returns the rank of the current process within the specified communication group.
     
@@ -45,7 +44,6 @@ def _get_rank(group=GlobalComm.WORLD_COMM_GROUP):
 
 @constexpr
 def _get_group_size(group=GlobalComm.WORLD_COMM_GROUP):
-
     r"""
     This function retrieves the size of the specified communication group.
     
@@ -106,7 +104,6 @@ def _gather(input_: mindspore.Tensor) -> mindspore.Tensor:
 class _CopyToModelParallelRegion(nn.Cell):
     """Pass the input to the model parallel region."""
     def construct(self, input_):
-
         r"""
         Constructs a new instance of the '_CopyToModelParallelRegion' class.
         
@@ -130,7 +127,6 @@ class _CopyToModelParallelRegion(nn.Cell):
 class _ReduceFromModelParallelRegion(nn.Cell):
     """All-redcue the input from the model parallel region."""
     def construct(self, input_):
-
         r"""
         Constructs a new instance of '_ReduceFromModelParallelRegion' class.
         
@@ -154,7 +150,6 @@ class _ReduceFromModelParallelRegion(nn.Cell):
 class _ScatterToModelParallelRegion(nn.Cell):
     """Split the input and keep only the corresponding chuck to the rank."""
     def construct(self, input_):
-
         r"""
         Constructs a scatter to model parallel region within the _ScatterToModelParallelRegion class.
         
@@ -178,7 +173,6 @@ class _GatherFromModelParallelRegion(nn.Cell):
     """Gather the input from model parallel region and concatinate."""
 
     def construct(self, input_):
-
         r"""
         This method constructs a gather operation from the input.
         

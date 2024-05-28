@@ -48,7 +48,6 @@ logger = logging.get_logger(__name__)
 
 
 def make_batched(videos) -> List[List[ImageInput]]:
-
     """
     Args:
         videos (Union[List[ImageInput], Tuple[ImageInput]]): A list or tuple of image inputs or a single image input.
@@ -125,7 +124,6 @@ class VideoMAEImageProcessor(BaseImageProcessor):
         image_std: Optional[Union[float, List[float]]] = None,
         **kwargs,
     ) -> None:
-
         """Initializes an instance of the VideoMAEImageProcessor class.
         
         Args:

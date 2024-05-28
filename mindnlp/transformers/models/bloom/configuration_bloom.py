@@ -121,7 +121,6 @@ class BloomConfig(PretrainedConfig):
         slow_but_exact=False,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the BloomConfig class.
         

@@ -119,7 +119,6 @@ class T5TokenizerFast(PreTrainedTokenizerFast):
         additional_special_tokens=None,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the T5TokenizerFast class.
         
@@ -174,7 +173,6 @@ class T5TokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def can_save_slow_tokenizer(self) -> bool:
-
         """
         This method checks if the slow tokenizer can be saved.
         
@@ -193,7 +191,6 @@ class T5TokenizerFast(PreTrainedTokenizerFast):
 
     @staticmethod
     def _eventually_correct_t5_max_length(pretrained_model_name_or_path, max_model_length, init_max_model_length):
-
         """
         This method updates the maximum model length for the T5 tokenizer. It checks if the provided `pretrained_model_name_or_path` is valid and compares the `init_max_model_length` with the
 `max_model_length` to determine the final value.
@@ -237,7 +234,6 @@ or padding sequences longer than the deprecated maximum model length.
         return max_model_length
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Saves the vocabulary for a slow tokenizer.
         
@@ -327,7 +323,6 @@ or padding sequences longer than the deprecated maximum model length.
         return len(token_ids_0 + eos + token_ids_1 + eos) * [0]
 
     def get_sentinel_tokens(self):
-
         """
         This method retrieves the sentinel tokens from the T5TokenizerFast instance.
         
@@ -345,7 +340,6 @@ or padding sequences longer than the deprecated maximum model length.
         )
 
     def get_sentinel_token_ids(self):
-
         """
         This method 'get_sentinel_token_ids' in the class 'T5TokenizerFast' retrieves the token IDs corresponding to the sentinel tokens.
         

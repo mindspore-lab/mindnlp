@@ -48,7 +48,6 @@ def is_tensor(x):
     return isinstance(x, np.ndarray)
 
 def _is_mindspore(x):
-
     """
     Checks if the input x is a MindSpore tensor.
     
@@ -78,7 +77,6 @@ class ExplicitEnum(str, Enum):
 
     @classmethod
     def _missing_(cls, value):
-
         """
         This method `_missing_` in the class `ExplicitEnum` is a class method used to handle missing values in the ExplicitEnum class.
         
@@ -131,7 +129,6 @@ class ModelOutput(OrderedDict):
     """
 
     def __post_init__(self):
-
         """Perform post-initialization actions for the ModelOutput class.
         
         This method is automatically called after the initialization of a ModelOutput object.
@@ -199,7 +196,6 @@ class ModelOutput(OrderedDict):
                     self[field.name] = v
 
     def __delitem__(self, *args, **kwargs):
-
         """
         __delitem__
         
@@ -217,7 +213,6 @@ class ModelOutput(OrderedDict):
         raise RuntimeError(f"You cannot use ``__delitem__`` on a {self.__class__.__name__} instance.")
 
     def setdefault(self, *args, **kwargs):
-
         """
         Sets a default value in the ModelOutput instance.
         
@@ -237,7 +232,6 @@ ModelOutput instance.
         raise RuntimeError(f"You cannot use ``setdefault`` on a {self.__class__.__name__} instance.")
 
     def pop(self, *args, **kwargs):
-
         """
         Method that raises a RuntimeError to prevent the use of 'pop' on a ModelOutput instance.
         
@@ -255,7 +249,6 @@ ModelOutput instance.
         raise RuntimeError(f"You cannot use ``pop`` on a {self.__class__.__name__} instance.")
 
     def update(self, *args, **kwargs):
-
         """
         Updates the current instance of the ModelOutput class.
         
@@ -274,7 +267,6 @@ ModelOutput instance.
         raise RuntimeError(f"You cannot use ``update`` on a {self.__class__.__name__} instance.")
 
     def __getitem__(self, k):
-
         """
         This method allows accessing the elements of the ModelOutput object using the square bracket notation.
         
@@ -297,7 +289,6 @@ element.
         return self.to_tuple()[k]
 
     def __setattr__(self, name, value):
-
         """
         Method __setattr__ in the class ModelOutput sets the value for the specified attribute name.
         
@@ -319,7 +310,6 @@ set to None.
         super().__setattr__(name, value)
 
     def __setitem__(self, key, value):
-
         """
         This method '__setitem__' in the class 'ModelOutput' allows setting key-value pairs in the model output object.
         
@@ -372,7 +362,6 @@ class cached_property(property):
     """
 
     def __get__(self, obj, objtype=None):
-
         """ 
         Method '__get__' in the class 'cached_property'.
         
@@ -400,7 +389,6 @@ class cached_property(property):
         return cached
 
 def _is_numpy(x):
-
     """
     This function checks if the input is a NumPy array.
     
@@ -507,7 +495,6 @@ class ContextManagers:
     """
 
     def __init__(self, context_managers: List[ContextManager]):
-
         """
         __init__
         
@@ -525,7 +512,6 @@ class ContextManagers:
         self.stack = ExitStack()
 
     def __enter__(self):
-
         """
         Method '__enter__' in the class 'ContextManagers'.
         
@@ -543,7 +529,6 @@ exceptions that may occur during the context management operations.
             self.stack.enter_context(context_manager)
 
     def __exit__(self, *args, **kwargs):
-
         """
         __exit__
         

@@ -48,7 +48,6 @@ one.
                  algebra_factory: Type[TAlgebraFactory],
                  x: Union[float, np.float64],
                  y: Union[float, np.float64]) -> None:
-
         r"""
         Initializes an instance of the Scalar class.
         
@@ -70,7 +69,6 @@ one.
         self._y = np.float64(y)
 
     def __str__(self) -> str:
-
         r"""
         The '__str__' method in the 'Scalar' class converts the object to a string representation.
         
@@ -90,7 +88,6 @@ one.
         return str(self._x) + ('+' if self._y >= 0. else '-') + self._impl.special_element() + str(abs(self._y))
 
     def __neg__(self) -> 'Scalar':
-
         r"""
         This method negates the current Scalar object by returning a new Scalar object with negative coordinates.
         
@@ -106,7 +103,6 @@ one.
         return Scalar(self._alg_factory, -self._x, -self._y)
 
     def __add__(self, that: 'Scalar') -> 'Scalar':
-
         r"""
         Method '__add__' in the class 'Scalar' performs addition operation on two Scalar objects.
         
@@ -128,8 +124,6 @@ one.
         return Scalar(self._alg_factory, self._x + that._x, self._y + that._y)
 
     def __sub__(self, that: 'Scalar') -> 'Scalar':
-
-        
         """
         Subtracts the components of the current Scalar object from another Scalar object.
         
@@ -147,7 +141,6 @@ one.
         return Scalar(self._alg_factory, self._x - that._x, self._y - that._y)
 
     def __mul__(self, that: 'Scalar') -> 'Scalar':
-
         r"""
         Method '__mul__' in the class 'Scalar'.
         
@@ -168,8 +161,6 @@ one.
         return Scalar(self._alg_factory, *product)
 
     def __truediv__(self, that: 'Scalar') -> 'Scalar':
-
-        
         """
         Perform division operation between two Scalar objects.
         
@@ -189,7 +180,6 @@ one.
         return Scalar(self._alg_factory, *div)
 
     def __getitem__(self, key):
-
         r"""
         This method allows accessing the x and y coordinates of a Scalar object using the [] operator.
         
@@ -211,7 +201,6 @@ one.
 
     @staticmethod
     def one(algebra_factory: Type[TAlgebraFactory]) -> 'Scalar':
-
         r"""
         This method creates a scalar instance with a value of 1.0 and an error of 0.0 using the specified algebra factory.
         
@@ -228,7 +217,6 @@ one.
 
     @staticmethod
     def zero(algebra_factory: Type[TAlgebraFactory]) -> 'Scalar':
-
         r"""
         This method initializes a Scalar object with a value of zero.
         
@@ -245,7 +233,6 @@ one.
         return Scalar(algebra_factory, 0., 0.)
 
     def get_algebra_type(self) -> Type[AlgebraFactory]:
-
         r"""
         get_algebra_type method in the Scalar class.
         
@@ -265,7 +252,6 @@ one.
         return self._alg_factory
 
     def sqrt(self) -> 'Scalar':
-
         r"""
         This method calculates the square root of the current Scalar instance.
         
@@ -282,7 +268,6 @@ one.
         return Scalar(self._alg_factory, x, y)
 
     def as_array(self) -> np.ndarray:
-
         r"""
         Converts the scalar to a numpy array.
         
@@ -298,7 +283,6 @@ one.
         return np.array([self._x, self._y], dtype=np.float64)
 
     def is_zero(self) -> bool:
-
         r"""
         Check if the Scalar instance is effectively zero.
         
@@ -319,7 +303,6 @@ one.
             and -Scalar._EQUALITY_TOLERANCE < self._y < Scalar._EQUALITY_TOLERANCE
 
     def get_real(self) -> np.float64:
-
         r"""
         Method to retrieve the real component of a Scalar object.
         
@@ -337,7 +320,6 @@ one.
         return self._x
 
     def visit(self, visitor, *args, **kwargs) -> None:
-
         r""" 
         Visit method in the Scalar class.
         
@@ -356,7 +338,6 @@ one.
         self._impl.visit(self, visitor, *args, **kwargs)
 
     def _make_like(self, val: Tuple[np.float64, np.float64]) -> 'Scalar':
-
         r"""
         Create a new instance of the 'Scalar' class that is similar to the current instance.
         
@@ -374,7 +355,6 @@ one.
         return Scalar(self._alg_factory, *val)
 
     def _zero_like(self) -> 'Scalar':
-
         r"""
         This method returns a new Scalar instance that is zero-like, based on the current Scalar instance.
         
@@ -394,7 +374,6 @@ one.
         return Scalar.zero(self._alg_factory)
 
     def _one_like(self) -> 'Scalar':
-
         r"""
         This method returns a new instance of Scalar with the same algebraic structure as the current instance.
         

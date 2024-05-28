@@ -161,7 +161,6 @@ class JetMoESequenceClassifierOutputWithPast(SequenceClassifierOutputWithPast):
 
 # Copied from transformers.models.llama.modeling_llama._get_unpad_data
 def _get_unpad_data(attention_mask):
-
     """
     This function retrieves unpadded data from the input attention_mask.
     
@@ -219,7 +218,6 @@ converted back to the original input data type.
         self.variance_epsilon = eps
 
     def construct(self, hidden_states):
-
         """
         Constructs the JetMoERMSNorm.
         
@@ -266,7 +264,6 @@ position embeddings based on the input sequence length.
         This class is designed to be used as part of neural network models, particularly in scenarios where rotary position embeddings are required.
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
-
         """
         Initializes the JetMoERotaryEmbedding object with the specified parameters.
         
@@ -299,7 +296,6 @@ position embeddings based on the input sequence length.
         )
 
     def _set_cos_sin_cache(self, seq_len, dtype):
-
         """
         Sets the cosine and sine cache for the JetMoERotaryEmbedding class.
         
@@ -325,7 +321,6 @@ position embeddings based on the input sequence length.
         self.sin_cached = emb.sin().to(dtype)
 
     def construct(self, x, seq_len=None):
-
         """
         Construct the JetMoERotaryEmbedding.
         
@@ -451,7 +446,6 @@ class JetMoEAttention(nn.Cell):
         use_cache: bool = False,
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
-
         """
         Constructs the JetMoEAttention.
         
@@ -704,7 +698,6 @@ class JetMoEModel(JetMoEPreTrainedModel):
     """
 
     def __init__(self, config: JetMoEConfig):
-
         """
         Initializes a new instance of the JetMoEModel class.
         
@@ -734,7 +727,6 @@ class JetMoEModel(JetMoEPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """ 
         Method to retrieve the input embeddings from the JetMoEModel.
         
@@ -752,7 +744,6 @@ class JetMoEModel(JetMoEPreTrainedModel):
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Set the input embeddings for the JetMoEModel.
         
@@ -780,7 +771,6 @@ class JetMoEModel(JetMoEPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
-
         """
         This method constructs the JetMoEModel by processing input data and generating the model output.
         
@@ -953,7 +943,6 @@ Additionally, the _reorder_cache method is a static method for reordering past k
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
-
         """
         Initializes an instance of JetMoEForCausalLM.
         
@@ -981,7 +970,6 @@ Additionally, the _reorder_cache method is a static method for reordering past k
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method to retrieve the input embeddings from the model.
         
@@ -1002,7 +990,6 @@ Additionally, the _reorder_cache method is a static method for reordering past k
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         This method sets the input embeddings for the JetMoEForCausalLM model.
         
@@ -1019,7 +1006,6 @@ Additionally, the _reorder_cache method is a static method for reordering past k
         self.model.embed_tokens = value
 
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings of the JetMoE model for causal language modeling.
         
@@ -1039,7 +1025,6 @@ Additionally, the _reorder_cache method is a static method for reordering past k
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Set the output embeddings for the JetMoEForCausalLM model.
         
@@ -1057,7 +1042,6 @@ Additionally, the _reorder_cache method is a static method for reordering past k
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
-
         """
         Sets the decoder for the JetMoEForCausalLM model.
         
@@ -1074,7 +1058,6 @@ Additionally, the _reorder_cache method is a static method for reordering past k
         self.model = decoder
 
     def get_decoder(self):
-
         """
         Method to retrieve the decoder model for the JetMoEForCausalLM class.
         
@@ -1168,7 +1151,6 @@ Additionally, the _reorder_cache method is a static method for reordering past k
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
-
         """
         Prepare inputs for generation.
         
@@ -1249,7 +1231,6 @@ Additionally, the _reorder_cache method is a static method for reordering past k
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Reorders the cache for the JetMoEForCausalLM model based on the specified beam index.
         
@@ -1295,7 +1276,6 @@ problem types (regression, single-label classification, or multi-label classific
     Note: This docstring does not include the method signatures or any other code for clarity and readability.
     """
     def __init__(self, config):
-
         """
         Initializes a JetMoEForSequenceClassification instance.
         
@@ -1322,7 +1302,6 @@ problem types (regression, single-label classification, or multi-label classific
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method retrieves the input embeddings from the JetMoEForSequenceClassification model.
         
@@ -1338,7 +1317,6 @@ problem types (regression, single-label classification, or multi-label classific
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the JetMoEForSequenceClassification model.
         

@@ -63,7 +63,6 @@ class TinyBertConfig(PretrainedConfig):
                  pre_trained='',
                  training='',
                  **kwargs):
-
         """
         Initializes a new instance of the TinyBertConfig class.
         

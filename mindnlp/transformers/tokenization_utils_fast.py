@@ -84,7 +84,6 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
     slow_tokenizer_class: PreTrainedTokenizer = None
 
     def __init__(self, *args, **kwargs):
-
         r"""
         Initializes an instance of the PreTrainedTokenizerFast class.
         
@@ -234,7 +233,6 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
 
     @property
     def is_fast(self) -> bool:
-
         r"""
         Method 'is_fast' in the class 'PreTrainedTokenizerFast'.
         
@@ -267,7 +265,6 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
         return self._tokenizer.get_vocab_size(with_added_tokens=False)
 
     def get_vocab(self) -> Dict[str, int]:
-
         r"""
         Retrieve the vocabulary of the tokenizer including any added tokens.
         
@@ -286,7 +283,6 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
 
     @property
     def vocab(self) -> Dict[str, int]:
-
         r"""
         This method retrieves the vocabulary of the `PreTrainedTokenizerFast` class instance.
         
@@ -424,7 +420,6 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
         return [self._convert_token_to_id_with_added_voc(token) for token in tokens]
 
     def _convert_token_to_id_with_added_voc(self, token: str) -> int:
-
         r"""
         Converts a token to its corresponding ID using the provided tokenizer with added vocabulary.
         
@@ -448,7 +443,6 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
         return index
 
     def _convert_id_to_token(self, index: int) -> Optional[str]:
-
         r"""
         Converts an index to a token.
         
@@ -466,7 +460,6 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
         return self._tokenizer.id_to_token(int(index))
 
     def _add_tokens(self, new_tokens: List[Union[str, AddedToken]], special_tokens=False) -> int:
-
         r"""
         This method adds new tokens to the tokenizer.
         
@@ -534,7 +527,6 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
         return tokens
 
     def tokenize(self, text: str, pair: Optional[str] = None, add_special_tokens: bool = False, **kwargs) -> List[str]:
-
         r"""
         '''
         Tokenizes the given text into a list of strings.
@@ -646,7 +638,6 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
         return_length: bool = False,
         verbose: bool = True,
     ) -> BatchEncoding:
-
         r"""
         This method `_batch_encode_plus` is defined in the class `PreTrainedTokenizerFast`. It takes 17 parameters and returns a value of type `BatchEncoding`.
         
@@ -762,7 +753,6 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
         verbose: bool = True,
         **kwargs,
     ) -> BatchEncoding:
-
         r"""
         This method encodes the input text or pair of texts and returns a BatchEncoding object containing the encoded inputs along with additional information.
         
@@ -830,7 +820,6 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
         return batched_output
 
     def convert_tokens_to_string(self, tokens: List[str]) -> str:
-
         r"""
         Converts a list of tokens into a string representation using the backend tokenizer's decoder.
         
@@ -853,7 +842,6 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
         clean_up_tokenization_spaces: bool = None,
         **kwargs,
     ) -> str:
-
         r"""
         Decodes a list of token IDs into a string representation using the tokenizer.
         

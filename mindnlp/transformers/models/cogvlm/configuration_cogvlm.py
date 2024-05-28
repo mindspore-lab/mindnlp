@@ -80,7 +80,6 @@ behavior of the CogVLM model.
             use_cache=True,
             **kwargs,
     ):
-
         """Initialize CogVLMConfig.
         
         Args:

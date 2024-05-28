@@ -154,7 +154,6 @@ class DebertaTokenizerFast(PreTrainedTokenizerFast):
         add_prefix_space=False,
         **kwargs,
     ):
-
         """Initialize a DebertaTokenizerFast object.
         
         Args:
@@ -285,7 +284,6 @@ class DebertaTokenizerFast(PreTrainedTokenizerFast):
 
     # Copied from transformers.models.gpt2.tokenization_gpt2_fast.GPT2TokenizerFast._batch_encode_plus
     def _batch_encode_plus(self, *args, **kwargs) -> BatchEncoding:
-
         """
         Encodes a batch of inputs into their tokenized form using the DebertaTokenizerFast.
         
@@ -308,7 +306,6 @@ class DebertaTokenizerFast(PreTrainedTokenizerFast):
 
     # Copied from transformers.models.gpt2.tokenization_gpt2_fast.GPT2TokenizerFast._encode_plus
     def _encode_plus(self, *args, **kwargs) -> BatchEncoding:
-
         """
         Encodes the input into a batch of model inputs and returns a BatchEncoding object.
         
@@ -333,7 +330,6 @@ with `add_prefix_space=True` to use it with pretokenized inputs.
 
     # Copied from transformers.models.gpt2.tokenization_gpt2_fast.GPT2TokenizerFast.save_vocabulary
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary files of the tokenizer model to a specified directory.
         

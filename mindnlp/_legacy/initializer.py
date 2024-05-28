@@ -23,7 +23,6 @@ except: # pylint: disable=bare-except
     from mindspore._c_expression import _random_normal
 
 def _numpy_seed():
-
     r"""
     Generates and returns a random integer value within the specified range.
     
@@ -37,7 +36,6 @@ def _numpy_seed():
     return np.random.randint(low=1, high=(1 << 63), dtype=np.int64)
 
 def _init_random_normal(mean, sigma, shape):
-
     r"""
     Initializes a numpy array with random numbers drawn from a normal distribution.
     
@@ -84,7 +82,6 @@ class XavierNormal(Initializer):
         >>> tensor2 = initializer('XavierNormal', [1, 2, 3], mindspore.float32)
     """
     def __init__(self, gain=1):
-
         r"""
         __init__
         
@@ -102,7 +99,6 @@ class XavierNormal(Initializer):
         self.gain = gain
 
     def _initialize(self, arr):
-
         r"""
         Initializes the given array with values drawn from a Xavier Normal distribution.
         

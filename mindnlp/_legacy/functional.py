@@ -264,7 +264,6 @@ def _in_projection_packed(q, k, v, w, b, k_is_v, q_is_k):
 
 
 def _scaled_dot_product_attention(query, key, value, attn_mask, dropout_p, is_causal, is_training):
-
     r"""
     This function calculates scaled dot product attention given query, key, and value tensors. It applies scaling to the query tensor, and if specified, applies a causal mask to the attention matrix. The
 attention matrix is computed by taking the dot product of the scaled query and key tensors, and then applying a softmax operation along the last dimension. If specified, dropout is applied to the attention
@@ -306,7 +305,6 @@ matrix during training. Finally, the output is computed by multiplying the atten
 
 
 def _mha_shape_check(query, key, value, key_padding_mask, attn_mask, num_heads):
-
     r"""
     Args:
         query (ndarray): The tensor representing the queries. Should be either a 2-D unbatched tensor or a 3-D batched tensor.
@@ -1374,8 +1372,6 @@ def reverse(x, axis):
 
 
 def einsum_label_to_index(label):
-
-    
     """
     Args:
         label (str): The label representing a dimension in an Einstein sum. 
@@ -1395,7 +1391,6 @@ def einsum_label_to_index(label):
 
 
 def maybe_wrap_dim(dim: int, dim_post_expr: int, wrap_scalar: bool = True):
-
     r"""
     This function takes three parameters: dim, dim_post_expr, and wrap_scalar.
     
@@ -1425,7 +1420,6 @@ def maybe_wrap_dim(dim: int, dim_post_expr: int, wrap_scalar: bool = True):
 
 
 def dim_list_to_bitset(opt_dims, ndims):
-
     r"""
     Converts a list of optional dimensions to a bitset representation.
     
@@ -1450,8 +1444,6 @@ def dim_list_to_bitset(opt_dims, ndims):
 
 
 def sumproduct_pair(left_, right_, sum_dims_, keep_dim_):
-
-    
     """
     Calculate the sum-product pair of two arrays along specified dimensions.
     
@@ -1558,8 +1550,6 @@ def sumproduct_pair(left_, right_, sum_dims_, keep_dim_):
 ELLIPSIS = 52
 
 def einsum(equation, *operands):
-
-    
     """
     Args:
         equation (str): A string representing the Einstein summation equation to be computed.

@@ -72,7 +72,6 @@ class MptAttention(nn.Cell):
     """
 
     def __init__(self, config: MptConfig):
-
         """
         Initializes an instance of the MptAttention class.
         
@@ -128,7 +127,6 @@ n_heads).
         past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
     ):
-
         """
         Constructs the attention mechanism.
         
@@ -203,7 +201,6 @@ construct method to process hidden states and residuals.
     Inherits from nn.Cell.
     """
     def __init__(self, config: MptConfig):
-
         """
         Initializes an instance of the MptMLP class.
         
@@ -231,7 +228,6 @@ construct method to process hidden states and residuals.
         self.hidden_dropout = config.attn_config.attn_pdrop
 
     def construct(self, hidden_states: mindspore.Tensor, residual: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs a multi-layer perception (MLP) module.
         
@@ -278,7 +274,6 @@ class MptBlock(nn.Cell):
     
     """
     def __init__(self, config: MptConfig):
-
         """
         Initializes an instance of the MptBlock class.
         
@@ -320,7 +315,6 @@ class MptBlock(nn.Cell):
         use_cache: bool = False,
         output_attentions: bool = False,
     ):
-
         """
         This method constructs a multi-head self-attention block within the MptBlock class.
         
@@ -399,7 +393,6 @@ class MptPreTrainedModel(PreTrainedModel):
     _keys_to_ignore_on_load_missing = [r"lm_head.*."]
 
     def __init__(self, *inputs, **kwargs):
-
         """
         Initializes a new instance of the MptPreTrainedModel class.
         
@@ -471,7 +464,6 @@ class MptModel(MptPreTrainedModel):
     performing transformer-based operations on text data.
     """
     def __init__(self, config: MptConfig):
-
         """
         Initializes an instance of MptModel.
         
@@ -510,7 +502,6 @@ class MptModel(MptPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         This method is part of the MptModel class and is used to retrieve the input embeddings.
         
@@ -526,7 +517,6 @@ class MptModel(MptPreTrainedModel):
         return self.wte
 
     def build_mpt_alibi_tensor(self, num_heads, sequence_length, alibi_bias_max=8):
-
         """
         This method builds a multi-head attention (MPT) alibi tensor.
         
@@ -546,7 +536,6 @@ class MptModel(MptPreTrainedModel):
         return build_mpt_alibi_tensor(num_heads, sequence_length, alibi_bias_max)
 
     def set_input_embeddings(self, new_embeddings: mindspore.Tensor):
-
         """
         Sets the input embeddings for the MptModel.
         
@@ -573,7 +562,6 @@ class MptModel(MptPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor, ...], BaseModelOutputWithPastAndCrossAttentions]:
-
         """
         Constructs the MptModel.
         
@@ -700,7 +688,6 @@ layer. The all self attentions tensor is a tuple of self attention tensors at ea
         )
 
 
-
 class MptForCausalLM(MptPreTrainedModel):
 
     """
@@ -723,7 +710,6 @@ class MptForCausalLM(MptPreTrainedModel):
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config: MptConfig):
-
         """
         Initializes an instance of the MptForCausalLM class.
         
@@ -747,7 +733,6 @@ class MptForCausalLM(MptPreTrainedModel):
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings for the MptForCausalLM model.
         
@@ -775,7 +760,6 @@ information of the input text, enabling downstream tasks such as text generation
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings: mindspore.Tensor):
-
         """
         Method to set new output embeddings for the language model.
         
@@ -801,7 +785,6 @@ information of the input text, enabling downstream tasks such as text generation
         use_cache: Optional[bool] = None,
         **kwargs,
     ) -> dict:
-
         """
         Prepares inputs for generation in the MptForCausalLM class.
         
@@ -954,7 +937,6 @@ the input sequences and a linear layer for generating logits from the hidden sta
 be in the range of [0, config.num_labels - 1]. If config.num_labels == 1, a regression loss is computed using Mean-Square loss. If config.num_labels > 1, a classification loss is computed using Cross-Entropy.
     """
     def __init__(self, config: MptConfig):
-
         """
         Initializes an instance of MptForSequenceClassification.
         
@@ -1102,7 +1084,6 @@ format.
     For detailed information on methods and attributes, please refer to the method implementations in the class.
     """
     def __init__(self, config: MptConfig):
-
         """
         Initializes an instance of the MptForTokenClassification class.
         
@@ -1204,7 +1185,6 @@ attentions if return_dict is False. If return_dict is True, it returns a Questio
     
     """
     def __init__(self, config):
-
         """
         Initializes an instance of MptForQuestionAnswering class.
         

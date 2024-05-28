@@ -41,7 +41,6 @@ class Evaluator:
     """
 
     def __init__(self, network, eval_dataset=None, metrics=None, callbacks=None, jit=False):
-
         r"""
         Initializes an instance of the Evaluator class.
         
@@ -73,7 +72,6 @@ class Evaluator:
         self.eval_func = self._prepare_eval_func(network, jit)
 
     def _prepare_eval_func(self, network, jit):
-
         r"""
         Prepares the evaluation function for the Evaluator class.
         

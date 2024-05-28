@@ -25,7 +25,6 @@ from .tensor_utils import tensor_tree_map, tree_map
 
 
 def _fetch_dims(tree: Union[dict, list, tuple, mindspore.Tensor]) -> List[Tuple[int, ...]]:
-
     """
     Fetches the dimensions of a given tree structure.
     
@@ -54,7 +53,6 @@ def _fetch_dims(tree: Union[dict, list, tuple, mindspore.Tensor]) -> List[Tuple[
 
 
 def _flat_idx_to_idx(flat_idx: int, dims: Tuple[int, ...]) -> Tuple[int, ...]:
-
     """
     Converts a flat index to a multidimensional index.
     
@@ -366,7 +364,6 @@ comparing argument caches to ensure consistency.
         # plateau earlier than this on all GPUs I've run the model on.
         max_chunk_size: int = 512,
     ):
-
         """
         Initializes an instance of the ChunkSizeTuner class.
         
@@ -385,7 +382,6 @@ comparing argument caches to ensure consistency.
         self.cached_arg_data: Optional[tuple] = None
 
     def _determine_favorable_chunk_size(self, fn: Callable, args: tuple, min_chunk_size: int) -> int:
-
         """
         Determines the favorable chunk size for a given function based on the provided parameters.
         
@@ -431,7 +427,6 @@ comparing argument caches to ensure consistency.
         return candidates[min_viable_chunk_size_index]
 
     def _compare_arg_caches(self, ac1: Iterable, ac2: Iterable) -> bool:
-
         """
         This method compares two argument caches for consistency.
         
@@ -467,7 +462,6 @@ comparing argument caches to ensure consistency.
         args: tuple,
         min_chunk_size: int,
     ) -> int:
-
         """
         This method tunes the chunk size based on the provided representative function, arguments, and minimum chunk size.
         

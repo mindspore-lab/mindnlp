@@ -33,7 +33,6 @@ and will be removed in version v4.40.0 as they are no longer relevant. It also p
 `huggingface_hub` library with the `list_models` method.
     """
     def __getitem__(self, item):
-
         """
         Get an item from the DeprecatedList object.
         
@@ -53,7 +52,6 @@ and will be removed in version v4.40.0 as they are no longer relevant. It also p
             "with the `list_models` method."
         )
         return super().__getitem__(item)
-
 
 
 MPT_PRETRAINED_MODEL_ARCHIVE_LIST = DeprecatedList(
@@ -124,7 +122,6 @@ class MptAttentionConfig(PretrainedConfig):
         alibi_bias_max=8,
         **kwargs,
     ):
-
         """Initializes a new instance of the MptAttentionConfig class.
         
         Args:
@@ -167,7 +164,6 @@ class MptAttentionConfig(PretrainedConfig):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, **kwargs) -> "PretrainedConfig":
-
         """
         Instantiates a new instance of the MptAttentionConfig class from a pre-trained model.
         
@@ -299,7 +295,6 @@ class MptConfig(PretrainedConfig):
         initializer_range=0.02,
         **kwargs,
     ):
-
         """
         Initializes an instance of the MptConfig class.
         

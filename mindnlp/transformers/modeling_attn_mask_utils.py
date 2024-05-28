@@ -36,7 +36,6 @@ class AttentionMaskConverter:
     """
 
     def __init__(self, is_causal: bool, sliding_window: Optional[int] = None):
-
         """
         This method initializes an instance of the AttentionMaskConverter class.
         
@@ -132,7 +131,6 @@ class AttentionMaskConverter:
         expanded_4d_mask = expanded_attn_mask
 
         return expanded_4d_mask
-
 
     @staticmethod
     def _make_causal_mask(

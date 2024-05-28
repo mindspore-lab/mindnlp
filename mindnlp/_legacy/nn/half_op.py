@@ -21,7 +21,6 @@ class Matmul(nn.Cell):
     Matmul Operation
     """
     def construct(self, a, b):
-
         r"""
         This method constructs a new matrix by performing matrix multiplication between the input matrices 'a' and 'b'.
         

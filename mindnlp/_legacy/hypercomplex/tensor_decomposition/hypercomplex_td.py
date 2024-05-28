@@ -25,7 +25,6 @@ class LinearTDLayer(nn.Cell):
     Note: This docstring does not include signatures or any other code.
     """
     def __init__(self, in_ch, out_ch, bias, rank):
-
         r"""
         Initialize a LinearTDLayer object with specified parameters.
         
@@ -48,7 +47,6 @@ class LinearTDLayer(nn.Cell):
         self.linear1 = Dense(rank, out_ch, has_bias=bias)
     
     def construct(self, u: mindspore.Tensor, v: mindspore.Tensor):
-
         r"""
         Constructs a linear TD layer by applying linear transformations to input tensors 'u' and 'v'.
         
@@ -68,7 +66,6 @@ class LinearTDLayer(nn.Cell):
         return self.linear1(u, v)
 
 def decompose_linear_parameters(param, threshold = 0.5, count_interations = 10):
-
     r"""Decompose linear parameters.
     
     Args:
@@ -109,7 +106,6 @@ def decompose_linear_parameters(param, threshold = 0.5, count_interations = 10):
     return u@s, v
 
 def set_new_dict_names(p1, p2, name, new_dict, b_x, b_y):
-
     r"""
     Sets new names in a dictionary and adds parameters to it.
     
@@ -140,7 +136,6 @@ def set_new_dict_names(p1, p2, name, new_dict, b_x, b_y):
     print('The transformations are applied!')
 
 def calculate_parameters(model):
-
     r"""
     Calculate the total number of trainable parameters in the given model.
     

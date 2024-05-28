@@ -108,7 +108,6 @@ class BeitImageProcessor(BaseImageProcessor):
         do_reduce_labels: bool = False,
         **kwargs,
     ) -> None:
-
         """
         Initializes an instance of the BeitImageProcessor class.
         
@@ -223,7 +222,6 @@ class BeitImageProcessor(BaseImageProcessor):
         )
 
     def reduce_label(self, label: ImageInput) -> np.ndarray:
-
         """
         Reduce the label values in the input image.
         
@@ -268,7 +266,6 @@ class BeitImageProcessor(BaseImageProcessor):
         image_std: Optional[Union[float, List[float]]] = None,
         input_data_format: Optional[Union[str, ChannelDimension]] = None,
     ):
-
         """
         _preprocess method processes the input image based on the provided parameters.
         
@@ -398,7 +395,6 @@ class BeitImageProcessor(BaseImageProcessor):
         return segmentation_map
 
     def __call__(self, images, segmentation_maps=None, **kwargs):
-
         """
         __call__
         

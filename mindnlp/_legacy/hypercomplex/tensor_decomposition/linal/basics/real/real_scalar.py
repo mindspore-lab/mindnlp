@@ -30,7 +30,6 @@ class Scalar(AbstractScalar):
     """
 
     def __init__(self, x: Union[float, np.float64]) -> None:
-
         r"""
         Initializes a new instance of the Scalar class.
         
@@ -47,7 +46,6 @@ class Scalar(AbstractScalar):
         self._x = np.float64(x)
 
     def __str__(self) -> str:
-
         r"""
         Converts the Scalar object to a string representation.
         
@@ -63,7 +61,6 @@ class Scalar(AbstractScalar):
         return str(self._x)
 
     def __neg__(self) -> 'Scalar':
-
         r"""
         Method '__neg__' in the class 'Scalar'.
         
@@ -82,7 +79,6 @@ class Scalar(AbstractScalar):
         return Scalar(-self._x)
 
     def __add__(self, that: 'Scalar') -> 'Scalar':
-
         r"""
         Method '__add__' in the class 'Scalar' adds the value of 'that' to the value of 'self' and returns a new instance of 'Scalar'.
         
@@ -99,7 +95,6 @@ class Scalar(AbstractScalar):
         return Scalar(self._x + that._x)
 
     def __sub__(self, that: 'Scalar') -> 'Scalar':
-
         r"""
         __sub__
         
@@ -118,7 +113,6 @@ class Scalar(AbstractScalar):
         return Scalar(self._x - that._x)
 
     def __mul__(self, that: 'Scalar') -> 'Scalar':
-
         r"""
         Multiply two Scalar objects.
         
@@ -142,7 +136,6 @@ class Scalar(AbstractScalar):
         return Scalar(self._x * that._x)
 
     def __truediv__(self, that: 'Scalar') -> 'Scalar':
-
         r"""
         Performs the true division operation on two Scalar objects.
         
@@ -171,7 +164,6 @@ the division.
 
     @staticmethod
     def one() -> 'Scalar':
-
         r"""
         This method, named 'one', is a static method belonging to the 'Scalar' class.
         
@@ -188,7 +180,6 @@ the division.
 
     @staticmethod
     def zero() -> 'Scalar':
-
         r"""
         Method 'zero' in the class 'Scalar' returns a Scalar object with a value of 0.0.
         
@@ -204,7 +195,6 @@ the division.
         return Scalar(0.)
 
     def sqrt(self) -> 'Scalar':
-
         r"""
         This method calculates the square root of the value contained within the Scalar object.
         
@@ -220,7 +210,6 @@ the division.
         return Scalar(np.sqrt(self._x))
 
     def as_array(self) -> np.ndarray:
-
         r"""
         Converts the scalar value to a NumPy array.
         
@@ -247,7 +236,6 @@ the division.
         return np.array(self._x, dtype=np.float64)
 
     def as_number(self) -> np.float64:
-
         r"""
         Method to convert the scalar value to a numpy float64 number.
         
@@ -264,7 +252,6 @@ the division.
         return self._x
 
     def is_zero(self) -> bool:
-
         r"""
         Check if the Scalar object is approximately zero.
         
@@ -282,7 +269,6 @@ the division.
         return -Scalar._EQUALITY_TOLERANCE < self._x < Scalar._EQUALITY_TOLERANCE
 
     def get_real(self) -> np.float64:
-
         r"""
         This method returns the real value of a scalar.
         
@@ -300,7 +286,6 @@ the division.
         return self._x
 
     def visit(self, visitor, *args, **kwargs) -> None:
-
         r"""
         This method 'visit' is defined in the class 'Scalar' and is used to accept a visitor and invoke the visitor's method 'visit_real' with the current instance as the first argument.
         
@@ -317,7 +302,6 @@ the division.
         visitor.visit_real(self, *args, **kwargs)
 
     def _make_like(self, val: np.float64) -> 'Scalar':
-
         r"""
         Method _make_like in class Scalar.
         
@@ -334,7 +318,6 @@ the division.
         return Scalar(val)
 
     def _zero_like(self) -> 'Scalar':
-
         r"""
         Returns a new instance of 'Scalar' with all values set to zero.
         
@@ -350,7 +333,6 @@ the division.
         return Scalar.zero()
 
     def _one_like(self) -> 'Scalar':
-
         r"""
         Method _one_like in class Scalar.
         

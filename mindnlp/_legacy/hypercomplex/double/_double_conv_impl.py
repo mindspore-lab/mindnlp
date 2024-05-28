@@ -69,7 +69,6 @@ class _ConvImpl(BaseConvImpl):
                   stride: Tuple[int, ...],
                   dilation: Tuple[int, ...],
                   group: int) -> Tuple[Tensor, Tensor]:
-
         r"""
         Constructs a new convolution operation with given inputs and parameters.
         
@@ -152,7 +151,6 @@ class _J1J2ConvImpl(BaseConvImpl):
                   stride: Tuple[int, ...],
                   dilation: Tuple[int, ...],
                   group: int) -> Tuple[Tensor, Tensor]:
-
         r"""
         Constructs a J1J2 convolutional operation.
         

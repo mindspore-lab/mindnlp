@@ -109,7 +109,6 @@ class ASTConfig(PretrainedConfig):
         num_mel_bins=128,
         **kwargs,
     ):
-
         """
         Initializes an instance of ASTConfig.
         

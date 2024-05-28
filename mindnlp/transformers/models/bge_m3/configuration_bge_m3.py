@@ -97,7 +97,6 @@ ID, end of sequence token ID, position embedding type, cache usage, classifier d
         unused_tokens=None,
         **kwargs,
     ):
-
         """
         This method initializes an instance of the BgeM3Config class with the given parameters.
         

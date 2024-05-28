@@ -150,7 +150,6 @@ class BatchEncoding(UserDict):
         prepend_batch_axis: bool = False,
         n_sequences: Optional[int] = None,
     ):
-
         r"""
         Initializes a BatchEncoding object.
         
@@ -222,7 +221,6 @@ class BatchEncoding(UserDict):
         )
 
     def __getattr__(self, item: str):
-
         r"""
         __getattr__
         
@@ -245,7 +243,6 @@ class BatchEncoding(UserDict):
             raise AttributeError from exc
 
     def __getstate__(self):
-
         r"""
         This method, '__getstate__', is defined within the 'BatchEncoding' class and is intended to handle the serialization of the class instance.
         
@@ -261,7 +258,6 @@ class BatchEncoding(UserDict):
         return {"data": self.data, "encodings": self._encodings}
 
     def __setstate__(self, state):
-
         r"""
         __setstate__ method in the BatchEncoding class.
         
@@ -290,7 +286,6 @@ class BatchEncoding(UserDict):
             self._encodings = state["encodings"]
 
     def keys(self):
-
         r"""
         This method returns a view of all the keys present in the BatchEncoding object.
         
@@ -306,7 +301,6 @@ class BatchEncoding(UserDict):
         return self.data.keys()
 
     def values(self):
-
         r"""
         Method 'values' in the class 'BatchEncoding'.
         
@@ -324,7 +318,6 @@ class BatchEncoding(UserDict):
         return self.data.values()
 
     def items(self):
-
         r"""
         Method 'items' in the class 'BatchEncoding' returns a view of the key-value pairs in the BatchEncoding object.
         
@@ -846,7 +839,6 @@ class SpecialTokensMixin:
     ]
 
     def __init__(self, verbose=False, **kwargs):
-
         r"""Initialize the SpecialTokensMixin.
         
         Args:
@@ -1050,7 +1042,6 @@ class SpecialTokensMixin:
         return self._add_tokens(new_tokens, special_tokens=special_tokens)
 
     def _add_tokens(self, new_tokens: Union[List[str], List[AddedToken]], special_tokens: bool = False) -> int:
-
         r"""
         Adds new tokens to the special tokens list.
         
@@ -1161,7 +1152,6 @@ class SpecialTokensMixin:
 
     @bos_token.setter
     def bos_token(self, value):
-
         r"""
         Method for setting the beginning of sentence (BOS) token in the SpecialTokensMixin class.
         
@@ -1183,7 +1173,6 @@ class SpecialTokensMixin:
 
     @eos_token.setter
     def eos_token(self, value):
-
         r"""
         Method to set the end-of-sequence (EOS) token in the SpecialTokensMixin class.
         
@@ -1203,7 +1192,6 @@ class SpecialTokensMixin:
 
     @unk_token.setter
     def unk_token(self, value):
-
         r"""
         unk_token(self, value)
             
@@ -1223,7 +1211,6 @@ class SpecialTokensMixin:
 
     @sep_token.setter
     def sep_token(self, value):
-
         r"""
         Method 'sep_token' in the class 'SpecialTokensMixin'.
         
@@ -1246,7 +1233,6 @@ class SpecialTokensMixin:
 
     @pad_token.setter
     def pad_token(self, value):
-
         r"""
         This method sets the value of the PAD token in the SpecialTokensMixin class.
         
@@ -1266,7 +1252,6 @@ class SpecialTokensMixin:
 
     @cls_token.setter
     def cls_token(self, value):
-
         r"""
         This method sets the CLS token for the SpecialTokensMixin class.
         
@@ -1286,7 +1271,6 @@ class SpecialTokensMixin:
 
     @mask_token.setter
     def mask_token(self, value):
-
         r"""
         This method sets the MASK token for the SpecialTokensMixin class.
         
@@ -1306,7 +1290,6 @@ class SpecialTokensMixin:
 
     @additional_special_tokens.setter
     def additional_special_tokens(self, value):
-
         r"""
         Sets the additional special tokens for the SpecialTokensMixin class.
         
@@ -1409,7 +1392,6 @@ class SpecialTokensMixin:
 
     @bos_token_id.setter
     def bos_token_id(self, value):
-
         r"""Sets the beginning-of-sequence (BOS) token ID for the SpecialTokensMixin class.
         
         Args:
@@ -1426,7 +1408,6 @@ class SpecialTokensMixin:
 
     @eos_token_id.setter
     def eos_token_id(self, value):
-
         r"""
         Method to set the end of sequence (EOS) token ID in the SpecialTokensMixin class.
         
@@ -1444,7 +1425,6 @@ class SpecialTokensMixin:
 
     @unk_token_id.setter
     def unk_token_id(self, value):
-
         r"""
         Method to set the unknown token ID for SpecialTokensMixin.
         
@@ -1464,7 +1444,6 @@ class SpecialTokensMixin:
 
     @sep_token_id.setter
     def sep_token_id(self, value):
-
         r"""
         This method sets the sep_token_id attribute of the SpecialTokensMixin class.
         
@@ -1482,7 +1461,6 @@ class SpecialTokensMixin:
 
     @pad_token_id.setter
     def pad_token_id(self, value):
-
         r"""
         Sets the pad token ID for the SpecialTokensMixin class.
         
@@ -1500,7 +1478,6 @@ class SpecialTokensMixin:
 
     @cls_token_id.setter
     def cls_token_id(self, value):
-
         r"""
         Sets the value of the `cls_token_id` attribute in the `SpecialTokensMixin` class.
         
@@ -1518,7 +1495,6 @@ class SpecialTokensMixin:
 
     @mask_token_id.setter
     def mask_token_id(self, value):
-
         r"""
         Sets the mask token ID value for the SpecialTokensMixin class.
         
@@ -1539,7 +1515,6 @@ ID value to tokens using the 'convert_ids_to_tokens' method and assigns the resu
 
     @additional_special_tokens_ids.setter
     def additional_special_tokens_ids(self, values):
-
         r"""
         Sets the additional special token IDs for the SpecialTokensMixin class.
         
@@ -1649,7 +1624,6 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
     slow_tokenizer_class = None
 
     def __init__(self, **kwargs):
-
         r"""
         Initialize the PreTrainedTokenizerBase class.
         
@@ -1720,7 +1694,6 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
 
     @max_len_single_sentence.setter
     def max_len_single_sentence(self, value) -> int:
-
         r"""
         This method 'max_len_single_sentence' in the class 'PreTrainedTokenizerBase' is used to set the maximum length of a single sentence in the tokenizer.
         
@@ -1748,7 +1721,6 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
 
     @max_len_sentences_pair.setter
     def max_len_sentences_pair(self, value) -> int:
-
         r"""
         Sets the maximum length of a pair of sentences for tokenization and truncation.
         
@@ -1782,7 +1754,6 @@ minus the number of special tokens added, a deprecation warning is issued. Other
 
     @property
     def added_tokens_decoder(self) -> Dict[int, AddedToken]:
-
         r"""
         Method to retrieve the decoder mapping for added tokens.
         
@@ -1800,7 +1771,6 @@ minus the number of special tokens added, a deprecation warning is issued. Other
         raise NotImplementedError()
 
     def __repr__(self) -> str:
-
         r"""
         This method generates a string representation of the PreTrainedTokenizerBase object.
         
@@ -1824,7 +1794,6 @@ clean_up_tokenization_spaces, and added_tokens_decoder. The added_tokens_decoder
         )
 
     def __len__(self) -> int:
-
         r"""
         Method '__len__' in the class 'PreTrainedTokenizerBase'.
         
@@ -1947,7 +1916,6 @@ clean_up_tokenization_spaces, and added_tokens_decoder. The added_tokens_decoder
 
     @lru_cache(128)
     def _compile_jinja_template(self, chat_template):
-
         r"""
         Compiles a Jinja template for chat messages.
         
@@ -2235,7 +2203,6 @@ name 'raise_exception'. This allows the template to raise an error by calling th
         _is_local=False,
         **kwargs,
     ):
-
         r"""
         This method initializes a PreTrainedTokenizerBase from a pretrained model or from a set of resolved vocabulary files.
         
@@ -2470,7 +2437,6 @@ name 'raise_exception'. This allows the template to raise an error by calling th
 
     @staticmethod
     def _eventually_correct_t5_max_length(pretrained_model_name_or_path, max_model_length, init_max_model_length):
-
         r""" 
         This method sets the maximum model length for a pretrained T5 model.
         
@@ -2494,7 +2460,6 @@ name 'raise_exception'. This allows the template to raise an error by calling th
 
     @classmethod
     def convert_added_tokens(cls, obj: Union[AddedToken, Any], save=False, add_type_field=True):
-
         r"""
         Converts AddedToken objects to dictionaries and vice versa.
         
@@ -2789,7 +2754,6 @@ name 'raise_exception'. This allows the template to raise an error by calling th
         return encoded_inputs["input_ids"]
 
     def num_special_tokens_to_add(self, pair: bool = False) -> int:
-
         r"""
         num_special_tokens_to_add method in the PreTrainedTokenizerBase class calculates the number of special tokens to be added.
         
@@ -3058,7 +3022,6 @@ name 'raise_exception'. This allows the template to raise an error by calling th
         verbose: bool = True,
         **kwargs,
     ) -> BatchEncoding:
-
         r"""
         This method '_call_one' in the class 'PreTrainedTokenizerBase' takes 18 parameters:
         
@@ -3271,7 +3234,6 @@ name 'raise_exception'. This allows the template to raise an error by calling th
         verbose: bool = True,
         **kwargs,
     ) -> BatchEncoding:
-
         r"""
         Method _encode_plus in the class PreTrainedTokenizerBase.
         
@@ -3404,7 +3366,6 @@ name 'raise_exception'. This allows the template to raise an error by calling th
         verbose: bool = True,
         **kwargs,
     ) -> BatchEncoding:
-
         r"""
         Batch encode a batch of text or text pairs using various encoding strategies.
         
@@ -4071,7 +4032,6 @@ name 'raise_exception'. This allows the template to raise an error by calling th
         clean_up_tokenization_spaces: bool = None,
         **kwargs,
     ) -> str:
-
         r"""
         Decode the given token IDs into a string representation.
         

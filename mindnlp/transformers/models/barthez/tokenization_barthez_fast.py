@@ -129,7 +129,6 @@ class BarthezTokenizerFast(PreTrainedTokenizerFast):
         mask_token="<mask>",
         **kwargs,
     ):
-
         """
         Initialize a BarthezTokenizerFast object.
         
@@ -170,7 +169,6 @@ class BarthezTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def can_save_slow_tokenizer(self) -> bool:
-
         """
         Method to check if the slow tokenizer can be saved.
         
@@ -236,7 +234,6 @@ class BarthezTokenizerFast(PreTrainedTokenizerFast):
         return len(cls + token_ids_0 + sep + sep + token_ids_1 + sep) * [0]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary for a slow tokenizer.
         

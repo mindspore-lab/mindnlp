@@ -66,7 +66,6 @@ class BatchFeature(UserDict):
     """
 
     def __init__(self, data: Optional[Dict[str, Any]] = None, tensor_type: Union[None, str, TensorType] = None):
-
         """
         Initializes a new instance of the BatchFeature class.
         
@@ -96,7 +95,6 @@ class BatchFeature(UserDict):
         raise KeyError("Indexing with integers is not available when using Python based feature extractors")
 
     def __getattr__(self, item: str):
-
         """
         This method allows access to attributes of the BatchFeature class that are not directly defined.
         
@@ -123,7 +121,6 @@ class BatchFeature(UserDict):
             raise AttributeError from exc
 
     def __getstate__(self):
-
         """
         Method: __getstate__
         
@@ -143,7 +140,6 @@ class BatchFeature(UserDict):
         return {"data": self.data}
 
     def __setstate__(self, state):
-
         """
         Sets the state of the BatchFeature object.
         
@@ -165,7 +161,6 @@ dictionary is used to set the 'data' attribute of the BatchFeature object.
 
     # Copied from transformers.tokenization_utils_base.BatchEncoding.keys
     def keys(self):
-
         '''
         Method: keys
         
@@ -185,7 +180,6 @@ dictionary is used to set the 'data' attribute of the BatchFeature object.
 
     # Copied from transformers.tokenization_utils_base.BatchEncoding.values
     def values(self):
-
         """
         Retrieves and returns the values stored in the 'data' attribute of the BatchFeature class instance.
         
@@ -202,7 +196,6 @@ dictionary is used to set the 'data' attribute of the BatchFeature object.
 
     # Copied from transformers.tokenization_utils_base.BatchEncoding.items
     def items(self):
-
         """
         Method items in class BatchFeature.
         
@@ -220,7 +213,6 @@ dictionary is used to set the 'data' attribute of the BatchFeature object.
         return self.data.items()
 
     def _get_is_as_tensor_fns(self, tensor_type: Optional[Union[str, TensorType]] = None):
-
         """
         This method '_get_is_as_tensor_fns' in the class 'BatchFeature' is responsible for returning functions for checking if a given input is a tensor and converting values to tensors based on the specified
 tensor type.
@@ -515,7 +507,6 @@ class FeatureExtractionMixin():
         self.to_json_file(output_feature_extractor_file)
         logger.info(f"Feature extractor saved in {output_feature_extractor_file}")
 
-
         return [output_feature_extractor_file]
 
     @classmethod
@@ -607,7 +598,6 @@ class FeatureExtractionMixin():
             logger.info(
                 f"loading configuration file {feature_extractor_file} from cache at {resolved_feature_extractor_file}"
             )
-
 
         return feature_extractor_dict, kwargs
 
@@ -712,7 +702,6 @@ class FeatureExtractionMixin():
             writer.write(self.to_json_string())
 
     def __repr__(self):
-
         """
         This method '__repr__' in the 'FeatureExtractionMixin' class generates a string representation of the object.
         

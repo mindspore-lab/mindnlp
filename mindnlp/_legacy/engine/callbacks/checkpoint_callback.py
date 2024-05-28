@@ -37,7 +37,6 @@ class CheckpointCallback(Callback):
 
     """
     def __init__(self, save_path, ckpt_name=None, epochs=None, keep_checkpoint_max=5):
-
         r"""
         Initializes the CheckpointCallback.
         

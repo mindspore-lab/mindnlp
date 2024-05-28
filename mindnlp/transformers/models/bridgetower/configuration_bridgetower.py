@@ -83,7 +83,6 @@ class BridgeTowerVisionConfig(PretrainedConfig):
         remove_last_layer=False,
         **kwargs,
     ):
-
         """
         Initializes a BridgeTowerVisionConfig object with the specified configuration parameters.
         
@@ -120,7 +119,6 @@ class BridgeTowerVisionConfig(PretrainedConfig):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
-
         """
         This method creates an instance of a 'BridgeTowerVisionConfig' class from a pretrained model or its path.
         
@@ -237,7 +235,6 @@ class BridgeTowerTextConfig(PretrainedConfig):
         use_cache=True,
         **kwargs,
     ):
-
         """
         Args:
             self (object): The instance of the class.
@@ -287,7 +284,6 @@ class BridgeTowerTextConfig(PretrainedConfig):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
-
         """
         This method instantiates a BridgeTowerTextConfig from a pretrained model or a model configuration file.
         
@@ -388,7 +384,6 @@ class BridgeTowerConfig(PretrainedConfig):
         vision_config=None,
         **kwargs,
     ):
-
         """
         __init__
         

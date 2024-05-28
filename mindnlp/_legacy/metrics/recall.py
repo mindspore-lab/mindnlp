@@ -112,7 +112,6 @@ class Recall(Metric):
 
     """
     def __init__(self, name='Recall'):
-
         r"""
         __init__
         

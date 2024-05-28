@@ -27,7 +27,6 @@ if is_jieba_available():
     import jieba
 
 
-
 logger = logging.get_logger(__name__)
 
 VOCAB_FILES_NAMES = {"vocab_file": "vocab.txt"}
@@ -74,7 +73,6 @@ class WordpieceTokenizer:
         tokenized_text = tokenizer.tokenize('helloworld')
     """
     def __init__(self, vocab, unk_token="<unk>", max_input_chars_per_word=200):
-
         """
         Initializes a new instance of the WordpieceTokenizer class.
         
@@ -103,7 +101,6 @@ class WordpieceTokenizer:
         self.max_input_chars_per_word = max_input_chars_per_word
 
     def tokenize(self, token):
-
         """
         This method tokenizes a given input token into sub-tokens based on the vocabulary of the WordpieceTokenizer class.
         
@@ -192,7 +189,6 @@ class CpmAntTokenizer(PreTrainedTokenizer):
         padding_side="left",
         **kwargs,
     ):
-
         """
         Initialize a CpmAntTokenizer object with the provided parameters.
         
@@ -247,7 +243,6 @@ class CpmAntTokenizer(PreTrainedTokenizer):
 
     @property
     def bod_token_id(self):
-
         """
         This method, 'bod_token_id', is a property method defined in the 'CpmAntTokenizer' class. It takes no external parameters and returns the token ID associated with the 'bod_token'.
         
@@ -264,7 +259,6 @@ class CpmAntTokenizer(PreTrainedTokenizer):
 
     @property
     def eod_token_id(self):
-
         """
         This method 'eod_token_id' in the class 'CpmAntTokenizer' retrieves the token ID of the end-of-document token.
         
@@ -281,7 +275,6 @@ class CpmAntTokenizer(PreTrainedTokenizer):
 
     @property
     def newline_id(self):
-
         """
         This method, newline_id, in the class CpmAntTokenizer, returns the value associated with the newline character in the encoder.
         
@@ -298,7 +291,6 @@ class CpmAntTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self) -> int:
-
         """
         Returns the size of the vocabulary used by the CpmAntTokenizer instance.
         
@@ -314,7 +306,6 @@ class CpmAntTokenizer(PreTrainedTokenizer):
         return len(self.encoder)
 
     def get_vocab(self):
-
         """
             Retrieves the vocabulary of the CpmAntTokenizer instance.
         
@@ -351,7 +342,6 @@ class CpmAntTokenizer(PreTrainedTokenizer):
         return super()._decode(token_ids, **kwargs)
 
     def check(self, token):
-
         """Check if a token is present in the encoder of the CpmAntTokenizer.
         
         Args:
@@ -367,7 +357,6 @@ class CpmAntTokenizer(PreTrainedTokenizer):
         return token in self.encoder
 
     def convert_tokens_to_string(self, tokens: List[str]) -> str:
-
         """
         Converts a list of tokens into a string representation.
         
@@ -402,7 +391,6 @@ class CpmAntTokenizer(PreTrainedTokenizer):
         return self.decoder.get(index, self.unk_token)
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary to a file with the specified directory and filename prefix.
         

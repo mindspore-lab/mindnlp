@@ -128,7 +128,6 @@ class BloomAttention(nn.Cell):
     fine-tuning the attention mechanism based on pretraining steps and optimization preferences.
     """
     def __init__(self, config: BloomConfig):
-
         """
         Initialize the BloomAttention class.
         
@@ -224,7 +223,6 @@ class BloomAttention(nn.Cell):
         use_cache: bool = False,
         output_attentions: bool = False,
     ):
-
         """
         Method 'construct' in the class 'BloomAttention'.
         
@@ -351,7 +349,6 @@ MLP.
     Note: The shapes of hidden_states and residual tensors must match for the forward propagation to work correctly.
     """
     def __init__(self, config: BloomConfig):
-
         """
         Initializes an instance of the BloomMLP class.
         
@@ -380,7 +377,6 @@ MLP.
         self.hidden_dropout = config.hidden_dropout
 
     def construct(self, hidden_states: mindspore.Tensor, residual: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the output tensor for the BloomMLP model.
         
@@ -444,7 +440,6 @@ class BloomBlock(nn.Cell):
                 outputs (Tuple[mindspore.Tensor, ...]): Tuple containing the output tensor(s) and cached values, if applicable.
     """
     def __init__(self, config: BloomConfig):
-
         """
         Initializes a BloomBlock object with the provided configuration.
         
@@ -486,7 +481,6 @@ class BloomBlock(nn.Cell):
         use_cache: bool = False,
         output_attentions: bool = False,
     ):
-
         """
         Constructs the BloomBlock.
         
@@ -587,7 +581,6 @@ facilitate pre-training tasks in NLP models with MindSpore framework.
             cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
             cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
-
     @staticmethod
     def _convert_to_standard_cache(
         past_key_value: Tuple[Tuple[mindspore.Tensor, mindspore.Tensor]], batch_size: int
@@ -652,7 +645,6 @@ class BloomModel(BloomPreTrainedModel):
     Note: This class is designed for custom transformer-based models and may require specific configurations and input formats.
     """
     def __init__(self, config: BloomConfig):
-
         """
         Initialize the BloomModel with the provided configuration.
         
@@ -693,7 +685,6 @@ class BloomModel(BloomPreTrainedModel):
         self.post_init()
 
     def build_alibi_tensor(self, attention_mask: mindspore.Tensor, num_heads: int, dtype) -> mindspore.Tensor:
-
         '''
         This method builds an alibi tensor based on the provided attention_mask, number of heads, and data type.
         
@@ -713,7 +704,6 @@ class BloomModel(BloomPreTrainedModel):
         return build_alibi_tensor(attention_mask, num_heads, dtype)
 
     def get_input_embeddings(self):
-
         """
         Returns the input embeddings of the BloomModel.
         
@@ -729,7 +719,6 @@ class BloomModel(BloomPreTrainedModel):
         return self.word_embeddings
 
     def set_input_embeddings(self, new_embeddings: mindspore.Tensor):
-
         """
         Sets the input embeddings for the BloomModel class.
         
@@ -762,7 +751,6 @@ class BloomModel(BloomPreTrainedModel):
         return_dict: Optional[bool] = None,
         **deprecated_arguments,
     ) -> Union[Tuple[mindspore.Tensor, ...], BaseModelOutputWithPastAndCrossAttentions]:
-
         """
         Constructs the BLOOM model based on the input parameters.
         
@@ -932,7 +920,6 @@ cache to match the beam indices during beam search or beam sampling.
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config: BloomConfig):
-
         """
         Initializes a new instance of the BloomForCausalLM class.
         
@@ -954,7 +941,6 @@ cache to match the beam indices during beam search or beam sampling.
         self.post_init()
 
     def get_output_embeddings(self):
-
         """
         Returns the output embeddings of the BloomForCausalLM model.
         
@@ -970,7 +956,6 @@ cache to match the beam indices during beam search or beam sampling.
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings: mindspore.Tensor):
-
         """
         Sets the output embeddings for the BloomForCausalLM model.
         
@@ -994,7 +979,6 @@ cache to match the beam indices during beam search or beam sampling.
         inputs_embeds: Optional[mindspore.Tensor] = None,
         **kwargs,
     ) -> dict:
-
         """
         Prepare inputs for generation.
         
@@ -1154,7 +1138,6 @@ removed in future versions. Additionally, the method supports the use of padding
     For detailed information on the methods and parameters of this class, please refer to the method docstrings and the class code.
     """
     def __init__(self, config: BloomConfig):
-
         """
         Initializes an instance of the BloomForSequenceClassification class with the provided configuration.
         
@@ -1318,7 +1301,6 @@ Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict:
                 - If `return_dict` is True, returns a `TokenClassifierOutput` object containing the loss, logits, hidden states, and attentions.
     """
     def __init__(self, config: BloomConfig):
-
         """
         Initializes an instance of BloomForTokenClassification.
         
@@ -1434,7 +1416,6 @@ BloomForQuestionAnswering class includes methods for model construction and infe
             Constructs the model for question answering based on the given inputs and returns the predicted start and end logits of the answer span, as well as other optional outputs.
     """
     def __init__(self, config):
-
         """
         Initializes the BloomForQuestionAnswering class.
         

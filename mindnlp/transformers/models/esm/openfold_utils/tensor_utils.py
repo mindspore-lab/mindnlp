@@ -22,7 +22,6 @@ from mindspore import ops
 
 
 def add(m1: mindspore.Tensor, m2: mindspore.Tensor, inplace: bool) -> mindspore.Tensor:
-
     """
     Function to add two tensors either in place or creating a new one.
     
@@ -48,7 +47,6 @@ def add(m1: mindspore.Tensor, m2: mindspore.Tensor, inplace: bool) -> mindspore.
 
 
 def permute_final_dims(tensor: mindspore.Tensor, inds: List[int]) -> mindspore.Tensor:
-
     """
     Permute the final dimensions of a given tensor.
     
@@ -68,7 +66,6 @@ def permute_final_dims(tensor: mindspore.Tensor, inds: List[int]) -> mindspore.T
 
 
 def flatten_final_dims(t: mindspore.Tensor, no_dims: int) -> mindspore.Tensor:
-
     """
     Flattens the final dimensions of a given tensor.
     
@@ -94,7 +91,6 @@ def flatten_final_dims(t: mindspore.Tensor, no_dims: int) -> mindspore.Tensor:
 
 
 def masked_mean(mask: mindspore.Tensor, value: mindspore.Tensor, dim: int, eps: float = 1e-4) -> mindspore.Tensor:
-
     """
     Calculates the masked mean along a specified dimension of a given tensor.
     
@@ -131,7 +127,6 @@ same dimension plus a small epsilon value.
 def pts_to_distogram(
     pts: mindspore.Tensor, min_bin = 2.3125, max_bin = 21.6875, no_bins: int = 64
 ) -> mindspore.Tensor:
-
     """
     Converts a set of points to a distogram representation.
     
@@ -155,7 +150,6 @@ def pts_to_distogram(
 
 
 def dict_multimap(fn: Callable[[list], Any], dicts: List[dict]) -> dict:
-
     """
     Apply a function to corresponding values in multiple dictionaries.
     
@@ -184,7 +178,6 @@ def dict_multimap(fn: Callable[[list], Any], dicts: List[dict]) -> dict:
 
 
 def one_hot(x: mindspore.Tensor, v_bins: mindspore.Tensor) -> mindspore.Tensor:
-
     """
     Converts an input tensor into a one-hot encoded tensor based on the provided bins.
     
@@ -206,7 +199,6 @@ def one_hot(x: mindspore.Tensor, v_bins: mindspore.Tensor) -> mindspore.Tensor:
 
 
 def batched_gather(data: mindspore.Tensor, inds: mindspore.Tensor, dim: int = 0, no_batch_dims: int = 0) -> mindspore.Tensor:
-
     """
     This function performs batched gathering of elements from the input data tensor based on the provided indices.
     
@@ -244,7 +236,6 @@ T = TypeVar("T")
 def dict_map(
     fn: Callable[[T], Any], dic: Dict[Any, Union[dict, list, tuple, T]], leaf_type: Type[T]
 ) -> Dict[Any, Union[dict, list, tuple, Any]]:
-
     """
     Recursively applies a function to all leaf values in a dictionary.
     
@@ -279,7 +270,6 @@ def dict_map(
 
 @overload
 def tree_map(fn: Callable[[T], Any], tree: T, leaf_type: Type[T]) -> Any:
-
     """
     Apply a function to each element of a tree structure.
     
@@ -300,7 +290,6 @@ def tree_map(fn: Callable[[T], Any], tree: T, leaf_type: Type[T]) -> Any:
 
 @overload
 def tree_map(fn: Callable[[T], Any], tree: dict, leaf_type: Type[T]) -> dict:
-
     """
     Applies a function to each leaf value in a dictionary tree and returns a new dictionary with the modified values.
     
@@ -323,7 +312,6 @@ def tree_map(fn: Callable[[T], Any], tree: dict, leaf_type: Type[T]) -> dict:
 
 @overload
 def tree_map(fn: Callable[[T], Any], tree: list, leaf_type: Type[T]) -> list:
-
     """
     Apply a function to each element of a tree structure.
     
@@ -343,7 +331,6 @@ def tree_map(fn: Callable[[T], Any], tree: list, leaf_type: Type[T]) -> list:
 
 @overload
 def tree_map(fn: Callable[[T], Any], tree: tuple, leaf_type: Type[T]) -> tuple:
-
     """
     Args:
         fn (Callable[[T], Any]): A function to be applied to each leaf node in the tree.
@@ -360,7 +347,6 @@ def tree_map(fn: Callable[[T], Any], tree: tuple, leaf_type: Type[T]) -> tuple:
 
 
 def tree_map(fn, tree, leaf_type):
-
     """
     Apply a given function to each element in a tree-like structure.
     

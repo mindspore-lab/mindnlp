@@ -112,7 +112,6 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
         jumanpp_kwargs=None,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the BertJapaneseTokenizer class.
         
@@ -216,7 +215,6 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
 
     @property
     def do_lower_case(self):
-
         """
         Method: do_lower_case
         
@@ -235,7 +233,6 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
         return self.lower_case
 
     def __getstate__(self):
-
         """
         This method '__getstate__' is defined within the class 'BertJapaneseTokenizer' and is used to retrieve the internal state of the object for pickling purposes.
         
@@ -255,7 +252,6 @@ attribute is removed from the state dictionary before returning it.
         return state
 
     def __setstate__(self, state):
-
         """
         Args:
             self (BertJapaneseTokenizer): The instance of the BertJapaneseTokenizer class.
@@ -282,7 +278,6 @@ attribute is removed from the state dictionary before returning it.
             )
 
     def _tokenize(self, text):
-
         """
         Tokenizes the given text using word and subword tokenization.
         
@@ -329,7 +324,6 @@ attribute is removed from the state dictionary before returning it.
 
     @property
     def vocab_size(self):
-
         """
         This method 'vocab_size' in the class 'BertJapaneseTokenizer' retrieves the vocabulary size based on the tokenizer type.
         
@@ -347,7 +341,6 @@ attribute is removed from the state dictionary before returning it.
         return len(self.vocab)
 
     def get_vocab(self):
-
         """
         This method 'get_vocab' in the class 'BertJapaneseTokenizer' retrieves the vocabulary used by the tokenizer.
         
@@ -473,7 +466,6 @@ added_tokens_encoder.
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary to a file in the specified directory.
         
@@ -870,7 +862,6 @@ class BasicTokenizer:
         strip_accents=None,
         do_split_on_punc=True,
     ):
-
         '''
         Initializes the BasicTokenizer class with the specified parameters.
         
@@ -1023,7 +1014,6 @@ class WordpieceTokenizer:
     """Runs WordPiece tokenization."""
 
     def __init__(self, vocab, unk_token, max_input_chars_per_word=100):
-
         """
         Initializes a new instance of the WordpieceTokenizer class.
         
@@ -1107,7 +1097,6 @@ class SentencepieceTokenizer:
         keep_accents=True,
         sp_model_kwargs: Optional[Dict[str, Any]] = None,
     ):
-
         """
         Initializes a SentencepieceTokenizer instance.
         
@@ -1139,7 +1128,6 @@ class SentencepieceTokenizer:
         self.sp_model.Load(self.vocab)
 
     def preprocess_text(self, inputs):
-
         """
         Preprocesses the input text by removing spaces, normalizing accents, and converting to lowercase, if specified.
         

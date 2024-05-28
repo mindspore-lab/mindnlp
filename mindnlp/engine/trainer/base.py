@@ -105,7 +105,6 @@ SCHEDULER_NAME = "scheduler.json"
 SCALER_NAME = "scaler.json"
 
 def _is_peft_model(model):
-
     r"""
     Checks if the input model is an instance of the PeftModel class.
     
@@ -143,8 +142,6 @@ class Trainer:
         optimizers: Tuple[nn.Optimizer, LearningRateSchedule] = (None, None),
         preprocess_logits_for_metrics: Optional[Callable[[mindspore.Tensor, mindspore.Tensor], mindspore.Tensor]] = None,
     ):
-
-        
         """
         Initializes the Trainer class.
         
@@ -246,7 +243,6 @@ class Trainer:
             callbacks, self.model, self.tokenizer, self.optimizer, self.lr_scheduler
         )
         self.add_callback(PrinterCallback if self.args.disable_tqdm else DEFAULT_PROGRESS_CALLBACK)
-
 
         # Will be set to True by `self._setup_loggers()` on first call to `self.log()`.
         self._loggers_initialized = False
@@ -370,7 +366,6 @@ class Trainer:
         self.callback_handler.remove_callback(callback)
 
     def _set_signature_columns_if_needed(self):
-
         r"""
         Method to set signature columns if they are not already set.
         
@@ -399,7 +394,6 @@ class Trainer:
             self._signature_columns += list(set(["label", "label_ids"] + self.label_names))
 
     def _remove_unused_columns(self, dataset: "mindspore.dataset.Dataset", description: Optional[str] = None):
-
         r""" 
         Method _remove_unused_columns in the class Trainer removes unused columns from the input dataset if the corresponding argument is set to True.
         
@@ -550,7 +544,6 @@ class Trainer:
             raise ValueError(f"Trainer cannot instantiate unsupported optimizer: {args.optim}")
         return optimizer_cls, optimizer_kwargs
 
-
     def create_scheduler(self, num_training_steps: int, optimizer = None):
         """
         Setup the scheduler. The optimizer of the trainer must have been set up either before this method is called or
@@ -595,7 +588,6 @@ class Trainer:
             return train_tokens
 
     def call_model_init(self):
-
         r"""
         Method to call the model initialization function and validate its output.
         
@@ -703,7 +695,6 @@ class Trainer:
         # We use the same batch_size as for eval.
         return eval_dataset
 
-
     def train(
         self,
         resume_from_checkpoint: Optional[Union[str, bool]] = None,
@@ -778,7 +769,6 @@ class Trainer:
         )
 
     def _load_best_model(self):
-
         r"""Load the best model checkpoint.
         
         This method loads the best model checkpoint based on the provided state. The best model checkpoint is determined by the highest score achieved during training.
@@ -862,9 +852,7 @@ MindSpore's `load_checkpoint` function.
                 "on multiple nodes, you should activate `--save_on_each_node`."
             )
 
-
     def _get_output_dir(self):
-
         r"""
         This method retrieves the output directory from the Trainer object.
         
@@ -883,7 +871,6 @@ MindSpore's `load_checkpoint` function.
     def _inner_training_loop(
         self, batch_size=None, args=None, resume_from_checkpoint=None, ignore_keys_for_eval=None
     ):
-
         r"""
         Method _inner_training_loop in the class Trainer.
         
@@ -1226,9 +1213,7 @@ MindSpore's `load_checkpoint` function.
 
         return TrainOutput(self.state.global_step, train_loss, metrics)
 
-
     def _load_from_checkpoint(self, resume_from_checkpoint, model=None):
-
         r"""
         Loads the model from a checkpoint directory.
         
@@ -1336,12 +1321,10 @@ indicating whether to prefer safe tensors.
             )
             self._issue_warnings_after_load(load_result)
 
-
     def _load_optimizer_and_scheduler(self, checkpoint):
         """If optimizer and scheduler states exist, load them."""
         if checkpoint is None:
             return
-
 
         checkpoint_file_exists = (
             os.path.isfile(os.path.join(checkpoint, OPTIMIZER_NAME))
@@ -1437,7 +1420,6 @@ indicating whether to prefer safe tensors.
 
         return (loss, outputs) if return_outputs else loss
 
-
     def is_local_process_zero(self) -> bool:
         """
         Whether or not this process is the local (e.g., on one machine if training in a distributed fashion on several
@@ -1473,7 +1455,6 @@ indicating whether to prefer safe tensors.
             return 0
 
     def _issue_warnings_after_load(self, load_result):
-
         r"""Issues warnings after loading a checkpoint model.
         
         Args:
@@ -1500,7 +1481,6 @@ indicating whether to prefer safe tensors.
             )
 
     def _maybe_log_save_evaluate(self, tr_loss, grad_norm, model, epoch, ignore_keys_for_eval):
-
         r""" 
         This method '_maybe_log_save_evaluate' is a part of the 'Trainer' class. It takes 6 parameters:
         
@@ -1571,8 +1551,6 @@ indicating whether to prefer safe tensors.
             self._save(output_dir)
 
     def _save(self, output_dir: Optional[str] = None, state_dict=None):
-
-        
         """
         Save the model checkpoint to the specified output directory.
         
@@ -1625,7 +1603,6 @@ indicating whether to prefer safe tensors.
         # mindspore.save_checkpoint(save_obj, ckpt_file_name, integrated_save=True, async_save=False, append_dict=None, enc_key=None, enc_mode='AES-GCM', choice_func=None, **kwargs)
 
     def _save_optimizer_and_scheduler(self, output_dir):
-
         r"""
         Save the optimizer and scheduler states to the specified output directory.
         
@@ -1652,7 +1629,6 @@ indicating whether to prefer safe tensors.
             # reissue_pt_warnings(caught_warnings)
 
     def _save_checkpoint(self, model, metrics=None):
-
         r"""
         Save the model checkpoint along with relevant metrics and state information.
         
@@ -1715,7 +1691,6 @@ indicating whether to prefer safe tensors.
             self._rotate_checkpoints(use_mtime=False, output_dir=run_dir)
 
     def _rotate_checkpoints(self, use_mtime=False, output_dir=None) -> None:
-
         r"""
         Rotate the checkpoints to limit the total number of saved checkpoints.
         
@@ -1755,9 +1730,7 @@ indicating whether to prefer safe tensors.
             logger.info(f"Deleting older checkpoint [{checkpoint}] due to args.save_total_limit")
             shutil.rmtree(checkpoint, ignore_errors=True)
 
-
     def store_flos(self):
-
         r"""
         Stores the current number of floating point operations (FLOs) and updates the total FLOs count.
         
@@ -1838,7 +1811,6 @@ indicating whether to prefer safe tensors.
             return metrics
 
         eval_dataset = self.get_eval_dataset(eval_dataset)
-
 
         start_time = time.time()
 
@@ -2201,7 +2173,6 @@ indicating whether to prefer safe tensors.
 
         return (loss, logits, labels)
 
-
     def log(self, logs: Dict[str, float]) -> None:
         """
         Log `logs` on the various objects watching training.
@@ -2224,7 +2195,6 @@ indicating whether to prefer safe tensors.
     def _sorted_checkpoints(
         self, output_dir=None, checkpoint_prefix=PREFIX_CHECKPOINT_DIR, use_mtime=False
     ) -> List[str]:
-
         r"""
         Method to retrieve and sort checkpoints based on specific criteria.
         

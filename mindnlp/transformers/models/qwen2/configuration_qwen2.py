@@ -116,7 +116,6 @@ class Qwen2Config(PretrainedConfig):
         attention_dropout=0.0,
         **kwargs,
     ):
-
         """
         __init__
         

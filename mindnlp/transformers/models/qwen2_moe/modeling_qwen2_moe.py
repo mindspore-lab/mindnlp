@@ -124,7 +124,6 @@ def load_balancing_loss_func(
 
 # Copied from transformers.models.llama.modeling_llama._get_unpad_data
 def _get_unpad_data(attention_mask):
-
     """
     This function takes an attention_mask as input and performs several operations to obtain unpad data. 
     
@@ -196,7 +195,6 @@ efficiency and convergence.
         self.variance_epsilon = eps
 
     def construct(self, hidden_states):
-
         """
         Constructs the Qwen2MoeRMSNorm for the given hidden states.
         
@@ -263,7 +261,6 @@ class Qwen2MoeRotaryEmbedding(nn.Cell):
         cos_embedding, sin_embedding = embedding.construct(x, seq_len)
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
-
         """
         Initializes an instance of the Qwen2MoeRotaryEmbedding class.
         
@@ -294,7 +291,6 @@ class Qwen2MoeRotaryEmbedding(nn.Cell):
         )
 
     def _set_cos_sin_cache(self, seq_len, dtype):
-
         """
         This method '_set_cos_sin_cache' is defined within the class 'Qwen2MoeRotaryEmbedding' and is responsible for setting up the cosine and sine cache based on the input sequence length and data type.
         
@@ -320,7 +316,6 @@ class Qwen2MoeRotaryEmbedding(nn.Cell):
         self.sin_cached = emb.sin().to(dtype)
 
     def construct(self, x, seq_len=None):
-
         """
         Constructs a rotary embedding for the given input sequence.
         
@@ -412,7 +407,6 @@ class Qwen2MoeMLP(nn.Cell):
         The Qwen2MoeMLP class assumes the availability of the nn module for neural network operations.
     """
     def __init__(self, config, intermediate_size=None):
-
         """
         Initializes an instance of the Qwen2MoeMLP class.
         
@@ -437,7 +431,6 @@ class Qwen2MoeMLP(nn.Cell):
         self.act_fn = ACT2FN[config.hidden_act]
 
     def construct(self, x):
-
         """
         Constructs a modified multi-layer perceptron in the Qwen2MoeMLP class.
         
@@ -481,7 +474,6 @@ class Qwen2MoeAttention(nn.Cell):
     """
 
     def __init__(self, config: Qwen2MoeConfig, layer_idx: Optional[int] = None):
-
         """
         Initialize a Qwen2MoeAttention instance.
         
@@ -544,7 +536,6 @@ class Qwen2MoeAttention(nn.Cell):
         use_cache: bool = False,
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
-
         """
         This method constructs Qwen2MoeAttention and performs attention mechanism.
         
@@ -664,7 +655,6 @@ class Qwen2MoeSparseMoeBlock(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Args:
             self (Qwen2MoeSparseMoeBlock): The instance of the Qwen2MoeSparseMoeBlock class.
@@ -698,7 +688,6 @@ class Qwen2MoeSparseMoeBlock(nn.Cell):
         self.shared_expert_gate = nn.Dense(config.hidden_size, 1, has_bias=False)
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         This method constructs a Qwen2MoeSparseMoeBlock by processing the input hidden_states.
         
@@ -809,7 +798,6 @@ representations.
     Please refer to the source code for more information on the specific implementation details.
     """
     def __init__(self, config: Qwen2MoeConfig, layer_idx: int):
-
         """
         Initializes a Qwen2MoeDecoderLayer object.
         
@@ -957,7 +945,6 @@ class Qwen2MoeModel(Qwen2MoePreTrainedModel):
     """
 
     def __init__(self, config: Qwen2MoeConfig):
-
         """
         Initializes a new instance of the Qwen2MoeModel class.
         
@@ -986,7 +973,6 @@ class Qwen2MoeModel(Qwen2MoePreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Get the input embeddings.
         
@@ -1004,7 +990,6 @@ class Qwen2MoeModel(Qwen2MoePreTrainedModel):
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the Qwen2MoeModel.
         
@@ -1035,7 +1020,6 @@ class Qwen2MoeModel(Qwen2MoePreTrainedModel):
         output_router_logits: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, MoeModelOutputWithPast]:
-
         """
             Constructs the Qwen2MoeModel.
         
@@ -1216,7 +1200,6 @@ with the given inputs and returns the output logits. Optionally computes the mas
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
-
         """
         Initializes a Qwen2MoeForCausalLM object.
         
@@ -1247,7 +1230,6 @@ with the given inputs and returns the output logits. Optionally computes the mas
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Returns the input embeddings for the Qwen2MoeForCausalLM model.
         
@@ -1263,7 +1245,6 @@ with the given inputs and returns the output logits. Optionally computes the mas
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Method: set_input_embeddings
         
@@ -1290,7 +1271,6 @@ with the given inputs and returns the output logits. Optionally computes the mas
         self.model.embed_tokens = value
 
     def get_output_embeddings(self):
-
         """Return the output embeddings of the Qwen2MoeForCausalLM model.
         
         Args:
@@ -1305,7 +1285,6 @@ with the given inputs and returns the output logits. Optionally computes the mas
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-
         """
         Sets new output embeddings for the Qwen2MoeForCausalLM model.
         
@@ -1322,7 +1301,6 @@ with the given inputs and returns the output logits. Optionally computes the mas
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
-
         """
         Sets the decoder for the Qwen2MoeForCausalLM class.
         
@@ -1339,7 +1317,6 @@ with the given inputs and returns the output logits. Optionally computes the mas
         self.model = decoder
 
     def get_decoder(self):
-
         """
         Returns the decoder model used in the Qwen2MoeForCausalLM class.
         
@@ -1462,7 +1439,6 @@ with the given inputs and returns the output logits. Optionally computes the mas
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
-
         """
         Prepares inputs for generation in the Qwen2MoeForCausalLM class.
         
@@ -1549,7 +1525,6 @@ with the given inputs and returns the output logits. Optionally computes the mas
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-
         """
         Reorders the cache based on the provided beam index.
         
@@ -1595,7 +1570,6 @@ class Qwen2MoeForSequenceClassification(Qwen2MoePreTrainedModel):
             Returns a tuple of loss and output if loss is computed, otherwise returns the model outputs.
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the Qwen2MoeForSequenceClassification class.
         
@@ -1618,7 +1592,6 @@ class Qwen2MoeForSequenceClassification(Qwen2MoePreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method: get_input_embeddings
         
@@ -1638,7 +1611,6 @@ class Qwen2MoeForSequenceClassification(Qwen2MoePreTrainedModel):
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
-
         """
         Set the input embeddings for the Qwen2MoeForSequenceClassification model.
         

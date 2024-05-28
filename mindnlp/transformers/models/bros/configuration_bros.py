@@ -109,7 +109,6 @@ class BrosConfig(PretrainedConfig):
         classifier_dropout_prob=0.1,
         **kwargs,
     ):
-
         """
         Initializes an instance of the BrosConfig class.
         

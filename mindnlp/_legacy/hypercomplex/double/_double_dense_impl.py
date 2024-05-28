@@ -62,7 +62,6 @@ class _DenseImpl(BaseDenseImpl):
     def construct(self,
                   real: Tensor,
                   double: Tensor) -> Tuple[Tensor, Tensor]:
-
         r"""
         Constructs the output tensors based on the input real and double tensors.
         
@@ -131,7 +130,6 @@ class _J1J2DenseImpl(BaseDenseImpl):
     def construct(self,
                   u1: Tensor,
                   u2: Tensor) -> Tuple[Tensor, Tensor]:
-
         r"""
         Constructs the output tensors for the _J1J2DenseImpl class.
         

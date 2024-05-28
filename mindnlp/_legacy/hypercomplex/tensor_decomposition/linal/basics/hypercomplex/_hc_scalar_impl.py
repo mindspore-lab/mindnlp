@@ -28,7 +28,6 @@ perform certain operations using the provided 'visitor' object.
 
     @abstractmethod
     def sqrt(self, x: np.float64, y: np.float64) -> Tuple[np.float64, np.float64]:
-
         r"""
         This method calculates the square root of two input values.
         
@@ -47,7 +46,6 @@ perform certain operations using the provided 'visitor' object.
 
     @abstractmethod
     def special_element(self) -> str:
-
         r"""
         This method, 'special_element', is defined in the '_ScalarImpl' class and is intended to perform a specific operation. 
         
@@ -64,7 +62,6 @@ perform certain operations using the provided 'visitor' object.
 
     @abstractmethod
     def visit(self, scalar, visitor, *args, **kwargs) -> None:
-
         r"""
         This method is a placeholder for the 'visit' functionality and must be implemented by subclasses.
         
@@ -87,7 +84,6 @@ perform certain operations using the provided 'visitor' object.
                    y1: np.float64,
                    x2: np.float64,
                    y2: np.float64) -> Tuple[np.float64, np.float64]:
-
         r"""
         Method to multiply two complex numbers by a scalar.
         
@@ -113,7 +109,6 @@ perform certain operations using the provided 'visitor' object.
                    y1: np.float64,
                    x2: np.float64,
                    y2: np.float64) -> Tuple[np.float64, np.float64]:
-
         r"""
         This method div_scalar in the _ScalarImpl class divides two 2D vectors (x1, y1) and (x2, y2) by scalar division.
         

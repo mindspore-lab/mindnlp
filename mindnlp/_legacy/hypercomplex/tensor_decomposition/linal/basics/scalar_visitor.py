@@ -47,7 +47,6 @@ visit_complex, and visit_dual methods.
 
     @abstractmethod
     def visit_real(self, s: RealScalar, *args, **kwargs) -> None:
-
         r"""
         This method is responsible for visiting a RealScalar object.
         
@@ -65,7 +64,6 @@ visit_complex, and visit_dual methods.
 
     @abstractmethod
     def visit_complex(self, s: HCScalar, *args, **kwargs) -> None:
-
         r"""
         visit_complex method in ScalarVisitor class.
         
@@ -84,7 +82,6 @@ visit_complex, and visit_dual methods.
 
     @abstractmethod
     def visit_dual(self, s: HCScalar, *args, **kwargs) -> None:
-
         r"""
         This method 'visit_dual' is defined in the 'ScalarVisitor' class and is an abstract method that must be implemented in subclasses.
         

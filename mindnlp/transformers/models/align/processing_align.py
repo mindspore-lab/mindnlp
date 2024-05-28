@@ -40,7 +40,6 @@ class AlignProcessor(ProcessorMixin):
     tokenizer_class = ("BertTokenizer", "BertTokenizerFast")
 
     def __init__(self, image_processor, tokenizer):
-
         """
         Initializes an AlignProcessor object.
         
@@ -131,7 +130,6 @@ class AlignProcessor(ProcessorMixin):
 
     @property
     def model_input_names(self):
-
         """
         This method retrieves the input names required for the model from the tokenizer and image processor.
         

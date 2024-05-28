@@ -86,7 +86,6 @@ class VipLlavaConfig(PretrainedConfig):
         vision_feature_layers=[-2, -5, -8, -11, 6],
         **kwargs,
     ):
-
         '''
         Initialize the VipLlavaConfig with the provided configuration parameters.
         

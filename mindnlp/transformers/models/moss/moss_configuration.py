@@ -58,7 +58,6 @@ class MossConfig(PretrainedConfig):
             # max_position_embeddings = 1024,
             **kwargs,
     ):
-
         """
         Initialize a MossConfig object.
         

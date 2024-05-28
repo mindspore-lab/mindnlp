@@ -113,7 +113,6 @@ class BigBirdTokenizer(PreTrainedTokenizer):
         sp_model_kwargs: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> None:
-
         """
         Initializes an instance of the BigBirdTokenizer class.
         
@@ -195,7 +194,6 @@ class BigBirdTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
-
         """
         Method to retrieve the vocabulary size of the BigBirdTokenizer.
         
@@ -212,7 +210,6 @@ class BigBirdTokenizer(PreTrainedTokenizer):
         return self.sp_model.get_piece_size()
 
     def get_vocab(self):
-
         """
         This method returns the vocabulary for the BigBirdTokenizer.
         
@@ -230,7 +227,6 @@ class BigBirdTokenizer(PreTrainedTokenizer):
         return vocab
 
     def __getstate__(self):
-
         """
         The '__getstate__' method in the 'BigBirdTokenizer' class is used to retrieve the current state of the object for serialization. This method takes one parameter, 'self', which refers to the instance of
 the 'BigBirdTokenizer' class.
@@ -249,7 +245,6 @@ the 'BigBirdTokenizer' class.
         return state
 
     def __setstate__(self, d):
-
         """
         Sets the state of the BigBirdTokenizer object based on the provided dictionary.
         
@@ -319,7 +314,6 @@ the 'BigBirdTokenizer' class.
         spaces_between_special_tokens: bool = True,
         **kwargs,
     ) -> str:
-
         """
         Decode the token IDs into a human-readable string.
         
@@ -380,7 +374,6 @@ the 'BigBirdTokenizer' class.
     def save_vocabulary(
         self, save_directory: str, filename_prefix: Optional[str] = None
     ) -> Tuple[str]:
-
         ''' 
         Save the vocabulary to a specified directory with an optional filename prefix.
         

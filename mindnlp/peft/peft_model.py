@@ -76,7 +76,6 @@ class PeftModel(nn.Cell):
     """
 
     def __init__(self, model, peft_config: PeftConfig, adapter_name="default"):
-
         r"""
         __init__
         
@@ -184,7 +183,6 @@ class PeftModel(nn.Cell):
         return model
 
     def _setup_prompt_encoder(self, adapter_name: str):
-
         r"""
         This method '_setup_prompt_encoder' in the class 'PeftModel' is responsible for setting up the prompt encoder based on the provided adapter name.
         
@@ -256,7 +254,6 @@ class PeftModel(nn.Cell):
             self.set_train(False)
 
         return load_result
-
 
     def get_nb_trainable_parameters(self):
         r"""
@@ -369,7 +366,6 @@ class PeftModel(nn.Cell):
         return self.base_model.model
         # return self.base_model if self.active_peft_config.is_prompt_learning else self.base_model.model
 
-
     def add_adapter(self, adapter_name: str, peft_config: PeftConfig):
         """add adapter."""
         if peft_config.peft_type != self.peft_type:
@@ -400,7 +396,6 @@ class PeftModel(nn.Cell):
 
         self.set_additional_trainable_cells(peft_config, adapter_name)
 
-
     def set_additional_trainable_cells(self, peft_config, adapter_name):
         """set additional trainable cells"""
         if getattr(peft_config, "cells_to_save", None) is not None:
@@ -427,8 +422,6 @@ class PeftModelForSequenceClassification(PeftModel):
     """
 
     def __init__(self, model, peft_config: PeftConfig, adapter_name="default"):
-
-        
         """
         Initializes a new instance of the PeftModelForSequenceClassification class.
         
@@ -534,7 +527,6 @@ class PeftModelForCausalLM(PeftModel):
     """
 
     def __init__(self, model, peft_config: PeftConfig, adapter_name="default"):
-
         r"""
         Initializes a new instance of the PeftModelForCausalLM class.
         
@@ -691,7 +683,6 @@ class PeftModelForSeq2SeqLM(PeftModel):
     """
 
     def __init__(self, model, peft_config: PeftConfig, adapter_name="default"):
-
         r"""
         Initialize a new PeftModelForSeq2SeqLM object.
         
@@ -914,7 +905,6 @@ class PeftModelForTokenClassification(PeftModel):
     """
 
     def __init__(self, model, peft_config: PeftConfig = None, adapter_name="default"):
-
         r"""
         Initializes a new instance of the PeftModelForTokenClassification class.
         
@@ -1020,7 +1010,6 @@ class PeftModelForTokenClassification(PeftModel):
         return_dict=None,
         **kwargs,
     ):
-
         r"""
         Performs the forward pass for the prefix tuning task in the PeftModelForTokenClassification class.
         

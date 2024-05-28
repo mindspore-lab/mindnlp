@@ -126,7 +126,6 @@ class MPNetTokenizerFast(PreTrainedTokenizerFast):
         strip_accents=None,
         **kwargs,
     ):
-
         """
         __init__
         
@@ -221,7 +220,6 @@ class MPNetTokenizerFast(PreTrainedTokenizerFast):
         self._mask_token = value
 
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
-
         """
         This method builds inputs with special tokens for the MPNetTokenizerFast class.
         
@@ -266,7 +264,6 @@ class MPNetTokenizerFast(PreTrainedTokenizerFast):
         return len(cls + token_ids_0 + sep + sep + token_ids_1 + sep) * [0]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary files for the MPNetTokenizerFast model.
         

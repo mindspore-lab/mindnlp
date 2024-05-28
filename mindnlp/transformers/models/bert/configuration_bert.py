@@ -33,7 +33,6 @@ BERT_SUPPORT_LIST = [
 ]
 
 
-
 class BertConfig(PretrainedConfig):
     """
     Configuration for BERT-base
@@ -61,7 +60,6 @@ class BertConfig(PretrainedConfig):
         classifier_dropout=None,
         **kwargs,
     ):
-
         """
         Initialize a BertConfig object with the specified parameters.
         

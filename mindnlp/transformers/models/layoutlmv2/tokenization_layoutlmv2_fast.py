@@ -135,7 +135,6 @@ class LayoutLMv2TokenizerFast(PreTrainedTokenizerFast):
             strip_accents=None,
             **kwargs,
     ):
-
         """
         This method initializes an instance of the LayoutLMv2TokenizerFast class.
         
@@ -377,7 +376,6 @@ class LayoutLMv2TokenizerFast(PreTrainedTokenizerFast):
             verbose: bool = True,
             **kwargs,
     ) -> BatchEncoding:
-
         """
         This method encodes a batch of text or text pairs using LayoutLMv2TokenizerFast.
         
@@ -442,7 +440,6 @@ class LayoutLMv2TokenizerFast(PreTrainedTokenizerFast):
         )
 
     def tokenize(self, text: str, pair: Optional[str] = None, add_special_tokens: bool = False, **kwargs) -> List[str]:
-
         """
         Tokenizes a given text using the LayoutLMv2TokenizerFast.
         
@@ -558,7 +555,6 @@ class LayoutLMv2TokenizerFast(PreTrainedTokenizerFast):
             return_length: bool = False,
             verbose: bool = True,
     ) -> BatchEncoding:
-
         """
         This method performs batch encoding for the LayoutLMv2TokenizerFast class.
         
@@ -743,7 +739,6 @@ class LayoutLMv2TokenizerFast(PreTrainedTokenizerFast):
             verbose: bool = True,
             **kwargs,
     ) -> BatchEncoding:
-
         """
         This method encodes the input text and optional text pair into a batch of tokenized and encoded outputs. It provides various options for special tokens, padding and truncation strategies, and return
 types.
@@ -952,7 +947,6 @@ types.
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary files of the LayoutLMv2TokenizerFast model.
         

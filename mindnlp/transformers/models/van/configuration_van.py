@@ -20,7 +20,6 @@ from ....utils import logging
 logger = logging.get_logger(__name__)
 
 
-
 class VanConfig(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`VanModel`]. It is used to instantiate a VAN model
@@ -91,7 +90,6 @@ class VanConfig(PretrainedConfig):
         dropout_rate=0.0,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the VanConfig class.
         

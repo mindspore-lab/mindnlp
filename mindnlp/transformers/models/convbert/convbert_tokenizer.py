@@ -132,7 +132,6 @@ class ConvBertTokenizer(PreTrainedTokenizer):
         strip_accents=None,
         **kwargs,
     ):
-
         """
         Initializes an instance of the ConvBertTokenizer class.
         
@@ -198,7 +197,6 @@ class ConvBertTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
-
         """
         Method to retrieve the size of the vocabulary.
         
@@ -215,7 +213,6 @@ class ConvBertTokenizer(PreTrainedTokenizer):
         return len(self.vocab)
 
     def get_vocab(self):
-
         """
         This method returns the vocabulary, including any added tokens, as a dictionary.
         
@@ -231,7 +228,6 @@ class ConvBertTokenizer(PreTrainedTokenizer):
         return dict(self.vocab, **self.added_tokens_encoder)
 
     def _tokenize(self, text, split_special_tokens=False):
-
         """
         Tokenizes the given text into a list of tokens using basic or wordpiece tokenization.
         
@@ -368,7 +364,6 @@ class ConvBertTokenizer(PreTrainedTokenizer):
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary to a file in the specified directory.
         
@@ -434,7 +429,6 @@ class BasicTokenizer():
         strip_accents=None,
         do_split_on_punc=True,
     ):
-
         """
         Initializes a BasicTokenizer object with the specified parameters.
         
@@ -588,7 +582,6 @@ class WordpieceTokenizer():
     """Runs WordPiece tokenization."""
 
     def __init__(self, vocab, unk_token, max_input_chars_per_word=100):
-
         '''
         Initializes a new instance of the WordpieceTokenizer class.
         

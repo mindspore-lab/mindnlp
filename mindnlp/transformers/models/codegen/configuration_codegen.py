@@ -134,7 +134,6 @@ class CodeGenConfig(PretrainedConfig):
         tie_word_embeddings=False,
         **kwargs,
     ):
-
         """
         Initializes an instance of the CodeGenConfig class.
         

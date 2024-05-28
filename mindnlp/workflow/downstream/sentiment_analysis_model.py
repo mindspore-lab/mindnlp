@@ -22,7 +22,6 @@ from mindnlp.transformers import BertModel
 class BertForSentimentAnalysis(nn.Cell):
     """Bert Model for classification tasks"""
     def __init__(self, config):
-
         """
         Initializes a BertForSentimentAnalysis instance.
         
@@ -49,7 +48,6 @@ class BertForSentimentAnalysis(nn.Cell):
 
     def construct(self, input_ids, attention_mask=None, token_type_ids=None, \
         position_ids=None, head_mask=None):
-
         """
         Constructs the sentiment analysis model using the BERT architecture.
         

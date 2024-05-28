@@ -91,7 +91,6 @@ class Blip2VisionConfig(PretrainedConfig):
         qkv_bias=True,
         **kwargs,
     ):
-
         """
         Initializes an instance of the Blip2VisionConfig class.
         
@@ -131,7 +130,6 @@ class Blip2VisionConfig(PretrainedConfig):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
-
         """
         Method to create a Blip2VisionConfig instance from a pretrained model.
         
@@ -245,7 +243,6 @@ class Blip2QFormerConfig(PretrainedConfig):
         encoder_hidden_size=1408,
         **kwargs,
     ):
-
         """
         Initialize a Blip2QFormerConfig object with the specified parameters.
         
@@ -292,7 +289,6 @@ class Blip2QFormerConfig(PretrainedConfig):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
-
         """
         This method creates a 'Blip2QFormerConfig' instance from a pretrained model.
         
@@ -379,7 +375,6 @@ class Blip2Config(PretrainedConfig):
     model_type = "blip-2"
 
     def __init__(self, vision_config=None, qformer_config=None, text_config=None, num_query_tokens=32, **kwargs):
-
         """
         This method initializes an instance of the Blip2Config class.
         

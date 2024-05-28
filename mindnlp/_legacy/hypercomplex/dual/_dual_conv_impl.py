@@ -70,8 +70,6 @@ class _ConvImpl(BaseConvImpl):
                   stride: Tuple[int, ...],
                   dilation: Tuple[int, ...],
                   group: int) -> Tuple[Tensor, Tensor]:
-
-        
         """
         Constructs the convolution operation for the given real and dual tensors.
         
@@ -93,7 +91,6 @@ class _ConvImpl(BaseConvImpl):
             - Any exceptions raised by the convolution function 'conv_fn' when applied to the input tensors 'real' and 'dual'.
         """
         
-
         out_r = conv_fn(real, self.weight_x, pad_mode=pad_mode, padding=padding,
                         stride=stride, dilation=dilation, group=group)
         out_rd = conv_fn(real, self.weight_y, pad_mode=pad_mode, padding=padding,
@@ -150,7 +147,6 @@ class _ReDuConvImpl(BaseConvImpl):
                  weight_init: Union[Tensor, str, Initializer, numbers.Number],
                  weight_shape: tuple,
                  **factory_kwargs) -> None:
-
         r"""Initializes the _ReDuConvImpl class.
         
         Args:
@@ -180,7 +176,6 @@ Initializer object, or a number.
                   stride: Tuple[int, ...],
                   dilation: Tuple[int, ...],
                   group: int) -> Tuple[Tensor, Tensor]:
-
         r"""
         Constructs the ReDuConv operation on the given input tensors.
         

@@ -74,7 +74,6 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
     other_param_names = ("r", "lora_alpha", "scaling", "lora_dropout")
 
     def __init__(self, base_layer: nn.Cell, **kwargs) -> None:
-
         r"""
         __init__
         
@@ -150,7 +149,6 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
     def update_layer(
         self, adapter_name, r, lora_alpha, lora_dropout, init_lora_weights, use_rslora, use_dora: bool = False
     ):
-
         r"""
         Update the layer configuration for the specified adapter in the LoraLayer class.
         
@@ -214,7 +212,6 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
         self.set_adapter(self.active_adapters)
 
     def reset_lora_parameters(self, adapter_name, init_lora_weights):
-
         r"""
         Reset the LoRa parameters for a given adapter.
         
@@ -251,7 +248,6 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
             self.lora_embedding_B[adapter_name].initialize(Normal(1.0))
 
     def _get_weight_norm(self, weight, lora_weight, scaling) -> mindspore.Tensor:
-
         r"""
         This method calculates the normalized weight for the LoraLayer.
         
@@ -275,7 +271,6 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
         return weight_norm
 
     def _cache_store(self, key: str, value: Any) -> None:
-
         r"""
         Method _cache_store in the LoraLayer class.
         
@@ -295,7 +290,6 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
         self._caches[key] = value
 
     def _cache_pop(self, key: str) -> Any:
-
         r"""
         Method _cache_pop in class LoraLayer.
         
@@ -316,7 +310,6 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
         return value
 
     def set_scale(self, adapter, scale):
-
         r"""
         This method sets the scale for a specific adapter in the LoraLayer class.
         
@@ -338,7 +331,6 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
         self.scaling[adapter] = scale * self.lora_alpha[adapter] / self.r[adapter]
 
     def scale_layer(self, scale: float) -> None:
-
         r"""
         Scale the layer by a specified factor.
         
@@ -362,7 +354,6 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
             self.scaling[active_adapter] *= scale
 
     def unscale_layer(self, scale=None) -> None:
-
         r"""
         This method unscales a layer by either calculating a new scaling factor or dividing the current scaling factor by a specified scale value.
         
@@ -414,7 +405,6 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
     def _mixed_batch_forward(
         self, x: mindspore.Tensor, *args: Any, adapter_names: list[str], **kwargs: Any
     ) -> mindspore.Tensor:
-
         r""" 
         This method '_mixed_batch_forward' is defined in the class 'LoraLayer' and is responsible for performing mixed batch forward propagation.
         
@@ -499,7 +489,6 @@ with 'lora.'.
         use_dora: bool = False,
         **kwargs,
     ) -> None:
-
         r"""
         Initializes a Linear object.
         
@@ -638,7 +627,6 @@ with 'lora.'.
         """
         dtype = self.lora_B[adapter].weight.dtype
 
-
         weight_A = self.lora_A[adapter].weight
         weight_B = self.lora_B[adapter].weight
 
@@ -647,7 +635,6 @@ with 'lora.'.
         return output_tensor
 
     def construct(self, x: mindspore.Tensor, *args: Any, **kwargs: Any) -> mindspore.Tensor:
-
         r"""
         Constructs the forward pass of the Linear class.
         
@@ -695,7 +682,6 @@ with 'lora.'.
         return result
 
     def __repr__(self) -> str:
-
         r"""
         This method returns a string representation of the Linear class instance.
         
@@ -737,7 +723,6 @@ adaptation and specialization.
         use_dora: bool = False,
         **kwargs,
     ) -> None:
-
         r"""
         Initializes an instance of the Embedding class.
         
@@ -776,8 +761,6 @@ adaptation and specialization.
         )
 
     def update_layer(self, adapter_name, r, lora_alpha, lora_dropout, init_lora_weights, use_rslora, use_dora):
-
-        
         """
         Updates the layer with the specified parameters for the given adapter.
         
@@ -899,7 +882,6 @@ adaptation and specialization.
     def _mixed_batch_forward(
         self, x: mindspore.Tensor, *args: Any, adapter_names: list[str], **kwargs: Any
     ) -> mindspore.Tensor:
-
         r"""
         This method '_mixed_batch_forward' is defined in the class 'Embedding' and is used to perform a mixed batch forward operation.
         
@@ -947,7 +929,6 @@ adaptation and specialization.
         return result
 
     def _embed(self, input: mindspore.Tensor, weight: mindspore.Tensor) -> mindspore.Tensor:
-
         r"""
         Method _embed in the class Embedding.
         
@@ -976,7 +957,6 @@ adaptation and specialization.
         )
 
     def construct(self, x: mindspore.Tensor, *args: Any, **kwargs: Any) -> mindspore.Tensor:
-
         r"""
         Constructs the embedding layer.
         
@@ -1020,7 +1000,6 @@ adaptation and specialization.
         return result
 
     def __repr__(self) -> str:
-
         r"""
         This method '__repr__' in the class 'Embedding' generates a string representation of the object.
         
@@ -1081,7 +1060,6 @@ class Conv2d(nn.Cell, LoraLayer):
         use_dora: bool = False,
         **kwargs,
     ) -> None:
-
         r"""
         Initializes an instance of the Conv2d class.
         
@@ -1118,7 +1096,6 @@ class Conv2d(nn.Cell, LoraLayer):
         )
 
     def update_layer(self, adapter_name, r, lora_alpha, lora_dropout, init_lora_weights, use_rslora, use_dora):
-
         r"""
         Update the layer for the Conv2d class with the provided parameters.
         
@@ -1297,7 +1274,6 @@ class Conv2d(nn.Cell, LoraLayer):
         return output_tensor
 
     def _get_weight_norm(self, weight, lora_weight, scaling) -> mindspore.Tensor:
-
         r"""
         Calculates and returns the normalized weight tensor for the Conv2d layer.
         
@@ -1356,7 +1332,6 @@ normalization required for the Conv2d layer's computations.
         return result_dora
 
     def construct(self, x: mindspore.Tensor, *args, **kwargs) -> mindspore.Tensor:
-
         r"""
         Constructs a forward pass of the Conv2d layer.
         
@@ -1407,7 +1382,6 @@ normalization required for the Conv2d layer's computations.
         return result
 
     def __repr__(self) -> str:
-
         r"""
         Method '__repr__' in the class 'Conv2d'.
         
@@ -1432,7 +1406,6 @@ def dispatch_default(
     lora_config: LoraConfig,
     **kwargs,
 ) -> Optional[nn.Cell]:
-
     r"""
     Dispatches the default adapter for different types of neural network layers.
     

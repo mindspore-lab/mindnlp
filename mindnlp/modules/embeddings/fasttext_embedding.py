@@ -56,7 +56,6 @@ class Fasttext(TokenEmbedding):
     dims = [300]
 
     def __init__(self, init_embed, requires_grad: bool = True, dropout=0.0):
-
         r"""
         Initializes a Fasttext object with the provided parameters.
         

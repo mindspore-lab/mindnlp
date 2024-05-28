@@ -70,7 +70,6 @@ class PromptEncoder(nn.Cell):
     """
 
     def __init__(self, config):
-
         """
         Initializes a PromptEncoder instance.
         
@@ -144,7 +143,6 @@ class PromptEncoder(nn.Cell):
                 raise ValueError("Prompt encoder type not recognized. Please use one of MLP (recommended) or LSTM.")
 
     def forward(self, indices):
-
         """
         Forward method in the PromptEncoder class.
         

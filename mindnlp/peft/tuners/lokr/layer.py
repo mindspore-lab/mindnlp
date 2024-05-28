@@ -108,7 +108,6 @@ the base layer's output. The class provides methods for creating, updating, merg
     merged_adapters: "List[str]" = []
 
     def __init__(self, base_layer: nn.Cell) -> None:
-
         r"""
         This method initializes an instance of the LoKrLayer class.
         
@@ -150,7 +149,6 @@ the base layer's output. The class provides methods for creating, updating, merg
 
     @property
     def _available_adapters(self) -> Set[str]:
-
         r"""
         Method to retrieve the set of available adapters.
         
@@ -177,7 +175,6 @@ the base layer's output. The class provides methods for creating, updating, merg
 
     @property
     def active_adapter(self) -> str:
-
         r"""
         This method returns the active adapter.
         
@@ -195,7 +192,6 @@ the base layer's output. The class provides methods for creating, updating, merg
 
     @property
     def disable_adapters(self) -> bool:
-
         r"""
         Disables the adapters in the LoKrLayer.
         
@@ -213,7 +209,6 @@ the base layer's output. The class provides methods for creating, updating, merg
 
     @property
     def merged(self) -> bool:
-
         r"""
         Returns a boolean value indicating whether the 'LoKrLayer' instance has any merged adapters.
         
@@ -230,7 +225,6 @@ the base layer's output. The class provides methods for creating, updating, merg
 
     @property
     def active_adapters(self):
-
         r"""
         This method 'active_adapters' in the class 'LoKrLayer' retrieves the active adapters.
         
@@ -270,7 +264,6 @@ the base layer's output. The class provides methods for creating, updating, merg
         use_w2: bool,
         use_effective_conv2d: bool,
     ):
-
         r"""Create adapter parameters for the LoKrLayer class.
         
         This method creates and initializes adapter parameters based on the provided arguments. The adapter parameters are used for the LoKrLayer class.
@@ -330,7 +323,6 @@ the base layer's output. The class provides methods for creating, updating, merg
                 self.lokr_w2_b[adapter_name] = ms.Parameter(ops.zeros((r, shape[1][1])))
 
     def reset_adapter_parameters(self, adapter_name: str):
-
         r"""
         Reset the parameters of the specified adapter within the LoKrLayer.
         
@@ -410,7 +402,6 @@ the base layer's output. The class provides methods for creating, updating, merg
             )
 
     def reset_adapter_parameters_random(self, adapter_name: str):
-
         r"""
         Resets the adapter parameters randomly for the specified adapter in the LoKrLayer class.
         
@@ -675,7 +666,6 @@ initialization.
                 )
 
     def get_delta_weight(self, adapter_name: str) -> ms.Tensor:
-
         r"""
         This method calculates the delta weight for a given adapter.
         
@@ -723,8 +713,6 @@ initialization.
         return weight
 
     def construct(self, x: ms.Tensor, *args, **kwargs) -> ms.Tensor:
-
-        
         """
         Constructs the output tensor using the specified input tensor and additional arguments.
         
@@ -784,8 +772,6 @@ class Dense(LoKrLayer):
         init_weights: bool = True,
         **kwargs,
     ):
-
-        
         """
         Initializes a new instance of the Dense class.
         
@@ -818,8 +804,6 @@ class Dense(LoKrLayer):
     def _get_delta_activations(
         self, adapter_name: str, input: ms.Tensor, *args: Any, **kwargs: Any
     ) -> ms.Tensor:
-
-        
         """
         Method to calculate the delta activations for a given adapter.
         
@@ -844,7 +828,6 @@ class Dense(LoKrLayer):
         return ops.dense(input, delta_weight)
 
     def __repr__(self) -> str:
-
         r"""
         This method returns a string representation of the object.
         
@@ -876,7 +859,6 @@ class Conv2d(LoKrLayer):
         init_weights: bool = True,
         **kwargs,
     ):
-
         r"""
         Initializes an instance of the Conv2d class.
         
@@ -916,7 +898,6 @@ class Conv2d(LoKrLayer):
     def _get_delta_activations(
         self, adapter_name: str, input: ms.Tensor, *args: Any, **kwargs: Any
     ) -> ms.Tensor:
-
         r"""
         Method to calculate delta activations for Conv2d layer.
         
@@ -946,7 +927,6 @@ class Conv2d(LoKrLayer):
         )
 
     def __repr__(self) -> str:
-
         r"""
         Return a string representation of the 'Conv2d' object.
         
@@ -1021,7 +1001,6 @@ def factorization(dimension: int, factor: int = -1) -> Tuple[int, int]:
 
 
 def make_weight_cp(t, wa, wb):
-
     r"""
     This function creates a weight tensor by performing the contraction of four-dimensional tensor 't' with two matrices 'wa' and 'wb' along specific dimensions.
     
@@ -1042,7 +1021,6 @@ respectively, and k, l represent the remaining dimensions inherited from 't'.
 
 
 def make_kron(w1, w2, scale=1.0):
-
     r"""
     This function creates a Kronecker product of two input tensors w1 and w2, and then scales the result by the specified scale factor.
     

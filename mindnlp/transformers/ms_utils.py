@@ -35,7 +35,6 @@ class Conv1D(nn.Cell):
     """
 
     def __init__(self, n_out, n_in):
-
         """
         Initialize the Conv1D class with the specified number of output channels and input channels.
         
@@ -57,7 +56,6 @@ class Conv1D(nn.Cell):
         self.matmul = Matmul()
 
     def construct(self, x):
-
         """
         Constructs the 1D convolutional operation on the input tensor x.
         

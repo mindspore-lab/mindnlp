@@ -51,7 +51,6 @@ columns.
                  height: Optional[int] = None,
                  width: Optional[int] = None,
                  items: Union[np.ndarray, List, NoneType] = None) -> None:
-
         r"""
         Initializes a Matrix object with the provided parameters.
         
@@ -78,7 +77,6 @@ columns.
         super(Matrix, self).__init__(height, width)
 
     def __getitem__(self, key):
-
         r"""
         This method allows retrieving items from the Matrix object using the specified key.
         
@@ -102,7 +100,6 @@ columns.
             return Scalar(x)
 
     def __neg__(self) -> 'Matrix':
-
         r"""
         __neg__
         
@@ -118,7 +115,6 @@ columns.
         return Matrix(self._height, self._width, np.negative(self._items))
 
     def add_scalar(self, that: Union[Scalar, float, np.float64]) -> 'Matrix':
-
         r"""
         Adds a scalar value to the current matrix.
         
@@ -138,8 +134,6 @@ columns.
         return Matrix(self._height, self._width, np.add(self._items, num))
 
     def sub_scalar(self, that: Union[Scalar, float, np.float64]) -> 'Matrix':
-
-        
         """
         Subtracts a scalar value from each element of the matrix.
         
@@ -159,8 +153,6 @@ columns.
         return Matrix(self._height, self._width, np.subtract(self._items, num))
 
     def mul_scalar(self, that: Union[Scalar, float, np.float64]) -> 'Matrix':
-
-        
         """
         Multiplies the Matrix by a scalar value.
         
@@ -180,7 +172,6 @@ columns.
         return Matrix(self._height, self._width, np.multiply(self._items, num))
 
     def transpose(self) -> 'Matrix':
-
         r"""
         Transposes the matrix by swapping its rows with columns.
         
@@ -196,7 +187,6 @@ columns.
         return Matrix(self._width, self._height, np.transpose(self._items))
 
     def transpose_conjugate(self) -> 'Matrix':
-
         r"""
         Method to transpose and conjugate the current matrix.
         
@@ -212,7 +202,6 @@ columns.
         return self.transpose()
 
     def div_scalar(self, that: Union[Scalar, float, np.float64]) -> 'Matrix':
-
         r"""
         Divides each element of the Matrix by a scalar value.
         
@@ -244,7 +233,6 @@ columns.
         return Matrix(self._height, self._width, np.divide(self._items, num))
 
     def as_array(self) -> np.ndarray:
-
         r"""
         Converts the Matrix object to a NumPy array.
         
@@ -270,7 +258,6 @@ further manipulation and analysis using the powerful NumPy library.
     def _init_default(self,
                       height: Optional[int],
                       width: Optional[int]) -> Tuple[int, int]:
-
         r"""
         Initializes a Matrix with default values based on the provided height and width.
         
@@ -294,8 +281,6 @@ further manipulation and analysis using the powerful NumPy library.
                       height: Optional[int],
                       width: Optional[int],
                       items: np.ndarray) -> Tuple[int, int]:
-
-        
         """
         Initializes the ndarray for the Matrix class.
         
@@ -323,7 +308,6 @@ further manipulation and analysis using the powerful NumPy library.
                    height: Optional[int],
                    width: Optional[int],
                    items: List[Vector]) -> Tuple[int, int]:
-
         r"""
         This method initializes a Matrix object with the provided height, width, and a list of vectors.
         
@@ -361,7 +345,6 @@ further manipulation and analysis using the powerful NumPy library.
         return height, width
 
     def _add(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         Method _add in the class Matrix.
         
@@ -385,7 +368,6 @@ further manipulation and analysis using the powerful NumPy library.
         return Matrix(self._height, self._width, np.add(self._items, that._items))
 
     def _sub(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         Subtracts the values of a given Matrix object from the calling Matrix object and returns a new Matrix object with the result.
         
@@ -402,7 +384,6 @@ further manipulation and analysis using the powerful NumPy library.
         return Matrix(self._height, self._width, np.subtract(self._items, that._items))
 
     def _mul(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         Method for multiplying two matrices.
         
@@ -423,7 +404,6 @@ further manipulation and analysis using the powerful NumPy library.
         return Matrix(self._height, self._width, np.multiply(self._items, that._items))
 
     def _matmul(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         Performs matrix multiplication between the current matrix and another matrix.
         
@@ -444,7 +424,6 @@ further manipulation and analysis using the powerful NumPy library.
         return Matrix(self._height, that._width, np.matmul(self._items, that._items))
 
     def _div(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         Method _div in the class Matrix performs element-wise division between two Matrix objects.
         
@@ -464,7 +443,6 @@ further manipulation and analysis using the powerful NumPy library.
         return Matrix(self._height, self._width, np.divide(self._items, that._items))
 
     def _full_like(self, items: Union[np.ndarray, List]) -> 'Matrix':
-
         r"""
         Performs a deep copy of the given items and creates a new 'Matrix' object with the same shape and data type as the original matrix.
         
@@ -499,7 +477,6 @@ showing the updated values.
         return Matrix(items=items)
 
     def _ones_like(self) -> 'Matrix':
-
         r"""
         Returns a new Matrix object with the same dimensions as the calling Matrix object, where all elements are set to a value of 1.
         
@@ -515,8 +492,6 @@ showing the updated values.
         return Matrix(items=[Vector(items=[Scalar.one()] * self._width)] * self._height)
 
     def _zeros_like(self) -> 'Matrix':
-
-        
         """
         Method _zeros_like in the class Matrix.
         
@@ -533,7 +508,6 @@ showing the updated values.
         return Matrix(items=[Vector(items=[Scalar.zero()] * self._width)] * self._height)
 
     def _identity_like(self) -> 'Matrix':
-
         r"""
         Creates a new Matrix object that has the same dimensions as the current Matrix object, with the diagonal elements set to 1 and all other elements set to 0.
         
@@ -554,7 +528,6 @@ showing the updated values.
         return Matrix(items=items)
 
     def _concat_rows(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         Concatenates the rows of the current matrix with the rows of another matrix.
         
@@ -584,7 +557,6 @@ the same as self. The items of the resulting matrix are obtained by concatenatin
         return Matrix(height=self._height + that._height, width=self._width, items=items)
 
     def _concat_cols(self, that: 'Matrix') -> 'Matrix':
-
         r"""
         Concatenates the columns of the current Matrix with another Matrix.
         

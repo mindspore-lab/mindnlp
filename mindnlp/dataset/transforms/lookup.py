@@ -51,7 +51,6 @@ class Lookup(TextTensorOperation):
     """
 
     def __init__(self, vocab, unk_token, return_dtype=mstype.int32):
-
         r"""
         Initializes a Lookup object.
         
@@ -82,7 +81,6 @@ class Lookup(TextTensorOperation):
         self._return_dtype = return_dtype
 
     def parse(self):
-
         r"""
         Parses the lookup operation based on the specified vocabulary.
         

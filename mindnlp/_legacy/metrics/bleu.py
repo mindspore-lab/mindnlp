@@ -62,7 +62,6 @@ class BleuScore(Metric):
 
     """
     def __init__(self, n_size=4, weights=None, name='BleuScore'):
-
         r""" 
         Initializes an instance of the BleuScore class.
         

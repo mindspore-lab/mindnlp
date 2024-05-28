@@ -47,7 +47,6 @@ class MSErnieMEmbeddings(nn.Cell):
     """Construct the embeddings from word and position embeddings."""
 
     def __init__(self, config):
-
         """
         Initializes an instance of the MSErnieMEmbeddings class.
         
@@ -85,7 +84,6 @@ class MSErnieMEmbeddings(nn.Cell):
         inputs_embeds: Optional[mindspore.Tensor] = None,
         past_key_values_length: int = 0,
     ) -> mindspore.Tensor:
-
         """
         Constructs the embeddings for MSErnieM model.
         
@@ -141,7 +139,6 @@ tensors. Additionally, it supports position embeddings and optional output of at
 natural language understanding and generation tasks.
     """
     def __init__(self, config, position_embedding_type=None):
-
         """
         Initializes the MSErnieMSelfAttention instance.
         
@@ -184,7 +181,6 @@ natural language understanding and generation tasks.
         self.is_decoder = config.is_decoder
 
     def transpose_for_scores(self, x: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Method transposes the input tensor for scores in a self-attention mechanism.
         
@@ -214,7 +210,6 @@ natural language understanding and generation tasks.
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         """
         Method to construct self-attention mechanism in the MSErnieMSelfAttention class.
         
@@ -338,7 +333,6 @@ class MSErnieMAttention(nn.Cell):
     The 'construct' method computes the attention output given input hidden states, optional masks, and other optional inputs.
     """
     def __init__(self, config, position_embedding_type=None):
-
         """
         Initializes an instance of the MSErnieMAttention class.
         
@@ -359,7 +353,6 @@ class MSErnieMAttention(nn.Cell):
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
-
         """
         This method 'prune_heads' in the class 'MSErnieMAttention' prunes heads from the attention mechanism.
         
@@ -402,7 +395,6 @@ class MSErnieMAttention(nn.Cell):
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         """
         Constructs the MSErnieMAttention module.
         
@@ -468,7 +460,6 @@ processed hidden states and optional attention outputs if specified.
     Note: The MSErnieMEncoderLayer class is designed to be used within the MSErnieM model architecture for encoding input sequences.
     """
     def __init__(self, config):
-
         """
         Initializes a MSErnieMEncoderLayer object with the provided configuration.
         
@@ -515,7 +506,6 @@ processed hidden states and optional attention outputs if specified.
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = True,
     ):
-
         """Constructs the MSErnieMEncoderLayer.
         
         This method applies the MSErnieMEncoderLayer to the input hidden states.
@@ -592,7 +582,6 @@ class MSErnieMEncoder(nn.Cell):
     
         """
     def __init__(self, config):
-
         """
         Initializes the MSErnieMEncoder class.
         
@@ -622,7 +611,6 @@ class MSErnieMEncoder(nn.Cell):
         output_attentions: Optional[bool] = False,
         output_hidden_states: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-
         """
         This method constructs the MSErnieMEncoder by processing the input embeddings and applying attention masks and head masks if provided.
         
@@ -672,7 +660,6 @@ class MSErnieMEncoder(nn.Cell):
         return tuple(v for v in [last_hidden_state, hidden_states, attentions] if v is not None)
 
 
-
 # Copied from transformers.models.bert.modeling_bert.BertPooler with Bert->ErnieM
 class MSErnieMPooler(nn.Cell):
 
@@ -691,7 +678,6 @@ class MSErnieMPooler(nn.Cell):
     
     """
     def __init__(self, config):
-
         """
         Initializes a new instance of the MSErnieMPooler class.
         
@@ -713,7 +699,6 @@ class MSErnieMPooler(nn.Cell):
         self.activation = nn.Tanh()
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-
         """
         Constructs the pooled output tensor from the provided hidden states.
         
@@ -795,7 +780,6 @@ configuration.
     
     """
     def __init__(self, config, add_pooling_layer=True):
-
         """
         Initializes a new MSErnieMModel instance.
         
@@ -823,7 +807,6 @@ configuration.
         self.post_init()
 
     def get_input_embeddings(self):
-
         """
         Method: get_input_embeddings
         
@@ -849,7 +832,6 @@ configuration.
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, value):
-
         """
         Sets the input embeddings for the MSErnieMModel.
         
@@ -885,7 +867,6 @@ configuration.
         output_hidden_states: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
     ) -> Tuple[mindspore.Tensor]:
-
         '''
         Constructs the MSErnieMModel.
         
@@ -978,7 +959,6 @@ loss and logits for the given input.
     """
     # Copied from transformers.models.bert.modeling_bert.BertForSequenceClassification.__init__ with Bert->ErnieM,bert->ernie_m
     def __init__(self, config):
-
         """
         Initializes an instance of the 'MSErnieMForSequenceClassification' class.
         
@@ -1086,7 +1066,6 @@ input tensors and generating classification predictions.
     """
     # Copied from transformers.models.bert.modeling_bert.BertForMultipleChoice.__init__ with Bert->ErnieM,bert->ernie_m
     def __init__(self, config):
-
         """
         Initializes an instance of MSErnieMForMultipleChoice.
         
@@ -1192,7 +1171,6 @@ the range `[0, ..., config.num_labels - 1]`.
     """
     # Copied from transformers.models.bert.modeling_bert.BertForTokenClassification.__init__ with Bert->ErnieM,bert->ernie_m
     def __init__(self, config):
-
         """
         Initializes a new instance of the MSErnieMForTokenClassification class.
         
@@ -1286,7 +1264,6 @@ class MSErnieMForQuestionAnswering(MSErnieMPreTrainedModel):
     """
     # Copied from transformers.models.bert.modeling_bert.BertForQuestionAnswering.__init__ with Bert->ErnieM,bert->ernie_m
     def __init__(self, config):
-
         """
         Initializes an instance of the MSErnieMForQuestionAnswering class.
         
@@ -1393,7 +1370,6 @@ predicted.
     This class is a part of the MindSpore library and is designed to provide a high-level interface for utilizing the MSERNIE-M model for information extraction tasks.
     """
     def __init__(self, config):
-
         """
         Initializes an instance of the MSErnieMForInformationExtraction class.
         

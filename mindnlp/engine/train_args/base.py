@@ -987,7 +987,6 @@ class TrainingArguments:
     )
 
     def __post_init__(self):
-
         r"""
         This method initializes the TrainingArguments class instance after its creation.
         
@@ -1150,9 +1149,7 @@ class TrainingArguments:
                 " when --dataset_num_workers > 1."
             )
 
-
     def __str__(self):
-
         r"""
         This method returns a string representation of the TrainingArguments object.
         
@@ -1181,7 +1178,6 @@ class TrainingArguments:
 
     @property
     def n_device(self):
-
         r"""
         Returns the number of devices used for training.
         
@@ -1296,7 +1292,6 @@ class TrainingArguments:
         log_level_main_node = logging.get_verbosity() if log_level == -1 else log_level
         log_level_replica_node = logging.get_verbosity() if log_level_replica == -1 else log_level_replica
         return log_level_main_node if self.should_log else log_level_replica_node
-
 
     @contextlib.contextmanager
     def main_process_first(self, local=True, desc="work"):

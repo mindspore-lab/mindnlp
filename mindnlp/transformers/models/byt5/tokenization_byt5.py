@@ -69,7 +69,6 @@ class ByT5Tokenizer(PreTrainedTokenizer):
         additional_special_tokens=None,
         **kwargs,
     ) -> None:
-
         """
         This method initializes an instance of the ByT5Tokenizer class.
         
@@ -119,7 +118,6 @@ class ByT5Tokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
-
         """
         Method to retrieve the vocabulary size of the ByT5Tokenizer instance.
         
@@ -135,7 +133,6 @@ class ByT5Tokenizer(PreTrainedTokenizer):
         return self._utf_vocab_size
 
     def get_vocab(self):
-
         """
         Retrieves the vocabulary of the ByT5Tokenizer.
         
@@ -282,7 +279,6 @@ class ByT5Tokenizer(PreTrainedTokenizer):
 
     # ByT5Tokenizer has no vocab file
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Saves the vocabulary of the ByT5Tokenizer instance to a file.
         

@@ -113,7 +113,6 @@ class BioGptTokenizer(PreTrainedTokenizer):
         pad_token="<pad>",
         **kwargs,
     ):
-
         """
         Initializes a new instance of the BioGptTokenizer class.
         
@@ -174,7 +173,6 @@ class BioGptTokenizer(PreTrainedTokenizer):
         return len(self.encoder)
 
     def get_vocab(self):
-
         """
         Method to retrieve the vocabulary dictionary consisting of tokens and their corresponding encodings.
         
@@ -191,7 +189,6 @@ class BioGptTokenizer(PreTrainedTokenizer):
         return dict(self.encoder, **self.added_tokens_encoder)
 
     def moses_tokenize(self, text, lang):
-
         """
         Perform Moses tokenization on the given text.
         
@@ -224,7 +221,6 @@ splitting, 'return_str' specifies whether to return a string or a list of tokens
         )
 
     def moses_detokenize(self, tokens, lang):
-
         """
         Performs Moses detokenization on a list of tokens for a specified language.
         
@@ -249,7 +245,6 @@ splitting, 'return_str' specifies whether to return a string or a list of tokens
         return self.cache_moses_detokenizer[lang].detokenize(tokens)
 
     def bpe(self, token):
-
         """
         Performs Byte Pair Encoding (BPE) on a given token.
         
@@ -435,7 +430,6 @@ can be made. The resulting subword units are then joined together to form the en
         return len(token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary to the specified directory with the given filename prefix.
         
@@ -481,7 +475,6 @@ can be made. The resulting subword units are then joined together to form the en
         return vocab_file, merge_file
 
     def __getstate__(self):
-
         """
         The '__getstate__' method in the 'BioGptTokenizer' class is used to retrieve the state of the object for pickling.
         
@@ -499,7 +492,6 @@ can be made. The resulting subword units are then joined together to form the en
         return state
 
     def __setstate__(self, d):
-
         """
         Sets the state of the BioGptTokenizer object.
         

@@ -103,7 +103,6 @@ class ReformerTokenizer(PreTrainedTokenizer):
         sp_model_kwargs: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> None:
-
         """
         Initializes a new instance of the ReformerTokenizer class.
         
@@ -137,7 +136,6 @@ class ReformerTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
-
         """
         Returns the size of the vocabulary used by the ReformerTokenizer.
         
@@ -153,7 +151,6 @@ class ReformerTokenizer(PreTrainedTokenizer):
         return self.sp_model.get_piece_size()
 
     def get_vocab(self) -> Dict[str, int]:
-
         """
         Get the vocabulary of the ReformerTokenizer.
         
@@ -172,7 +169,6 @@ class ReformerTokenizer(PreTrainedTokenizer):
         return vocab
 
     def __getstate__(self):
-
         """
         Method '__getstate__' in the class 'ReformerTokenizer'.
         
@@ -193,7 +189,6 @@ class ReformerTokenizer(PreTrainedTokenizer):
         return state
 
     def __setstate__(self, d):
-
         """
         __setstate__ method in the class ReformerTokenizer.
         
@@ -245,7 +240,6 @@ class ReformerTokenizer(PreTrainedTokenizer):
         return out_string.strip()
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary to a specified directory.
         

@@ -106,7 +106,6 @@ class BitConfig(BackboneConfigMixin, PretrainedConfig):
         out_indices=None,
         **kwargs,
     ):
-
         """
         Initialize the BitConfig class with the provided configuration parameters.
         

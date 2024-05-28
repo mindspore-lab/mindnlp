@@ -20,7 +20,6 @@ class _MathObjImpl(ABC):
             a_y: np.ndarray,
             b_x: Union[np.ndarray, np.float64],
             b_y: Union[np.ndarray, np.float64]) -> Tuple[np.ndarray, np.ndarray]:
-
         r"""
         This method performs multiplication of given input arrays and scalar values.
         
@@ -47,7 +46,6 @@ class _MathObjImpl(ABC):
             a_y: np.ndarray,
             b_x: Union[np.ndarray, np.float64],
             b_y: Union[np.ndarray, np.float64]) -> Tuple[np.ndarray, np.ndarray]:
-
         r"""
         This method performs division on the input arrays and returns the result as a tuple of numpy arrays.
         

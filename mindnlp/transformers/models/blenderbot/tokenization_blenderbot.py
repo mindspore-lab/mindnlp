@@ -174,7 +174,6 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
         add_prefix_space=False,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the BlenderbotTokenizer class.
         
@@ -250,7 +249,6 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
     @property
     # Copied from transformers.models.roberta.tokenization_roberta.RobertaTokenizer.vocab_size with Roberta->Blenderbot, RoBERTa->Blenderbot
     def vocab_size(self):
-
         """
         Method: vocab_size
         
@@ -270,7 +268,6 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.roberta.tokenization_roberta.RobertaTokenizer.get_vocab with Roberta->Blenderbot, RoBERTa->Blenderbot
     def get_vocab(self):
-
         """
         Retrieve the vocabulary from the BlenderbotTokenizer.
         
@@ -291,7 +288,6 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.roberta.tokenization_roberta.RobertaTokenizer.bpe with Roberta->Blenderbot, RoBERTa->Blenderbot
     def bpe(self, token):
-
         """
         This method, 'bpe', is defined within the class 'BlenderbotTokenizer' and is used to perform Byte Pair Encoding (BPE) on a given token.
         
@@ -376,7 +372,6 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.roberta.tokenization_roberta.RobertaTokenizer.save_vocabulary with Roberta->Blenderbot, RoBERTa->Blenderbot
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
-
         """
         Save the vocabulary files for the BlenderbotTokenizer.
         
@@ -484,7 +479,6 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.roberta.tokenization_roberta.RobertaTokenizer.prepare_for_tokenization with Roberta->Blenderbot, RoBERTa->Blenderbot
     def prepare_for_tokenization(self, text, is_split_into_words=False, **kwargs):
-
         """
         This method prepares the input text for tokenization by adding a prefix space if specified or if the text is not already split into words.
         

@@ -60,7 +60,6 @@ attentions, and cross attentions.
     config_class = BgeM3Config
 
     def __init__(self, config: BgeM3Config):
-
         """
             Initializes a new instance of the BgeM3Model class.
         
@@ -87,7 +86,6 @@ attentions, and cross attentions.
 
     # Copied from FlagEmbedding
     def dense_embedding(self, hidden_state, mask):
-
         """
         This method calculates the dense embedding based on the provided hidden state and mask, using the specified sentence pooling method.
         
@@ -112,7 +110,6 @@ attentions, and cross attentions.
 
     # Copied from FlagEmbedding
     def sparse_embedding(self, hidden_state, input_ids, return_embedding: bool = False):
-
         """
         Sparse Embedding
         
@@ -150,7 +147,6 @@ attentions, and cross attentions.
 
     # Copied from FlagEmbedding
     def colbert_embedding(self, last_hidden_state, mask):
-
         """
         Embeds the last hidden state of the BgeM3Model using the Colbert method.
         
@@ -174,7 +170,6 @@ attentions, and cross attentions.
 
     # Modified from FlagEmbedding
     def _process_token_weights(self, token_weights, input_ids, mask):
-
         """
         Process the token weights for the BgeM3Model.
         
@@ -226,7 +221,6 @@ dictionaries. The resulting list is returned as the output of this method.
 
     # Copied from FlagEmbedding
     def _process_colbert_vecs(self, colbert_vecs, tokens_num) -> List[mindspore.Tensor]:
-
         '''
         This method processes the Colbert vectors to extract a subset of vectors based on the tokens number.
         
@@ -265,7 +259,6 @@ dictionaries. The resulting list is returned as the output of this method.
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], BgeM3ModelOutput]:
-
         """
         Constructs the BgeM3Model.
         

@@ -116,7 +116,6 @@ class AlignTextConfig(PretrainedConfig):
         use_cache=True,
         **kwargs,
     ):
-
         """
         Initializes a new instance of the AlignTextConfig class.
         
@@ -164,7 +163,6 @@ class AlignTextConfig(PretrainedConfig):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
-
         """
         Loads a pretrained model configuration from a given model name or file path.
         
@@ -293,7 +291,6 @@ class AlignVisionConfig(PretrainedConfig):
         drop_connect_rate: float = 0.2,
         **kwargs,
     ):
-
         """
         Initializes an instance of the `AlignVisionConfig` class.
         
@@ -354,7 +351,6 @@ class AlignVisionConfig(PretrainedConfig):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
-
         """
         This method creates an instance of AlignVisionConfig from a pretrained model configuration.
         
@@ -444,7 +440,6 @@ class AlignConfig(PretrainedConfig):
         initializer_range=0.02,
         **kwargs,
     ):
-
         """Initializes an instance of the AlignConfig class.
         
         Args:
