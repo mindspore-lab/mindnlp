@@ -112,7 +112,7 @@ class LoHaConfig(LycorisConfig):
             "help": "The layer pattern name, used only if `layers_to_transform` is different to None and if the layer pattern is not in the common layers pattern."
         },
     )
-    modules_to_save: Optional[List[str]] = field(
+    cells_to_save: Optional[List[str]] = field(
         default=None,
         metadata={
             "help": "List of modules apart from LoHA layers to be set as trainable and saved in the final checkpoint. "
