@@ -1,0 +1,56 @@
+name: Run Pytest for Specified Model
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_directory:
+        description: 'Model to run pytest'
+        required: true
+
+jobs:
+  run-pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ms_version: ['2.2.14']
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/requirements.txt
+      - name: Install MindSpore
+        shell: bash
+        run: |
+          pip install https://ms-release.obs.cn-north-4.myhuaweicloud.com/${{matrix.ms_version}}/MindSpore/unified/x86_64/mindspore-${{matrix.ms_version}}-cp39-cp39-linux_x86_64.whl --trusted-host ms-release.obs.cn-north-4.myhuaweicloud.com
+
+      - name: Check if directory exists
+        run: |
+          if [ ! -d "mindnlp/transformers/models/${{ github.event.inputs.test_directory }}" ]; then
+            echo "Directory 'tests/ut/transformers/models/${{ github.event.inputs.test_directory }}' does not exist."
+            exit 1
+          fi
+
+          if [ ! -d "tests/ut/transformers/models/${{ github.event.inputs.test_directory }}" ]; then
+            echo "Directory 'tests/ut/transformers/models/${{ github.event.inputs.test_directory }}' does not exist."
+            exit 1
+          fi
+
+      - name: Check if test files exist
+        run: |
+          if [ -z "$(ls -A $tests/ut/transformers/models/${{ github.event.inputs.test_directory }}/test_modeling_*.py 2>/dev/null)" ]; then
+            echo "No test_modeling_*.py files found in directory '${{ github.event.inputs.test_directory }}'."
+            exit 1
+          fi
+
+      - name: Run pytest
+        run: |
+          export RUN_SLOW=1
+          pytest -vs tests/ut/transformers/models/${{ github.event.inputs.test_directory }}
