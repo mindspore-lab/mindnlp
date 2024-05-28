@@ -1,11 +1,8 @@
-name: Run Pytest for Specified Model
+name: Single model test.
 
 on:
-  workflow_dispatch:
-    inputs:
-      test_directory:
-        description: 'Model to run pytest'
-        required: true
+  issue_comment:
+    types: [created]
 
 jobs:
   run-pytest:
@@ -24,26 +21,36 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements/requirements.txt
 
+    - name: Parse comment
+      id: parse_comment
+      run: |
+        echo "COMMENT_BODY=${{ github.event.comment.body }}" >> $GITHUB_ENV
+        if [[ "${{ github.event.comment.body }}" =~ ^/model[[:space:]]+([a-zA-Z0-9_-]+)$ ]]; then
+          echo "MODEL_NAME=${BASH_REMATCH[1]}" >> $GITHUB_ENV
+        else
+          echo "No valid model command found."
+          exit 1
+
       - name: Check if directory exists
         run: |
-          if [ ! -d "mindnlp/transformers/models/${{ github.event.inputs.test_directory }}" ]; then
-            echo "Directory 'tests/ut/transformers/models/${{ github.event.inputs.test_directory }}' does not exist."
+          if [ ! -d "mindnlp/transformers/models/${{ env.MODEL_NAME }}" ]; then
+            echo "Directory 'tests/ut/transformers/models/${{ env.MODEL_NAME }}' does not exist."
             exit 1
           fi
 
-          if [ ! -d "tests/ut/transformers/models/${{ github.event.inputs.test_directory }}" ]; then
-            echo "Directory 'tests/ut/transformers/models/${{ github.event.inputs.test_directory }}' does not exist."
+          if [ ! -d "tests/ut/transformers/models/${{ env.MODEL_NAME }}" ]; then
+            echo "Directory 'tests/ut/transformers/models/${{ env.MODEL_NAME }}' does not exist."
             exit 1
           fi
 
       - name: Check if test files exist
         run: |
-          if [ -z "$(ls -A tests/ut/transformers/models/${{ github.event.inputs.test_directory }}/test_modeling_*.py 2>/dev/null)" ]; then
-            echo "No test_modeling_*.py files found in directory '${{ github.event.inputs.test_directory }}'."
+          if [ -z "$(ls -A tests/ut/transformers/models/${{ env.MODEL_NAME }}/test_modeling_*.py 2>/dev/null)" ]; then
+            echo "No test_modeling_*.py files found in directory '${{ env.MODEL_NAME }}'."
             exit 1
           fi
 
       - name: Run pytest
         run: |
           export RUN_SLOW=1
-          pytest -vs tests/ut/transformers/models/${{ github.event.inputs.test_directory }}
+          pytest -vs tests/ut/transformers/models/${{ env.MODEL_NAME }}
