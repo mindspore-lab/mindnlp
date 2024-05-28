@@ -395,17 +395,7 @@ class LoKrLayer(nn.Cell, BaseTunerLayer):
             self.reset_adapter_parameters(adapter_name)
         else:
             self.reset_adapter_parameters_random(adapter_name)
-        """
-        # Move new weights to device
-        weight = getattr(self.get_base_layer(), "weight", None)
-        
-        if weight is not None:
-            # the layer is already completely initialized, this is an update
-            if weight.dtype.is_floating_point or weight.dtype.is_complex:
-                self.to(weight.device, dtype=weight.dtype)
-            else:
-                self.to(weight.device)
-        """
+
         self.set_adapter(self.active_adapters)
 
     def set_adapter(self, adapter_names) -> None:

@@ -21,9 +21,8 @@ import mindspore
 from .peft_types import PeftType
 from .constants import WEIGHTS_NAME
 
-def get_data_list(model: mindspore.nn.Cell):
+def get_data_list(param_dict):
     """Get state dict of the Peft model for saving."""
-    param_dict: OrderedDict = model.parameters_dict()
     data_list = OrderedDict()  # {key: [dims, tensor_type, data]}
 
     for key, value in param_dict.items():
@@ -53,8 +52,7 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
 
     config = model.peft_config[adapter_name]
     if state_dict is None:
-        # NOTE: state_dict = model.state_dict()
-        state_dict = get_data_list(model)
+        state_dict = get_data_list(model.parameters_dict())
     if config.peft_type in (PeftType.LORA, PeftType.ADALORA):
         # to_return = lora_state_dict(model, bias=model.peft_config.bias)
         # adapted from `https://github.com/microsoft/LoRA/blob/main/loralib/utils.py`
@@ -89,6 +87,19 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
         to_return = {k: state_dict[k] for k in state_dict if "lokr_" in k}
     elif config.peft_type == PeftType.LOHA:
         to_return = {k: state_dict[k] for k in state_dict if "hada_" in k}
+    elif config.is_prompt_learning:
+        to_return = {}
+        if config.peft_type == PeftType.MULTITASK_PROMPT_TUNING:
+            to_return["prefix_task_cols"] = model.prompt_encoder[adapter_name].prefix_task_cols
+            to_return["prefix_task_rows"] = model.prompt_encoder[adapter_name].prefix_task_rows
+            prompt_embeddings = model.prompt_encoder[adapter_name].embedding.weight
+        else:
+            if config.inference_mode:
+                prompt_embeddings = model.prompt_encoder[adapter_name].embedding.weight
+            else:
+                prompt_embeddings = model.get_prompt_embedding_to_save(adapter_name)
+        to_return["prompt_embeddings"] = prompt_embeddings
+        to_return = get_data_list(to_return)
     else:
         raise NotImplementedError
 
@@ -154,13 +165,20 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
             rank_pattern = config.rank_pattern
             if rank_pattern is not None:
                 model.resize_cells_by_rank_pattern(rank_pattern, adapter_name)
-    elif config.peft_type == PeftType.ADAPTION_PROMPT:
+    elif config.is_prompt_learning or config.peft_type == PeftType.ADAPTION_PROMPT:
         peft_model_state_dict = state_dict
     else:
         raise NotImplementedError
-    param_not_load, ckpt_not_load = mindspore.load_param_into_net(model, peft_model_state_dict, strict_load=strict_load)
 
-    return (param_not_load, ckpt_not_load)
+    load_result = model.load_state_dict(peft_model_state_dict, strict=False)
+    if config.is_prompt_learning:
+        model.prompt_encoder[adapter_name].embedding.load_state_dict(
+            {"weight": peft_model_state_dict["prompt_embeddings"]}, strict=True
+        )
+
+    if config.peft_type == PeftType.MULTITASK_PROMPT_TUNING:
+        model.prompt_encoder[adapter_name].load_state_dict(peft_model_state_dict, strict=False)
+    return load_result
 
 def load_peft_weights(model_id: str,) -> dict:
     r"""

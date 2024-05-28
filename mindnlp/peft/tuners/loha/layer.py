@@ -239,14 +239,6 @@ class LoHaLayer(nn.Cell, LycorisLayer):
         else:
             self.reset_adapter_parameters_random(adapter_name)
         # TODO
-        # Move new weights to device
-        # weight = getattr(self.get_base_layer(), "weight", None)
-        # if weight is not None:
-        #     # the layer is already completely initialized, this is an update
-        #     if weight.is_floating_point or weight.is_complex:
-        #         self.to(weight.device, dtype=weight.dtype)
-        #     else:
-        #         self.to(weight.device)
         self.set_adapter(self.active_adapters)
 
     def get_delta_weight(self, adapter_name: str) -> mindspore.Tensor:
