@@ -216,7 +216,7 @@ def insert_comments(file_path, comments):
 
     print(f"Annotated file created: {new_file_path}")
 
-def process_directory(directory_path, suffix, exclude=None, ):
+def process_directory(directory_path, exclude=None, ):
     directory_path = os.path.abspath(directory_path)
 
     if os.path.isfile(directory_path):
