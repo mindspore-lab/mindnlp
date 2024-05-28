@@ -42,9 +42,9 @@ import argparse
 import astroid
 from mindnlp.transformers import pipeline
 
-# 全局变量，用于存储命令行参数
 ARGS = None
 
+# 建议使用至少强于gpt-3.5的模型
 generator = pipeline(model="Qwen/Qwen1.5-1.8B-Chat")
 
 def generate_docstring_batch(inputs):
