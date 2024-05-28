@@ -265,7 +265,8 @@ class Matrix(ABC):
             that (Union[Matrix, Scalar, Any]): The second operand of the division operation. It can be a 'Matrix' instance, a 'Scalar' value, or any other object.
             
         Returns:
-            Matrix: A new 'Matrix' instance resulting from the division operation. If 'that' is a 'Matrix' instance, element-wise division is performed. If 'that' is a 'Scalar' value, each element in the 'Matrix' instance is divided by 'that'.
+            Matrix: A new 'Matrix' instance resulting from the division operation. If 'that' is a 'Matrix' instance, element-wise division is performed. If 'that' is a 'Scalar' value, each element in the
+'Matrix' instance is divided by 'that'.
         
         Raises:
             None: This method does not raise any exceptions.
@@ -282,7 +283,9 @@ class Matrix(ABC):
             self (Matrix): The Matrix object on which the __str__ method is called.
         
         Returns:
-            str: A string representation of the Matrix object. The string contains the dimensions of the matrix in the format 'height x width', followed by the elements of the matrix enclosed in square brackets. If the height of the matrix is less than or equal to 4, the elements are listed row-wise within the brackets. If the height is greater than 4, only the first 2 and last 2 elements of the matrix are listed, separated by an ellipsis '...'.
+            str: A string representation of the Matrix object. The string contains the dimensions of the matrix in the format 'height x width', followed by the elements of the matrix enclosed in square
+brackets. If the height of the matrix is less than or equal to 4, the elements are listed row-wise within the brackets. If the height is greater than 4, only the first 2 and last 2 elements of the matrix are
+listed, separated by an ellipsis '...'.
         
         Raises:
             None
@@ -551,7 +554,8 @@ class Matrix(ABC):
             Matrix: A new Matrix object resulting from the multiplication operation.
         
         Raises:
-            ValueError: If the dimensions of the current Matrix and the 'that' Matrix do not match, a ValueError is raised indicating that matrix multiplication is only possible between matrices with the same dimensions.
+            ValueError: If the dimensions of the current Matrix and the 'that' Matrix do not match, a ValueError is raised indicating that matrix multiplication is only possible between matrices with the same
+dimensions.
         """
         if self._height != that._height or self._width != that._width:
             raise ValueError(
@@ -627,7 +631,8 @@ class Matrix(ABC):
             None
         
         Note:
-            The division operation is performed element-wise between the current matrix and the scalar value. If the scalar value is of type Scalar, it will be divided by each element of the matrix. If the scalar value is of any other data type, it will be divided by each corresponding element of the matrix based on their positions.
+            The division operation is performed element-wise between the current matrix and the scalar value. If the scalar value is of type Scalar, it will be divided by each element of the matrix. If the
+scalar value is of any other data type, it will be divided by each corresponding element of the matrix based on their positions.
         
         Example:
             Consider a matrix 'A' with the following elements:
@@ -730,7 +735,8 @@ class Matrix(ABC):
         Raises:
             None.
         
-        This method transposes the matrix by switching its rows with columns. The transpose of a matrix is obtained by reflecting the elements along the main diagonal. The resulting matrix will have the rows of the original matrix as its columns and the columns of the original matrix as its rows.
+        This method transposes the matrix by switching its rows with columns. The transpose of a matrix is obtained by reflecting the elements along the main diagonal. The resulting matrix will have the rows
+of the original matrix as its columns and the columns of the original matrix as its rows.
         
         Example:
             Given a matrix object 'matrix' with the following elements:

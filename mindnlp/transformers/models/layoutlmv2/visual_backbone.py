@@ -716,7 +716,9 @@ def build_resnet_fpn_backbone(cfg):
     Raises:
         None.
     
-    This function builds a ResNet-FPN backbone using the specified configuration. It first constructs the bottom-up ResNet backbone using the provided configuration. Then, it retrieves the required input features and output channels from the configuration. Finally, it constructs the FPN backbone using the bottom-up backbone, input features, output channels, normalization method, top block, and fuse type specified in the configuration. The constructed FPN backbone is returned as the result.
+    This function builds a ResNet-FPN backbone using the specified configuration. It first constructs the bottom-up ResNet backbone using the provided configuration. Then, it retrieves the required input
+features and output channels from the configuration. Finally, it constructs the FPN backbone using the bottom-up backbone, input features, output channels, normalization method, top block, and fuse type
+specified in the configuration. The constructed FPN backbone is returned as the result.
     """
     bottom_up = build_resnet_backbone(cfg)
     in_features = cfg.MODEL.FPN.IN_FEATURES

@@ -145,13 +145,16 @@ class LlavaPreTrainedModel(PreTrainedModel):
     """
     The `LlavaPreTrainedModel` class is a subclass of the `PreTrainedModel` class in the Hugging Face library. It represents a pre-trained model for natural language processing tasks. 
     
-    This class provides functionality for initializing the weights of the model's cells. The `_init_weights` method is used to set the initial weights of the model's cells based on the specified configuration. The method supports different types of cells, including `Dense`, `Conv2d`, and `Embedding`. 
+    This class provides functionality for initializing the weights of the model's cells. The `_init_weights` method is used to set the initial weights of the model's cells based on the specified configuration.
+The method supports different types of cells, including `Dense`, `Conv2d`, and `Embedding`. 
     
     If the cell has a `class_embedding` attribute, the method initializes it using a normal distribution with a standard deviation specified by the `initializer_range` attribute of the configuration. 
     
-    For `Dense` and `Conv2d` cells, the method initializes the `weight` attribute using a normal distribution with the same standard deviation as above. If the cell has a `bias` attribute, it is initialized with zeros. 
+    For `Dense` and `Conv2d` cells, the method initializes the `weight` attribute using a normal distribution with the same standard deviation as above. If the cell has a `bias` attribute, it is initialized
+with zeros. 
     
-    For `Embedding` cells, the method initializes the `weight` attribute using a normal distribution with the same standard deviation as above. If the cell has a `padding_idx` attribute, the corresponding element in the weight matrix is set to zero. 
+    For `Embedding` cells, the method initializes the `weight` attribute using a normal distribution with the same standard deviation as above. If the cell has a `padding_idx` attribute, the corresponding
+element in the weight matrix is set to zero. 
     
     Note: The `LlavaPreTrainedModel` class assumes that the `PreTrainedModel` class is available in the code environment.
     
@@ -177,13 +180,16 @@ class LlavaPreTrainedModel(PreTrainedModel):
             None.
         
         This method initializes the weights of the provided cell based on the configuration settings of the LlavaPreTrainedModel.
-        If the configuration has an 'initializer_range' attribute, the standard deviation is set to that value. Otherwise, it falls back to the 'initializer_range' value in the 'text_config' attribute of the configuration.
+        If the configuration has an 'initializer_range' attribute, the standard deviation is set to that value. Otherwise, it falls back to the 'initializer_range' value in the 'text_config' attribute of the
+configuration.
         
         If the cell has a 'class_embedding' attribute, it is initialized using a normal distribution with the calculated standard deviation.
         
-        If the cell is an instance of nn.Dense or nn.Conv2d, both the weight and bias are initialized using a normal distribution with the calculated standard deviation. If the cell has no bias, it remains unchanged.
+        If the cell is an instance of nn.Dense or nn.Conv2d, both the weight and bias are initialized using a normal distribution with the calculated standard deviation. If the cell has no bias, it remains
+unchanged.
         
-        If the cell is an instance of nn.Embedding, the weight tensor is initialized using a normal distribution with the calculated standard deviation. If a 'padding_idx' is specified, the corresponding weight value is set to 0.
+        If the cell is an instance of nn.Embedding, the weight tensor is initialized using a normal distribution with the calculated standard deviation. If a 'padding_idx' is specified, the corresponding
+weight value is set to 0.
         
         Note:
             - The weight initialization is done in-place and modifies the original cell.
@@ -240,7 +246,10 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
         - tie_weights(self): Ties the weights of the language model.
         - resize_token_embeddings(self, new_num_tokens: Optional[int] = None, pad_to_multiple_of=None) -> nn.Embedding: Resizes the token embeddings of the language model.
         - _merge_input_ids_with_image_features(self, image_features, inputs_embeds, input_ids, attention_mask, labels): Merges the input IDs with image features for multi-modal generation.
-        - construct(self, input_ids: mindspore.Tensor = None, pixel_values: mindspore.Tensor = None, attention_mask: Optional[mindspore.Tensor] = None, position_ids: Optional[mindspore.Tensor] = None, past_key_values: Optional[List[mindspore.Tensor]] = None, inputs_embeds: Optional[mindspore.Tensor] = None, vision_feature_layer: Optional[int] = None, vision_feature_select_strategy: Optional[str] = None, labels: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inputs.
+        - construct(self, input_ids: mindspore.Tensor = None, pixel_values: mindspore.Tensor = None, attention_mask: Optional[mindspore.Tensor] = None, position_ids: Optional[mindspore.Tensor] = None,
+past_key_values: Optional[List[mindspore.Tensor]] = None, inputs_embeds: Optional[mindspore.Tensor] = None, vision_feature_layer: Optional[int] = None, vision_feature_select_strategy: Optional[str] = None,
+labels: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) ->
+Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inputs.
         - prepare_inputs_for_generation(self, input_ids, past_key_values=None, inputs_embeds=None, pixel_values=None, attention_mask=None, **kwargs): Prepares the inputs for text generation.
         - _reorder_cache(self, *args, **kwargs): Reorders the cache for text generation.
     

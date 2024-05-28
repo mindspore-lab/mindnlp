@@ -42,7 +42,8 @@ def _get_batch_size(input_ids: Optional[Tensor], inputs_embeds: Optional[Tensor]
 class ModulesToSaveWrapper(nn.Cell):
 
     r"""
-    This class represents a wrapper for saving and managing modules in a neural network. It provides functionality to save and switch between different modules, known as adapters, while also maintaining the original module for reference. The class includes methods for enabling and disabling adapters, setting the active adapter, updating the saved modules, and constructing the model with the appropriate adapter.
+    This class represents a wrapper for saving and managing modules in a neural network. It provides functionality to save and switch between different modules, known as adapters, while also maintaining the
+original module for reference. The class includes methods for enabling and disabling adapters, setting the active adapter, updating the saved modules, and constructing the model with the appropriate adapter.
     
     The class inherits from nn.Cell and includes the following methods:
     - __init__: Initializes the ModulesToSaveWrapper instance with the original cell to save and the initial adapter name.

@@ -140,7 +140,8 @@ def get_aligned_output_features_output_indices(
 
 class BackboneMixin:
 
-    r"""The `BackboneMixin` class represents a mixin for initializing backbone models used in computer vision and natural language processing tasks. It provides methods for initializing the backbone, setting output features and indices, accessing feature channels, and serializing the instance to a Python dictionary.
+    r"""The `BackboneMixin` class represents a mixin for initializing backbone models used in computer vision and natural language processing tasks. It provides methods for initializing the backbone, setting
+output features and indices, accessing feature channels, and serializing the instance to a Python dictionary.
     
     Attributes:
         stage_names: A list of stage names in the backbone model.

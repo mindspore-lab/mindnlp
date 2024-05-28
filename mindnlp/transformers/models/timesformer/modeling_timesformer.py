@@ -158,9 +158,14 @@ class TimesformerEmbeddings(nn.Cell):
         Raises:
             None.
         
-        This method takes in a tensor of pixel values and constructs the embeddings for the Timesformer model. The input tensor is expected to have dimensions (batch_size, num_frames, patch_height, patch_width). The method first computes patch embeddings using the `patch_embeddings` function. It then adds a special token (`cls_token`) to the embeddings. If the shape of the embeddings does not match the shape of the position embeddings, the method adjusts the position embeddings to match the shape of the embeddings. The method then adds the adjusted position embeddings to the embeddings. The embeddings are then passed through a dropout layer (`pos_drop`). 
+        This method takes in a tensor of pixel values and constructs the embeddings for the Timesformer model. The input tensor is expected to have dimensions (batch_size, num_frames, patch_height,
+patch_width). The method first computes patch embeddings using the `patch_embeddings` function. It then adds a special token (`cls_token`) to the embeddings. If the shape of the embeddings does not match the
+shape of the position embeddings, the method adjusts the position embeddings to match the shape of the embeddings. The method then adds the adjusted position embeddings to the embeddings. The embeddings are
+then passed through a dropout layer (`pos_drop`). 
         
-        If the attention type is not 'space_only', the method separates the `cls_token` from the embeddings, converts the embeddings to the desired shape, and adds time embeddings to the embeddings. The time embeddings are adjusted to match the number of frames in the input tensor. The adjusted time embeddings are added to the embeddings. The embeddings are then passed through a dropout layer (`time_drop`). Finally, the embeddings are reshaped and the `cls_token` is concatenated back to the embeddings.
+        If the attention type is not 'space_only', the method separates the `cls_token` from the embeddings, converts the embeddings to the desired shape, and adds time embeddings to the embeddings. The time
+embeddings are adjusted to match the number of frames in the input tensor. The adjusted time embeddings are added to the embeddings. The embeddings are then passed through a dropout layer (`time_drop`).
+Finally, the embeddings are reshaped and the `cls_token` is concatenated back to the embeddings.
         
         The method returns the constructed embeddings.
         """
@@ -430,7 +435,8 @@ class TimesformerSelfOutput(nn.Cell):
         Raises:
             None.
         
-        This method takes the hidden states tensor and applies the self output layer operations to it. It first applies a dense layer to transform the hidden states tensor. Then, it applies dropout to the transformed tensor to prevent overfitting. Finally, it returns the output tensor after the self output layer operations have been applied.
+        This method takes the hidden states tensor and applies the self output layer operations to it. It first applies a dense layer to transform the hidden states tensor. Then, it applies dropout to the
+transformed tensor to prevent overfitting. Finally, it returns the output tensor after the self output layer operations have been applied.
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
@@ -441,11 +447,13 @@ class TimesformerSelfOutput(nn.Cell):
 class TimeSformerAttention(nn.Cell):
 
     """
-    The TimeSformerAttention class represents the self-attention mechanism for the TimeSformer model. It inherits from the nn.Cell class and is responsible for performing self-attention and generating attention-based outputs.
+    The TimeSformerAttention class represents the self-attention mechanism for the TimeSformer model. It inherits from the nn.Cell class and is responsible for performing self-attention and generating
+attention-based outputs.
     
     The class contains the following methods:
     - __init__(self, config: TimesformerConfig): Initializes the TimeSformerAttention instance with the provided configuration.
-    - construct(self, hidden_states: mindspore.Tensor, output_attentions: bool = False) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]: Constructs the self-attention mechanism using the provided hidden states and optionally returns attention outputs.
+    - construct(self, hidden_states: mindspore.Tensor, output_attentions: bool = False) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]: Constructs the self-attention mechanism
+using the provided hidden states and optionally returns attention outputs.
     
     This class is an essential component of the TimeSformer model, providing the functionality for self-attention computations and output generation.
     """
@@ -465,7 +473,8 @@ class TimeSformerAttention(nn.Cell):
             None.
         
         This method initializes the TimeSformerAttention class by setting up the attention and output layers.
-        The 'self' parameter refers to the current instance of the class, while the 'config' parameter is an instance of the TimesformerConfig class that specifies the configuration settings for the TimeSformerAttention.
+        The 'self' parameter refers to the current instance of the class, while the 'config' parameter is an instance of the TimesformerConfig class that specifies the configuration settings for the
+TimeSformerAttention.
         
         The 'attention' attribute is assigned an instance of the TimesformerSelfAttention class, which handles the attention mechanism.
         The 'output' attribute is assigned an instance of the TimesformerSelfOutput class, which processes the attention output.
@@ -531,7 +540,8 @@ class TimesformerIntermediate(nn.Cell):
         
         Args:
             self: The instance of the TimesformerIntermediate class.
-            config (TimesformerConfig): An instance of the TimesformerConfig class containing configuration parameters for the TimesformerIntermediate class. It specifies the hidden size, intermediate size, and hidden dropout probability.
+            config (TimesformerConfig): An instance of the TimesformerConfig class containing configuration parameters for the TimesformerIntermediate class. It specifies the hidden size, intermediate size,
+and hidden dropout probability.
             
         Returns:
             None: This method does not return any value.
@@ -630,7 +640,8 @@ class TimesformerOutput(nn.Cell):
             mindspore.Tensor: The processed tensor after applying the dense and dropout operations.
         
         Raises:
-            None: This method does not explicitly raise any exceptions. However, it is important to note that the operations performed within this method may raise exceptions related to tensor manipulation in the mindspore library.
+            None: This method does not explicitly raise any exceptions. However, it is important to note that the operations performed within this method may raise exceptions related to tensor manipulation in
+the mindspore library.
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
@@ -642,7 +653,8 @@ class TimesformerOutput(nn.Cell):
 class TimesformerLayer(nn.Cell):
 
     """
-    This class represents a Timesformer layer, which is a component of the Timesformer model. The Timesformer layer includes various operations such as attention, intermediate, and output layers. It supports different attention types, including divided space-time, space only, and joint space-time.
+    This class represents a Timesformer layer, which is a component of the Timesformer model. The Timesformer layer includes various operations such as attention, intermediate, and output layers. It supports
+different attention types, including divided space-time, space only, and joint space-time.
     
     The TimesformerLayer class inherits from the nn.Cell class.
     
@@ -1010,9 +1022,12 @@ class TimesformerModel(TimesformerPreTrainedModel):
     """
     Represents a Timesformer model.
     
-    This class inherits from TimesformerPreTrainedModel and implements the Timesformer model architecture for processing video data. It includes methods for initializing the model, getting input embeddings, pruning heads, and constructing the model output.
+    This class inherits from TimesformerPreTrainedModel and implements the Timesformer model architecture for processing video data. It includes methods for initializing the model, getting input embeddings,
+pruning heads, and constructing the model output.
     
-    The __init__ method initializes the TimesformerModel with the provided configuration. The get_input_embeddings method returns the patch embeddings from the model's embeddings. The _prune_heads method prunes heads of the model based on the provided heads_to_prune dictionary. The construct method processes the input pixel values and returns the model output, with options to include attentions and hidden states in the returned dictionary.
+    The __init__ method initializes the TimesformerModel with the provided configuration. The get_input_embeddings method returns the patch embeddings from the model's embeddings. The _prune_heads method
+prunes heads of the model based on the provided heads_to_prune dictionary. The construct method processes the input pixel values and returns the model output, with options to include attentions and hidden
+states in the returned dictionary.
     
     The class also contains additional methods and attributes inherited from the base class TimesformerPreTrainedModel.
     

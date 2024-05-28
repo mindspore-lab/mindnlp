@@ -218,7 +218,8 @@ class BartphoTokenizer(PreTrainedTokenizer):
     def __setstate__(self, d):
 
         """
-        This method '__setstate__' is defined within the class 'BartphoTokenizer' and is used to restore the object's state from a dictionary representation. It takes two parameters, 'self' which refers to the instance of the class, and 'd' which is a dictionary representing the state to be restored.
+        This method '__setstate__' is defined within the class 'BartphoTokenizer' and is used to restore the object's state from a dictionary representation. It takes two parameters, 'self' which refers to the
+instance of the class, and 'd' which is a dictionary representing the state to be restored.
         
         Args:
             self (BartphoTokenizer): The instance of the BartphoTokenizer class.
@@ -228,7 +229,8 @@ class BartphoTokenizer(PreTrainedTokenizer):
             None: This method does not return any value explicitly.
         
         Raises:
-            No specific exceptions are documented to be raised by this method. However, potential exceptions that could arise during the execution of this method may include, but are not limited to, those related to the initialization of the 'SentencePieceProcessor' instance or its 'LoadFromSerializedProto' method.
+            No specific exceptions are documented to be raised by this method. However, potential exceptions that could arise during the execution of this method may include, but are not limited to, those
+related to the initialization of the 'SentencePieceProcessor' instance or its 'LoadFromSerializedProto' method.
         """
         self.__dict__ = d
 

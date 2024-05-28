@@ -235,7 +235,8 @@ class _DualAlgebraImpl(_MatrixImpl, _VectorImpl, _ScalarImpl):
             y2 (np.float64): The fourth scalar value to be divided.
         
         Returns:
-            Tuple[np.float64, np.float64]: A tuple containing two np.float64 values - the result of the division operation between 'x1' and 'x2', and the result of the mathematical operation performed on 'y1', 'x2', 'x1', and 'y2'.
+            Tuple[np.float64, np.float64]: A tuple containing two np.float64 values - the result of the division operation between 'x1' and 'x2', and the result of the mathematical operation performed on 'y1',
+'x2', 'x1', and 'y2'.
         
         Raises:
             None.

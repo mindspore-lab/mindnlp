@@ -296,11 +296,13 @@ class RobertaSelfAttention(nn.Cell):
             head_mask (Optional[mindspore.Tensor]): The head mask tensor. Default: None. Shape: (num_heads, hidden_size).
             encoder_hidden_states (Optional[mindspore.Tensor]): The hidden states of the encoder. Default: None. Shape: (batch_size, encoder_sequence_length, hidden_size).
             encoder_attention_mask (Optional[mindspore.Tensor]): The attention mask for the encoder. Default: None. Shape: (batch_size, encoder_sequence_length).
-            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): The past key and value tensors. Default: None. Shape: ((batch_size, num_heads, past_sequence_length, head_size), (batch_size, num_heads, past_sequence_length, head_size)).
+            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): The past key and value tensors. Default: None. Shape: ((batch_size, num_heads, past_sequence_length, head_size), (batch_size, num_heads,
+past_sequence_length, head_size)).
             output_attentions (Optional[bool]): Whether to output attention probabilities. Default: False.
         
         Returns:
-            Tuple[mindspore.Tensor]: A tuple containing the context layer tensor. Shape: (batch_size, sequence_length, hidden_size). Optionally, if `output_attentions` is True, the tuple also contains the attention probabilities tensor. Shape: (batch_size, num_heads, sequence_length, sequence_length).
+            Tuple[mindspore.Tensor]: A tuple containing the context layer tensor. Shape: (batch_size, sequence_length, hidden_size). Optionally, if `output_attentions` is True, the tuple also contains the
+attention probabilities tensor. Shape: (batch_size, num_heads, sequence_length, sequence_length).
         
         Raises:
             None
@@ -472,17 +474,24 @@ class RobertaAttention(nn.Cell):
     """
     This class represents the attention mechanism used in the Roberta model. It is a subclass of nn.Cell.
     
-    The RobertaAttention class implements the attention mechanism used in the Roberta model. It consists of a self-attention module and a self-output module. The self-attention module is responsible for computing the attention scores between the input hidden states and itself, while the self-output module applies a linear transformation to the attention output.
+    The RobertaAttention class implements the attention mechanism used in the Roberta model. It consists of a self-attention module and a self-output module. The self-attention module is responsible for
+computing the attention scores between the input hidden states and itself, while the self-output module applies a linear transformation to the attention output.
     
     The class provides the following methods:
     
-    - __init__(self, config, position_embedding_type=None): Initializes the RobertaAttention instance. It takes a configuration object and an optional position_embedding_type as arguments. The config object contains the model configuration, while the position_embedding_type specifies the type of position embedding to be used.
+    - __init__(self, config, position_embedding_type=None): Initializes the RobertaAttention instance. It takes a configuration object and an optional position_embedding_type as arguments. The config object
+contains the model configuration, while the position_embedding_type specifies the type of position embedding to be used.
     
-    - prune_heads(self, heads): Prunes the specified attention heads. It takes a list of heads to be pruned as input. This method updates the attention module by removing the pruned heads and adjusting the attention head size accordingly.
+    - prune_heads(self, heads): Prunes the specified attention heads. It takes a list of heads to be pruned as input. This method updates the attention module by removing the pruned heads and adjusting the
+attention head size accordingly.
     
-    - construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False): Constructs the attention output given the input hidden states and optional arguments. It computes the attention scores using the self-attention module and applies the self-output module to generate the final attention output. This method returns a tuple containing the attention output and optional additional outputs.
+    - construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False): Constructs the attention output
+given the input hidden states and optional arguments. It computes the attention scores using the self-attention module and applies the self-output module to generate the final attention output. This method
+returns a tuple containing the attention output and optional additional outputs.
     
-    Note: The 'hidden_states' argument is a tensor representing the input hidden states. The 'attention_mask' argument is an optional tensor specifying the attention mask. The 'head_mask' argument is an optional tensor indicating which attention heads to mask. The 'encoder_hidden_states' and 'encoder_attention_mask' arguments are optional tensors representing the hidden states and attention mask of the encoder. The 'past_key_value' argument is an optional tuple of past key-value tensors. The 'output_attentions' argument is a boolean flag indicating whether to output the attention scores.
+    Note: The 'hidden_states' argument is a tensor representing the input hidden states. The 'attention_mask' argument is an optional tensor specifying the attention mask. The 'head_mask' argument is an
+optional tensor indicating which attention heads to mask. The 'encoder_hidden_states' and 'encoder_attention_mask' arguments are optional tensors representing the hidden states and attention mask of the
+encoder. The 'past_key_value' argument is an optional tuple of past key-value tensors. The 'output_attentions' argument is a boolean flag indicating whether to output the attention scores.
     
     Please refer to the RobertaSelfAttention and RobertaSelfOutput classes for more information about the self-attention and self-output modules used in this class.
     """
@@ -741,7 +750,8 @@ class RobertaLayer(nn.Cell):
     
     Methods:
         __init__(self, config): Initializes the RobertaLayer with the given configuration.
-        construct(self, hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_value, output_attentions): Constructs the layer using the given input and arguments, applying self-attention and cross-attention if applicable.
+        construct(self, hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_value, output_attentions): Constructs the layer using the given input and arguments,
+applying self-attention and cross-attention if applicable.
         feed_forward_chunk(self, attention_output): Performs the feed-forward computation using the given attention output.
     """
     def __init__(self, config):
@@ -800,7 +810,8 @@ class RobertaLayer(nn.Cell):
         Returns:
             Tuple[mindspore.Tensor]: A tuple containing the following:
                 - layer_output (mindspore.Tensor): The output tensor of shape (batch_size, sequence_length, hidden_size) representing the layer output.
-                - present_key_value (mindspore.Tensor): The tensor of shape (batch_size, num_heads, sequence_length, hidden_size), containing the present key-value tensors. Only returned if self.is_decoder is True.
+                - present_key_value (mindspore.Tensor): The tensor of shape (batch_size, num_heads, sequence_length, hidden_size), containing the present key-value tensors. Only returned if self.is_decoder is
+True.
         
         Raises:
             ValueError: If `encoder_hidden_states` are passed, and `self` is not instantiated with cross-attention layers by setting `config.add_cross_attention=True`.
@@ -883,11 +894,14 @@ class RobertaLayer(nn.Cell):
 class RobertaEncoder(nn.Cell):
 
     """
-    This class represents a RobertaEncoder, which is a neural network encoder for the RoBERTa model. It inherits from the nn.Cell class and is responsible for encoding input sequences using a stack of multiple RobertaLayer modules.
+    This class represents a RobertaEncoder, which is a neural network encoder for the RoBERTa model. It inherits from the nn.Cell class and is responsible for encoding input sequences using a stack of multiple
+RobertaLayer modules.
     
-    The RobertaEncoder class contains an __init__ method to initialize the encoder with a given configuration, and a construct method to perform the encoding process. The construct method takes in various input tensors and optional parameters, and returns the encoded output and optional additional information such as hidden states, attentions, and cross-attentions.
+    The RobertaEncoder class contains an __init__ method to initialize the encoder with a given configuration, and a construct method to perform the encoding process. The construct method takes in various
+input tensors and optional parameters, and returns the encoded output and optional additional information such as hidden states, attentions, and cross-attentions.
     
-    The encoder utilizes a stack of RobertaLayer modules, where each layer applies a series of transformations to the input hidden states using self-attention and optionally cross-attention mechanisms. The construct method iterates through the layers, applying the transformations and updating the hidden states accordingly.
+    The encoder utilizes a stack of RobertaLayer modules, where each layer applies a series of transformations to the input hidden states using self-attention and optionally cross-attention mechanisms. The
+construct method iterates through the layers, applying the transformations and updating the hidden states accordingly.
     
     Additionally, the encoder supports gradient checkpointing and caching of past key values for efficient training and inference.
     
@@ -935,10 +949,12 @@ class RobertaEncoder(nn.Cell):
         Args:
             self: The object instance.
             hidden_states (mindspore.Tensor): The input hidden states of the encoder layer. Shape: (batch_size, sequence_length, hidden_size).
-            attention_mask (Optional[mindspore.Tensor]): The attention mask tensor. If provided, should be of shape (batch_size, sequence_length), with 0s indicating tokens to be masked and 1s indicating tokens to be attended to.
+            attention_mask (Optional[mindspore.Tensor]): The attention mask tensor. If provided, should be of shape (batch_size, sequence_length), with 0s indicating tokens to be masked and 1s indicating
+tokens to be attended to.
             head_mask (Optional[mindspore.Tensor]): The head mask tensor. If provided, should be of shape (num_layers, num_heads), with 0s indicating heads to be masked and 1s indicating heads to be used.
             encoder_hidden_states (Optional[mindspore.Tensor]): The hidden states of the encoder layer. Shape: (batch_size, sequence_length, hidden_size).
-            encoder_attention_mask (Optional[mindspore.Tensor]): The attention mask tensor for encoder layer. If provided, should be of shape (batch_size, sequence_length), with 0s indicating tokens to be masked and 1s indicating tokens to be attended to.
+            encoder_attention_mask (Optional[mindspore.Tensor]): The attention mask tensor for encoder layer. If provided, should be of shape (batch_size, sequence_length), with 0s indicating tokens to be
+masked and 1s indicating tokens to be attended to.
             past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]]): The past key values. If provided, should be of shape (num_layers, 2, batch_size, num_heads, sequence_length, hidden_size // num_heads).
             use_cache (Optional[bool]): Whether to use cache. If True, the cache will be used and updated. If False, the cache will be ignored. Default: None.
             output_attentions (Optional[bool]): Whether to output attentions. If True, attentions will be output. Default: False.
@@ -946,12 +962,17 @@ class RobertaEncoder(nn.Cell):
             return_dict (Optional[bool]): Whether to return a dictionary as output. If True, a dictionary containing the output tensors will be returned. If False, a tuple will be returned. Default: True.
         
         Returns:
-            Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]: The output of the encoder layer. If return_dict is True, a dictionary containing the output tensors will be returned. If return_dict is False, a tuple of tensors will be returned. The output tensors include:
+            Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]: The output of the encoder layer. If return_dict is True, a dictionary containing the output tensors will be returned. If
+return_dict is False, a tuple of tensors will be returned. The output tensors include:
             - last_hidden_state (mindspore.Tensor): The last hidden state of the encoder layer. Shape: (batch_size, sequence_length, hidden_size).
-            - past_key_values (Tuple[Tuple[mindspore.Tensor]]): The updated past key values. If use_cache is True, the key values for each layer will be returned. Shape: (num_layers, 2, batch_size, num_heads, sequence_length, hidden_size // num_heads).
-            - hidden_states (Tuple[mindspore.Tensor]): The hidden states of the encoder layer. If output_hidden_states is True, all hidden states for each layer will be returned. Shape: (num_layers, batch_size, sequence_length, hidden_size).
-            - attentions (Tuple[mindspore.Tensor]): The self-attention weights of the encoder layer. If output_attentions is True, all self-attention weights for each layer will be returned. Shape: (num_layers, batch_size, num_heads, sequence_length, sequence_length).
-            - cross_attentions (Tuple[mindspore.Tensor]): The cross-attention weights of the encoder layer. If output_attentions is True and add_cross_attention is True, all cross-attention weights for each layer will be returned. Shape: (num_layers, batch_size, num_heads, sequence_length, encoder_sequence_length).
+            - past_key_values (Tuple[Tuple[mindspore.Tensor]]): The updated past key values. If use_cache is True, the key values for each layer will be returned. Shape: (num_layers, 2, batch_size, num_heads,
+sequence_length, hidden_size // num_heads).
+            - hidden_states (Tuple[mindspore.Tensor]): The hidden states of the encoder layer. If output_hidden_states is True, all hidden states for each layer will be returned. Shape: (num_layers,
+batch_size, sequence_length, hidden_size).
+            - attentions (Tuple[mindspore.Tensor]): The self-attention weights of the encoder layer. If output_attentions is True, all self-attention weights for each layer will be returned. Shape:
+(num_layers, batch_size, num_heads, sequence_length, sequence_length).
+            - cross_attentions (Tuple[mindspore.Tensor]): The cross-attention weights of the encoder layer. If output_attentions is True and add_cross_attention is True, all cross-attention weights for each
+layer will be returned. Shape: (num_layers, batch_size, num_heads, sequence_length, encoder_sequence_length).
         
         Raises:
             None.
@@ -1357,7 +1378,8 @@ class RobertaForCausalLM(RobertaPreTrainedModel):
             Retrieve the output embeddings of the model.
         set_output_embeddings(self, new_embeddings)
             Set new output embeddings for the model.
-        construct(self, input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, encoder_hidden_states, encoder_attention_mask, labels, past_key_values, use_cache, output_attentions, output_hidden_states, return_dict)
+        construct(self, input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, encoder_hidden_states, encoder_attention_mask, labels, past_key_values, use_cache, output_attentions,
+output_hidden_states, return_dict)
             Perform the forward pass of the model for causal language modeling.
         prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, **model_kwargs)
             Prepare the inputs for generation by removing the prefix and adjusting the attention mask.
@@ -1617,15 +1639,19 @@ class RobertaForCausalLM(RobertaPreTrainedModel):
 class RobertaForMaskedLM(RobertaPreTrainedModel):
 
     """
-    `RobertaForMaskedLM` is a Python class that represents a RoBERTa model for masked language modeling tasks. This class inherits from `RobertaPreTrainedModel` and provides methods for initializing the model, getting and setting output embeddings, and constructing the model for masked language modeling tasks. It also includes a detailed `construct` method for processing input data and computing the masked language modeling loss.
+    `RobertaForMaskedLM` is a Python class that represents a RoBERTa model for masked language modeling tasks. This class inherits from `RobertaPreTrainedModel` and provides methods for initializing the model,
+getting and setting output embeddings, and constructing the model for masked language modeling tasks. It also includes a detailed `construct` method for processing input data and computing the masked language
+modeling loss.
     
     The class includes the following methods:
     - `__init__(self, config)`: Initializes the `RobertaForMaskedLM` instance.
     - `get_output_embeddings(self)`: Returns the output embeddings of the model.
     - `set_output_embeddings(self, new_embeddings)`: Sets the output embeddings of the model to the specified new embeddings.
-    - `construct(self, input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, encoder_hidden_states, encoder_attention_mask, labels, output_attentions, output_hidden_states, return_dict)`: Constructs the model for masked language modeling tasks and computes the masked language modeling loss.
+    - `construct(self, input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, encoder_hidden_states, encoder_attention_mask, labels, output_attentions, output_hidden_states,
+return_dict)`: Constructs the model for masked language modeling tasks and computes the masked language modeling loss.
     
-    The `construct` method supports various input parameters such as input IDs, attention mask, token type IDs, position IDs, head mask, input embeddings, encoder hidden states, encoder attention mask, labels, output attentions, output hidden states, and return dictionary. It also includes detailed information about the expected shape and type of the input data, as well as the optional arguments.
+    The `construct` method supports various input parameters such as input IDs, attention mask, token type IDs, position IDs, head mask, input embeddings, encoder hidden states, encoder attention mask, labels,
+output attentions, output hidden states, and return dictionary. It also includes detailed information about the expected shape and type of the input data, as well as the optional arguments.
     
     Additionally, the class includes warnings and error handling for specific configurations, ensuring the proper usage of the `RobertaForMaskedLM` model for bi-directional self-attention.
     
@@ -1847,11 +1873,15 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
     
     The class's code includes an initialization method (__init__) and a construct method. 
     
-    The __init__ method initializes the RobertaForSequenceClassification object by taking a config argument. It calls the super() method to initialize the parent class (RobertaPreTrainedModel) with the provided config. It also initializes other attributes such as num_labels and classifier.
+    The __init__ method initializes the RobertaForSequenceClassification object by taking a config argument. It calls the super() method to initialize the parent class (RobertaPreTrainedModel) with the
+provided config. It also initializes other attributes such as num_labels and classifier.
     
-    The construct method takes several input arguments and returns either a tuple of tensors or a SequenceClassifierOutput object. It performs the main computation of the model. It first calls the roberta() method of the parent class to obtain the sequence output. Then, it passes the sequence output to the classifier to obtain the logits. If labels are provided, it calculates the loss based on the problem type specified in the config. The loss and other outputs are returned as per the value of the return_dict parameter.
+    The construct method takes several input arguments and returns either a tuple of tensors or a SequenceClassifierOutput object. It performs the main computation of the model. It first calls the roberta()
+method of the parent class to obtain the sequence output. Then, it passes the sequence output to the classifier to obtain the logits. If labels are provided, it calculates the loss based on the problem type
+specified in the config. The loss and other outputs are returned as per the value of the return_dict parameter.
     
-    It is important to note that this class is specifically designed for sequence classification tasks, where the labels can be used to compute either a regression loss (Mean-Square loss) or a classification loss (Cross-Entropy). The problem type is determined automatically based on the number of labels and the dtype of the labels tensor.
+    It is important to note that this class is specifically designed for sequence classification tasks, where the labels can be used to compute either a regression loss (Mean-Square loss) or a classification
+loss (Cross-Entropy). The problem type is determined automatically based on the number of labels and the dtype of the labels tensor.
     
     For more details on the usage and functionality of this class, please refer to the RobertaForSequenceClassification documentation.
     """
@@ -2111,7 +2141,8 @@ class RobertaForTokenClassification(RobertaPreTrainedModel):
     
     Methods:
     - __init__(self, config): Initializes the RobertaForTokenClassification instance with the given configuration.
-    - construct(self, input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Constructs the token classification model and returns the output.
+    - construct(self, input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Constructs the token classification model
+and returns the output.
     
     Attributes:
     - return_dict (bool): Indicates whether to return a dictionary as output.
@@ -2291,7 +2322,8 @@ class RobertaForQuestionAnswering(RobertaPreTrainedModel):
     
     Methods:
         __init__(config): Initializes the RobertaForQuestionAnswering model with the provided configuration.
-        construct(input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, start_positions, end_positions, output_attentions, output_hidden_states, return_dict) -> Union[Tuple[mindspore.Tensor], QuestionAnsweringModelOutput]: 
+        construct(input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, start_positions, end_positions, output_attentions, output_hidden_states, return_dict) ->
+Union[Tuple[mindspore.Tensor], QuestionAnsweringModelOutput]: 
             Constructs the model using the input tensors and returns the output logits for start and end positions.
             Optionally computes the total loss if start and end positions are provided.
     

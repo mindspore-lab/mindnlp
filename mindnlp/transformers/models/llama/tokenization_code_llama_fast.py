@@ -315,7 +315,8 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
         Raises:
             None.
         
-        This method retrieves the ID of the middle token in the CodeLlamaTokenizerFast instance. If the middle token is not set or is set to None, None is returned. Otherwise, the method calls the 'convert_tokens_to_ids' function to convert the middle token into its corresponding ID and returns the ID value.
+        This method retrieves the ID of the middle token in the CodeLlamaTokenizerFast instance. If the middle token is not set or is set to None, None is returned. Otherwise, the method calls the
+'convert_tokens_to_ids' function to convert the middle token into its corresponding ID and returns the ID value.
         """
         if self._middle_token is None:
             return None
@@ -355,7 +356,8 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
             - None: This method does not raise any exceptions.
         
         Description:
-        This method retrieves the suffix ID associated with the `_suffix_token` attribute. If the `_suffix_token` is `None`, indicating the absence of a suffix token, the method returns `None`. Otherwise, it calls the `convert_tokens_to_ids` method to convert the `_suffix_token` to its corresponding ID and returns the result.
+        This method retrieves the suffix ID associated with the `_suffix_token` attribute. If the `_suffix_token` is `None`, indicating the absence of a suffix token, the method returns `None`. Otherwise, it
+calls the `convert_tokens_to_ids` method to convert the `_suffix_token` to its corresponding ID and returns the result.
         
         Note:
         - The `_suffix_token` attribute should be set before calling this method to ensure accurate results.
@@ -381,7 +383,8 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
         Raises:
             None.
         
-        This method retrieves the ID representation of the EOT token. If the EOT token is not set (None), it returns None. Otherwise, it uses the 'convert_tokens_to_ids' method to convert the EOT token to its corresponding ID representation and returns it.
+        This method retrieves the ID representation of the EOT token. If the EOT token is not set (None), it returns None. Otherwise, it uses the 'convert_tokens_to_ids' method to convert the EOT token to its
+corresponding ID representation and returns it.
         """
         if self._eot_token is None:
             return None

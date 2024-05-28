@@ -957,8 +957,10 @@ class Transformer(nn.Cell):
         r"""
         Args:
             self (object): The instance of the Transformer class.
-            src (tensor): The input tensor representing the source sequence. If the data is batched, the shape should be (batch_size, sequence_length, feature_number). If not batched, the shape should be (sequence_length, feature_number).
-            tgt (tensor): The input tensor representing the target sequence. If the data is batched, the shape should be (batch_size, sequence_length, feature_number). If not batched, the shape should be (sequence_length, feature_number).
+            src (tensor): The input tensor representing the source sequence. If the data is batched, the shape should be (batch_size, sequence_length, feature_number). If not batched, the shape should be
+(sequence_length, feature_number).
+            tgt (tensor): The input tensor representing the target sequence. If the data is batched, the shape should be (batch_size, sequence_length, feature_number). If not batched, the shape should be
+(sequence_length, feature_number).
             src_mask (tensor, optional): The mask tensor for the src input. It should have the same shape as src. Defaults to None.
             tgt_mask (tensor, optional): The mask tensor for the tgt input. It should have the same shape as tgt. Defaults to None.
             memory_mask (tensor, optional): The mask tensor for the memory. Defaults to None.

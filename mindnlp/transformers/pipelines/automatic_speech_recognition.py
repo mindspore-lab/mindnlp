@@ -143,7 +143,8 @@ def _find_longest_common_sequence(sequences, tokenizer):
     Finds the longest common sequence among multiple sequences of tokens.
     
     Args:
-        sequences (List[Tuple[np.ndarray, Any]]): A list of tuples, where each tuple contains a sequence of tokens as a numpy array and any additional information associated with the sequence. The sequences are expected to be preprocessed and tokenized.
+        sequences (List[Tuple[np.ndarray, Any]]): A list of tuples, where each tuple contains a sequence of tokens as a numpy array and any additional information associated with the sequence. The sequences
+are expected to be preprocessed and tokenized.
         tokenizer (Any): The tokenizer object used for tokenization. It should have an attribute 'all_special_ids' which contains a list of special token IDs to be excluded from the sequences.
     
     Returns:
@@ -153,7 +154,8 @@ def _find_longest_common_sequence(sequences, tokenizer):
         None
     
     Note:
-        The function uses a sliding window approach to find the longest common sequence. The sequences are compared token by token, excluding any special tokens defined by the tokenizer. The function returns the longest common sequence found among all input sequences.
+        The function uses a sliding window approach to find the longest common sequence. The sequences are compared token by token, excluding any special tokens defined by the tokenizer. The function returns
+the longest common sequence found among all input sequences.
     
     """
     # TODO  Use a faster algorithm this can probably be done in O(n)
@@ -452,9 +454,11 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
         
         Args:
             self (object): The instance of the AutomaticSpeechRecognitionPipeline class.
-            inputs (str, bytes, dict, or np.ndarray): The input data, which can be in the form of a file path (str), binary data (bytes), a dictionary containing audio data and its properties, or a numpy array representing the audio.
+            inputs (str, bytes, dict, or np.ndarray): The input data, which can be in the form of a file path (str), binary data (bytes), a dictionary containing audio data and its properties, or a numpy array
+representing the audio.
             chunk_length_s (float): The length of chunks into which the audio data should be divided for processing, in seconds. Defaults to 0.
-            stride_length_s (float or list): The length of stride for chunking the audio data, in seconds. If a single value is provided, it is applied to both the left and right strides. If a list is provided, the first value represents the left stride and the second value represents the right stride. If not provided, it defaults to chunk_length_s / 6.
+            stride_length_s (float or list): The length of stride for chunking the audio data, in seconds. If a single value is provided, it is applied to both the left and right strides. If a list is
+provided, the first value represents the left stride and the second value represents the right stride. If not provided, it defaults to chunk_length_s / 6.
         
         Returns:
             None. This method yields processed chunks of the input audio data and does not return a single value.

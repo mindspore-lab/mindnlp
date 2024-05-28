@@ -265,9 +265,11 @@ class Transformer(nn.Cell):
     """
     Represents a Transformer model for sequence-to-sequence tasks.
     
-    This class inherits from the nn.Cell class and implements the Transformer architecture, which consists of multiple Transformer layers. Each layer module applies self-attention mechanism and position-wise feed-forward networks to input hidden states.
+    This class inherits from the nn.Cell class and implements the Transformer architecture, which consists of multiple Transformer layers. Each layer module applies self-attention mechanism and position-wise
+feed-forward networks to input hidden states.
     
-    The Transformer class initializes with a configuration object and creates a list of Transformer layers based on the specified number of hidden layers in the configuration. The construct method applies the series of Transformer layers to the input hidden states, resulting in transformed hidden states.
+    The Transformer class initializes with a configuration object and creates a list of Transformer layers based on the specified number of hidden layers in the configuration. The construct method applies the
+series of Transformer layers to the input hidden states, resulting in transformed hidden states.
     
     This class provides an efficient and flexible implementation of the Transformer model for various natural language processing tasks, such as machine translation and language modeling.
     """
@@ -318,7 +320,8 @@ class GLU(nn.Cell):
     """ 
     This class represents a Gated Linear Unit (GLU) module, which is used in neural networks for processing sequential data. It is implemented as a subclass of the nn.Cell class.
     
-    GLU applies a gating mechanism to the input data, allowing it to selectively pass through different branches of the network. It consists of several layers, including linear projections, layer normalization, activation functions, and dense transformations.
+    GLU applies a gating mechanism to the input data, allowing it to selectively pass through different branches of the network. It consists of several layers, including linear projections, layer
+normalization, activation functions, and dense transformations.
     
     Attributes:
         linear_proj (nn.Dense): A linear projection layer that maps the input features to the hidden size.

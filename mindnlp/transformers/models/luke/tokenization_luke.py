@@ -958,7 +958,8 @@ class LukeTokenizer(PreTrainedTokenizer):
         Args:
             self (LukeTokenizer): The LukeTokenizer instance.
             batch_text_or_text_pairs (Union[List[TextInput], List[TextInputPair]]): A list of text inputs or text pairs to be encoded.
-            batch_entity_spans_or_entity_spans_pairs (Optional[Union[List[EntitySpanInput], List[Tuple[EntitySpanInput, EntitySpanInput]]]]): A list of entity span inputs or entity span input pairs to be encoded. Defaults to None.
+            batch_entity_spans_or_entity_spans_pairs (Optional[Union[List[EntitySpanInput], List[Tuple[EntitySpanInput, EntitySpanInput]]]]): A list of entity span inputs or entity span input pairs to be
+encoded. Defaults to None.
             batch_entities_or_entities_pairs (Optional[Union[List[EntityInput], List[Tuple[EntityInput, EntityInput]]]]): A list of entity inputs or entity input pairs to be encoded. Defaults to None.
             add_special_tokens (bool): Whether to add special tokens to the encoded inputs. Defaults to True.
             padding_strategy (PaddingStrategy): The strategy to use for padding. Defaults to PaddingStrategy.DO_NOT_PAD.
@@ -1074,7 +1075,8 @@ class LukeTokenizer(PreTrainedTokenizer):
         Args:
             self: The instance of the class.
             entities (Optional[EntityInput]): A list of entity names. If specified, it should be given as a list of entity names.
-            entity_spans (Optional[EntitySpanInput]): A list of tuples containing the start and end character indices. If specified, it should be given as a list of tuples containing the start and end character indices.
+            entity_spans (Optional[EntitySpanInput]): A list of tuples containing the start and end character indices. If specified, it should be given as a list of tuples containing the start and end
+character indices.
         
         Returns:
             None: This method does not return any value.

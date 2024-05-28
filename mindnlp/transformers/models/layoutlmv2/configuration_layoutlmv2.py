@@ -223,7 +223,8 @@ class LayoutLMv2Config(PretrainedConfig):
     def get_default_detectron2_config(cls):
 
         '''
-        This method returns a dictionary containing the default configuration for the Detectron2 model. The configuration includes various settings related to the model's architecture, backbone, region of interest (ROI) heads, and other parameters.
+        This method returns a dictionary containing the default configuration for the Detectron2 model. The configuration includes various settings related to the model's architecture, backbone, region of
+interest (ROI) heads, and other parameters.
         
         Args:
             cls (class): The class object.

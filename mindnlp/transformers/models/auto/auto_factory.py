@@ -163,11 +163,13 @@ class _BaseAutoModelClass:
         Example:
             >>> _BaseAutoModelClass.from_pretrained("bert-base-uncased")
         
-        In the provided code snippet, the method `from_pretrained` is a class method of the `_BaseAutoModelClass` class. It is used to load a pretrained model by either specifying its name or providing the path to the model file. The method performs various operations to correctly configure and initialize the model.
+        In the provided code snippet, the method `from_pretrained` is a class method of the `_BaseAutoModelClass` class. It is used to load a pretrained model by either specifying its name or providing the
+path to the model file. The method performs various operations to correctly configure and initialize the model.
         
         The `cls` parameter is a reference to the class object itself. It is automatically passed when calling the method on the class.
         
-        The `pretrained_model_name_or_path` parameter is a string that represents the name or path of the pretrained model. It can be either a local file path or a remote repository URL. This parameter is required to specify the pretrained model to load.
+        The `pretrained_model_name_or_path` parameter is a string that represents the name or path of the pretrained model. It can be either a local file path or a remote repository URL. This parameter is
+required to specify the pretrained model to load.
         
         The method does not return any value, as indicated by the `None` return type.
         
@@ -182,11 +184,13 @@ class _BaseAutoModelClass:
         7. If the `torch_dtype` parameter is set to `'auto'` in `kwargs_orig`, it is added to `kwargs` with the same value.
         8. If the `quantization_config` parameter is not `None` in `kwargs_orig`, it is added to `kwargs` with the same value.
         9. The `token`, `mirror`, and `revision` parameters are added to `kwargs` with their respective values obtained earlier.
-        10. If the type of `config` is one of the keys in `_model_mapping` of the class, the corresponding model class is obtained using `_get_model_class` function with `config` and `_model_mapping` as arguments.
+        10. If the type of `config` is one of the keys in `_model_mapping` of the class, the corresponding model class is obtained using `_get_model_class` function with `config` and `_model_mapping` as
+arguments.
         11. The `from_pretrained` method of the obtained `model_class` is called with `pretrained_model_name_or_path`, `model_args`, `config`, and the updated `kwargs` as arguments.
         12. If the type of `config` is not recognized, a `ValueError` is raised with an informative error message.
         
-        Note that this docstring assumes the presence of additional helper functions and variables that are not included in the provided code snippet. It is recommended to refer to the complete implementation for a comprehensive understanding.
+        Note that this docstring assumes the presence of additional helper functions and variables that are not included in the provided code snippet. It is recommended to refer to the complete implementation
+for a comprehensive understanding.
         """
         config = kwargs.pop("config", None)
         _ = kwargs.get('from_pt', True)

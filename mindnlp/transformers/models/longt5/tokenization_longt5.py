@@ -214,7 +214,8 @@ class LongT5Tokenizer(PreTrainedTokenizer):
             None: This method does not return any value; it modifies the 'max_model_length' parameter in-place.
         
         Raises:
-            FutureWarning: This method may raise a FutureWarning if the tokenizer was incorrectly instantiated with a model max length that needs correction. The warning provides guidance on how to avoid the warning and properly handle the model max length.
+            FutureWarning: This method may raise a FutureWarning if the tokenizer was incorrectly instantiated with a model max length that needs correction. The warning provides guidance on how to avoid the
+warning and properly handle the model max length.
             Warning: This method may raise a generic Warning if the 'init_max_model_length' is not None and does not match the 'max_model_length', indicating a potential issue with the maximum model length.
         
         """
@@ -271,7 +272,8 @@ class LongT5Tokenizer(PreTrainedTokenizer):
             None.
         
         Note:
-            The method combines the default vocabulary dictionary generated from the `vocab_size` parameter and any additional tokens that have been added using the `add_tokens` method. The additional tokens are included in the vocabulary dictionary with their respective indices.
+            The method combines the default vocabulary dictionary generated from the `vocab_size` parameter and any additional tokens that have been added using the `add_tokens` method. The additional tokens
+are included in the vocabulary dictionary with their respective indices.
         
         Example:
             >>> tokenizer = LongT5Tokenizer()
@@ -349,7 +351,8 @@ class LongT5Tokenizer(PreTrainedTokenizer):
         Raises:
             None
         
-        This method retrieves the sentinel tokens from the input sequence using the 'get_sentinel_tokens' method and converts each token into its corresponding token ID using the 'convert_tokens_to_ids' method. The resulting token IDs are then returned as a list.
+        This method retrieves the sentinel tokens from the input sequence using the 'get_sentinel_tokens' method and converts each token into its corresponding token ID using the 'convert_tokens_to_ids'
+method. The resulting token IDs are then returned as a list.
         
         Note:
         - The 'get_sentinel_tokens' method should be implemented in the 'LongT5Tokenizer' class.
@@ -447,7 +450,8 @@ class LongT5Tokenizer(PreTrainedTokenizer):
             None: This method does not return any value explicitly.
         
         Raises:
-            No specific exceptions are raised by this method under normal operation. However, potential exceptions could be raised during the execution of the method if there are issues related to setting the state attributes or loading the vocab file using SentencePieceProcessor. It is recommended to handle exceptions related to attribute assignment or file loading gracefully in the surrounding code.
+            No specific exceptions are raised by this method under normal operation. However, potential exceptions could be raised during the execution of the method if there are issues related to setting the
+state attributes or loading the vocab file using SentencePieceProcessor. It is recommended to handle exceptions related to attribute assignment or file loading gracefully in the surrounding code.
         """
         self.__dict__ = d
 

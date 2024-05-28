@@ -279,7 +279,8 @@ class AutoFeatureExtractor:
             None. This method does not return any value.
         
         Raises:
-            EnvironmentError: This exception is raised with the message 'AutoFeatureExtractor is designed to be instantiated using the `AutoFeatureExtractor.from_pretrained(pretrained_model_name_or_path)` method.' 
+            EnvironmentError: This exception is raised with the message 'AutoFeatureExtractor is designed to be instantiated using the `AutoFeatureExtractor.from_pretrained(pretrained_model_name_or_path)`
+method.' 
         """
         raise EnvironmentError(
             "AutoFeatureExtractor is designed to be instantiated "

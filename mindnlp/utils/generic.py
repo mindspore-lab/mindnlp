@@ -228,7 +228,8 @@ class ModelOutput(OrderedDict):
             None. This method does not return any value.
         
         Raises:
-            RuntimeError: This exception is raised if the method 'setdefault' is called on a ModelOutput instance. The message in the exception states that the 'setdefault' method cannot be used on a ModelOutput instance.
+            RuntimeError: This exception is raised if the method 'setdefault' is called on a ModelOutput instance. The message in the exception states that the 'setdefault' method cannot be used on a
+ModelOutput instance.
         
         Note:
             The 'setdefault' method is not supported for ModelOutput instances as it can only be used on dictionary objects.
@@ -279,7 +280,8 @@ class ModelOutput(OrderedDict):
         
         Args:
             self (ModelOutput): The instance of the ModelOutput class.
-            k (str or int): The key or index for accessing the element. If k is a string, it is used as a key to retrieve the corresponding value. If k is an integer, it is used as an index to retrieve the element. 
+            k (str or int): The key or index for accessing the element. If k is a string, it is used as a key to retrieve the corresponding value. If k is an integer, it is used as an index to retrieve the
+element. 
         
         Returns:
             None: This method does not return any value directly. The retrieved value is returned based on the input key or index.
@@ -308,7 +310,8 @@ class ModelOutput(OrderedDict):
             None. This method does not return any value.
         
         Raises:
-            No specific exceptions are raised by this method. However, if the attribute name is not in the keys of the object, it will be added as a new attribute. If the value is None, the attribute will be set to None.
+            No specific exceptions are raised by this method. However, if the attribute name is not in the keys of the object, it will be added as a new attribute. If the value is None, the attribute will be
+set to None.
         """
         if name in self.keys() and value is not None:
             # Don't call self.__setitem__ to avoid recursion errors
@@ -533,7 +536,8 @@ class ContextManagers:
             None. This method does not return any value explicitly, it performs context management operations within the class.
             
         Raises:
-            This method may raise exceptions if the context managers encountered during the iteration in the for loop raise any exceptions. Ensure proper error handling is in place to catch and handle any exceptions that may occur during the context management operations.
+            This method may raise exceptions if the context managers encountered during the iteration in the for loop raise any exceptions. Ensure proper error handling is in place to catch and handle any
+exceptions that may occur during the context management operations.
         """
         for context_manager in self.context_managers:
             self.stack.enter_context(context_manager)

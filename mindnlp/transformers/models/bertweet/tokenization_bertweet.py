@@ -320,7 +320,8 @@ class BertweetTokenizer(PreTrainedTokenizer):
             token (str): The input token to be processed by the BPE algorithm.
         
         Returns:
-            str or None: The processed token after applying the BPE algorithm. If the input token is not found in the cache and the BPE algorithm is applied, the processed token is returned. If the input token is found in the cache, the corresponding processed token is returned from the cache. If the input token is not found in the cache and the BPE algorithm is not applied, None is returned.
+            str or None: The processed token after applying the BPE algorithm. If the input token is not found in the cache and the BPE algorithm is applied, the processed token is returned. If the input token
+is found in the cache, the corresponding processed token is returned from the cache. If the input token is not found in the cache and the BPE algorithm is not applied, None is returned.
         
         Raises:
             None: This method does not raise any specific exceptions.

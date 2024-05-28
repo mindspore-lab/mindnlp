@@ -114,7 +114,8 @@ def masked_mean(mask: mindspore.Tensor, value: mindspore.Tensor, dim: int, eps: 
         ValueError: If `eps` is not a positive float value.
     
     Note:
-        The masked mean is calculated by multiplying the `mask` tensor with the `value` tensor, summing the masked values along the specified dimension, and dividing it by the sum of the mask values along the same dimension plus a small epsilon value.
+        The masked mean is calculated by multiplying the `mask` tensor with the `value` tensor, summing the masked values along the specified dimension, and dividing it by the sum of the mask values along the
+same dimension plus a small epsilon value.
     
     Example:
         mask = mindspore.Tensor([[1, 1, 1], [0, 1, 0]])

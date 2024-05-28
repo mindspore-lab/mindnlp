@@ -291,8 +291,10 @@ class SingleLSTMLayer_GPU(SingleLSTMLayerBase):
         
         Args:
             self: The instance of the SingleLSTMLayer_GPU class.
-            weights: A tuple containing weights for the LSTM layer. The weights are expected to be in the format (weight_i, weight_f, weight_c, weight_o) if bidirectional is True, and (weight_i, weight_f) if bidirectional is False.
-            biases: A tuple containing biases for the LSTM layer. The biases are expected to be in the format (bias_i, bias_f, bias_c, bias_o) if bidirectional is True, and (bias_i, bias_f) if bidirectional is False.
+            weights: A tuple containing weights for the LSTM layer. The weights are expected to be in the format (weight_i, weight_f, weight_c, weight_o) if bidirectional is True, and (weight_i, weight_f) if
+bidirectional is False.
+            biases: A tuple containing biases for the LSTM layer. The biases are expected to be in the format (bias_i, bias_f, bias_c, bias_o) if bidirectional is True, and (bias_i, bias_f) if bidirectional is
+False.
         
         Returns:
             None

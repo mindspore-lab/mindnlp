@@ -233,7 +233,8 @@ class FillMaskPipeline(Pipeline):
             
             top_k (int): The maximum number of top predictions to consider. Defaults to 5.
             
-            target_ids (Tensor, optional): The tensor containing the target token IDs. If provided, only predictions for these target token IDs will be considered. If not provided, all token IDs will be considered.
+            target_ids (Tensor, optional): The tensor containing the target token IDs. If provided, only predictions for these target token IDs will be considered. If not provided, all token IDs will be
+considered.
         
         Returns:
             None: This method does not return any value.
@@ -370,7 +371,8 @@ class FillMaskPipeline(Pipeline):
             tokenizer_kwargs (dict, optional): Additional keyword arguments for the tokenizer. Defaults to None.
         
         Returns:
-            tuple: A tuple containing preprocess_params, an empty dict, and postprocess_params. preprocess_params may contain 'tokenizer_kwargs' if provided, and postprocess_params may contain 'target_ids' and 'top_k' if the corresponding arguments are provided.
+            tuple: A tuple containing preprocess_params, an empty dict, and postprocess_params. preprocess_params may contain 'tokenizer_kwargs' if provided, and postprocess_params may contain 'target_ids' and
+'top_k' if the corresponding arguments are provided.
         
         Raises:
             PipelineException: Raised if the tokenizer does not define a `mask_token`.

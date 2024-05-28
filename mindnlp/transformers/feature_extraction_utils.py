@@ -157,7 +157,8 @@ class BatchFeature(UserDict):
         Raises:
             None.
         
-        This method is automatically called by the pickle module when unpickling a BatchFeature object. It sets the state of the object based on the provided 'state' dictionary. The 'data' key in the 'state' dictionary is used to set the 'data' attribute of the BatchFeature object.
+        This method is automatically called by the pickle module when unpickling a BatchFeature object. It sets the state of the object based on the provided 'state' dictionary. The 'data' key in the 'state'
+dictionary is used to set the 'data' attribute of the BatchFeature object.
         """
         if "data" in state:
             self.data = state["data"]
@@ -221,7 +222,8 @@ class BatchFeature(UserDict):
     def _get_is_as_tensor_fns(self, tensor_type: Optional[Union[str, TensorType]] = None):
 
         """
-        This method '_get_is_as_tensor_fns' in the class 'BatchFeature' is responsible for returning functions for checking if a given input is a tensor and converting values to tensors based on the specified tensor type.
+        This method '_get_is_as_tensor_fns' in the class 'BatchFeature' is responsible for returning functions for checking if a given input is a tensor and converting values to tensors based on the specified
+tensor type.
         
         Args:
             self: An instance of the class BatchFeature.

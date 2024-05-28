@@ -21,7 +21,9 @@ from mindnlp.modules.functional import normalize
 class top_k_gating(nn.Cell):
 
     """
-    This class represents a top-k gating mechanism for selecting a subset of experts based on input logits. The gating mechanism uses the top-k experts to make predictions and can be used for model ensembling or expert selection. The class inherits from nn.Cell and implements methods for initializing the mechanism, computing auxiliary loss, and constructing the top-k gating for input data. Additionally, the class provides a method for returning an extra representation string for the module.
+    This class represents a top-k gating mechanism for selecting a subset of experts based on input logits. The gating mechanism uses the top-k experts to make predictions and can be used for model ensembling
+or expert selection. The class inherits from nn.Cell and implements methods for initializing the mechanism, computing auxiliary loss, and constructing the top-k gating for input data. Additionally, the class
+provides a method for returning an extra representation string for the module.
     
     The top_k_gating class provides the following methods:
     

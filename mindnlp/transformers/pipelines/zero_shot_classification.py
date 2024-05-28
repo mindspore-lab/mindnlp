@@ -390,11 +390,13 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
         
         Args:
             self (object): The instance of the ZeroShotClassificationPipeline class.
-            model_outputs (list): A list of dictionaries containing the model outputs. Each dictionary must have the keys 'candidate_label', 'sequence', and 'logits'. The 'candidate_label' key represents the candidate label, 'sequence' key represents the sequence, and 'logits' key holds the logits values.
+            model_outputs (list): A list of dictionaries containing the model outputs. Each dictionary must have the keys 'candidate_label', 'sequence', and 'logits'. The 'candidate_label' key represents the
+candidate label, 'sequence' key represents the sequence, and 'logits' key holds the logits values.
             multi_label (bool): A flag indicating whether the classification is multi-label or not. If set to True, the method processes the outputs accordingly.
         
         Returns:
-            dict: A dictionary containing the processed information of the model outputs. It includes the 'sequence' key with the sequence value, 'labels' key with the list of candidate labels in descending order of their scores, and 'scores' key with the corresponding scores of the candidate labels.
+            dict: A dictionary containing the processed information of the model outputs. It includes the 'sequence' key with the sequence value, 'labels' key with the list of candidate labels in descending
+order of their scores, and 'scores' key with the corresponding scores of the candidate labels.
         
         Raises:
             IndexError: If the indices accessed during processing are out of bounds.

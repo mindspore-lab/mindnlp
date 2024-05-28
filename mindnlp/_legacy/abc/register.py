@@ -51,7 +51,8 @@ class Register():
     def __call__(self, name, *args, **kwargs):
 
         r"""
-        This method, named '__call__', is part of the 'Register' class and is used to retrieve a registered item from the memory dictionary based on the provided name and then call it with the given arguments and keyword arguments.
+        This method, named '__call__', is part of the 'Register' class and is used to retrieve a registered item from the memory dictionary based on the provided name and then call it with the given arguments
+and keyword arguments.
         
         Args:
             self (object): The instance of the 'Register' class.
@@ -61,7 +62,8 @@ class Register():
             None: This method returns None.
         
         Raises:
-            ValueError: If the provided 'name' is not registered in the memory dictionary, a ValueError is raised with a message indicating that the name is not registered and prompting the user to check the dataset list.
+            ValueError: If the provided 'name' is not registered in the memory dictionary, a ValueError is raised with a message indicating that the name is not registered and prompting the user to check the
+dataset list.
         """
         lname = name.lower()
         if lname not in self.mem_dict:

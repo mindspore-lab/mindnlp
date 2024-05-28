@@ -1850,7 +1850,8 @@ class ParallelMode(Enum):
     r"""
     Represents the different modes of parallel processing supported by the system.
     
-    This class defines an enumeration for the various modes of parallel processing that can be utilized by the system. It inherits from the Enum class, providing a structured way to define and work with parallel processing modes within the system.
+    This class defines an enumeration for the various modes of parallel processing that can be utilized by the system. It inherits from the Enum class, providing a structured way to define and work with
+parallel processing modes within the system.
     """
     NOT_PARALLEL = "not_parallel"
     NOT_DISTRIBUTED = "not_distributed"

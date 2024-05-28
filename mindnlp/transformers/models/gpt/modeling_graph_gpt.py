@@ -641,11 +641,14 @@ class GPTDoubleHeadsModel(GPTPreTrainedModel):
         Args:
             self (GPTDoubleHeadsModel): The instance of the GPTDoubleHeadsModel class.
             input_ids (Tensor, optional): The input tensor of shape ``(batch_size, sequence_length)``. It contains the token indices. Defaults to None.
-            attention_mask (Tensor, optional): The attention mask tensor of shape ``(batch_size, sequence_length)``. It is used to specify which tokens should be attended to and which should not. Defaults to None.
-            token_type_ids (Tensor, optional): The token type tensor of shape ``(batch_size, sequence_length)``. It is used to indicate the token types (e.g., sentence A and sentence B) in the input sequence. Defaults to None.
+            attention_mask (Tensor, optional): The attention mask tensor of shape ``(batch_size, sequence_length)``. It is used to specify which tokens should be attended to and which should not. Defaults to
+None.
+            token_type_ids (Tensor, optional): The token type tensor of shape ``(batch_size, sequence_length)``. It is used to indicate the token types (e.g., sentence A and sentence B) in the input sequence.
+Defaults to None.
             position_ids (Tensor, optional): The position indices tensor of shape ``(batch_size, sequence_length)``. It is used to specify the position of each token in the input sequence. Defaults to None.
             head_mask (Tensor, optional): The head mask tensor of shape ``(num_layers, num_heads)``. It is used to mask certain heads of the attention modules. Defaults to None.
-            inputs_embeds (Tensor, optional): The input embeddings tensor of shape ``(batch_size, sequence_length, hidden_size)``. It contains the embeddings of the input sequence instead of using ``input_ids``. Defaults to None.
+            inputs_embeds (Tensor, optional): The input embeddings tensor of shape ``(batch_size, sequence_length, hidden_size)``. It contains the embeddings of the input sequence instead of using
+``input_ids``. Defaults to None.
             mc_token_ids (Tensor, optional): The multiple-choice token indices tensor of shape ``(batch_size, num_choices)``. It contains the token indices for the multiple-choice inputs. Defaults to None.
             labels (Tensor, optional): The labels tensor of shape ``(batch_size, sequence_length)``. It contains the token indices to predict in the language modeling task. Defaults to None.
             mc_labels (Tensor, optional): The multiple-choice labels tensor of shape ``(batch_size,)``. It contains the indices of the correct multiple-choice answers. Defaults to None.

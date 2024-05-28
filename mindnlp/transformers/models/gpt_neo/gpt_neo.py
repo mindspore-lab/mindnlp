@@ -274,7 +274,8 @@ class GPTNeoAttention(nn.Cell):
             self: The instance of the GPTNeoAttention class.
             hidden_states (tensor): The input hidden states of shape (batch_size, sequence_length, hidden_size).
             layer_past (tuple, optional): The past states of shape (batch_size, num_heads, past_sequence_length, head_size) to be used for attention computation. Defaults to None.
-            attention_mask (tensor, optional): The attention mask tensor of shape (batch_size, sequence_length) or (batch_size, num_heads, sequence_length, sequence_length) to mask attention scores. Defaults to None.
+            attention_mask (tensor, optional): The attention mask tensor of shape (batch_size, sequence_length) or (batch_size, num_heads, sequence_length, sequence_length) to mask attention scores. Defaults
+to None.
             head_mask (tensor, optional): The head mask tensor of shape (num_heads,) or (batch_size, num_heads) to mask attention heads. Defaults to None.
             use_cache (bool, optional): Whether to use cached states for attention computation. Defaults to False.
             output_attentions (bool, optional): Whether to output the attention weights. Defaults to False.

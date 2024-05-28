@@ -53,7 +53,8 @@ class _PrevExtTableStates(TypedDict):
     """
     Represents the state of a previous external table.
     
-    This class inherits from TypedDict and provides a structured way to store the state information of a previous external table. The class '_PrevExtTableStates' can be used to store and retrieve various attributes related to the state of the table.
+    This class inherits from TypedDict and provides a structured way to store the state information of a previous external table. The class '_PrevExtTableStates' can be used to store and retrieve various
+attributes related to the state of the table.
     
     Attributes:
         <attribute1>: <description of attribute1>
@@ -119,7 +120,8 @@ class _DictTree(TypedDict):
 
     """A Python class representing a dictionary-like tree structure.
     
-    The _DictTree class is a subclass of TypedDict, which allows for the creation of dictionary-like objects that have a fixed set of keys and specific value types for each key. The _DictTree class provides additional functionality to represent a hierarchical tree structure.
+    The _DictTree class is a subclass of TypedDict, which allows for the creation of dictionary-like objects that have a fixed set of keys and specific value types for each key. The _DictTree class provides
+additional functionality to represent a hierarchical tree structure.
     
     Attributes:
         None
@@ -154,7 +156,8 @@ class _DictTree(TypedDict):
             def get_children(self) -> List[MyTree]:
                 return self.children
     
-    In the above example, a custom tree structure is defined with two keys: 'name' of type str and 'children' of type List[MyTree]. The class provides methods to add and remove children, as well as retrieve the list of children.
+    In the above example, a custom tree structure is defined with two keys: 'name' of type str and 'children' of type List[MyTree]. The class provides methods to add and remove children, as well as retrieve
+the list of children.
     
     """
     value: str
@@ -556,7 +559,8 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
         Raises:
             None.
         
-        This method takes in two parameters, self and tokens. The self parameter is an instance of the CpmBeeTokenizer class and is used to access the class's attributes and methods. The tokens parameter is a list of strings representing individual tokens.
+        This method takes in two parameters, self and tokens. The self parameter is an instance of the CpmBeeTokenizer class and is used to access the class's attributes and methods. The tokens parameter is a
+list of strings representing individual tokens.
         
         The function returns a string that is obtained by concatenating all the tokens together using the ''.join() method. This method does not modify the original list of tokens.
         

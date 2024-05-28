@@ -80,7 +80,8 @@ class Wav2Vec2Processor(ProcessorMixin):
         
         Raises:
             OSError: If an OSError occurs during the loading process.
-            FutureWarning: If the tokenizer is being loaded from a config that does not include a `tokenizer_class` attribute, a FutureWarning is issued. It advises adding a `'tokenizer_class': 'Wav2Vec2CTCTokenizer'` attribute to either the `config.json` or `tokenizer_config.json` file to suppress the warning.
+            FutureWarning: If the tokenizer is being loaded from a config that does not include a `tokenizer_class` attribute, a FutureWarning is issued. It advises adding a `'tokenizer_class':
+'Wav2Vec2CTCTokenizer'` attribute to either the `config.json` or `tokenizer_config.json` file to suppress the warning.
         """
         try:
             return super().from_pretrained(pretrained_model_name_or_path, **kwargs)

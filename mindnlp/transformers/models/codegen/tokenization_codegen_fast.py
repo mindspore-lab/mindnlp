@@ -188,7 +188,8 @@ class CodeGenTokenizerFast(PreTrainedTokenizerFast):
             BatchEncoding: A dictionary-like object containing the tokenized and encoded representations of the input batch.
         
         Raises:
-            AssertionError: If the 'add_prefix_space' attribute is not set to True and the 'is_split_into_words' argument is True. In such cases, the method requires the instantiation of 'CodeGenTokenizerFast' with 'add_prefix_space=True' for using it with pretokenized inputs.
+            AssertionError: If the 'add_prefix_space' attribute is not set to True and the 'is_split_into_words' argument is True. In such cases, the method requires the instantiation of 'CodeGenTokenizerFast'
+with 'add_prefix_space=True' for using it with pretokenized inputs.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
         assert self.add_prefix_space or not is_split_into_words, (

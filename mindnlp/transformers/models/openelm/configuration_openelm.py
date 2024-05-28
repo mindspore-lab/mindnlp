@@ -229,7 +229,8 @@ class OpenELMConfig(PretrainedConfig):
             None: This method does not return any value.
         
         Raises:
-            NotImplementedError: If the QKV multipliers are not a single number or a list containing exactly two numbers, or if the FFN multipliers are not a single number or a list containing exactly two numbers.
+            NotImplementedError: If the QKV multipliers are not a single number or a list containing exactly two numbers, or if the FFN multipliers are not a single number or a list containing exactly two
+numbers.
             AssertionError: If the length of the FFN multipliers does not match the number of transformer layers, or if the number of query heads is not divisible by the number of key-value heads for any layer.
         """
         if self.num_gqa_groups is not None:

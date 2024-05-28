@@ -448,9 +448,11 @@ class BertTokenizer(PreTrainedTokenizer):
             OSError: If there is an issue with accessing or writing to the save_directory.
             UnicodeEncodeError: If there is an issue encoding the vocabulary file with 'utf-8'.
         
-        The method saves the vocabulary of the tokenizer to a file in the specified save_directory. If save_directory is a directory, the vocabulary file will be saved with the default name (or with the filename_prefix if provided) in the directory. If save_directory is a file path, the vocabulary file will be saved with the same name as the file in the specified path.
+        The method saves the vocabulary of the tokenizer to a file in the specified save_directory. If save_directory is a directory, the vocabulary file will be saved with the default name (or with the
+filename_prefix if provided) in the directory. If save_directory is a file path, the vocabulary file will be saved with the same name as the file in the specified path.
         
-        The vocabulary is saved in a newline-separated format, where each line contains a token from the vocabulary. The tokens are sorted based on their token_index in the vocabulary dictionary. If the token indices are not consecutive, a warning message is logged.
+        The vocabulary is saved in a newline-separated format, where each line contains a token from the vocabulary. The tokens are sorted based on their token_index in the vocabulary dictionary. If the token
+indices are not consecutive, a warning message is logged.
         
         Example Usage:
             tokenizer = BertTokenizer()

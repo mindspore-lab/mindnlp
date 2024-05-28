@@ -101,9 +101,11 @@ class OpenELMPreTrainedModel(PreTrainedModel):
     
     The class contains an initialization method, '_init_weights', which is responsible for initializing the weights of the model. This method takes a 'cell' parameter, which represents the neural network cell.
     
-    The '_init_weights' method initializes the weights differently based on the type of the 'cell' parameter. If the 'cell' is an instance of 'nn.Dense', the weight is initialized using a normal distribution with a range defined by the 'initializer_range' attribute of the 'config' object. If the 'cell' has a bias, it is initialized to zeros.
+    The '_init_weights' method initializes the weights differently based on the type of the 'cell' parameter. If the 'cell' is an instance of 'nn.Dense', the weight is initialized using a normal distribution
+with a range defined by the 'initializer_range' attribute of the 'config' object. If the 'cell' has a bias, it is initialized to zeros.
     
-    If the 'cell' is an instance of 'nn.Embedding', the weight is initialized using a normal distribution with a range defined by the 'initializer_range' attribute of the 'config' object. If the 'cell' has a padding index, the weight corresponding to the padding index is set to zero.
+    If the 'cell' is an instance of 'nn.Embedding', the weight is initialized using a normal distribution with a range defined by the 'initializer_range' attribute of the 'config' object. If the 'cell' has a
+padding index, the weight corresponding to the padding index is set to zero.
     
     If the 'cell' is an instance of 'OpenELMRMSNorm', the weight is initialized to ones.
     
@@ -354,9 +356,12 @@ class OpenELMMultiHeadCausalAttention(nn.Cell):
     
     Inherits from nn.Cell, this class provides functionality for processing input tensors through multi-head self-attention mechanism, with support for caching key-value pairs for efficient generation tasks.
     
-    The class initializes with configuration parameters and layer index, setting up projection layers, position embeddings, normalization options, and output projection layers. It also defines the number of query, key, and value heads, along with transformer dimensions and grouping information.
+    The class initializes with configuration parameters and layer index, setting up projection layers, position embeddings, normalization options, and output projection layers. It also defines the number of
+query, key, and value heads, along with transformer dimensions and grouping information.
     
-    The 'construct' method performs the forward pass of multi-head self-attention, taking input hidden states, optional attention mask, cached key-value pairs, and other parameters. It computes queries, keys, and values, applies normalization if configured, updates cached key-value pairs if available, incorporates positional embeddings, and performs scaled dot-product attention calculation. Finally, it applies output projection and returns the attention output along with optional attention weights and updated cached key-value pairs.
+    The 'construct' method performs the forward pass of multi-head self-attention, taking input hidden states, optional attention mask, cached key-value pairs, and other parameters. It computes queries, keys,
+and values, applies normalization if configured, updates cached key-value pairs if available, incorporates positional embeddings, and performs scaled dot-product attention calculation. Finally, it applies
+output projection and returns the attention output along with optional attention weights and updated cached key-value pairs.
     
     Note: This class assumes the existence of certain related classes and functions like OpenELMConfig, OpenELMRotaryEmbedding, OpenELMRMSNorm, Cache, nn.Dense, and _scaled_dot_product_attention.
     """
@@ -538,11 +543,13 @@ class OpenELMFeedForwardNetwork(nn.Cell):
     """
     The OpenELMFeedForwardNetwork class represents a feedforward network layer for the OpenELM model. This class inherits from nn.Cell and implements the forward function of the feedforward network layer.
     
-    The __init__ method initializes the OpenELMFeedForwardNetwork instance with the provided configuration and layer index. It calculates the intermediate dimensions based on the configuration, initializes the projection layers, and sets the activation function based on the configuration.
+    The __init__ method initializes the OpenELMFeedForwardNetwork instance with the provided configuration and layer index. It calculates the intermediate dimensions based on the configuration, initializes the
+projection layers, and sets the activation function based on the configuration.
     
     The extra_repr method returns a string representation of the instance, including the ffn_with_glu attribute.
     
-    The construct method implements the forward function of the feedforward network layer. It takes an input tensor of shape [batch size, sequence length, model dimension], applies the projection layers and activation functions based on the configuration, and returns a tensor of the same shape as the input.
+    The construct method implements the forward function of the feedforward network layer. It takes an input tensor of shape [batch size, sequence length, model dimension], applies the projection layers and
+activation functions based on the configuration, and returns a tensor of the same shape as the input.
     
     """
     def __init__(self, config: OpenELMConfig, layer_idx: int) -> None:
@@ -653,7 +660,8 @@ class OpenELMDecoderLayer(nn.Cell):
             
             Args:
                 hidden_states (mindspore.Tensor): The input to the layer of shape `(batch, seq_len, embed_dim)`.
-                attention_mask (mindspore.Tensor, optional): The attention mask of size `(batch_size, sequence_length)` if flash attention is used or `(batch_size, 1, query_sequence_length, key_sequence_length)` if default attention is used.
+                attention_mask (mindspore.Tensor, optional): The attention mask of size `(batch_size, sequence_length)` if flash attention is used or `(batch_size, 1, query_sequence_length,
+key_sequence_length)` if default attention is used.
                 position_ids (mindspore.Tensor, optional): The position ids tensor of shape `(batch_size, sequence_length)`.
                 past_key_value (Tuple(mindspore.Tensor), optional): Cached past key and value projection states.
                 output_attentions (bool, optional): Whether or not to return the attention tensors of all attention layers.
@@ -662,7 +670,8 @@ class OpenELMDecoderLayer(nn.Cell):
                 **kwargs: Additional keyword arguments.
     
             Returns:
-                Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: A tuple containing the output tensor of the layer and optionally the attention weights and present key value states, depending on the specified arguments.
+                Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: A tuple containing the output tensor of the layer and optionally the attention weights and present key value
+states, depending on the specified arguments.
     """
     def __init__(self, config: OpenELMConfig, layer_idx: int) -> None:
 
@@ -753,11 +762,15 @@ class OpenELMDecoderLayer(nn.Cell):
 class OpenELMModel(OpenELMPreTrainedModel):
 
     """
-    This class represents an OpenELM model for natural language processing tasks. It is designed to be used for tasks such as language modeling, text generation, and machine translation. The model architecture includes a transformer-based decoder with customizable layers and attention mechanisms.
+    This class represents an OpenELM model for natural language processing tasks. It is designed to be used for tasks such as language modeling, text generation, and machine translation. The model architecture
+includes a transformer-based decoder with customizable layers and attention mechanisms.
     
-    The OpenELMModel class provides methods for initializing the model with configuration settings, accessing and updating input embeddings, and constructing the model for inference or training. The construct method handles the main computation flow of the model, including processing input data, applying transformer layers, and generating model outputs. The class also includes helper methods for managing cache, attention masks, and normalization.
+    The OpenELMModel class provides methods for initializing the model with configuration settings, accessing and updating input embeddings, and constructing the model for inference or training. The construct
+method handles the main computation flow of the model, including processing input data, applying transformer layers, and generating model outputs. The class also includes helper methods for managing cache,
+attention masks, and normalization.
     
-    The OpenELMModel class is designed to be flexible and efficient, allowing for easy customization of the model architecture and behavior. It inherits from the OpenELMPreTrainedModel class, which provides additional functionality and pre-trained model weights.
+    The OpenELMModel class is designed to be flexible and efficient, allowing for easy customization of the model architecture and behavior. It inherits from the OpenELMPreTrainedModel class, which provides
+additional functionality and pre-trained model weights.
     
     For detailed information on each method and parameter, refer to the method docstrings within the class implementation.
     """
@@ -1014,7 +1027,9 @@ class OpenELMModel(OpenELMPreTrainedModel):
         
         Args:
             self (OpenELMModel): The instance of the OpenELMModel class.
-            attention_mask (torch.Tensor): A tensor containing the attention mask. This mask is used to mask certain positions of the input tensor during attention computations. If the `_attn_implementation` attribute of the `config` object is set to 'flash_attention_2' and the attention_mask contains a 0.0 value, the attention_mask is returned as is. Otherwise, if the attention_mask is not provided or does not contain a 0.0 value, it is set to None.
+            attention_mask (torch.Tensor): A tensor containing the attention mask. This mask is used to mask certain positions of the input tensor during attention computations. If the `_attn_implementation`
+attribute of the `config` object is set to 'flash_attention_2' and the attention_mask contains a 0.0 value, the attention_mask is returned as is. Otherwise, if the attention_mask is not provided or does not
+contain a 0.0 value, it is set to None.
             input_tensor (torch.Tensor): The input tensor to the model. It has shape (batch_size, seq_length) and represents the input sequences.
         
         Returns:
@@ -1062,7 +1077,9 @@ class OpenELMModel(OpenELMPreTrainedModel):
 class OpenELMForCausalLM(OpenELMPreTrainedModel):
 
     """
-    This class represents a OpenELM model for Causal Language Modeling (LM). It is designed for generating text based on input sequences and predicting the next token in a sequence. The class includes methods for setting and getting input and output embeddings, setting the decoder, constructing the model for generation, and preparing inputs for text generation. Additionally, it provides a static method for reordering cache during generation. The class inherits from OpenELMPreTrainedModel and implements functionality specific to Causal LM tasks.
+    This class represents a OpenELM model for Causal Language Modeling (LM). It is designed for generating text based on input sequences and predicting the next token in a sequence. The class includes methods
+for setting and getting input and output embeddings, setting the decoder, constructing the model for generation, and preparing inputs for text generation. Additionally, it provides a static method for
+reordering cache during generation. The class inherits from OpenELMPreTrainedModel and implements functionality specific to Causal LM tasks.
     """
     _tied_weights_keys = ["lm_head.weight"]
 

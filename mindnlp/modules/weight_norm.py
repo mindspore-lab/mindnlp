@@ -44,7 +44,9 @@ def _weight_norm(weight_v, weight_g, dim):
 class WeightNorm:
 
     r"""
-    The 'WeightNorm' class implements weight normalization for neural network modules. It provides methods to compute normalized weights, apply weight normalization to a cell, wrap a function, and remove weight bias from a cell. The class also contains an initializer for the name and dimension of the weight parameters, as well as a method to compute the weight using the normalized parameters. Additionally, it includes a method to remove the weight bias and a wrapper function for transposing cell_id to cell. 
+    The 'WeightNorm' class implements weight normalization for neural network modules. It provides methods to compute normalized weights, apply weight normalization to a cell, wrap a function, and remove
+weight bias from a cell. The class also contains an initializer for the name and dimension of the weight parameters, as well as a method to compute the weight using the normalized parameters. Additionally, it
+includes a method to remove the weight bias and a wrapper function for transposing cell_id to cell. 
     """
     name: str
     dim: int

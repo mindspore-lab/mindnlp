@@ -156,7 +156,8 @@ class Scalar(AbstractScalar):
         Raises:
             TypeError: If either self or that is not an instance of the Scalar class.
         
-        This method divides the value of the first Scalar object (self) by the value of the second Scalar object (that). The true division operation returns a new Scalar object that represents the result of the division.
+        This method divides the value of the first Scalar object (self) by the value of the second Scalar object (that). The true division operation returns a new Scalar object that represents the result of
+the division.
         
         Note that both self and that must be instances of the Scalar class. If either of them is not, a TypeError is raised.
         

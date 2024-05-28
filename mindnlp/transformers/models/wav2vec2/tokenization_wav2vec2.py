@@ -309,7 +309,8 @@ class Wav2Vec2CTCTokenizer(PreTrainedTokenizer):
         Raises:
             None.
         
-        This method retrieves the vocabulary used by the Wav2Vec2CTCTokenizer instance. The vocabulary is a dictionary that combines the encoder and added_tokens_encoder dictionaries. The encoder dictionary maps tokens to unique integer IDs, while the added_tokens_encoder dictionary contains additional tokens added by the user. The resulting vocabulary dictionary is returned.
+        This method retrieves the vocabulary used by the Wav2Vec2CTCTokenizer instance. The vocabulary is a dictionary that combines the encoder and added_tokens_encoder dictionaries. The encoder dictionary
+maps tokens to unique integer IDs, while the added_tokens_encoder dictionary contains additional tokens added by the user. The resulting vocabulary dictionary is returned.
         """
         vocab = dict(self.encoder)
         vocab.update(self.added_tokens_encoder)
@@ -331,7 +332,9 @@ class Wav2Vec2CTCTokenizer(PreTrainedTokenizer):
         Raises:
             None
         
-        This method takes a list of new tokens and adds them to the vocabulary of the Wav2Vec2CTCTokenizer. The new tokens can be either strings or instances of AddedToken. If a token is a string, a default AddedToken object will be created with the token as its text and the following default values for its attributes: rstrip=False, lstrip=False, normalized=False. If a token is already an instance of AddedToken, it will be added as is. The method then calls the super()._add_tokens() method to add the tokens to the vocabulary. The special_tokens flag can be used to indicate whether the new tokens are special tokens.
+        This method takes a list of new tokens and adds them to the vocabulary of the Wav2Vec2CTCTokenizer. The new tokens can be either strings or instances of AddedToken. If a token is a string, a default
+AddedToken object will be created with the token as its text and the following default values for its attributes: rstrip=False, lstrip=False, normalized=False. If a token is already an instance of AddedToken,
+it will be added as is. The method then calls the super()._add_tokens() method to add the tokens to the vocabulary. The special_tokens flag can be used to indicate whether the new tokens are special tokens.
         """
         # Overwritten to never strip!
         to_add = []

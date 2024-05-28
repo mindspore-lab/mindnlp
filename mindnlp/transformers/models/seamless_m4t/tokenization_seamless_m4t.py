@@ -586,7 +586,8 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
         Raises:
             None.
         
-        This method calculates and returns the length of the unknown token present in the SeamlessM4TTokenizer instance. The unknown token is obtained by encoding the string representation of the 'unk_token' attribute using the 'sp_model' encoding method. The length of the resulting encoded token is then returned as an integer value.
+        This method calculates and returns the length of the unknown token present in the SeamlessM4TTokenizer instance. The unknown token is obtained by encoding the string representation of the 'unk_token'
+attribute using the 'sp_model' encoding method. The length of the resulting encoded token is then returned as an integer value.
         
         Note that this method takes no additional parameters besides the mandatory 'self' parameter, which represents the instance of the SeamlessM4TTokenizer class on which the method is called.
         

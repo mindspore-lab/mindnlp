@@ -82,7 +82,8 @@ class SchemaTree:
         Raises:
             None.
         
-        This method initializes a SchemaTree instance with the provided name and children. If no name is provided, the default name is set to 'root'. If no children are provided, an empty list is assigned to the 'children' attribute. The 'prefix', 'parent_relations', and 'parent' attributes are also initialized with None.
+        This method initializes a SchemaTree instance with the provided name and children. If no name is provided, the default name is set to 'root'. If no children are provided, an empty list is assigned to
+the 'children' attribute. The 'prefix', 'parent_relations', and 'parent' attributes are also initialized with None.
         
         If children are provided, each child is added to the instance using the add_child() method.
         """

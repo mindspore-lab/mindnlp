@@ -274,11 +274,13 @@ class MSBertSelfAttention(nn.Cell):
         Args:
             self (MSBertSelfAttention): The instance of the MSBertSelfAttention class.
             hidden_states (Tensor): The input tensor of shape (batch_size, seq_length, hidden_size) representing the hidden states.
-            attention_mask (Tensor, optional): The attention mask tensor of shape (batch_size, seq_length) or (batch_size, seq_length, seq_length) to mask out certain positions from the attention computation. Defaults to None.
+            attention_mask (Tensor, optional): The attention mask tensor of shape (batch_size, seq_length) or (batch_size, seq_length, seq_length) to mask out certain positions from the attention computation.
+Defaults to None.
             head_mask (Tensor, optional): The tensor of shape (num_attention_heads,) representing the mask for the attention heads. Defaults to None.
         
         Returns:
-            outputs (tuple): A tuple containing the context layer tensor of shape (batch_size, seq_length, hidden_size) and the attention probabilities tensor of shape (batch_size, num_attention_heads, seq_length, seq_length) if self.output_attentions is True, else only the context layer tensor is returned.
+            outputs (tuple): A tuple containing the context layer tensor of shape (batch_size, seq_length, hidden_size) and the attention probabilities tensor of shape (batch_size, num_attention_heads,
+seq_length, seq_length) if self.output_attentions is True, else only the context layer tensor is returned.
         
         Raises:
             None.
@@ -534,7 +536,8 @@ class MSBertIntermediate(nn.Cell):
         Raises:
             None.
         
-        This method takes in the input hidden states and applies the intermediate layer transformations. It first passes the hidden states through a dense layer, then applies an activation function. The resulting hidden states are returned as the output.
+        This method takes in the input hidden states and applies the intermediate layer transformations. It first passes the hidden states through a dense layer, then applies an activation function. The
+resulting hidden states are returned as the output.
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
@@ -706,7 +709,8 @@ class MSBertEncoder(nn.Cell):
             None.
         
         Description:
-        This method iterates over each layer within the MSBertEncoder instance and sets the recompute flag for each layer by calling the 'recompute()' method of the layer. The recompute flag is used to indicate whether the layer needs to be recomputed during the forward pass of the encoder. By setting the recompute flag, it allows for dynamic computation of the layer based on the input.
+        This method iterates over each layer within the MSBertEncoder instance and sets the recompute flag for each layer by calling the 'recompute()' method of the layer. The recompute flag is used to
+indicate whether the layer needs to be recomputed during the forward pass of the encoder. By setting the recompute flag, it allows for dynamic computation of the layer based on the input.
         
         Example usage:
             encoder = MSBertEncoder()
@@ -948,7 +952,8 @@ class MSBertLMPredictionHead(nn.Cell):
         """
         Constructs the MSBertLMPredictionHead.
         
-        This method takes in the hidden states and masked language model positions, and applies a series of operations to compute the final hidden states for the MSBertLMPredictionHead. The resulting hidden states are then transformed and decoded to produce the final output.
+        This method takes in the hidden states and masked language model positions, and applies a series of operations to compute the final hidden states for the MSBertLMPredictionHead. The resulting hidden
+states are then transformed and decoded to produce the final output.
         
         Args:
             self (MSBertLMPredictionHead): An instance of the MSBertLMPredictionHead class.
@@ -1212,7 +1217,8 @@ class MSBertForPretraining(MSBertPreTrainedModel):
         
         Args:
             self: The instance of the MSBertForPretraining class.
-            config: The configuration for the MSBertForPretraining, containing various parameters and settings for model initialization. It should be an instance of the configuration class specific to the MSBertForPretraining model.
+            config: The configuration for the MSBertForPretraining, containing various parameters and settings for model initialization. It should be an instance of the configuration class specific to the
+MSBertForPretraining model.
         
         Returns:
             None. This method does not return any value.

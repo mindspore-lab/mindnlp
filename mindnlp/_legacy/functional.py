@@ -266,7 +266,9 @@ def _in_projection_packed(q, k, v, w, b, k_is_v, q_is_k):
 def _scaled_dot_product_attention(query, key, value, attn_mask, dropout_p, is_causal, is_training):
 
     r"""
-    This function calculates scaled dot product attention given query, key, and value tensors. It applies scaling to the query tensor, and if specified, applies a causal mask to the attention matrix. The attention matrix is computed by taking the dot product of the scaled query and key tensors, and then applying a softmax operation along the last dimension. If specified, dropout is applied to the attention matrix during training. Finally, the output is computed by multiplying the attention matrix with the value tensor.
+    This function calculates scaled dot product attention given query, key, and value tensors. It applies scaling to the query tensor, and if specified, applies a causal mask to the attention matrix. The
+attention matrix is computed by taking the dot product of the scaled query and key tensors, and then applying a softmax operation along the last dimension. If specified, dropout is applied to the attention
+matrix during training. Finally, the output is computed by multiplying the attention matrix with the value tensor.
     
     Args:
         query (Tensor): The query tensor of shape [batch_size, sequence_length, embedding_size].

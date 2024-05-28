@@ -714,7 +714,8 @@ def convert_to_size_dict(
     Args:
         size (int or tuple/list): The size input to be converted.
             - If an integer is provided and `default_to_square` is True, it creates a square size dictionary with both height and width values set to the given size.
-            - If an integer is provided and `default_to_square` is False, it creates a size dictionary with the shortest edge set to the given size. Optionally, the longest edge can be specified using the `max_size` parameter.
+            - If an integer is provided and `default_to_square` is False, it creates a size dictionary with the shortest edge set to the given size. Optionally, the longest edge can be specified using the
+`max_size` parameter.
             - If a tuple or list is provided and `height_width_order` is True, it creates a size dictionary with the first element representing the height and the second element representing the width.
             - If a tuple or list is provided and `height_width_order` is False, it creates a size dictionary with the first element representing the width and the second element representing the height.
             - If `size` is None and `max_size` is not None, it creates a size dictionary with the longest edge set to the `max_size`. Note that `default_to_square` must be False in this case.

@@ -27,7 +27,8 @@ class JiebaTokenizer:
     r""" 
         A class for tokenizing Chinese text using the Jieba library.
     
-        This class provides methods for initializing the tokenizer with custom word dictionaries and settings, as well as for tokenizing Chinese text with options for different cutting modes and Named Entity Recognition (NER) recognition.
+        This class provides methods for initializing the tokenizer with custom word dictionaries and settings, as well as for tokenizing Chinese text with options for different cutting modes and Named Entity
+Recognition (NER) recognition.
     
         Args:
             dict_path (str): Path to a custom dictionary file. Default is an empty string.

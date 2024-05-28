@@ -155,7 +155,8 @@ def _get_unpad_data(attention_mask):
 class JambaRMSNorm(nn.Cell):
 
     """
-    The 'JambaRMSNorm' class represents a layer normalization module equivalent to T5LayerNorm. It inherits from nn.Cell and includes methods for initialization and construction. The class provides functionality for normalizing input hidden states using the RMS normalization technique, with the ability to specify the hidden size and epsilon value for variance stabilization.
+    The 'JambaRMSNorm' class represents a layer normalization module equivalent to T5LayerNorm. It inherits from nn.Cell and includes methods for initialization and construction. The class provides
+functionality for normalizing input hidden states using the RMS normalization technique, with the ability to specify the hidden size and epsilon value for variance stabilization.
     
     Attributes:
         weight (Parameter): A parameter representing the weight used for normalization.
@@ -227,7 +228,8 @@ class JambaAttention(nn.Cell):
         Args:
             self: The instance of the JambaAttention class.
             config (JambaConfig): An instance of JambaConfig containing the configuration parameters for the attention layer.
-            layer_idx (Optional[int]): The index of the layer. If not provided, it may lead to errors during the forward call if caching is used. It is recommended to always provide a layer index when creating this class.
+            layer_idx (Optional[int]): The index of the layer. If not provided, it may lead to errors during the forward call if caching is used. It is recommended to always provide a layer index when creating
+this class.
         
         Returns:
             None. This method does not return any value.
@@ -419,7 +421,8 @@ class HybridMambaAttentionDynamicCache(DynamicCache):
             None.
         
         Description:
-        This method initializes an instance of the HybridMambaAttentionDynamicCache class. It is called automatically when a new object of this class is created. The method sets the attention_layer_idx attribute of the instance to None.
+        This method initializes an instance of the HybridMambaAttentionDynamicCache class. It is called automatically when a new object of this class is created. The method sets the attention_layer_idx
+attribute of the instance to None.
         
         Example:
             cache = HybridMambaAttentionDynamicCache()
@@ -793,7 +796,8 @@ class JambaMLP(nn.Cell):
     """
     JambaMLP represents a multi-layer perceptron (MLP) model used in the Jamba project. It inherits from nn.Cell.
     
-    This class implements the construction and initialization of the JambaMLP model. The model consists of three linear layers: gate_proj, down_proj, and up_proj. The activation function used in the hidden layer is determined by the hidden_act parameter in the JambaConfig object.
+    This class implements the construction and initialization of the JambaMLP model. The model consists of three linear layers: gate_proj, down_proj, and up_proj. The activation function used in the hidden
+layer is determined by the hidden_act parameter in the JambaConfig object.
     
     Attributes:
         ffn_dim (int): The size of the intermediate layer in the MLP.
@@ -917,7 +921,8 @@ class JambaSparseMoeBlock(nn.Cell):
             hidden_states (mindspore.Tensor): A tensor containing the hidden states. It should have a shape of (batch_size, sequence_length, hidden_dim).
             
         Returns:
-            Tuple[mindspore.Tensor, mindspore.Tensor]: A tuple containing the final hidden states and the router logits. The final hidden states have a shape of (batch_size, sequence_length, hidden_dim), and the router logits have a shape of (batch_size * sequence_length, 1).
+            Tuple[mindspore.Tensor, mindspore.Tensor]: A tuple containing the final hidden states and the router logits. The final hidden states have a shape of (batch_size, sequence_length, hidden_dim), and
+the router logits have a shape of (batch_size * sequence_length, 1).
             
         Raises:
             None.
@@ -1112,7 +1117,8 @@ class JambaMambaDecoderLayer(nn.Cell):
     """
     This class represents a decoder layer for Jamba Mamba model, implementing the logic for processing input sequences in a transformer architecture.
     
-    Inherits from the nn.Cell class, this decoder layer consists of components such as JambaMambaMixer, JambaSparseMoeBlock, JambaRMSNorm, and implements methods for processing hidden states, attention masks, and past key-value states.
+    Inherits from the nn.Cell class, this decoder layer consists of components such as JambaMambaMixer, JambaSparseMoeBlock, JambaRMSNorm, and implements methods for processing hidden states, attention masks,
+and past key-value states.
     
     Attributes:
         - mamba (JambaMambaMixer): A mixer module for Jamba Mamba processing.
@@ -1122,7 +1128,8 @@ class JambaMambaDecoderLayer(nn.Cell):
     
     Methods:
         - construct(hidden_states, attention_mask=None, position_ids=None, past_key_value=None, output_attentions=False, output_router_logits=False, use_cache=False, **kwargs): 
-            Processes the input hidden states through the decoder layer, applying layer normalization, mixer, MoE block, and returns the output along with optional tensors like attentions, router logits, and cache values.
+            Processes the input hidden states through the decoder layer, applying layer normalization, mixer, MoE block, and returns the output along with optional tensors like attentions, router logits, and
+cache values.
     
         - _get_past_seqlen(past_key_value, seqlen): 
             Helper method to calculate the past sequence length based on past key-value states and current sequence length.
@@ -1278,7 +1285,8 @@ class JambaMambaDecoderLayer(nn.Cell):
 class JambaPreTrainedModel(PreTrainedModel):
 
     """
-    The 'JambaPreTrainedModel' class is a subclass of 'PreTrainedModel' and represents a model that has been pre-trained for various tasks in natural language processing. This class provides additional methods for converting cache formats between standard and Jamba formats.
+    The 'JambaPreTrainedModel' class is a subclass of 'PreTrainedModel' and represents a model that has been pre-trained for various tasks in natural language processing. This class provides additional methods
+for converting cache formats between standard and Jamba formats.
     
     Methods:
         - _convert_to_standard_cache(past_key_value: Tuple[Tuple[mindspore.Tensor, mindspore.Tensor]], batch_size: int) -> Tuple[Tuple[mindspore.Tensor, mindspore.Tensor]]:
@@ -1665,7 +1673,8 @@ class JambaForCausalLM(JambaPreTrainedModel):
     """
     This class represents a Jamba model for causal language modeling tasks. It is a subclass of JambaPreTrainedModel.
     
-    The JambaForCausalLM class encapsulates the architecture and functionality of the Jamba model for generating text. It includes methods for initializing the model, getting and setting input and output embeddings, setting the decoder, and constructing the model.
+    The JambaForCausalLM class encapsulates the architecture and functionality of the Jamba model for generating text. It includes methods for initializing the model, getting and setting input and output
+embeddings, setting the decoder, and constructing the model.
     
     Attributes:
         - model (JambaModel): The Jamba model used for text generation.
@@ -1683,8 +1692,10 @@ class JambaForCausalLM(JambaPreTrainedModel):
         - set_output_embeddings(self, new_embeddings): Sets the output embeddings of the model.
         - set_decoder(self, decoder): Sets the decoder of the model.
         - get_decoder(self): Returns the decoder of the model.
-        - construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, output_router_logits, return_dict, calc_logits_for_entire_prompt): Constructs the model for generating text and returns the outputs.
-        - prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, output_router_logits, **kwargs): Prepares the inputs for text generation by reordering the cache and updating the position ids.
+        - construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, output_router_logits, return_dict,
+calc_logits_for_entire_prompt): Constructs the model for generating text and returns the outputs.
+        - prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, output_router_logits, **kwargs): Prepares the inputs for text generation by reordering the cache and
+updating the position ids.
     
     Please refer to the source code for more details on the implementation of each method.
     """
@@ -1937,7 +1948,8 @@ class JambaForCausalLM(JambaPreTrainedModel):
             output_router_logits (bool): Flag indicating whether to calculate output router logits.
         
         Returns:
-            dict: A dictionary containing the prepared model inputs for generation, including input_ids, position_ids, past_key_values, use_cache, attention_mask, output_router_logits, and calc_logits_for_entire_prompt.
+            dict: A dictionary containing the prepared model inputs for generation, including input_ids, position_ids, past_key_values, use_cache, attention_mask, output_router_logits, and
+calc_logits_for_entire_prompt.
         
         Raises:
             ValueError: If the shape of past_key_values is not as expected.

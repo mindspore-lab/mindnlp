@@ -269,7 +269,8 @@ class MT5LayerFF(nn.Cell):
     """
     MT5LayerFF is a Python class representing a feed-forward layer for the MT5 model. It inherits from nn.Cell and contains methods for initialization and forward propagation.
     
-    The __init__ method initializes the MT5LayerFF instance with the provided configuration. It checks if the configuration includes gated activation and assigns the appropriate DenseReluDense module accordingly. Additionally, it sets up layer normalization and dropout.
+    The __init__ method initializes the MT5LayerFF instance with the provided configuration. It checks if the configuration includes gated activation and assigns the appropriate DenseReluDense module
+accordingly. Additionally, it sets up layer normalization and dropout.
     
     The construct method applies layer normalization to the input hidden_states, passes it through the DenseReluDense module, applies dropout, and returns the updated hidden_states.
     
@@ -316,13 +317,17 @@ class MT5LayerFF(nn.Cell):
             None: This method does not raise any exceptions.
         
         Description:
-        This method constructs the forward pass for the feed-forward layer in the MT5 model. It takes the input hidden states tensor and applies a series of operations to transform it. The steps involved in the forward pass are as follows:
+        This method constructs the forward pass for the feed-forward layer in the MT5 model. It takes the input hidden states tensor and applies a series of operations to transform it. The steps involved in
+the forward pass are as follows:
         
-        1. Layer Normalization: The input hidden states tensor is first passed through a layer normalization operation using self.layer_norm. This operation normalizes the hidden states, making them more robust to variations in scale and distribution.
+        1. Layer Normalization: The input hidden states tensor is first passed through a layer normalization operation using self.layer_norm. This operation normalizes the hidden states, making them more
+robust to variations in scale and distribution.
         
-        2. Feed-Forward Transformation: The normalized hidden states tensor is then passed through a feed-forward transformation using self.DenseReluDense. This transformation consists of a linear layer followed by a ReLU activation function, followed by another linear layer. This operation helps the model learn complex non-linear relationships within the hidden states.
+        2. Feed-Forward Transformation: The normalized hidden states tensor is then passed through a feed-forward transformation using self.DenseReluDense. This transformation consists of a linear layer
+followed by a ReLU activation function, followed by another linear layer. This operation helps the model learn complex non-linear relationships within the hidden states.
         
-        3. Dropout: The output of the feed-forward transformation is then added to the original hidden states tensor after applying dropout. Dropout is a regularization technique that randomly sets a fraction of the hidden states to zero during training, which helps prevent overfitting and improves generalization.
+        3. Dropout: The output of the feed-forward transformation is then added to the original hidden states tensor after applying dropout. Dropout is a regularization technique that randomly sets a fraction
+of the hidden states to zero during training, which helps prevent overfitting and improves generalization.
         
         The final output hidden states tensor is returned by this method, which has the same shape as the input tensor.
         
@@ -342,7 +347,8 @@ class MT5Attention(nn.Cell):
     
     This class inherits from the `nn.Cell` class, which is the base class for all neural network modules in MindSpore.
     
-    The main purpose of this class is to compute the attention weights and output of the attention mechanism. It takes in the hidden states, mask, key-value states, position bias, past key-value states, layer head mask, query length, use cache flag, and output attentions flag as inputs.
+    The main purpose of this class is to compute the attention weights and output of the attention mechanism. It takes in the hidden states, mask, key-value states, position bias, past key-value states, layer
+head mask, query length, use cache flag, and output attentions flag as inputs.
     
     The class provides the following methods:
     
@@ -350,11 +356,13 @@ class MT5Attention(nn.Cell):
     
     - `prune_heads(self, heads)`: Prunes the specified attention heads from the model.
     
-    - `_relative_position_bucket(relative_position, bidirectional=True, num_buckets=32, max_distance=128)`: Translates the relative position to a bucket number for relative attention. This method is adapted from Mesh Tensorflow.
+    - `_relative_position_bucket(relative_position, bidirectional=True, num_buckets=32, max_distance=128)`: Translates the relative position to a bucket number for relative attention. This method is adapted
+from Mesh Tensorflow.
     
     - `compute_bias(self, query_length, key_length)`: Computes the binned relative position bias for the attention mechanism.
     
-    - `construct(self, hidden_states, mask=None, key_value_states=None, position_bias=None, past_key_value=None, layer_head_mask=None, query_length=None, use_cache=False, output_attentions=False)`: Constructs the attention mechanism by applying self-attention (if `key_value_states` is None) or attention over source sentence (provided by `key_value_states`).
+    - `construct(self, hidden_states, mask=None, key_value_states=None, position_bias=None, past_key_value=None, layer_head_mask=None, query_length=None, use_cache=False, output_attentions=False)`: Constructs
+the attention mechanism by applying self-attention (if `key_value_states` is None) or attention over source sentence (provided by `key_value_states`).
     
     Please refer to the method docstrings for more detailed information on each method and its parameters.
     """
@@ -419,7 +427,8 @@ class MT5Attention(nn.Cell):
         
         Raises:
             No specific exceptions are documented to be raised by this method.
-            However, potential exceptions may arise if the input 'heads' list contains indices that are out of bounds of the existing heads or if any of the helper functions called within this method encounter errors.
+            However, potential exceptions may arise if the input 'heads' list contains indices that are out of bounds of the existing heads or if any of the helper functions called within this method encounter
+errors.
         """
         if len(heads) == 0:
             return
@@ -757,7 +766,8 @@ class MT5LayerCrossAttention(nn.Cell):
     
     Methods:
         __init__(self, config): Initializes the MT5LayerCrossAttention instance with the given configuration.
-        construct(self, hidden_states, key_value_states, attention_mask=None, position_bias=None, layer_head_mask=None, past_key_value=None, use_cache=False, query_length=None, output_attentions=False): Constructs the cross-attention mechanism using the given parameters and returns the outputs.
+        construct(self, hidden_states, key_value_states, attention_mask=None, position_bias=None, layer_head_mask=None, past_key_value=None, use_cache=False, query_length=None, output_attentions=False):
+Constructs the cross-attention mechanism using the given parameters and returns the outputs.
     
     """
     def __init__(self, config):
@@ -838,7 +848,8 @@ class MT5LayerCrossAttention(nn.Cell):
 class MT5Block(nn.Cell):
 
     """
-    This class represents a block of the MT5 model, which is a Transformer-based neural network architecture for sequence-to-sequence tasks. It consists of a self-attention layer, an optional cross-attention layer, and a feed-forward layer.
+    This class represents a block of the MT5 model, which is a Transformer-based neural network architecture for sequence-to-sequence tasks. It consists of a self-attention layer, an optional cross-attention
+layer, and a feed-forward layer.
     
     Attributes:
         - `is_decoder` (bool): Indicates whether the block is used in the decoder part of the model.
@@ -850,15 +861,19 @@ class MT5Block(nn.Cell):
     Details:
     The `MT5Block` class inherits from the `nn.Cell` class and overrides the `construct` method. The `__init__` method initializes the block's attributes, including the `is_decoder` flag and the list of layers.
     
-    The `construct` method takes various input parameters, including the hidden states, attention masks, position biases, and layer head masks. It also accepts optional parameters for encoder hidden states and attention masks, as well as past key-value states used for caching.
+    The `construct` method takes various input parameters, including the hidden states, attention masks, position biases, and layer head masks. It also accepts optional parameters for encoder hidden states and
+attention masks, as well as past key-value states used for caching.
     
     The method first checks if past key-value states are provided and validates their correctness. It then retrieves the self-attention and cross-attention past key-value states from the input if present.
     
-    Next, the method passes the hidden states through the self-attention layer, using the provided attention mask, position bias, and layer head mask. The output includes the updated hidden states and the present key-value state.
+    Next, the method passes the hidden states through the self-attention layer, using the provided attention mask, position bias, and layer head mask. The output includes the updated hidden states and the
+present key-value state.
     
-    If the block is a decoder and encoder hidden states are provided, the method performs cross-attention. It retrieves the query length and passes the hidden states, encoder hidden states, and other parameters to the cross-attention layer. The output includes the updated hidden states and the present key-value state.
+    If the block is a decoder and encoder hidden states are provided, the method performs cross-attention. It retrieves the query length and passes the hidden states, encoder hidden states, and other
+parameters to the cross-attention layer. The output includes the updated hidden states and the present key-value state.
     
-    Finally, the method passes the hidden states through the feed-forward layer. It then clamps the hidden states to prevent any numerical issues and returns the final hidden states along with any additional outputs, such as present key-value states and attention outputs, depending on the value of the `use_cache` parameter.
+    Finally, the method passes the hidden states through the feed-forward layer. It then clamps the hidden states to prevent any numerical issues and returns the final hidden states along with any additional
+outputs, such as present key-value states and attention outputs, depending on the value of the `use_cache` parameter.
     
     Note: This class assumes the usage of the MindSpore deep learning framework.
     
@@ -1254,7 +1269,8 @@ class MT5Stack(MT5PreTrainedModel):
         - `__init__(self, config, embed_tokens=None)`: Initializes the `MT5Stack` instance.
         - `get_input_embeddings(self)`: Returns the token embeddings of the model.
         - `set_input_embeddings(self, new_embeddings)`: Sets new token embeddings for the model.
-        - `construct(self, input_ids=None, attention_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, inputs_embeds=None, head_mask=None, cross_attn_head_mask=None, past_key_values=None, use_cache=None, output_attentions=None, output_hidden_states=None, return_dict=None)`: Constructs the model by performing the forward pass.
+        - `construct(self, input_ids=None, attention_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, inputs_embeds=None, head_mask=None, cross_attn_head_mask=None, past_key_values=None,
+use_cache=None, output_attentions=None, output_hidden_states=None, return_dict=None)`: Constructs the model by performing the forward pass.
     
     Note:
         - The `construct` method is the main method of the class that performs the forward pass through the stack of MT5 blocks.
@@ -2176,7 +2192,8 @@ class MT5ForConditionalGeneration(MT5PreTrainedModel):
         
         Args:
             self (MT5ForConditionalGeneration): An instance of the MT5ForConditionalGeneration class.
-            past_key_values (Tuple): A tuple containing the past key values for the decoder. Each element in the tuple represents the past key values for a specific layer. Each layer's past key values is a tuple containing the past key values for each attention head in that layer.
+            past_key_values (Tuple): A tuple containing the past key values for the decoder. Each element in the tuple represents the past key values for a specific layer. Each layer's past key values is a
+tuple containing the past key values for each attention head in that layer.
             beam_idx (Tensor): The index of the beam to reorder the cache for.
         
         Returns:
@@ -2384,13 +2401,16 @@ class MT5ForSequenceClassification(MT5PreTrainedModel):
     - `transformer`: An instance of the `MT5Model` class, which represents the main transformer model.
     - `classification_head`: An instance of the `MT5ClassificationHead` class, which represents the classification head of the model.
     
-    The `construct` method is used to process the input and generate the outputs of the model. It takes several input tensors as parameters, such as `input_ids`, `attention_mask`, `decoder_input_ids`, etc. The method returns a tuple of outputs, including the predicted logits for classification, and other intermediate outputs if requested.
+    The `construct` method is used to process the input and generate the outputs of the model. It takes several input tensors as parameters, such as `input_ids`, `attention_mask`, `decoder_input_ids`, etc. The
+method returns a tuple of outputs, including the predicted logits for classification, and other intermediate outputs if requested.
     
-    If labels are provided, the method also calculates the loss based on the predicted logits and the provided labels. The loss calculation depends on the `problem_type` specified in the configuration. The supported problem types are regression, single-label classification, and multi-label classification.
+    If labels are provided, the method also calculates the loss based on the predicted logits and the provided labels. The loss calculation depends on the `problem_type` specified in the configuration. The
+supported problem types are regression, single-label classification, and multi-label classification.
     
     Note: The `MT5ForSequenceClassification` class does not currently support passing input embeddings instead of input IDs.
     
-    The `MT5ForSequenceClassification` class is designed to be used with the MT5 model for fine-tuning on sequence classification tasks. It provides a convenient interface for processing input sequences and generating predictions.
+    The `MT5ForSequenceClassification` class is designed to be used with the MT5 model for fine-tuning on sequence classification tasks. It provides a convenient interface for processing input sequences and
+generating predictions.
     
     Please refer to the documentation of the `MT5PreTrainedModel` class for more details on loading and saving pre-trained MT5 models.
     """
@@ -2540,7 +2560,8 @@ class MT5ForQuestionAnswering(MT5PreTrainedModel):
     - set_input_embeddings(self, new_embeddings): Sets the shared input embeddings to the provided new embeddings.
     - get_encoder(self): Returns the encoder module of the model.
     - get_decoder(self): Returns the decoder module of the model.
-    - construct(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask, cross_attn_head_mask, encoder_outputs, start_positions, end_positions, inputs_embeds, decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model and returns the outputs.
+    - construct(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask, cross_attn_head_mask, encoder_outputs, start_positions, end_positions, inputs_embeds,
+decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model and returns the outputs.
     
     The 'construct' method takes various input tensors and returns either a tuple of tensors or an instance of Seq2SeqQuestionAnsweringModelOutput.
     

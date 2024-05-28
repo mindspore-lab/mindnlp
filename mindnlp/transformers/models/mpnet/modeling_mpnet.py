@@ -357,7 +357,8 @@ class MPNetAttention(nn.Cell):
             **kwargs: Additional keyword arguments.
         
         Returns:
-            Tuple[Union[Tensor, Tuple[Tensor]], ...]: A tuple containing the attention output tensor of shape (batch_size, sequence_length, hidden_size) and any additional outputs returned by the attention layer.
+            Tuple[Union[Tensor, Tuple[Tensor]], ...]: A tuple containing the attention output tensor of shape (batch_size, sequence_length, hidden_size) and any additional outputs returned by the attention
+layer.
         
         Raises:
             None.
@@ -727,7 +728,8 @@ class MPNetPooler(nn.Cell):
         
         Args:
             self: The instance of the MPNetPooler class.
-            hidden_states (mindspore.Tensor): A tensor containing the hidden states of the MPNet model. It is expected to have a shape of (batch_size, sequence_length, hidden_size), where batch_size is the batch size, sequence_length is the length of the input sequence, and hidden_size is the size of the hidden state.
+            hidden_states (mindspore.Tensor): A tensor containing the hidden states of the MPNet model. It is expected to have a shape of (batch_size, sequence_length, hidden_size), where batch_size is the
+batch size, sequence_length is the length of the input sequence, and hidden_size is the size of the hidden state.
         
         Returns:
             mindspore.Tensor: The pooled output tensor generated from the hidden states. It has a shape of (batch_size, hidden_size).

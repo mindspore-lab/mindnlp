@@ -418,11 +418,14 @@ class GPT2Tokenizer(PreTrainedTokenizer):
         Raises:
             OSError: If the save_directory is not a valid directory.
         
-        This method saves the vocabulary of the GPT2Tokenizer instance to the specified save_directory. The vocabulary is saved in two files: a vocabulary file and a merge file. The vocabulary file contains the encoder dictionary in JSON format, and the merge file contains the BPE merge indices.
+        This method saves the vocabulary of the GPT2Tokenizer instance to the specified save_directory. The vocabulary is saved in two files: a vocabulary file and a merge file. The vocabulary file contains
+the encoder dictionary in JSON format, and the merge file contains the BPE merge indices.
         
-        If the save_directory does not exist or is not a directory, an OSError is raised. The filename_prefix parameter is optional and can be used to add a prefix to the filename of the saved vocabulary files. If filename_prefix is not provided, no prefix will be added to the filenames.
+        If the save_directory does not exist or is not a directory, an OSError is raised. The filename_prefix parameter is optional and can be used to add a prefix to the filename of the saved vocabulary
+files. If filename_prefix is not provided, no prefix will be added to the filenames.
         
-        The method returns a tuple containing the paths of the saved vocabulary files, i.e., (vocab_file, merge_file). The vocab_file path points to the saved vocabulary file, and the merge_file path points to the saved merge file.
+        The method returns a tuple containing the paths of the saved vocabulary files, i.e., (vocab_file, merge_file). The vocab_file path points to the saved vocabulary file, and the merge_file path points to
+the saved merge file.
         """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")

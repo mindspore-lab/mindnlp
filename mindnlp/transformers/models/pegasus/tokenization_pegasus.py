@@ -267,7 +267,8 @@ class PegasusTokenizer(PreTrainedTokenizer):
             None: This method does not return any value explicitly. It updates the internal state of the PegasusTokenizer object based on the provided dictionary 'd'.
         
         Raises:
-            No specific exceptions are documented to be raised by this method. However, potential exceptions that could occur during the execution of this method may include any exceptions raised by the SentencePieceProcessor class methods like Load, if there are issues with loading the vocabulary file specified in the state information.
+            No specific exceptions are documented to be raised by this method. However, potential exceptions that could occur during the execution of this method may include any exceptions raised by the
+SentencePieceProcessor class methods like Load, if there are issues with loading the vocabulary file specified in the state information.
         """
         self.__dict__ = d
 

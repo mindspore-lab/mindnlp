@@ -887,7 +887,9 @@ class BatchNorm1d(_UniformOperator):
         """
 
         
-        def __init__(self, num_features: int, eps: float = 1e-05, momentum: float = 0.9, affine: bool = True, gamma_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones', beta_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros', moving_mean_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros', moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones', use_batch_statistics: bool = True) -> None:
+        def __init__(self, num_features: int, eps: float = 1e-05, momentum: float = 0.9, affine: bool = True, gamma_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones', beta_init: Union[Tensor, str,
+Initializer, numbers.Number] = 'zeros', moving_mean_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros', moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones',
+use_batch_statistics: bool = True) -> None:
             """
             Initializes an instance of the BatchNorm1d class.
         
@@ -909,7 +911,8 @@ class BatchNorm1d(_UniformOperator):
             Raises:
                 None
             """
-            super(BatchNorm1d, self).__init__(HBatchNorm1d, BatchNormImpl, num_features=num_features, eps=eps, momentum=momentum, affine=affine, gamma_init=gamma_init, beta_init=beta_init, moving_mean_init=moving_mean_init, moving_var_init=moving_var_init, use_batch_statistics=use_batch_statistics)
+            super(BatchNorm1d, self).__init__(HBatchNorm1d, BatchNormImpl, num_features=num_features, eps=eps, momentum=momentum, affine=affine, gamma_init=gamma_init, beta_init=beta_init,
+moving_mean_init=moving_mean_init, moving_var_init=moving_var_init, use_batch_statistics=use_batch_statistics)
         
         super(BatchNorm1d, self).__init__(HBatchNorm1d,
                                           BatchNormImpl,
@@ -1036,7 +1039,8 @@ class BatchNorm2d(_UniformOperator):
             gamma_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value for the gamma weight. It can be a Tensor, string, Initializer, or a number (default is 'ones').
             beta_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value for the beta weight. It can be a Tensor, string, Initializer, or a number (default is 'zeros').
             moving_mean_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value for the moving mean. It can be a Tensor, string, Initializer, or a number (default is 'zeros').
-            moving_var_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value for the moving variance. It can be a Tensor, string, Initializer, or a number (default is 'ones').
+            moving_var_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value for the moving variance. It can be a Tensor, string, Initializer, or a number (default is
+'ones').
             use_batch_statistics (bool, optional): A boolean value indicating whether to use batch statistics during training (default is True).
             data_format (str, optional): The data format. Supported values are 'NCHW' and 'NHWC' (default is 'NCHW').
         

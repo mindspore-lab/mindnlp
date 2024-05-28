@@ -41,7 +41,8 @@ class LlamaRMSNorm(nn.Cell):
 
     """LlamaRMSNorm is a class that represents a normalization layer, equivalent to T5LayerNorm, used in deep learning models. It inherits from the nn.Cell class.
     
-    This class provides methods to initialize and apply RMS normalization to the input hidden states. The RMS normalization is calculated based on the variance of the hidden states and a weight parameter. The normalized hidden states are then multiplied by the weight parameter to obtain the final output.
+    This class provides methods to initialize and apply RMS normalization to the input hidden states. The RMS normalization is calculated based on the variance of the hidden states and a weight parameter. The
+normalized hidden states are then multiplied by the weight parameter to obtain the final output.
     
     Attributes:
         - weight (mindspore.Parameter): The weight parameter used in the RMS normalization.
@@ -165,13 +166,17 @@ class LlamaRotaryEmbedding(nn.Cell):
         Description:
         This method sets the cosine and sine caches for LlamaRotaryEmbedding. The caches are used in the forward pass of the neural network for efficient calculation of rotary position embeddings.
         
-        The method first sets the maximum sequence length cached to the given sequence length. It then creates a tensor 't' using the 'arange' operation from the 'ops' module, with the same data type as 'inv_freq'.
+        The method first sets the maximum sequence length cached to the given sequence length. It then creates a tensor 't' using the 'arange' operation from the 'ops' module, with the same data type as
+'inv_freq'.
         
-        Next, it calculates the element-wise product of 't' and 'inv_freq' using 'einsum' operation from the 'ops' module. The result is a tensor 'freqs' which represents the frequencies for each position in the sequence.
+        Next, it calculates the element-wise product of 't' and 'inv_freq' using 'einsum' operation from the 'ops' module. The result is a tensor 'freqs' which represents the frequencies for each position in
+the sequence.
         
-        To create the cache tensor, 'freqs' is concatenated with itself along the last axis using the 'cat' operation from the 'ops' module. The resulting tensor 'emb' has shape (seq_len, 2 * frequency_dim), where frequency_dim is the dimension of the 'inv_freq' tensor.
+        To create the cache tensor, 'freqs' is concatenated with itself along the last axis using the 'cat' operation from the 'ops' module. The resulting tensor 'emb' has shape (seq_len, 2 * frequency_dim),
+where frequency_dim is the dimension of the 'inv_freq' tensor.
         
-        Finally, the 'cos_cached' and 'sin_cached' attributes are updated by calculating the cosine and sine of each element in 'emb', respectively. The resulting tensors are converted to the given data type 'dtype' using the 'to' method.
+        Finally, the 'cos_cached' and 'sin_cached' attributes are updated by calculating the cosine and sine of each element in 'emb', respectively. The resulting tensors are converted to the given data type
+'dtype' using the 'to' method.
         
         Note: It is assumed that the 'inv_freq' attribute of the LlamaRotaryEmbedding instance has been initialized prior to calling this method.
         """
@@ -369,7 +374,8 @@ class LlamaMLP(nn.Cell):
     """
     This class represents a multi-layer perceptron (MLP) model called LlamaMLP. 
     
-    LlamaMLP inherits from the nn.Cell class and is designed for deep learning tasks. It consists of multiple layers, including gate projection, up projection, and down projection layers, which are used to transform the input data and produce the final output.
+    LlamaMLP inherits from the nn.Cell class and is designed for deep learning tasks. It consists of multiple layers, including gate projection, up projection, and down projection layers, which are used to
+transform the input data and produce the final output.
     
     Attributes:
         config (object): The configuration object that stores the hyperparameters of the LlamaMLP model.
@@ -389,7 +395,8 @@ class LlamaMLP(nn.Cell):
             This method returns the final output of the LlamaMLP model.
             
     Note:
-        The LlamaMLP model supports pretraining when the 'pretraining_tp' hyperparameter is greater than 1. In this case, the input data is split into slices to perform parallel computations. Otherwise, the computations are performed in a single path.
+        The LlamaMLP model supports pretraining when the 'pretraining_tp' hyperparameter is greater than 1. In this case, the input data is split into slices to perform parallel computations. Otherwise, the
+computations are performed in a single path.
     """
     def __init__(self, config):
 
@@ -719,7 +726,8 @@ class LlamaDecoderLayer(nn.Cell):
     
             Args:
                 hidden_states (mindspore.Tensor): The input to the layer of shape `(batch, seq_len, embed_dim)`.
-                attention_mask (mindspore.Tensor, optional): The attention mask. Its shape depends on the attention mechanism used. For flash attention, it has a shape of `(batch_size, sequence_length)`, and for default attention, it has a shape of `(batch_size, 1, query_sequence_length, key_sequence_length)`.
+                attention_mask (mindspore.Tensor, optional): The attention mask. Its shape depends on the attention mechanism used. For flash attention, it has a shape of `(batch_size, sequence_length)`, and
+for default attention, it has a shape of `(batch_size, 1, query_sequence_length, key_sequence_length)`.
                 position_ids (mindspore.Tensor, optional): The position ids tensor.
                 past_key_value (Tuple[mindspore.Tensor], optional): The cached past key and value projection states.
                 output_attentions (bool, optional): Whether or not to return the attention tensors of all attention layers. See the `attentions` under the returned tensors for more detail.
@@ -727,7 +735,8 @@ class LlamaDecoderLayer(nn.Cell):
                 kwargs: Additional keyword arguments.
     
             Returns:
-                Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: The output tensor of shape `(batch, seq_len, embed_dim)`. If `output_attentions` is True, the tuple also includes the attention weights tensor. If `use_cache` is True, the tuple also includes the present key and value projection states.
+                Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: The output tensor of shape `(batch, seq_len, embed_dim)`. If `output_attentions` is True, the tuple also includes
+the attention weights tensor. If `use_cache` is True, the tuple also includes the present key and value projection states.
     
     Note:
         The `LlamaDecoderLayer` class assumes that the `LlamaConfig` instance is already defined and passed as an argument to the constructor.
@@ -831,7 +840,8 @@ class LlamaPreTrainedModel(PreTrainedModel):
     """
     LlamaPreTrainedModel is a Python class representing a pre-trained model for llama-based machine learning tasks. This class inherits from PreTrainedModel and provides methods for initializing weights.
     
-    The _init_weights method initializes the weights for the given cell. If the cell is of type nn.Dense, the weight is initialized using the Normal initializer within the specified range. If the cell has bias, it is initialized with zeros. If the cell is of type nn.Embedding, the weight is initialized with random normal values within the specified range, and the padding index is set to 0 if provided.
+    The _init_weights method initializes the weights for the given cell. If the cell is of type nn.Dense, the weight is initialized using the Normal initializer within the specified range. If the cell has
+bias, it is initialized with zeros. If the cell is of type nn.Embedding, the weight is initialized with random normal values within the specified range, and the padding index is set to 0 if provided.
     
     Parameters:
     - cell: The cell for which the weights need to be initialized.
@@ -965,7 +975,8 @@ class LlamaModel(LlamaPreTrainedModel):
             return_dict (bool, optional): Whether to return a dictionary. Default is None.
         
         Returns:
-            Union[Tuple, BaseModelOutputWithPast]: The output of the LlamaModel. It can be a tuple containing hidden states, next cache, all hidden states, and all self attentions; or an instance of BaseModelOutputWithPast.
+            Union[Tuple, BaseModelOutputWithPast]: The output of the LlamaModel. It can be a tuple containing hidden states, next cache, all hidden states, and all self attentions; or an instance of
+BaseModelOutputWithPast.
         
         Raises:
             ValueError: If both input_ids and inputs_embeds are specified.
@@ -1058,7 +1069,8 @@ class LlamaModel(LlamaPreTrainedModel):
 class LlamaForCausalLM(LlamaPreTrainedModel):
 
     """
-    This class represents a Llama model for Causal Language Modeling (LM) tasks. It includes methods for setting and getting input and output embeddings, setting and getting the decoder, as well as methods for model construction and preparing inputs for generation. The class inherits from LlamaPreTrainedModel and implements the necessary functionalities for generating text based on a given prompt.
+    This class represents a Llama model for Causal Language Modeling (LM) tasks. It includes methods for setting and getting input and output embeddings, setting and getting the decoder, as well as methods for
+model construction and preparing inputs for generation. The class inherits from LlamaPreTrainedModel and implements the necessary functionalities for generating text based on a given prompt.
     
     Attributes:
         - model: Instance of LlamaModel used for the LM task.
@@ -1196,7 +1208,9 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         Raises:
             None.
         
-        This method allows the user to update the output embeddings of the LlamaForCausalLM model by replacing the current embeddings with the provided new_embeddings. The new_embeddings should be a tensor of the same shape and size as the current embeddings. This method is useful in fine-tuning the model with custom embeddings or when transferring the model to a different task that requires different output embeddings.
+        This method allows the user to update the output embeddings of the LlamaForCausalLM model by replacing the current embeddings with the provided new_embeddings. The new_embeddings should be a tensor of
+the same shape and size as the current embeddings. This method is useful in fine-tuning the model with custom embeddings or when transferring the model to a different task that requires different output
+embeddings.
         """
         self.lm_head = new_embeddings
 
@@ -1402,7 +1416,8 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         Raises:
             None.
         
-        This static method reorders the cache of past key values for a specific beam index in the LlamaForCausalLM class. The method iterates over each layer's cache and reorders the past states based on the provided beam index. The reordered cache is then returned as a tuple of past key values. The original cache is modified in-place and no new objects are created.
+        This static method reorders the cache of past key values for a specific beam index in the LlamaForCausalLM class. The method iterates over each layer's cache and reorders the past states based on the
+provided beam index. The reordered cache is then returned as a tuple of past key values. The original cache is modified in-place and no new objects are created.
         """
         reordered_past = ()
         for layer_past in past_key_values:
@@ -1492,7 +1507,8 @@ class LlamaForSequenceClassification(LlamaPreTrainedModel):
         Raises:
             None.
         
-        This method retrieves the input embeddings for the given sequence from the LlamaForSequenceClassification model. Input embeddings are the vector representations of the input tokens in the sequence that the model uses for further processing. These embeddings capture the contextual information of the tokens and are essential for downstream tasks such as sequence classification.
+        This method retrieves the input embeddings for the given sequence from the LlamaForSequenceClassification model. Input embeddings are the vector representations of the input tokens in the sequence that
+the model uses for further processing. These embeddings capture the contextual information of the tokens and are essential for downstream tasks such as sequence classification.
         
         Note:
             The input embeddings are obtained by calling the 'embed_tokens' method of the model instance.

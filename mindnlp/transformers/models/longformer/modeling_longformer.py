@@ -554,9 +554,11 @@ class LongformerEmbeddings(nn.Cell):
 class LongformerSelfAttention(nn.Cell):
 
     """
-    This class represents the self-attention mechanism used in Longformer models. It handles the computation of attention scores and outputs for both local and global attention patterns, with support for sliding window attention. Inherits from nn.Cell.
+    This class represents the self-attention mechanism used in Longformer models. It handles the computation of attention scores and outputs for both local and global attention patterns, with support for
+sliding window attention. Inherits from nn.Cell.
     
-    The class includes methods for initializing the self-attention layer, constructing the attention mechanism, padding and processing hidden states, and computing attention outputs based on global indices. It also provides functions for matrix multiplication with sliding window attention patterns and handling global attention indices.
+    The class includes methods for initializing the self-attention layer, constructing the attention mechanism, padding and processing hidden states, and computing attention outputs based on global indices. It
+also provides functions for matrix multiplication with sliding window attention patterns and handling global attention indices.
     
     The LongformerSelfAttention class is designed to work seamlessly within Longformer models, ensuring efficient and accurate attention computations for both local and global contexts.
     
@@ -569,7 +571,8 @@ class LongformerSelfAttention(nn.Cell):
         
         Args:
             self: The instance of the class.
-            config: An object containing the configuration parameters for the LongformerSelfAttention layer, including hidden_size, num_attention_heads, attention_probs_dropout_prob, and attention_window. Type: object. Restrictions: Must contain the specified configuration parameters.
+            config: An object containing the configuration parameters for the LongformerSelfAttention layer, including hidden_size, num_attention_heads, attention_probs_dropout_prob, and attention_window.
+Type: object. Restrictions: Must contain the specified configuration parameters.
             layer_id: The ID of the layer. Type: int. Purpose: Identifies the specific layer within the LongformerSelfAttention. Restrictions: Must be a valid layer ID.
         
         Returns:
@@ -1295,7 +1298,8 @@ class LongformerSelfAttention(nn.Cell):
 class LongformerSelfOutput(nn.Cell):
 
     """
-    This class represents the Longformer self-attention mechanism used in the Longformer model. It is responsible for applying a dense layer, layer normalization, and dropout to the hidden states of the input tensor.
+    This class represents the Longformer self-attention mechanism used in the Longformer model. It is responsible for applying a dense layer, layer normalization, and dropout to the hidden states of the input
+tensor.
     
     Inherits from: nn.Cell
     
@@ -1618,7 +1622,8 @@ class LongformerLayer(nn.Cell):
 
     """A class representing a Longformer layer.
     
-    This class inherits from the nn.Cell class and implements a single layer of the Longformer model. The Longformer layer consists of three main components: attention, intermediate, and output. It also provides methods for constructing the layer and performing feed-forward chunking.
+    This class inherits from the nn.Cell class and implements a single layer of the Longformer model. The Longformer layer consists of three main components: attention, intermediate, and output. It also
+provides methods for constructing the layer and performing feed-forward chunking.
     
     Attributes:
         attention (LongformerAttention): The attention module of the layer.
@@ -1629,7 +1634,8 @@ class LongformerLayer(nn.Cell):
     
     Methods:
         __init__(self, config, layer_id=0): Initializes a new instance of LongformerLayer.
-        construct(self, hidden_states, attention_mask=None, layer_head_mask=None, is_index_masked=None, is_index_global_attn=None, is_global_attn=None, output_attentions=False): Constructs the LongformerLayer given the input hidden states and optional masks.
+        construct(self, hidden_states, attention_mask=None, layer_head_mask=None, is_index_masked=None, is_index_global_attn=None, is_global_attn=None, output_attentions=False): Constructs the LongformerLayer
+given the input hidden states and optional masks.
         ff_chunk(self, attn_output): Performs feed-forward chunking on the given attention output.
     
     """
@@ -1737,7 +1743,8 @@ class LongformerEncoder(nn.Cell):
     
     This class inherits from `nn.Cell` and initializes with a configuration object `config`. The `config` parameter specifies the configuration settings for the LongformerEncoder.
     
-    The LongformerEncoder consists of a series of Longformer layers. The number of layers is determined by the `config.num_hidden_layers` parameter. Each layer is represented by an instance of the `LongformerLayer` class.
+    The LongformerEncoder consists of a series of Longformer layers. The number of layers is determined by the `config.num_hidden_layers` parameter. Each layer is represented by an instance of the
+`LongformerLayer` class.
     
     The `construct` method is responsible for processing the input sequence through the Longformer layers. It takes the following parameters:
     - `hidden_states`: The input hidden states of the sequence.
@@ -1748,7 +1755,9 @@ class LongformerEncoder(nn.Cell):
     - `output_hidden_states`: A boolean flag indicating whether to output hidden states of each layer.
     - `return_dict`: A boolean flag indicating whether to return the output as a LongformerBaseModelOutput dictionary.
     
-    The `construct` method processes the input sequence through each layer of the LongformerEncoder. It keeps track of the hidden states and attention tensors if the corresponding flags are set. If a head mask is provided, it is applied to the respective layer. At the end, the method returns a LongformerBaseModelOutput containing the last hidden state, hidden states of all layers, attention tensors, and global attention tensors if applicable.
+    The `construct` method processes the input sequence through each layer of the LongformerEncoder. It keeps track of the hidden states and attention tensors if the corresponding flags are set. If a head mask
+is provided, it is applied to the respective layer. At the end, the method returns a LongformerBaseModelOutput containing the last hidden state, hidden states of all layers, attention tensors, and global
+attention tensors if applicable.
     
     Note: The LongformerEncoder assumes that the input hidden states and attention mask have compatible shapes.
     
@@ -2212,7 +2221,8 @@ class LongformerModel(LongformerPreTrainedModel):
         
         Args:
             self (LongformerModel): An instance of the LongformerModel class.
-            attention_mask (mindspore.Tensor): The attention mask tensor. It is a binary tensor of shape (batch_size, sequence_length) where 0 indicates masking and 1 indicates non-masking. If None, the global_attention_mask is used.
+            attention_mask (mindspore.Tensor): The attention mask tensor. It is a binary tensor of shape (batch_size, sequence_length) where 0 indicates masking and 1 indicates non-masking. If None, the
+global_attention_mask is used.
             global_attention_mask (mindspore.Tensor): The global attention mask tensor. It is a binary tensor of shape (batch_size, sequence_length) where 0 indicates masking and 1 indicates non-masking.
         
         Returns:
@@ -2355,7 +2365,10 @@ class LongformerModel(LongformerPreTrainedModel):
 class LongformerForMaskedLM(LongformerPreTrainedModel):
 
     """
-    This class represents a Longformer model for masked language modeling tasks. It inherits from the LongformerPreTrainedModel class and includes methods for initializing the model, getting and setting output embeddings, and constructing the model for masked language modeling tasks. The construct method accepts various input tensors and optional keyword arguments, and returns the LongformerMaskedLMOutput. The method also includes an illustrative example of using the model for mask filling. The class provides detailed explanations for various parameters and return values, and includes usage examples for initializing the tokenizer and model, as well as performing masked language modeling tasks with long input sequences.
+    This class represents a Longformer model for masked language modeling tasks. It inherits from the LongformerPreTrainedModel class and includes methods for initializing the model, getting and setting output
+embeddings, and constructing the model for masked language modeling tasks. The construct method accepts various input tensors and optional keyword arguments, and returns the LongformerMaskedLMOutput. The
+method also includes an illustrative example of using the model for mask filling. The class provides detailed explanations for various parameters and return values, and includes usage examples for initializing
+the tokenizer and model, as well as performing masked language modeling tasks with long input sequences.
     """
     _tied_weights_keys = ["lm_head.decoder"]
 
@@ -2504,11 +2517,14 @@ class LongformerForSequenceClassification(LongformerPreTrainedModel):
     """
     This class represents a Longformer model for sequence classification tasks. It extends the functionality of the LongformerPreTrainedModel class by adding specific methods for sequence classification. 
     
-    The class includes an initialization method (__init__) that sets up the model with the provided configuration. It also provides a construct method for processing input data and generating classification outputs. The construct method supports various parameters for fine-tuning the model and computing classification losses.
+    The class includes an initialization method (__init__) that sets up the model with the provided configuration. It also provides a construct method for processing input data and generating classification
+outputs. The construct method supports various parameters for fine-tuning the model and computing classification losses.
     
-    When using this class, users can pass input data such as input_ids, attention_mask, global_attention_mask, and other optional tensors to perform sequence classification. The class handles different types of classification tasks based on the configuration provided, such as regression, single-label classification, or multi-label classification. 
+    When using this class, users can pass input data such as input_ids, attention_mask, global_attention_mask, and other optional tensors to perform sequence classification. The class handles different types
+of classification tasks based on the configuration provided, such as regression, single-label classification, or multi-label classification. 
     
-    Additionally, the LongformerForSequenceClassification class offers flexibility in returning output in different formats, including returning a tuple of loss and outputs or a LongformerSequenceClassifierOutput object containing detailed classification results.
+    Additionally, the LongformerForSequenceClassification class offers flexibility in returning output in different formats, including returning a tuple of loss and outputs or a
+LongformerSequenceClassifierOutput object containing detailed classification results.
     
     Overall, the LongformerForSequenceClassification class provides a comprehensive solution for leveraging Longformer models in sequence classification tasks within the specified framework.
     """
@@ -2669,15 +2685,20 @@ class LongformerForQuestionAnswering(LongformerPreTrainedModel):
     """
     This class represents a Longformer model for question answering tasks. It inherits from the LongformerPreTrainedModel class.
     
-    The LongformerForQuestionAnswering class contains methods for constructing and running the model. The constructor initializes the model with the given configuration. The model architecture consists of a LongformerModel and a linear layer for question answering. 
+    The LongformerForQuestionAnswering class contains methods for constructing and running the model. The constructor initializes the model with the given configuration. The model architecture consists of a
+LongformerModel and a linear layer for question answering. 
     
-    The construct method is used to perform question answering on the input data. It takes several input tensors including input_ids, attention_mask, global_attention_mask, head_mask, token_type_ids, position_ids, and inputs_embeds. It also takes start_positions and end_positions as optional labels for the start and end positions of the answer span. The method returns a tuple of outputs including start_logits and end_logits which represent the predicted probabilities for the start and end positions of the answer span.
+    The construct method is used to perform question answering on the input data. It takes several input tensors including input_ids, attention_mask, global_attention_mask, head_mask, token_type_ids,
+position_ids, and inputs_embeds. It also takes start_positions and end_positions as optional labels for the start and end positions of the answer span. The method returns a tuple of outputs including
+start_logits and end_logits which represent the predicted probabilities for the start and end positions of the answer span.
     
     If start_positions and end_positions are provided, the method also computes the token classification loss based on the predicted logits and the provided labels. The loss is averaged over the batch.
     
-    Note: The method automatically sets the global attention on question tokens. If global_attention_mask is not provided, it is automatically generated based on the input_ids and the sep_token_id from the model configuration.
+    Note: The method automatically sets the global attention on question tokens. If global_attention_mask is not provided, it is automatically generated based on the input_ids and the sep_token_id from the
+model configuration.
     
-    The LongformerForQuestionAnswering class also provides an example usage of the model for question answering tasks using the forward method. The example demonstrates how to use the model to predict the answer span given a question and a passage.
+    The LongformerForQuestionAnswering class also provides an example usage of the model for question answering tasks using the forward method. The example demonstrates how to use the model to predict the
+answer span given a question and a passage.
     
     Please refer to the example code for more details on how to use the LongformerForQuestionAnswering class for question answering tasks.
     """
@@ -2825,13 +2846,18 @@ class LongformerForQuestionAnswering(LongformerPreTrainedModel):
 class LongformerForTokenClassification(LongformerPreTrainedModel):
 
     """
-    This class represents a Longformer model for token classification tasks. It is designed for token classification tasks where the goal is to assign labels to individual tokens in a sequence. The class inherits from LongformerPreTrainedModel and includes methods for model initialization and forward pass to generate token classification outputs.
+    This class represents a Longformer model for token classification tasks. It is designed for token classification tasks where the goal is to assign labels to individual tokens in a sequence. The class
+inherits from LongformerPreTrainedModel and includes methods for model initialization and forward pass to generate token classification outputs.
     
-    The class's constructor initializes the LongformerForTokenClassification model with the provided configuration. It sets up the necessary components such as the LongformerModel, dropout layer, and classifier for token classification.
+    The class's constructor initializes the LongformerForTokenClassification model with the provided configuration. It sets up the necessary components such as the LongformerModel, dropout layer, and
+classifier for token classification.
     
-    The 'construct' method takes input tensors such as input_ids, attention_mask, token_type_ids, etc., and returns token classification outputs. It utilizes the Longformer model to generate sequence outputs, applies dropout, and passes the output through a classifier to obtain logits. If labels are provided, it computes the cross-entropy loss. The method returns a Tuple containing loss and token classification outputs, based on the return_dict parameter.
+    The 'construct' method takes input tensors such as input_ids, attention_mask, token_type_ids, etc., and returns token classification outputs. It utilizes the Longformer model to generate sequence outputs,
+applies dropout, and passes the output through a classifier to obtain logits. If labels are provided, it computes the cross-entropy loss. The method returns a Tuple containing loss and token classification
+outputs, based on the return_dict parameter.
     
-    Note that labels should be indices in the range [0, ..., config.num_labels - 1]. The LongformerForTokenClassification class provides functionality for handling token classification tasks efficiently and can be used in various natural language processing applications.
+    Note that labels should be indices in the range [0, ..., config.num_labels - 1]. The LongformerForTokenClassification class provides functionality for handling token classification tasks efficiently and
+can be used in various natural language processing applications.
     """
     def __init__(self, config):
 
@@ -2921,7 +2947,8 @@ class LongformerForMultipleChoice(LongformerPreTrainedModel):
     """
     This class represents a Longformer model for multiple choice tasks. It is a subclass of LongformerPreTrainedModel.
     
-    The LongformerForMultipleChoice class includes methods to initialize the model, construct the model, and compute the multiple choice classification loss. It also provides a method to retrieve the model output.
+    The LongformerForMultipleChoice class includes methods to initialize the model, construct the model, and compute the multiple choice classification loss. It also provides a method to retrieve the model
+output.
     
     Attributes:
         longformer (LongformerModel): The Longformer model used for encoding the input.
@@ -2930,7 +2957,8 @@ class LongformerForMultipleChoice(LongformerPreTrainedModel):
         
     Methods:
         __init__(self, config): Initializes the LongformerForMultipleChoice model with the given configuration.
-        construct(self, input_ids, token_type_ids, attention_mask, global_attention_mask, head_mask, labels, position_ids, inputs_embeds, output_attentions, output_hidden_states, return_dict): Constructs the LongformerForMultipleChoice model with the given inputs and returns the model output.
+        construct(self, input_ids, token_type_ids, attention_mask, global_attention_mask, head_mask, labels, position_ids, inputs_embeds, output_attentions, output_hidden_states, return_dict): Constructs the
+LongformerForMultipleChoice model with the given inputs and returns the model output.
     """
     def __init__(self, config):
 

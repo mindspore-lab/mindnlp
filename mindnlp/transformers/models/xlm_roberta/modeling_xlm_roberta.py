@@ -186,7 +186,8 @@ class XLMRobertaSelfAttention(nn.Cell):
         
         Args:
             self: The instance of the class.
-            config: An object containing the configuration settings for the XLMRobertaSelfAttention. It should have attributes like hidden_size, num_attention_heads, embedding_size, attention_probs_dropout_prob, position_embedding_type, max_position_embeddings, and is_decoder.
+            config: An object containing the configuration settings for the XLMRobertaSelfAttention. It should have attributes like hidden_size, num_attention_heads, embedding_size,
+attention_probs_dropout_prob, position_embedding_type, max_position_embeddings, and is_decoder.
             position_embedding_type: (optional) A string specifying the type of position embedding. Defaults to None. It should be one of 'absolute', 'relative_key', or 'relative_key_query'.
         
         Returns:
@@ -527,7 +528,8 @@ class XLMRobertaIntermediate(nn.Cell):
         
         Args:
             self (XLMRobertaIntermediate): The instance of the XLMRobertaIntermediate class.
-            hidden_states (mindspore.Tensor): The tensor representing the hidden states to be processed. It should be of type mindspore.Tensor and must adhere to the input requirements of the intermediate layers.
+            hidden_states (mindspore.Tensor): The tensor representing the hidden states to be processed. It should be of type mindspore.Tensor and must adhere to the input requirements of the intermediate
+layers.
         
         Returns:
             mindspore.Tensor: Returns the processed hidden states as a tensor of type mindspore.Tensor.
@@ -609,7 +611,8 @@ class XLMRobertaLayer(nn.Cell):
             None. This method does not return any value.
         
         Raises:
-            - ValueError: If add_cross_attention is True and the model is not configured as a decoder, a ValueError is raised indicating that XLMRobertaLayer should be used as a decoder model when cross attention is added.
+            - ValueError: If add_cross_attention is True and the model is not configured as a decoder, a ValueError is raised indicating that XLMRobertaLayer should be used as a decoder model when cross
+attention is added.
         """
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
@@ -1225,7 +1228,8 @@ class XLMRobertaForCausalLM(XLMRobertaPreTrainedModel):
             None.
         
         Note:
-            The output embeddings are used in the decoder layer of the XLMRobertaForCausalLM model. By setting new embeddings, users can customize the output layer of the model according to their specific requirements.
+            The output embeddings are used in the decoder layer of the XLMRobertaForCausalLM model. By setting new embeddings, users can customize the output layer of the model according to their specific
+requirements.
         
         Example:
             >>> model = XLMRobertaForCausalLM.from_pretrained('xlm-roberta-base')
@@ -1528,7 +1532,8 @@ class XLMRobertaLMHead(nn.Cell):
         
         Args:
             self: An instance of the XLMRobertaLMHead class.
-            config: A configuration object containing parameters for initializing the XLMRobertaLMHead instance. It is of type 'config' and is used to set the hidden size, vocabulary size, and layer normalization epsilon for the XLMRobertaLMHead instance.
+            config: A configuration object containing parameters for initializing the XLMRobertaLMHead instance. It is of type 'config' and is used to set the hidden size, vocabulary size, and layer
+normalization epsilon for the XLMRobertaLMHead instance.
         
         Returns:
             None. This method does not return any value.

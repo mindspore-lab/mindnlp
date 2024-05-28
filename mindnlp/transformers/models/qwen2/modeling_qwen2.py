@@ -83,9 +83,11 @@ class Qwen2RMSNorm(nn.Cell):
     """
     Qwen2RMSNorm is a custom normalization layer that inherits from nn.Cell. It is equivalent to T5LayerNorm and is designed to normalize the input hidden states.
     
-    This class initializes with the specified hidden_size and an optional epsilon value for variance smoothing. The normalization process involves scaling the hidden states based on the calculated variance and the provided weight parameter.
+    This class initializes with the specified hidden_size and an optional epsilon value for variance smoothing. The normalization process involves scaling the hidden states based on the calculated variance and
+the provided weight parameter.
     
-    The construct method takes hidden_states as input and performs the normalization operation, ensuring that the output matches the input data type. The normalized hidden_states are then multiplied by the weight parameter to produce the final output.
+    The construct method takes hidden_states as input and performs the normalization operation, ensuring that the output matches the input data type. The normalized hidden_states are then multiplied by the
+weight parameter to produce the final output.
     
     Note: This docstring is based on the provided information and does not include actual code or signatures.
     """
@@ -156,7 +158,8 @@ class Qwen2RotaryEmbedding(nn.Cell):
         Raises:
             None.
         
-        This method initializes the Qwen2RotaryEmbedding object with the specified dimensionality, maximum position embeddings, and base value. It calculates the inverse frequency based on the dimensionality and stores it in the 'inv_freq' attribute. Additionally, it sets the cosine and sine cache based on the maximum position embeddings.
+        This method initializes the Qwen2RotaryEmbedding object with the specified dimensionality, maximum position embeddings, and base value. It calculates the inverse frequency based on the dimensionality
+and stores it in the 'inv_freq' attribute. Additionally, it sets the cosine and sine cache based on the maximum position embeddings.
         """
         super().__init__()
 
@@ -325,7 +328,9 @@ class Qwen2MLP(nn.Cell):
         Raises:
             None.
         
-        This method constructs a new object by performing a series of operations on the input data 'x'. It first applies the 'gate_proj' function to 'x' and then applies the 'act_fn' function to the result. The output of 'act_fn' is multiplied element-wise with the result of applying the 'down_proj' function to 'x'. Finally, the result is multiplied with the output of applying the 'up_proj' function to 'x'. The constructed object is returned as None.
+        This method constructs a new object by performing a series of operations on the input data 'x'. It first applies the 'gate_proj' function to 'x' and then applies the 'act_fn' function to the result.
+The output of 'act_fn' is multiplied element-wise with the result of applying the 'down_proj' function to 'x'. Finally, the result is multiplied with the output of applying the 'up_proj' function to 'x'. The
+constructed object is returned as None.
         """
         return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
 
@@ -357,7 +362,8 @@ class Qwen2Attention(nn.Cell):
         Args:
             self: The instance of the class.
             config (Qwen2Config): An instance of the Qwen2Config class containing configuration parameters for the attention mechanism.
-            layer_idx (Optional[int]): The index of the layer. Defaults to None. If None, a warning is logged as it may lead to errors during forward call if caching is used. It is recommended to provide a valid layer index when creating the class.
+            layer_idx (Optional[int]): The index of the layer. Defaults to None. If None, a warning is logged as it may lead to errors during forward call if caching is used. It is recommended to provide a
+valid layer index when creating the class.
         
         Returns:
             None: This method does not return any value.
@@ -429,7 +435,8 @@ class Qwen2Attention(nn.Cell):
                 - past_key_value (Optional[Tuple[mindspore.Tensor]]): The updated key and value tensors, if past_key_value is not None and caching is enabled, else None.
         
         Raises:
-            ValueError: If the cache structure has changed and the layer index is not provided, if the shape of attention weights or attention mask is incorrect, or if the shape of the output tensor is not as expected.
+            ValueError: If the cache structure has changed and the layer index is not provided, if the shape of attention weights or attention mask is incorrect, or if the shape of the output tensor is not as
+expected.
         '''
         bsz, q_len, _ = hidden_states.shape
 
@@ -518,7 +525,8 @@ class Qwen2DecoderLayer(nn.Cell):
     
     Methods:
         __init__(config: Qwen2Config, layer_idx: int): Initializes the Qwen2DecoderLayer with the given configuration and layer index.
-        construct(hidden_states: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, position_ids: Optional[mindspore.Tensor] = None, past_key_value: Optional[Tuple[mindspore.Tensor]] = None, output_attentions: Optional[bool] = False, use_cache: Optional[bool] = False, **kwargs) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: 
+        construct(hidden_states: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, position_ids: Optional[mindspore.Tensor] = None, past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
+output_attentions: Optional[bool] = False, use_cache: Optional[bool] = False, **kwargs) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: 
             Applies the layer operations to the input hidden_states and returns the resulting output tensor along with optional additional tensors, such as attention weights and present key value.
     
     Args:
@@ -623,7 +631,8 @@ class Qwen2PreTrainedModel(PreTrainedModel):
         - Returns: None
         
     Details:
-    The _init_weights method initializes the weights of the specified cell. It first checks the type of the cell. If it is of type nn.Dense, it sets the weight data using the initializer function. The initializer function takes the following parameters:
+    The _init_weights method initializes the weights of the specified cell. It first checks the type of the cell. If it is of type nn.Dense, it sets the weight data using the initializer function. The
+initializer function takes the following parameters:
         - Normal(self.config.initializer_range): A normal distribution initializer with the specified range.
         - cell.weight.shape: The shape of the weight tensor.
         - cell.weight.dtype: The data type of the weight tensor.
@@ -888,7 +897,8 @@ class Qwen2Model(Qwen2PreTrainedModel):
 class Qwen2ForCausalLM(Qwen2PreTrainedModel):
 
     """
-    This class represents a Qwen2 model for causal language modeling (LM). It is a subclass of Qwen2PreTrainedModel. The Qwen2ForCausalLM class provides methods for initializing the model, setting and getting input and output embeddings, setting and getting the decoder, constructing the model, and preparing inputs for generation.
+    This class represents a Qwen2 model for causal language modeling (LM). It is a subclass of Qwen2PreTrainedModel. The Qwen2ForCausalLM class provides methods for initializing the model, setting and getting
+input and output embeddings, setting and getting the decoder, constructing the model, and preparing inputs for generation.
     
     To initialize an instance of the Qwen2ForCausalLM class, a configuration object should be passed as a parameter to the constructor. The model's architecture and settings are defined by this configuration.
     
@@ -908,9 +918,11 @@ class Qwen2ForCausalLM(Qwen2PreTrainedModel):
     
     - `get_decoder(self)`: Returns the decoder of the model.
     
-    - `construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict)`: Constructs the model using the provided input arguments. This method returns a tuple of outputs, including the logits and optionally the loss, past key values, hidden states, and attentions.
+    - `construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict)`: Constructs the model using the
+provided input arguments. This method returns a tuple of outputs, including the logits and optionally the loss, past key values, hidden states, and attentions.
     
-    - `prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, **kwargs)`: Prepares the inputs for generation. This method takes input_ids, past_key_values, attention_mask, inputs_embeds, and additional keyword arguments as input and returns a dictionary of model inputs.
+    - `prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, **kwargs)`: Prepares the inputs for generation. This method takes input_ids, past_key_values,
+attention_mask, inputs_embeds, and additional keyword arguments as input and returns a dictionary of model inputs.
     
     - `_reorder_cache(past_key_values, beam_idx)`: Reorders the past key values according to the given beam indices. This method is static and is used internally in the class.
     
@@ -1293,7 +1305,8 @@ class Qwen2ForCausalLM(Qwen2PreTrainedModel):
 class Qwen2ForSequenceClassification(Qwen2PreTrainedModel):
 
     """
-    Qwen2ForSequenceClassification is a class representing a sequence classification model that inherits from Qwen2PreTrainedModel. It includes methods for initializing the model with a configuration, getting and setting input embeddings, and constructing the model for sequence classification.
+    Qwen2ForSequenceClassification is a class representing a sequence classification model that inherits from Qwen2PreTrainedModel. It includes methods for initializing the model with a configuration, getting
+and setting input embeddings, and constructing the model for sequence classification.
     
     Attributes:
         num_labels (int): The number of labels for sequence classification.
@@ -1302,7 +1315,8 @@ class Qwen2ForSequenceClassification(Qwen2PreTrainedModel):
         __init__(self, config): Initializes the sequence classification model with the given configuration.
         get_input_embeddings(self): Retrieves the input embeddings from the model.
         set_input_embeddings(self, value): Sets the input embeddings for the model.
-        construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the sequence classification model with the specified inputs and returns the sequence classifier output with past values.
+        construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the sequence classification
+model with the specified inputs and returns the sequence classifier output with past values.
     
     Args:
         input_ids (Tensor, optional): The input tensor of shape `(batch_size, sequence_length)` representing the input sequence.
@@ -1323,7 +1337,8 @@ class Qwen2ForSequenceClassification(Qwen2PreTrainedModel):
         ValueError: If batch sizes > 1 and no padding token is defined.
     
     Note:
-        This docstring is generated based on the provided code and is intended to provide a comprehensive understanding of the Qwen2ForSequenceClassification class and its methods. Additional details and specific usage instructions may be available in the official documentation or source code.
+        This docstring is generated based on the provided code and is intended to provide a comprehensive understanding of the Qwen2ForSequenceClassification class and its methods. Additional details and
+specific usage instructions may be available in the official documentation or source code.
     """
     def __init__(self, config):
 

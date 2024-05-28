@@ -391,7 +391,8 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
         Raises:
             FileNotFoundError: If the `save_directory` does not exist or is not a directory.
         
-        The `save_vocabulary` method saves the vocabulary files for the tokenizer. It takes the `save_directory` as input, which is the directory where the vocabulary files will be saved. The optional `filename_prefix` parameter can be used to add a prefix to the vocabulary file names.
+        The `save_vocabulary` method saves the vocabulary files for the tokenizer. It takes the `save_directory` as input, which is the directory where the vocabulary files will be saved. The optional
+`filename_prefix` parameter can be used to add a prefix to the vocabulary file names.
         
         The method saves two files: the vocabulary file and the merges file. The vocabulary file contains the encoding dictionary of the tokenizer, while the merges file contains the BPE merge indices.
         

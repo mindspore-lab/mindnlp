@@ -280,9 +280,11 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
         Raises:
             None.
         
-        This method retrieves the prefix token that is used for tokenizing code in the CodeLlamaTokenizer class. The prefix token serves as a marker or indicator to identify the start of a code block or expression. It is used during the tokenization process to correctly identify and separate different parts of the code.
+        This method retrieves the prefix token that is used for tokenizing code in the CodeLlamaTokenizer class. The prefix token serves as a marker or indicator to identify the start of a code block or
+expression. It is used during the tokenization process to correctly identify and separate different parts of the code.
         
-        Note that the prefix token is an internal attribute of the CodeLlamaTokenizer class, and it is not meant to be modified directly. To change the prefix token, use the appropriate setter method or modify the underlying implementation of the class if necessary.
+        Note that the prefix token is an internal attribute of the CodeLlamaTokenizer class, and it is not meant to be modified directly. To change the prefix token, use the appropriate setter method or modify
+the underlying implementation of the class if necessary.
         
         Example usage:
             tokenizer = CodeLlamaTokenizer()
@@ -344,7 +346,8 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
         Raises:
             None.
         
-        This method returns the middle ID of the CodeLlamaTokenizer instance. If the middle token is None, it returns None. The middle ID is obtained by converting the middle token to its corresponding ID using the 'convert_tokens_to_ids' method.
+        This method returns the middle ID of the CodeLlamaTokenizer instance. If the middle token is None, it returns None. The middle ID is obtained by converting the middle token to its corresponding ID
+using the 'convert_tokens_to_ids' method.
         """
         if self._middle_token is None:
             return None
@@ -384,7 +387,8 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
         Raises:
             None.
         
-        This method retrieves the ID corresponding to the suffix token. If the suffix token is None, the method returns None. The suffix token is obtained by converting the suffix token to its corresponding ID using the convert_tokens_to_ids method.
+        This method retrieves the ID corresponding to the suffix token. If the suffix token is None, the method returns None. The suffix token is obtained by converting the suffix token to its corresponding ID
+using the convert_tokens_to_ids method.
         """
         if self._suffix_token is None:
             return None
@@ -754,7 +758,8 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
     def __setstate__(self, d):
 
         """
-        This method '__setstate__' is defined within the 'CodeLlamaTokenizer' class to set the internal state of the object based on the provided dictionary 'd'. It reconstructs the object's state including the SentencePiece model by loading it from a serialized proto.
+        This method '__setstate__' is defined within the 'CodeLlamaTokenizer' class to set the internal state of the object based on the provided dictionary 'd'. It reconstructs the object's state including
+the SentencePiece model by loading it from a serialized proto.
         
         Args:
             self (CodeLlamaTokenizer): The instance of the CodeLlamaTokenizer class.

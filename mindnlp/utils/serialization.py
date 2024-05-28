@@ -205,7 +205,10 @@ class PyTorchFileReader:
         Raises:
             None.
         
-        This method takes in the self parameter, which is an instance of the PyTorchFileReader class. It also takes a name parameter, which represents the name of the record for which the header offset is to be retrieved. The method checks if the specified record exists in the PyTorch file by creating the filename using the directory attribute of the PyTorchFileReader instance and the provided name. If the filename exists in the file's namelist, the method returns the header offset of the file info associated with the filename. Otherwise, it returns None, indicating that the specified record does not exist in the file.
+        This method takes in the self parameter, which is an instance of the PyTorchFileReader class. It also takes a name parameter, which represents the name of the record for which the header offset is to
+be retrieved. The method checks if the specified record exists in the PyTorch file by creating the filename using the directory attribute of the PyTorchFileReader instance and the provided name. If the
+filename exists in the file's namelist, the method returns the header offset of the file info associated with the filename. Otherwise, it returns None, indicating that the specified record does not exist in
+the file.
         """
         filename = f"{self.directory}/{name}"
         if filename in self.file.namelist():
@@ -217,7 +220,8 @@ class LoadEndianness(Enum):
     """
     Represents an enumeration for specifying the byte order (endianness) of a data load.
     
-    This class inherits from the built-in Enum class in Python and provides a set of pre-defined constants for different byte orders. The byte order determines the arrangement of bytes in a multi-byte data type, such as integers and floating-point numbers, when it is stored or transmitted.
+    This class inherits from the built-in Enum class in Python and provides a set of pre-defined constants for different byte orders. The byte order determines the arrangement of bytes in a multi-byte data
+type, such as integers and floating-point numbers, when it is stored or transmitted.
     
     Attributes:
         BIG_ENDIAN: Represents the big-endian byte order where the most significant byte is stored first.
@@ -225,10 +229,12 @@ class LoadEndianness(Enum):
         NATIVE: Represents the native byte order of the underlying platform.
         NETWORK: Represents the byte order used in network byte order, which is big-endian.
     
-    The LoadEndianness class allows you to easily specify the desired byte order when loading data, ensuring compatibility with the expected byte order. It provides a convenient and readable way to work with different byte orders without the need for manual byte swapping or conversion.
+    The LoadEndianness class allows you to easily specify the desired byte order when loading data, ensuring compatibility with the expected byte order. It provides a convenient and readable way to work with
+different byte orders without the need for manual byte swapping or conversion.
     
     Usage:
-        The LoadEndianness class can be used to specify the byte order when loading data from a file, network, or any other data source. Simply import the class and use the desired constant to set the byte order.
+        The LoadEndianness class can be used to specify the byte order when loading data from a file, network, or any other data source. Simply import the class and use the desired constant to set the byte
+order.
     
     Example:
         >>> load_endianness = LoadEndianness.BIG_ENDIAN
@@ -236,7 +242,8 @@ class LoadEndianness(Enum):
         >>> print(data)
     
     Note:
-        It is important to ensure that the byte order specified matches the actual byte order of the data being loaded. Using the wrong byte order can lead to incorrect interpretation of the data and produce unexpected results.
+        It is important to ensure that the byte order specified matches the actual byte order of the data being loaded. Using the wrong byte order can lead to incorrect interpretation of the data and produce
+unexpected results.
     
     """
     NATIVE = 1
@@ -530,7 +537,8 @@ class _open_file(_opener):
                 The name of the file to be opened.
         
             mode: str
-                The mode in which the file should be opened. It should be a string that represents the mode in which the file is opened. It can be 'r' for reading, 'w' for writing, or 'a' for appending. Other modes are also supported.
+                The mode in which the file should be opened. It should be a string that represents the mode in which the file is opened. It can be 'r' for reading, 'w' for writing, or 'a' for appending. Other
+modes are also supported.
         
         Returns:
             None
@@ -554,7 +562,8 @@ class _open_file(_opener):
         None. This method does not return any value explicitly.
         
         Raises:
-        This method does not raise any exceptions explicitly. However, it indirectly depends on the behavior of the 'close()' method of the file-like object it operates on, which may raise exceptions related to file I/O operations.
+        This method does not raise any exceptions explicitly. However, it indirectly depends on the behavior of the 'close()' method of the file-like object it operates on, which may raise exceptions related
+to file I/O operations.
         """
         self.file_like.close()
 

@@ -142,7 +142,8 @@ class BlipForConditionalGenerationModelOutput(ModelOutput):
             None. The method does not return any value.
         
         Raises:
-            FutureWarning: This method raises a 'FutureWarning' if the 'decoder_logits' attribute is used. This attribute is deprecated and will be removed in version 5 of Transformers. The 'logits' attribute should be used instead to retrieve the final output.
+            FutureWarning: This method raises a 'FutureWarning' if the 'decoder_logits' attribute is used. This attribute is deprecated and will be removed in version 5 of Transformers. The 'logits' attribute
+should be used instead to retrieve the final output.
         
         Note:
             The 'decoder_logits' attribute is deprecated and will be removed in version 5 of Transformers. Please use the 'logits' attribute to retrieve the final output instead.
@@ -349,7 +350,8 @@ class BlipVisionEmbeddings(nn.Cell):
             pixel_values (mindspore.Tensor): The input tensor containing pixel values. It should have a shape of (batch_size, channels, height, width).
         
         Returns:
-            mindspore.Tensor: The constructed embeddings tensor. It has a shape of (batch_size, num_patches + 1, embedding_dim), where num_patches is the number of patches obtained from the input tensor and embedding_dim is the dimension of the embeddings.
+            mindspore.Tensor: The constructed embeddings tensor. It has a shape of (batch_size, num_patches + 1, embedding_dim), where num_patches is the number of patches obtained from the input tensor and
+embedding_dim is the dimension of the embeddings.
         
         Raises:
             TypeError: If the pixel_values parameter is not of type mindspore.Tensor.
@@ -378,7 +380,8 @@ class BlipTextEmbeddings(nn.Cell):
 
     """
     This class represents a text embeddings module for BlipText, providing functionality to construct embeddings for input tokens with position information.
-    The BlipTextEmbeddings class inherits from nn.Cell and implements methods to initialize embeddings based on configuration settings and construct embeddings for input tokens with optional position information.
+    The BlipTextEmbeddings class inherits from nn.Cell and implements methods to initialize embeddings based on configuration settings and construct embeddings for input tokens with optional position
+information.
     """
     def __init__(self, config: BlipTextConfig):
 
@@ -603,9 +606,11 @@ class BlipMLP(nn.Cell):
         Raises:
             None.
         
-        This method takes in the hidden states and applies a series of linear transformations and non-linear activations to them. It first passes the hidden states through a fully connected layer (self.fc1), then applies an activation function (self.activation_fn) to the resulting tensor. It then passes the tensor through another fully connected layer (self.fc2) before returning the final output tensor.
+        This method takes in the hidden states and applies a series of linear transformations and non-linear activations to them. It first passes the hidden states through a fully connected layer (self.fc1),
+then applies an activation function (self.activation_fn) to the resulting tensor. It then passes the tensor through another fully connected layer (self.fc2) before returning the final output tensor.
         
-        The purpose of this method is to construct the MLP and process the given hidden states to obtain a transformed tensor. The returned tensor can be used for further computations or as an output of the MLP.
+        The purpose of this method is to construct the MLP and process the given hidden states to obtain a transformed tensor. The returned tensor can be used for further computations or as an output of the
+MLP.
         
         Note: The dimensions of the hidden_states tensor should be compatible with the dimensions of the MLP's layers in order for the method to execute successfully.
         """
@@ -855,7 +860,8 @@ class BlipVisionModel(BlipPreTrainedModel):
     
     Methods:
         __init__(self, config: BlipVisionConfig): Initializes the BlipVisionModel with the given configuration.
-        construct(self, pixel_values: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Tuple, BaseModelOutputWithPooling]: Constructs the BlipVisionModel and returns the model outputs.
+        construct(self, pixel_values: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) ->
+Union[Tuple, BaseModelOutputWithPooling]: Constructs the BlipVisionModel and returns the model outputs.
         get_input_embeddings(self): Returns the input embeddings for the BlipVisionModel.
     """
     main_input_name = "pixel_values"
@@ -953,7 +959,8 @@ class BlipModel(BlipPreTrainedModel):
     """
     BlipModel
     
-    BlipModel is a class that represents a multimodal model for processing both text and images. It inherits from BlipPreTrainedModel and includes methods for obtaining text and image features, as well as for constructing the model output.
+    BlipModel is a class that represents a multimodal model for processing both text and images. It inherits from BlipPreTrainedModel and includes methods for obtaining text and image features, as well as for
+constructing the model output.
     
     Examples:
         >>> from transformers import AutoProcessor, BlipModel
@@ -976,9 +983,12 @@ class BlipModel(BlipPreTrainedModel):
     
     Methods:
         - __init__(self, config: BlipConfig)
-        - get_text_features(self, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, position_ids: Optional[mindspore.Tensor] = None, return_dict: Optional[bool] = None) -> mindspore.Tensor
+        - get_text_features(self, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, position_ids: Optional[mindspore.Tensor] = None, return_dict: Optional[bool] =
+None) -> mindspore.Tensor
         - get_image_features(self, pixel_values: Optional[mindspore.Tensor] = None, return_dict: Optional[bool] = None) -> mindspore.Tensor
-        - construct(self, input_ids: Optional[mindspore.Tensor] = None, pixel_values: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, position_ids: Optional[mindspore.Tensor] = None, return_loss: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Tuple, BlipOutput]
+        - construct(self, input_ids: Optional[mindspore.Tensor] = None, pixel_values: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, position_ids:
+Optional[mindspore.Tensor] = None, return_loss: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Tuple,
+BlipOutput]
     """
     config_class = BlipConfig
 
@@ -1221,8 +1231,11 @@ class BlipForConditionalGeneration(BlipPreTrainedModel):
     Methods:
         __init__(self, config: BlipConfig): Initializes the BlipForConditionalGeneration model.
         get_input_embeddings(self) -> nn.Cell: Returns the input embeddings of the vision model.
-        construct(self, pixel_values: mindspore.Tensor, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, labels: Optional[mindspore.Tensor] = None, return_dict: Optional[bool] = None) -> Union[Tuple, BlipForConditionalGenerationModelOutput]: Constructs the model architecture and generates image captions.
-        generate(self, pixel_values: mindspore.Tensor, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, **generate_kwargs) -> mindspore.Tensor: Generates image captions based on the input image.
+        construct(self, pixel_values: mindspore.Tensor, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None,
+output_hidden_states: Optional[bool] = None, labels: Optional[mindspore.Tensor] = None, return_dict: Optional[bool] = None) -> Union[Tuple, BlipForConditionalGenerationModelOutput]: Constructs the model
+architecture and generates image captions.
+        generate(self, pixel_values: mindspore.Tensor, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, **generate_kwargs) -> mindspore.Tensor: Generates image
+captions based on the input image.
     
     Examples:
         
@@ -1243,7 +1256,8 @@ class BlipForConditionalGeneration(BlipPreTrainedModel):
         
     
     Overrides:
-        generate(self, pixel_values: mindspore.Tensor, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, **generate_kwargs) -> mindspore.Tensor: Overrides the generate function to enable the model to be used as a conditional generator.
+        generate(self, pixel_values: mindspore.Tensor, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, **generate_kwargs) -> mindspore.Tensor: Overrides the
+generate function to enable the model to be used as a conditional generator.
     
     """
     config_class = BlipConfig
@@ -1456,7 +1470,9 @@ class BlipForQuestionAnswering(BlipPreTrainedModel):
     2. get_input_embeddings(self) -> nn.Cell
         Returns the input embeddings of the vision model.
     
-    3. construct(self, input_ids: mindspore.Tensor, pixel_values: mindspore.Tensor, decoder_input_ids: Optional[mindspore.Tensor] = None, decoder_attention_mask: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, labels: Optional[mindspore.Tensor] = None, return_dict: Optional[bool] = None) -> Union[Tuple, BlipTextVisionModelOutput]
+    3. construct(self, input_ids: mindspore.Tensor, pixel_values: mindspore.Tensor, decoder_input_ids: Optional[mindspore.Tensor] = None, decoder_attention_mask: Optional[mindspore.Tensor] = None,
+attention_mask: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, labels: Optional[mindspore.Tensor] = None, return_dict: Optional[bool]
+= None) -> Union[Tuple, BlipTextVisionModelOutput]
         Constructs the model and performs the forward pass. Returns the model outputs.
     
     4. generate(self, input_ids: mindspore.Tensor, pixel_values: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, **generate_kwargs) -> mindspore.Tensor
@@ -1706,13 +1722,15 @@ class BlipForQuestionAnswering(BlipPreTrainedModel):
 class BlipForImageTextRetrieval(BlipPreTrainedModel):
 
     """
-    BlipForImageTextRetrieval is a class that implements a model for image-text retrieval tasks. It is designed to retrieve relevant text based on input images and vice versa. This class inherits from BlipPreTrainedModel.
+    BlipForImageTextRetrieval is a class that implements a model for image-text retrieval tasks. It is designed to retrieve relevant text based on input images and vice versa. This class inherits from
+BlipPreTrainedModel.
     
     The class's constructor initializes the model with the provided configuration. It sets up the vision model, text encoder, projection layers, and other necessary components for image-text retrieval.
     
     The 'get_input_embeddings' method returns the patch embeddings from the vision model.
     
-    The 'construct' method takes input image and text tensors and constructs the output based on the specified parameters. It utilizes the vision model to extract image features and the text encoder to process input text. Depending on the 'use_itm_head' parameter, the method either computes the similarity score between image and text features or uses the image and text projections for matching.
+    The 'construct' method takes input image and text tensors and constructs the output based on the specified parameters. It utilizes the vision model to extract image features and the text encoder to process
+input text. Depending on the 'use_itm_head' parameter, the method either computes the similarity score between image and text features or uses the image and text projections for matching.
     
     The method also handles optional parameters for controlling the output format and behavior. It provides examples on how to use the BlipForImageTextRetrieval class for image-text retrieval tasks.
     

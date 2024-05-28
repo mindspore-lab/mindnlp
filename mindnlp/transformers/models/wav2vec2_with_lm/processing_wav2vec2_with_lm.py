@@ -254,7 +254,8 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
     def get_missing_alphabet_tokens(decoder, tokenizer):
 
         """
-        This method 'get_missing_alphabet_tokens' is defined in the class 'Wav2Vec2ProcessorWithLM' and is responsible for identifying missing alphabet tokens by comparing the tokenizer's vocabulary with the decoder's alphabet labels.
+        This method 'get_missing_alphabet_tokens' is defined in the class 'Wav2Vec2ProcessorWithLM' and is responsible for identifying missing alphabet tokens by comparing the tokenizer's vocabulary with the
+decoder's alphabet labels.
         
         Args:
             decoder (object): The decoder object used for decoding tokens. It should be of type 'Decoder' and is required as an input parameter for the method.
@@ -264,7 +265,8 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
             set: This method returns a set of missing tokens from the tokenizer's vocabulary that are not present in the decoder's alphabet labels. If no missing tokens are found, it returns an empty set.
         
         Raises:
-            No specific exceptions are documented to be raised by this method. However, potential exceptions may include AttributeError if the attributes accessed from the decoder or tokenizer objects do not exist, or TypeError if the input parameters are not of the expected types.
+            No specific exceptions are documented to be raised by this method. However, potential exceptions may include AttributeError if the attributes accessed from the decoder or tokenizer objects do not
+exist, or TypeError if the input parameters are not of the expected types.
         """
         from pyctcdecode.alphabet import BLANK_TOKEN_PTN, UNK_TOKEN, UNK_TOKEN_PTN
 

@@ -107,7 +107,8 @@ class VanDropPath(nn.Cell):
             None.
         
         Note:
-            The drop_path operation randomly sets a fraction of the hidden states to zero during training. This helps in regularizing the model and preventing overfitting. The drop probability is controlled by the 'drop_prob' attribute of the VanDropPath class.
+            The drop_path operation randomly sets a fraction of the hidden states to zero during training. This helps in regularizing the model and preventing overfitting. The drop probability is controlled by
+the 'drop_prob' attribute of the VanDropPath class.
         
         Example:
             >>> drop_path = VanDropPath()
@@ -132,7 +133,8 @@ class VanDropPath(nn.Cell):
         Raises:
             None.
         
-        This method returns a formatted string representation of the drop probability of the VanDropPath instance. The drop probability is obtained from the `drop_prob` attribute of the instance. The returned string is of the form 'p={}', where '{}' is replaced by the actual drop probability value.
+        This method returns a formatted string representation of the drop probability of the VanDropPath instance. The drop probability is obtained from the `drop_prob` attribute of the instance. The returned
+string is of the form 'p={}', where '{}' is replaced by the actual drop probability value.
         
         Example:
             If the `drop_prob` attribute of the instance is 0.3, the method will return the string "p=0.3".
@@ -742,7 +744,9 @@ class VanPreTrainedModel(PreTrainedModel):
 class VanModel(VanPreTrainedModel):
 
     """
-    The VanModel class represents a model for processing pixel values using the VanEncoder and providing various output representations. It inherits from the VanPreTrainedModel class and includes methods for initialization and constructing the model's output. The constructor initializes the model with the provided configuration, while the construct method processes the pixel values and returns the output representation. The class provides flexibility for handling hidden states and returning output in the form of BaseModelOutputWithPoolingAndNoAttention. 
+    The VanModel class represents a model for processing pixel values using the VanEncoder and providing various output representations. It inherits from the VanPreTrainedModel class and includes methods for
+initialization and constructing the model's output. The constructor initializes the model with the provided configuration, while the construct method processes the pixel values and returns the output
+representation. The class provides flexibility for handling hidden states and returning output in the form of BaseModelOutputWithPoolingAndNoAttention. 
     """
     def __init__(self, config):
 
@@ -788,7 +792,8 @@ class VanModel(VanPreTrainedModel):
             return_dict (Optional[bool]): Whether to return the output as a dictionary. If None, the value is taken from self.config.use_return_dict.
         
         Returns:
-            Union[Tuple, BaseModelOutputWithPoolingAndNoAttention]: A tuple containing the last hidden state and the pooled output, along with the encoder hidden states if return_dict is False. Otherwise, it returns a BaseModelOutputWithPoolingAndNoAttention object.
+            Union[Tuple, BaseModelOutputWithPoolingAndNoAttention]: A tuple containing the last hidden state and the pooled output, along with the encoder hidden states if return_dict is False. Otherwise, it
+returns a BaseModelOutputWithPoolingAndNoAttention object.
         
         Raises:
             None

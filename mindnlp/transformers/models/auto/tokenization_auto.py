@@ -653,7 +653,8 @@ class AutoTokenizer:
             None. This method does not return any value.
         
         Raises:
-            EnvironmentError: If the AutoTokenizer is instantiated directly using the __init__ method, an EnvironmentError is raised with the message 'AutoTokenizer is designed to be instantiated using the `AutoTokenizer.from_pretrained(pretrained_model_name_or_path)` method.'
+            EnvironmentError: If the AutoTokenizer is instantiated directly using the __init__ method, an EnvironmentError is raised with the message 'AutoTokenizer is designed to be instantiated using the
+`AutoTokenizer.from_pretrained(pretrained_model_name_or_path)` method.'
         """
         raise EnvironmentError(
             "AutoTokenizer is designed to be instantiated "

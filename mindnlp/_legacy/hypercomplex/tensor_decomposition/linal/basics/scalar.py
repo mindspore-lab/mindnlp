@@ -8,7 +8,8 @@ class Scalar(ABC):
     r"""
     Represents a scalar value and provides abstract methods for mathematical operations and transformations.
     
-    This class inherits from ABC and defines abstract methods for arithmetic operations, square root, visitor pattern, creating new instances with the same type, getting the scalar as a NumPy array, checking if the scalar is zero, and getting the real value as a NumPy float64.
+    This class inherits from ABC and defines abstract methods for arithmetic operations, square root, visitor pattern, creating new instances with the same type, getting the scalar as a NumPy array, checking
+if the scalar is zero, and getting the real value as a NumPy float64.
     
     Subclasses of 'Scalar' must implement these abstract methods to define the behavior of scalar values in their specific contexts.
     """

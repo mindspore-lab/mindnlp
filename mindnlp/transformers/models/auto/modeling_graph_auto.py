@@ -275,7 +275,8 @@ FLAX_MODEL_FOR_AUDIO_CLASSIFICATION_MAPPING = _LazyAutoMapping(
 class MSAutoModel(_BaseAutoModelClass):
 
     """
-    MSAutoModel is a Python class that represents a model for a Microsoft Azure Machine Learning service. It inherits from the _BaseAutoModelClass and provides functionality for creating and managing auto ML models on the Azure platform.
+    MSAutoModel is a Python class that represents a model for a Microsoft Azure Machine Learning service. It inherits from the _BaseAutoModelClass and provides functionality for creating and managing auto ML
+models on the Azure platform.
     """
     _model_mapping = FLAX_MODEL_MAPPING
 
@@ -283,7 +284,8 @@ class MSAutoModel(_BaseAutoModelClass):
 class MSAutoModelForPreTraining(_BaseAutoModelClass):
 
     """
-    Represents a model for pre-training in Microsoft's Machine Learning framework. This class serves as a base class for different auto models used for pre-training. It inherits functionality from the _BaseAutoModelClass class. 
+    Represents a model for pre-training in Microsoft's Machine Learning framework. This class serves as a base class for different auto models used for pre-training. It inherits functionality from the
+_BaseAutoModelClass class. 
     """
     _model_mapping = FLAX_MODEL_FOR_PRETRAINING_MAPPING
 
@@ -305,10 +307,12 @@ class MSAutoModelForCausalLM(_BaseAutoModelClass):
         - __init__(self, base_model_name_or_path: str, config: Optional[AutoConfig] = None, tokenizer: Optional[AutoTokenizer] = None, model: Optional[AutoModelForCausalLM] = None):
             Initializes a new instance of the MSAutoModelForCausalLM class.
             
-        - forward(self, input_ids: Optional[torch.Tensor] = None, attention_mask: Optional[torch.Tensor] = None, decoder_input_ids: Optional[torch.Tensor] = None, decoder_attention_mask: Optional[torch.Tensor] = None, labels: Optional[torch.Tensor] = None):
+        - forward(self, input_ids: Optional[torch.Tensor] = None, attention_mask: Optional[torch.Tensor] = None, decoder_input_ids: Optional[torch.Tensor] = None, decoder_attention_mask: Optional[torch.Tensor]
+= None, labels: Optional[torch.Tensor] = None):
             Performs a forward pass through the auto-regressive language model.
     
-        - generate(self, input_ids: Optional[torch.Tensor] = None, attention_mask: Optional[torch.Tensor] = None, decoder_start_token_id: Optional[int] = None, max_length: Optional[int] = None, num_return_sequences: Optional[int] = None, temperature: Optional[float] = None):
+        - generate(self, input_ids: Optional[torch.Tensor] = None, attention_mask: Optional[torch.Tensor] = None, decoder_start_token_id: Optional[int] = None, max_length: Optional[int] = None,
+num_return_sequences: Optional[int] = None, temperature: Optional[float] = None):
             Generates text using the auto-regressive language model.
     
         - save_pretrained(self, save_directory: Union[str, os.PathLike]):
@@ -366,7 +370,8 @@ class MSAutoModelForSeq2SeqLM(_BaseAutoModelClass):
     """
     This class represents a pre-trained model for sequence-to-sequence language modeling with automatic architecture selection.
     
-    It is a subclass of the '_BaseAutoModelClass' and inherits its methods and attributes. The 'MSAutoModelForSeq2SeqLM' class provides an interface for automatically selecting and loading the appropriate model architecture for sequence-to-sequence language modeling tasks.
+    It is a subclass of the '_BaseAutoModelClass' and inherits its methods and attributes. The 'MSAutoModelForSeq2SeqLM' class provides an interface for automatically selecting and loading the appropriate
+model architecture for sequence-to-sequence language modeling tasks.
     
     Attributes:
         - config_class (type): The class to use for instantiating the model configuration.
@@ -405,17 +410,22 @@ class MSAutoModelForSequenceClassification(_BaseAutoModelClass):
     """
     This class represents an auto model for sequence classification tasks in the Microsoft AutoML framework.
     
-    The 'MSAutoModelForSequenceClassification' class is a subclass of '_BaseAutoModelClass' and provides a convenient interface for training and evaluating sequence classification models. It utilizes the power of AutoML to automatically search for the best model architecture and hyperparameters for a given sequence classification task.
+    The 'MSAutoModelForSequenceClassification' class is a subclass of '_BaseAutoModelClass' and provides a convenient interface for training and evaluating sequence classification models. It utilizes the power
+of AutoML to automatically search for the best model architecture and hyperparameters for a given sequence classification task.
     
     The class inherits the functionalities of the '_BaseAutoModelClass' class, which includes methods for loading and saving models, as well as performing inference using trained models.
     
-    To use the 'MSAutoModelForSequenceClassification' class, first initialize an instance by providing the required parameters such as the number of classes, input dimensions, and other relevant configuration options. Then, you can call the 'fit' method to start the automatic model search process. This method takes in the training data, performs the model search, and returns the best model found.
+    To use the 'MSAutoModelForSequenceClassification' class, first initialize an instance by providing the required parameters such as the number of classes, input dimensions, and other relevant configuration
+options. Then, you can call the 'fit' method to start the automatic model search process. This method takes in the training data, performs the model search, and returns the best model found.
     
-    Once the model has been trained, you can use the 'evaluate' method to evaluate its performance on a separate validation or test dataset. This method calculates various evaluation metrics such as accuracy, precision, recall, and F1-score.
+    Once the model has been trained, you can use the 'evaluate' method to evaluate its performance on a separate validation or test dataset. This method calculates various evaluation metrics such as accuracy,
+precision, recall, and F1-score.
     
-    In addition to these core methods, the 'MSAutoModelForSequenceClassification' class provides various helper methods for configuring and fine-tuning the model search process. These include methods for setting the search space, defining custom metrics, specifying early stopping criteria, and more.
+    In addition to these core methods, the 'MSAutoModelForSequenceClassification' class provides various helper methods for configuring and fine-tuning the model search process. These include methods for
+setting the search space, defining custom metrics, specifying early stopping criteria, and more.
     
-    Note that the automatic model search process may take some time to complete, depending on the size of the dataset and the complexity of the search space. However, it helps to alleviate the burden of manually tuning hyperparameters and allows you to focus on other aspects of your sequence classification task.
+    Note that the automatic model search process may take some time to complete, depending on the size of the dataset and the complexity of the search space. However, it helps to alleviate the burden of
+manually tuning hyperparameters and allows you to focus on other aspects of your sequence classification task.
     
     For more information on how to use the 'MSAutoModelForSequenceClassification' class and the Microsoft AutoML framework, please refer to the official documentation and examples.
     
@@ -430,7 +440,8 @@ class MSAutoModelForQuestionAnswering(_BaseAutoModelClass):
     
     This class inherits from _BaseAutoModelClass, which provides the base functionality for automatic modeling in the Microsoft Azure Machine Learning service.
     
-    The MSAutoModelForQuestionAnswering class provides methods and attributes specific to question answering tasks, enabling users to fine-tune and deploy pre-trained models for question answering in a production environment.
+    The MSAutoModelForQuestionAnswering class provides methods and attributes specific to question answering tasks, enabling users to fine-tune and deploy pre-trained models for question answering in a
+production environment.
     
     Attributes:
         - model_name_or_path (str): The name or path of the pre-trained model.
@@ -493,7 +504,8 @@ class MSAutoModelForTokenClassification(_BaseAutoModelClass):
     """
     Represents a model for token classification using Microsoft's AutoModel framework.
     
-    This class inherits from _BaseAutoModelClass and provides functionality for token classification tasks. It encapsulates the architecture and configuration of the model, including loading pre-trained weights and performing inference on token sequences. The model supports fine-tuning on specific token classification datasets and provides a high-level interface for integrating with downstream applications.
+    This class inherits from _BaseAutoModelClass and provides functionality for token classification tasks. It encapsulates the architecture and configuration of the model, including loading pre-trained
+weights and performing inference on token sequences. The model supports fine-tuning on specific token classification datasets and provides a high-level interface for integrating with downstream applications.
     
     Note: This docstring is a placeholder and should be updated with specific details about the class attributes, methods, and usage examples.
     """
@@ -507,11 +519,14 @@ class MSAutoModelForMultipleChoice(_BaseAutoModelClass):
     
     The 'MSAutoModelForMultipleChoice' class inherits from the '_BaseAutoModelClass' class, which provides the foundational functionality for automated model creation.
     
-    The 'MSAutoModelForMultipleChoice' class is specifically designed to handle multiple choice tasks in the Microsoft Azure Machine Learning service. It streamlines the process of creating, training, and evaluating models for multiple choice tasks, reducing the amount of manual effort required.
+    The 'MSAutoModelForMultipleChoice' class is specifically designed to handle multiple choice tasks in the Microsoft Azure Machine Learning service. It streamlines the process of creating, training, and
+evaluating models for multiple choice tasks, reducing the amount of manual effort required.
     
-    To use this class, first instantiate an object of the 'MSAutoModelForMultipleChoice' class. Then, call the appropriate methods to perform tasks such as loading data, preprocessing, training the model, and evaluating its performance.
+    To use this class, first instantiate an object of the 'MSAutoModelForMultipleChoice' class. Then, call the appropriate methods to perform tasks such as loading data, preprocessing, training the model, and
+evaluating its performance.
     
-    This class encapsulates various methods and attributes that are essential for automating the model creation process for multiple choice tasks. It leverages the power of the Microsoft Azure Machine Learning service to provide a seamless and efficient experience for users.
+    This class encapsulates various methods and attributes that are essential for automating the model creation process for multiple choice tasks. It leverages the power of the Microsoft Azure Machine Learning
+service to provide a seamless and efficient experience for users.
     
     Note: This class requires the Microsoft Azure Machine Learning service to be properly set up and configured in order to function correctly.
     
@@ -527,13 +542,17 @@ class MSAutoModelForNextSentencePrediction(_BaseAutoModelClass):
     
     The MSAutoModelForNextSentencePrediction class inherits from the _BaseAutoModelClass, which provides basic functionality for automatic model loading and inference.
     
-    Next sentence prediction is a task in natural language processing that involves predicting whether two given sentences are logically connected, such as being consecutive or having a cause-effect relationship.
+    Next sentence prediction is a task in natural language processing that involves predicting whether two given sentences are logically connected, such as being consecutive or having a cause-effect
+relationship.
     
-    This class encapsulates the architecture and weights of a pre-trained model specifically designed for next sentence prediction. It provides methods for loading the model, encoding input sentences, and making predictions.
+    This class encapsulates the architecture and weights of a pre-trained model specifically designed for next sentence prediction. It provides methods for loading the model, encoding input sentences, and
+making predictions.
     
-    To use this class, first initialize an instance by providing the necessary model configuration. Then, load the pre-trained weights using the 'load_weights' method. After loading, you can encode input sentences using the 'encode' method, which converts the sentences into numerical representations suitable for model input. Finally, use the 'predict' method to predict the connection between pairs of sentences.
+    To use this class, first initialize an instance by providing the necessary model configuration. Then, load the pre-trained weights using the 'load_weights' method. After loading, you can encode input
+sentences using the 'encode' method, which converts the sentences into numerical representations suitable for model input. Finally, use the 'predict' method to predict the connection between pairs of sentences.
     
-    Note that this class assumes the pre-trained weights have been downloaded and stored in a specific format compatible with the Microsoft AutoModel framework. If the weights are not available, they can be obtained from the official Microsoft website or other trusted sources.
+    Note that this class assumes the pre-trained weights have been downloaded and stored in a specific format compatible with the Microsoft AutoModel framework. If the weights are not available, they can be
+obtained from the official Microsoft website or other trusted sources.
     
     For more details on how to use this class and examples of its functionality, refer to the documentation and code examples provided in the Microsoft AutoModel repository.
     
@@ -561,14 +580,17 @@ class MSAutoModelForImageClassification(_BaseAutoModelClass):
     """
     This class represents an auto model for image classification using the Microsoft Azure cognitive services. 
     
-    The 'MSAutoModelForImageClassification' class is a Python class that inherits from the '_BaseAutoModelClass'. It provides an interface for training and deploying machine learning models specifically designed for image classification tasks using the Microsoft Azure cognitive services.
+    The 'MSAutoModelForImageClassification' class is a Python class that inherits from the '_BaseAutoModelClass'. It provides an interface for training and deploying machine learning models specifically
+designed for image classification tasks using the Microsoft Azure cognitive services.
     
     Features:
     - Data preprocessing: The class supports various data preprocessing techniques such as resizing, cropping, and normalization to prepare the image data for training and prediction.
-    - Model training: The class allows users to train the image classification model using their own labeled dataset. It supports popular deep learning architectures like CNN (Convolutional Neural Networks) and transfer learning techniques.
+    - Model training: The class allows users to train the image classification model using their own labeled dataset. It supports popular deep learning architectures like CNN (Convolutional Neural Networks)
+and transfer learning techniques.
     - Model evaluation: Users can evaluate the performance of the trained model using standard evaluation metrics such as accuracy, precision, recall, and F1-score.
     - Model deployment: Once the model is trained, it can be deployed in production environments to perform real-time image classification tasks.
-    - Integration with Microsoft Azure cognitive services: The class seamlessly integrates with the Microsoft Azure cognitive services, allowing users to leverage powerful cloud-based functionalities such as automatic scaling, high availability, and advanced analytics.
+    - Integration with Microsoft Azure cognitive services: The class seamlessly integrates with the Microsoft Azure cognitive services, allowing users to leverage powerful cloud-based functionalities such as
+automatic scaling, high availability, and advanced analytics.
     
     Usage:
     1. Instantiate an object of the 'MSAutoModelForImageClassification' class.
@@ -589,7 +611,8 @@ class MSAutoModelForImageClassification(_BaseAutoModelClass):
 class MSAutoModelForVision2Seq(_BaseAutoModelClass):
 
     """
-    The MSAutoModelForVision2Seq class is a Python class that represents a vision-to-sequence auto model for multi-modal tasks. This class inherits from the _BaseAutoModelClass and provides functionalities for vision to sequence transformation in multi-modal tasks.
+    The MSAutoModelForVision2Seq class is a Python class that represents a vision-to-sequence auto model for multi-modal tasks. This class inherits from the _BaseAutoModelClass and provides functionalities for
+vision to sequence transformation in multi-modal tasks.
     """
     _model_mapping = FLAX_MODEL_FOR_VISION_2_SEQ_MAPPING
 
@@ -599,10 +622,13 @@ class MSAutoModelForSpeechSeq2Seq(_BaseAutoModelClass):
     """
     Represents a speech sequence-to-sequence model for multi-source automatic speech recognition (ASR) and natural language generation (NLG).
     
-    This class inherits from _BaseAutoModelClass and provides a pre-trained model for processing speech input and generating sequence-to-sequence outputs. It supports multi-source ASR and NLG tasks, making it suitable for a wide range of speech-related applications.
+    This class inherits from _BaseAutoModelClass and provides a pre-trained model for processing speech input and generating sequence-to-sequence outputs. It supports multi-source ASR and NLG tasks, making it
+suitable for a wide range of speech-related applications.
     
-    The MSAutoModelForSpeechSeq2Seq class encapsulates the functionality for loading the pre-trained model, processing input speech data, and generating corresponding sequence-to-sequence outputs. It also provides methods for fine-tuning the model and evaluating its performance on speech-related tasks.
+    The MSAutoModelForSpeechSeq2Seq class encapsulates the functionality for loading the pre-trained model, processing input speech data, and generating corresponding sequence-to-sequence outputs. It also
+provides methods for fine-tuning the model and evaluating its performance on speech-related tasks.
     
-    Users can instantiate an object of this class to leverage the pre-trained speech sequence-to-sequence model for ASR and NLG tasks, enabling efficient and accurate processing of speech data with multi-source support.
+    Users can instantiate an object of this class to leverage the pre-trained speech sequence-to-sequence model for ASR and NLG tasks, enabling efficient and accurate processing of speech data with
+multi-source support.
     """
     _model_mapping = FLAX_MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING

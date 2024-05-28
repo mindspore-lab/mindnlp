@@ -8,7 +8,8 @@ class ScalarVisitor(ABC):
     r"""
     This class represents a visitor that can visit different types of scalar values and perform specific operations on them.
     
-    The ScalarVisitor class is an abstract base class (ABC) that provides a framework for implementing concrete scalar visitors. Concrete classes inheriting from this class must implement the visit_real, visit_complex, and visit_dual methods.
+    The ScalarVisitor class is an abstract base class (ABC) that provides a framework for implementing concrete scalar visitors. Concrete classes inheriting from this class must implement the visit_real,
+visit_complex, and visit_dual methods.
     
     The visit_real method is responsible for handling a real scalar value. It takes a RealScalar object as input and performs the necessary operations on it.
     

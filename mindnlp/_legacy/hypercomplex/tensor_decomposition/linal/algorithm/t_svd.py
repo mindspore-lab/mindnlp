@@ -13,11 +13,14 @@ class TSVD(DualSVD):
     r"""
     This class represents a truncated singular value decomposition (TSVD) algorithm.
     
-    TSVD is a matrix factorization technique that decomposes a given matrix into three separate matrices: U, S, and V^T. The U matrix contains the left singular vectors, the S matrix contains the singular values, and the V^T matrix contains the right singular vectors.
+    TSVD is a matrix factorization technique that decomposes a given matrix into three separate matrices: U, S, and V^T. The U matrix contains the left singular vectors, the S matrix contains the singular
+values, and the V^T matrix contains the right singular vectors.
     
-    This TSVD class is a subclass of the DualSVD class, which provides a general implementation of the SVD algorithm. The inherited _decompose() method from DualSVD is used to perform the actual decomposition of the matrix.
+    This TSVD class is a subclass of the DualSVD class, which provides a general implementation of the SVD algorithm. The inherited _decompose() method from DualSVD is used to perform the actual decomposition
+of the matrix.
     
-    The decompose() method of this class takes a matrix as input and returns a tuple containing the three decomposed matrices: U, S, and V^T. The method internally calls the _decompose() method of the DualSVD class with a value of -1, indicating that no truncation is applied.
+    The decompose() method of this class takes a matrix as input and returns a tuple containing the three decomposed matrices: U, S, and V^T. The method internally calls the _decompose() method of the DualSVD
+class with a value of -1, indicating that no truncation is applied.
     
     Note that the decompose() method is a static method, meaning it can be called directly on the class without needing to create an instance of the TSVD class.
     

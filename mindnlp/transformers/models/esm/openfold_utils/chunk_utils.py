@@ -342,7 +342,8 @@ def chunk_layer(
 class ChunkSizeTuner:
 
     """
-    The ChunkSizeTuner class represents a utility for tuning chunk size to optimize the performance of a given function with specified arguments. It provides methods for determining a favorable chunk size and comparing argument caches to ensure consistency.
+    The ChunkSizeTuner class represents a utility for tuning chunk size to optimize the performance of a given function with specified arguments. It provides methods for determining a favorable chunk size and
+comparing argument caches to ensure consistency.
     
     Attributes:
         max_chunk_size (int): The maximum chunk size allowed for tuning.

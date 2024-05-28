@@ -137,7 +137,8 @@ class SeamlessM4TProcessor(ProcessorMixin):
         Raises:
             None
         
-        This method retrieves the model input names from the tokenizer and feature extractor used by the SeamlessM4TProcessor. It then combines these names into a single list and removes any duplicates, returning the final list of model input names.
+        This method retrieves the model input names from the tokenizer and feature extractor used by the SeamlessM4TProcessor. It then combines these names into a single list and removes any duplicates,
+returning the final list of model input names.
         """
         tokenizer_input_names = self.tokenizer.model_input_names
         feature_extractor_input_names = self.feature_extractor.model_input_names

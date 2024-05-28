@@ -154,7 +154,8 @@ class _ReDuConvImpl(BaseConvImpl):
         r"""Initializes the _ReDuConvImpl class.
         
         Args:
-            weight_init (Union[Tensor, str, Initializer, numbers.Number]): The weight initialization for the convolution layer. It can be a Tensor, a string representing the weight initialization method, an Initializer object, or a number. 
+            weight_init (Union[Tensor, str, Initializer, numbers.Number]): The weight initialization for the convolution layer. It can be a Tensor, a string representing the weight initialization method, an
+Initializer object, or a number. 
             weight_shape (tuple): The shape of the weight tensor for the convolution layer.
             **factory_kwargs: Additional keyword arguments to configure the convolution layer.
         

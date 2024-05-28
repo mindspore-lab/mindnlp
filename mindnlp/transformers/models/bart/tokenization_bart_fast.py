@@ -297,7 +297,8 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
         - BatchEncoding: A dictionary-like object containing the encoded inputs.
         
         Raises:
-        - ValueError: Raised if the parameter 'is_split_into_words' is set to True but 'add_prefix_space' is False. In such cases, it indicates that the tokenizer needs to be instantiated with 'add_prefix_space=True' to work with pretokenized inputs.
+        - ValueError: Raised if the parameter 'is_split_into_words' is set to True but 'add_prefix_space' is False. In such cases, it indicates that the tokenizer needs to be instantiated with
+'add_prefix_space=True' to work with pretokenized inputs.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
 

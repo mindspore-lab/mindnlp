@@ -11,7 +11,8 @@ class Vector(AbstractVector):
     r"""
     Represents a vector in a mathematical space.
     
-    This class inherits from AbstractVector, providing functionality for vector operations and manipulations. The Vector class allows for the creation and manipulation of vectors, and supports operations such as addition, subtraction, multiplication, and division with scalars and other vectors.
+    This class inherits from AbstractVector, providing functionality for vector operations and manipulations. The Vector class allows for the creation and manipulation of vectors, and supports operations such
+as addition, subtraction, multiplication, and division with scalars and other vectors.
     
     Attributes:
         _size (int): The size of the vector.

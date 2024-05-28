@@ -36,7 +36,8 @@ from ..tuners_utils import (
 class LoKrLayer(nn.Cell, BaseTunerLayer):
 
     r"""
-    LoKrLayer is a custom PyTorch class representing a layer that implements the Locally Kroneckerized Neural Network adaptation technique. This technique allows for adaptive modifications to be made on top of the base layer's output. The class provides methods for creating, updating, merging, unmerging, and managing adaptive layers within the network.
+    LoKrLayer is a custom PyTorch class representing a layer that implements the Locally Kroneckerized Neural Network adaptation technique. This technique allows for adaptive modifications to be made on top of
+the base layer's output. The class provides methods for creating, updating, merging, unmerging, and managing adaptive layers within the network.
     
     Attributes:
         - lokr_w1: Dictionary of parameters for the first adaptive layer.
@@ -423,9 +424,13 @@ class LoKrLayer(nn.Cell, BaseTunerLayer):
         Raises:
             None.
         
-        This method resets the adapter parameters randomly based on the adapter name provided. If the adapter name is found in the self.lokr_w1 dictionary, the self.lokr_w1[adapter_name] parameter is reset using HeUniform initialization with a negative slope of the square root of 5. If the adapter name is not found in the self.lokr_w1 dictionary, the self.lokr_w1_a[adapter_name] and self.lokr_w1_b[adapter_name] parameters are reset using the same initialization.
+        This method resets the adapter parameters randomly based on the adapter name provided. If the adapter name is found in the self.lokr_w1 dictionary, the self.lokr_w1[adapter_name] parameter is reset
+using HeUniform initialization with a negative slope of the square root of 5. If the adapter name is not found in the self.lokr_w1 dictionary, the self.lokr_w1_a[adapter_name] and self.lokr_w1_b[adapter_name]
+parameters are reset using the same initialization.
         
-        Similarly, the self.lokr_w2 and self.lokr_t2 parameters are reset based on the adapter name. If the adapter name is found in the self.lokr_w2 dictionary, the self.lokr_w2[adapter_name] parameter is reset using HeUniform initialization. If the adapter name is not found in the self.lokr_w2 dictionary, the self.lokr_w2_a[adapter_name] and self.lokr_w2_b[adapter_name] parameters are reset using the same initialization.
+        Similarly, the self.lokr_w2 and self.lokr_t2 parameters are reset based on the adapter name. If the adapter name is found in the self.lokr_w2 dictionary, the self.lokr_w2[adapter_name] parameter is
+reset using HeUniform initialization. If the adapter name is not found in the self.lokr_w2 dictionary, the self.lokr_w2_a[adapter_name] and self.lokr_w2_b[adapter_name] parameters are reset using the same
+initialization.
         
         Note: This method assumes that the initializer and HeUniform functions are defined and available.
         """
@@ -1026,7 +1031,8 @@ def make_weight_cp(t, wa, wb):
         wb (ndarray): A matrix with shape (j, r), where j represents the dimension matching the second dimension of 't', and r represents the desired dimension of the resulting tensor along the second axis.
     
     Returns:
-        ndarray: The resulting weight tensor after performing the contraction operation. The shape of the output tensor is (p, r, k, l), where p and r represent the dimensions specified by 'wa' and 'wb', respectively, and k, l represent the remaining dimensions inherited from 't'.
+        ndarray: The resulting weight tensor after performing the contraction operation. The shape of the output tensor is (p, r, k, l), where p and r represent the dimensions specified by 'wa' and 'wb',
+respectively, and k, l represent the remaining dimensions inherited from 't'.
     
     Raises:
         None: This function does not raise any exceptions.

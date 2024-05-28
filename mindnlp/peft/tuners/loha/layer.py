@@ -25,7 +25,8 @@ from mindnlp.peft.tuners.lycoris_utils import LycorisLayer
 class LoHaLayer(nn.Cell, LycorisLayer):
 
     r"""
-    The LoHaLayer class represents a layer that applies Local Harmonic Adaptation (LoHa) to a base layer. LoHaLayer inherits from nn.Cell and LycorisLayer. It provides methods to create, reset, and update adapter parameters, as well as to calculate delta weights and apply the adaptation to input data. 
+    The LoHaLayer class represents a layer that applies Local Harmonic Adaptation (LoHa) to a base layer. LoHaLayer inherits from nn.Cell and LycorisLayer. It provides methods to create, reset, and update
+adapter parameters, as well as to calculate delta weights and apply the adaptation to input data. 
     
     Attributes:
         base_layer (nn.Cell): The base layer for which LoHa adaptation is applied.
@@ -656,7 +657,8 @@ class HadaWeight(nn.Cell):
     r"""
     The HadaWeight class represents a module that calculates the Hadamard product of two sets of weights in a neural network. 
     
-    This class inherits from nn.Cell and provides methods for constructing the Hadamard product of two weight matrices, backpropagating through the operation, and computing the gradients with respect to the input weights. 
+    This class inherits from nn.Cell and provides methods for constructing the Hadamard product of two weight matrices, backpropagating through the operation, and computing the gradients with respect to the
+input weights. 
     
     The construct method computes the Hadamard product of two sets of weights scaled by a specified factor. 
     
@@ -748,11 +750,14 @@ class HadaWeight(nn.Cell):
 class HadaWeightCP(nn.Cell):
 
     r"""
-    The HadaWeightCP class represents a cell for performing HadaWeightCP (Hadamard product with weight and channel permutation) operations. This class inherits from nn.Cell and provides methods for constructing the HadaWeightCP operation and its backward propagation.
+    The HadaWeightCP class represents a cell for performing HadaWeightCP (Hadamard product with weight and channel permutation) operations. This class inherits from nn.Cell and provides methods for
+constructing the HadaWeightCP operation and its backward propagation.
     
-    The construct method takes input tensors t1, w1a, w1b, t2, w2a, w2b, and optional scale, and returns the result of the HadaWeightCP operation. The HadaWeightCP operation involves performing einsum operations on the input tensors and scaling the result by the provided scale.
+    The construct method takes input tensors t1, w1a, w1b, t2, w2a, w2b, and optional scale, and returns the result of the HadaWeightCP operation. The HadaWeightCP operation involves performing einsum
+operations on the input tensors and scaling the result by the provided scale.
     
-    The bprop method takes input tensors t1, w1a, w1b, t2, w2a, w2b, scale, out, and dout, and computes the gradients with respect to the input tensors and weight matrices. The method involves performing einsum operations and computing gradients for w1a, w1b, t1, w2a, w2b, and t2.
+    The bprop method takes input tensors t1, w1a, w1b, t2, w2a, w2b, scale, out, and dout, and computes the gradients with respect to the input tensors and weight matrices. The method involves performing
+einsum operations and computing gradients for w1a, w1b, t1, w2a, w2b, and t2.
     
     This class is designed to be used as a building block for neural network models that involve HadaWeightCP operations and provides an efficient and optimized implementation for such operations.
     """

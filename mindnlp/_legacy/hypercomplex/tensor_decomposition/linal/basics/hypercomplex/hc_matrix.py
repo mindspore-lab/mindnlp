@@ -12,7 +12,9 @@ NoneType = type(None)
 class Matrix(AbstractMatrix):
 
     r"""
-    The Matrix class represents a matrix using a given algebra factory. It provides methods for various matrix operations such as addition, subtraction, multiplication, division, transpose, conjugate transpose, and more. The class supports initialization from various input types including tuples, NumPy arrays, and lists of vectors. Additionally, it provides methods for creating matrices with specific properties such as ones, zeros, and identity matrices, as well as concatenating matrices along rows and columns.
+    The Matrix class represents a matrix using a given algebra factory. It provides methods for various matrix operations such as addition, subtraction, multiplication, division, transpose, conjugate
+transpose, and more. The class supports initialization from various input types including tuples, NumPy arrays, and lists of vectors. Additionally, it provides methods for creating matrices with specific
+properties such as ones, zeros, and identity matrices, as well as concatenating matrices along rows and columns.
     
     This class inherits from the AbstractMatrix class and provides an implementation for the matrix-specific functionality.
     
@@ -126,13 +128,16 @@ class Matrix(AbstractMatrix):
         
         Args:
             self (Matrix): The matrix object to which a scalar value will be added.
-            that (Union[Scalar, Tuple[Union[float, np.float64], Union[float, np.float64]]]): The scalar value to be added to the matrix. It can either be a Scalar object or a tuple containing two elements, each being a float or np.float64. If 'that' is a Scalar object, it must have the same data type as the matrix defined by 'self._alg_factory'.
+            that (Union[Scalar, Tuple[Union[float, np.float64], Union[float, np.float64]]]): The scalar value to be added to the matrix. It can either be a Scalar object or a tuple containing two elements,
+each being a float or np.float64. If 'that' is a Scalar object, it must have the same data type as the matrix defined by 'self._alg_factory'.
         
         Returns:
-            Matrix: A new Matrix object resulting from adding the scalar value to the original matrix. The new matrix has the same algebra factory, height, and width as the original matrix, with each element being the sum of the corresponding elements of the original matrix and the scalar value.
+            Matrix: A new Matrix object resulting from adding the scalar value to the original matrix. The new matrix has the same algebra factory, height, and width as the original matrix, with each element
+being the sum of the corresponding elements of the original matrix and the scalar value.
         
         Raises:
-            TypeError: If 'that' is a Scalar object with a different data type than the matrix defined by 'self._alg_factory', a TypeError is raised with a message indicating that only scalars of the same data type are allowed for addition.
+            TypeError: If 'that' is a Scalar object with a different data type than the matrix defined by 'self._alg_factory', a TypeError is raised with a message indicating that only scalars of the same data
+type are allowed for addition.
         """
         if isinstance(that, Scalar) and that.get_algebra_type() != self._alg_factory:
             raise TypeError(
@@ -213,7 +218,8 @@ class Matrix(AbstractMatrix):
         Raises:
             None.
         
-        This method takes no additional parameters besides 'self'. It returns a new Matrix object that has the same elements as the current matrix, but with its rows and columns interchanged. The transposed matrix will have dimensions 'width' x 'height', where 'width' is the number of columns in the original matrix and 'height' is the number of rows.
+        This method takes no additional parameters besides 'self'. It returns a new Matrix object that has the same elements as the current matrix, but with its rows and columns interchanged. The transposed
+matrix will have dimensions 'width' x 'height', where 'width' is the number of columns in the original matrix and 'height' is the number of rows.
         
         Example:
             # Create a 2x3 matrix
@@ -265,7 +271,8 @@ class Matrix(AbstractMatrix):
         
         Args:
             self (Matrix): The instance of the Matrix class.
-            that (Union[Scalar, Tuple[Union[float, np.float64], Union[float, np.float64]]]): The scalar value or tuple of scalar values with which the matrix will be divided. If a Scalar object is provided, its algebra type must match the algebra type of the matrix.
+            that (Union[Scalar, Tuple[Union[float, np.float64], Union[float, np.float64]]]): The scalar value or tuple of scalar values with which the matrix will be divided. If a Scalar object is provided,
+its algebra type must match the algebra type of the matrix.
         
         Returns:
             Matrix: A new Matrix object resulting from the division operation.
@@ -336,7 +343,8 @@ class Matrix(AbstractMatrix):
             self (Matrix): The current instance of the Matrix class.
             height (Optional[int]): The height of the matrix. If not provided, it is determined by the height of the 'items' array.
             width (Optional[int]): The width of the matrix. If not provided, it is determined by the width of the 'items' array.
-            items (Tuple[np.ndarray, np.ndarray]): A tuple containing two numpy arrays representing the elements of the matrix. The first array represents the x-coordinate values, and the second array represents the y-coordinate values.
+            items (Tuple[np.ndarray, np.ndarray]): A tuple containing two numpy arrays representing the elements of the matrix. The first array represents the x-coordinate values, and the second array
+represents the y-coordinate values.
         
         Returns:
             Tuple[int, int]: A tuple containing the height and width of the initialized matrix.
@@ -488,7 +496,8 @@ class Matrix(AbstractMatrix):
             Matrix: A new Matrix object resulting from the subtraction of the two matrices.
         
         Raises:
-            TypeError: If the data type of the current Matrix and the provided Matrix are different, a TypeError is raised. The error message will indicate that it is only possible to subtract a matrix of the same data type.
+            TypeError: If the data type of the current Matrix and the provided Matrix are different, a TypeError is raised. The error message will indicate that it is only possible to subtract a matrix of the
+same data type.
         
         """
         if self._alg_factory != that._alg_factory:

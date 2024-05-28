@@ -76,7 +76,8 @@ class Starcoder2RotaryEmbedding(nn.Cell):
     """
     The Starcoder2RotaryEmbedding class represents a rotary embedding module used for positional encoding in neural network models. This class inherits from the nn.Cell class.
     
-    The class's constructor method initializes the Starcoder2RotaryEmbedding instance with the specified dimensions, maximum position embeddings, and base value for the rotary embedding. It computes the inverse frequency and sets the cosine and sine cache for positional encoding.
+    The class's constructor method initializes the Starcoder2RotaryEmbedding instance with the specified dimensions, maximum position embeddings, and base value for the rotary embedding. It computes the
+inverse frequency and sets the cosine and sine cache for positional encoding.
     
     The _set_cos_sin_cache method sets the cosine and sine cache based on the maximum sequence length and data type.
     
@@ -301,7 +302,8 @@ class Starcoder2Attention(nn.Cell):
         Args:
             self: The object instance.
             config (Starcoder2Config): The configuration object containing various model hyperparameters.
-            layer_idx (Optional[int], default=None): The index of the layer. If None, a warning will be logged and it is not recommended to omit this parameter as it may cause errors during the forward call if caching is used.
+            layer_idx (Optional[int], default=None): The index of the layer. If None, a warning will be logged and it is not recommended to omit this parameter as it may cause errors during the forward call if
+caching is used.
         
         Returns:
             None
@@ -372,7 +374,8 @@ class Starcoder2Attention(nn.Cell):
             use_cache (bool): A flag to indicate whether to use the cache for key and value states.
         
         Returns:
-            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing the attention output tensor with shape (batch_size, sequence_length, hidden_size), attention weights tensor (optional), and past key value tuple (optional).
+            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing the attention output tensor with shape (batch_size, sequence_length, hidden_size),
+attention weights tensor (optional), and past key value tuple (optional).
         
         Raises:
             ValueError: If the attention weights or attention mask shape does not match the expected shape.
@@ -578,9 +581,12 @@ class Starcoder2PreTrainedModel(PreTrainedModel):
     """
     This class represents a Starcoder2PreTrainedModel, which is a subclass of PreTrainedModel. 
     
-    The Starcoder2PreTrainedModel class provides methods for initializing the weights of different types of cells. The initialization process depends on the type of the cell. If the cell is an instance of nn.Dense, the weights are initialized using a normal distribution with a mean of 0 and a standard deviation defined by the `initializer_range` attribute of the configuration. If the cell has a bias, the bias is initialized with zeros. 
+    The Starcoder2PreTrainedModel class provides methods for initializing the weights of different types of cells. The initialization process depends on the type of the cell. If the cell is an instance of
+nn.Dense, the weights are initialized using a normal distribution with a mean of 0 and a standard deviation defined by the `initializer_range` attribute of the configuration. If the cell has a bias, the bias
+is initialized with zeros. 
     
-    If the cell is an instance of nn.Embedding, the weights are initialized using a normal distribution with a mean of 0 and a standard deviation defined by the `initializer_range` attribute of the configuration. If the cell has a padding index, the weight corresponding to the padding index is set to 0.
+    If the cell is an instance of nn.Embedding, the weights are initialized using a normal distribution with a mean of 0 and a standard deviation defined by the `initializer_range` attribute of the
+configuration. If the cell has a padding index, the weight corresponding to the padding index is set to 0.
     
     Note: It is assumed that the `cell` parameter passed to the `_init_weights` method is an instance of either nn.Dense or nn.Embedding.
     
@@ -840,7 +846,8 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
     """
     The Starcoder2ForCausalLM class represents a Starcoder2 model for causal language modeling. It inherits from the Starcoder2PreTrainedModel. 
     
-    This class provides methods to initialize the model, get and set input embeddings, get and set output embeddings, set the decoder, get the decoder, construct the model with various optional inputs, prepare inputs for generation, and reorder the cache.
+    This class provides methods to initialize the model, get and set input embeddings, get and set output embeddings, set the decoder, get the decoder, construct the model with various optional inputs, prepare
+inputs for generation, and reorder the cache.
     
     Example usage:
     
@@ -1085,15 +1092,20 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
         Args:
             self: An instance of the Starcoder2ForCausalLM class.
             input_ids (torch.Tensor): Tensor of shape (batch_size, sequence_length) containing the input IDs.
-            past_key_values (Cache, tuple, or None): Cache object or tuple of tensors containing the past key values. If Cache object is provided, the cache_length, past_length, and max_cache_length are extracted. If tuple is provided, cache_length and past_length are extracted from the first element. If None, cache_length and past_length are calculated based on input_ids.
-            attention_mask (torch.Tensor or None): Tensor of shape (batch_size, sequence_length) containing the attention mask. If not None and attention_mask.shape[1] is greater than input_ids.shape[1], the input_ids are truncated accordingly. If attention_mask is not None and past_length is less than input_ids.shape[1], the input_ids are sliced accordingly. If max_cache_length is not None and attention_mask is not None and cache_length + input_ids.shape[1] is greater than max_cache_length, the attention_mask is truncated accordingly.
-            inputs_embeds (torch.Tensor or None): Tensor of shape (batch_size, sequence_length, embedding_size) containing the input embeddings. If not None and past_key_values is None, the model_inputs dictionary is updated with 'inputs_embeds' key.
+            past_key_values (Cache, tuple, or None): Cache object or tuple of tensors containing the past key values. If Cache object is provided, the cache_length, past_length, and max_cache_length are
+extracted. If tuple is provided, cache_length and past_length are extracted from the first element. If None, cache_length and past_length are calculated based on input_ids.
+            attention_mask (torch.Tensor or None): Tensor of shape (batch_size, sequence_length) containing the attention mask. If not None and attention_mask.shape[1] is greater than input_ids.shape[1], the
+input_ids are truncated accordingly. If attention_mask is not None and past_length is less than input_ids.shape[1], the input_ids are sliced accordingly. If max_cache_length is not None and attention_mask is
+not None and cache_length + input_ids.shape[1] is greater than max_cache_length, the attention_mask is truncated accordingly.
+            inputs_embeds (torch.Tensor or None): Tensor of shape (batch_size, sequence_length, embedding_size) containing the input embeddings. If not None and past_key_values is None, the model_inputs
+dictionary is updated with 'inputs_embeds' key.
             **kwargs: Additional keyword arguments.
         
         Returns:
             dict: A dictionary containing the model inputs. The dictionary includes the following keys:
                 - 'input_ids': Tensor of shape (batch_size, sequence_length) containing the input IDs.
-                - 'position_ids': Tensor of shape (batch_size, sequence_length) containing the position IDs. If attention_mask is not None and position_ids is None, the position_ids are calculated based on the attention_mask.
+                - 'position_ids': Tensor of shape (batch_size, sequence_length) containing the position IDs. If attention_mask is not None and position_ids is None, the position_ids are calculated based on the
+attention_mask.
                 - 'past_key_values': Cache object or tuple of tensors containing the past key values.
                 - 'use_cache': Boolean indicating whether to use cache or not.
                 - 'attention_mask': Tensor of shape (batch_size, sequence_length) containing the attention mask.

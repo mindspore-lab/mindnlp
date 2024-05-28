@@ -141,7 +141,8 @@ def build_template_angle_feat(template_feats: Dict[str, mindspore.Tensor]) -> mi
             - 'template_torsion_angles_mask': A tensor representing the mask for template torsion angles.
     
     Returns:
-        mindspore.Tensor: The template angle feature tensor constructed by concatenating one-hot encoded template amino acid types, template torsion angles sin and cosine, alternative template torsion angles sin and cosine, and template torsion angles mask.
+        mindspore.Tensor: The template angle feature tensor constructed by concatenating one-hot encoded template amino acid types, template torsion angles sin and cosine, alternative template torsion angles
+sin and cosine, and template torsion angles mask.
     
     Raises:
         None

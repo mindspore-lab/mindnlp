@@ -152,10 +152,13 @@ class PromptEncoder(nn.Cell):
         
         Args:
             self: An instance of the PromptEncoder class.
-            indices (Tensor): A tensor containing the indices used for embedding lookup. The shape of the tensor should be (batch_size, sequence_length), where batch_size is the number of input sequences, and sequence_length is the length of each input sequence. Each element in the tensor represents the index of a word in the vocabulary.
+            indices (Tensor): A tensor containing the indices used for embedding lookup. The shape of the tensor should be (batch_size, sequence_length), where batch_size is the number of input sequences, and
+sequence_length is the length of each input sequence. Each element in the tensor represents the index of a word in the vocabulary.
             
         Returns:
-            output_embeds (Tensor): A tensor containing the output embeddings. The shape of the tensor depends on the encoder type. If the encoder_type is PromptEncoderReparameterizationType.LSTM, the shape will be (batch_size, sequence_length, embedding_size), where embedding_size is the size of the embedding vector. If the encoder_type is PromptEncoderReparameterizationType.MLP, the shape will be (batch_size, sequence_length, output_size), where output_size is the size of the output vector.
+            output_embeds (Tensor): A tensor containing the output embeddings. The shape of the tensor depends on the encoder type. If the encoder_type is PromptEncoderReparameterizationType.LSTM, the shape
+will be (batch_size, sequence_length, embedding_size), where embedding_size is the size of the embedding vector. If the encoder_type is PromptEncoderReparameterizationType.MLP, the shape will be (batch_size,
+sequence_length, output_size), where output_size is the size of the output vector.
         
         Raises:
             ValueError: If the encoder_type is not recognized. Please use either PromptEncoderReparameterizationType.MLP or PromptEncoderReparameterizationType.LSTM.

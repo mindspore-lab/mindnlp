@@ -131,7 +131,8 @@ class MistralRMSNorm(nn.Cell):
 class MistralRotaryEmbedding(nn.Cell):
 
     """
-    The MistralRotaryEmbedding class represents a rotary positional embedding for sequences. It inherits from the nn.Cell class and provides methods for setting up the rotary embedding and constructing the embeddings for input sequences.
+    The MistralRotaryEmbedding class represents a rotary positional embedding for sequences. It inherits from the nn.Cell class and provides methods for setting up the rotary embedding and constructing the
+embeddings for input sequences.
     
     Attributes:
         dim (int): The dimension of the embedding.
@@ -363,7 +364,8 @@ class MistralAttention(nn.Cell):
         Args:
             self: The MistralAttention instance.
             config (MistralConfig): The configuration object for the MistralAttention model.
-            layer_idx (Optional[int], default=None): The index of the layer. If not provided, it will issue a warning and may cause errors during the forward call if caching is used. It is recommended to always provide a `layer_idx` when creating this class.
+            layer_idx (Optional[int], default=None): The index of the layer. If not provided, it will issue a warning and may cause errors during the forward call if caching is used. It is recommended to
+always provide a `layer_idx` when creating this class.
         
         Returns:
             None
@@ -532,7 +534,8 @@ class MistralAttention(nn.Cell):
 class MistralDecoderLayer(nn.Cell):
 
     """
-    MistralDecoderLayer represents a single layer of the Mistral decoder model. This class implements the logic for processing input hidden states through self-attention mechanism and multi-layer perceptron (MLP) in a decoder layer.
+    MistralDecoderLayer represents a single layer of the Mistral decoder model. This class implements the logic for processing input hidden states through self-attention mechanism and multi-layer perceptron
+(MLP) in a decoder layer.
     
     Inherits From:
         nn.Cell
@@ -548,7 +551,8 @@ class MistralDecoderLayer(nn.Cell):
         __init__(config: MistralConfig, layer_idx: int)
             Initializes the MistralDecoderLayer with the given configuration and layer index.
         
-        construct(hidden_states: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, position_ids: Optional[mindspore.Tensor] = None, past_key_value: Optional[Tuple[mindspore.Tensor]] = None, output_attentions: Optional[bool] = False, use_cache: Optional[bool] = False, **kwargs) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]
+        construct(hidden_states: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, position_ids: Optional[mindspore.Tensor] = None, past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
+output_attentions: Optional[bool] = False, use_cache: Optional[bool] = False, **kwargs) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]
             Processes the input hidden states through self-attention and MLP mechanisms in the decoder layer, optionally returning additional tensors based on the arguments provided.
     
     Args:
@@ -660,7 +664,9 @@ class MistralPreTrainedModel(PreTrainedModel):
     Parameters:
         - cell: The cell for which the weights need to be initialized.
     
-    The _init_weights method initializes the weights of the given cell based on its type. If the cell is of type nn.Dense, the weights are set using a normal distribution with a range specified by the 'initializer_range' attribute in the configuration. If the cell has a bias, it is initialized with zeros. If the cell is of type nn.Embedding, the weights are initialized using a normal distribution with a range specified by the 'initializer_range' attribute in the configuration. If the cell has a padding index, the weight corresponding to the padding index is set to zero.
+    The _init_weights method initializes the weights of the given cell based on its type. If the cell is of type nn.Dense, the weights are set using a normal distribution with a range specified by the
+'initializer_range' attribute in the configuration. If the cell has a bias, it is initialized with zeros. If the cell is of type nn.Embedding, the weights are initialized using a normal distribution with a
+range specified by the 'initializer_range' attribute in the configuration. If the cell has a padding index, the weight corresponding to the padding index is set to zero.
     
     Note: The MistralPreTrainedModel class assumes that the cell's weight and bias attributes are accessible using the 'weight' and 'bias' properties, respectively.
     
@@ -907,7 +913,9 @@ class MistralModel(MistralPreTrainedModel):
 class MistralForCausalLM(MistralPreTrainedModel):
 
     """
-    The MistralForCausalLM class represents a causal language model for Mistral. It inherits from MistralPreTrainedModel and includes methods for initializing the model, setting and getting input and output embeddings, setting the decoder, constructing the model, and preparing inputs for generation. The class also includes a method for reordering cache during generation. The construct method handles the model's forward pass, while the prepare_inputs_for_generation method prepares inputs for generation. The class provides functionality for generating text based on input prompts. 
+    The MistralForCausalLM class represents a causal language model for Mistral. It inherits from MistralPreTrainedModel and includes methods for initializing the model, setting and getting input and output
+embeddings, setting the decoder, constructing the model, and preparing inputs for generation. The class also includes a method for reordering cache during generation. The construct method handles the model's
+forward pass, while the prepare_inputs_for_generation method prepares inputs for generation. The class provides functionality for generating text based on input prompts. 
     """
     _tied_weights_keys = ["lm_head.weight"]
 

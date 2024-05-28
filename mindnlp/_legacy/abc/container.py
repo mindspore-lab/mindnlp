@@ -361,7 +361,8 @@ class ParameterDict(Cell):
     - values: Returns an iterable of the parameter values.
     - update: Updates the ParameterDict with new parameters from an iterable of key/value pairs.
     
-    Note: The update method expects the input to be an iterable of key/value pairs. If the input is a mapping type, the keys and values are inserted into the ParameterDict. If the input is a sequence, each element should be an iterable of length 2 representing a key/value pair.
+    Note: The update method expects the input to be an iterable of key/value pairs. If the input is a mapping type, the keys and values are inserted into the ParameterDict. If the input is a sequence, each
+element should be an iterable of length 2 representing a key/value pair.
     """
     _params: Dict[str, Parameter]
 
@@ -380,13 +381,16 @@ class ParameterDict(Cell):
         Raises:
             None.
         
-        This method is responsible for initializing a new instance of the ParameterDict class. It takes two parameters: self, which represents the current instance of the class, and parameters, which is an optional dictionary of parameters.
+        This method is responsible for initializing a new instance of the ParameterDict class. It takes two parameters: self, which represents the current instance of the class, and parameters, which is an
+optional dictionary of parameters.
         
         The 'self' parameter is required and is automatically passed when calling the method on an instance of the class.
         
-        The 'parameters' parameter is an optional dictionary that contains string keys and Parameter values. If provided, the method will update the ParameterDict instance with the values from the 'parameters' dictionary. If not provided, the instance will remain empty.
+        The 'parameters' parameter is an optional dictionary that contains string keys and Parameter values. If provided, the method will update the ParameterDict instance with the values from the 'parameters'
+dictionary. If not provided, the instance will remain empty.
         
-        The 'parameters' dictionary allows for easy initialization of the ParameterDict instance with pre-defined values. It should be a dictionary where the keys are strings representing parameter names, and the values are instances of the Parameter class.
+        The 'parameters' dictionary allows for easy initialization of the ParameterDict instance with pre-defined values. It should be a dictionary where the keys are strings representing parameter names, and
+the values are instances of the Parameter class.
         
         Example usage:
             # Create a new instance of ParameterDict

@@ -290,23 +290,30 @@ class BigBirdPegasusSelfAttention(nn.Cell):
 class BigBirdPegasusBlockSparseAttention(nn.Cell):
 
     """
-    The `BigBirdPegasusBlockSparseAttention` class represents a block sparse attention mechanism used in the BigBird model for text generation tasks. This class inherits from the `nn.Cell` class and provides methods for performing block sparse attention operations.
+    The `BigBirdPegasusBlockSparseAttention` class represents a block sparse attention mechanism used in the BigBird model for text generation tasks. This class inherits from the `nn.Cell` class and provides
+methods for performing block sparse attention operations.
     
-    The class initializes and constructs the block sparse attention mechanism using the provided configuration parameters. It also includes methods for fast matrix multiplication, creating random attention masks, and generating adjacency lists for random attention.
+    The class initializes and constructs the block sparse attention mechanism using the provided configuration parameters. It also includes methods for fast matrix multiplication, creating random attention
+masks, and generating adjacency lists for random attention.
     
     The class includes the following methods:
     - `__init__(self, config, seed=None)`: Initializes the BigBirdPegasusBlockSparseAttention with the given configuration and optional seed for randomization.
     - `swapaxes_for_scores(self, x)`: Swaps axes for the attention scores.
-    - `construct(self, hidden_states, band_mask=None, from_mask=None, to_mask=None, from_blocked_mask=None, to_blocked_mask=None, output_attentions=None)`: Constructs the block sparse attention mechanism using the given hidden states and masks.
+    - `construct(self, hidden_states, band_mask=None, from_mask=None, to_mask=None, from_blocked_mask=None, to_blocked_mask=None, output_attentions=None)`: Constructs the block sparse attention mechanism using
+the given hidden states and masks.
     - `ms_bmm_nd(self, inp_1, inp_2, ndim=None)`: Fast n-dimensional matrix multiplication.
     - `ms_bmm_nd_swapaxes(self, inp_1, inp_2, ndim=None)`: Fast n-dimensional matrix multiplication with swapaxes.
-    - `bigbird_block_sparse_attention(self, query_layer, key_layer, value_layer, band_mask, from_mask, to_mask, from_blocked_mask, to_blocked_mask, n_heads, n_rand_blocks, attention_head_size, from_block_size, to_block_size, batch_size, from_seq_len, to_seq_len, seed, plan_from_length, plan_num_rand_blocks, output_attentions)`: Performs the block sparse attention mechanism with the given input tensors and parameters.
+    - `bigbird_block_sparse_attention(self, query_layer, key_layer, value_layer, band_mask, from_mask, to_mask, from_blocked_mask, to_blocked_mask, n_heads, n_rand_blocks, attention_head_size, from_block_size,
+to_block_size, batch_size, from_seq_len, to_seq_len, seed, plan_from_length, plan_num_rand_blocks, output_attentions)`: Performs the block sparse attention mechanism with the given input tensors and parameters.
     - `ms_gather_b2(params, indices)`: Gathers elements from the input tensors based on the provided indices.
-    - `_create_rand_mask_from_inputs(from_blocked_mask, to_blocked_mask, rand_attn, num_attention_heads, num_rand_blocks, batch_size, from_seq_length, from_block_size)`: Creates a 3D attention mask from 2D tensor masks.
+    - `_create_rand_mask_from_inputs(from_blocked_mask, to_blocked_mask, rand_attn, num_attention_heads, num_rand_blocks, batch_size, from_seq_length, from_block_size)`: Creates a 3D attention mask from 2D
+tensor masks.
     - `_get_rand_attn_plan(from_seq_length, from_block_size, num_rand_blocks)`: Generates a plan for random attention placement.
     - `_bigbird_block_rand_mask(self, from_seq_length, to_seq_length, from_block_size, to_block_size, num_rand_blocks, last_idx=-1)`: Creates an adjacency list of random attention.
-    - `_bigbird_block_rand_mask_with_head(self, from_seq_length, to_seq_length, from_block_size, to_block_size, num_heads, plan_from_length, plan_num_rand_blocks, window_block_left=1, window_block_right=1, global_block_top=1, global_block_bottom=1, global_block_left=1, global_block_right=1)`: Creates an adjacency list of random attention with multiple heads.
-    - `_get_single_block_row_attention(block_id, to_start_block_id, to_end_block_id, num_rand_blocks, window_block_left=1, window_block_right=1, global_block_left=1, global_block_right=1)`: Gets random row attention for a single block row.
+    - `_bigbird_block_rand_mask_with_head(self, from_seq_length, to_seq_length, from_block_size, to_block_size, num_heads, plan_from_length, plan_num_rand_blocks, window_block_left=1, window_block_right=1,
+global_block_top=1, global_block_bottom=1, global_block_left=1, global_block_right=1)`: Creates an adjacency list of random attention with multiple heads.
+    - `_get_single_block_row_attention(block_id, to_start_block_id, to_end_block_id, num_rand_blocks, window_block_left=1, window_block_right=1, global_block_left=1, global_block_right=1)`: Gets random row
+attention for a single block row.
     
     This class provides a comprehensive implementation of the block sparse attention mechanism for efficient text generation tasks.
     """
@@ -369,9 +376,12 @@ class BigBirdPegasusBlockSparseAttention(nn.Cell):
         Raises:
             None.
         
-        This method takes in two parameters, 'self' and 'x'. 'self' is an instance of the BigBirdPegasusBlockSparseAttention class, used to access other class attributes and methods. 'x' is a torch.Tensor object representing the input tensor to be processed. The input tensor should have a shape compatible with (batch_size, sequence_length, hidden_size).
+        This method takes in two parameters, 'self' and 'x'. 'self' is an instance of the BigBirdPegasusBlockSparseAttention class, used to access other class attributes and methods. 'x' is a torch.Tensor
+object representing the input tensor to be processed. The input tensor should have a shape compatible with (batch_size, sequence_length, hidden_size).
         
-        The method performs an axis swapping operation on the input tensor 'x'. It first calculates the new shape of 'x' by combining the existing dimensions with the number of attention heads and the size of each attention head. Then, using the 'view' method of the tensor, the shape of 'x' is rearranged to match the new shape. Finally, the 'permute' method is applied to the tensor to swap the axes according to the specified permutation order (0, 2, 1, 3).
+        The method performs an axis swapping operation on the input tensor 'x'. It first calculates the new shape of 'x' by combining the existing dimensions with the number of attention heads and the size of
+each attention head. Then, using the 'view' method of the tensor, the shape of 'x' is rearranged to match the new shape. Finally, the 'permute' method is applied to the tensor to swap the axes according to the
+specified permutation order (0, 2, 1, 3).
         
         The method returns the processed tensor with the axes swapped. The shape of the output tensor is (batch_size, num_attention_heads, sequence_length, attention_head_size).
         
@@ -1661,15 +1671,20 @@ class BigBirdPegasusDecoderAttention(nn.Cell):
 class BigBirdPegasusEncoderLayer(nn.Cell):
 
     """
-    This class represents a BigBirdPegasusEncoderLayer in a neural network model. It is used for encoding input sequences using a combination of attention mechanisms and feedforward neural networks. The layer includes mechanisms for self-attention, layer normalization, activation functions, and dropout regularization. It also supports different types of attention, such as 'original_full' and 'block_sparse'.
+    This class represents a BigBirdPegasusEncoderLayer in a neural network model. It is used for encoding input sequences using a combination of attention mechanisms and feedforward neural networks. The layer
+includes mechanisms for self-attention, layer normalization, activation functions, and dropout regularization. It also supports different types of attention, such as 'original_full' and 'block_sparse'.
     
-    The BigBirdPegasusEncoderLayer inherits from the nn.Cell class and consists of methods for initialization, constructing the layer, and setting the attention type. The layer's parameters and operations are defined based on the provided configuration, including attention types, embedding dimensions, and feedforward neural network dimensions.
+    The BigBirdPegasusEncoderLayer inherits from the nn.Cell class and consists of methods for initialization, constructing the layer, and setting the attention type. The layer's parameters and operations are
+defined based on the provided configuration, including attention types, embedding dimensions, and feedforward neural network dimensions.
     
-    The `construct` method processes the input hidden states through self-attention mechanisms, normalization, activation functions, and feedforward neural networks. It allows for optional outputs of attention tensors from all attention layers. The method handles different types of masks for attention and dropout regularization based on the provided configurations.
+    The `construct` method processes the input hidden states through self-attention mechanisms, normalization, activation functions, and feedforward neural networks. It allows for optional outputs of attention
+tensors from all attention layers. The method handles different types of masks for attention and dropout regularization based on the provided configurations.
     
-    The `set_attention_type` method allows for setting the type of attention mechanism used in the layer, ensuring that it is either 'original_full' or 'block_sparse'. It updates the attention type parameter and adjusts the self-attention mechanism accordingly.
+    The `set_attention_type` method allows for setting the type of attention mechanism used in the layer, ensuring that it is either 'original_full' or 'block_sparse'. It updates the attention type parameter
+and adjusts the self-attention mechanism accordingly.
     
-    Overall, the BigBirdPegasusEncoderLayer class encapsulates the functionality of an encoder layer within the BigBirdPegasus model, providing essential operations for processing input sequences and capturing complex patterns in the data.
+    Overall, the BigBirdPegasusEncoderLayer class encapsulates the functionality of an encoder layer within the BigBirdPegasus model, providing essential operations for processing input sequences and capturing
+complex patterns in the data.
     """
     def __init__(self, config: BigBirdPegasusConfig, seed=None):
 
@@ -1800,9 +1815,11 @@ class BigBirdPegasusDecoderLayer(nn.Cell):
     """
     This class represents a decoder layer for the BigBirdPegasus model. It includes self-attention and cross-attention mechanisms, feedforward neural network, layer normalization, and dropout.
     
-    The class inherits from nn.Cell and has an initialization method that takes a BigBirdPegasusConfig object as input and constructs the decoder layer. The construct method takes input hidden states and various optional arguments to perform decoding and returns the output tensor. It also includes detailed parameter descriptions and option flags for controlling the output.
+    The class inherits from nn.Cell and has an initialization method that takes a BigBirdPegasusConfig object as input and constructs the decoder layer. The construct method takes input hidden states and
+various optional arguments to perform decoding and returns the output tensor. It also includes detailed parameter descriptions and option flags for controlling the output.
     
-    The decoder layer consists of self-attention, encoder attention, layer normalization, feedforward neural network, and dropout operations. The construct method also supports caching of past key and value projection states and returning attention weights if specified.
+    The decoder layer consists of self-attention, encoder attention, layer normalization, feedforward neural network, and dropout operations. The construct method also supports caching of past key and value
+projection states and returning attention weights if specified.
     
     This class provides a comprehensive implementation of a decoder layer for the BigBirdPegasus model with detailed parameter and method descriptions.
     """
@@ -1820,16 +1837,19 @@ class BigBirdPegasusDecoderLayer(nn.Cell):
         Raises:
             None.
         
-        This method initializes the BigBirdPegasusDecoderLayer by setting the values of various attributes. It takes in the self parameter, which is a reference to the current instance of the class, and the config parameter, which is an instance of the BigBirdPegasusConfig class. 
+        This method initializes the BigBirdPegasusDecoderLayer by setting the values of various attributes. It takes in the self parameter, which is a reference to the current instance of the class, and the
+config parameter, which is an instance of the BigBirdPegasusConfig class. 
         
         The config parameter is used to set the following attributes:
         - embed_dim (int): The embedding dimension size, which is set to the value of config.d_model.
-        - self_attn (BigBirdPegasusDecoderAttention): The self-attention mechanism for the decoder layer, which is created using the embed_dim, config.decoder_attention_heads, config.attention_dropout, config.is_decoder, and config.use_bias parameters.
+        - self_attn (BigBirdPegasusDecoderAttention): The self-attention mechanism for the decoder layer, which is created using the embed_dim, config.decoder_attention_heads, config.attention_dropout,
+config.is_decoder, and config.use_bias parameters.
         - dropout (float): The dropout rate, which is set to the value of config.dropout.
         - activation_fn (function): The activation function used in the decoder layer, which is determined based on the value of config.activation_function.
         - activation_dropout (float): The dropout rate for the activation function, which is set to the value of config.activation_dropout.
         - self_attn_layer_norm (nn.LayerNorm): The layer normalization module applied to the output of the self-attention mechanism, which is created using the embed_dim parameter.
-        - encoder_attn (BigBirdPegasusDecoderAttention): The encoder attention mechanism for the decoder layer, which is created using the embed_dim, config.decoder_attention_heads, config.attention_dropout, config.is_decoder, and config.use_bias parameters.
+        - encoder_attn (BigBirdPegasusDecoderAttention): The encoder attention mechanism for the decoder layer, which is created using the embed_dim, config.decoder_attention_heads, config.attention_dropout,
+config.is_decoder, and config.use_bias parameters.
         - encoder_attn_layer_norm (nn.LayerNorm): The layer normalization module applied to the output of the encoder attention mechanism, which is created using the embed_dim parameter.
         - fc1 (nn.Dense): The first fully connected layer in the decoder feed-forward network, which has an input size of embed_dim and an output size of config.decoder_ffn_dim.
         - fc2 (nn.Dense): The second fully connected layer in the decoder feed-forward network, which has an input size of config.decoder_ffn_dim and an output size of embed_dim.
@@ -2012,11 +2032,14 @@ class BigBirdPegasusClassificationHead(nn.Cell):
 class BigBirdPegasusPreTrainedModel(PreTrainedModel):
 
     """
-    The 'BigBirdPegasusPreTrainedModel' class represents a pre-trained model for natural language processing tasks. It inherits from the 'PreTrainedModel' class and includes methods for initializing weights and generating dummy inputs for the model. 
+    The 'BigBirdPegasusPreTrainedModel' class represents a pre-trained model for natural language processing tasks. It inherits from the 'PreTrainedModel' class and includes methods for initializing weights
+and generating dummy inputs for the model. 
     
-    The '_init_weights' method initializes the weights of the model's cells based on the specified standard deviation. It handles different cell types such as 'nn.Dense' and 'nn.Embedding', setting their weights and biases accordingly. For 'nn.Embedding' cells, it also handles padding indices to ensure proper weight initialization.
+    The '_init_weights' method initializes the weights of the model's cells based on the specified standard deviation. It handles different cell types such as 'nn.Dense' and 'nn.Embedding', setting their
+weights and biases accordingly. For 'nn.Embedding' cells, it also handles padding indices to ensure proper weight initialization.
     
-    The 'dummy_inputs' property returns a dictionary of dummy inputs for the model, including an attention mask and input IDs. It uses the specified pad token ID to generate the inputs and handles padding for the input sequences.
+    The 'dummy_inputs' property returns a dictionary of dummy inputs for the model, including an attention mask and input IDs. It uses the specified pad token ID to generate the inputs and handles padding for
+the input sequences.
     
     This class provides essential functionality for initializing model weights and generating dummy inputs, making it suitable for use in natural language processing tasks.
     """
@@ -2055,7 +2078,8 @@ class BigBirdPegasusPreTrainedModel(PreTrainedModel):
         Returns:
             dict: A dictionary containing dummy inputs for the model, with the following keys:
                   - 'attention_mask': A tensor representing the attention mask. It is obtained by applying the 'ne' (not equal) operation on the 'input_ids' tensor, with the padding token as the argument.
-                  - 'input_ids': A tensor representing the input IDs for the model. It contains two rows, where each row represents a different sequence. The first row consists of the values [0, 6, 10, 4, 2], and the second row consists of the values [0, 8, 12, 2, pad_token], where 'pad_token' is the padding token ID obtained from the model's configuration.
+                  - 'input_ids': A tensor representing the input IDs for the model. It contains two rows, where each row represents a different sequence. The first row consists of the values [0, 6, 10, 4, 2],
+and the second row consists of the values [0, 8, 12, 2, pad_token], where 'pad_token' is the padding token ID obtained from the model's configuration.
         
         Raises:
             None.
@@ -2342,7 +2366,8 @@ class BigBirdPegasusEncoder(BigBirdPegasusPreTrainedModel):
         Method: create_masks_for_block_sparse_attn
         
         Description:
-        This method creates various types of masks for block-sparse attention in the BigBirdPegasusEncoder class. It takes an attention_mask and the block_size as input and returns multiple masks required for block-sparse attention.
+        This method creates various types of masks for block-sparse attention in the BigBirdPegasusEncoder class. It takes an attention_mask and the block_size as input and returns multiple masks required for
+block-sparse attention.
         
         Args:
             attention_mask (mindspore.Tensor): A 2D tensor representing the attention mask for the input sequence.
@@ -2717,7 +2742,8 @@ class BigBirdPegasusModel(BigBirdPegasusPreTrainedModel):
     """
     This class represents a BigBirdPegasus model for sequence-to-sequence tasks. It is a variant of the BigBird model that is specifically designed for text generation tasks using the Pegasus architecture.
     
-    The BigBirdPegasusModel class inherits from the BigBirdPegasusPreTrainedModel class, which is a base class for all pre-trained BigBirdPegasus models. It provides common methods and attributes for loading and saving models.
+    The BigBirdPegasusModel class inherits from the BigBirdPegasusPreTrainedModel class, which is a base class for all pre-trained BigBirdPegasus models. It provides common methods and attributes for loading
+and saving models.
     
     The BigBirdPegasusModel class has the following methods:
     
@@ -2727,11 +2753,13 @@ class BigBirdPegasusModel(BigBirdPegasusPreTrainedModel):
     - _tie_weights(self): Ties the weights of the encoder and decoder embedding layers if specified in the configuration.
     - get_encoder(self): Returns the encoder module of the model.
     - get_decoder(self): Returns the decoder module of the model.
-    - construct(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask, cross_attn_head_mask, encoder_outputs, past_key_values, inputs_embeds, decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model by performing encoding and decoding operations on the input sequence.
+    - construct(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask, cross_attn_head_mask, encoder_outputs, past_key_values, inputs_embeds,
+decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model by performing encoding and decoding operations on the input sequence.
     
     Please refer to the documentation of the individual methods for more details on their parameters and return values.
     
-    Note: This docstring is generated based on the provided code snippet and may not include all the class attributes, methods, and their details. Please refer to the source code or official documentation for complete information.
+    Note: This docstring is generated based on the provided code snippet and may not include all the class attributes, methods, and their details. Please refer to the source code or official documentation for
+complete information.
     """
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
@@ -2814,7 +2842,8 @@ class BigBirdPegasusModel(BigBirdPegasusPreTrainedModel):
             None.
         
         Note:
-            This method is used to ensure that the encoder and decoder token embeddings share the same weights when the tie_word_embeddings flag is set to True. It helps in reducing the number of parameters in the model and improves training efficiency.
+            This method is used to ensure that the encoder and decoder token embeddings share the same weights when the tie_word_embeddings flag is set to True. It helps in reducing the number of parameters in
+the model and improves training efficiency.
         """
         if self.config.tie_word_embeddings:
             self._tie_or_clone_weights(self.encoder.embed_tokens, self.shared)
@@ -2883,7 +2912,8 @@ class BigBirdPegasusModel(BigBirdPegasusPreTrainedModel):
             decoder_attention_mask (mindspore.Tensor, optional): The decoder attention mask of shape (batch_size, sequence_length). Defaults to None.
             head_mask (mindspore.Tensor, optional): The head mask tensor of shape (num_layers, num_heads) or (num_layers, num_heads, sequence_length, sequence_length). Defaults to None.
             decoder_head_mask (mindspore.Tensor, optional): The decoder head mask tensor of shape (num_layers, num_heads) or (num_layers, num_heads, sequence_length, sequence_length). Defaults to None.
-            cross_attn_head_mask (mindspore.Tensor, optional): The cross-attention head mask tensor of shape (num_layers, num_heads) or (num_layers, num_heads, sequence_length, sequence_length). Defaults to None.
+            cross_attn_head_mask (mindspore.Tensor, optional): The cross-attention head mask tensor of shape (num_layers, num_heads) or (num_layers, num_heads, sequence_length, sequence_length). Defaults to
+None.
             encoder_outputs (List[mindspore.Tensor], optional): The encoder outputs of shape [(batch_size, sequence_length, hidden_size), ...]. Defaults to None.
             past_key_values (List[mindspore.Tensor], optional): The past key values of shape [(batch_size, num_heads, past_sequence_length, hidden_size), ...]. Defaults to None.
             inputs_embeds (mindspore.Tensor, optional): The embedded inputs tensor of shape (batch_size, sequence_length, hidden_size). Defaults to None.
@@ -2975,7 +3005,8 @@ class BigBirdPegasusForConditionalGeneration(BigBirdPegasusPreTrainedModel):
     """
     This class represents a conditional generation model based on BigBirdPegasus. It is a subclass of BigBirdPegasusPreTrainedModel. 
     
-    The BigBirdPegasusForConditionalGeneration class extends the functionality of its parent class by adding methods for conditional generation tasks, such as generating text given a prompt or a set of input tokens. 
+    The BigBirdPegasusForConditionalGeneration class extends the functionality of its parent class by adding methods for conditional generation tasks, such as generating text given a prompt or a set of input
+tokens. 
     
     Methods:
     - __init__(self, config: BigBirdPegasusConfig): Initializes the model with the given configuration.
@@ -2985,8 +3016,13 @@ class BigBirdPegasusForConditionalGeneration(BigBirdPegasusPreTrainedModel):
     - _resize_final_logits_bias(self, new_num_tokens: int) -> None: Resizes the bias tensor used for final logits.
     - get_output_embeddings(self): Returns the output embedding layer of the model.
     - set_output_embeddings(self, new_embeddings): Sets the output embedding layer of the model.
-    - construct(self, input_ids: mindspore.Tensor = None, attention_mask: Optional[mindspore.Tensor] = None, decoder_input_ids: Optional[mindspore.Tensor] = None, decoder_attention_mask: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, decoder_head_mask: Optional[mindspore.Tensor] = None, cross_attn_head_mask: Optional[mindspore.Tensor] = None, encoder_outputs: Optional[List[mindspore.Tensor]] = None, past_key_values: Optional[List[mindspore.Tensor]] = None, inputs_embeds: Optional[mindspore.Tensor] = None, decoder_inputs_embeds: Optional[mindspore.Tensor] = None, labels: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Tuple, Seq2SeqLMOutput]: Constructs the model for conditional generation tasks.
-    - prepare_inputs_for_generation(self, decoder_input_ids, past_key_values=None, attention_mask=None, decoder_attention_mask=None, head_mask=None, decoder_head_mask=None, cross_attn_head_mask=None, use_cache=None, encoder_outputs=None, **kwargs): Prepares the input tensors for generation.
+    - construct(self, input_ids: mindspore.Tensor = None, attention_mask: Optional[mindspore.Tensor] = None, decoder_input_ids: Optional[mindspore.Tensor] = None, decoder_attention_mask:
+Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, decoder_head_mask: Optional[mindspore.Tensor] = None, cross_attn_head_mask: Optional[mindspore.Tensor] = None, encoder_outputs:
+Optional[List[mindspore.Tensor]] = None, past_key_values: Optional[List[mindspore.Tensor]] = None, inputs_embeds: Optional[mindspore.Tensor] = None, decoder_inputs_embeds: Optional[mindspore.Tensor] = None,
+labels: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) ->
+Union[Tuple, Seq2SeqLMOutput]: Constructs the model for conditional generation tasks.
+    - prepare_inputs_for_generation(self, decoder_input_ids, past_key_values=None, attention_mask=None, decoder_attention_mask=None, head_mask=None, decoder_head_mask=None, cross_attn_head_mask=None,
+use_cache=None, encoder_outputs=None, **kwargs): Prepares the input tensors for generation.
     - prepare_decoder_input_ids_from_labels(self, labels: mindspore.Tensor): Prepares the decoder input IDs from the given labels.
     - _reorder_cache(past_key_values, beam_idx): Reorders the past key values for beam search.
     
@@ -3088,7 +3124,8 @@ class BigBirdPegasusForConditionalGeneration(BigBirdPegasusPreTrainedModel):
         Raises:
             None.
         
-        The method `_resize_final_logits_bias` resizes the `final_logits_bias` tensor based on the provided `new_num_tokens` parameter. If the `new_num_tokens` is less than or equal to the current number of tokens in `final_logits_bias`, the tensor is sliced to retain only the first `new_num_tokens` columns. Otherwise, extra bias columns are added to the tensor using `zeros` and `cat` operations.
+        The method `_resize_final_logits_bias` resizes the `final_logits_bias` tensor based on the provided `new_num_tokens` parameter. If the `new_num_tokens` is less than or equal to the current number of
+tokens in `final_logits_bias`, the tensor is sliced to retain only the first `new_num_tokens` columns. Otherwise, extra bias columns are added to the tensor using `zeros` and `cat` operations.
         
         Note: This method directly modifies the `final_logits_bias` attribute of the BigBirdPegasusForConditionalGeneration instance.
         """
@@ -3242,7 +3279,8 @@ class BigBirdPegasusForConditionalGeneration(BigBirdPegasusPreTrainedModel):
         - encoder_outputs (Tensor, optional): The outputs from the encoder. Defaults to None.
         
         Returns:
-        - dict: A dictionary containing 'input_ids', 'encoder_outputs', 'past_key_values', 'decoder_input_ids', 'attention_mask', 'decoder_attention_mask', 'head_mask', 'decoder_head_mask', 'cross_attn_head_mask', and 'use_cache'.
+        - dict: A dictionary containing 'input_ids', 'encoder_outputs', 'past_key_values', 'decoder_input_ids', 'attention_mask', 'decoder_attention_mask', 'head_mask', 'decoder_head_mask',
+'cross_attn_head_mask', and 'use_cache'.
         
         Raises:
         - None
@@ -3321,7 +3359,9 @@ class BigBirdPegasusForConditionalGeneration(BigBirdPegasusPreTrainedModel):
 class BigBirdPegasusForSequenceClassification(BigBirdPegasusPreTrainedModel):
 
     """
-    This class represents a BigBirdPegasus model for sequence classification. It inherits from BigBirdPegasusPreTrainedModel and includes methods for model initialization and construction of the sequence classifier. The construct method takes various input parameters for decoding and attention masks, and returns the sequence classifier output including logits and optional loss. The class also handles different problem types such as regression, single label classification, and multi-label classification. Additionally, it ensures consistency in the number of <eos> tokens for all examples. 
+    This class represents a BigBirdPegasus model for sequence classification. It inherits from BigBirdPegasusPreTrainedModel and includes methods for model initialization and construction of the sequence
+classifier. The construct method takes various input parameters for decoding and attention masks, and returns the sequence classifier output including logits and optional loss. The class also handles different
+problem types such as regression, single label classification, and multi-label classification. Additionally, it ensures consistency in the number of <eos> tokens for all examples. 
     """
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
@@ -3454,11 +3494,14 @@ class BigBirdPegasusForQuestionAnswering(BigBirdPegasusPreTrainedModel):
     """
     This class represents a BigBirdPegasus model for question answering tasks. It is designed to perform question answering using the BigBirdPegasus architecture.
     
-    The class includes methods for initialization and constructing the model for question answering tasks. It inherits from the BigBirdPegasusPreTrainedModel class and utilizes a sequence-to-sequence model for processing input and generating output.
+    The class includes methods for initialization and constructing the model for question answering tasks. It inherits from the BigBirdPegasusPreTrainedModel class and utilizes a sequence-to-sequence model for
+processing input and generating output.
     
-    The __init__ method initializes the model with configuration settings, including setting the number of labels for classification. The construct method constructs the model for question answering by processing input tensors and generating start and end position logits for the answer span.
+    The __init__ method initializes the model with configuration settings, including setting the number of labels for classification. The construct method constructs the model for question answering by
+processing input tensors and generating start and end position logits for the answer span.
     
-    The class provides functionality for computing the token classification loss based on the start and end positions of the labelled span. It handles the calculation of loss and returns the output in the desired format based on the return_dict parameter.
+    The class provides functionality for computing the token classification loss based on the start and end positions of the labelled span. It handles the calculation of loss and returns the output in the
+desired format based on the return_dict parameter.
     
     For detailed information on the methods and parameters of this class, please refer to the class code and method docstrings.
     """
@@ -3641,9 +3684,11 @@ class BigBirdPegasusForCausalLM(BigBirdPegasusPreTrainedModel):
     """
     The `BigBirdPegasusForCausalLM` class represents a BigBird Pegasus model for causal language modeling tasks. It inherits from the `BigBirdPegasusPreTrainedModel` class. 
     
-    The class initializes the model with the provided configuration and defines methods for getting and setting input and output embeddings, setting the decoder, and constructing the model for generation. Additionally, it provides methods for preparing inputs for generation and reordering cache for beam search.
+    The class initializes the model with the provided configuration and defines methods for getting and setting input and output embeddings, setting the decoder, and constructing the model for generation.
+Additionally, it provides methods for preparing inputs for generation and reordering cache for beam search.
     
-    The `construct` method processes the input data for the model and returns the model outputs. The `prepare_inputs_for_generation` method prepares input data for generation, and the `_reorder_cache` method reorders the cache for beam search.
+    The `construct` method processes the input data for the model and returns the model outputs. The `prepare_inputs_for_generation` method prepares input data for generation, and the `_reorder_cache` method
+reorders the cache for beam search.
     
     The class also includes detailed documentation for the input and output parameters of the `construct` method, providing information on the usage and functionality of each parameter.
     
@@ -3659,7 +3704,8 @@ class BigBirdPegasusForCausalLM(BigBirdPegasusPreTrainedModel):
         
         Args:
             self: The instance of the class.
-            config: A configuration object containing the model's configuration parameters. It is expected to be a dictionary or an object that can be deep-copied. It should include the necessary parameters for initializing the model. The 'is_decoder' and 'is_encoder_decoder' attributes will be modified within this method. 
+            config: A configuration object containing the model's configuration parameters. It is expected to be a dictionary or an object that can be deep-copied. It should include the necessary parameters
+for initializing the model. The 'is_decoder' and 'is_encoder_decoder' attributes will be modified within this method. 
         
         Returns:
             None. This method does not return any value.

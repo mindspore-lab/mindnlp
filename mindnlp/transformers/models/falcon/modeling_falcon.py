@@ -1368,7 +1368,8 @@ class FalconForCausalLM(FalconPreTrainedModel):
         Raises:
             None.
         
-        This method returns the output embeddings of the FalconForCausalLM model. The output embeddings represent the final hidden states of the model's language model head. These embeddings can be used for downstream tasks such as fine-tuning or feature extraction.
+        This method returns the output embeddings of the FalconForCausalLM model. The output embeddings represent the final hidden states of the model's language model head. These embeddings can be used for
+downstream tasks such as fine-tuning or feature extraction.
         
         Note that the method takes only one parameter, `self`, which refers to the instance of the FalconForCausalLM class itself. No additional arguments are required.
         

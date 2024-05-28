@@ -297,7 +297,8 @@ class RwkvSelfAttention(nn.Cell):
         """
         Construct method in the RwkvSelfAttention class.
         
-        This method constructs the self-attention mechanism for the Rwkv model. It takes in the hidden input, the state, and a flag indicating whether to use cache or not. It returns the output of the attention mechanism and the updated state.
+        This method constructs the self-attention mechanism for the Rwkv model. It takes in the hidden input, the state, and a flag indicating whether to use cache or not. It returns the output of the
+attention mechanism and the updated state.
         
         Args:
             self: The RwkvSelfAttention object.
@@ -378,10 +379,12 @@ class RwkvFeedForward(nn.Cell):
         Args:
             self: The instance of the RwkvFeedForward class.
             hidden (array): The input array representing the hidden state. It is used to calculate the key, value, and receptance. The array should have the shape (batch_size, sequence_length, feature_dim).
-            state (array, optional): The optional input array representing the state. It is used for calculating the shifted value. If provided, it should have the same shape as 'hidden' (batch_size, sequence_length, feature_dim). Default is None.
+            state (array, optional): The optional input array representing the state. It is used for calculating the shifted value. If provided, it should have the same shape as 'hidden' (batch_size,
+sequence_length, feature_dim). Default is None.
         
         Returns:
-            tuple: A tuple containing the calculated receptance and the updated state. The receptance is a weighted value based on the key and shifted values. The updated state represents the modified state based on the input hidden array.
+            tuple: A tuple containing the calculated receptance and the updated state. The receptance is a weighted value based on the key and shifted values. The updated state represents the modified state
+based on the input hidden array.
         
         Raises:
             ValueError: If the shape of the 'hidden' array is not compatible for the calculations required in the method.

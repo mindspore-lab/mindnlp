@@ -442,7 +442,8 @@ class SPTokenizer:
         Raises:
             None.
             
-        This method takes a list of tokens and converts them into a string using the text tokenizer. The resulting string is then passed through the postprocessing method to remove any unwanted characters or formatting. The method returns the final decoded string as output. This method is a part of the SPTokenizer class and requires an instance of the class to be called.
+        This method takes a list of tokens and converts them into a string using the text tokenizer. The resulting string is then passed through the postprocessing method to remove any unwanted characters or
+formatting. The method returns the final decoded string as output. This method is a part of the SPTokenizer class and requires an instance of the class to be called.
         """
         text = self._get_text_tokenizer().convert_tokens_to_string(tokens)
         text = self.postprocess(text)
@@ -623,7 +624,8 @@ class ChatGLMTokenizer(PreTrainedTokenizer):
             inputs (str): The input text to be preprocessed.
             
         Returns:
-            str: The preprocessed text based on the specified configuration. If self.remove_space is True, leading and trailing spaces are removed, and consecutive spaces within the text are replaced with a single space. If self.do_lower_case is True, the text is converted to lowercase. The preprocessed text is returned.
+            str: The preprocessed text based on the specified configuration. If self.remove_space is True, leading and trailing spaces are removed, and consecutive spaces within the text are replaced with a
+single space. If self.do_lower_case is True, the text is converted to lowercase. The preprocessed text is returned.
         
         Raises:
             None

@@ -383,7 +383,8 @@ class SeamlessM4TTokenizerFast(PreTrainedTokenizerFast):
         Raises:
             None
         
-        This method prepares a batch of source texts and, optionally, target texts for tokenization using the SeamlessM4TTokenizerFast class. It takes the source texts, source language, target texts, and target language as input parameters. The method returns a BatchEncoding object, which contains the tokenized sequences.
+        This method prepares a batch of source texts and, optionally, target texts for tokenization using the SeamlessM4TTokenizerFast class. It takes the source texts, source language, target texts, and
+target language as input parameters. The method returns a BatchEncoding object, which contains the tokenized sequences.
         
         The 'self' parameter refers to the instance of the SeamlessM4TTokenizerFast class on which the method is called.
         

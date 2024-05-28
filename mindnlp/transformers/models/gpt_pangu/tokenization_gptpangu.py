@@ -163,7 +163,8 @@ class GPTPanguTokenizer(PreTrainedTokenizer):
         Note:
         - If the input tokens are None, the method returns None.
         - If the input tokens are a string, the method calls the _convert_token_to_id_with_added_voc() method to convert it into a token ID.
-        - If the input tokens contain special tokens, the method identifies their indices and splits the tokens into segments. Each segment is then encoded using the sp.encode() method and appended to the list of token IDs.
+        - If the input tokens contain special tokens, the method identifies their indices and splits the tokens into segments. Each segment is then encoded using the sp.encode() method and appended to the list
+of token IDs.
         - The method concatenates all the encoded segments and returns the final list of token IDs.
         
         Example usage:

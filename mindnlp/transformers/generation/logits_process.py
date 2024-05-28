@@ -519,7 +519,8 @@ class NoBadWordsLogitsProcessor(LogitsProcessor):
             self: The instance of the class.
             bad_words_ids (List[List[int]]): A list of lists containing the IDs of bad words. Each inner list represents a sequence of bad word IDs.
                 The outer list contains multiple sequences of bad word IDs. The parameter is expected to be a non-empty list of lists of positive integers.
-            eos_token_id (Union[int, List[int]]): An integer or a list of integers representing the end-of-sequence token ID(s). If a single integer is provided, it is converted to a list with a single element. 
+            eos_token_id (Union[int, List[int]]): An integer or a list of integers representing the end-of-sequence token ID(s). If a single integer is provided, it is converted to a list with a single
+element. 
                 If this parameter is None, it is automatically assigned an empty list. It is expected to be a positive integer or a list of positive integers.
         
         Returns:
@@ -656,7 +657,9 @@ class NoBadWordsLogitsProcessor(LogitsProcessor):
             None
         
         Description:
-        This method takes the previous input IDs and calculates the banned bad word IDs based on the pre-defined bad word sequences. It iterates over each slice of the previous input IDs and checks if any of the bad word sequences match with the preceding tokens. If a match is found, the corresponding bad word ID is added to the list of banned tokens. The banned tokens for each slice are then appended to the final list of banned tokens.
+        This method takes the previous input IDs and calculates the banned bad word IDs based on the pre-defined bad word sequences. It iterates over each slice of the previous input IDs and checks if any of
+the bad word sequences match with the preceding tokens. If a match is found, the corresponding bad word ID is added to the list of banned tokens. The banned tokens for each slice are then appended to the final
+list of banned tokens.
         
         Note:
         - The bad word sequences are specified in the 'bad_words_id_length_greater_than_1' attribute of the NoBadWordsLogitsProcessor class.
@@ -746,7 +749,8 @@ class MinLengthLogitsProcessor(LogitsProcessor):
         Args:
             self (MinLengthLogitsProcessor): The current instance of the MinLengthLogitsProcessor class.
             min_length (int): The minimum length of the processed logits. It must be a positive integer.
-            eos_token_id (Union[int, List[int]]): The end-of-sequence token ID or a list of end-of-sequence token IDs. If an integer is provided, it will be converted to a list. It must be a list of positive integers.
+            eos_token_id (Union[int, List[int]]): The end-of-sequence token ID or a list of end-of-sequence token IDs. If an integer is provided, it will be converted to a list. It must be a list of positive
+integers.
         
         Returns:
             None: This method does not return any value.
@@ -956,7 +960,8 @@ class ForcedBOSTokenLogitsProcessor(LogitsProcessor):
         Raises:
             - None
         
-        This method modifies the scores tensor by adjusting the scores based on the input IDs. If the length of the input_ids tensor is 1, the scores for all tokens except the 'bos_token_id' are set to negative infinity, and the score for the 'bos_token_id' is set to 0. The modified scores tensor is then returned.
+        This method modifies the scores tensor by adjusting the scores based on the input IDs. If the length of the input_ids tensor is 1, the scores for all tokens except the 'bos_token_id' are set to
+negative infinity, and the score for the 'bos_token_id' is set to 0. The modified scores tensor is then returned.
         """
         cur_len = input_ids.shape[-1]
         if cur_len == 1:
@@ -1039,7 +1044,8 @@ class InfNanRemoveLogitsProcessor(LogitsProcessor):
         Args:
             self: An instance of the InfNanRemoveLogitsProcessor class.
             input_ids (mindspore.Tensor): A tensor containing the input IDs.
-            scores (mindspore.Tensor): A tensor containing the scores to be processed. Any NaN values in the scores will be replaced with 0.0, and any infinite values will be replaced with the maximum value for the data type.
+            scores (mindspore.Tensor): A tensor containing the scores to be processed. Any NaN values in the scores will be replaced with 0.0, and any infinite values will be replaced with the maximum value
+for the data type.
         
         Returns:
             mindspore.Tensor: A tensor containing the processed scores after replacing NaN and infinite values.
@@ -1152,7 +1158,8 @@ class SuppressTokensLogitsProcessor(LogitsProcessor):
     def __call__(self, input_ids, scores):
 
         """
-        The '__call__' method in the 'SuppressTokensLogitsProcessor' class modifies the 'scores' array by setting the values of specific tokens to negative infinity. It takes three parameters: 'self', 'input_ids', and 'scores'. The method does not return any value.
+        The '__call__' method in the 'SuppressTokensLogitsProcessor' class modifies the 'scores' array by setting the values of specific tokens to negative infinity. It takes three parameters: 'self',
+'input_ids', and 'scores'. The method does not return any value.
         
         Args:
             self (SuppressTokensLogitsProcessor): An instance of the 'SuppressTokensLogitsProcessor' class.
@@ -1848,7 +1855,8 @@ class SequenceBiasLogitsProcessor(LogitsProcessor):
         
         Args:
             self: The object instance.
-            sequence_bias (Dict[Tuple[int], float]): A dictionary containing the sequence bias values. The keys are tuples of integers representing the sequence positions, and the values are floats representing the bias for each position. 
+            sequence_bias (Dict[Tuple[int], float]): A dictionary containing the sequence bias values. The keys are tuples of integers representing the sequence positions, and the values are floats
+representing the bias for each position. 
         
         Returns:
             None. This method does not return any value.
@@ -2178,7 +2186,8 @@ class WhisperTimeStampLogitsProcessor(LogitsProcessor):
     >>> generated_ids = model.generate(inputs=input_features, return_timestamps=True)
     >>> transcription = processor.batch_decode(generated_ids, skip_special_tokens=False)[0]
     >>> print("Transcription:", transcription)
-    Transcription: <|startoftranscript|><|0.00|> He has grave doubts whether Sir Frederick Layton's work is really Greek after all, and can<|6.44|><|6.44|> discover in it but little of rocky Ithaca.<|9.44|><|endoftext|>
+    Transcription: <|startoftranscript|><|0.00|> He has grave doubts whether Sir Frederick Layton's work is really Greek after all, and can<|6.44|><|6.44|> discover in it but little of rocky
+Ithaca.<|9.44|><|endoftext|>
 
 
     >>> #No timestamps & change EOS:
@@ -2427,13 +2436,19 @@ class ClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
         Raises:
             ValueError: If the shape of the scores tensor does not meet the required conditions.
         
-        The '__call__' method processes the logits to generate processed scores for a classifier with free guidance. It expects two parameters: 'input_ids' and 'scores'. The method returns a tensor of type 'mindspore.Tensor' which contains the processed scores.
+        The '__call__' method processes the logits to generate processed scores for a classifier with free guidance. It expects two parameters: 'input_ids' and 'scores'. The method returns a tensor of type
+'mindspore.Tensor' which contains the processed scores.
         
-        The 'input_ids' parameter is a tensor that holds the input IDs for the classifier. It is used to determine the batch size and shape of the scores tensor. There are no specific restrictions on this parameter.
+        The 'input_ids' parameter is a tensor that holds the input IDs for the classifier. It is used to determine the batch size and shape of the scores tensor. There are no specific restrictions on this
+parameter.
         
-        The 'scores' parameter is a tensor that holds the logits for the classifier. It is expected to have twice the batch size of the input IDs tensor, with the first half of the batches corresponding to the conditional inputs and the second half corresponding to the unconditional inputs. The shape of the scores tensor should be (2 * input_ids.shape[0], ...). The method raises a ValueError if the shape of the scores tensor does not meet this requirement.
+        The 'scores' parameter is a tensor that holds the logits for the classifier. It is expected to have twice the batch size of the input IDs tensor, with the first half of the batches corresponding to the
+conditional inputs and the second half corresponding to the unconditional inputs. The shape of the scores tensor should be (2 * input_ids.shape[0], ...). The method raises a ValueError if the shape of the
+scores tensor does not meet this requirement.
         
-        The method splits the scores tensor into two parts: 'cond_logits' and 'uncond_logits'. 'cond_logits' represents the logits for the conditional inputs, while 'uncond_logits' represents the logits for the unconditional inputs. These logits are then processed using the guidance scale specified in the instance of the ClassifierFreeGuidanceLogitsProcessor class. The final processed scores are obtained by adding 'uncond_logits' to the difference between 'cond_logits' and 'uncond_logits', multiplied by the guidance scale.
+        The method splits the scores tensor into two parts: 'cond_logits' and 'uncond_logits'. 'cond_logits' represents the logits for the conditional inputs, while 'uncond_logits' represents the logits for
+the unconditional inputs. These logits are then processed using the guidance scale specified in the instance of the ClassifierFreeGuidanceLogitsProcessor class. The final processed scores are obtained by
+adding 'uncond_logits' to the difference between 'cond_logits' and 'uncond_logits', multiplied by the guidance scale.
         
         Note: This method assumes that the 'split' function splits the tensor into two parts along the first dimension (axis=0).
         """

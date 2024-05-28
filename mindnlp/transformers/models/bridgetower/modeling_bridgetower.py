@@ -453,7 +453,8 @@ class BridgeTowerVisionTransformer(nn.Cell):
                 visual_output_post (mindspore.Tensor): A tensor containing the processed visual output.
     
     Note:
-        The BridgeTowerVisionTransformer class is designed for BridgeTower vision tasks and provides flexibility in layer normalization. It can be used to process pixel values and generate visual representations.
+        The BridgeTowerVisionTransformer class is designed for BridgeTower vision tasks and provides flexibility in layer normalization. It can be used to process pixel values and generate visual
+representations.
     """
     def __init__(self, config):
 
@@ -1062,13 +1063,15 @@ class BridgeTowerSelfAttention(nn.Cell):
             hidden_states (mindspore.Tensor): The input tensor of shape (batch_size, sequence_length, hidden_size) representing the hidden states.
             attention_mask (Optional[mindspore.Tensor]): An optional input tensor of shape (batch_size, sequence_length) representing the attention mask. Defaults to None.
             head_mask (Optional[mindspore.Tensor]): An optional input tensor of shape (num_heads,) representing the head mask. Defaults to None.
-            encoder_hidden_states (Optional[mindspore.Tensor]): An optional input tensor of shape (batch_size, encoder_sequence_length, hidden_size) representing the hidden states of the encoder. Defaults to None.
+            encoder_hidden_states (Optional[mindspore.Tensor]): An optional input tensor of shape (batch_size, encoder_sequence_length, hidden_size) representing the hidden states of the encoder. Defaults to
+None.
             encoder_attention_mask (Optional[mindspore.Tensor]): An optional input tensor of shape (batch_size, encoder_sequence_length) representing the attention mask of the encoder. Defaults to None.
             past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): An optional tuple containing the past key and value tensors. Defaults to None.
             output_attentions (Optional[bool]): An optional flag indicating whether to output attention probabilities. Defaults to False.
         
         Returns:
-            Tuple[mindspore.Tensor]: A tuple containing the context layer tensor of shape (batch_size, sequence_length, hidden_size) and optionally attention probabilities tensor of shape (batch_size, num_heads, sequence_length, encoder_sequence_length) if output_attentions is True.
+            Tuple[mindspore.Tensor]: A tuple containing the context layer tensor of shape (batch_size, sequence_length, hidden_size) and optionally attention probabilities tensor of shape (batch_size,
+num_heads, sequence_length, encoder_sequence_length) if output_attentions is True.
         
         Raises:
             None.
@@ -1311,7 +1314,8 @@ class BridgeTowerAttention(nn.Cell):
 class BridgeTowerBertCrossLayer(nn.Cell):
 
     """
-    This Python class, 'BridgeTowerBertCrossLayer', represents a single layer in the BridgeTowerBert model. It is a subclass of nn.Cell and is responsible for performing cross-attention operations between hidden states from the encoder and decoder.
+    This Python class, 'BridgeTowerBertCrossLayer', represents a single layer in the BridgeTowerBert model. It is a subclass of nn.Cell and is responsible for performing cross-attention operations between
+hidden states from the encoder and decoder.
     
     Attributes:
     - chunk_size_feed_forward (int): The chunk size used in the forward pass of the feed-forward network.
@@ -1324,7 +1328,8 @@ class BridgeTowerBertCrossLayer(nn.Cell):
     - output (BridgeTowerOutput): An instance of the BridgeTowerOutput class, responsible for producing the final output of the layer.
     
     Methods:
-    - construct(hidden_states, encoder_hidden_states, attention_mask=None, head_mask=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False): Performs the forward pass of the layer. It applies self-attention to the hidden states, followed by cross-attention if specified. The outputs are then passed through the feed-forward chunk function.
+    - construct(hidden_states, encoder_hidden_states, attention_mask=None, head_mask=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False): Performs the forward pass of the layer. It
+applies self-attention to the hidden states, followed by cross-attention if specified. The outputs are then passed through the feed-forward chunk function.
     - feed_forward_chunk(attention_output): Applies the intermediate and output transformations to the attention output.
     
     """
@@ -1459,7 +1464,8 @@ class BridgeTowerTextLayer(nn.Cell):
     
     Methods:
     - __init__(self, config): Initializes the BridgeTowerTextLayer with the given configuration.
-    - construct(self, hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_value, output_attentions): Constructs the layer by applying attention and feed forward operations to the input hidden states.
+    - construct(self, hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_value, output_attentions): Constructs the layer by applying attention and feed forward
+operations to the input hidden states.
     - feed_forward_chunk(self, attention_output): Applies the feed forward operation to the attention output.
     
     """
@@ -2308,7 +2314,8 @@ class BridgeTowerModel(BridgeTowerPreTrainedModel):
     
     This class inherits from BridgeTowerPreTrainedModel and implements methods for initializing the model, constructing the model, and getting classification features.
     
-    The BridgeTowerModel class includes methods for getting and setting input embeddings, as well as constructing the model for processing multimodal inputs. It also provides a method for obtaining classification features from the processed multimodal inputs.
+    The BridgeTowerModel class includes methods for getting and setting input embeddings, as well as constructing the model for processing multimodal inputs. It also provides a method for obtaining
+classification features from the processed multimodal inputs.
     
     Attributes:
         config: The configuration for the BridgeTowerModel.
@@ -2317,7 +2324,8 @@ class BridgeTowerModel(BridgeTowerPreTrainedModel):
         __init__(self, config): Initializes the BridgeTowerModel with the provided configuration.
         get_input_embeddings(self): Retrieves the input embeddings from the text model.
         set_input_embeddings(self, value): Sets the input embeddings for the text model.
-        construct(self, input_ids, attention_mask, token_type_ids, pixel_values, pixel_mask, head_mask, inputs_embeds, image_embeds, image_token_type_idx, output_attentions, output_hidden_states, return_dict, labels): Constructs the model for processing multimodal inputs and returns the model output.
+        construct(self, input_ids, attention_mask, token_type_ids, pixel_values, pixel_mask, head_mask, inputs_embeds, image_embeds, image_token_type_idx, output_attentions, output_hidden_states, return_dict,
+labels): Constructs the model for processing multimodal inputs and returns the model output.
         get_cls_features(self, text_features, image_features): Retrieves the classification features from the processed multimodal inputs.
     
     Examples:
@@ -2423,9 +2431,11 @@ class BridgeTowerModel(BridgeTowerPreTrainedModel):
         Raises:
             None.
         
-        This method retrieves the input embeddings from the underlying text model of the BridgeTowerModel. The input embeddings are representations of the input text that are used for further processing or analysis. By calling this method, you can access the input embeddings that have been generated by the text model.
+        This method retrieves the input embeddings from the underlying text model of the BridgeTowerModel. The input embeddings are representations of the input text that are used for further processing or
+analysis. By calling this method, you can access the input embeddings that have been generated by the text model.
         
-        Note that the text model must be initialized and trained before calling this method. If the text model has not been initialized or trained, this method may not return the expected embeddings or may raise an exception.
+        Note that the text model must be initialized and trained before calling this method. If the text model has not been initialized or trained, this method may not return the expected embeddings or may
+raise an exception.
         """
         return self.text_model.get_input_embeddings()
 
@@ -2758,7 +2768,8 @@ class BridgeTowerPredictionHeadTransform(nn.Cell):
 class BridgeTowerMLMHead(nn.Cell):
 
     """
-    BridgeTowerMLMHead represents the Masked Language Model (MLM) head for the BridgeTower model. This class inherits from nn.Cell and implements the MLM head for generating predictions using the provided configuration and optional weight.
+    BridgeTowerMLMHead represents the Masked Language Model (MLM) head for the BridgeTower model. This class inherits from nn.Cell and implements the MLM head for generating predictions using the provided
+configuration and optional weight.
     
     Attributes:
         config: The configuration settings for the MLM head.
@@ -2819,7 +2830,8 @@ class BridgeTowerMLMHead(nn.Cell):
 class BridgeTowerITMHead(nn.Cell):
 
     """
-    BridgeTowerITMHead is a class representing an ITM (Item-Transaction-Model) head for a Bridge Tower model. This class inherits from nn.Cell and contains methods for initializing the head with a specific hidden size and constructing the ITM score based on the input data.
+    BridgeTowerITMHead is a class representing an ITM (Item-Transaction-Model) head for a Bridge Tower model. This class inherits from nn.Cell and contains methods for initializing the head with a specific
+hidden size and constructing the ITM score based on the input data.
     
     Attributes:
         fc (nn.Dense): A fully connected layer for computing the ITM score.
@@ -2940,7 +2952,9 @@ class BridgeTowerForMaskedLM(BridgeTowerPreTrainedModel):
         Raises:
             None. This method does not raise any exceptions.
         
-        This method sets the output embeddings for the BridgeTowerForMaskedLM model by updating the decoder attribute of the mlm_score object. The new_embeddings parameter should be a tensor representing the new embeddings to be used as the output embeddings. The tensor should have a shape of (vocab_size, hidden_size) where vocab_size is the number of tokens in the vocabulary and hidden_size is the size of the hidden state of the model.
+        This method sets the output embeddings for the BridgeTowerForMaskedLM model by updating the decoder attribute of the mlm_score object. The new_embeddings parameter should be a tensor representing the
+new embeddings to be used as the output embeddings. The tensor should have a shape of (vocab_size, hidden_size) where vocab_size is the number of tokens in the vocabulary and hidden_size is the size of the
+hidden state of the model.
         
         Example usage:
             model = BridgeTowerForMaskedLM()
@@ -3216,9 +3230,11 @@ class BridgeTowerForContrastiveLearning(BridgeTowerPreTrainedModel):
     """
     Represents a BridgeTower model for contrastive learning.
     
-    This class inherits from BridgeTowerPreTrainedModel and includes initialization and construction methods for contrastive learning. It contains methods for processing input data, calculating contrastive loss, and returning outputs for text and image embeddings.
+    This class inherits from BridgeTowerPreTrainedModel and includes initialization and construction methods for contrastive learning. It contains methods for processing input data, calculating contrastive
+loss, and returning outputs for text and image embeddings.
     
-    The `construct` method takes input tensors for text and image data, and optional parameters for attention, token types, and masks. It returns a BridgeTowerContrastiveOutput object containing the contrastive loss, logits, text embeddings, image embeddings, cross-modal embeddings, hidden states, and attentions.
+    The `construct` method takes input tensors for text and image data, and optional parameters for attention, token types, and masks. It returns a BridgeTowerContrastiveOutput object containing the
+contrastive loss, logits, text embeddings, image embeddings, cross-modal embeddings, hidden states, and attentions.
     
     The example provided demonstrates the usage of the BridgeTowerForContrastiveLearning class for processing images and texts, calculating contrastive loss, and obtaining model outputs.
     

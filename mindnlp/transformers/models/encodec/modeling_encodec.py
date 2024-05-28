@@ -597,7 +597,8 @@ class EncodecEuclideanCodebook(nn.Cell):
             hidden_states (ndarray): A numpy array containing the hidden states to be encoded. The shape of the array is expected to be (batch_size, sequence_length, hidden_size).
         
         Returns:
-            ndarray: A numpy array containing the encoded indices. The shape of the array is the same as the input hidden_states, except for the last dimension which is reduced to represent the indices of the codebook.
+            ndarray: A numpy array containing the encoded indices. The shape of the array is the same as the input hidden_states, except for the last dimension which is reduced to represent the indices of the
+codebook.
         
         Raises:
             None.

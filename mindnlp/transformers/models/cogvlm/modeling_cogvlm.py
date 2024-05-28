@@ -244,7 +244,9 @@ class VisionExpertMLP(nn.Cell):
         construct(hidden_states, token_type_ids): Processes the input hidden states based on the token type IDs to produce the output.
     
     Detailed Description:
-    The VisionExpertMLP class initializes with two instances of the MLP class, language_mlp, and vision_mlp, to process language-related and vision-related inputs, respectively. The construct method operates on the hidden states and token type IDs to calculate the output. The construct method employs the vision_mlp and language_mlp instances to process the hidden states based on the vision and language token masks, and then aggregates the results to produce the final output.
+    The VisionExpertMLP class initializes with two instances of the MLP class, language_mlp, and vision_mlp, to process language-related and vision-related inputs, respectively. The construct method operates
+on the hidden states and token type IDs to calculate the output. The construct method employs the vision_mlp and language_mlp instances to process the hidden states based on the vision and language token
+masks, and then aggregates the results to produce the final output.
     
     The construct method takes the following parameters:
         - hidden_states (mindspore.Tensor(B, L, D)): The input hidden states to be processed.
@@ -356,7 +358,8 @@ def attention_fn(
         attention_dropout: nn.Cell = None):
 
     """
-    The attention_fn function calculates the attention scores between the given query, key, and value layers, using an attention mask if provided. It then applies softmax to normalize the attention scores and performs an optional attention dropout. Finally, it computes the context layer by multiplying the attention scores with the value layer.
+    The attention_fn function calculates the attention scores between the given query, key, and value layers, using an attention mask if provided. It then applies softmax to normalize the attention scores and
+performs an optional attention dropout. Finally, it computes the context layer by multiplying the attention scores with the value layer.
     
     Args:
         query_layer (mindspore.Tensor(B, H, L, HD)): The query layer tensor, where B represents the batch size, H is the number of attention heads, L is the sequence length, and HD is the hidden dimension.
@@ -749,7 +752,8 @@ class CogVLMDecoderLayer(nn.Cell):
         post_attention_layernorm (RMSNorm): The layer normalization module after the attention module.
     
     Methods:
-        construct(self, hidden_states: mindspore.Tensor, token_type_ids: mindspore.Tensor, position_ids: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, past_key_value: Optional[Tuple[mindspore.Tensor]] = None, output_attentions: Optional[bool] = False, use_cache: Optional[bool] = False) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
+        construct(self, hidden_states: mindspore.Tensor, token_type_ids: mindspore.Tensor, position_ids: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, past_key_value:
+Optional[Tuple[mindspore.Tensor]] = None, output_attentions: Optional[bool] = False, use_cache: Optional[bool] = False) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
             Constructs the decoder layer.
     
     Returns:
@@ -840,10 +844,13 @@ class CogVLMDecoderLayer(nn.Cell):
 class CogVLMPreTrainedModel(PreTrainedModel):
 
     """
-    The `CogVLMPreTrainedModel` class is a subclass of `PreTrainedModel` and represents a pre-trained language model for cognitive vision and language tasks. This class provides methods for initializing the weights of the model's neural network cells.
+    The `CogVLMPreTrainedModel` class is a subclass of `PreTrainedModel` and represents a pre-trained language model for cognitive vision and language tasks. This class provides methods for initializing the
+weights of the model's neural network cells.
     
     Methods:
-    - `_init_weights(self, cell)`: Initializes the weights of the specified neural network cell. If the cell is a `nn.Dense` type, the weights are initialized using a normal distribution with a mean of 0 and a standard deviation specified by `self.config.initializer_range`. If the cell has a bias, the bias weights are initialized to zeros. If the cell is an `nn.Embedding` type, the weights are initialized using a normal distribution with a mean of 0 and a standard deviation specified by `self.config.initializer_range`. If the cell has a padding index, the corresponding weight value is set to 0.
+    - `_init_weights(self, cell)`: Initializes the weights of the specified neural network cell. If the cell is a `nn.Dense` type, the weights are initialized using a normal distribution with a mean of 0 and a
+standard deviation specified by `self.config.initializer_range`. If the cell has a bias, the bias weights are initialized to zeros. If the cell is an `nn.Embedding` type, the weights are initialized using a
+normal distribution with a mean of 0 and a standard deviation specified by `self.config.initializer_range`. If the cell has a padding index, the corresponding weight value is set to 0.
     
     Note: The `CogVLMPreTrainedModel` class assumes that the `PreTrainedModel` class has been properly implemented and imported.
     """
@@ -964,13 +971,19 @@ class CogVLMModel(CogVLMPreTrainedModel):
     '''
     Represents a CogVLM (Cognitive Vision and Language Model) for multimodal learning, combining vision and language information for various NLP and computer vision tasks.
     
-    This class inherits from CogVLMPreTrainedModel and implements methods for encoding images and constructing the model for language and vision processing. It also includes methods for forward pass, getting and setting input embeddings, and preparing attention masks for the decoder.
+    This class inherits from CogVLMPreTrainedModel and implements methods for encoding images and constructing the model for language and vision processing. It also includes methods for forward pass, getting
+and setting input embeddings, and preparing attention masks for the decoder.
     
     The CogVLMModel class includes the following methods:
     - __init__(self, config): Initializes the CogVLMModel with the provided configuration.
     - encode_images(self, images: List[List[mindspore.Tensor]]) -> mindspore.Tensor: Encodes the input images and returns the image features.
-    - construct(self, input_ids: mindspore.Tensor = None, images: List[List[mindspore.Tensor]] = None, token_type_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, position_ids: Optional[mindspore.Tensor] = None, past_key_values: Optional[List[mindspore.Tensor]] = None, inputs_embeds: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Tuple, BaseModelOutputWithPast]: Constructs the model for language and vision processing and returns the output.
-    - llm_forward(self, input_ids: mindspore.Tensor = None, token_type_ids: mindspore.Tensor = None, attention_mask: Optional[mindspore.Tensor] = None, position_ids: Optional[mindspore.Tensor] = None, past_key_values: Optional[List[mindspore.Tensor]] = None, inputs_embeds: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Tuple, BaseModelOutputWithPast]: Performs the forward pass for the CogVLMModel and returns the output.
+    - construct(self, input_ids: mindspore.Tensor = None, images: List[List[mindspore.Tensor]] = None, token_type_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None,
+position_ids: Optional[mindspore.Tensor] = None, past_key_values: Optional[List[mindspore.Tensor]] = None, inputs_embeds: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions:
+Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Tuple, BaseModelOutputWithPast]: Constructs the model for language and vision processing and
+returns the output.
+    - llm_forward(self, input_ids: mindspore.Tensor = None, token_type_ids: mindspore.Tensor = None, attention_mask: Optional[mindspore.Tensor] = None, position_ids: Optional[mindspore.Tensor] = None,
+past_key_values: Optional[List[mindspore.Tensor]] = None, inputs_embeds: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states:
+Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Tuple, BaseModelOutputWithPast]: Performs the forward pass for the CogVLMModel and returns the output.
     - get_input_embeddings(self): Returns the input embeddings for the model.
     - set_input_embeddings(self, value): Sets the input embeddings for the model.
     - _prepare_decoder_attention_mask(self, attention_mask, input_shape, inputs_embeds, past_key_values_length): Prepares attention masks for the decoder based on the provided inputs.
@@ -986,7 +999,8 @@ class CogVLMModel(CogVLMPreTrainedModel):
         
         Args:
             self: The instance of the CogVLMModel class.
-            config: An object containing the configuration parameters for the model, such as pad_token_id, vocab_size, hidden_size, num_hidden_layers, rms_norm_eps, and other relevant settings. It is of type 'config' and is required for initializing the model.
+            config: An object containing the configuration parameters for the model, such as pad_token_id, vocab_size, hidden_size, num_hidden_layers, rms_norm_eps, and other relevant settings. It is of type
+'config' and is required for initializing the model.
         
         Returns:
             None. This method does not return any value.
@@ -1223,7 +1237,8 @@ class CogVLMModel(CogVLMPreTrainedModel):
         Raises:
             None.
         
-        This method sets the 'embed_tokens' attribute of the CogVLMModel instance to the provided 'value'. The 'embed_tokens' attribute represents the input embeddings used for the model. By setting this attribute, the input embeddings can be customized or updated during runtime.
+        This method sets the 'embed_tokens' attribute of the CogVLMModel instance to the provided 'value'. The 'embed_tokens' attribute represents the input embeddings used for the model. By setting this
+attribute, the input embeddings can be customized or updated during runtime.
         
         Note:
             The 'value' parameter should be compatible with the expected format of the input embeddings. Ensure that the 'value' matches the required shape and data type for the model's input embeddings.
@@ -1319,7 +1334,8 @@ def _history_to_prompt(signal_type, history, query):
 class CogVLMForCausalLM(CogVLMPreTrainedModel):
 
     """
-    CogVLMForCausalLM is a class for generating language using a CogVLM (Cognitive Vision Language Model) for causal language modeling. This class inherits from the CogVLMPreTrainedModel and includes methods for constructing, preparing inputs for generation, updating model keyword arguments for generation, and reordering cache. 
+    CogVLMForCausalLM is a class for generating language using a CogVLM (Cognitive Vision Language Model) for causal language modeling. This class inherits from the CogVLMPreTrainedModel and includes methods
+for constructing, preparing inputs for generation, updating model keyword arguments for generation, and reordering cache. 
     
     Methods:
     - __init__(self, config): Initializes the class with a given configuration.
@@ -1329,7 +1345,8 @@ class CogVLMForCausalLM(CogVLMPreTrainedModel):
     - set_output_embeddings(self, new_embeddings): Sets the model's output embeddings to a given value.
     - set_decoder(self, decoder): Sets the model's decoder to a given value.
     - get_decoder(self): Returns the model's decoder.
-    - construct(self, input_ids, images, token_type_ids, attention_mask, position_ids, past_key_values, inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict, labels): Constructs the model with given inputs and returns the output.
+    - construct(self, input_ids, images, token_type_ids, attention_mask, position_ids, past_key_values, inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict, labels): Constructs the
+model with given inputs and returns the output.
     - _prepare_attention_mask_for_generation(self, inputs, pad_token_id, eos_token_id): Prepares the attention mask for generation.
     - prepare_inputs_for_generation(self, input_ids, token_type_ids, images, past_key_values, attention_mask, inputs_embeds): Prepares inputs for generation.
     - _update_model_kwargs_for_generation(self, outputs, model_kwargs, is_encoder_decoder, standardize_cache_format): Updates model keyword arguments for generation.
@@ -1399,7 +1416,8 @@ class CogVLMForCausalLM(CogVLMPreTrainedModel):
         Raises:
             None.
         
-        This method sets the input embeddings for the CogVLMForCausalLM model. It assigns the input embeddings to the 'embed_tokens' attribute of the model, which is responsible for handling the input embeddings during the model's forward pass.
+        This method sets the input embeddings for the CogVLMForCausalLM model. It assigns the input embeddings to the 'embed_tokens' attribute of the model, which is responsible for handling the input
+embeddings during the model's forward pass.
         
         Note:
             The input embeddings should be a tensor of shape (vocab_size, embedding_dim), where 'vocab_size' is the size of the vocabulary and 'embedding_dim' is the dimension of the embedding space.
@@ -1614,7 +1632,9 @@ class CogVLMForCausalLM(CogVLMPreTrainedModel):
             None: This method does not raise any exceptions.
         
         Note:
-            The input_ids, token_type_ids, and attention_mask tensors should have the same shape and dimensionality. If position_ids are not provided, they are built using the token_type_ids and attention_mask tensors. If past_key_values are provided, the input_ids, token_type_ids, and position_ids tensors are sliced to keep only the last token. The model_inputs dictionary is then constructed with the relevant tensors.
+            The input_ids, token_type_ids, and attention_mask tensors should have the same shape and dimensionality. If position_ids are not provided, they are built using the token_type_ids and attention_mask
+tensors. If past_key_values are provided, the input_ids, token_type_ids, and position_ids tensors are sliced to keep only the last token. The model_inputs dictionary is then constructed with the relevant
+tensors.
         
         Example:
             >>> model = CogVLMForCausalLM()
@@ -1761,7 +1781,8 @@ class CogVLMForCausalLM(CogVLMPreTrainedModel):
             template_version (Optional[Literal['base', 'chat', 'vqa']]): The version of the conversation template to be used. Defaults to None.
         
         Returns:
-            dict: A dictionary containing the input_ids, token_type_ids, attention_mask, and images. The input_ids are the tokenized input for the conversation, token_type_ids specify the type of each token (language or vision), attention_mask indicates the position of valid tokens, and images represent the processed visual input.
+            dict: A dictionary containing the input_ids, token_type_ids, attention_mask, and images. The input_ids are the tokenized input for the conversation, token_type_ids specify the type of each token
+(language or vision), attention_mask indicates the position of valid tokens, and images represent the processed visual input.
         
         Raises:
             AssertionError: If the number of images provided is more than one.

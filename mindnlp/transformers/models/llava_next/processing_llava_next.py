@@ -159,7 +159,8 @@ class LlavaNextProcessor(ProcessorMixin):
         Raises:
             None.
         
-        This method retrieves the model input names from the tokenizer and image processor of the LlavaNextProcessor. It concatenates the tokenizer input names and image processor input names, and removes any duplicate entries using a dictionary conversion. The resulting list of model input names is returned.
+        This method retrieves the model input names from the tokenizer and image processor of the LlavaNextProcessor. It concatenates the tokenizer input names and image processor input names, and removes any
+duplicate entries using a dictionary conversion. The resulting list of model input names is returned.
         """
         tokenizer_input_names = self.tokenizer.model_input_names
         image_processor_input_names = self.image_processor.model_input_names

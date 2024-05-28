@@ -329,7 +329,8 @@ class BloomAttention(nn.Cell):
 class BloomMLP(nn.Cell):
 
     """
-    BloomMLP is a multi-layer perceptron (MLP) that is used for pre-training in natural language processing (NLP) tasks. This class inherits from nn.Cell and implements the forward propagation logic for the MLP. 
+    BloomMLP is a multi-layer perceptron (MLP) that is used for pre-training in natural language processing (NLP) tasks. This class inherits from nn.Cell and implements the forward propagation logic for the
+MLP. 
     
     Attributes:
         pretraining_tp (int): The number of times the MLP will be pre-trained.
@@ -502,7 +503,8 @@ class BloomBlock(nn.Cell):
             output_attentions (bool): Optional. Whether to output the attentions. Defaults to False.
         
         Returns:
-            Tuple[mindspore.Tensor, ...]: The outputs of the BloomBlock layer. The first element is the output tensor of shape (batch_size, sequence_length, hidden_size), followed by other optional outputs if `output_attentions` is True.
+            Tuple[mindspore.Tensor, ...]: The outputs of the BloomBlock layer. The first element is the output tensor of shape (batch_size, sequence_length, hidden_size), followed by other optional outputs if
+`output_attentions` is True.
         
         Raises:
             None: This method does not raise any exceptions.
@@ -556,7 +558,9 @@ class BloomBlock(nn.Cell):
 class BloomPreTrainedModel(PreTrainedModel):
 
     """
-    BloomPreTrainedModel is a Python class that extends the functionality of PreTrainedModel. It provides methods for initializing weights and converting cache formats to be compatible with the Bloom model. The class includes functions for initializing weights based on the type of neural network cell and for standardizing or converting cache formats to match specific implementations. Utilize this class to facilitate pre-training tasks in NLP models with MindSpore framework.
+    BloomPreTrainedModel is a Python class that extends the functionality of PreTrainedModel. It provides methods for initializing weights and converting cache formats to be compatible with the Bloom model.
+The class includes functions for initializing weights based on the type of neural network cell and for standardizing or converting cache formats to match specific implementations. Utilize this class to
+facilitate pre-training tasks in NLP models with MindSpore framework.
     """
     config_class = BloomConfig
     base_model_prefix = "transformer"
@@ -765,21 +769,28 @@ class BloomModel(BloomPreTrainedModel):
         Args:
             self (BloomModel): An instance of the BloomModel class.
             input_ids (Optional[mindspore.Tensor]): Input tensor of shape (batch_size, seq_length) containing the input tokens.
-            past_key_values (Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]]): Tuple of length 'n_layer' where each tuple contains two tensors of shape (batch_size, num_heads, seq_length, hidden_size//num_heads) representing the past key and value respectively. If not provided, initialized with None.
-            attention_mask (Optional[mindspore.Tensor]): Input tensor of shape (batch_size, seq_length) containing the attention mask values. If None, initialized with ones tensor of shape (batch_size, seq_length + past_key_values_length) where past_key_values_length is the length of past_key_values. Default: None.
+            past_key_values (Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]]): Tuple of length 'n_layer' where each tuple contains two tensors of shape (batch_size, num_heads, seq_length,
+hidden_size//num_heads) representing the past key and value respectively. If not provided, initialized with None.
+            attention_mask (Optional[mindspore.Tensor]): Input tensor of shape (batch_size, seq_length) containing the attention mask values. If None, initialized with ones tensor of shape (batch_size,
+seq_length + past_key_values_length) where past_key_values_length is the length of past_key_values. Default: None.
             head_mask (Optional[mindspore.Tensor]): Input tensor of shape (n_layer, num_heads) containing the mask values for each head in each layer. If None, initialized with None. Default: None.
-            inputs_embeds (Optional[mindspore.Tensor]): Input tensor of shape (batch_size, seq_length, hidden_size) containing the embedded input tokens. If None, initialized with the embeddings of input_ids. Default: None.
+            inputs_embeds (Optional[mindspore.Tensor]): Input tensor of shape (batch_size, seq_length, hidden_size) containing the embedded input tokens. If None, initialized with the embeddings of input_ids.
+Default: None.
             use_cache (Optional[bool]): Whether to use past_key_values for faster decoding. If None, initialized with the value from the model config. Default: None.
             output_attentions (Optional[bool]): Whether to return the attentions tensors of all attention layers. If None, initialized with the value from the model config. Default: None.
             output_hidden_states (Optional[bool]): Whether to return the hidden states tensors of all layers. If None, initialized with the value from the model config. Default: None.
-            return_dict (Optional[bool]): Whether to return a BaseModelOutputWithPastAndCrossAttentions object as the output instead of a tuple. If None, initialized with the value from the model config. Default: None.
+            return_dict (Optional[bool]): Whether to return a BaseModelOutputWithPastAndCrossAttentions object as the output instead of a tuple. If None, initialized with the value from the model config.
+Default: None.
         
         Returns:
             Union[Tuple[mindspore.Tensor, ...], BaseModelOutputWithPastAndCrossAttentions]: A tuple of the following tensors depending on the value of 'return_dict':
                 - hidden_states (mindspore.Tensor): Output tensor of shape (batch_size, seq_length, hidden_size) containing the output features of the last layer.
-                - presents (Tuple[mindspore.Tensor, ...]): Tuple of length 'n_layer' containing tuples of two tensors of shape (batch_size, num_heads, seq_length + past_key_values_length, hidden_size//num_heads) representing the present key and value respectively.
-                - all_hidden_states (Tuple[mindspore.Tensor, ...]): Tuple of length 'n_layer+1' containing the hidden states tensors of all layers including the input embeddings. Each tensor has shape (batch_size, seq_length, hidden_size).
-                - all_self_attentions (Tuple[mindspore.Tensor, ...]): Tuple of length 'n_layer' containing the attention tensors of all attention layers. Each tensor has shape (batch_size, num_heads, seq_length + past_key_values_length, seq_length + past_key_values_length).
+                - presents (Tuple[mindspore.Tensor, ...]): Tuple of length 'n_layer' containing tuples of two tensors of shape (batch_size, num_heads, seq_length + past_key_values_length,
+hidden_size//num_heads) representing the present key and value respectively.
+                - all_hidden_states (Tuple[mindspore.Tensor, ...]): Tuple of length 'n_layer+1' containing the hidden states tensors of all layers including the input embeddings. Each tensor has shape
+(batch_size, seq_length, hidden_size).
+                - all_self_attentions (Tuple[mindspore.Tensor, ...]): Tuple of length 'n_layer' containing the attention tensors of all attention layers. Each tensor has shape (batch_size, num_heads,
+seq_length + past_key_values_length, seq_length + past_key_values_length).
         
         Raises:
             ValueError: If both input_ids and inputs_embeds are provided or neither of them are provided, or if there are any unexpected arguments passed in.
@@ -891,7 +902,8 @@ class BloomForCausalLM(BloomPreTrainedModel):
     """
     The `BloomForCausalLM` class is a subclass of `BloomPreTrainedModel` and represents a model for causal language modeling using the BLOOM architecture.
     
-    Causal language modeling is the task of predicting the next token in a sequence given the previous tokens. The BLOOM architecture is specifically designed for this task, utilizing a transformer model with an additional language modeling head.
+    Causal language modeling is the task of predicting the next token in a sequence given the previous tokens. The BLOOM architecture is specifically designed for this task, utilizing a transformer model with
+an additional language modeling head.
     
     The class has the following methods:
     
@@ -901,11 +913,16 @@ class BloomForCausalLM(BloomPreTrainedModel):
     
     - `set_output_embeddings(self, new_embeddings: mindspore.Tensor)`: Sets the language modeling head to the provided embeddings.
     
-    - `prepare_inputs_for_generation(self, input_ids: mindspore.Tensor, past_key_values: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor] = None, **kwargs) -> dict`: Prepares the inputs for generation by removing the prefix length from the input sequence and converting the past key values to BLOOM cache format.
+    - `prepare_inputs_for_generation(self, input_ids: mindspore.Tensor, past_key_values: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, inputs_embeds:
+Optional[mindspore.Tensor] = None, **kwargs) -> dict`: Prepares the inputs for generation by removing the prefix length from the input sequence and converting the past key values to BLOOM cache format.
     
-    - `construct(self, input_ids: Optional[mindspore.Tensor] = None, past_key_values: Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]] = None, attention_mask: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor] = None, labels: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None, **deprecated_arguments) -> Union[Tuple[mindspore.Tensor], CausalLMOutputWithCrossAttentions]`: Constructs the BLOOM model by passing the inputs through the transformer and language modeling head. Optionally computes the loss if labels are provided.
+    - `construct(self, input_ids: Optional[mindspore.Tensor] = None, past_key_values: Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]] = None, attention_mask: Optional[mindspore.Tensor] = None,
+head_mask: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor] = None, labels: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] =
+None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None, **deprecated_arguments) -> Union[Tuple[mindspore.Tensor], CausalLMOutputWithCrossAttentions]`: Constructs the BLOOM model
+by passing the inputs through the transformer and language modeling head. Optionally computes the loss if labels are provided.
     
-    - `_reorder_cache(self, past: Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...], beam_idx: mindspore.Tensor) -> Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]`: Reorders the past key values cache to match the beam indices during beam search or beam sampling.
+    - `_reorder_cache(self, past: Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...], beam_idx: mindspore.Tensor) -> Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]`: Reorders the past key values
+cache to match the beam indices during beam search or beam sampling.
     
     Additionally, the class inherits all the properties and methods from the `BloomPreTrainedModel` class.
     
@@ -991,7 +1008,8 @@ class BloomForCausalLM(BloomPreTrainedModel):
             inputs_embeds (Optional[mindspore.Tensor]): The optional tensor containing the embedded input sequence.
         
         Returns:
-            dict: A dictionary containing the model inputs. It may include either 'input_ids' or 'inputs_embeds' depending on the availability of 'inputs_embeds' and 'past_key_values'. It also includes 'past_key_values', 'use_cache', and 'attention_mask' if provided.
+            dict: A dictionary containing the model inputs. It may include either 'input_ids' or 'inputs_embeds' depending on the availability of 'inputs_embeds' and 'past_key_values'. It also includes
+'past_key_values', 'use_cache', and 'attention_mask' if provided.
         
         Raises:
             None
@@ -1124,9 +1142,12 @@ class BloomForCausalLM(BloomPreTrainedModel):
 class BloomForSequenceClassification(BloomPreTrainedModel):
 
     """
-    The 'BloomForSequenceClassification' class represents a fine-tuned sequence classification model based on the Bloom architecture. This class inherits from the 'BloomPreTrainedModel' and includes methods for model initialization and inference. It provides functionality for computing sequence classification/regression loss and handling batch processing. The class also supports different problem types such as regression, single-label classification, and multi-label classification.
+    The 'BloomForSequenceClassification' class represents a fine-tuned sequence classification model based on the Bloom architecture. This class inherits from the 'BloomPreTrainedModel' and includes methods
+for model initialization and inference. It provides functionality for computing sequence classification/regression loss and handling batch processing. The class also supports different problem types such as
+regression, single-label classification, and multi-label classification.
     
-    The class includes the 'construct' method for generating model outputs and computing loss based on the input data. It also handles deprecated arguments and provides warnings for functionality that will be removed in future versions. Additionally, the method supports the use of padding tokens and provides appropriate error handling for different scenarios.
+    The class includes the 'construct' method for generating model outputs and computing loss based on the input data. It also handles deprecated arguments and provides warnings for functionality that will be
+removed in future versions. Additionally, the method supports the use of padding tokens and provides appropriate error handling for different scenarios.
     
     The 'BloomForSequenceClassification' class is designed to be used for sequence classification tasks and provides flexibility in handling various types of input data and problem types.
     
@@ -1274,7 +1295,9 @@ class BloomForTokenClassification(BloomPreTrainedModel):
     
     Methods:
         - `__init__(self, config: BloomConfig)`: Initializes a new instance of the `BloomForTokenClassification` class. It takes a `BloomConfig` object as input and sets the necessary attributes.
-        - `construct(self, input_ids: Optional[mindspore.Tensor] = None, past_key_values: Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]] = None, attention_mask: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor] = None, labels: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None, **deprecated_arguments) -> Union[Tuple[mindspore.Tensor], TokenClassifierOutput]`: 
+        - `construct(self, input_ids: Optional[mindspore.Tensor] = None, past_key_values: Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]] = None, attention_mask: Optional[mindspore.Tensor] =
+None, head_mask: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor] = None, labels: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions:
+Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None, **deprecated_arguments) -> Union[Tuple[mindspore.Tensor], TokenClassifierOutput]`: 
             Constructs the BLOOM model for token classification. It takes various input tensors and arguments and returns the model output.
             
             Parameters:
@@ -1398,7 +1421,8 @@ class BloomForTokenClassification(BloomPreTrainedModel):
 class BloomForQuestionAnswering(BloomPreTrainedModel):
 
     """
-    This class represents a Bloom model for question answering tasks. It is a subclass of BloomPreTrainedModel, which provides the basic structure and functionality for pre-trained models. The BloomForQuestionAnswering class includes methods for model construction and inference.
+    This class represents a Bloom model for question answering tasks. It is a subclass of BloomPreTrainedModel, which provides the basic structure and functionality for pre-trained models. The
+BloomForQuestionAnswering class includes methods for model construction and inference.
     
     Attributes:
         - transformer: An instance of the BloomModel class, which is responsible for the main transformer architecture of the model.

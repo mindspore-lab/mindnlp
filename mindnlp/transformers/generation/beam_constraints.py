@@ -384,7 +384,8 @@ class DisjunctiveTrie:
         
         Args:
             self: The instance of the DisjunctiveTrie class.
-            current_seq: A sequence representing the current state within the trie. It is of type str and is used to navigate through the trie structure. There are no specific restrictions on the content of the sequence.
+            current_seq: A sequence representing the current state within the trie. It is of type str and is used to navigate through the trie structure. There are no specific restrictions on the content of
+the sequence.
         
         Returns:
             None: This method returns a value of type None, indicating that there are no more tokens to traverse in the trie, and the current sequence has reached a leaf node.
@@ -512,7 +513,8 @@ class DisjunctiveConstraint(Constraint):
             ValueError: If the provided `token_id` is not of type int.
         
         Note:
-            The `does_advance` method checks if the given `token_id` can be advanced in the DisjunctiveConstraint. It first validates that the `token_id` is of type int. Then, it retrieves the next possible tokens from the trie associated with the current sequence. Finally, it returns whether the `token_id` is present in the next tokens or not.
+            The `does_advance` method checks if the given `token_id` can be advanced in the DisjunctiveConstraint. It first validates that the `token_id` is of type int. Then, it retrieves the next possible
+tokens from the trie associated with the current sequence. Finally, it returns whether the `token_id` is present in the next tokens or not.
         """
         if not isinstance(token_id, int):
             raise ValueError(f"`token_id` is supposed to be type `int`, but is {token_id} of type {type(token_id)}")

@@ -476,7 +476,8 @@ class EsmSelfAttention(nn.Cell):
         
         Args:
             self (EsmSelfAttention): The instance of the EsmSelfAttention class.
-            x (mindspore.Tensor): The input tensor representing the scores for self-attention calculation. It should have a shape that can be reshaped to include the specified number of attention heads and attention head size.
+            x (mindspore.Tensor): The input tensor representing the scores for self-attention calculation. It should have a shape that can be reshaped to include the specified number of attention heads and
+attention head size.
         
         Returns:
             mindspore.Tensor: The tensor after swapping and reshaping to prepare for self-attention calculation.
@@ -513,7 +514,8 @@ class EsmSelfAttention(nn.Cell):
             output_attentions (Optional[bool]): An optional boolean value indicating whether to output attention probabilities. Default is False.
         
         Returns:
-            Tuple[mindspore.Tensor]: A tuple containing the output context tensor of shape (batch_size, sequence_length, hidden_size) and optionally the attention probabilities tensor of shape (batch_size, num_attention_heads, sequence_length, sequence_length) if output_attentions is True.
+            Tuple[mindspore.Tensor]: A tuple containing the output context tensor of shape (batch_size, sequence_length, hidden_size) and optionally the attention probabilities tensor of shape (batch_size,
+num_attention_heads, sequence_length, sequence_length) if output_attentions is True.
         
         Raises:
             None
@@ -676,12 +678,14 @@ class EsmAttention(nn.Cell):
     """
     EsmAttention
     
-    This class represents an attention mechanism for the ESM model. It inherits from nn.Cell and contains methods for initializing the attention mechanism, pruning attention heads, and constructing the attention output.
+    This class represents an attention mechanism for the ESM model. It inherits from nn.Cell and contains methods for initializing the attention mechanism, pruning attention heads, and constructing the
+attention output.
     
     Methods:
     - __init__(self, config): Initializes the EsmAttention instance with the provided configuration.
     - prune_heads(self, heads): Prunes the specified attention heads from the EsmAttention instance.
-    - construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False): Constructs the attention output based on the provided input states and masks.
+    - construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False): Constructs the attention output
+based on the provided input states and masks.
     """
     def __init__(self, config):
 
@@ -854,9 +858,11 @@ class EsmOutput(nn.Cell):
     
     This class inherits from nn.Cell and contains methods for initializing the class and constructing the output layer. 
     
-    The __init__ method initializes the EsmOutput instance with the provided configuration. It sets up a dense layer with the specified intermediate and hidden sizes, and a dropout layer with the given dropout probability.
+    The __init__ method initializes the EsmOutput instance with the provided configuration. It sets up a dense layer with the specified intermediate and hidden sizes, and a dropout layer with the given dropout
+probability.
     
-    The construct method takes hidden_states and input_tensor as input and processes the hidden_states through the dense layer, applies dropout, and adds the input_tensor to the result. The processed hidden_states are then returned.
+    The construct method takes hidden_states and input_tensor as input and processes the hidden_states through the dense layer, applies dropout, and adds the input_tensor to the result. The processed
+hidden_states are then returned.
     
     Note: This docstring is based on the provided information and does not include code signatures or any other code.
     """
@@ -913,7 +919,8 @@ class EsmOutput(nn.Cell):
 class EsmLayer(nn.Cell):
 
     """
-    The EsmLayer class represents a layer for the ESM (Evolved Transformer with Split Mixture of Experts) model. It is used for processing input data and performing self-attention and feed-forward operations. This class inherits from the nn.Cell class.
+    The EsmLayer class represents a layer for the ESM (Evolved Transformer with Split Mixture of Experts) model. It is used for processing input data and performing self-attention and feed-forward operations.
+This class inherits from the nn.Cell class.
     
     Attributes:
         chunk_size_feed_forward (int): The chunk size for feed-forward operations.
@@ -1107,7 +1114,8 @@ class EsmEncoder(nn.Cell):
     
     Methods:
         - `__init__(self, config)`: Initializes an instance of the `EsmEncoder` class.
-        - `construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, past_key_values=None, use_cache=None, output_attentions=False, output_hidden_states=False, return_dict=True)`: Constructs the encoder layers and returns the final hidden states.
+        - `construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, past_key_values=None, use_cache=None, output_attentions=False,
+output_hidden_states=False, return_dict=True)`: Constructs the encoder layers and returns the final hidden states.
     
     Please note that this class assumes the existence of the `EsmLayer` class, which represents the individual layers of the encoder. The `EsmLayer` class is not defined within this docstring.
     
@@ -1587,11 +1595,15 @@ class EsmForMaskedLM(EsmPreTrainedModel):
     Represents an ESM (Evolutionary Scale Modeling) model for masked language modeling (MLM), inheriting from EsmPreTrainedModel. 
     This class provides the functionality to perform masked language modeling using the ESM model.
     
-    The EsmForMaskedLM class contains methods for initializing the model, getting and setting output embeddings, constructing the model, and predicting contacts. The model architecture includes an ESM model and a language modeling head (lm_head). The construct method takes input_ids, attention_mask, position_ids, head_mask, inputs_embeds, encoder_hidden_states, encoder_attention_mask, labels, output_attentions, output_hidden_states, and return_dict as input arguments and returns the masked language modeling loss and other outputs. The predict_contacts method takes tokens and attention_mask as input and returns the predicted contacts using the ESM model.
+    The EsmForMaskedLM class contains methods for initializing the model, getting and setting output embeddings, constructing the model, and predicting contacts. The model architecture includes an ESM model
+and a language modeling head (lm_head). The construct method takes input_ids, attention_mask, position_ids, head_mask, inputs_embeds, encoder_hidden_states, encoder_attention_mask, labels, output_attentions,
+output_hidden_states, and return_dict as input arguments and returns the masked language modeling loss and other outputs. The predict_contacts method takes tokens and attention_mask as input and returns the
+predicted contacts using the ESM model.
     
     Note:
     - If using `EsmForMaskedLM`, ensure `config.is_decoder=False` for bi-directional self-attention.
-    - Labels for computing the masked language modeling loss should be indices in `[-100, 0, ..., config.vocab_size]`. Tokens with indices set to `-100` are ignored (masked), and the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
+    - Labels for computing the masked language modeling loss should be indices in `[-100, 0, ..., config.vocab_size]`. Tokens with indices set to `-100` are ignored (masked), and the loss is only computed for
+the tokens with labels in `[0, ..., config.vocab_size]`.
     
     """
     _tied_weights_keys = ["lm_head.decoder.weight"]
@@ -1895,11 +1907,15 @@ class EsmForSequenceClassification(EsmPreTrainedModel):
 class EsmForTokenClassification(EsmPreTrainedModel):
 
     """
-    EsmForTokenClassification is a class that represents a token classification model based on the ESM (Evoformer Sequence Model) architecture. This class extends EsmPreTrainedModel to leverage pre-trained weights and configurations for efficient token classification tasks. It includes methods for initializing the model, constructing the forward pass, and computing the token classification loss.
+    EsmForTokenClassification is a class that represents a token classification model based on the ESM (Evoformer Sequence Model) architecture. This class extends EsmPreTrainedModel to leverage pre-trained
+weights and configurations for efficient token classification tasks. It includes methods for initializing the model, constructing the forward pass, and computing the token classification loss.
     
-    The __init__ method initializes the EsmForTokenClassification model with configurable parameters such as the number of labels, dropout probability, and hidden layer sizes. It also sets up the ESM model, dropout layer, and the classifier for token classification.
+    The __init__ method initializes the EsmForTokenClassification model with configurable parameters such as the number of labels, dropout probability, and hidden layer sizes. It also sets up the ESM model,
+dropout layer, and the classifier for token classification.
     
-    The construct method defines the forward pass of the model, taking input tensors such as input_ids, attention_mask, position_ids, etc., and returning the token classification output. It computes the logits for token classification based on the sequence_output from the ESM model and calculates the cross-entropy loss if labels are provided. The method allows for returning additional outputs like hidden states and attentions based on the return_dict parameter.
+    The construct method defines the forward pass of the model, taking input tensors such as input_ids, attention_mask, position_ids, etc., and returning the token classification output. It computes the logits
+for token classification based on the sequence_output from the ESM model and calculates the cross-entropy loss if labels are provided. The method allows for returning additional outputs like hidden states and
+attentions based on the return_dict parameter.
     
     Note: This docstring is a high-level summary and does not include method signatures or implementation details.
     """

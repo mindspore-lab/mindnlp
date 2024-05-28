@@ -380,7 +380,8 @@ class MixtralAttention(nn.Cell):
         Args:
             self: The object instance.
             config (MixtralConfig): An instance of the MixtralConfig class containing the configuration parameters for the attention layer.
-            layer_idx (Optional[int]): The index of the layer. Defaults to None. If layer_idx is not provided, a warning will be logged, as not passing a `layer_idx` is not recommended and may cause errors during the forward call if caching is used.
+            layer_idx (Optional[int]): The index of the layer. Defaults to None. If layer_idx is not provided, a warning will be logged, as not passing a `layer_idx` is not recommended and may cause errors
+during the forward call if caching is used.
         
         Returns:
             None
@@ -441,7 +442,8 @@ class MixtralAttention(nn.Cell):
         Raises:
             None
         
-        This method reshapes the input tensor by rearranging its dimensions. The tensor is reshaped into a new shape of (bsz, seq_len, num_heads, head_dim) by using the view and swapaxes operations. The returned tensor has its dimensions rearranged to facilitate further processing in the MixtralAttention layer.
+        This method reshapes the input tensor by rearranging its dimensions. The tensor is reshaped into a new shape of (bsz, seq_len, num_heads, head_dim) by using the view and swapaxes operations. The
+returned tensor has its dimensions rearranged to facilitate further processing in the MixtralAttention layer.
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
@@ -548,7 +550,8 @@ MIXTRAL_ATTENTION_CLASSES = {
 class MixtralBlockSparseTop2MLP(nn.Cell):
 
     """
-    The MixtralBlockSparseTop2MLP class represents a neural network block that utilizes sparse top-2 multi-layer perceptron (MLP) for processing hidden states. It inherits from nn.Cell and includes methods for initialization and construction of the MLP layers.
+    The MixtralBlockSparseTop2MLP class represents a neural network block that utilizes sparse top-2 multi-layer perceptron (MLP) for processing hidden states. It inherits from nn.Cell and includes methods for
+initialization and construction of the MLP layers.
     
     Attributes:
         ffn_dim (int): The dimension of the feed-forward network.
@@ -836,7 +839,10 @@ class MixtralPreTrainedModel(PreTrainedModel):
     """
     The `MixtralPreTrainedModel` class is a subclass of `PreTrainedModel` that represents a pre-trained model for Mixtral models. 
     
-    This class provides a method `_init_weights` that initializes the weights of the model. It takes a `cell` parameter and initializes the weights based on the type of the `cell`. If the `cell` is an instance of `nn.Dense`, the weight is initialized using the `Normal` initializer with a range specified by the `initializer_range` attribute of the `config` object. If the `cell` has a bias, it is initialized with zeros. If the `cell` is an instance of `nn.Embedding`, the weight is initialized with random values from a normal distribution with a mean of 0 and a standard deviation specified by the `initializer_range` attribute of the `config` object. If the `cell` has a `padding_idx`, the weight at the `padding_idx` is set to 0.
+    This class provides a method `_init_weights` that initializes the weights of the model. It takes a `cell` parameter and initializes the weights based on the type of the `cell`. If the `cell` is an instance
+of `nn.Dense`, the weight is initialized using the `Normal` initializer with a range specified by the `initializer_range` attribute of the `config` object. If the `cell` has a bias, it is initialized with
+zeros. If the `cell` is an instance of `nn.Embedding`, the weight is initialized with random values from a normal distribution with a mean of 0 and a standard deviation specified by the `initializer_range`
+attribute of the `config` object. If the `cell` has a `padding_idx`, the weight at the `padding_idx` is set to 0.
     
     Note: This docstring does not include signatures or any other code.
     """
@@ -1092,7 +1098,8 @@ class MixtralForCausalLM(MixtralPreTrainedModel):
     """
     Represents a Mixtral model for causal language modeling.
     
-    This class provides methods for initializing the model, setting and getting input and output embeddings, setting and getting the decoder, constructing the model, preparing inputs for generation, and reordering cache values.
+    This class provides methods for initializing the model, setting and getting input and output embeddings, setting and getting the decoder, constructing the model, preparing inputs for generation, and
+reordering cache values.
     
     The class inherits from MixtralPreTrainedModel and contains the following methods:
     - __init__(self, config)
@@ -1185,7 +1192,8 @@ class MixtralForCausalLM(MixtralPreTrainedModel):
         Raises:
             None.
         
-        This method retrieves the output embeddings from the MixtralForCausalLM model. The output embeddings represent the learned representations of the model's output tokens. These embeddings can be used for downstream tasks such as fine-tuning or further analysis.
+        This method retrieves the output embeddings from the MixtralForCausalLM model. The output embeddings represent the learned representations of the model's output tokens. These embeddings can be used for
+downstream tasks such as fine-tuning or further analysis.
         """
         return self.lm_head
 
@@ -1479,7 +1487,9 @@ class MixtralForSequenceClassification(MixtralPreTrainedModel):
     """
     MixtralForSequenceClassification
     
-    This class represents a Mixtral model for sequence classification. It inherits from MixtralPreTrainedModel and is designed to handle sequence classification tasks. It includes methods for initializing the model, getting and setting input embeddings, and constructing the model for sequence classification. The class also provides detailed documentation for the construct method, which accepts various input parameters and returns the sequence classification output.
+    This class represents a Mixtral model for sequence classification. It inherits from MixtralPreTrainedModel and is designed to handle sequence classification tasks. It includes methods for initializing the
+model, getting and setting input embeddings, and constructing the model for sequence classification. The class also provides detailed documentation for the construct method, which accepts various input
+parameters and returns the sequence classification output.
     
     Attributes:
         num_labels: An integer representing the number of labels for sequence classification.
@@ -1490,12 +1500,16 @@ class MixtralForSequenceClassification(MixtralPreTrainedModel):
         __init__(self, config): Initializes the MixtralForSequenceClassification instance with the provided configuration.
         get_input_embeddings(self): Retrieves the input embeddings from the model.
         set_input_embeddings(self, value): Sets the input embeddings for the model.
-        construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model for sequence classification, processing the input data and returning the sequence classification output.
+        construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model for sequence
+classification, processing the input data and returning the sequence classification output.
     
-    The construct method supports various optional input parameters, including input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, and return_dict. The labels parameter is optional and can be used for computing the sequence classification/regression loss. The method also handles different problem types such as regression, single-label classification, and multi-label classification, and computes the loss accordingly.
+    The construct method supports various optional input parameters, including input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions,
+output_hidden_states, and return_dict. The labels parameter is optional and can be used for computing the sequence classification/regression loss. The method also handles different problem types such as
+regression, single-label classification, and multi-label classification, and computes the loss accordingly.
     
     Returns:
-        When return_dict is False, the construct method returns a tuple containing the loss and other sequence classifier outputs. When return_dict is True, it returns a SequenceClassifierOutputWithPast object that includes the loss, logits, past_key_values, hidden_states, and attentions.
+        When return_dict is False, the construct method returns a tuple containing the loss and other sequence classifier outputs. When return_dict is True, it returns a SequenceClassifierOutputWithPast object
+that includes the loss, logits, past_key_values, hidden_states, and attentions.
     
     Note: The class documentation and method descriptions are based on the provided Python code and its associated functionality.
     """

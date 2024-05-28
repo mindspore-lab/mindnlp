@@ -409,7 +409,8 @@ class BlipTextSelfOutput(nn.Cell):
     """
     This class represents the self-output layer of the BlipText model in the MindSpore library.
     
-    The BlipTextSelfOutput class is a subclass of the nn.Cell class, and it is responsible for applying various transformations to the hidden states of the BlipText model's self-attention layer. It performs dense linear transformation, dropout, layer normalization, and residual connection to produce the final hidden states.
+    The BlipTextSelfOutput class is a subclass of the nn.Cell class, and it is responsible for applying various transformations to the hidden states of the BlipText model's self-attention layer. It performs
+dense linear transformation, dropout, layer normalization, and residual connection to produce the final hidden states.
     
     Attributes:
         dense (nn.Dense): The dense linear transformation layer that projects the hidden states to a higher-dimensional space.
@@ -538,13 +539,17 @@ class BlipTextAttention(nn.Cell):
             None
         
         Description:
-        This method prunes the specified attention heads from the BlipTextAttention layer. The attention heads are identified by their indices provided in the 'heads' parameter. If the 'heads' parameter is an empty list, the method returns without performing any pruning.
+        This method prunes the specified attention heads from the BlipTextAttention layer. The attention heads are identified by their indices provided in the 'heads' parameter. If the 'heads' parameter is an
+empty list, the method returns without performing any pruning.
         
-        The 'heads' parameter is a list of integers which represent the attention heads to be pruned. Each integer in the list should be a valid attention head index within the BlipTextAttention layer. If an invalid attention head index is provided, it will be ignored.
+        The 'heads' parameter is a list of integers which represent the attention heads to be pruned. Each integer in the list should be a valid attention head index within the BlipTextAttention layer. If an
+invalid attention head index is provided, it will be ignored.
         
-        The method updates the 'query', 'key', 'value', and 'output.dense' attributes of the BlipTextAttention instance by pruning the corresponding linear layers. The pruning is performed using the 'index' obtained from the 'find_pruneable_heads_and_indices' function.
+        The method updates the 'query', 'key', 'value', and 'output.dense' attributes of the BlipTextAttention instance by pruning the corresponding linear layers. The pruning is performed using the 'index'
+obtained from the 'find_pruneable_heads_and_indices' function.
         
-        Additionally, the method updates the 'num_attention_heads' attribute of the BlipTextAttention instance by subtracting the number of pruned heads from the current number of attention heads. The 'all_head_size' attribute is also updated accordingly.
+        Additionally, the method updates the 'num_attention_heads' attribute of the BlipTextAttention instance by subtracting the number of pruned heads from the current number of attention heads. The
+'all_head_size' attribute is also updated accordingly.
         
         The 'pruned_heads' attribute of the BlipTextAttention instance is updated by adding the pruned attention heads to the existing set of pruned heads.
         
@@ -698,7 +703,8 @@ class BlipTextIntermediate(nn.Cell):
 class BlipTextOutput(nn.Cell):
 
     """
-    This class represents a BlipTextOutput module that is used in neural network models for natural language processing tasks. It is a subclass of nn.Cell and is responsible for constructing the output of the Blip model.
+    This class represents a BlipTextOutput module that is used in neural network models for natural language processing tasks. It is a subclass of nn.Cell and is responsible for constructing the output of the
+Blip model.
     
     Attributes:
         dense (nn.Dense): A fully connected layer that maps the input tensor to an intermediate size.
@@ -707,7 +713,8 @@ class BlipTextOutput(nn.Cell):
     
     Methods:
         __init__(self, config): Initializes the BlipTextOutput module with the given configuration.
-        construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor: Constructs the output tensor by applying dense layer, dropout, layer normalization, and adding the input tensor to the hidden states.
+        construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor: Constructs the output tensor by applying dense layer, dropout, layer normalization, and adding the
+input tensor to the hidden states.
     
     """
     def __init__(self, config):
@@ -762,7 +769,8 @@ class BlipTextOutput(nn.Cell):
 class BlipTextLayer(nn.Cell):
 
     """
-    The BlipTextLayer class represents a layer of a neural network model for text processing. It is designed to handle self-attention and cross-attention mechanisms, and it can be used as part of a transformer architecture. This class inherits from nn.Cell and contains methods for initialization and constructing the layer.
+    The BlipTextLayer class represents a layer of a neural network model for text processing. It is designed to handle self-attention and cross-attention mechanisms, and it can be used as part of a transformer
+architecture. This class inherits from nn.Cell and contains methods for initialization and constructing the layer.
     
     Attributes:
         - config: A configuration object for the layer.
@@ -776,10 +784,12 @@ class BlipTextLayer(nn.Cell):
     
     Methods:
         - __init__(self, config, layer_num): Initializes the BlipTextLayer with the given configuration and layer number.
-        - construct(self, hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_value, output_attentions): Constructs the layer using the provided inputs and optional arguments.
+        - construct(self, hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_value, output_attentions): Constructs the layer using the provided inputs and
+optional arguments.
         - feed_forward_chunk(self, attention_output): Performs a feed-forward operation on the given attention output.
     
-    The BlipTextLayer class is a fundamental component for building transformer-based models for text processing tasks, providing the necessary functionality for attention mechanisms and intermediate processing.
+    The BlipTextLayer class is a fundamental component for building transformer-based models for text processing tasks, providing the necessary functionality for attention mechanisms and intermediate
+processing.
     """
     def __init__(self, config, layer_num):
 
@@ -905,14 +915,21 @@ class BlipTextEncoder(nn.Cell):
     
     Methods:
         - __init__(self, config): Initializes a new instance of the BlipTextEncoder class.
-        - construct(self, hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_values, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the BlipTextEncoder module and performs the encoding of the input text.
+        - construct(self, hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_values, use_cache, output_attentions, output_hidden_states, return_dict): Constructs
+the BlipTextEncoder module and performs the encoding of the input text.
     
     Detailed Description:
-    The BlipTextEncoder module is responsible for encoding text data using a series of hidden layers. It takes in an input tensor representing the hidden states of the text, along with optional attention masks, head masks, encoder hidden states, encoder attention masks, past key values, and other parameters. The module applies the specified number of hidden layers to the input tensor, performing attention and other operations as necessary. The output of the module includes the encoded hidden states, as well as optional outputs such as attentions and cross-attentions.
+    The BlipTextEncoder module is responsible for encoding text data using a series of hidden layers. It takes in an input tensor representing the hidden states of the text, along with optional attention
+masks, head masks, encoder hidden states, encoder attention masks, past key values, and other parameters. The module applies the specified number of hidden layers to the input tensor, performing attention and
+other operations as necessary. The output of the module includes the encoded hidden states, as well as optional outputs such as attentions and cross-attentions.
     
-    The BlipTextEncoder class contains an initialization method (__init__) that takes a configuration object as input. This configuration object is used to set up the module's parameters, such as the number of hidden layers. The hidden layers are stored in the 'layer' attribute as a list of BlipTextLayer instances. The 'gradient_checkpointing' attribute is a boolean flag that indicates whether gradient checkpointing is enabled for this module.
+    The BlipTextEncoder class contains an initialization method (__init__) that takes a configuration object as input. This configuration object is used to set up the module's parameters, such as the number of
+hidden layers. The hidden layers are stored in the 'layer' attribute as a list of BlipTextLayer instances. The 'gradient_checkpointing' attribute is a boolean flag that indicates whether gradient checkpointing
+is enabled for this module.
     
-    The main method of the BlipTextEncoder class is the 'construct' method. This method takes the input hidden states tensor, along with optional arguments such as attention masks, head masks, and past key values. It performs the encoding of the input text by applying the hidden layers sequentially to the input tensor. The method returns the encoded hidden states, as well as optional outputs such as attentions and cross-attentions. The method also allows for customization of the output format through the use of boolean flags such as 'output_attentions' and 'output_hidden_states'.
+    The main method of the BlipTextEncoder class is the 'construct' method. This method takes the input hidden states tensor, along with optional arguments such as attention masks, head masks, and past key
+values. It performs the encoding of the input text by applying the hidden layers sequentially to the input tensor. The method returns the encoded hidden states, as well as optional outputs such as attentions
+and cross-attentions. The method also allows for customization of the output format through the use of boolean flags such as 'output_attentions' and 'output_hidden_states'.
     
     Note:
     - The BlipTextEncoder module supports gradient checkpointing, which can be enabled by setting the 'gradient_checkpointing' attribute to True.
@@ -1066,7 +1083,8 @@ class BlipTextPooler(nn.Cell):
     """
     The BlipTextPooler class represents a text pooler for Blip model. It inherits from the nn.Cell class. 
     
-    The class's code includes an __init__ method that initializes the BlipTextPooler object with the provided configuration. It also contains a construct method that takes hidden_states as input and returns the pooled output after applying dense and activation operations.
+    The class's code includes an __init__ method that initializes the BlipTextPooler object with the provided configuration. It also contains a construct method that takes hidden_states as input and returns
+the pooled output after applying dense and activation operations.
     
     Attributes:
         dense (nn.Dense): A fully connected layer with the hidden size specified in the configuration.
@@ -1161,7 +1179,8 @@ class BlipTextPredictionHeadTransform(nn.Cell):
             self: The object itself.
             config: An instance of the configuration class containing the following attributes:
                 - hidden_size (int): The size of the hidden layer.
-                - hidden_act (str or function): The activation function for the hidden layer. If it is a string, it represents the name of the activation function. If it is a function, it is the custom activation function itself.
+                - hidden_act (str or function): The activation function for the hidden layer. If it is a string, it represents the name of the activation function. If it is a function, it is the custom
+activation function itself.
                 - layer_norm_eps (float): The epsilon value for layer normalization.
         
         Returns:
@@ -1191,7 +1210,8 @@ class BlipTextPredictionHeadTransform(nn.Cell):
             mindspore.Tensor: A tensor representing the processed hidden states after passing through the dense layer, activation function, and LayerNorm operation.
         
         Raises:
-            This method does not explicitly raise any exceptions. However, potential exceptions may be raised during the execution of the operations within the method, such as shape mismatch errors or exceptions from underlying operations.
+            This method does not explicitly raise any exceptions. However, potential exceptions may be raised during the execution of the operations within the method, such as shape mismatch errors or
+exceptions from underlying operations.
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.transform_act_fn(hidden_states)
@@ -1647,7 +1667,8 @@ class BlipTextLMHeadModel(BlipTextPreTrainedModel):
     - __init__(self, config): Initializes the BlipTextLMHeadModel instance.
     - get_output_embeddings(self): Returns the decoder layer of the predictions.
     - set_output_embeddings(self, new_embeddings): Sets the decoder layer of the predictions to new_embeddings.
-    - construct(self, input_ids, attention_mask, position_ids, head_mask, inputs_embeds, encoder_hidden_states, encoder_attention_mask, labels, past_key_values, use_cache, output_attentions, output_hidden_states, return_dict, return_logits, is_decoder, reduction): Constructs the BlipTextLMHeadModel.
+    - construct(self, input_ids, attention_mask, position_ids, head_mask, inputs_embeds, encoder_hidden_states, encoder_attention_mask, labels, past_key_values, use_cache, output_attentions,
+output_hidden_states, return_dict, return_logits, is_decoder, reduction): Constructs the BlipTextLMHeadModel.
     - prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, **model_kwargs): Prepares the inputs for generation.
     - _reorder_cache(self, past_key_values, beam_idx): Reorders the past key values for generation.
     
@@ -1690,7 +1711,8 @@ class BlipTextLMHeadModel(BlipTextPreTrainedModel):
         This method retrieves the output embeddings from the BlipTextLMHeadModel. The output embeddings are used for generating predictions in the decoder module of the model.
         
         Note:
-            The output embeddings represent the learned representations of the input data after being processed by the model's encoder. These embeddings can be used for downstream tasks such as classification or further analysis.
+            The output embeddings represent the learned representations of the input data after being processed by the model's encoder. These embeddings can be used for downstream tasks such as classification
+or further analysis.
         
         Example usage:
             model = BlipTextLMHeadModel()

@@ -537,10 +537,12 @@ class BaseTunerLayer(ABC):
         Raises:
             None.
         
-        This method disables the adapters in the BaseTunerLayer. Adapters are components that allow communication between different systems or modules. By disabling the adapters, the BaseTunerLayer restricts any further communication or interaction with external systems.
+        This method disables the adapters in the BaseTunerLayer. Adapters are components that allow communication between different systems or modules. By disabling the adapters, the BaseTunerLayer restricts
+any further communication or interaction with external systems.
         
         Note:
-            The disable_adapters method does not remove or delete the adapters from the BaseTunerLayer instance. It only disables their functionality temporarily. To enable the adapters again, use the enable_adapters method.
+            The disable_adapters method does not remove or delete the adapters from the BaseTunerLayer instance. It only disables their functionality temporarily. To enable the adapters again, use the
+enable_adapters method.
         
         Example:
             >>> tuner_layer = BaseTunerLayer()

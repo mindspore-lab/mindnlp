@@ -423,7 +423,8 @@ class PreTrainedTokenizer(PreTrainedTokenizerBase):
         Raises:
             None.
         
-        This method returns True if the tokenizer is fast, and False otherwise. The tokenizer's speed is determined by various factors, such as its implementation, data size, and computational resources available. This information can be useful for optimizing the tokenization process or making decisions based on the tokenizer's performance.
+        This method returns True if the tokenizer is fast, and False otherwise. The tokenizer's speed is determined by various factors, such as its implementation, data size, and computational resources
+available. This information can be useful for optimizing the tokenization process or making decisions based on the tokenizer's performance.
         """
         return False
 
@@ -934,7 +935,8 @@ class PreTrainedTokenizer(PreTrainedTokenizerBase):
         
         Raises:
         - ValueError: If the input is not valid, should be a string, a list/tuple of strings, or a list/tuple of integers.
-        - NotImplementedError: If 'return_offset_mapping' is requested, which is not available when using Python tokenizers. To use this feature, change the tokenizer to one deriving from transformers.PreTrainedTokenizerFast.
+        - NotImplementedError: If 'return_offset_mapping' is requested, which is not available when using Python tokenizers. To use this feature, change the tokenizer to one deriving from
+transformers.PreTrainedTokenizerFast.
         """
         def get_input_ids(text):
             if isinstance(text, str):

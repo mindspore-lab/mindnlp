@@ -59,7 +59,8 @@ class ErnieMEmbeddings(nn.Cell):
         """
         Args:
             self (object): The instance of the ErnieMEmbeddings class.
-            config (object): An object containing configuration parameters for the ErnieMEmbeddings instance, including the hidden size, vocabulary size, maximum position embeddings, padding token ID, layer normalization epsilon, and hidden dropout probability.
+            config (object): An object containing configuration parameters for the ErnieMEmbeddings instance, including the hidden size, vocabulary size, maximum position embeddings, padding token ID, layer
+normalization epsilon, and hidden dropout probability.
         
         Returns:
             None: This method does not return any value.
@@ -128,7 +129,8 @@ class ErnieMSelfAttention(nn.Cell):
 
     """A module that implements the self-attention mechanism used in ERNIE model.
     
-    This module contains the `ErnieMSelfAttention` class, which represents the self-attention mechanism used in the ERNIE model. It is a subclass of `nn.Cell` and is responsible for calculating the attention scores and producing the context layer.
+    This module contains the `ErnieMSelfAttention` class, which represents the self-attention mechanism used in the ERNIE model. It is a subclass of `nn.Cell` and is responsible for calculating the attention
+scores and producing the context layer.
     
     Attributes:
         num_attention_heads (int): The number of attention heads in the self-attention mechanism.
@@ -387,7 +389,8 @@ class ErnieMAttention(nn.Cell):
         None. This method does not return any value but modifies the attention heads in the model in-place.
         
         Raises:
-        This method does not explicitly raise any exceptions. However, it is assumed that the functions called within this method, such as 'find_pruneable_heads_and_indices' and 'prune_linear_layer', may raise exceptions related to input validation or processing errors.
+        This method does not explicitly raise any exceptions. However, it is assumed that the functions called within this method, such as 'find_pruneable_heads_and_indices' and 'prune_linear_layer', may raise
+exceptions related to input validation or processing errors.
         """
         if len(heads) == 0:
             return
@@ -453,7 +456,9 @@ class ErnieMAttention(nn.Cell):
 class ErnieMEncoderLayer(nn.Cell):
 
     """
-    The ErnieMEncoderLayer class represents a single layer of the ErnieM (Enhanced Representation through kNowledge Integration) encoder, which is designed for natural language processing tasks. This class inherits from the nn.Cell class and implements the functionality for processing input hidden states using multi-head self-attention mechanism and feedforward neural network layers with layer normalization and dropout.
+    The ErnieMEncoderLayer class represents a single layer of the ErnieM (Enhanced Representation through kNowledge Integration) encoder, which is designed for natural language processing tasks. This class
+inherits from the nn.Cell class and implements the functionality for processing input hidden states using multi-head self-attention mechanism and feedforward neural network layers with layer normalization and
+dropout.
     
     Attributes:
         - self_attn: Instance of ErnieMAttention for multi-head self-attention mechanism.
@@ -586,7 +591,8 @@ class ErnieMEncoder(nn.Cell):
     """ 
     ErnieMEncoder represents a multi-layer Transformer-based encoder model for processing sequences of input data. 
     
-    The ErnieMEncoder class inherits from nn.Cell and implements a multi-layer Transformer-based encoder, with the ability to return hidden states and attention weights if specified. The class provides methods for initializing the model and processing input data through its layers.
+    The ErnieMEncoder class inherits from nn.Cell and implements a multi-layer Transformer-based encoder, with the ability to return hidden states and attention weights if specified. The class provides methods
+for initializing the model and processing input data through its layers.
     
     Attributes:
         config: A configuration object containing the model's hyperparameters.
@@ -778,7 +784,9 @@ class ErnieMPreTrainedModel(PreTrainedModel):
 class ErnieMModel(ErnieMPreTrainedModel):
 
     """
-    This class represents an ERNIE-M (Enhanced Representation through kNowledge Integration) model for multi-purpose pre-training and fine-tuning on downstream tasks. It incorporates ERNIE-M embeddings, encoder, and optional pooling layer. The class provides methods for initializing, getting and setting input embeddings, pruning model heads, and constructing the model with various input and output options. The class inherits from ErnieMPreTrainedModel and extends its functionality to support specific ERNIE-M model architecture and operations.
+    This class represents an ERNIE-M (Enhanced Representation through kNowledge Integration) model for multi-purpose pre-training and fine-tuning on downstream tasks. It incorporates ERNIE-M embeddings,
+encoder, and optional pooling layer. The class provides methods for initializing, getting and setting input embeddings, pruning model heads, and constructing the model with various input and output options.
+The class inherits from ErnieMPreTrainedModel and extends its functionality to support specific ERNIE-M model architecture and operations.
     """
     def __init__(self, config, add_pooling_layer=True):
 
@@ -1103,7 +1111,8 @@ class ErnieMForMultipleChoice(ErnieMPreTrainedModel):
         
     Methods:
         - __init__(self, config): Initializes the ErnieMForMultipleChoice model with the given configuration.
-        - construct(self, input_ids, attention_mask, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Constructs the model for multiple choice question answering and computes the classification loss.
+        - construct(self, input_ids, attention_mask, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Constructs the model for multiple choice question
+answering and computes the classification loss.
     
     The construct method takes various input tensors and parameters, processes them through the ERNIE-M model, applies dropout, and computes the classification logits. 
     If labels are provided, it calculates the cross-entropy loss. The method returns the loss and model outputs based on the return_dict parameter.
@@ -1206,12 +1215,15 @@ class ErnieMForTokenClassification(ErnieMPreTrainedModel):
     """
     This class represents a fine-tuned ErnieM model for token classification tasks. It inherits from the ErnieMPreTrainedModel class.
     
-    The ErnieMForTokenClassification class implements the necessary methods and attributes for token classification tasks. It takes a configuration object as input during initialization and sets up the model architecture accordingly. The model consists of an ErnieMModel instance, a dropout layer, and a classifier layer.
+    The ErnieMForTokenClassification class implements the necessary methods and attributes for token classification tasks. It takes a configuration object as input during initialization and sets up the model
+architecture accordingly. The model consists of an ErnieMModel instance, a dropout layer, and a classifier layer.
     
     Methods:
-    - __init__(self, config): Initializes the ErnieMForTokenClassification instance with the given configuration. It sets the number of labels, creates an ErnieMModel object, initializes the dropout layer, and creates the classifier layer.
+    - __init__(self, config): Initializes the ErnieMForTokenClassification instance with the given configuration. It sets the number of labels, creates an ErnieMModel object, initializes the dropout layer, and
+creates the classifier layer.
     
-    - construct(self, input_ids, attention_mask, position_ids, head_mask, inputs_embeds, past_key_values, output_hidden_states, output_attentions, return_dict, labels): Constructs the forward pass of the model. It takes various input tensors and returns the token classification output. Optionally, it can also compute the token classification loss if labels are provided.
+    - construct(self, input_ids, attention_mask, position_ids, head_mask, inputs_embeds, past_key_values, output_hidden_states, output_attentions, return_dict, labels): Constructs the forward pass of the
+model. It takes various input tensors and returns the token classification output. Optionally, it can also compute the token classification loss if labels are provided.
     
     Attributes:
     - num_labels: The number of possible labels for the token classification task.
@@ -1313,13 +1325,20 @@ class ErnieMForQuestionAnswering(ErnieMPreTrainedModel):
     """
     ErnieMForQuestionAnswering is a class that represents a fine-tuned ErnieM model for question answering tasks. It is a subclass of ErnieMPreTrainedModel.
     
-    This class extends the functionality of the base ErnieM model by adding a question answering head on top of it. It takes as input the configuration of the model and initializes the necessary components. The class provides a method called 'construct' which performs the forward pass of the model for question answering.
+    This class extends the functionality of the base ErnieM model by adding a question answering head on top of it. It takes as input the configuration of the model and initializes the necessary components.
+The class provides a method called 'construct' which performs the forward pass of the model for question answering.
     
-    The 'construct' method takes several input tensors such as 'input_ids', 'attention_mask', 'position_ids', 'head_mask', and 'inputs_embeds'. It also supports optional inputs like 'start_positions', 'end_positions', 'output_attentions', 'output_hidden_states', and 'return_dict'. The method returns the question answering model output, which includes the start and end logits, hidden states, attentions, and an optional total loss.
+    The 'construct' method takes several input tensors such as 'input_ids', 'attention_mask', 'position_ids', 'head_mask', and 'inputs_embeds'. It also supports optional inputs like 'start_positions',
+'end_positions', 'output_attentions', 'output_hidden_states', and 'return_dict'. The method returns the question answering model output, which includes the start and end logits, hidden states, attentions, and
+an optional total loss.
     
-    The 'construct' method internally calls the 'ernie_m' method of the base ErnieM model to obtain the sequence output. It then passes the sequence output through a dense layer 'qa_outputs' to get the logits for the start and end positions. The logits are then processed to obtain the final start and end logits. If 'start_positions' and 'end_positions' are provided, the method calculates the cross-entropy loss for the predicted logits and the provided positions. The total loss is computed as the average of the start and end losses.
+    The 'construct' method internally calls the 'ernie_m' method of the base ErnieM model to obtain the sequence output. It then passes the sequence output through a dense layer 'qa_outputs' to get the logits
+for the start and end positions. The logits are then processed to obtain the final start and end logits. If 'start_positions' and 'end_positions' are provided, the method calculates the cross-entropy loss for
+the predicted logits and the provided positions. The total loss is computed as the average of the start and end losses.
     
-    The 'construct' method returns the model output in a structured manner based on the 'return_dict' parameter. If 'return_dict' is False, the method returns a tuple containing the total loss, start logits, end logits, and any additional hidden states or attentions. If 'return_dict' is True, the method returns an instance of the 'QuestionAnsweringModelOutput' class, which encapsulates the output elements as attributes.
+    The 'construct' method returns the model output in a structured manner based on the 'return_dict' parameter. If 'return_dict' is False, the method returns a tuple containing the total loss, start logits,
+end logits, and any additional hidden states or attentions. If 'return_dict' is True, the method returns an instance of the 'QuestionAnsweringModelOutput' class, which encapsulates the output elements as
+attributes.
     
     Note:
     - If 'start_positions' and 'end_positions' are not provided, the total loss will be None.

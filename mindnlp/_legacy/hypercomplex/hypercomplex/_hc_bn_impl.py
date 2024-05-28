@@ -386,7 +386,8 @@ class _BaseBatchNormImpl(_BatchNormImpl):
             shift_y (Tensor): The shifting factor tensor for the y-axis.
         
         Returns:
-            Tuple[Tensor, Tensor]: A tuple containing two tensors. The first tensor represents the scaled and shifted tensor for the x-axis, while the second tensor represents the scaled and shifted tensor for the y-axis.
+            Tuple[Tensor, Tensor]: A tuple containing two tensors. The first tensor represents the scaled and shifted tensor for the x-axis, while the second tensor represents the scaled and shifted tensor for
+the y-axis.
         
         Raises:
             None.

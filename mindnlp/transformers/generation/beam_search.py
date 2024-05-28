@@ -211,7 +211,8 @@ class BeamSearchScorer(BeamScorer):
         Raises:
             None.
         
-        This method returns True if the internal '_done' attribute, which represents the completion status of the BeamSearchScorer instance, is set to True for all elements. Otherwise, it returns False. The '_done' attribute is a container that holds the completion status of each element in the BeamSearchScorer instance.
+        This method returns True if the internal '_done' attribute, which represents the completion status of the BeamSearchScorer instance, is set to True for all elements. Otherwise, it returns False. The
+'_done' attribute is a container that holds the completion status of each element in the BeamSearchScorer instance.
         
         Note:
             The '_done' attribute is expected to be a container with elements that can be evaluated as boolean values. If the '_done' attribute contains non-boolean elements, unexpected behavior may occur.
@@ -368,7 +369,8 @@ class BeamSearchScorer(BeamScorer):
         - beam_indices (Optional[mindspore.Tensor]): The indices of the beam hypotheses, default is None.
         
         Returns:
-        Tuple[mindspore.Tensor]: A tuple containing the final output sequences ('sequences' key), the scores of the sequences ('sequence_scores' key), and the indices of the beam hypotheses ('beam_indices' key).
+        Tuple[mindspore.Tensor]: A tuple containing the final output sequences ('sequences' key), the scores of the sequences ('sequence_scores' key), and the indices of the beam hypotheses ('beam_indices'
+key).
         
         Raises:
         - ValueError: Raised if 'pad_token_id' is not defined when necessary.

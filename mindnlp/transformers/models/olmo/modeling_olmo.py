@@ -518,7 +518,8 @@ class OlmoAttention(nn.Cell):
         
         If the 'rope_scaling' configuration parameter is not specified, the RoPE is initialized with the OlmoRotaryEmbedding class using the default parameters.
         
-        If the 'rope_scaling' configuration parameter is specified, the RoPE is initialized with a specific scaling type and factor. The 'scaling_type' parameter determines the type of scaling to be used, and the 'scaling_factor' parameter determines the scaling factor to be applied. The available scaling types are 'linear' and 'dynamic'.
+        If the 'rope_scaling' configuration parameter is specified, the RoPE is initialized with a specific scaling type and factor. The 'scaling_type' parameter determines the type of scaling to be used, and
+the 'scaling_factor' parameter determines the scaling factor to be applied. The available scaling types are 'linear' and 'dynamic'.
         
             - For 'linear' scaling type, the RoPE is initialized with the OlmoLinearScalingRotaryEmbedding class using the specified scaling factor.
             - For 'dynamic' scaling type, the RoPE is initialized with the OlmoDynamicNTKScalingRotaryEmbedding class using the specified scaling factor.
@@ -589,7 +590,8 @@ class OlmoAttention(nn.Cell):
             cache_position (Optional[mindspore.Tensor]): The position tensor for the key-value cache.
         
         Returns:
-            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing the attention output tensor of shape (batch_size, sequence_length, hidden_size), the attention weights tensor of shape (batch_size, num_heads, sequence_length, sequence_length), and the updated past key-value cache.
+            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing the attention output tensor of shape (batch_size, sequence_length, hidden_size), the
+attention weights tensor of shape (batch_size, num_heads, sequence_length, sequence_length), and the updated past key-value cache.
         
         Raises:
             ValueError: If the shape of the attention output tensor is not (batch_size, num_heads, sequence_length, hidden_size).
@@ -793,13 +795,17 @@ class OlmoPreTrainedModel(PreTrainedModel):
     OlmoPreTrainedModel provides methods for initializing weights, setting up cache, and resetting cache. 
     
     Methods:
-    - _init_weights(self, cell): Initializes the weights of the given cell. If the cell is of type nn.Dense, the weight is initialized using a normal distribution with a standard deviation of self.config.initializer_range. If the cell has a bias, the bias is initialized to zeros. If the cell is of type nn.Embedding, the weight is initialized using a normal distribution with a standard deviation of self.config.initializer_range. If the cell has a padding index, the weight at the padding index is set to 0.
+    - _init_weights(self, cell): Initializes the weights of the given cell. If the cell is of type nn.Dense, the weight is initialized using a normal distribution with a standard deviation of
+self.config.initializer_range. If the cell has a bias, the bias is initialized to zeros. If the cell is of type nn.Embedding, the weight is initialized using a normal distribution with a standard deviation of
+self.config.initializer_range. If the cell has a padding index, the weight at the padding index is set to 0.
     
-    - _setup_cache(self, cache_cls, max_batch_size, max_cache_len: Optional[int] = None): Sets up the cache for the model. If the attention implementation is 'flash_attention_2' and the cache class is StaticCache, a ValueError is raised. For each layer in the model, the cache is set to an instance of the cache class, with the specified maximum batch size, maximum cache length, and data type.
+    - _setup_cache(self, cache_cls, max_batch_size, max_cache_len: Optional[int] = None): Sets up the cache for the model. If the attention implementation is 'flash_attention_2' and the cache class is
+StaticCache, a ValueError is raised. For each layer in the model, the cache is set to an instance of the cache class, with the specified maximum batch size, maximum cache length, and data type.
     
     - _reset_cache(self): Resets the cache for the model. For each layer in the model, the cache is set to None.
     
-    Note: The OlmoPreTrainedModel class assumes the existence of a model attribute, which is expected to have a layers attribute. Additionally, it checks for the existence of a _pre_quantization_dtype attribute in the config attribute.
+    Note: The OlmoPreTrainedModel class assumes the existence of a model attribute, which is expected to have a layers attribute. Additionally, it checks for the existence of a _pre_quantization_dtype
+attribute in the config attribute.
     
     For more information on Olmo, refer to the documentation at https://github.com/huggingface/transformers.
     """
@@ -1184,7 +1190,8 @@ class OlmoForCausalLM(OlmoPreTrainedModel):
     - `set_output_embeddings(self, new_embeddings)`: Sets the output embeddings of the model.
     - `set_decoder(self, decoder)`: Sets the decoder of the model.
     - `get_decoder(self)`: Returns the decoder of the model.
-    - `construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict, cache_position)`: Constructs the model and returns the output.
+    - `construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict, cache_position)`: Constructs the model
+and returns the output.
     - `prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, cache_position, **kwargs)`: Prepares the inputs for generation.
     
     The class also includes a private static method `_reorder_cache(past_key_values, beam_idx)`.
@@ -1290,7 +1297,8 @@ class OlmoForCausalLM(OlmoPreTrainedModel):
         
         Args:
             self (OlmoForCausalLM): The instance of the OlmoForCausalLM class.
-            new_embeddings: The new embeddings to be set for the output layer of the model. This can be a tensor or any object that can be assigned to `self.lm_head`. The shape of the embeddings should match the expected shape of the output layer.
+            new_embeddings: The new embeddings to be set for the output layer of the model. This can be a tensor or any object that can be assigned to `self.lm_head`. The shape of the embeddings should match
+the expected shape of the output layer.
             
         Returns:
             None. This method does not return any value.

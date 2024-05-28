@@ -198,7 +198,8 @@ class CLIPOutput(ModelOutput):
 class CLIPVisionEmbeddings(nn.Cell):
 
     """
-    CLIPVisionEmbeddings is a class that represents the embeddings used in the CLIP (Contrastive Language-Image Pretraining) model for vision. This class inherits from nn.Cell and is responsible for constructing the embeddings for input images.
+    CLIPVisionEmbeddings is a class that represents the embeddings used in the CLIP (Contrastive Language-Image Pretraining) model for vision. This class inherits from nn.Cell and is responsible for
+constructing the embeddings for input images.
     
     Attributes:
         config (CLIPVisionConfig): The configuration object that holds the parameters for the CLIPVisionEmbeddings.
@@ -303,7 +304,8 @@ class CLIPTextEmbeddings(nn.Cell):
     
     Methods:
     - __init__(self, config: CLIPTextConfig): Initializes the CLIPTextEmbeddings module.
-    - construct(self, input_ids: Optional[mindspore.Tensor] = None, position_ids: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor] = None) -> mindspore.Tensor: Constructs the text embeddings.
+    - construct(self, input_ids: Optional[mindspore.Tensor] = None, position_ids: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor] = None) -> mindspore.Tensor: Constructs the text
+embeddings.
     
     """
     def __init__(self, config: CLIPTextConfig):
@@ -579,7 +581,8 @@ class CLIPMLP(nn.Cell):
         3. Applies another linear transformation to the output of the activation function using the fully connected layer fc2.
         4. Returns the final output tensor after passing through the fc2 layer.
         
-        Note that the input hidden_states tensor must have a shape of (batch_size, hidden_size), where batch_size represents the number of input examples and hidden_size represents the size of the hidden states.
+        Note that the input hidden_states tensor must have a shape of (batch_size, hidden_size), where batch_size represents the number of input examples and hidden_size represents the size of the hidden
+states.
         """
         hidden_states = self.fc1(hidden_states)
         hidden_states = self.activation_fn(hidden_states)
@@ -855,13 +858,16 @@ class CLIPEncoder(nn.Cell):
 class CLIPTextTransformer(nn.Cell):
 
     """
-    The CLIPTextTransformer class represents a transformer model for processing text inputs in the Contextual Language-Image Pretraining (CLIP) framework. It includes methods for initializing the model and constructing the forward pass for text inputs.
+    The CLIPTextTransformer class represents a transformer model for processing text inputs in the Contextual Language-Image Pretraining (CLIP) framework. It includes methods for initializing the model and
+constructing the forward pass for text inputs.
     
-    This class inherits from the nn.Cell module, and it contains an initialization method (__init__) for setting up the model configuration and a construct method for processing input text data through the transformer layers.
+    This class inherits from the nn.Cell module, and it contains an initialization method (__init__) for setting up the model configuration and a construct method for processing input text data through the
+transformer layers.
     
     The __init__ method initializes the CLIPTextTransformer instance with a provided CLIPTextConfig object, setting up the model's configuration and embedding layers.
     
-    The construct method processes input text data through the transformer layers, including handling input_ids, attention_mask, position_ids, and other optional parameters. It applies the transformer encoder to the input embeddings and returns the encoded hidden states and pooled output.
+    The construct method processes input text data through the transformer layers, including handling input_ids, attention_mask, position_ids, and other optional parameters. It applies the transformer encoder
+to the input embeddings and returns the encoded hidden states and pooled output.
     
     For additional details and usage examples, please refer to the code and method-specific docstrings.
     """
@@ -977,11 +983,15 @@ class CLIPTextTransformer(nn.Cell):
 class CLIPTextModel(CLIPPreTrainedModel):
 
     """
-    The `CLIPTextModel` class represents a model for processing text inputs using the CLIP (Contrastive Language-Image Pretraining) framework. This class inherits from `CLIPPreTrainedModel` and provides methods for initializing the model, obtaining input embeddings, and constructing the model for inference.
+    The `CLIPTextModel` class represents a model for processing text inputs using the CLIP (Contrastive Language-Image Pretraining) framework. This class inherits from `CLIPPreTrainedModel` and provides
+methods for initializing the model, obtaining input embeddings, and constructing the model for inference.
     
-    The `CLIPTextModel` class includes methods for initializing the model with a configuration, obtaining input embeddings, and constructing the model for inference. The `get_input_embeddings` method returns the token embeddings used as input to the model, while the `set_input_embeddings` method allows for updating the token embeddings. The `construct` method constructs the model for performing inference, with options for specifying input tensors, attention masks, position ids, and return settings.
+    The `CLIPTextModel` class includes methods for initializing the model with a configuration, obtaining input embeddings, and constructing the model for inference. The `get_input_embeddings` method returns
+the token embeddings used as input to the model, while the `set_input_embeddings` method allows for updating the token embeddings. The `construct` method constructs the model for performing inference, with
+options for specifying input tensors, attention masks, position ids, and return settings.
     
-    The `construct` method returns the model outputs based on the provided inputs and settings. Additionally, the docstring includes usage examples for initializing the `CLIPTextModel` and performing inference using the model.
+    The `construct` method returns the model outputs based on the provided inputs and settings. Additionally, the docstring includes usage examples for initializing the `CLIPTextModel` and performing inference
+using the model.
     
     Examples:
     
@@ -1098,11 +1108,13 @@ class CLIPTextModel(CLIPPreTrainedModel):
 class CLIPVisionTransformer(nn.Cell):
 
     """
-    This class represents a vision transformer model for the Contrastive Language-Image Pretraining (CLIP) framework. It inherits from the nn.Cell class and incorporates CLIPVisionConfig and CLIPVisionEmbeddings for configuration and embedding functionalities, respectively. The class includes methods for initialization and construction of the vision transformer.
+    This class represents a vision transformer model for the Contrastive Language-Image Pretraining (CLIP) framework. It inherits from the nn.Cell class and incorporates CLIPVisionConfig and
+CLIPVisionEmbeddings for configuration and embedding functionalities, respectively. The class includes methods for initialization and construction of the vision transformer.
     
     The __init__ method initializes the CLIPVisionTransformer class with the provided configuration. It sets up the required embeddings, layer normalization, and encoder components.
     
-    The construct method processes the input pixel values and generates the outputs using the configured vision transformer. It handles optional arguments for controlling the output format and returns the resulting hidden states, pooled output, and other relevant information according to the specified return format.
+    The construct method processes the input pixel values and generates the outputs using the configured vision transformer. It handles optional arguments for controlling the output format and returns the
+resulting hidden states, pooled output, and other relevant information according to the specified return format.
     
     Note: This class is designed to be used within the MindSpore framework for vision-related tasks in the CLIP framework.
     """
@@ -1178,7 +1190,8 @@ class CLIPVisionTransformer(nn.Cell):
 class CLIPVisionModel(CLIPPreTrainedModel):
 
     """
-    The `CLIPVisionModel` class represents a model for vision tasks using the CLIP (Contrastive Language-Image Pre-training) framework. It is designed to process images and generate visual embeddings using the CLIPVisionTransformer.
+    The `CLIPVisionModel` class represents a model for vision tasks using the CLIP (Contrastive Language-Image Pre-training) framework. It is designed to process images and generate visual embeddings using the
+CLIPVisionTransformer.
     
     Args:
         config (CLIPVisionConfig): The configuration object that defines the model architecture and behavior.
@@ -1189,7 +1202,8 @@ class CLIPVisionModel(CLIPPreTrainedModel):
     Methods:
         __init__(self, config: CLIPVisionConfig): Initializes a new instance of the `CLIPVisionModel` class.
         get_input_embeddings(self) -> nn.Cell: Returns the input embeddings of the vision model.
-        construct(self, pixel_values: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Tuple, BaseModelOutputWithPooling]: Constructs the vision model and performs image processing.
+        construct(self, pixel_values: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) ->
+Union[Tuple, BaseModelOutputWithPooling]: Constructs the vision model and performs image processing.
     
     Returns:
         The constructed `CLIPVisionModel` instance.
@@ -1297,7 +1311,9 @@ class CLIPVisionModel(CLIPPreTrainedModel):
 class CLIPModel(CLIPPreTrainedModel):
 
     """
-    A Python class representing a CLIP (Contrastive Language-Image Pre-training) model that combines text and vision inputs for image-text similarity scoring. This class inherits from CLIPPreTrainedModel and provides methods for extracting text and image features, as well as for constructing the final CLIP output. The class handles the initialization of model configurations, text and vision embeddings, projection layers, and scaling of logits for calculating similarity scores. It also includes examples on how to use the model for text and image inputs. 
+    A Python class representing a CLIP (Contrastive Language-Image Pre-training) model that combines text and vision inputs for image-text similarity scoring. This class inherits from CLIPPreTrainedModel and
+provides methods for extracting text and image features, as well as for constructing the final CLIP output. The class handles the initialization of model configurations, text and vision embeddings, projection
+layers, and scaling of logits for calculating similarity scores. It also includes examples on how to use the model for text and image inputs. 
     """
     config_class = CLIPConfig
     _no_split_modules = ["CLIPTextEmbeddings", "CLIPEncoderLayer"]
@@ -1546,11 +1562,14 @@ class CLIPTextModelWithProjection(CLIPPreTrainedModel):
     """
     This class represents a CLIP text model with a projection layer for embedding text inputs. It inherits from the CLIPPreTrainedModel class.
     
-    The CLIPTextModelWithProjection class is designed to process text inputs using the CLIP (Contrastive Language-Image Pretraining) model architecture. It incorporates a CLIPTextTransformer and a text projection layer to generate text embeddings.
+    The CLIPTextModelWithProjection class is designed to process text inputs using the CLIP (Contrastive Language-Image Pretraining) model architecture. It incorporates a CLIPTextTransformer and a text
+projection layer to generate text embeddings.
     
-    The class provides functionality for initializing the model with a CLIPTextConfig, accessing the input embeddings, setting the input embeddings, and constructing the model's outputs based on input text ids, attention masks, and position ids.
+    The class provides functionality for initializing the model with a CLIPTextConfig, accessing the input embeddings, setting the input embeddings, and constructing the model's outputs based on input text
+ids, attention masks, and position ids.
     
-    The construct method takes optional input tensors representing text ids, attention masks, position ids, output attentions, output hidden states, and return dictionary flag. It returns a CLIPTextModelOutput object containing the text embeddings and other relevant information.
+    The construct method takes optional input tensors representing text ids, attention masks, position ids, output attentions, output hidden states, and return dictionary flag. It returns a CLIPTextModelOutput
+object containing the text embeddings and other relevant information.
     
     Example usage:
     
@@ -1689,7 +1708,9 @@ class CLIPVisionModelWithProjection(CLIPPreTrainedModel):
     
     This class inherits from CLIPPreTrainedModel and includes methods for initializing the model, retrieving input embeddings, and constructing the model.
     
-    The 'CLIPVisionModelWithProjection' class initializes with a configuration object of type 'CLIPVisionConfig' and sets up the vision model and visual projection. It provides a method to retrieve input embeddings and constructs the vision model with optional parameters for pixel values, attentions, hidden states, and return dictionary. The method returns image embeddings and other model outputs based on the input parameters.
+    The 'CLIPVisionModelWithProjection' class initializes with a configuration object of type 'CLIPVisionConfig' and sets up the vision model and visual projection. It provides a method to retrieve input
+embeddings and constructs the vision model with optional parameters for pixel values, attentions, hidden states, and return dictionary. The method returns image embeddings and other model outputs based on the
+input parameters.
     
     Examples:
     
@@ -1809,7 +1830,8 @@ class CLIPVisionModelWithProjection(CLIPPreTrainedModel):
 class CLIPForImageClassification(CLIPPreTrainedModel):
 
     """
-    The CLIPForImageClassification class represents a model for image classification using the Contrastive Language-Image Pretraining (CLIP) approach. It inherits from the CLIPPreTrainedModel class and implements the necessary methods for image classification tasks.
+    The CLIPForImageClassification class represents a model for image classification using the Contrastive Language-Image Pretraining (CLIP) approach. It inherits from the CLIPPreTrainedModel class and
+implements the necessary methods for image classification tasks.
     
     Attributes:
         config (CLIPConfig): The configuration for the CLIP model, containing parameters such as num_labels, vision_model, and classifier.
@@ -1818,7 +1840,8 @@ class CLIPForImageClassification(CLIPPreTrainedModel):
         __init__(self, config: CLIPConfig) -> None:
             Initializes the CLIPForImageClassification model with the provided configuration.
     
-        construct(self, pixel_values: Optional[mindspore.Tensor] = None, labels: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[tuple, ImageClassifierOutput]:
+        construct(self, pixel_values: Optional[mindspore.Tensor] = None, labels: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None,
+return_dict: Optional[bool] = None) -> Union[tuple, ImageClassifierOutput]:
             Constructs the image classification model using the specified pixel values and labels. It returns the logits, loss, hidden states, and attentions if specified.
     
     Args:

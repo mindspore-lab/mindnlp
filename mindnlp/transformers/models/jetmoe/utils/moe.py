@@ -256,10 +256,12 @@ class MoE(nn.Cell):
         
         Args:
             self (object): The instance of the MoE class.
-            x (tensor): The input tensor representing the input data for the single mapping operation. It should have a shape of (bsz, length, emb_size), where 'bsz' is the batch size, 'length' is the length of input sequence, and 'emb_size' is the embedding size.
+            x (tensor): The input tensor representing the input data for the single mapping operation. It should have a shape of (bsz, length, emb_size), where 'bsz' is the batch size, 'length' is the length
+of input sequence, and 'emb_size' is the embedding size.
         
         Returns:
-            y (tensor): The output tensor representing the result of the single mapping operation. It has a shape of (bsz, length, self.top_k, -1), where 'bsz' is the batch size, 'length' is the length of input sequence, and 'self.top_k' is the number of top-k expert indices, and '-1' represents the output dimension.
+            y (tensor): The output tensor representing the result of the single mapping operation. It has a shape of (bsz, length, self.top_k, -1), where 'bsz' is the batch size, 'length' is the length of
+input sequence, and 'self.top_k' is the number of top-k expert indices, and '-1' represents the output dimension.
             loss (float): The loss value associated with the single mapping operation.
         
         Raises:

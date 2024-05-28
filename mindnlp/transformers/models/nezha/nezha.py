@@ -272,7 +272,8 @@ class NezhaSelfAttention(nn.Cell):
         - output_attentions: Bool, optional. Flag indicating whether to output attention scores. Default is False.
         
         Returns:
-        - Tuple of Tensors or Tuple of (Tensor, Tensor, Tuple of Tensors): The output of the self-attention mechanism. If output_attentions is True, returns a tuple containing the context_layer and attention_probs. If self.is_decoder is True, the output also includes the past_key_value.
+        - Tuple of Tensors or Tuple of (Tensor, Tensor, Tuple of Tensors): The output of the self-attention mechanism. If output_attentions is True, returns a tuple containing the context_layer and
+attention_probs. If self.is_decoder is True, the output also includes the past_key_value.
         
         Raises:
         - ValueError: If the dimensions or types of the input tensors are incompatible.
@@ -470,10 +471,13 @@ class NezhaAttention(nn.Cell):
         Args:
             self (NezhaAttention): The instance of NezhaAttention class.
             hidden_states (torch.Tensor): The input hidden states of the model. Shape: (batch_size, sequence_length, hidden_size).
-            attention_mask (torch.Tensor, optional): The attention mask tensor. If provided, it should be a 2D tensor of shape (batch_size, sequence_length), where 1 indicates a token that should be attended to and 0 indicates a token that should not be attended to. Defaults to None.
-            head_mask (torch.Tensor, optional): The head mask tensor. If provided, it should be a 1D tensor of shape (num_heads,), where 1 indicates a head that should be masked and 0 indicates a head that should not be masked. Defaults to None.
+            attention_mask (torch.Tensor, optional): The attention mask tensor. If provided, it should be a 2D tensor of shape (batch_size, sequence_length), where 1 indicates a token that should be attended
+to and 0 indicates a token that should not be attended to. Defaults to None.
+            head_mask (torch.Tensor, optional): The head mask tensor. If provided, it should be a 1D tensor of shape (num_heads,), where 1 indicates a head that should be masked and 0 indicates a head that
+should not be masked. Defaults to None.
             encoder_hidden_states (torch.Tensor, optional): The hidden states of the encoder. Shape: (batch_size, sequence_length, hidden_size). Defaults to None.
-            encoder_attention_mask (torch.Tensor, optional): The attention mask tensor for the encoder. If provided, it should be a 2D tensor of shape (batch_size, sequence_length), where 1 indicates a token that should be attended to and 0 indicates a token that should not be attended to. Defaults to None.
+            encoder_attention_mask (torch.Tensor, optional): The attention mask tensor for the encoder. If provided, it should be a 2D tensor of shape (batch_size, sequence_length), where 1 indicates a token
+that should be attended to and 0 indicates a token that should not be attended to. Defaults to None.
             past_key_value (tuple, optional): The cached key-value pairs of the previous time steps. Defaults to None.
             output_attentions (bool, optional): Whether to return attention weights. Defaults to False.
         
@@ -481,7 +485,8 @@ class NezhaAttention(nn.Cell):
             tuple: A tuple containing:
                 - attention_output (torch.Tensor): The output of the attention mechanism. Shape: (batch_size, sequence_length, hidden_size).
                 - self_outputs (tuple): A tuple containing the outputs of the self-attention mechanism.
-                - output_attentions (torch.Tensor, optional): The attention weights tensor. Shape: (num_attention_heads, batch_size, sequence_length, sequence_length). Only returned if `output_attentions` is set to True.
+                - output_attentions (torch.Tensor, optional): The attention weights tensor. Shape: (num_attention_heads, batch_size, sequence_length, sequence_length). Only returned if `output_attentions` is
+set to True.
         
         Raises:
             None
@@ -1258,7 +1263,8 @@ class NezhaPreTrainedModel(PreTrainedModel):
             None.
         
         Description:
-        This method is a placeholder and does not perform any specific operations. It is called automatically after the initialization of an instance of the NezhaPreTrainedModel class. It can be overridden in child classes to add custom initialization logic or perform additional setup steps.
+        This method is a placeholder and does not perform any specific operations. It is called automatically after the initialization of an instance of the NezhaPreTrainedModel class. It can be overridden in
+child classes to add custom initialization logic or perform additional setup steps.
         
         Note that the 'self' parameter is automatically passed to the method and does not need to be provided explicitly when calling the method.
         """

@@ -154,7 +154,8 @@ class Vector(ABC):
             that (Union[Vector, Scalar, Any]): The second operand for the division operation. It can be a Vector object, a Scalar value, or any other data type.
         
         Returns:
-            Vector: A new Vector object resulting from the division operation. If the second operand is a Vector object, the division is element-wise. If the second operand is a Scalar value, the division is scalar division.
+            Vector: A new Vector object resulting from the division operation. If the second operand is a Vector object, the division is element-wise. If the second operand is a Scalar value, the division is
+scalar division.
         
         Raises:
             None: This method does not raise any exceptions.
@@ -173,7 +174,8 @@ class Vector(ABC):
         - self (object): The Vector object itself.
         
         Returns:
-        - str: A string representation of the Vector object. If the size of the Vector is less than or equal to 6, it returns a string containing all elements of the Vector enclosed in square brackets. If the size is greater than 6, it returns a string containing the first 3 elements, followed by '...,', and then the last 3 elements, all enclosed in square brackets.
+        - str: A string representation of the Vector object. If the size of the Vector is less than or equal to 6, it returns a string containing all elements of the Vector enclosed in square brackets. If the
+size is greater than 6, it returns a string containing the first 3 elements, followed by '...,', and then the last 3 elements, all enclosed in square brackets.
         
         Raises:
         This method does not raise any exceptions.
@@ -345,7 +347,8 @@ class Vector(ABC):
             None.
         
         Note:
-            The add_scalar method performs element-wise addition of the scalar value to each element of the vector. If the scalar value is of a different type than the vector elements, it will be automatically converted to the appropriate type before the addition takes place.
+            The add_scalar method performs element-wise addition of the scalar value to each element of the vector. If the scalar value is of a different type than the vector elements, it will be automatically
+converted to the appropriate type before the addition takes place.
         
         Example:
             >>> v = Vector([1, 2, 3])
@@ -537,15 +540,18 @@ class Vector(ABC):
     def _full_like(self, items: Any) -> 'Vector':
 
         r"""
-        This method, '_full_like', is a member of the 'Vector' class and is used to create a new 'Vector' object with the same shape and data type as the input 'items', but with all elements set to the value specified by the 'items' parameter.
+        This method, '_full_like', is a member of the 'Vector' class and is used to create a new 'Vector' object with the same shape and data type as the input 'items', but with all elements set to the value
+specified by the 'items' parameter.
         
         Args:
             self: An instance of the 'Vector' class. This parameter is automatically passed when calling the method on an object of the class. It is used to access the attributes and methods of the object.
         
-            items: The input parameter representing the source object used to determine the shape and data type of the output 'Vector' object. This parameter can have any type. It is used to specify the desired value for all elements in the output 'Vector' object.
+            items: The input parameter representing the source object used to determine the shape and data type of the output 'Vector' object. This parameter can have any type. It is used to specify the
+desired value for all elements in the output 'Vector' object.
         
         Returns:
-            A new 'Vector' object with the same shape and data type as the input 'items', but with all elements set to the value specified by the 'items' parameter. The output 'Vector' object is returned as the result of the method.
+            A new 'Vector' object with the same shape and data type as the input 'items', but with all elements set to the value specified by the 'items' parameter. The output 'Vector' object is returned as
+the result of the method.
         
         Raises:
             This method does not raise any exceptions.
@@ -661,9 +667,11 @@ class Vector(ABC):
         Raises:
             TypeError: If the 'that' parameter is not of type Vector.
         
-        This method divides the current vector by another vector. It creates a new vector object that contains the result of the division. The 'self' parameter represents the current vector object, while the 'that' parameter represents the vector to divide by.
+        This method divides the current vector by another vector. It creates a new vector object that contains the result of the division. The 'self' parameter represents the current vector object, while the
+'that' parameter represents the vector to divide by.
         
-        The division operation is performed element-wise between the two vectors. Each element of the current vector is divided by the corresponding element of the 'that' vector to produce the corresponding element of the resulting vector.
+        The division operation is performed element-wise between the two vectors. Each element of the current vector is divided by the corresponding element of the 'that' vector to produce the corresponding
+element of the resulting vector.
         
         The resulting vector is returned as the output of this method.
         
@@ -688,7 +696,8 @@ class Vector(ABC):
         Raises:
             TypeError: If either self or that is not an instance of the Vector class.
         
-        This method calculates the dot product between this vector and another vector. The dot product is a scalar value that represents the similarity between the two vectors. It is calculated by multiplying the corresponding elements of the two vectors and summing the results.
+        This method calculates the dot product between this vector and another vector. The dot product is a scalar value that represents the similarity between the two vectors. It is calculated by multiplying
+the corresponding elements of the two vectors and summing the results.
         
         Note that both self and that must be instances of the Vector class. If either parameter is not of the correct type, a TypeError will be raised.
         

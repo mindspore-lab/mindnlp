@@ -511,11 +511,13 @@ class TranslationPipeline(Text2TextGenerationPipeline):
             None.
         
         Description:
-        This method sanitizes the parameters for the TranslationPipeline by ensuring that the source language and target language are set correctly. It also handles the scenario where both the source language and target language are not provided, but the task name is given in the kwargs. In this case, the method extracts the source and target languages from the task name and sets them in the preprocess parameters.
+        This method sanitizes the parameters for the TranslationPipeline by ensuring that the source language and target language are set correctly. It also handles the scenario where both the source language
+and target language are not provided, but the task name is given in the kwargs. In this case, the method extracts the source and target languages from the task name and sets them in the preprocess parameters.
         
         If src_lang is provided, it updates the preprocess_params dictionary with the src_lang parameter.
         If tgt_lang is provided, it updates the preprocess_params dictionary with the tgt_lang parameter.
-        If neither src_lang nor tgt_lang is provided, it checks if the task name is present in kwargs. If it is, and the task name is in the format 'prefix_srcLang_to_tgtLang_suffix', it extracts the source language and target language from the task name and sets them in the preprocess_params dictionary.
+        If neither src_lang nor tgt_lang is provided, it checks if the task name is present in kwargs. If it is, and the task name is in the format 'prefix_srcLang_to_tgtLang_suffix', it extracts the source
+language and target language from the task name and sets them in the preprocess_params dictionary.
         
         The method then returns the sanitized preprocess parameters, forward parameters, and postprocess parameters as a tuple.
         """

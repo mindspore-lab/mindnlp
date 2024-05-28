@@ -193,7 +193,8 @@ class InternLMDynamicNTKScalingRotaryEmbedding(InternLMRotaryEmbedding):
     """
     The `InternLMDynamicNTKScalingRotaryEmbedding` class is a Python class that represents a dynamic version of the Neural Tangent Kernel (NTK) Scaling Rotary Embedding used in the context of an InternLM model.
     
-    This class inherits from the `InternLMRotaryEmbedding` class and provides additional functionality for dynamically adjusting the NTK scaling factor based on the sequence length. It calculates and caches the cosine and sine values necessary for the rotary embeddings.
+    This class inherits from the `InternLMRotaryEmbedding` class and provides additional functionality for dynamically adjusting the NTK scaling factor based on the sequence length. It calculates and caches
+the cosine and sine values necessary for the rotary embeddings.
     
     Attributes:
         scaling_factor (float): The scaling factor used for adjusting the NTK scaling based on sequence length.
@@ -636,7 +637,8 @@ class InternLMDecoderLayer(nn.Cell):
 class InternLMPreTrainedModel(PreTrainedModel):
 
     """
-    The 'InternLMPreTrainedModel' class represents a pre-trained language model for internal use. It inherits from the 'PreTrainedModel' class and includes methods for initializing weights and setting gradient checkpointing. 
+    The 'InternLMPreTrainedModel' class represents a pre-trained language model for internal use. It inherits from the 'PreTrainedModel' class and includes methods for initializing weights and setting gradient
+checkpointing. 
     
     Attributes:
         config: The configuration for the pre-trained model.
@@ -671,9 +673,11 @@ class InternLMPreTrainedModel(PreTrainedModel):
         This method initializes the weights of the given cell based on the configuration specified in `self.config`. 
         It supports two types of cells: `nn.Dense` and `nn.Embedding`.
         
-        For `nn.Dense` cells, the weights are initialized using a normal distribution with mean 0 and standard deviation `self.config.initializer_range`. The weights are set using the `set_data` method of the `weight` attribute of the cell. If the cell has a bias attribute (`cell.bias`), it is initialized with zeros using the `set_data` method as well.
+        For `nn.Dense` cells, the weights are initialized using a normal distribution with mean 0 and standard deviation `self.config.initializer_range`. The weights are set using the `set_data` method of the
+`weight` attribute of the cell. If the cell has a bias attribute (`cell.bias`), it is initialized with zeros using the `set_data` method as well.
         
-        For `nn.Embedding` cells, the weights are initialized using a normal distribution with mean 0 and standard deviation `self.config.initializer_range`. The weights are randomly sampled using the `np.random.normal` function and set using the `set_data` method of the `weight` attribute of the cell. If the cell has a `padding_idx` attribute (`cell.padding_idx`), the weight at that index is set to 0.
+        For `nn.Embedding` cells, the weights are initialized using a normal distribution with mean 0 and standard deviation `self.config.initializer_range`. The weights are randomly sampled using the
+`np.random.normal` function and set using the `set_data` method of the `weight` attribute of the cell. If the cell has a `padding_idx` attribute (`cell.padding_idx`), the weight at that index is set to 0.
         
         Note: This method modifies the weights of the cell in-place and does not return any value.
         """
@@ -963,7 +967,8 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
     """
     A class representing an InternLM model for causal language modeling.
     
-    This class extends the InternLMPreTrainedModel class and provides additional functionality specific to causal language modeling tasks. It includes methods for initializing the model, setting and getting input and output embeddings, setting the decoder, constructing the model, and preparing inputs for generation.
+    This class extends the InternLMPreTrainedModel class and provides additional functionality specific to causal language modeling tasks. It includes methods for initializing the model, setting and getting
+input and output embeddings, setting the decoder, constructing the model, and preparing inputs for generation.
     
     Attributes:
         model (InternLMModel): The underlying InternLM model.
@@ -977,7 +982,8 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
         set_output_embeddings(self, new_embeddings): Sets the output embeddings of the model.
         set_decoder(self, decoder): Sets the decoder for the model.
         get_decoder(self): Returns the decoder of the model.
-        construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model and computes the masked language modeling loss.
+        construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model and computes the
+masked language modeling loss.
         prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, **kwargs): Prepares inputs for generation by modifying the input_ids, attention_mask, and position_ids.
     
     Example usage:
@@ -1046,7 +1052,8 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
         Raises:
             None.
         
-        This method is used to obtain the input embeddings from the model. The input embeddings are representations of the input tokens that the model uses to process the text. The embeddings capture the semantic meaning and contextual information of the tokens, which is crucial for the model's performance.
+        This method is used to obtain the input embeddings from the model. The input embeddings are representations of the input tokens that the model uses to process the text. The embeddings capture the
+semantic meaning and contextual information of the tokens, which is crucial for the model's performance.
         
         Note:
             The 'embed_tokens' attribute of the 'self.model' object contains the input embeddings. This attribute should be accessed to retrieve the embeddings.
@@ -1306,15 +1313,22 @@ class InternLMForSequenceClassification(InternLMPreTrainedModel):
     """
     This class represents an InternLM model for sequence classification tasks. It is a subclass of the InternLMPreTrainedModel class.
     
-    The InternLMForSequenceClassification class is initialized with a configuration object, which includes the number of labels for the classification task. The model architecture consists of an InternLMModel and a score layer.
+    The InternLMForSequenceClassification class is initialized with a configuration object, which includes the number of labels for the classification task. The model architecture consists of an InternLMModel
+and a score layer.
     
-    The class provides methods for getting and setting the input embeddings of the model. The get_input_embeddings method returns the embedded tokens of the model, while the set_input_embeddings method allows for setting new input embeddings.
+    The class provides methods for getting and setting the input embeddings of the model. The get_input_embeddings method returns the embedded tokens of the model, while the set_input_embeddings method allows
+for setting new input embeddings.
     
-    The construct method is responsible for processing input data and generating classification outputs. It takes several optional parameters, including input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, and return_dict. The method returns either a tuple or a SequenceClassifierOutputWithPast object, depending on the value of the return_dict parameter.
+    The construct method is responsible for processing input data and generating classification outputs. It takes several optional parameters, including input_ids, attention_mask, position_ids,
+past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, and return_dict. The method returns either a tuple or a SequenceClassifierOutputWithPast object, depending on the
+value of the return_dict parameter.
     
-    If labels are provided, the method computes the sequence classification loss based on the configured problem type. The problem type can be 'regression', 'single_label_classification', or 'multi_label_classification', depending on the number of labels and the data type of the labels. The loss is computed using various loss functions, such as mean squared error (MSE) loss, cross-entropy loss, or binary cross-entropy with logits loss.
+    If labels are provided, the method computes the sequence classification loss based on the configured problem type. The problem type can be 'regression', 'single_label_classification', or
+'multi_label_classification', depending on the number of labels and the data type of the labels. The loss is computed using various loss functions, such as mean squared error (MSE) loss, cross-entropy loss, or
+binary cross-entropy with logits loss.
     
-    If the return_dict parameter is False, the method returns a tuple containing the pooled logits and other transformer outputs. If the loss is not None, it is included in the tuple. If the return_dict parameter is True, the method returns a SequenceClassifierOutputWithPast object, which includes the loss, pooled logits, past key values, hidden states, and attentions.
+    If the return_dict parameter is False, the method returns a tuple containing the pooled logits and other transformer outputs. If the loss is not None, it is included in the tuple. If the return_dict
+parameter is True, the method returns a SequenceClassifierOutputWithPast object, which includes the loss, pooled logits, past key values, hidden states, and attentions.
     
     Note: The class assumes that the batch size is 1 or that a padding token ID is defined. If the batch size is greater than 1 and no padding token ID is defined, a ValueError is raised.
     
@@ -1363,7 +1377,8 @@ class InternLMForSequenceClassification(InternLMPreTrainedModel):
         Raises:
             None.
         
-        This method retrieves the input embeddings from the model's embed_tokens attribute. The input embeddings are used as the input to the model for sequence classification tasks. The method does not modify the input embeddings or perform any additional processing. The retrieved input embeddings can be used for further analysis or visualization, if needed.
+        This method retrieves the input embeddings from the model's embed_tokens attribute. The input embeddings are used as the input to the model for sequence classification tasks. The method does not modify
+the input embeddings or perform any additional processing. The retrieved input embeddings can be used for further analysis or visualization, if needed.
         """
         return self.model.embed_tokens
 

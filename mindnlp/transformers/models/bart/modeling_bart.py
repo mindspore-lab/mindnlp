@@ -337,7 +337,8 @@ BART_ATTENTION_CLASSES = {
 class BartEncoderLayer(nn.Cell):
 
     '''
-    BartEncoderLayer represents a single layer of the BART (Bidirectional and Auto-Regressive Transformers) encoder. This layer consists of multi-head self-attention mechanism followed by feed-forward neural network (FFN) and layer normalization.
+    BartEncoderLayer represents a single layer of the BART (Bidirectional and Auto-Regressive Transformers) encoder. This layer consists of multi-head self-attention mechanism followed by feed-forward neural
+network (FFN) and layer normalization.
     
     Args:
         config (BartConfig): An instance of BartConfig containing the configuration for the BART model.
@@ -376,7 +377,8 @@ class BartEncoderLayer(nn.Cell):
         
         Args:
             self: The instance of the class.
-            config (BartConfig): The configuration object for the BART model, containing various parameters such as d_model, encoder_attention_heads, attention_dropout, dropout, activation_function, activation_dropout, and encoder_ffn_dim. 
+            config (BartConfig): The configuration object for the BART model, containing various parameters such as d_model, encoder_attention_heads, attention_dropout, dropout, activation_function,
+activation_dropout, and encoder_ffn_dim. 
         
         Returns:
             None. This method does not return any value.
@@ -455,7 +457,8 @@ class BartEncoderLayer(nn.Cell):
 class BartDecoderLayer(nn.Cell):
 
     """
-    This class represents a BART decoder layer used in natural language processing tasks. The BARTDecoderLayer class implements the decoder layer architecture for the BART (Bidirectional and Auto-Regressive Transformers) model.
+    This class represents a BART decoder layer used in natural language processing tasks. The BARTDecoderLayer class implements the decoder layer architecture for the BART (Bidirectional and Auto-Regressive
+Transformers) model.
     
     Attributes:
         - embed_dim (int): The dimension of the input embeddings.
@@ -688,7 +691,8 @@ class BartClassificationHead(nn.Cell):
 class BartPreTrainedModel(PreTrainedModel):
 
     """
-    BartPreTrainedModel class represents a pre-trained BART (Bidirectional and Auto-Regressive Transformers) model for natural language processing tasks. This class inherits from PreTrainedModel and includes methods for initializing weights and generating dummy inputs for the model.
+    BartPreTrainedModel class represents a pre-trained BART (Bidirectional and Auto-Regressive Transformers) model for natural language processing tasks. This class inherits from PreTrainedModel and includes
+methods for initializing weights and generating dummy inputs for the model.
     
     Attributes:
         config: The configuration instance for the BART model.
@@ -1259,7 +1263,8 @@ class BartDecoder(BartPreTrainedModel):
 class BartModel(BartPreTrainedModel):
 
     """
-    BartModel is a class that represents the BART (Bidirectional and Auto-Regressive Transformers) model for sequence-to-sequence tasks. It inherits from BartPreTrainedModel and encapsulates the architecture and functionality of the BART model.
+    BartModel is a class that represents the BART (Bidirectional and Auto-Regressive Transformers) model for sequence-to-sequence tasks. It inherits from BartPreTrainedModel and encapsulates the architecture
+and functionality of the BART model.
     
     Attributes:
         shared (nn.Embedding): Shared embedding layer for both encoder and decoder parts of the model.
@@ -1273,7 +1278,8 @@ class BartModel(BartPreTrainedModel):
         set_input_embeddings(value): Sets the shared input embeddings to the provided value.
         get_encoder(): Retrieves the encoder component of the model.
         get_decoder(): Retrieves the decoder component of the model.
-        construct(input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask, cross_attn_head_mask, encoder_outputs, past_key_values, inputs_embeds, decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the BART model for sequence-to-sequence tasks with the specified inputs and configurations.
+        construct(input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask, cross_attn_head_mask, encoder_outputs, past_key_values, inputs_embeds,
+decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the BART model for sequence-to-sequence tasks with the specified inputs and configurations.
     """
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
@@ -1322,9 +1328,11 @@ class BartModel(BartPreTrainedModel):
             None
         
         Description:
-        This method is used to tie the weights of the word embeddings in the encoder and decoder of the BartModel. The tying of weights means that the same weight parameters are shared between the encoder and decoder embeddings.
+        This method is used to tie the weights of the word embeddings in the encoder and decoder of the BartModel. The tying of weights means that the same weight parameters are shared between the encoder and
+decoder embeddings.
         
-        The method first checks if the 'tie_word_embeddings' flag in the model configuration is set to True. If it is, the method calls the '_tie_or_clone_weights' function to tie the weights of the 'embed_tokens' in the encoder with the 'shared' weights. It then repeats the process for the 'embed_tokens' in the decoder.
+        The method first checks if the 'tie_word_embeddings' flag in the model configuration is set to True. If it is, the method calls the '_tie_or_clone_weights' function to tie the weights of the
+'embed_tokens' in the encoder with the 'shared' weights. It then repeats the process for the 'embed_tokens' in the decoder.
         
         Note that tying the weights can help reduce the number of parameters in the model and improve efficiency, especially in scenarios where the encoder and decoder share the same vocabulary.
         
@@ -1451,7 +1459,8 @@ class BartModel(BartPreTrainedModel):
             return_dict (Optional[bool], optional): Whether to return a dictionary. Default: None.
         
         Returns:
-            Union[Tuple, Seq2SeqModelOutput]: A tuple or a Seq2SeqModelOutput object containing the last hidden state, past key values, decoder hidden states, decoder attentions, cross attentions, encoder last hidden state, encoder hidden states, and encoder attentions.
+            Union[Tuple, Seq2SeqModelOutput]: A tuple or a Seq2SeqModelOutput object containing the last hidden state, past key values, decoder hidden states, decoder attentions, cross attentions, encoder last
+hidden state, encoder hidden states, and encoder attentions.
         
         Raises:
             ValueError: If no `decoder_input_ids` or `decoder_inputs_embeds` are passed and `input_ids` is `None`.
@@ -1529,7 +1538,10 @@ class BartModel(BartPreTrainedModel):
 class BartForConditionalGeneration(BartPreTrainedModel):
 
     """
-    This class represents a BART model for conditional text generation. It inherits from BartPreTrainedModel and provides methods for model initialization, encoder and decoder retrieval, resizing token embeddings, output embeddings, model construction, preparing inputs for generation, preparing decoder input ids from labels, and reordering cache. The class includes methods for initializing the model, retrieving encoder and decoder, resizing token embeddings, constructing the model, preparing inputs for text generation, and reordering cache for efficient generation. Additionally, it provides methods for setting and getting output embeddings and resizing final logits bias. The class also includes a method for preparing decoder input ids from labels for masked language modeling.
+    This class represents a BART model for conditional text generation. It inherits from BartPreTrainedModel and provides methods for model initialization, encoder and decoder retrieval, resizing token
+embeddings, output embeddings, model construction, preparing inputs for generation, preparing decoder input ids from labels, and reordering cache. The class includes methods for initializing the model,
+retrieving encoder and decoder, resizing token embeddings, constructing the model, preparing inputs for text generation, and reordering cache for efficient generation. Additionally, it provides methods for
+setting and getting output embeddings and resizing final logits bias. The class also includes a method for preparing decoder input ids from labels for masked language modeling.
     """
     base_model_prefix = "model"
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight", "lm_head.weight"]
@@ -1832,7 +1844,8 @@ class BartForConditionalGeneration(BartPreTrainedModel):
         """
         Prepare decoder input IDs from labels.
         
-        This method takes in two parameters: self, labels. The 'self' parameter refers to the current instance of the 'BartForConditionalGeneration' class, while the 'labels' parameter is a tensor containing the input labels.
+        This method takes in two parameters: self, labels. The 'self' parameter refers to the current instance of the 'BartForConditionalGeneration' class, while the 'labels' parameter is a tensor containing
+the input labels.
         
         Args:
             self (BartForConditionalGeneration): The current instance of the BartForConditionalGeneration class.
@@ -1876,11 +1889,15 @@ class BartForConditionalGeneration(BartPreTrainedModel):
 class BartForSequenceClassification(BartPreTrainedModel):
 
     """
-    The `BartForSequenceClassification` class represents a BART model fine-tuned for sequence classification tasks. It inherits from the `BartPreTrainedModel` class and includes methods for model initialization and sequence classification.
+    The `BartForSequenceClassification` class represents a BART model fine-tuned for sequence classification tasks. It inherits from the `BartPreTrainedModel` class and includes methods for model
+initialization and sequence classification.
     
-    This class includes an `__init__` method for initializing the BART model and a `construct` method for constructing the sequence classification outputs. The `construct` method accepts various input and output parameters, including input and output tensors, attention masks, labels, and cache usage. It processes the input data through the BART model, computes the classification logits, and calculates the loss based on the specified problem type.
+    This class includes an `__init__` method for initializing the BART model and a `construct` method for constructing the sequence classification outputs. The `construct` method accepts various input and
+output parameters, including input and output tensors, attention masks, labels, and cache usage. It processes the input data through the BART model, computes the classification logits, and calculates the loss
+based on the specified problem type.
     
-    The class also includes additional methods for handling sequence classification tasks and managing model outputs. The `BartForSequenceClassification` class provides a comprehensive solution for utilizing BART models for sequence classification applications.
+    The class also includes additional methods for handling sequence classification tasks and managing model outputs. The `BartForSequenceClassification` class provides a comprehensive solution for utilizing
+BART models for sequence classification applications.
     """
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
@@ -2012,12 +2029,14 @@ class BartForQuestionAnswering(BartPreTrainedModel):
     """
     This class represents a BART model for question answering tasks. It inherits from the BartPreTrainedModel class.
     
-    BARTForQuestionAnswering is a fine-tuned version of the BART model, specifically designed for question answering tasks. It takes in input sequences and returns the predicted start and end positions of the answer span within the input sequence.
+    BARTForQuestionAnswering is a fine-tuned version of the BART model, specifically designed for question answering tasks. It takes in input sequences and returns the predicted start and end positions of the
+answer span within the input sequence.
     
     The BARTForQuestionAnswering class contains the following methods:
     
     - __init__(self, config): Initializes the BARTForQuestionAnswering model with the provided configuration.
-    - construct(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask, cross_attn_head_mask, encoder_outputs, start_positions, end_positions, inputs_embeds, decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the BART model for question answering and returns the predicted start and end positions of the answer span.
+    - construct(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask, cross_attn_head_mask, encoder_outputs, start_positions, end_positions, inputs_embeds,
+decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the BART model for question answering and returns the predicted start and end positions of the answer span.
     
     The construct method takes the following parameters:
     
@@ -2222,11 +2241,15 @@ class BartForCausalLM(BartPreTrainedModel):
     """
     This class represents a Bart model for causal language modeling (LM). It is a subclass of BartPreTrainedModel.
     
-    BartForCausalLM is designed for generating text in an autoregressive manner, where the model predicts the next word in a sequence given the previous words. It consists of a decoder component that takes input_ids and attention_mask as inputs, and produces a sequence of predicted logits. The decoder can be configured with various options such as encoder_hidden_states, encoder_attention_mask, head_mask, cross_attn_head_mask, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, and return_dict.
+    BartForCausalLM is designed for generating text in an autoregressive manner, where the model predicts the next word in a sequence given the previous words. It consists of a decoder component that takes
+input_ids and attention_mask as inputs, and produces a sequence of predicted logits. The decoder can be configured with various options such as encoder_hidden_states, encoder_attention_mask, head_mask,
+cross_attn_head_mask, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, and return_dict.
     
-    The class provides methods for getting and setting the input and output embeddings, as well as getting and setting the decoder component. The construct method is the main method for generating text. It takes input_ids, attention_mask, and other optional arguments, and returns the predicted logits, along with other optional outputs such as loss, past_key_values, hidden_states, attentions, and cross_attentions.
+    The class provides methods for getting and setting the input and output embeddings, as well as getting and setting the decoder component. The construct method is the main method for generating text. It
+takes input_ids, attention_mask, and other optional arguments, and returns the predicted logits, along with other optional outputs such as loss, past_key_values, hidden_states, attentions, and cross_attentions.
     
-    The prepare_inputs_for_generation method is used to prepare inputs for text generation. It takes input_ids, past_key_values, attention_mask, use_cache, and other optional arguments, and returns a dictionary containing the prepared inputs.
+    The prepare_inputs_for_generation method is used to prepare inputs for text generation. It takes input_ids, past_key_values, attention_mask, use_cache, and other optional arguments, and returns a
+dictionary containing the prepared inputs.
     
     The _reorder_cache method is a static method that is used to reorder the past_key_values cache during beam search.
     

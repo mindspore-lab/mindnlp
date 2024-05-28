@@ -43,7 +43,8 @@ class ComplexAlgebraFactory(AlgebraFactory):
         Raises:
             None.
         
-        This method returns an instance of _VectorImpl, which is responsible for implementing the complex algebra operations for the ComplexAlgebraFactory class. The _VectorImpl class provides the necessary functionality to perform vector operations in complex algebra. The returned object can be used to perform various operations such as addition, subtraction, multiplication, and division on complex numbers.
+        This method returns an instance of _VectorImpl, which is responsible for implementing the complex algebra operations for the ComplexAlgebraFactory class. The _VectorImpl class provides the necessary
+functionality to perform vector operations in complex algebra. The returned object can be used to perform various operations such as addition, subtraction, multiplication, and division on complex numbers.
         
         Note that this method takes only one parameter, which is 'self'. 'self' represents the instance of the ComplexAlgebraFactory class itself and is used to access and manipulate its attributes and methods.
         

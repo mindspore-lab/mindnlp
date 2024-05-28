@@ -450,11 +450,14 @@ class MBartDecoderLayer(nn.Cell):
         Args:
             self (MBartDecoderLayer): The instance of the MBartDecoderLayer class.
             hidden_states (Tensor): The input hidden states tensor of shape (batch_size, sequence_length, hidden_size).
-            attention_mask (Optional[Tensor]): The attention mask tensor of shape (batch_size, sequence_length) or (batch_size, sequence_length, sequence_length), indicating which tokens should be attended to. Defaults to None.
+            attention_mask (Optional[Tensor]): The attention mask tensor of shape (batch_size, sequence_length) or (batch_size, sequence_length, sequence_length), indicating which tokens should be attended to.
+Defaults to None.
             encoder_hidden_states (Optional[Tensor]): The hidden states tensor from the encoder of shape (batch_size, encoder_sequence_length, hidden_size). Defaults to None.
-            encoder_attention_mask (Optional[Tensor]): The attention mask tensor for the encoder of shape (batch_size, encoder_sequence_length) or (batch_size, encoder_sequence_length, encoder_sequence_length). Defaults to None.
+            encoder_attention_mask (Optional[Tensor]): The attention mask tensor for the encoder of shape (batch_size, encoder_sequence_length) or (batch_size, encoder_sequence_length,
+encoder_sequence_length). Defaults to None.
             layer_head_mask (Optional[Tensor]): The mask tensor for attention heads of shape (batch_size, num_heads, sequence_length, sequence_length). Defaults to None.
-            cross_attn_layer_head_mask (Optional[Tensor]): The mask tensor for attention heads in the cross-attention layer of shape (batch_size, num_heads, sequence_length, encoder_sequence_length). Defaults to None.
+            cross_attn_layer_head_mask (Optional[Tensor]): The mask tensor for attention heads in the cross-attention layer of shape (batch_size, num_heads, sequence_length, encoder_sequence_length). Defaults
+to None.
             past_key_value (Optional[Tuple[Tensor]]): The tuple of tensors containing the past key and value states. Defaults to None.
             output_attentions (Optional[bool]): Whether to output attentions. Defaults to False.
             use_cache (Optional[bool]): Whether to use the cache. Defaults to True.
@@ -1379,7 +1382,8 @@ class MBartForConditionalGeneration(MBartPreTrainedModel):
             return_dict (bool, optional): Flag to indicate whether to return a dictionary. Defaults to None.
         
         Returns:
-            Union[Seq2SeqLMOutput, Tuple[Tensor]]: The output of the model. If `return_dict` is False, returns a tuple containing the masked language model logits and additional outputs. If `return_dict` is True, returns a Seq2SeqLMOutput object containing various model outputs.
+            Union[Seq2SeqLMOutput, Tuple[Tensor]]: The output of the model. If `return_dict` is False, returns a tuple containing the masked language model logits and additional outputs. If `return_dict` is
+True, returns a Seq2SeqLMOutput object containing various model outputs.
         
         Raises:
             None.
@@ -1744,7 +1748,8 @@ class MBartForQuestionAnswering(MBartPreTrainedModel):
                 return_dict (Optional[bool], optional): Whether to return a dictionary. Default is None.
         
             Returns:
-                Union[Tuple, Seq2SeqQuestionAnsweringModelOutput]: The model output, including the loss, start logits, end logits, past key values, decoder hidden states, decoder attentions, cross attentions, encoder last hidden state, encoder hidden states, and encoder attentions.
+                Union[Tuple, Seq2SeqQuestionAnsweringModelOutput]: The model output, including the loss, start logits, end logits, past key values, decoder hidden states, decoder attentions, cross attentions,
+encoder last hidden state, encoder hidden states, and encoder attentions.
         
             Raises:
                 None
@@ -1856,7 +1861,8 @@ class MBartDecoderWrapper(MBartPreTrainedModel):
             None.
         
         Description:
-        This method is used to construct a new instance of the MBartDecoderWrapper class. It takes no additional parameters other than self, which is automatically passed to the method. The method initializes the instance by calling the decoder method with the provided arguments and keyword arguments.
+        This method is used to construct a new instance of the MBartDecoderWrapper class. It takes no additional parameters other than self, which is automatically passed to the method. The method initializes
+the instance by calling the decoder method with the provided arguments and keyword arguments.
         
         Note that this method does not return any value. It is used solely for initialization purposes.
         

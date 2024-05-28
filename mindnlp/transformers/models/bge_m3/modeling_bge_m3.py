@@ -53,7 +53,9 @@ class BgeM3ModelOutput(ModelOutput):
 class BgeM3Model(XLMRobertaPreTrainedModel):
 
     """
-    The BgeM3Model class represents a model that extends XLMRobertaPreTrainedModel. It includes methods for dense embedding, sparse embedding, Colbert embedding, and processing token weights and Colbert vectors. The construct method processes input tensors to generate various outputs including last hidden state, dense output, pooler output, Colbert output, sparse output, hidden states, past key values, attentions, and cross attentions. 
+    The BgeM3Model class represents a model that extends XLMRobertaPreTrainedModel. It includes methods for dense embedding, sparse embedding, Colbert embedding, and processing token weights and Colbert
+vectors. The construct method processes input tensors to generate various outputs including last hidden state, dense output, pooler output, Colbert output, sparse output, hidden states, past key values,
+attentions, and cross attentions. 
     """
     config_class = BgeM3Config
 
@@ -188,7 +190,8 @@ class BgeM3Model(XLMRobertaPreTrainedModel):
         Raises:
             None.
         
-        This method processes the given token weights by removing unused tokens and filtering out invalid indices. It then computes the maximum weight for each unique ID and stores the results in a list of dictionaries. The resulting list is returned as the output of this method.
+        This method processes the given token weights by removing unused tokens and filtering out invalid indices. It then computes the maximum weight for each unique ID and stores the results in a list of
+dictionaries. The resulting list is returned as the output of this method.
         """
         token_weights = token_weights.squeeze(-1)
         # conver to dict
@@ -276,7 +279,8 @@ class BgeM3Model(XLMRobertaPreTrainedModel):
             inputs_embeds (Optional[mindspore.Tensor]): The input embeddings tensor of shape (batch_size, sequence_length, hidden_size) containing the embeddings for the input IDs.
             encoder_hidden_states (Optional[mindspore.Tensor]): The encoder hidden states tensor of shape (batch_size, encoder_sequence_length, hidden_size) containing the hidden states of the encoder.
             encoder_attention_mask (Optional[mindspore.Tensor]): The encoder attention mask tensor of shape (batch_size, encoder_sequence_length) containing attention masks for the encoder hidden states.
-            past_key_values (Optional[List[mindspore.Tensor]]): The list of past key value tensors of shape (2, batch_size, num_heads, sequence_length, hidden_size//num_heads) containing the past key value states for the transformer decoder.
+            past_key_values (Optional[List[mindspore.Tensor]]): The list of past key value tensors of shape (2, batch_size, num_heads, sequence_length, hidden_size//num_heads) containing the past key value
+states for the transformer decoder.
             use_cache (Optional[bool]): Whether to use cache for the transformer decoder.
             output_attentions (Optional[bool]): Whether to output attentions.
             output_hidden_states (Optional[bool]): Whether to output hidden states.
@@ -290,9 +294,11 @@ class BgeM3Model(XLMRobertaPreTrainedModel):
                 colbert_output (mindspore.Tensor): The Colbert embedding output tensor of shape (batch_size, sequence_length, colbert_size) containing the Colbert embeddings.
                 sparse_output (mindspore.Tensor): The sparse embedding output tensor of shape (batch_size, sequence_length, sparse_size) containing the sparse embeddings.
                 hidden_states (Tuple[mindspore.Tensor]): The hidden states tensor of shape (num_layers, batch_size, sequence_length, hidden_size) containing the hidden states of the transformer.
-                past_key_values (Tuple[mindspore.Tensor]): The past key value tensors of shape (2, batch_size, num_heads, sequence_length, hidden_size//num_heads) containing the past key value states for the transformer decoder.
+                past_key_values (Tuple[mindspore.Tensor]): The past key value tensors of shape (2, batch_size, num_heads, sequence_length, hidden_size//num_heads) containing the past key value states for the
+transformer decoder.
                 attentions (Tuple[mindspore.Tensor]): The attentions tensors of shape (num_layers, batch_size, num_heads, sequence_length, sequence_length) containing the attentions of the transformer.
-                cross_attentions (Tuple[mindspore.Tensor]): The cross attentions tensors of shape (num_layers, batch_size, num_heads, sequence_length, encoder_sequence_length) containing the cross attentions of the transformer.
+                cross_attentions (Tuple[mindspore.Tensor]): The cross attentions tensors of shape (num_layers, batch_size, num_heads, sequence_length, encoder_sequence_length) containing the cross attentions
+of the transformer.
         
             BgeM3ModelOutput: If `return_dict` is set to True, returns an instance of the BgeM3ModelOutput class containing the following elements:
                 last_hidden_state (mindspore.Tensor): The last hidden state tensor of shape (batch_size, sequence_length, hidden_size) containing the last hidden state of the transformer.
@@ -301,9 +307,11 @@ class BgeM3Model(XLMRobertaPreTrainedModel):
                 colbert_output (mindspore.Tensor): The Colbert embedding output tensor of shape (batch_size, sequence_length, colbert_size) containing the Colbert embeddings.
                 sparse_output (mindspore.Tensor): The sparse embedding output tensor of shape (batch_size, sequence_length, sparse_size) containing the sparse embeddings.
                 hidden_states (Tuple[mindspore.Tensor]): The hidden states tensor of shape (num_layers, batch_size, sequence_length, hidden_size) containing the hidden states of the transformer.
-                past_key_values (Tuple[mindspore.Tensor]): The past key value tensors of shape (2, batch_size, num_heads, sequence_length, hidden_size//num_heads) containing the past key value states for the transformer decoder.
+                past_key_values (Tuple[mindspore.Tensor]): The past key value tensors of shape (2, batch_size, num_heads, sequence_length, hidden_size//num_heads) containing the past key value states for the
+transformer decoder.
                 attentions (Tuple[mindspore.Tensor]): The attentions tensors of shape (num_layers, batch_size, num_heads, sequence_length, sequence_length) containing the attentions of the transformer.
-                cross_attentions (Tuple[mindspore.Tensor]): The cross attentions tensors of shape (num_layers, batch_size, num_heads, sequence_length, encoder_sequence_length) containing the cross attentions of the transformer.
+                cross_attentions (Tuple[mindspore.Tensor]): The cross attentions tensors of shape (num_layers, batch_size, num_heads, sequence_length, encoder_sequence_length) containing the cross attentions
+of the transformer.
         
         Raises:
             None.

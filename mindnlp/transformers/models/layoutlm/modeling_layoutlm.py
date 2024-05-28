@@ -227,9 +227,11 @@ class LayoutLMSelfAttention(nn.Cell):
         Raises:
             None
         
-        This method transposes the input tensor `x` to prepare it for calculating self-attention scores in the LayoutLMSelfAttention model. The transposition is performed by reshaping the tensor to include the number of attention heads and the size of each attention head. The resulting tensor is then permuted to match the desired shape `(batch_size, num_attention_heads, sequence_length, attention_head_size)`.
+        This method transposes the input tensor `x` to prepare it for calculating self-attention scores in the LayoutLMSelfAttention model. The transposition is performed by reshaping the tensor to include the
+number of attention heads and the size of each attention head. The resulting tensor is then permuted to match the desired shape `(batch_size, num_attention_heads, sequence_length, attention_head_size)`.
         
-        Note that this method assumes that the input tensor `x` has a rank of at least 3, where the last dimension represents the hidden size. The number of attention heads and the size of each attention head are obtained from the attributes `num_attention_heads` and `attention_head_size` of the LayoutLMSelfAttention instance, respectively.
+        Note that this method assumes that the input tensor `x` has a rank of at least 3, where the last dimension represents the hidden size. The number of attention heads and the size of each attention head
+are obtained from the attributes `num_attention_heads` and `attention_head_size` of the LayoutLMSelfAttention instance, respectively.
         """
         new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
         x = x.view(new_x_shape)
@@ -457,7 +459,8 @@ class LayoutLMAttention(nn.Cell):
         
         This method prunes the specified attention heads from the LayoutLMAttention instance. 
         First, it checks if the 'heads' list is empty. If so, the method returns without making any changes.
-        Otherwise, it calls the 'find_pruneable_heads_and_indices' function to identify the attention heads and their corresponding indices that can be pruned based on the given 'heads' list, the number of attention heads, attention head size, and already pruned heads stored in the instance.
+        Otherwise, it calls the 'find_pruneable_heads_and_indices' function to identify the attention heads and their corresponding indices that can be pruned based on the given 'heads' list, the number of
+attention heads, attention head size, and already pruned heads stored in the instance.
         Next, it prunes the 'self.query', 'self.key', 'self.value', and 'self.output.dense' linear layers by calling the 'prune_linear_layer' function with the identified indices.
         After each linear layer is pruned, the number of attention heads is updated by subtracting the length of the 'heads' list from the current number of attention heads.
         The total size of all attention heads, 'self.all_head_size', is then recalculated as the product of the attention head size and the updated number of attention heads.
@@ -675,11 +678,13 @@ class LayoutLMLayer(nn.Cell):
             head_mask (Optional[mindspore.Tensor]): The head mask tensor of shape (num_heads,) or (num_layers, num_heads), where num_heads and num_layers are derived from the configuration. Defaults to None.
             encoder_hidden_states (Optional[mindspore.Tensor]): The encoder hidden states tensor of shape (batch_size, seq_length, hidden_size). Defaults to None.
             encoder_attention_mask (Optional[mindspore.Tensor]): The encoder attention mask tensor of shape (batch_size, seq_length) or (batch_size, seq_length, seq_length). Defaults to None.
-            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): The past key-value tensor of shape (2, batch_size, num_heads, past_seq_length, head_dim), where past_seq_length is the length of past sequence. Defaults to None.
+            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): The past key-value tensor of shape (2, batch_size, num_heads, past_seq_length, head_dim), where past_seq_length is the length of past
+sequence. Defaults to None.
             output_attentions (Optional[bool]): Whether to output attentions. Defaults to False.
         
         Returns:
-            Tuple[mindspore.Tensor]: A tuple containing the output tensor(s) of the layer. The first element is the layer output tensor of shape (batch_size, seq_length, hidden_size). If the layer is a decoder, the tuple also includes the present key-value tensor(s) of shape (2, batch_size, num_heads, seq_length, head_dim).
+            Tuple[mindspore.Tensor]: A tuple containing the output tensor(s) of the layer. The first element is the layer output tensor of shape (batch_size, seq_length, hidden_size). If the layer is a
+decoder, the tuple also includes the present key-value tensor(s) of shape (2, batch_size, num_heads, seq_length, head_dim).
         
         Raises:
             ValueError: If `encoder_hidden_states` are passed and the cross-attention layers are not instantiated by setting `config.add_cross_attention=True`.
@@ -821,7 +826,8 @@ class LayoutLMEncoder(nn.Cell):
         - return_dict (Optional[bool]): Flag to indicate returning the output as a dictionary.
         
         Returns:
-        - Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]: The output of the encoder, which is either a tuple of hidden states or a complex object containing past key values and attentions.
+        - Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]: The output of the encoder, which is either a tuple of hidden states or a complex object containing past key values and
+attentions.
         
         Raises:
         - Warning: If `use_cache=True` is incompatible with gradient checkpointing, it will issue a warning and set `use_cache=False`.
@@ -975,7 +981,8 @@ class LayoutLMPredictionHeadTransform(nn.Cell):
             hidden_states (mindspore.Tensor): The input tensor representing the hidden states. It is expected to be a tensor of shape (batch_size, sequence_length, hidden_size).
         
         Returns:
-            mindspore.Tensor: A tensor containing the transformed hidden states after passing through dense layers, activation function, and layer normalization. The shape of the output tensor is the same as the input hidden_states.
+            mindspore.Tensor: A tensor containing the transformed hidden states after passing through dense layers, activation function, and layer normalization. The shape of the output tensor is the same as
+the input hidden_states.
         
         Raises:
             This method does not explicitly raise any exceptions.

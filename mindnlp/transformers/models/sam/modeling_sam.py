@@ -261,7 +261,9 @@ class SamLayerNorm(nn.Cell):
         Raises:
             NotImplementedError: If the specified data format is not supported.
         
-        This method initializes the SamLayerNorm object with the provided parameters. It sets the weight and bias parameters as trainable variables, initializes the epsilon value for numerical stability, and validates the data format. The normalized_shape parameter represents the size of each dimension of the input tensor. The eps parameter is used to avoid division by zero when normalizing the input tensor. The data_format parameter specifies the layout of the input tensor, which can be either 'channels_last' or 'channels_first'. If an unsupported data format is provided, a NotImplementedError is raised.
+        This method initializes the SamLayerNorm object with the provided parameters. It sets the weight and bias parameters as trainable variables, initializes the epsilon value for numerical stability, and
+validates the data format. The normalized_shape parameter represents the size of each dimension of the input tensor. The eps parameter is used to avoid division by zero when normalizing the input tensor. The
+data_format parameter specifies the layout of the input tensor, which can be either 'channels_last' or 'channels_first'. If an unsupported data format is provided, a NotImplementedError is raised.
         """
         super().__init__()
         self.weight = Parameter(ops.ones(normalized_shape))
@@ -404,7 +406,8 @@ class SamAttention(nn.Cell):
             query (Tensor): The query tensor of shape (batch_size, seq_length, embedding_dim) representing the query values.
             key (Tensor): The key tensor of shape (batch_size, seq_length, embedding_dim) representing the key values.
             value (Tensor): The value tensor of shape (batch_size, seq_length, embedding_dim) representing the value values.
-            attention_similarity (Tensor, optional): The attention similarity tensor of shape (batch_size, num_attention_heads, seq_length, seq_length) representing the similarity scores between tokens. Defaults to None.
+            attention_similarity (Tensor, optional): The attention similarity tensor of shape (batch_size, num_attention_heads, seq_length, seq_length) representing the similarity scores between tokens.
+Defaults to None.
         
         Returns:
             Tensor: The output tensor of shape (batch_size, seq_length, embedding_dim) representing the attended values.
@@ -589,13 +592,18 @@ class SamTwoWayTransformer(nn.Cell):
     """
     This class represents a two-way transformer model called SamTwoWayTransformer. It is a subclass of nn.Cell.
     
-    SamTwoWayTransformer is designed to perform two-way attention between point embeddings and image embeddings. It consists of multiple layers of SamTwoWayAttentionBlock, followed by a final attention step using SamAttention. The class also includes a layer normalization step.
+    SamTwoWayTransformer is designed to perform two-way attention between point embeddings and image embeddings. It consists of multiple layers of SamTwoWayAttentionBlock, followed by a final attention step
+using SamAttention. The class also includes a layer normalization step.
     
-    The main purpose of this class is to construct the transformer model and generate the outputs based on the given inputs. The inputs include point embeddings, image embeddings, image positional embeddings, attention similarity, target embeddings (optional), and various optional parameters to control the output format.
+    The main purpose of this class is to construct the transformer model and generate the outputs based on the given inputs. The inputs include point embeddings, image embeddings, image positional embeddings,
+attention similarity, target embeddings (optional), and various optional parameters to control the output format.
     
-    The constructor (__init__) initializes the SamTwoWayTransformer instance with a configuration object (config) of type SamMaskDecoderConfig. It sets the configuration, number of hidden layers, and initializes the list of layers.
+    The constructor (__init__) initializes the SamTwoWayTransformer instance with a configuration object (config) of type SamMaskDecoderConfig. It sets the configuration, number of hidden layers, and
+initializes the list of layers.
     
-    The construct method takes the point embeddings, image embeddings, image positional embeddings, attention similarity, target embedding, and optional parameters as inputs. It performs the necessary computations to generate the outputs of the transformer model. The method supports optional arguments to control the output format, such as output_attentions, output_hidden_states, and return_dict. The method returns a tuple containing the queries, keys, and optionally, all the attention outputs.
+    The construct method takes the point embeddings, image embeddings, image positional embeddings, attention similarity, target embedding, and optional parameters as inputs. It performs the necessary
+computations to generate the outputs of the transformer model. The method supports optional arguments to control the output format, such as output_attentions, output_hidden_states, and return_dict. The method
+returns a tuple containing the queries, keys, and optionally, all the attention outputs.
     
     Please note that this class requires the image_embeddings parameter to be specified. If it is not provided, a ValueError will be raised.
     
@@ -718,7 +726,8 @@ class SamTwoWayTransformer(nn.Cell):
 class SamFeedForward(nn.Cell):
 
     """
-    SamFeedForward is a class representing a feedforward neural network model with customizable parameters for input, hidden, and output dimensions, as well as the number of layers. The class allows for the option of applying a sigmoid activation function to the output layer.
+    SamFeedForward is a class representing a feedforward neural network model with customizable parameters for input, hidden, and output dimensions, as well as the number of layers. The class allows for the
+option of applying a sigmoid activation function to the output layer.
     
     Parameters:
     - input_dim (int): The dimension of the input data.
@@ -801,7 +810,8 @@ class SamMaskDecoder(nn.Cell):
     """
     A class representing a Mask Decoder module for generating masks based on image and prompt embeddings.
     
-    This class inherits from nn.Cell and contains methods for initializing the decoder and constructing the masks based on input embeddings. The decoder architecture includes components such as transformers, convolutional layers, embeddings, and feedforward networks to generate masks with optional attentions and predictions.
+    This class inherits from nn.Cell and contains methods for initializing the decoder and constructing the masks based on input embeddings. The decoder architecture includes components such as transformers,
+convolutional layers, embeddings, and feedforward networks to generate masks with optional attentions and predictions.
     
     Attributes:
         - hidden_size (int): The size of the hidden layers in the decoder.
@@ -819,7 +829,9 @@ class SamMaskDecoder(nn.Cell):
     
     Methods:
         - __init__(self, config: SamMaskDecoderConfig): Initializes the Mask Decoder with the provided configuration.
-        - construct(self, image_embeddings: mindspore.Tensor, image_positional_embeddings: mindspore.Tensor, sparse_prompt_embeddings: mindspore.Tensor, dense_prompt_embeddings: mindspore.Tensor, multimask_output: bool, output_attentions: Optional[bool] = None, attention_similarity: mindspore.Tensor = None, target_embedding: mindspore.Tensor = None) -> Tuple[mindspore.Tensor, mindspore.Tensor]: Predicts masks based on input embeddings and returns the generated masks along with optional attentions.
+        - construct(self, image_embeddings: mindspore.Tensor, image_positional_embeddings: mindspore.Tensor, sparse_prompt_embeddings: mindspore.Tensor, dense_prompt_embeddings: mindspore.Tensor,
+multimask_output: bool, output_attentions: Optional[bool] = None, attention_similarity: mindspore.Tensor = None, target_embedding: mindspore.Tensor = None) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
+Predicts masks based on input embeddings and returns the generated masks along with optional attentions.
     
     For more details on the functionality and usage of the Mask Decoder class, refer to the method descriptions and class attributes above.
     """
@@ -1026,7 +1038,8 @@ class SamPositionalEmbedding(nn.Cell):
 class SamMaskEmbedding(nn.Cell):
 
     """
-    This class represents a mask embedding module used for generating dense embeddings from input masks. It consists of several convolutional and normalization layers for processing the input masks and producing dense embeddings. The class inherits from nn.Cell.
+    This class represents a mask embedding module used for generating dense embeddings from input masks. It consists of several convolutional and normalization layers for processing the input masks and
+producing dense embeddings. The class inherits from nn.Cell.
     
     Attributes:
         - mask_input_channels (int): Number of input channels for the mask
@@ -1442,7 +1455,8 @@ class SamVisionAttention(nn.Cell):
 class SamVisionLayer(nn.Cell):
 
     """
-    This class represents a vision layer in the SamVision model. It inherits from the nn.Cell class and implements the necessary methods and functionality for performing attention-based operations on input image tokens.
+    This class represents a vision layer in the SamVision model. It inherits from the nn.Cell class and implements the necessary methods and functionality for performing attention-based operations on input
+image tokens.
     
     Attributes:
     - layer_norm1: An instance of nn.LayerNorm which applies layer normalization to the input hidden states.
@@ -1643,7 +1657,8 @@ class SamVisionNeck(nn.Cell):
 
         """Constructs the hidden states in the SamVisionNeck class.
         
-        This method takes in two parameters: self and hidden_states. The hidden_states parameter represents the input hidden states and should be a tensor. The purpose of this parameter is to provide the input for constructing the hidden states. There are no restrictions on the shape or size of the hidden_states tensor.
+        This method takes in two parameters: self and hidden_states. The hidden_states parameter represents the input hidden states and should be a tensor. The purpose of this parameter is to provide the input
+for constructing the hidden states. There are no restrictions on the shape or size of the hidden_states tensor.
         
         The method performs the following operations on the hidden_states:
         1. Permute the dimensions of the hidden_states tensor using the permute() function, with the dimensions permuted as (0, 3, 1, 2).
@@ -1676,13 +1691,18 @@ class SamVisionNeck(nn.Cell):
 class SamVisionEncoder(nn.Cell):
 
     """
-    The SamVisionEncoder class represents a vision encoder for processing image data using the SAM (Self-Attention Model) architecture. It inherits from the nn.Cell class and is designed to be used within the MindSpore framework for deep learning applications.
+    The SamVisionEncoder class represents a vision encoder for processing image data using the SAM (Self-Attention Model) architecture. It inherits from the nn.Cell class and is designed to be used within the
+MindSpore framework for deep learning applications.
     
-    The class initializes with a SamVisionConfig object and sets various attributes based on the provided configuration. It includes methods for retrieving input embeddings and constructing the encoder output based on the input pixel values. The construction process involves passing the input through the patch embeddings, applying positional embeddings if configured, processing the input through multiple vision layers, and finally passing the output through a vision neck module.
+    The class initializes with a SamVisionConfig object and sets various attributes based on the provided configuration. It includes methods for retrieving input embeddings and constructing the encoder output
+based on the input pixel values. The construction process involves passing the input through the patch embeddings, applying positional embeddings if configured, processing the input through multiple vision
+layers, and finally passing the output through a vision neck module.
     
-    The class also provides options for controlling the output of attentions and hidden states, as well as the ability to return the output as a dictionary. Additionally, it supports gradient checkpointing during training for efficient memory usage.
+    The class also provides options for controlling the output of attentions and hidden states, as well as the ability to return the output as a dictionary. Additionally, it supports gradient checkpointing
+during training for efficient memory usage.
     
-    Overall, the SamVisionEncoder class encapsulates the functionality for encoding image data using the SAM architecture, providing a flexible and configurable interface for vision processing tasks within the MindSpore framework.
+    Overall, the SamVisionEncoder class encapsulates the functionality for encoding image data using the SAM architecture, providing a flexible and configurable interface for vision processing tasks within the
+MindSpore framework.
     """
     def __init__(self, config: SamVisionConfig):
 
@@ -1901,7 +1921,9 @@ class SamModel(SamPreTrainedModel):
     
     - `get_prompt_embeddings(self, input_points, input_labels, input_boxes, input_masks)`: Returns the prompt embeddings by passing the input points, labels, boxes, and masks through the prompt encoder.
     
-    - `construct(self, pixel_values, input_points, input_labels, input_boxes, input_masks, image_embeddings, multimask_output, attention_similarity, target_embedding, output_attentions, output_hidden_states, return_dict)`: Constructs the model by passing the input data through the vision encoder, image-wide positional embeddings, prompt encoder, and mask decoder. Returns a list of dictionaries containing the model outputs.
+    - `construct(self, pixel_values, input_points, input_labels, input_boxes, input_masks, image_embeddings, multimask_output, attention_similarity, target_embedding, output_attentions, output_hidden_states,
+return_dict)`: Constructs the model by passing the input data through the vision encoder, image-wide positional embeddings, prompt encoder, and mask decoder. Returns a list of dictionaries containing the model
+outputs.
     
     The `SamModel` class is typically used for image segmentation tasks. An example of how to use the `SamModel` class is provided in the docstring.
     

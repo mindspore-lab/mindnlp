@@ -300,13 +300,15 @@ class RobertaTokenizer(PreTrainedTokenizer):
             self (RobertaTokenizer): An instance of the RobertaTokenizer class.
         
         Returns:
-            dict or None: The vocabulary dictionary containing the base encoder and any additional tokens added to the tokenizer. If the tokenizer has not been initialized with a base encoder or any additional tokens, None is returned.
+            dict or None: The vocabulary dictionary containing the base encoder and any additional tokens added to the tokenizer. If the tokenizer has not been initialized with a base encoder or any additional
+tokens, None is returned.
         
         Raises:
             None.
         
         Note:
-            The vocabulary dictionary is created by copying the base encoder dictionary and updating it with the added_tokens_encoder dictionary. The base encoder dictionary contains the original encoding for the tokenizer, while the added_tokens_encoder dictionary contains any additional tokens that have been added to the tokenizer.
+            The vocabulary dictionary is created by copying the base encoder dictionary and updating it with the added_tokens_encoder dictionary. The base encoder dictionary contains the original encoding for
+the tokenizer, while the added_tokens_encoder dictionary contains any additional tokens that have been added to the tokenizer.
         
         Example:
             >>> tokenizer = RobertaTokenizer()
@@ -417,7 +419,8 @@ class RobertaTokenizer(PreTrainedTokenizer):
         Raises:
             OSError: If the save_directory is not a valid directory.
         
-        This method saves the vocabulary file and merge file used by the RobertaTokenizer. The vocabulary file contains the encoder dictionary in JSON format, while the merge file contains the BPE merge indices and tokens. The files are saved in the specified save_directory with optional filename_prefix added to the filenames.
+        This method saves the vocabulary file and merge file used by the RobertaTokenizer. The vocabulary file contains the encoder dictionary in JSON format, while the merge file contains the BPE merge
+indices and tokens. The files are saved in the specified save_directory with optional filename_prefix added to the filenames.
         
         Note:
             If the save_directory does not exist, the method will raise an OSError.

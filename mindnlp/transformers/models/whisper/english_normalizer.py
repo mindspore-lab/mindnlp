@@ -83,7 +83,8 @@ class BasicTextNormalizer:
     - split_letters (bool): A flag indicating whether to split letters in the text. Default is False.
     
     Methods:
-    - __call__(s: str): Normalizes the input text by converting it to lowercase, removing HTML tags and content within parentheses, applying symbol and diacritic removal, and optionally splitting letters if the split_letters flag is True. Returns the normalized text.
+    - __call__(s: str): Normalizes the input text by converting it to lowercase, removing HTML tags and content within parentheses, applying symbol and diacritic removal, and optionally splitting letters if
+the split_letters flag is True. Returns the normalized text.
     
     Example usage:
     
@@ -688,7 +689,8 @@ class EnglishSpellingNormalizer:
 class EnglishTextNormalizer:
 
     """
-    The EnglishTextNormalizer class represents a tool for normalizing English text by standardizing spellings, numbers, and formatting. It utilizes various patterns and replacement rules to clean and enhance input text.
+    The EnglishTextNormalizer class represents a tool for normalizing English text by standardizing spellings, numbers, and formatting. It utilizes various patterns and replacement rules to clean and enhance
+input text.
     
     Attributes:
         ignore_patterns (str): Regular expression pattern to identify and ignore specific words or phrases during text normalization.
@@ -709,7 +711,8 @@ class EnglishTextNormalizer:
         """
         Args:
             self (object): The instance of the EnglishTextNormalizer class.
-            english_spelling_mapping (dict): A dictionary containing English spelling mappings. The keys are the original spellings, and the values are the corresponding standardized spellings. This parameter is used to initialize the EnglishSpellingNormalizer.
+            english_spelling_mapping (dict): A dictionary containing English spelling mappings. The keys are the original spellings, and the values are the corresponding standardized spellings. This parameter
+is used to initialize the EnglishSpellingNormalizer.
         
         Returns:
             None. This method initializes the EnglishTextNormalizer object with the specified English spelling mappings and other default settings.

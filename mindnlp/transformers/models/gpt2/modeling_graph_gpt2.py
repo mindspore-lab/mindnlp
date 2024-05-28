@@ -190,7 +190,8 @@ class GPT2Attention(nn.Cell):
     def _upcast_and_reordered_attn(self, query, key, value, attention_mask=None, head_mask=None):
 
         """
-        This method '_upcast_and_reordered_attn' is a part of the 'GPT2Attention' class and performs upcasting and reordering operations on the provided query, key, and value tensors to compute the attention weights and output. The method takes the following parameters:
+        This method '_upcast_and_reordered_attn' is a part of the 'GPT2Attention' class and performs upcasting and reordering operations on the provided query, key, and value tensors to compute the attention
+weights and output. The method takes the following parameters:
         
         Args:
         - self: The instance of the class.
@@ -1035,7 +1036,9 @@ class GPT2DoubleHeadsModel(GPT2PreTrainedModel):
             mc_labels (torch.Tensor, optional): The optional multiple choice labels tensor of shape (batch_size,) containing the labels for multiple choice classification. Defaults to None.
         
         Returns:
-            Tuple[torch.Tensor]: A tuple containing the output logits for language modeling (`lm_logits`), the output logits for multiple choice classification (`mc_logits`), and the transformer outputs (`transformer_outputs`). The `lm_logits` tensor has shape (batch_size, sequence_length, vocab_size), the `mc_logits` tensor has shape (batch_size,), and the `transformer_outputs` is a tuple containing the hidden states of the transformer.
+            Tuple[torch.Tensor]: A tuple containing the output logits for language modeling (`lm_logits`), the output logits for multiple choice classification (`mc_logits`), and the transformer outputs
+(`transformer_outputs`). The `lm_logits` tensor has shape (batch_size, sequence_length, vocab_size), the `mc_logits` tensor has shape (batch_size,), and the `transformer_outputs` is a tuple containing the
+hidden states of the transformer.
         
         Raises:
             None.
@@ -1079,7 +1082,8 @@ class GPT2DoubleHeadsModel(GPT2PreTrainedModel):
         This method '_reorder_cache' belongs to the class 'GPT2DoubleHeadsModel' and is used to reorder the cache based on the provided beam index.
         
         Args:
-        - past (tuple): A tuple containing the past states of the model. Each element in the tuple represents the past states for a specific layer. The past states are used for generating the next sequence of tokens.
+        - past (tuple): A tuple containing the past states of the model. Each element in the tuple represents the past states for a specific layer. The past states are used for generating the next sequence of
+tokens.
         - beam_idx (torch.Tensor): A tensor containing the indices that specify the new order in which the past states should be reordered. It is expected to be on the same device as the past states.
         
         Returns:

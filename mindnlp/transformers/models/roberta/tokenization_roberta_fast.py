@@ -299,7 +299,8 @@ class RobertaTokenizerFast(PreTrainedTokenizerFast):
         - BatchEncoding: This method returns a BatchEncoding object that contains the batch-encoded inputs.
         
         Raises:
-        - AssertionError: This method may raise an AssertionError if the condition 'self.add_prefix_space or not is_split_into_words' is not met, indicating that the class needs to be instantiated with add_prefix_space=True to use it with pretokenized inputs.
+        - AssertionError: This method may raise an AssertionError if the condition 'self.add_prefix_space or not is_split_into_words' is not met, indicating that the class needs to be instantiated with
+add_prefix_space=True to use it with pretokenized inputs.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
         assert self.add_prefix_space or not is_split_into_words, (
@@ -377,11 +378,14 @@ class RobertaTokenizerFast(PreTrainedTokenizerFast):
             None
         
         Description:
-        This method takes in two sequences of token IDs, token_ids_0 and token_ids_1, and builds a new list of token IDs with special tokens added. The special tokens include the beginning of sequence (bos_token_id) and the end of sequence (eos_token_id).
+        This method takes in two sequences of token IDs, token_ids_0 and token_ids_1, and builds a new list of token IDs with special tokens added. The special tokens include the beginning of sequence
+(bos_token_id) and the end of sequence (eos_token_id).
         
-        The method first adds the bos_token_id to the beginning of the token_ids_0 list, followed by all the token IDs in token_ids_0, and then adds the eos_token_id to the end of the list. If token_ids_1 is provided, the method appends the eos_token_id, followed by all the token IDs in token_ids_1, and finally adds another eos_token_id to the end of the list.
+        The method first adds the bos_token_id to the beginning of the token_ids_0 list, followed by all the token IDs in token_ids_0, and then adds the eos_token_id to the end of the list. If token_ids_1 is
+provided, the method appends the eos_token_id, followed by all the token IDs in token_ids_1, and finally adds another eos_token_id to the end of the list.
         
-        If token_ids_1 is not provided, the method simply returns the list output containing the special tokens and token_ids_0. If token_ids_1 is provided, the method returns the list output containing the special tokens, token_ids_0, special tokens, and token_ids_1.
+        If token_ids_1 is not provided, the method simply returns the list output containing the special tokens and token_ids_0. If token_ids_1 is provided, the method returns the list output containing the
+special tokens, token_ids_0, special tokens, and token_ids_1.
         
         Example usage:
             tokenizer = RobertaTokenizerFast()

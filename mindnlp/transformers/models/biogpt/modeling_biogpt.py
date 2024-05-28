@@ -686,7 +686,8 @@ class BioGptModel(BioGptPreTrainedModel):
 class BioGptForCausalLM(BioGptPreTrainedModel):
 
     """
-    BioGptForCausalLM represents a BioGpt model for Causal Language Modeling. This class inherits from BioGptPreTrainedModel and provides methods for initializing the model, constructing the model, and preparing inputs for generation.
+    BioGptForCausalLM represents a BioGpt model for Causal Language Modeling. This class inherits from BioGptPreTrainedModel and provides methods for initializing the model, constructing the model, and
+preparing inputs for generation.
     
     Attributes:
         config: The configuration for the BioGptForCausalLM model.
@@ -695,7 +696,8 @@ class BioGptForCausalLM(BioGptPreTrainedModel):
         __init__(config): Initializes the BioGptForCausalLM model with the given configuration.
         get_output_embeddings(): Returns the output projection layer for the model.
         set_output_embeddings(new_embeddings): Sets the output projection layer to the new embeddings.
-        construct(input_ids, attention_mask, head_mask, inputs_embeds, past_key_values, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the BioGptForCausalLM model with the given input parameters and returns the model output.
+        construct(input_ids, attention_mask, head_mask, inputs_embeds, past_key_values, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the BioGptForCausalLM model with the
+given input parameters and returns the model output.
         prepare_inputs_for_generation(input_ids, attention_mask, inputs_embeds, past_key_values, **kwargs): Prepares the inputs for generation based on the given parameters.
         _reorder_cache(past_key_values, beam_idx): Reorders the past key values based on the given beam index.
     
@@ -834,7 +836,8 @@ class BioGptForCausalLM(BioGptPreTrainedModel):
             past_key_values (tuple, optional): The tuple containing past key values for fast decoding. Defaults to None.
         
         Returns:
-            dict: A dictionary containing the model inputs, including 'input_ids', 'attention_mask', 'past_key_values', and 'use_cache' (if provided). Returns None if past_key_values is provided and the input_ids shape is greater than the past_length.
+            dict: A dictionary containing the model inputs, including 'input_ids', 'attention_mask', 'past_key_values', and 'use_cache' (if provided). Returns None if past_key_values is provided and the
+input_ids shape is greater than the past_length.
         
         Raises:
             ValueError: If the input_ids shape is less than or equal to zero.
@@ -897,7 +900,9 @@ class BioGptForCausalLM(BioGptPreTrainedModel):
 class BioGptForTokenClassification(BioGptPreTrainedModel):
 
     """
-    This class represents a BioGpt model for token classification, inheriting from BioGptPreTrainedModel. It includes methods for initializing the model and constructing token classification outputs based on input data. The model utilizes a transformer architecture for processing input sequences and generating classification predictions. The class provides functionality for computing loss based on predicted logits and actual labels, as well as handling optional parameters for caching, attention masks, and return dictionary configurations.
+    This class represents a BioGpt model for token classification, inheriting from BioGptPreTrainedModel. It includes methods for initializing the model and constructing token classification outputs based on
+input data. The model utilizes a transformer architecture for processing input sequences and generating classification predictions. The class provides functionality for computing loss based on predicted logits
+and actual labels, as well as handling optional parameters for caching, attention masks, and return dictionary configurations.
     """
     def __init__(self, config):
 
@@ -998,11 +1003,13 @@ class BioGptForTokenClassification(BioGptPreTrainedModel):
 class BioGptForSequenceClassification(BioGptPreTrainedModel):
 
     '''
-    This class represents a BioGpt model for sequence classification tasks. It inherits from the BioGptPreTrainedModel and includes methods for initialization, constructing the model, getting input embeddings, and setting input embeddings.
+    This class represents a BioGpt model for sequence classification tasks. It inherits from the BioGptPreTrainedModel and includes methods for initialization, constructing the model, getting input embeddings,
+and setting input embeddings.
     
     The __init__ method initializes the BioGptForSequenceClassification instance with a BioGptConfig and sets the number of labels, BioGptModel, and score.
     
-    The construct method takes input tensors for the model and returns the sequence classifier output with past key values. It also handles labels for computing the sequence classification/regression loss and handles different problem types such as regression, single-label classification, and multi-label classification.
+    The construct method takes input tensors for the model and returns the sequence classifier output with past key values. It also handles labels for computing the sequence classification/regression loss and
+handles different problem types such as regression, single-label classification, and multi-label classification.
     
     The get_input_embeddings method returns the input embeddings of the BioGpt model.
     

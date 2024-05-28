@@ -206,7 +206,8 @@ class LlavaConfig(PretrainedConfig):
         Raises:
             None.
         
-        This method is used to set the vocabulary size for the LlavaConfig class. The vocabulary size determines the number of unique words that can be stored in the vocabulary. It is important to set an appropriate vocabulary size based on the application and the amount of available memory. The vocabulary size can only be set to a positive integer value, otherwise an error will be raised.
+        This method is used to set the vocabulary size for the LlavaConfig class. The vocabulary size determines the number of unique words that can be stored in the vocabulary. It is important to set an
+appropriate vocabulary size based on the application and the amount of available memory. The vocabulary size can only be set to a positive integer value, otherwise an error will be raised.
         
         Example:
             config = LlavaConfig()

@@ -112,7 +112,8 @@ class MultiHeadAttention(nn.Cell):
     """
     A class representing a multi-head attention mechanism for neural networks.
     
-    This class implements multi-head attention by dividing the input into multiple heads and processing them in parallel. It includes methods for initializing the attention mechanism, pruning heads based on specific criteria, and constructing the attention output based on input, masks, and key-value pairs.
+    This class implements multi-head attention by dividing the input into multiple heads and processing them in parallel. It includes methods for initializing the attention mechanism, pruning heads based on
+specific criteria, and constructing the attention output based on input, masks, and key-value pairs.
     
     Attributes:
         - layer_id: An identifier for the attention layer.
@@ -184,7 +185,8 @@ class MultiHeadAttention(nn.Cell):
         
         1. Calculates the attention_head_size by dividing the dimension (self.dim) by the number of heads (self.n_heads).
         2. If the list of heads is empty, the method returns without performing any pruning.
-        3. Calls the 'find_pruneable_heads_and_indices' function to find the pruneable heads and their corresponding indices based on the given parameters (heads, self.n_heads, attention_head_size, self.pruned_heads).
+        3. Calls the 'find_pruneable_heads_and_indices' function to find the pruneable heads and their corresponding indices based on the given parameters (heads, self.n_heads, attention_head_size,
+self.pruned_heads).
         4. Prunes the linear layers q_lin, k_lin, v_lin, and out_lin using the 'prune_linear_layer' function, passing the calculated indices (index) as a parameter.
         5. Updates the number of heads (self.n_heads) by subtracting the length of the pruneable heads list.
         6. Updates the dimension (self.dim) by multiplying the attention_head_size with the updated number of heads.
@@ -273,7 +275,8 @@ class MultiHeadAttention(nn.Cell):
 class TransformerFFN(nn.Cell):
 
     """
-    TransformerFFN is a class that represents a feed-forward neural network component of a transformer model. It inherits from nn.Cell and includes methods for initializing the network and constructing the forward pass.
+    TransformerFFN is a class that represents a feed-forward neural network component of a transformer model. It inherits from nn.Cell and includes methods for initializing the network and constructing the
+forward pass.
     
     Attributes:
     - in_dim (int): The input dimension of the network.
@@ -465,13 +468,15 @@ class XLMModel(XLMPreTrainedModel):
     
     This class inherits from XLMPreTrainedModel and implements various methods for initializing the model, handling embeddings, pruning heads, and constructing the model for inference.
     
-    The __init__ method initializes the model with configuration parameters and sets up the model's architecture. It handles encoder-decoder setup, embeddings, attention mechanisms, layer normalization, and other model components.
+    The __init__ method initializes the model with configuration parameters and sets up the model's architecture. It handles encoder-decoder setup, embeddings, attention mechanisms, layer normalization, and
+other model components.
     
     The get_input_embeddings method returns the input embeddings used in the model, while set_input_embeddings allows for updating the input embeddings.
     
     The _prune_heads method prunes specific attention heads in the model based on the provided dictionary of {layer_num: list of heads}.
     
-    The construct method constructs the model for inference, taking input tensors for input_ids, attention_mask, langs, token_type_ids, position_ids, lengths, cache, head_mask, inputs_embeds, output settings, and returns the model output or a BaseModelOutput object depending on the return_dict setting.
+    The construct method constructs the model for inference, taking input tensors for input_ids, attention_mask, langs, token_type_ids, position_ids, lengths, cache, head_mask, inputs_embeds, output settings,
+and returns the model output or a BaseModelOutput object depending on the return_dict setting.
     
     Overall, XLMModel provides a comprehensive implementation of the XLM transformer model for cross-lingual language tasks.
     """
@@ -841,7 +846,8 @@ class XLMWithLMHeadModel(XLMPreTrainedModel):
     """
     XLMWithLMHeadModel represents a transformer model with a language modeling head based on the XLM (Cross-lingual Language Model) architecture.
     
-    This class inherits from XLMPreTrainedModel and provides methods for initializing the model, getting and setting output embeddings, preparing inputs for generation, and constructing the model for language modeling tasks.
+    This class inherits from XLMPreTrainedModel and provides methods for initializing the model, getting and setting output embeddings, preparing inputs for generation, and constructing the model for language
+modeling tasks.
     
     Attributes:
         transformer (XLMModel): The XLMModel instance used for the transformer architecture.
@@ -852,7 +858,8 @@ class XLMWithLMHeadModel(XLMPreTrainedModel):
         get_output_embeddings(self): Returns the output embeddings from the language modeling head.
         set_output_embeddings(self, new_embeddings): Sets new output embeddings for the language modeling head.
         prepare_inputs_for_generation(self, input_ids, **kwargs): Prepares input tensors for language generation tasks.
-        construct(self, input_ids, attention_mask, langs, token_type_ids, position_ids, lengths, cache, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Constructs the model for language modeling tasks and returns the masked language model output.
+        construct(self, input_ids, attention_mask, langs, token_type_ids, position_ids, lengths, cache, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Constructs the
+model for language modeling tasks and returns the masked language model output.
     
     Note: The construct method includes detailed documentation for its parameters and return value, including optional and shifted labels for language modeling.
     """
@@ -1138,7 +1145,8 @@ class XLMForQuestionAnsweringSimple(XLMPreTrainedModel):
         qa_outputs (nn.Dense): The output layer for question answering predictions.
     
     Methods:
-        - construct: Construct the model for question answering tasks, with optional input parameters and return values. This method includes detailed descriptions of the input and output tensors, as well as the expected behavior of the model during inference.
+        - construct: Construct the model for question answering tasks, with optional input parameters and return values. This method includes detailed descriptions of the input and output tensors, as well as
+the expected behavior of the model during inference.
     
     Note: This class is intended for use with the MindSpore framework.
     """
@@ -1248,7 +1256,8 @@ class XLMForQuestionAnsweringSimple(XLMPreTrainedModel):
 class XLMForQuestionAnswering(XLMPreTrainedModel):
 
     """
-    The `XLMForQuestionAnswering` class is a model for question answering tasks using the XLM (Cross-lingual Language Model) architecture. It is designed to take input sequences and output the start and end positions of the answer within the sequence.
+    The `XLMForQuestionAnswering` class is a model for question answering tasks using the XLM (Cross-lingual Language Model) architecture. It is designed to take input sequences and output the start and end
+positions of the answer within the sequence.
     
     This class inherits from `XLMPreTrainedModel`, which provides the base functionality for loading and using pre-trained XLM models.
     
@@ -1258,7 +1267,9 @@ class XLMForQuestionAnswering(XLMPreTrainedModel):
         
     Methods:
         - `__init__(self, config)`: Initializes the `XLMForQuestionAnswering` class by calling the parent class's `__init__` method and setting up the `transformer` and `qa_outputs` attributes.
-        - `construct(self, input_ids, attention_mask, langs, token_type_ids, position_ids, lengths, cache, head_mask, inputs_embeds, start_positions, end_positions, is_impossible, cls_index, p_mask, output_attentions, output_hidden_states, return_dict)`: Constructs the model by encoding the input sequences using the `transformer` and predicting the start and end positions using the `qa_outputs`. Returns the predicted start and end positions, along with other optional outputs depending on the value of `return_dict`.
+        - `construct(self, input_ids, attention_mask, langs, token_type_ids, position_ids, lengths, cache, head_mask, inputs_embeds, start_positions, end_positions, is_impossible, cls_index, p_mask,
+output_attentions, output_hidden_states, return_dict)`: Constructs the model by encoding the input sequences using the `transformer` and predicting the start and end positions using the `qa_outputs`. Returns
+the predicted start and end positions, along with other optional outputs depending on the value of `return_dict`.
     
     Example:
         
@@ -1404,7 +1415,8 @@ class XLMForTokenClassification(XLMPreTrainedModel):
 
     """XLMForTokenClassification
     
-    This class is a token classification model based on the XLM architecture. It is designed for token-level classification tasks, such as named entity recognition or part-of-speech tagging. The model takes input sequences and predicts a label for each token in the sequence.
+    This class is a token classification model based on the XLM architecture. It is designed for token-level classification tasks, such as named entity recognition or part-of-speech tagging. The model takes
+input sequences and predicts a label for each token in the sequence.
     
     The XLMForTokenClassification class inherits from the XLMPreTrainedModel class, which provides the basic functionality for pre-training and fine-tuning XLM models.
     
@@ -1416,7 +1428,8 @@ class XLMForTokenClassification(XLMPreTrainedModel):
         
     Methods:
         __init__(self, config): Initializes the XLMForTokenClassification instance.
-        construct(self, input_ids, attention_mask, langs, token_type_ids, position_ids, lengths, cache, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Constructs the XLMForTokenClassification model and performs token classification.
+        construct(self, input_ids, attention_mask, langs, token_type_ids, position_ids, lengths, cache, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Constructs the
+XLMForTokenClassification model and performs token classification.
     
     """
     def __init__(self, config):
@@ -1503,7 +1516,8 @@ class XLMForTokenClassification(XLMPreTrainedModel):
 class XLMForMultipleChoice(XLMPreTrainedModel):
 
     """
-    XLMForMultipleChoice represents a XLM model for multiple choice tasks. It is a subclass of XLMPreTrainedModel and includes methods for building the model, processing input data, and computing multiple choice classification loss.
+    XLMForMultipleChoice represents a XLM model for multiple choice tasks. It is a subclass of XLMPreTrainedModel and includes methods for building the model, processing input data, and computing multiple
+choice classification loss.
     
     Attributes:
         transformer: An instance of XLMModel for processing input data.

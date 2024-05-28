@@ -417,7 +417,8 @@ class TinyBertLayer(nn.Cell):
         Args:
             self (object): The instance of the TinyBertLayer class.
             hidden_states (object): The input hidden states for the layer, typically a tensor of shape (batch_size, sequence_length, hidden_size).
-            attention_mask (object): The attention mask for the input hidden states, typically a tensor of shape (batch_size, 1, sequence_length, sequence_length) with 0s for padding tokens and 1s for non-padding tokens.
+            attention_mask (object): The attention mask for the input hidden states, typically a tensor of shape (batch_size, 1, sequence_length, sequence_length) with 0s for padding tokens and 1s for
+non-padding tokens.
         
         Returns:
             tuple: A tuple containing the layer output (typically a tensor of shape (batch_size, sequence_length, hidden_size)) and the attention scores (layer_att) generated during the attention computation.

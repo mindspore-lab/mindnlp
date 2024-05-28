@@ -280,7 +280,8 @@ class DynamicPad2d(nn.Cell):
     def __call__(self, input):
 
         """
-        This method is called when an instance of the DynamicPad2d class is used as a function. It performs dynamic padding on the input tensor based on the kernel size, stride, dilation, and value specified in the class instance.
+        This method is called when an instance of the DynamicPad2d class is used as a function. It performs dynamic padding on the input tensor based on the kernel size, stride, dilation, and value specified
+in the class instance.
         
         Args:
             self (DynamicPad2d): The instance of the DynamicPad2d class.
@@ -566,7 +567,8 @@ class BitDropPath(nn.Cell):
         Raises:
             None.
         
-        This method returns a string representation of the BitDropPath object, specifically the probability of dropping a bit. The returned string is formatted as 'p=drop_prob', where 'drop_prob' is the probability of dropping a bit.
+        This method returns a string representation of the BitDropPath object, specifically the probability of dropping a bit. The returned string is formatted as 'p=drop_prob', where 'drop_prob' is the
+probability of dropping a bit.
         """
         return "p={}".format(self.drop_prob)
 
@@ -780,7 +782,8 @@ class BitBottleneckLayer(nn.Cell):
         
         Args:
             self: The instance of the BitBottleneckLayer class.
-            hidden_states (Tensor): The input hidden states on which the method operates. It is of type Tensor and represents the intermediate hidden states of the model. There are no specific restrictions on the input.
+            hidden_states (Tensor): The input hidden states on which the method operates. It is of type Tensor and represents the intermediate hidden states of the model. There are no specific restrictions on
+the input.
         
         Returns:
             Tensor: The updated hidden states after the operations have been performed. It is of type Tensor and represents the modified hidden states.
@@ -817,7 +820,8 @@ class BitDownsampleConv(nn.Cell):
     
     Attributes:
         conv (WeightStandardizedConv2d): An instance of the WeightStandardizedConv2d class that performs a weight-standardized convolution operation on the input tensor.
-        norm (nn.Identity or BitGroupNormActivation): An instance of either nn.Identity or BitGroupNormActivation class, depending on the value of the preact parameter. If preact is True, nn.Identity is used, otherwise BitGroupNormActivation is used for applying bit group normalization activation.
+        norm (nn.Identity or BitGroupNormActivation): An instance of either nn.Identity or BitGroupNormActivation class, depending on the value of the preact parameter. If preact is True, nn.Identity is used,
+otherwise BitGroupNormActivation is used for applying bit group normalization activation.
     
     Methods:
         __init__(self, config, in_channels, out_channels, stride=1, preact=True):
@@ -1187,7 +1191,8 @@ class BitPreTrainedModel(PreTrainedModel):
 class BitModel(BitPreTrainedModel):
 
     """
-    The BitModel class represents a model for processing pixel values using Bit embeddings and encoding techniques. It inherits from the BitPreTrainedModel and includes methods for initialization and constructing the model output with pooling and no attention.
+    The BitModel class represents a model for processing pixel values using Bit embeddings and encoding techniques. It inherits from the BitPreTrainedModel and includes methods for initialization and
+constructing the model output with pooling and no attention.
     
     Attributes:
         config: The configuration for the model.
@@ -1198,7 +1203,8 @@ class BitModel(BitPreTrainedModel):
     
     Methods:
         __init__(self, config): Initializes the BitModel with the provided configuration.
-        construct(self, pixel_values, output_hidden_states, return_dict): Constructs the model output with pooling and no attention based on the input pixel values and optional flags for outputting hidden states and using a return dictionary.
+        construct(self, pixel_values, output_hidden_states, return_dict): Constructs the model output with pooling and no attention based on the input pixel values and optional flags for outputting hidden
+states and using a return dictionary.
     """
     def __init__(self, config):
 

@@ -97,7 +97,8 @@ class Blip2VisionEmbeddings(nn.Cell):
     """
     This class represents the embedding module for the Blip2Vision model. It inherits from the nn.Cell class.
     
-    The Blip2VisionEmbeddings class initializes with a configuration object of type Blip2VisionConfig. It sets various attributes such as the embedding dimensions, image size, patch size, class embedding, patch embedding, number of patches, and position embedding.
+    The Blip2VisionEmbeddings class initializes with a configuration object of type Blip2VisionConfig. It sets various attributes such as the embedding dimensions, image size, patch size, class embedding,
+patch embedding, number of patches, and position embedding.
     
     - Attributes:
         - config: The configuration object for Blip2Vision.
@@ -302,7 +303,8 @@ class Blip2MLP(nn.Cell):
     """
     Blip2MLP is a multi-layer perceptron (MLP) implemented as a subclass of the nn.Cell class. It represents a feedforward neural network with two fully connected layers.
     
-    The Blip2MLP class initializes with a configuration object, which contains various parameters for the MLP. It sets the configuration object to the 'config' attribute and assigns the activation function based on the 'hidden_act' parameter from the configuration object.
+    The Blip2MLP class initializes with a configuration object, which contains various parameters for the MLP. It sets the configuration object to the 'config' attribute and assigns the activation function
+based on the 'hidden_act' parameter from the configuration object.
     
     The construct method takes a tensor 'hidden_states' as input and performs the following operations:
     1. Applies the first fully connected layer (fc1) to the 'hidden_states' tensor.
@@ -1050,16 +1052,22 @@ class Blip2QFormerAttention(nn.Cell):
     """
     This class represents the attention mechanism used in the Blip2QFormer model. It is a subclass of the nn.Cell class.
     
-    The Blip2QFormerAttention class implements the attention mechanism that is responsible for attending to different parts of the input data. It consists of a multi-head attention layer and a self-output layer. The attention layer performs attention calculations on the input data, while the self-output layer processes the attention outputs.
+    The Blip2QFormerAttention class implements the attention mechanism that is responsible for attending to different parts of the input data. It consists of a multi-head attention layer and a self-output
+layer. The attention layer performs attention calculations on the input data, while the self-output layer processes the attention outputs.
     
-    The class provides methods for pruning heads in the attention layer, which allows for reducing the computational complexity of the model. The construct method is used to perform the attention calculations and generate the final output.
+    The class provides methods for pruning heads in the attention layer, which allows for reducing the computational complexity of the model. The construct method is used to perform the attention calculations
+and generate the final output.
     
     Methods:
-    - __init__(self, config, is_cross_attention=False): Initializes the Blip2QFormerAttention object. It takes a configuration object and a boolean flag indicating whether the attention is cross-attention or not. It initializes the attention and output layers, and sets up the pruned heads.
+    - __init__(self, config, is_cross_attention=False): Initializes the Blip2QFormerAttention object. It takes a configuration object and a boolean flag indicating whether the attention is cross-attention or
+not. It initializes the attention and output layers, and sets up the pruned heads.
     
-    - prune_heads(self, heads): Prunes the specified heads from the attention layer. This method takes a list of heads to be pruned and updates the attention layer accordingly. The pruned heads are removed from the attention calculations, reducing the computational complexity of the model.
+    - prune_heads(self, heads): Prunes the specified heads from the attention layer. This method takes a list of heads to be pruned and updates the attention layer accordingly. The pruned heads are removed
+from the attention calculations, reducing the computational complexity of the model.
     
-    - construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False): Performs the attention calculations and generates the final output. This method takes the hidden states of the input, along with optional attention masks, head masks, encoder hidden states, encoder attention masks, past key-value pairs, and a flag indicating whether to output attention weights. It returns a tuple containing the attention output and any additional outputs.
+    - construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False): Performs the attention
+calculations and generates the final output. This method takes the hidden states of the input, along with optional attention masks, head masks, encoder hidden states, encoder attention masks, past key-value
+pairs, and a flag indicating whether to output attention weights. It returns a tuple containing the attention output and any additional outputs.
     
     Attributes:
     - attention: The multi-head attention layer used for attention calculations.
@@ -1114,7 +1122,8 @@ class Blip2QFormerAttention(nn.Cell):
             - The 'self.attention' attribute refers to the attention layer of the Blip2QFormerAttention class.
             - The 'self.attention.query', 'self.attention.key', and 'self.attention.value' attributes represent the weight matrices of the attention layer.
             - The 'self.output.dense' attribute represents the weight matrix of the output layer.
-            - The 'index' variable is obtained by calling the 'find_pruneable_heads_and_indices' function, which determines the indices of the pruneable attention heads based on the current configuration of the attention layer.
+            - The 'index' variable is obtained by calling the 'find_pruneable_heads_and_indices' function, which determines the indices of the pruneable attention heads based on the current configuration of
+the attention layer.
             - The 'prune_linear_layer' function is called to prune the attention heads by removing the corresponding weights and biases from the attention and output layers.
             - The 'self.attention.num_attention_heads' attribute is updated by subtracting the number of pruned heads from the current number of attention heads.
             - The 'self.attention.all_head_size' attribute is updated based on the new number of attention heads and the attention head size.
@@ -1248,7 +1257,8 @@ class Blip2QFormerIntermediate(nn.Cell):
             hidden_states (mindspore.Tensor): The input tensor representing the hidden states of the model. It is expected to be a tensor of shape (batch_size, sequence_length, hidden_size).
         
         Returns:
-            mindspore.Tensor: The output tensor representing the intermediate representation of the model. It is of the same shape as the input hidden_states tensor, with each value being transformed based on the operations performed within the method.
+            mindspore.Tensor: The output tensor representing the intermediate representation of the model. It is of the same shape as the input hidden_states tensor, with each value being transformed based on
+the operations performed within the method.
         
         Raises:
             None
@@ -1272,7 +1282,8 @@ class Blip2QFormerOutput(nn.Cell):
     
     Methods:
         __init__(self, config): Initializes the Blip2QFormerOutput layer with the provided configuration.
-        construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor: Constructs the output layer by applying dense transformation, dropout, layer normalization, and addition with input tensor.
+        construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor: Constructs the output layer by applying dense transformation, dropout, layer normalization, and
+addition with input tensor.
     
     Note:
         The Blip2QFormerOutput class is designed for a specific transformer model architecture and should be used accordingly.
@@ -1339,7 +1350,8 @@ class Blip2QFormerLayer(nn.Cell):
     
     Methods:
     - __init__(self, config, layer_idx): Initializes the Blip2QFormerLayer instance with the given configuration and layer index.
-    - construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False, query_length=0): Constructs the layer by processing attention mechanisms and feed-forward operations.
+    - construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False, query_length=0): Constructs the
+layer by processing attention mechanisms and feed-forward operations.
     - feed_forward_chunk(self, attention_output): Processes the feed-forward chunk operation for the layer.
     - feed_forward_chunk_query(self, attention_output): Processes the feed-forward chunk operation specifically for query processing.
     
@@ -1414,12 +1426,14 @@ class Blip2QFormerLayer(nn.Cell):
         - head_mask (optional): The head mask tensor of shape (num_heads, sequence_length, sequence_length). It indicates which heads should be masked out.
         - encoder_hidden_states (optional): The hidden states output tensor from the encoder layer of shape (batch_size, sequence_length, hidden_size). Required for cross-attention layers.
         - encoder_attention_mask (optional): The attention mask tensor for the encoder layer of shape (batch_size, sequence_length). Required for cross-attention layers.
-        - past_key_value (optional): The past key-value tensor of shape (2, batch_size, num_heads, past_sequence_length, hidden_size). It contains the previous key-value pairs. If not provided, it will be set to None.
+        - past_key_value (optional): The past key-value tensor of shape (2, batch_size, num_heads, past_sequence_length, hidden_size). It contains the previous key-value pairs. If not provided, it will be set
+to None.
         - output_attentions (optional): Whether to output attention weights. Defaults to False.
         - query_length (optional): The length of the query sequence. If greater than 0, cross-attention with the encoder layer will be applied. Defaults to 0.
         
         Returns:
-        - outputs: A tuple containing the layer output tensor, attention outputs (if output_attentions=True), and the present key-value tensor. The layer output tensor has shape (batch_size, sequence_length, hidden_size).
+        - outputs: A tuple containing the layer output tensor, attention outputs (if output_attentions=True), and the present key-value tensor. The layer output tensor has shape (batch_size, sequence_length,
+hidden_size).
         
         Raises:
         - ValueError: If encoder_hidden_states is not provided for cross-attention layers.
@@ -1926,7 +1940,8 @@ class Blip2Model(Blip2PreTrainedModel):
     """
     A class representing the Blip2Model for multimodal language understanding tasks. 
     
-    Blip2Model is a multimodal transformer model that combines vision and text inputs to generate high-level representations and perform tasks such as image captioning, visual question answering, and multimodal language generation.
+    Blip2Model is a multimodal transformer model that combines vision and text inputs to generate high-level representations and perform tasks such as image captioning, visual question answering, and
+multimodal language generation.
     
     This class extends the Blip2PreTrainedModel, which is the base class for all models in the Blip2 project.
     
@@ -1947,10 +1962,16 @@ class Blip2Model(Blip2PreTrainedModel):
         get_encoder(self): Returns the encoder of the language model.
         get_decoder(self): Returns the decoder of the language model.
         _tie_weights(self): Ties the weights of the encoder and decoder in the language model.
-        get_text_features(self, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, decoder_input_ids: Optional[mindspore.Tensor] = None, decoder_attention_mask: Optional[mindspore.Tensor] = None, labels: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None): Retrieves the text features from the language model.
-        get_image_features(self, pixel_values: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None): Retrieves the image features from the vision model.
-        get_qformer_features(self, pixel_values: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None): Retrieves the query transformer (QFormer) features from the vision model.
-        construct(self, pixel_values: mindspore.Tensor, input_ids: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, decoder_input_ids: Optional[mindspore.Tensor] = None, decoder_attention_mask: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, labels: Optional[mindspore.Tensor] = None, return_dict: Optional[bool] = None) -> Union[Tuple, Blip2ForConditionalGenerationModelOutput]: Constructs the Blip2Model with the given inputs and returns the model outputs.
+        get_text_features(self, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, decoder_input_ids: Optional[mindspore.Tensor] = None, decoder_attention_mask:
+Optional[mindspore.Tensor] = None, labels: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None):
+Retrieves the text features from the language model.
+        get_image_features(self, pixel_values: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None):
+Retrieves the image features from the vision model.
+        get_qformer_features(self, pixel_values: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None):
+Retrieves the query transformer (QFormer) features from the vision model.
+        construct(self, pixel_values: mindspore.Tensor, input_ids: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, decoder_input_ids: Optional[mindspore.Tensor] = None,
+decoder_attention_mask: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, labels: Optional[mindspore.Tensor] = None, return_dict:
+Optional[bool] = None) -> Union[Tuple, Blip2ForConditionalGenerationModelOutput]: Constructs the Blip2Model with the given inputs and returns the model outputs.
     
     Examples:
         import torch
@@ -2406,7 +2427,8 @@ class Blip2Model(Blip2PreTrainedModel):
 class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
 
     """
-    The `Blip2ForConditionalGeneration` class is a model for image captioning and visual question answering. It is a conditional generator that takes as input an image and generates captions or answers to questions based on the image.
+    The `Blip2ForConditionalGeneration` class is a model for image captioning and visual question answering. It is a conditional generator that takes as input an image and generates captions or answers to
+questions based on the image.
     
     The class inherits from the `Blip2PreTrainedModel` class.
     
@@ -2426,8 +2448,11 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
     - `get_encoder(self)`: Returns the encoder of the language model.
     - `get_decoder(self)`: Returns the decoder of the language model.
     - `_tie_weights(self)`: Ties the weights of the encoder and decoder if the model is not using a decoder-only language model.
-    - `construct(self, pixel_values: mindspore.Tensor, input_ids: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, decoder_input_ids: Optional[mindspore.Tensor] = None, decoder_attention_mask: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, labels: Optional[mindspore.Tensor] = None, return_dict: Optional[bool] = None) -> Union[Tuple, Blip2ForConditionalGenerationModelOutput]`: Constructs the Blip2ForConditionalGeneration model with the given inputs and returns the output.
-    - `generate(self, pixel_values: mindspore.Tensor, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, **generate_kwargs) -> mindspore.Tensor`: Generates captions or answers based on the given image and optionally the input sequence and attention mask.
+    - `construct(self, pixel_values: mindspore.Tensor, input_ids: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, decoder_input_ids: Optional[mindspore.Tensor] = None,
+decoder_attention_mask: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, labels: Optional[mindspore.Tensor] = None, return_dict:
+Optional[bool] = None) -> Union[Tuple, Blip2ForConditionalGenerationModelOutput]`: Constructs the Blip2ForConditionalGeneration model with the given inputs and returns the output.
+    - `generate(self, pixel_values: mindspore.Tensor, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, **generate_kwargs) -> mindspore.Tensor`: Generates
+captions or answers based on the given image and optionally the input sequence and attention mask.
     
     Please refer to the docstrings of each method for more detailed information.
     """
@@ -2441,7 +2466,8 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
         
         Args:
             self: The instance of the Blip2ForConditionalGeneration class.
-            config (Blip2Config): An object containing the configuration settings for the Blip2 model. It is used to initialize the various components of the model, such as vision model, query tokens, qformer, language projection, and language model. The config parameter is required and must be of type Blip2Config.
+            config (Blip2Config): An object containing the configuration settings for the Blip2 model. It is used to initialize the various components of the model, such as vision model, query tokens, qformer,
+language projection, and language model. The config parameter is required and must be of type Blip2Config.
         
         Returns:
             None: This method does not return any value.
@@ -2485,7 +2511,8 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
         Raises:
             None.
         
-        This method retrieves the input embeddings from the underlying language model used in Blip2ForConditionalGeneration. It returns None since it directly calls the 'get_input_embeddings' method of the language model and does not modify or process the embeddings further.
+        This method retrieves the input embeddings from the underlying language model used in Blip2ForConditionalGeneration. It returns None since it directly calls the 'get_input_embeddings' method of the
+language model and does not modify or process the embeddings further.
         
         Please note that this method takes only one parameter, which is the instance of the Blip2ForConditionalGeneration class itself (self).
         """
@@ -2506,7 +2533,9 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
         Raises:
             None: This method does not raise any exceptions.
         
-        This method sets the input embeddings for the underlying language model of Blip2ForConditionalGeneration. The input embeddings are used to represent the input tokens during the model's forward pass. The 'value' parameter should be a tensor of shape (vocab_size, embedding_dim), where 'vocab_size' represents the size of the vocabulary and 'embedding_dim' represents the dimensionality of the embedding space. The method updates the input embeddings of the language model with the provided 'value'.
+        This method sets the input embeddings for the underlying language model of Blip2ForConditionalGeneration. The input embeddings are used to represent the input tokens during the model's forward pass.
+The 'value' parameter should be a tensor of shape (vocab_size, embedding_dim), where 'vocab_size' represents the size of the vocabulary and 'embedding_dim' represents the dimensionality of the embedding space.
+The method updates the input embeddings of the language model with the provided 'value'.
         
         Example:
             >>> model = Blip2ForConditionalGeneration()
@@ -2546,7 +2575,8 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
         Raises:
             None.
         
-        This method returns the output embeddings of the language model used in the Blip2ForConditionalGeneration class. The output embeddings are retrieved by calling the 'get_output_embeddings()' method of the language model.
+        This method returns the output embeddings of the language model used in the Blip2ForConditionalGeneration class. The output embeddings are retrieved by calling the 'get_output_embeddings()' method of
+the language model.
         
         Note:
             The output embeddings are typically used to map the hidden states of the language model to the vocabulary space. They can be further processed or used in downstream tasks.

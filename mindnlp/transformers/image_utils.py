@@ -62,7 +62,8 @@ class ChannelDimension(ExplicitEnum):
     """
     Represents a channel dimension for data analysis and visualization.
     
-    This class inherits from ExplicitEnum and provides a set of predefined channel dimensions. It allows for easy management and manipulation of channel dimensions within a data processing or visualization context.
+    This class inherits from ExplicitEnum and provides a set of predefined channel dimensions. It allows for easy management and manipulation of channel dimensions within a data processing or visualization
+context.
     
     Attributes:
         - TODO: List any attributes specific to the ChannelDimension class.
@@ -80,7 +81,8 @@ class AnnotationFormat(ExplicitEnum):
     """
     Represents an annotation format for storing and manipulating data.
     
-    This class is a subclass of ExplicitEnum, which allows for the creation of enumerated types with explicit values. The AnnotationFormat class provides a way to define and manage different annotation formats used in data processing and analysis.
+    This class is a subclass of ExplicitEnum, which allows for the creation of enumerated types with explicit values. The AnnotationFormat class provides a way to define and manage different annotation formats
+used in data processing and analysis.
     
     Attributes:
         name (str): The name of the annotation format.
@@ -108,13 +110,15 @@ class AnnotionFormat(ExplicitEnum):
     """
     Represents a class for defining annotation formats. This class inherits from ExplicitEnum.
     
-    AnnotionFormat provides a way to define and manage different annotation formats. It inherits properties and methods from the ExplicitEnum class, allowing for easy management and manipulation of annotation formats within a Python application.
+    AnnotionFormat provides a way to define and manage different annotation formats. It inherits properties and methods from the ExplicitEnum class, allowing for easy management and manipulation of annotation
+formats within a Python application.
     
     Attributes:
         ExplicitEnum: The base class from which AnnotionFormat inherits.
     
     Usage:
-        AnnotionFormat instances can be used to define and manage annotation formats within a Python application. The class provides methods and properties for working with annotation formats in a structured and consistent manner.
+        AnnotionFormat instances can be used to define and manage annotation formats within a Python application. The class provides methods and properties for working with annotation formats in a structured
+and consistent manner.
     
     Example:
         
@@ -401,7 +405,8 @@ def is_valid_annotation_coco_panoptic(annotation: Dict[str, Union[List, Tuple]])
     Checks if the given COCO Panoptic annotation is valid.
     
     Args:
-        annotation (Dict[str, Union[List, Tuple]]): A dictionary representing a COCO Panoptic annotation containing the keys 'image_id', 'segments_info', and 'file_name'. The value associated with the key 'segments_info' must be a list or tuple, and if it is not empty, the first element must be a dictionary.
+        annotation (Dict[str, Union[List, Tuple]]): A dictionary representing a COCO Panoptic annotation containing the keys 'image_id', 'segments_info', and 'file_name'. The value associated with the key
+'segments_info' must be a list or tuple, and if it is not empty, the first element must be a dictionary.
     
     Returns:
         bool: True if the annotation is valid, otherwise False.

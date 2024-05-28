@@ -276,7 +276,8 @@ def _sample_negative_indices(
 class Wav2Vec2NoLayerNormConvLayer(nn.Cell):
 
     """
-    Wav2Vec2NoLayerNormConvLayer is a Python class representing a convolutional layer without layer normalization for the Wav2Vec2 model. This class inherits from nn.Cell and is used for processing audio features.
+    Wav2Vec2NoLayerNormConvLayer is a Python class representing a convolutional layer without layer normalization for the Wav2Vec2 model. This class inherits from nn.Cell and is used for processing audio
+features.
     
     Attributes:
         config (Wav2Vec2Config): The configuration object for the Wav2Vec2 model.
@@ -420,7 +421,8 @@ class Wav2Vec2LayerNormConvLayer(nn.Cell):
 class Wav2Vec2GroupNormConvLayer(nn.Cell):
 
     """
-    This class represents a group normalization convolutional layer used in the Wav2Vec2 model. It applies a 1D convolution operation followed by group normalization, activation, and layer normalization to the input hidden states.
+    This class represents a group normalization convolutional layer used in the Wav2Vec2 model. It applies a 1D convolution operation followed by group normalization, activation, and layer normalization to the
+input hidden states.
     
     Args:
         config (Wav2Vec2Config): The configuration object containing the settings for the Wav2Vec2 model.
@@ -709,7 +711,8 @@ class Wav2Vec2FeatureExtractor(Wav2Vec2FeatureEncoder):
     """
     Wav2Vec2FeatureExtractor is a class that represents a feature extractor for Wav2Vec2 models. It is designed to extract features from audio data for use in Wav2Vec2 models. 
     
-    This class inherits from Wav2Vec2FeatureEncoder, and it is recommended to use Wav2Vec2FeatureEncoder instead of this class, as Wav2Vec2FeatureExtractor has been deprecated and will be removed in Transformers v5. 
+    This class inherits from Wav2Vec2FeatureEncoder, and it is recommended to use Wav2Vec2FeatureEncoder instead of this class, as Wav2Vec2FeatureExtractor has been deprecated and will be removed in
+Transformers v5. 
     
     Please refer to the documentation for Wav2Vec2FeatureEncoder for feature extraction and encoding in Wav2Vec2 models.
     """
@@ -726,7 +729,8 @@ class Wav2Vec2FeatureExtractor(Wav2Vec2FeatureEncoder):
             None: This method does not return any value.
         
         Raises:
-            FutureWarning: If the class Wav2Vec2FeatureExtractor is used, a FutureWarning is raised indicating that the class has been depreciated and will be removed in Transformers v5. It is recommended to use the base class instead.
+            FutureWarning: If the class Wav2Vec2FeatureExtractor is used, a FutureWarning is raised indicating that the class has been depreciated and will be removed in Transformers v5. It is recommended to
+use the base class instead.
         """
         super().__init__(config)
         warnings.warn(
@@ -745,7 +749,8 @@ class Wav2Vec2FeatureProjection(nn.Cell):
     
     The __init__ method initializes the feature projection module by setting up layer normalization, dense projection, and dropout.
     
-    The construct method applies layer normalization to the hidden states, projects the normalized states using dense projection, and applies dropout to the projected states before returning the hidden states and the normalized hidden states.
+    The construct method applies layer normalization to the hidden states, projects the normalized states using dense projection, and applies dropout to the projected states before returning the hidden states
+and the normalized hidden states.
     """
     def __init__(self, config: Wav2Vec2Config):
 
@@ -754,7 +759,8 @@ class Wav2Vec2FeatureProjection(nn.Cell):
         
         Args:
             self: The instance of the Wav2Vec2FeatureProjection class.
-            config (Wav2Vec2Config): An instance of the Wav2Vec2Config class containing the configuration parameters for the Wav2Vec2 feature projection. It specifies the configuration for the layer normalization, projection, and dropout layers.
+            config (Wav2Vec2Config): An instance of the Wav2Vec2Config class containing the configuration parameters for the Wav2Vec2 feature projection. It specifies the configuration for the layer
+normalization, projection, and dropout layers.
         
         Returns:
             None. This method does not return any value.
@@ -989,11 +995,14 @@ class Wav2Vec2Attention(nn.Cell):
 class Wav2Vec2FeedForward(nn.Cell):
 
     """
-    Wav2Vec2FeedForward is a class representing the feedforward network for the Wav2Vec2 model. This class inherits from nn.Cell and contains methods for initializing the network and constructing the feedforward layers.
+    Wav2Vec2FeedForward is a class representing the feedforward network for the Wav2Vec2 model. This class inherits from nn.Cell and contains methods for initializing the network and constructing the
+feedforward layers.
     
-    The __init__ method initializes the feedforward network with the provided configuration. It sets up the intermediate dropout, intermediate dense, intermediate activation function, output dense, and output dropout layers based on the configuration parameters.
+    The __init__ method initializes the feedforward network with the provided configuration. It sets up the intermediate dropout, intermediate dense, intermediate activation function, output dense, and output
+dropout layers based on the configuration parameters.
     
-    The construct method takes hidden states as input and processes them through the intermediate dense layer, intermediate activation function, intermediate dropout layer, output dense layer, and output dropout layer. It then returns the processed hidden states.
+    The construct method takes hidden states as input and processes them through the intermediate dense layer, intermediate activation function, intermediate dropout layer, output dense layer, and output
+dropout layer. It then returns the processed hidden states.
     
     Note: This docstring is based on the provided code snippet and may need to be updated with additional information once the entire class implementation is available.
     """
@@ -1066,7 +1075,8 @@ class Wav2Vec2EncoderLayer(nn.Cell):
 
     """A class representing an encoder layer of the Wav2Vec2 model.
     
-    The Wav2Vec2EncoderLayer class inherits from the nn.Cell class and implements the functionality of a single encoder layer in the Wav2Vec2 model architecture. It consists of multiple sub-modules, including an attention mechanism, dropout layers, layer normalization, and a feed-forward neural network.
+    The Wav2Vec2EncoderLayer class inherits from the nn.Cell class and implements the functionality of a single encoder layer in the Wav2Vec2 model architecture. It consists of multiple sub-modules, including
+an attention mechanism, dropout layers, layer normalization, and a feed-forward neural network.
     
     Attributes:
         attention (Wav2Vec2Attention): The attention mechanism used in the layer.
@@ -1134,7 +1144,8 @@ class Wav2Vec2EncoderLayer(nn.Cell):
             output_attentions (bool, optional): Whether to output the attention weights. Defaults to False.
         
         Returns:
-            tuple: A tuple containing the hidden states of shape (batch_size, sequence_length, hidden_size). If output_attentions is True, the tuple also contains the attention weights of shape (batch_size, num_heads, sequence_length, sequence_length).
+            tuple: A tuple containing the hidden states of shape (batch_size, sequence_length, hidden_size). If output_attentions is True, the tuple also contains the attention weights of shape (batch_size,
+num_heads, sequence_length, sequence_length).
         
         Raises:
             None
@@ -1291,13 +1302,15 @@ class Wav2Vec2Encoder(nn.Cell):
         
         Args:
             self: The instance of the class.
-            config (Wav2Vec2Config): An instance of the Wav2Vec2Config class containing the configuration parameters for the encoder. It specifies the configuration for the Wav2Vec2 model, such as hidden size, layer normalization epsilon, hidden dropout probability, and the number of hidden layers.
+            config (Wav2Vec2Config): An instance of the Wav2Vec2Config class containing the configuration parameters for the encoder. It specifies the configuration for the Wav2Vec2 model, such as hidden size,
+layer normalization epsilon, hidden dropout probability, and the number of hidden layers.
         
         Returns:
             None: This method does not return any value.
         
         Raises:
-            None: This method does not raise any exceptions explicitly. However, exceptions may be raised during the initialization of the Wav2Vec2PositionalConvEmbedding, nn.LayerNorm, nn.Dropout, and nn.CellList objects.
+            None: This method does not raise any exceptions explicitly. However, exceptions may be raised during the initialization of the Wav2Vec2PositionalConvEmbedding, nn.LayerNorm, nn.Dropout, and
+nn.CellList objects.
         """
         super().__init__()
         self.config = config
@@ -1392,7 +1405,8 @@ class Wav2Vec2EncoderStableLayerNorm(nn.Cell):
     """
     Wav2Vec2EncoderStableLayerNorm is a Python class that represents an encoder with stable layer normalization for the Wav2Vec2 model. This class inherits from the nn.Cell module.
     
-    This class initializes with a Wav2Vec2Config object and constructs a series of encoder layers with stable layer normalization. The encoder layers operate on the input hidden states and optionally apply attention masks, producing hidden states with added positional embeddings and layer normalization.
+    This class initializes with a Wav2Vec2Config object and constructs a series of encoder layers with stable layer normalization. The encoder layers operate on the input hidden states and optionally apply
+attention masks, producing hidden states with added positional embeddings and layer normalization.
     
     The construct method applies the encoder layers to the input hidden states, handling attention masks, outputting hidden states, and attentions based on the specified configurations.
     
@@ -1554,7 +1568,8 @@ class Wav2Vec2GumbelVectorQuantizer(nn.Cell):
         
         Args:
             probs (Tensor): The input probability distribution. It should be a tensor of shape (N, D) where N is the number of elements and D is the dimensionality of the distribution.
-            mask (Tensor, optional): A boolean tensor of the same shape as probs, indicating which elements to include in the computation. If provided, only the elements where mask is True will be considered. Defaults to None.
+            mask (Tensor, optional): A boolean tensor of the same shape as probs, indicating which elements to include in the computation. If provided, only the elements where mask is True will be considered.
+Defaults to None.
         
         Returns:
             None: This method does not return anything but updates the internal state of the class.
@@ -1772,7 +1787,8 @@ class Wav2Vec2AdapterLayer(nn.Cell):
 class Wav2Vec2AttnAdapterLayer(nn.Cell):
 
     """
-    This class represents a single layer of an attention adapter module in the Wav2Vec2 model. The adapter module is designed to enhance the training throughput by directly implementing the adapter modules with 3D tensor weights as parameters, without using ModuleList.
+    This class represents a single layer of an attention adapter module in the Wav2Vec2 model. The adapter module is designed to enhance the training throughput by directly implementing the adapter modules
+with 3D tensor weights as parameters, without using ModuleList.
     
     Attributes:
         input_dim (int): The dimension of the input tensor to the adapter module.
@@ -2182,7 +2198,8 @@ class Wav2Vec2Model(Wav2Vec2PreTrainedModel):
     - `freeze_feature_extractor()`: Disables the gradient computation for the feature encoder, preventing its parameters from being updated during training.
     - `freeze_feature_encoder()`: Disables the gradient computation for the feature encoder, preventing its parameters from being updated during training.
     - `_mask_hidden_states(hidden_states, mask_time_indices=None, attention_mask=None)`: Masks extracted features along the time axis and/or the feature axis according to SpecAugment.
-    - `construct(input_values, attention_mask=None, mask_time_indices=None, output_attentions=None, output_hidden_states=None, return_dict=None)`: Constructs the model by processing the input values and returns the model outputs.
+    - `construct(input_values, attention_mask=None, mask_time_indices=None, output_attentions=None, output_hidden_states=None, return_dict=None)`: Constructs the model by processing the input values and
+returns the model outputs.
     
     Please note that the `freeze_feature_extractor()` method is deprecated and will be removed in Transformers v5. The equivalent `freeze_feature_encoder()` method should be used instead.
     
@@ -2634,7 +2651,8 @@ class Wav2Vec2ForMaskedLM(Wav2Vec2PreTrainedModel):
     
     Methods:
         - `__init__(self, config: Wav2Vec2Config)`: Initializes a new instance of the `Wav2Vec2ForMaskedLM` class.
-        - `construct(self, input_values: Tensor, attention_mask: Optional[Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None, labels: Optional[Tensor] = None) -> Union[Tuple, MaskedLMOutput]`: Constructs the model for masked language modeling.
+        - `construct(self, input_values: Tensor, attention_mask: Optional[Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] =
+None, labels: Optional[Tensor] = None) -> Union[Tuple, MaskedLMOutput]`: Constructs the model for masked language modeling.
     
     Note: This class is deprecated and should be replaced with `Wav2Vec2ForCTC`.
     """
@@ -2704,7 +2722,8 @@ class Wav2Vec2ForMaskedLM(Wav2Vec2PreTrainedModel):
             labels (Optional[Tensor]): Optional tensor representing the labels for the masked language modeling task. Its shape is (batch_size, sequence_length).
         
         Returns:
-            Union[Tuple, MaskedLMOutput]: The return value can be either a tuple or a MaskedLMOutput object. If return_dict is False, it returns a tuple containing the logits and, optionally, the hidden states and attentions. If return_dict is True, it returns a MaskedLMOutput object containing the logits, hidden states, and attentions.
+            Union[Tuple, MaskedLMOutput]: The return value can be either a tuple or a MaskedLMOutput object. If return_dict is False, it returns a tuple containing the logits and, optionally, the hidden states
+and attentions. If return_dict is True, it returns a MaskedLMOutput object containing the logits, hidden states, and attentions.
         
         Raises:
             None
@@ -2732,9 +2751,11 @@ class Wav2Vec2ForMaskedLM(Wav2Vec2PreTrainedModel):
 class Wav2Vec2ForCTC(Wav2Vec2PreTrainedModel):
 
     """
-    This class represents a Wav2Vec2 model fine-tuned for Connectionist Temporal Classification (CTC) tasks. It inherits from the Wav2Vec2PreTrainedModel, providing methods for initializing the model, tying weights, freezing the feature extractor, feature encoder, and base model, as well as constructing the model for inference and training. 
+    This class represents a Wav2Vec2 model fine-tuned for Connectionist Temporal Classification (CTC) tasks. It inherits from the Wav2Vec2PreTrainedModel, providing methods for initializing the model, tying
+weights, freezing the feature extractor, feature encoder, and base model, as well as constructing the model for inference and training. 
     
-    The Wav2Vec2ForCTC class encapsulates the Wav2Vec2 model with additional methods for CTC-specific functionality, such as handling labels for CTC, computing CTC loss, and processing input values for CTC tasks. 
+    The Wav2Vec2ForCTC class encapsulates the Wav2Vec2 model with additional methods for CTC-specific functionality, such as handling labels for CTC, computing CTC loss, and processing input values for CTC
+tasks. 
     
     The class provides methods for fine-tuning the Wav2Vec2 model for CTC tasks, including freezing specific components of the model, as well as constructing the model for CTC inference and training. 
     
@@ -2909,9 +2930,13 @@ class Wav2Vec2ForCTC(Wav2Vec2PreTrainedModel):
 class Wav2Vec2ForSequenceClassification(Wav2Vec2PreTrainedModel):
 
     """
-    The `Wav2Vec2ForSequenceClassification` class represents a Wav2Vec2 model for sequence classification tasks. It inherits from the `Wav2Vec2PreTrainedModel` class. This class provides methods for initializing the model, freezing specific components, and computing the sequence classification output. It also includes methods for handling the feature extractor, feature encoder, and base model. The class supports the construction of the sequence classification output and provides options for setting various parameters such as attention masks, output attentions, output hidden states, and labels.
+    The `Wav2Vec2ForSequenceClassification` class represents a Wav2Vec2 model for sequence classification tasks. It inherits from the `Wav2Vec2PreTrainedModel` class. This class provides methods for
+initializing the model, freezing specific components, and computing the sequence classification output. It also includes methods for handling the feature extractor, feature encoder, and base model. The class
+supports the construction of the sequence classification output and provides options for setting various parameters such as attention masks, output attentions, output hidden states, and labels.
     
-    Deprecated methods such as `freeze_feature_extractor` and `freeze_base_model` are included along with their corresponding replacements. The `construct` method computes the sequence classification/regression loss and handles the classification output based on the input values, attention masks, and labels. The class allows for fine-tuning the model for sequence classification tasks while providing flexibility in handling different components and parameters.
+    Deprecated methods such as `freeze_feature_extractor` and `freeze_base_model` are included along with their corresponding replacements. The `construct` method computes the sequence
+classification/regression loss and handles the classification output based on the input values, attention masks, and labels. The class allows for fine-tuning the model for sequence classification tasks while
+providing flexibility in handling different components and parameters.
     
     For detailed information about the class and its methods, refer to the individual method docstrings and the base class `Wav2Vec2PreTrainedModel` for additional context and functionality.
     """
@@ -3038,7 +3063,8 @@ class Wav2Vec2ForSequenceClassification(Wav2Vec2PreTrainedModel):
 class Wav2Vec2ForAudioFrameClassification(Wav2Vec2PreTrainedModel):
 
     """
-    This class represents a Wav2Vec2 model for audio frame classification. It inherits from the Wav2Vec2PreTrainedModel and includes methods for initializing the model, freezing the feature encoder and base model, as well as constructing the model for inference and training.
+    This class represents a Wav2Vec2 model for audio frame classification. It inherits from the Wav2Vec2PreTrainedModel and includes methods for initializing the model, freezing the feature encoder and base
+model, as well as constructing the model for inference and training.
     
     Attributes:
         wav2vec2 (Wav2Vec2Model): The Wav2Vec2Model used for audio frame classification.
@@ -3056,8 +3082,10 @@ class Wav2Vec2ForAudioFrameClassification(Wav2Vec2PreTrainedModel):
         freeze_base_model(self): 
             Disables the gradient computation for the base model, preventing its parameters from being updated during training while allowing the classification head to be updated.
     
-        construct(self, input_values: Optional[Tensor], attention_mask: Optional[Tensor] = None, labels: Optional[Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> TokenClassifierOutput: 
-            Constructs the model for inference and training, handling input values, attention masks, labels, and other optional parameters. Returns TokenClassifierOutput containing loss, logits, hidden states, and attentions.
+        construct(self, input_values: Optional[Tensor], attention_mask: Optional[Tensor] = None, labels: Optional[Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool]
+= None, return_dict: Optional[bool] = None) -> TokenClassifierOutput: 
+            Constructs the model for inference and training, handling input values, attention masks, labels, and other optional parameters. Returns TokenClassifierOutput containing loss, logits, hidden states,
+and attentions.
     """
     def __init__(self, config: Wav2Vec2Config):
 
@@ -3164,7 +3192,8 @@ class Wav2Vec2ForAudioFrameClassification(Wav2Vec2PreTrainedModel):
 class AMSoftmaxLoss(nn.Cell):
 
     """
-    The AMSoftmaxLoss class represents a neural network cell for computing the AM-Softmax loss. This class inherits from nn.Cell and provides methods for initializing the loss function and constructing the computation graph.
+    The AMSoftmaxLoss class represents a neural network cell for computing the AM-Softmax loss. This class inherits from nn.Cell and provides methods for initializing the loss function and constructing the
+computation graph.
     
     Attributes:
         scale (float): The scale parameter for the AM-Softmax loss function.
@@ -3294,7 +3323,8 @@ class TDNNLayer(nn.Cell):
             hidden_states (Tensor): The input hidden states to be processed by the TDNN layer. It should be a tensor of shape (batch_size, in_channels, sequence_length).
         
         Returns:
-            hidden_states (Tensor): The processed hidden states after applying the TDNN layer operations. It will be a tensor of shape (batch_size, out_channels, new_length), where out_channels is the number of output channels and new_length is the length of the output sequence.
+            hidden_states (Tensor): The processed hidden states after applying the TDNN layer operations. It will be a tensor of shape (batch_size, out_channels, new_length), where out_channels is the number
+of output channels and new_length is the length of the output sequence.
         
         Raises:
             TypeError: If the input hidden_states is not a tensor.
@@ -3317,11 +3347,14 @@ class TDNNLayer(nn.Cell):
 class Wav2Vec2ForXVector(Wav2Vec2PreTrainedModel):
 
     """
-    This class represents a Wav2Vec2 model for extracting x-vector embeddings from audio data. It inherits from the Wav2Vec2PreTrainedModel class, and provides methods for freezing specific model components and computing x-vector embeddings from input audio data.
+    This class represents a Wav2Vec2 model for extracting x-vector embeddings from audio data. It inherits from the Wav2Vec2PreTrainedModel class, and provides methods for freezing specific model components
+and computing x-vector embeddings from input audio data.
     
-    The class contains methods for freezing the feature extractor, freezing the feature encoder, and freezing the base model to disable gradient computation for specific model components. Additionally, it includes methods for computing the output length of the TDNN layers and for constructing x-vector embeddings from input audio data.
+    The class contains methods for freezing the feature extractor, freezing the feature encoder, and freezing the base model to disable gradient computation for specific model components. Additionally, it
+includes methods for computing the output length of the TDNN layers and for constructing x-vector embeddings from input audio data.
     
-    The construct method takes input audio data and optional parameters such as attention mask and labels, and returns x-vector embeddings along with optional loss and hidden states. The method also supports outputting hidden states and attentions based on the configuration settings.
+    The construct method takes input audio data and optional parameters such as attention mask and labels, and returns x-vector embeddings along with optional loss and hidden states. The method also supports
+outputting hidden states and attentions based on the configuration settings.
     
     This class is designed to be used for x-vector extraction tasks and provides flexibility for customizing the model's behavior and freezing specific components during training.
     """

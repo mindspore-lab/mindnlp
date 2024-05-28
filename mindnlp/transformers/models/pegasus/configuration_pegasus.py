@@ -220,9 +220,12 @@ class PegasusConfig(PretrainedConfig):
             None.
         
         
-        The `num_attention_heads` method returns an integer value representing the number of attention heads used in the encoder of the Pegasus model. Attention heads are a key component of transformer models, and they enable the model to focus on different parts of the input sequence during processing. By varying the number of attention heads, the model can capture different levels of information and dependencies in the input data.
+        The `num_attention_heads` method returns an integer value representing the number of attention heads used in the encoder of the Pegasus model. Attention heads are a key component of transformer models,
+and they enable the model to focus on different parts of the input sequence during processing. By varying the number of attention heads, the model can capture different levels of information and dependencies
+in the input data.
         
-        This method is a property, which means that it can be accessed as an attribute without needing to call it explicitly as a function. When accessed, it directly returns the number of attention heads specified in the `encoder_attention_heads` attribute of the current instance of the PegasusConfig class.
+        This method is a property, which means that it can be accessed as an attribute without needing to call it explicitly as a function. When accessed, it directly returns the number of attention heads
+specified in the `encoder_attention_heads` attribute of the current instance of the PegasusConfig class.
         
         Note that the `num_attention_heads` method does not take any additional parameters beyond the `self` parameter, as it is designed to provide information specific to the current instance of the class.
         
@@ -232,7 +235,8 @@ class PegasusConfig(PretrainedConfig):
             >>> print(num_heads)
             12
         
-        In this example, a new instance of the PegasusConfig class is created. The `num_attention_heads` property is accessed as an attribute (`config.num_attention_heads`), and the resulting number of attention heads (12 in this case) is printed.
+        In this example, a new instance of the PegasusConfig class is created. The `num_attention_heads` property is accessed as an attribute (`config.num_attention_heads`), and the resulting number of
+attention heads (12 in this case) is printed.
         """
         return self.encoder_attention_heads
 

@@ -125,18 +125,22 @@ class CodeGenAttention(nn.Cell):
     ''' 
     Represents an attention mechanism for code generation tasks using the specified configuration.
     
-    This class inherits from the nn.Cell module and implements the attention mechanism for code generation tasks. It includes methods for splitting and merging attention heads, performing attention calculations, and constructing the attention mechanism using the specified inputs.
+    This class inherits from the nn.Cell module and implements the attention mechanism for code generation tasks. It includes methods for splitting and merging attention heads, performing attention
+calculations, and constructing the attention mechanism using the specified inputs.
     
-    The class includes methods for splitting and merging attention heads, performing attention calculations, and constructing the attention mechanism using the specified inputs. It also handles positional embeddings and caching for efficient computation.
+    The class includes methods for splitting and merging attention heads, performing attention calculations, and constructing the attention mechanism using the specified inputs. It also handles positional
+embeddings and caching for efficient computation.
     
     The methods included in the class are:
     - __init__(self, config): Initializes the CodeGenAttention class with the specified configuration.
     - _split_heads(self, x, n_head, dim_head, mp_num): Splits the attention heads based on the specified parameters.
     - _merge_heads(self, tensor, num_attention_heads, attn_head_size): Merges the attention heads into the specified shape.
     - _attn(self, query, key, value, attention_mask=None, head_mask=None): Performs the attention calculation using the query, key, and value tensors, with optional attention and head masks.
-    - construct(self, hidden_states, layer_past=None, attention_mask=None, position_ids=None, head_mask=None, use_cache=False, output_attentions=False): Constructs the attention mechanism using the specified inputs and optional configurations.
+    - construct(self, hidden_states, layer_past=None, attention_mask=None, position_ids=None, head_mask=None, use_cache=False, output_attentions=False): Constructs the attention mechanism using the specified
+inputs and optional configurations.
     
-    The CodeGenAttention class provides a comprehensive solution for implementing attention mechanisms in code generation tasks, allowing for efficient computation and flexibility in handling various input configurations.
+    The CodeGenAttention class provides a comprehensive solution for implementing attention mechanisms in code generation tasks, allowing for efficient computation and flexibility in handling various input
+configurations.
     '''
     def __init__(self, config):
 
@@ -304,7 +308,8 @@ class CodeGenAttention(nn.Cell):
                     output_attentions (bool, optional): Whether to output attention weights. It is an optional parameter. Defaults to False.
         
                 Returns:
-                    Union[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor]], Optional[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, ...]]]]: The output of the attention mechanism. It can be a tuple containing attention output and present tensors, or a tuple containing attention output, present tensors, and attention weights.
+                    Union[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor]], Optional[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, ...]]]]: The output of the attention mechanism. It
+can be a tuple containing attention output and present tensors, or a tuple containing attention output, present tensors, and attention weights.
         
                 Raises:
                     None
@@ -383,7 +388,8 @@ class CodeGenMLP(nn.Cell):
     
     This class, named 'CodeGenMLP', is a subclass of the 'nn.Cell' class in the MindSpore framework. It is designed to be used in code generation applications within machine learning pipelines.
     
-    The 'CodeGenMLP' class consists of several components, including fully connected layers, activation functions, and dropout regularization. It takes an input tensor of hidden states and performs a series of operations to transform and refine the data.
+    The 'CodeGenMLP' class consists of several components, including fully connected layers, activation functions, and dropout regularization. It takes an input tensor of hidden states and performs a series of
+operations to transform and refine the data.
     
     Attributes:
         - fc_in (nn.Dense): A fully connected layer that maps the input tensor to an intermediate size.
@@ -617,7 +623,8 @@ class CodeGenPreTrainedModel(PreTrainedModel):
 class CodeGenModel(CodeGenPreTrainedModel):
 
     """
-    The `CodeGenModel` class is a Python class that represents a code generation model. It is a subclass of `CodeGenPreTrainedModel` and provides functionality for constructing, setting and getting input embeddings, and generating code outputs.
+    The `CodeGenModel` class is a Python class that represents a code generation model. It is a subclass of `CodeGenPreTrainedModel` and provides functionality for constructing, setting and getting input
+embeddings, and generating code outputs.
     
     Attributes:
         - `embed_dim`: An integer representing the embedding dimension.
@@ -633,7 +640,8 @@ class CodeGenModel(CodeGenPreTrainedModel):
         - `__init__(self, config)`: Initializes the `CodeGenModel` instance.
         - `get_input_embeddings(self) -> nn.Embedding`: Returns the input embeddings layer.
         - `set_input_embeddings(self, new_embeddings)`: Sets the input embeddings layer.
-        - `construct(self, input_ids, past_key_values, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict) -> Union[Tuple, BaseModelOutputWithPast]`: Constructs the code generation model.
+        - `construct(self, input_ids, past_key_values, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict) -> Union[Tuple,
+BaseModelOutputWithPast]`: Constructs the code generation model.
     
     Note: Please refer to the `CodeGenPreTrainedModel` class for additional inherited attributes and methods.
     

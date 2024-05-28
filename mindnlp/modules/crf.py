@@ -123,8 +123,10 @@ class CRF(nn.Cell):
         Args:
             self (CRF): The CRF instance.
             emissions (array-like): The emissions for the CRF model. It represents the observed data and should be in the shape (batch_size, max_seq_length, num_classes).
-            tags (array-like, optional): The tags for the CRF model. It represents the target labels for the emissions. If not provided, the method will decode the emissions. It should be in the shape (batch_size, max_seq_length).
-            seq_length (array-like, optional): The sequence length for each batch. It specifies the actual length of each sequence in the batch. If not provided, it is assumed that all sequences have the same length as the maximum sequence length in the batch.
+            tags (array-like, optional): The tags for the CRF model. It represents the target labels for the emissions. If not provided, the method will decode the emissions. It should be in the shape
+(batch_size, max_seq_length).
+            seq_length (array-like, optional): The sequence length for each batch. It specifies the actual length of each sequence in the batch. If not provided, it is assumed that all sequences have the same
+length as the maximum sequence length in the batch.
         
         Returns:
             None: This method does not return any value directly. The constructed CRF model or the decoding result can be accessed through the CRF instance.
@@ -144,8 +146,10 @@ class CRF(nn.Cell):
         Args:
             self (object): The instance of the CRF class.
             emissions (array-like): The emissions for the CRF, representing the observed features. It should be a tensor of shape (max_length, batch_size, num_labels).
-            tags (array-like, optional): The tags for the CRF, representing the sequence of labels. It should be a tensor of shape (max_length, batch_size) if self.batch_first is True, otherwise (batch_size, max_length).
-            seq_length (array-like, optional): The length of each sequence in the batch. It should be a 1D tensor of shape (batch_size,) containing the sequence lengths. If not provided, it will be calculated based on the maximum length of sequences in the batch.
+            tags (array-like, optional): The tags for the CRF, representing the sequence of labels. It should be a tensor of shape (max_length, batch_size) if self.batch_first is True, otherwise (batch_size,
+max_length).
+            seq_length (array-like, optional): The length of each sequence in the batch. It should be a 1D tensor of shape (batch_size,) containing the sequence lengths. If not provided, it will be calculated
+based on the maximum length of sequences in the batch.
         
         Returns:
             None: This method does not return any value directly. However, it performs computations to construct the CRF.
@@ -277,13 +281,18 @@ class CRF(nn.Cell):
             TypeError: If the input parameters are not of the correct type.
             ValueError: If the input tensors have incompatible shapes.
         
-        This method computes the normalizer value for the CRF by iterating over the input sequence and calculating the scores for all possible tag sequences. The normalizer value is the sum of the exponentiated scores.
+        This method computes the normalizer value for the CRF by iterating over the input sequence and calculating the scores for all possible tag sequences. The normalizer value is the sum of the
+exponentiated scores.
         
-        The emissions parameter represents the emission scores for each tag at each position in the input sequence. It should be a tensor of shape (seq_length, num_tags). The emission scores are used to calculate the score for each tag sequence.
+        The emissions parameter represents the emission scores for each tag at each position in the input sequence. It should be a tensor of shape (seq_length, num_tags). The emission scores are used to
+calculate the score for each tag sequence.
         
-        The mask parameter is a binary tensor of shape (seq_length,) indicating the valid positions in the input sequence. Only the positions with a value of 1 in the mask are considered during the computation of the normalizer.
+        The mask parameter is a binary tensor of shape (seq_length,) indicating the valid positions in the input sequence. Only the positions with a value of 1 in the mask are considered during the computation
+of the normalizer.
         
-        The method starts by initializing the score with the sum of the start transition scores and the emission scores for the first position in the input sequence. Then, it iterates over the remaining positions in the sequence and updates the score using the transition scores and the emission scores for each position. The scores are calculated by expanding the score tensor and the emission tensor to the appropriate dimensions and adding them together. The logsumexp function is then applied to obtain the updated score. The score is updated based on the mask, with only the valid positions being updated.
+        The method starts by initializing the score with the sum of the start transition scores and the emission scores for the first position in the input sequence. Then, it iterates over the remaining
+positions in the sequence and updates the score using the transition scores and the emission scores for each position. The scores are calculated by expanding the score tensor and the emission tensor to the
+appropriate dimensions and adding them together. The logsumexp function is then applied to obtain the updated score. The score is updated based on the mask, with only the valid positions being updated.
         
         Finally, the end transition scores are added to the score, and the logsumexp function is applied again to obtain the final normalizer value.
         

@@ -603,7 +603,8 @@ class PegasusPreTrainedModel(PreTrainedModel):
     """
     PegasusPreTrainedModel represents a pre-trained model for Pegasus, inheriting from PreTrainedModel.
     
-    This class provides methods for initializing weights, including handling different types of cells such as Dense, PegasusSinusoidalPositionalEmbedding, and Embedding. The _init_weights method sets the data for weights based on the specified standard deviation and initializes biases or padding indices as needed.
+    This class provides methods for initializing weights, including handling different types of cells such as Dense, PegasusSinusoidalPositionalEmbedding, and Embedding. The _init_weights method sets the data
+for weights based on the specified standard deviation and initializes biases or padding indices as needed.
     
     For further details on the implementation and usage of this class, please refer to the corresponding code documentation.
     """
@@ -1182,7 +1183,8 @@ class PegasusDecoder(PegasusPreTrainedModel):
 class PegasusModel(PegasusPreTrainedModel):
 
     """
-    The `PegasusModel` class is a PyTorch-based model implementation for Pegasus, a pre-trained model for abstractive text summarization. It is a subclass of `PegasusPreTrainedModel`, which provides common methods and attributes for all Pegasus model variants.
+    The `PegasusModel` class is a PyTorch-based model implementation for Pegasus, a pre-trained model for abstractive text summarization. It is a subclass of `PegasusPreTrainedModel`, which provides common
+methods and attributes for all Pegasus model variants.
     
     The `PegasusModel` class has the following methods:
     
@@ -1191,9 +1193,14 @@ class PegasusModel(PegasusPreTrainedModel):
     - `set_input_embeddings(self, value)`: Sets the shared input embeddings to the given value.
     - `get_encoder(self)`: Returns the Pegasus encoder module.
     - `get_decoder(self)`: Returns the Pegasus decoder module.
-    - `resize_position_embeddings(self, new_num_position_embeddings: int)`: Resizes the position embeddings matrix of the model if the new number of position embeddings is different from the maximum position embeddings defined in the configuration.
+    - `resize_position_embeddings(self, new_num_position_embeddings: int)`: Resizes the position embeddings matrix of the model if the new number of position embeddings is different from the maximum position
+embeddings defined in the configuration.
     - `get_position_embeddings(self) -> Tuple[nn.Embedding]`: Returns the position embeddings matrix used by the encoder and decoder.
-    - `construct(self, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, decoder_input_ids: Optional[mindspore.Tensor] = None, decoder_attention_mask: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, decoder_head_mask: Optional[mindspore.Tensor] = None, cross_attn_head_mask: Optional[mindspore.Tensor] = None, encoder_outputs: Optional[Tuple[mindspore.Tensor]] = None, past_key_values: Optional[Tuple[mindspore.Tensor]] = None, inputs_embeds: Optional[mindspore.Tensor] = None, decoder_inputs_embeds: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Tuple, Seq2SeqModelOutput]`: Constructs the Pegasus model by encoding the input and decoding it with the provided decoder inputs and attention masks.
+    - `construct(self, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, decoder_input_ids: Optional[mindspore.Tensor] = None, decoder_attention_mask:
+Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, decoder_head_mask: Optional[mindspore.Tensor] = None, cross_attn_head_mask: Optional[mindspore.Tensor] = None, encoder_outputs:
+Optional[Tuple[mindspore.Tensor]] = None, past_key_values: Optional[Tuple[mindspore.Tensor]] = None, inputs_embeds: Optional[mindspore.Tensor] = None, decoder_inputs_embeds: Optional[mindspore.Tensor] = None,
+use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Tuple, Seq2SeqModelOutput]`: Constructs the
+Pegasus model by encoding the input and decoding it with the provided decoder inputs and attention masks.
     
     The `PegasusModel` class provides an example in its docstring to demonstrate how to use the model for text summarization.
     
@@ -1435,8 +1442,13 @@ class PegasusForConditionalGeneration(PegasusPreTrainedModel):
     - set_output_embeddings(self, new_embeddings): Sets the output embeddings of the Pegasus model.
     - resize_position_embeddings(self, new_num_position_embeddings: int): Resizes the position embeddings matrix of the model.
     - get_position_embeddings(self) -> Tuple[nn.Embedding]: Retrieves the position embeddings matrix.
-    - construct(self, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, decoder_input_ids: Optional[mindspore.Tensor] = None, decoder_attention_mask: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, decoder_head_mask: Optional[mindspore.Tensor] = None, cross_attn_head_mask: Optional[mindspore.Tensor] = None, encoder_outputs: Optional[Tuple[mindspore.Tensor]] = None, past_key_values: Optional[Tuple[mindspore.Tensor]] = None, inputs_embeds: Optional[mindspore.Tensor] = None, decoder_inputs_embeds: Optional[mindspore.Tensor] = None, labels: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Tuple, Seq2SeqLMOutput]: Constructs the Pegasus model.
-    - prepare_inputs_for_generation(self, decoder_input_ids, past_key_values=None, attention_mask=None, head_mask=None, decoder_head_mask=None, cross_attn_head_mask=None, use_cache=None, encoder_outputs=None, **kwargs): Prepares inputs for generation.
+    - construct(self, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, decoder_input_ids: Optional[mindspore.Tensor] = None, decoder_attention_mask:
+Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, decoder_head_mask: Optional[mindspore.Tensor] = None, cross_attn_head_mask: Optional[mindspore.Tensor] = None, encoder_outputs:
+Optional[Tuple[mindspore.Tensor]] = None, past_key_values: Optional[Tuple[mindspore.Tensor]] = None, inputs_embeds: Optional[mindspore.Tensor] = None, decoder_inputs_embeds: Optional[mindspore.Tensor] = None,
+labels: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) ->
+Union[Tuple, Seq2SeqLMOutput]: Constructs the Pegasus model.
+    - prepare_inputs_for_generation(self, decoder_input_ids, past_key_values=None, attention_mask=None, head_mask=None, decoder_head_mask=None, cross_attn_head_mask=None, use_cache=None, encoder_outputs=None,
+**kwargs): Prepares inputs for generation.
     - prepare_decoder_input_ids_from_labels(self, labels: mindspore.Tensor): Prepares decoder input ids from labels.
     - _reorder_cache(past_key_values, beam_idx): Reorders the past key values for beam search.
     
@@ -1517,7 +1529,9 @@ class PegasusForConditionalGeneration(PegasusPreTrainedModel):
         Raises:
             None: This method does not raise any exceptions.
         
-        This method resizes the token embeddings of the Pegasus model for conditional generation to the specified new number of tokens. It uses the super() function to call the parent class's resize_token_embeddings() method and obtains the new embeddings. Then, the method calls the _resize_final_logits_bias() method to adjust the final logits bias based on the new embeddings' weight shape. Finally, it returns the resized token embeddings as an instance of the nn.Embedding class.
+        This method resizes the token embeddings of the Pegasus model for conditional generation to the specified new number of tokens. It uses the super() function to call the parent class's
+resize_token_embeddings() method and obtains the new embeddings. Then, the method calls the _resize_final_logits_bias() method to adjust the final logits bias based on the new embeddings' weight shape.
+Finally, it returns the resized token embeddings as an instance of the nn.Embedding class.
         """
         new_embeddings = super().resize_token_embeddings(new_num_tokens, pad_to_multiple_of)
         self._resize_final_logits_bias(new_embeddings.weight.shape[0])
@@ -1538,7 +1552,9 @@ class PegasusForConditionalGeneration(PegasusPreTrainedModel):
         Raises:
             None.
         
-        This method resizes the final_logits_bias tensor in the PegasusForConditionalGeneration class based on the specified new_num_tokens. If new_num_tokens is less than or equal to the current number of tokens in self.final_logits_bias, a new_bias tensor is created by slicing the original tensor. Otherwise, extra_bias tensor is created with additional columns (new_num_tokens - old_num_tokens) and concatenated with the original tensor along the column axis. Finally, the self.final_logits_bias attribute is updated with the new_bias tensor.
+        This method resizes the final_logits_bias tensor in the PegasusForConditionalGeneration class based on the specified new_num_tokens. If new_num_tokens is less than or equal to the current number of
+tokens in self.final_logits_bias, a new_bias tensor is created by slicing the original tensor. Otherwise, extra_bias tensor is created with additional columns (new_num_tokens - old_num_tokens) and concatenated
+with the original tensor along the column axis. Finally, the self.final_logits_bias attribute is updated with the new_bias tensor.
         """
         old_num_tokens = self.final_logits_bias.shape[-1]
         if new_num_tokens <= old_num_tokens:
@@ -1852,9 +1868,11 @@ class PegasusForCausalLM(PegasusPreTrainedModel):
     """
     This class represents a Pegasus model for causal language modeling (LM). It is a subclass of PegasusPreTrainedModel, which provides the basic infrastructure for loading and saving pre-trained models.
     
-    The PegasusForCausalLM class is designed for generating text in a causal manner, where each token is generated based on the previously generated tokens. It takes as input a sequence of tokens and predicts the probability distribution over the next token in the sequence.
+    The PegasusForCausalLM class is designed for generating text in a causal manner, where each token is generated based on the previously generated tokens. It takes as input a sequence of tokens and predicts
+the probability distribution over the next token in the sequence.
     
-    The PegasusForCausalLM class provides various methods for interacting with the model. These include initializing the model with a configuration, getting and setting input and output embeddings, getting and setting the decoder, getting the position embeddings, resizing the position embeddings, and constructing the model for generation.
+    The PegasusForCausalLM class provides various methods for interacting with the model. These include initializing the model with a configuration, getting and setting input and output embeddings, getting and
+setting the decoder, getting the position embeddings, resizing the position embeddings, and constructing the model for generation.
     
     The `__init__` method initializes the PegasusForCausalLM object with a configuration. It sets the decoder configuration and initializes the model and the LM head.
     
@@ -1872,9 +1890,11 @@ class PegasusForCausalLM(PegasusPreTrainedModel):
     
     The `get_position_embeddings` method returns the position embeddings matrix of the model.
     
-    The `resize_position_embeddings` method resizes the position embeddings matrix of the model if the new number of position embeddings is different from the maximum number of position embeddings specified in the configuration.
+    The `resize_position_embeddings` method resizes the position embeddings matrix of the model if the new number of position embeddings is different from the maximum number of position embeddings specified in
+the configuration.
     
-    The `construct` method constructs the model for generation. It takes input tensors such as input_ids, attention_mask, encoder_hidden_states, and labels, and returns the model outputs, including the logits, loss, past key values, hidden states, attentions, and cross attentions.
+    The `construct` method constructs the model for generation. It takes input tensors such as input_ids, attention_mask, encoder_hidden_states, and labels, and returns the model outputs, including the logits,
+loss, past key values, hidden states, attentions, and cross attentions.
     
     The `prepare_inputs_for_generation` method prepares the inputs for generation. It takes input tensors such as input_ids, past_key_values, and attention_mask, and returns a dictionary of prepared inputs.
     

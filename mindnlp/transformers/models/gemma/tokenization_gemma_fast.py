@@ -197,7 +197,8 @@ class GemmaTokenizerFast(PreTrainedTokenizerFast):
         Raises:
             None.
         
-        This method adds an EOS token to the GemmaTokenizerFast object. The EOS token is used to mark the end of a sentence or text sequence. It is commonly used in natural language processing tasks such as language modeling and text generation. By adding an EOS token, the GemmaTokenizerFast object can handle text sequences more effectively, allowing for better analysis and processing.
+        This method adds an EOS token to the GemmaTokenizerFast object. The EOS token is used to mark the end of a sentence or text sequence. It is commonly used in natural language processing tasks such as
+language modeling and text generation. By adding an EOS token, the GemmaTokenizerFast object can handle text sequences more effectively, allowing for better analysis and processing.
         """
         return self._add_eos_token
 

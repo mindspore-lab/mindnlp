@@ -467,7 +467,10 @@ class EmptyTqdm:
 
 class _tqdm_cls:
 
-    """_tqdm_cls is a Python class that provides functionality for managing the progress of tasks. It includes methods for calling the class, setting a lock, and getting a lock. This class is designed to work in conjunction with the tqdm_lib module for displaying progress bars during iterative processes. When _tqdm_active is True, the class uses methods from the tqdm_lib.tqdm module to handle progress tracking. Otherwise, it falls back to using an EmptyTqdm instance for progress tracking. The set_lock method allows users to specify a lock for thread safety, and the get_lock method retrieves the current lock if one has been set."""
+    """_tqdm_cls is a Python class that provides functionality for managing the progress of tasks. It includes methods for calling the class, setting a lock, and getting a lock. This class is designed to work
+in conjunction with the tqdm_lib module for displaying progress bars during iterative processes. When _tqdm_active is True, the class uses methods from the tqdm_lib.tqdm module to handle progress tracking.
+Otherwise, it falls back to using an EmptyTqdm instance for progress tracking. The set_lock method allows users to specify a lock for thread safety, and the get_lock method retrieves the current lock if one
+has been set."""
     def __call__(self, *args, **kwargs):
 
         """
@@ -480,7 +483,8 @@ class _tqdm_cls:
             None: This method does not explicitly return any value. It returns either a tqdm object or an EmptyTqdm object based on the _tqdm_active flag.
         
         Raises:
-            No specific exceptions are raised by this method under normal circumstances. However, if there are issues related to the instantiation of tqdm objects or EmptyTqdm objects, standard Python exceptions may be raised.
+            No specific exceptions are raised by this method under normal circumstances. However, if there are issues related to the instantiation of tqdm objects or EmptyTqdm objects, standard Python
+exceptions may be raised.
         """
         if _tqdm_active:
             return tqdm_lib.tqdm(*args, **kwargs)

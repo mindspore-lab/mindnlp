@@ -294,8 +294,10 @@ class LukeSelfAttention(nn.Cell):
             self (LukeSelfAttention): An instance of the LukeSelfAttention class.
             word_hidden_states (Tensor): The hidden states of the word input sequence. Shape: (batch_size, sequence_length, hidden_size).
             entity_hidden_states (Tensor): The hidden states of the entity input sequence. Shape: (batch_size, entity_length, hidden_size).
-            attention_mask (Tensor, optional): An optional mask tensor indicating which positions should be attended to and which should be ignored. Shape: (batch_size, sequence_length, sequence_length) or (batch_size, 1, 1, sequence_length).
-            head_mask (Tensor, optional): An optional mask tensor indicating which heads should be masked out of the attention calculation. Shape: (num_attention_heads, sequence_length, sequence_length) or (batch_size, num_attention_heads, sequence_length, sequence_length).
+            attention_mask (Tensor, optional): An optional mask tensor indicating which positions should be attended to and which should be ignored. Shape: (batch_size, sequence_length, sequence_length) or
+(batch_size, 1, 1, sequence_length).
+            head_mask (Tensor, optional): An optional mask tensor indicating which heads should be masked out of the attention calculation. Shape: (num_attention_heads, sequence_length, sequence_length) or
+(batch_size, num_attention_heads, sequence_length, sequence_length).
             output_attentions (bool, optional): Whether to include attention probabilities in the output. Defaults to False.
         
         Returns:
@@ -574,7 +576,8 @@ class LukeIntermediate(nn.Cell):
         Raises:
             None.
         
-        This method takes in the instance of the LukeIntermediate class and the input hidden states. It applies a dense layer to the hidden states and then applies the intermediate activation function. The resulting intermediate hidden states are returned as a Tensor.
+        This method takes in the instance of the LukeIntermediate class and the input hidden states. It applies a dense layer to the hidden states and then applies the intermediate activation function. The
+resulting intermediate hidden states are returned as a Tensor.
         
         No exceptions are raised by this method.
         """
@@ -2178,7 +2181,8 @@ class LukeForTokenClassification(LukePreTrainedModel):
             return_dict (Optional[bool]): Whether to return a dictionary. Default is None.
         
         Returns:
-            Tuple[Optional[Tensor], Tensor, Optional[Tensor], Optional[Tensor], Optional[Tensor]]: A tuple containing the loss, logits, hidden states, entity hidden states, and attentions. Any element that is not None is included in the tuple.
+            Tuple[Optional[Tensor], Tensor, Optional[Tensor], Optional[Tensor], Optional[Tensor]]: A tuple containing the loss, logits, hidden states, entity hidden states, and attentions. Any element that is
+not None is included in the tuple.
         
         Raises:
             None
@@ -2425,7 +2429,8 @@ class LukeForMultipleChoice(LukePreTrainedModel):
                 - loss (Optional[Tensor]): The training loss tensor. Returns None if labels are not provided.
                 - reshaped_logits (Tensor): The reshaped logits tensor of shape [batch_size * num_choices, num_choices].
                 - hidden_states (Optional[List[Tensor]]): The hidden states of the model at the output of each layer. Returns None if output_hidden_states is set to False.
-                - entity_hidden_states (Optional[List[Tensor]]): The hidden states of the model for the entity embeddings at the output of each layer. Returns None if output_hidden_states is set to False or entity embeddings are not provided.
+                - entity_hidden_states (Optional[List[Tensor]]): The hidden states of the model for the entity embeddings at the output of each layer. Returns None if output_hidden_states is set to False or
+entity embeddings are not provided.
                 - attentions (Optional[List[Tensor]]): The attention weights of the model at the output of each layer. Returns None if output_attentions is set to False.
         
         Raises:

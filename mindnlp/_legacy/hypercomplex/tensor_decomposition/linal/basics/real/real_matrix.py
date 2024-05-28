@@ -12,7 +12,8 @@ class Matrix(AbstractMatrix):
     r""" 
     Represents a matrix object that can perform various operations such as addition, subtraction, multiplication, and more.
     
-    This class inherits from AbstractMatrix and provides functionality for initializing matrices, performing arithmetic operations with scalars and other matrices, transposing, and concatenating rows and columns.
+    This class inherits from AbstractMatrix and provides functionality for initializing matrices, performing arithmetic operations with scalars and other matrices, transposing, and concatenating rows and
+columns.
     
     Attributes:
         height (Optional[int]): The height of the matrix.
@@ -256,9 +257,11 @@ class Matrix(AbstractMatrix):
         Raises:
             None.
         
-        This method takes a single parameter, `self`, which is an instance of the Matrix class. The purpose of this parameter is to provide access to the current instance of the Matrix object. There are no restrictions on the type of the `self` parameter.
+        This method takes a single parameter, `self`, which is an instance of the Matrix class. The purpose of this parameter is to provide access to the current instance of the Matrix object. There are no
+restrictions on the type of the `self` parameter.
         
-        The method returns a NumPy array (`np.ndarray`) that represents the Matrix object. The returned array has the same shape and contents as the Matrix object. The purpose of this return value is to enable further manipulation and analysis using the powerful NumPy library.
+        The method returns a NumPy array (`np.ndarray`) that represents the Matrix object. The returned array has the same shape and contents as the Matrix object. The purpose of this return value is to enable
+further manipulation and analysis using the powerful NumPy library.
         
         This method does not raise any exceptions.
         """
@@ -467,7 +470,8 @@ class Matrix(AbstractMatrix):
         
         Args:
             self (Matrix): The instance of the 'Matrix' class that this method is called on.
-            items (Union[np.ndarray, List]): The input items which can be either a numpy array or a list. The items represent the data that will be used to populate the new 'Matrix' object. If a numpy array is provided, a deep copy of it will be made. If a list is provided, a numpy array will be created from it.
+            items (Union[np.ndarray, List]): The input items which can be either a numpy array or a list. The items represent the data that will be used to populate the new 'Matrix' object. If a numpy array is
+provided, a deep copy of it will be made. If a list is provided, a numpy array will be created from it.
         
         Returns:
             Matrix: A new 'Matrix' object that has the same shape and data type as the original matrix, but with the values from the input items.
@@ -489,7 +493,8 @@ class Matrix(AbstractMatrix):
             Matrix([[5, 6], [7, 8]])
             
         
-            In the example above, the '_full_like' method is called on the 'original_matrix' object to create a new 'Matrix' object with the same shape and data type. The new 'Matrix' object is then printed, showing the updated values.
+            In the example above, the '_full_like' method is called on the 'original_matrix' object to create a new 'Matrix' object with the same shape and data type. The new 'Matrix' object is then printed,
+showing the updated values.
         """
         return Matrix(items=items)
 
@@ -563,13 +568,15 @@ class Matrix(AbstractMatrix):
         Raises:
             None.
         
-        This method takes two parameters: self, which represents the current matrix object, and that, which represents another matrix object. The method concatenates the rows of self with the rows of that and returns a new matrix object.
+        This method takes two parameters: self, which represents the current matrix object, and that, which represents another matrix object. The method concatenates the rows of self with the rows of that and
+returns a new matrix object.
         
         The self parameter is of type Matrix and is used to access the current matrix object.
         
         The that parameter is also of type Matrix and is used to provide the matrix object to concatenate the rows with.
         
-        The method returns a new matrix object of type Matrix, resulting from the concatenation of rows. The height of the resulting matrix is the sum of the heights of self and that, while the width remains the same as self. The items of the resulting matrix are obtained by concatenating the items of self and that along the row axis.
+        The method returns a new matrix object of type Matrix, resulting from the concatenation of rows. The height of the resulting matrix is the sum of the heights of self and that, while the width remains
+the same as self. The items of the resulting matrix are obtained by concatenating the items of self and that along the row axis.
         
         No exceptions are raised by this method.
         """

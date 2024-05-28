@@ -311,13 +311,19 @@ class DebertaTokenizer(PreTrainedTokenizer):
         Raises:
             None.
         
-        This method applies BPE to the given token by iteratively replacing the most frequent pairs of characters in the token with a single character. If the token is already present in the cache, the cached value is returned. Otherwise, the token is converted to a tuple of characters. Pairs of characters in the tuple are obtained using the 'get_pairs' function. If no pairs are found, the original token is returned. 
+        This method applies BPE to the given token by iteratively replacing the most frequent pairs of characters in the token with a single character. If the token is already present in the cache, the cached
+value is returned. Otherwise, the token is converted to a tuple of characters. Pairs of characters in the tuple are obtained using the 'get_pairs' function. If no pairs are found, the original token is
+returned. 
         
-        The method then enters a loop where it selects the most frequent pair from the pairs obtained. If the selected pair is not present in the 'bpe_ranks' dictionary, the loop is terminated. Otherwise, the first and second characters of the pair are extracted. 
+        The method then enters a loop where it selects the most frequent pair from the pairs obtained. If the selected pair is not present in the 'bpe_ranks' dictionary, the loop is terminated. Otherwise, the
+first and second characters of the pair are extracted. 
         
-        A new word list, 'new_word', is created to store the modified characters of the token. The method iterates over the characters of the token and checks if the current character matches the first character of the selected pair. If it does, and the next character is the second character of the pair, the pair is replaced with a single character by appending it to 'new_word' and incrementing the index by 2. Otherwise, the current character is appended to 'new_word' and the index is incremented by 1. 
+        A new word list, 'new_word', is created to store the modified characters of the token. The method iterates over the characters of the token and checks if the current character matches the first
+character of the selected pair. If it does, and the next character is the second character of the pair, the pair is replaced with a single character by appending it to 'new_word' and incrementing the index by
+2. Otherwise, the current character is appended to 'new_word' and the index is incremented by 1. 
         
-        The modified 'new_word' is converted back to a tuple and assigned to 'word'. If the length of 'word' becomes 1, indicating that the BPE process is complete, the loop is terminated. Otherwise, new pairs are obtained from 'word' and the process is repeated until 'word' is of length 1. 
+        The modified 'new_word' is converted back to a tuple and assigned to 'word'. If the length of 'word' becomes 1, indicating that the BPE process is complete, the loop is terminated. Otherwise, new pairs
+are obtained from 'word' and the process is repeated until 'word' is of length 1. 
         
         Finally, 'word' is converted to a string by joining the characters with spaces. The encoded token is stored in the cache for future use and returned.
         

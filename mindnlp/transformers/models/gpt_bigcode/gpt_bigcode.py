@@ -161,10 +161,13 @@ class GPTBigCodeAttention(nn.Cell):
         
         Args:
             self: The GPTBigCodeAttention instance.
-            query (Tensor): The input query tensor with shape (batch_size, sequence_length, hidden_size) if multi_query is False, or (batch_size, sequence_length * num_heads, hidden_size) if multi_query is True.
+            query (Tensor): The input query tensor with shape (batch_size, sequence_length, hidden_size) if multi_query is False, or (batch_size, sequence_length * num_heads, hidden_size) if multi_query is
+True.
             key (Tensor): The input key tensor with shape (batch_size * num_heads, hidden_size, sequence_length) if multi_query is False, or (batch_size, sequence_length, hidden_size) if multi_query is True.
-            value (Tensor): The input value tensor with shape (batch_size * num_heads, sequence_length, hidden_size) if multi_query is False, or (batch_size, sequence_length, hidden_size) if multi_query is True.
-            attention_mask (Tensor, optional): A tensor with shape (batch_size, sequence_length) or (batch_size, num_heads, sequence_length, sequence_length) containing attention masks to be applied to the attention scores. Default is None.
+            value (Tensor): The input value tensor with shape (batch_size * num_heads, sequence_length, hidden_size) if multi_query is False, or (batch_size, sequence_length, hidden_size) if multi_query is
+True.
+            attention_mask (Tensor, optional): A tensor with shape (batch_size, sequence_length) or (batch_size, num_heads, sequence_length, sequence_length) containing attention masks to be applied to the
+attention scores. Default is None.
             head_mask (Tensor, optional): A tensor with shape (batch_size, num_heads, sequence_length) representing the head mask to be applied to the attention weights. Default is None.
         
         Returns:
@@ -373,7 +376,8 @@ class GPTBigCodeMLP(nn.Cell):
         
         Args:
             self: The instance of the GPTBigCodeMLP class.
-            hidden_states (Optional[Tuple[mindspore.Tensor]]): The hidden states to be processed by the multi-layer perceptron. It is an optional tuple of mindspore.Tensor containing the input hidden states. If not provided, the method will default to None.
+            hidden_states (Optional[Tuple[mindspore.Tensor]]): The hidden states to be processed by the multi-layer perceptron. It is an optional tuple of mindspore.Tensor containing the input hidden states.
+If not provided, the method will default to None.
         
         Returns:
             mindspore.Tensor: A tensor representing the processed hidden states after passing through the multi-layer perceptron.
@@ -459,7 +463,8 @@ class GPTBigCodeBlock(nn.Cell):
         - output_attentions (Optional[bool]): Flag to indicate whether to output attentions.
         
         Returns:
-        Union[Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]]: The output of the method which may include the hidden states and optionally attention scores.
+        Union[Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]]: The output of the method which may include the hidden states and
+optionally attention scores.
         
         Raises:
         - ValueError: If `encoder_hidden_states` are passed but the cross-attention layers are not instantiated with the flag `config.add_cross_attention=True`.
@@ -748,7 +753,8 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
             return_dict (Optional[bool], optional): Whether to return a dictionary. Defaults to None.
         
         Returns:
-            Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]: The output of the GPTBigCodeModel. Returns a tuple or a BaseModelOutputWithPastAndCrossAttentions object depending on the value of return_dict.
+            Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]: The output of the GPTBigCodeModel. Returns a tuple or a BaseModelOutputWithPastAndCrossAttentions object depending on the value of
+return_dict.
         
         Raises:
             ValueError: If both input_ids and inputs_embeds are specified.

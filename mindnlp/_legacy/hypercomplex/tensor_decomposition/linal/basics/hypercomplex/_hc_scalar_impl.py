@@ -14,7 +14,8 @@ class _ScalarImpl(ABC):
     
     The 'special_element' method does not take any arguments and returns a string. This method should be implemented to return a special element associated with the scalar implementation.
     
-    The 'visit' method takes a 'scalar' argument, a 'visitor' argument, and optional additional arguments and keyword arguments. It does not return anything. This method is used to visit the scalar value and perform certain operations using the provided 'visitor' object.
+    The 'visit' method takes a 'scalar' argument, a 'visitor' argument, and optional additional arguments and keyword arguments. It does not return anything. This method is used to visit the scalar value and
+perform certain operations using the provided 'visitor' object.
     
     The 'mul_scalar' method takes four arguments, 'x1', 'y1', 'x2', and 'y2', all of type np.float64, and returns a tuple of two np.float64 values. This method performs multiplication of two scalar values.
     

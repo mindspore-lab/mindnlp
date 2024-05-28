@@ -187,10 +187,12 @@ class BlipTextConfig(PretrainedConfig):
         
         Args:
             cls (class): The class object itself.
-            pretrained_model_name_or_path (Union[str, os.PathLike]): A string representing the name of a pretrained model or a valid path to a pretrained model configuration file. This parameter is mandatory and required for initializing the configuration object.
+            pretrained_model_name_or_path (Union[str, os.PathLike]): A string representing the name of a pretrained model or a valid path to a pretrained model configuration file. This parameter is mandatory
+and required for initializing the configuration object.
         
         Returns:
-            PretrainedConfig: An instance of 'PretrainedConfig' class representing the configuration settings of the pretrained model. The method returns the configuration object based on the provided pretrained model name or path.
+            PretrainedConfig: An instance of 'PretrainedConfig' class representing the configuration settings of the pretrained model. The method returns the configuration object based on the provided
+pretrained model name or path.
         
         Raises:
             - TypeError: If the provided 'pretrained_model_name_or_path' is not a string or a valid path-like object.
@@ -324,7 +326,8 @@ class BlipVisionConfig(PretrainedConfig):
         
         Args:
             cls (class): The class object itself, automatically passed as the first argument.
-            pretrained_model_name_or_path (Union[str, os.PathLike]): A string representing the name or path of the pretrained model. It can be either a string or a PathLike object. This parameter is used to fetch the configuration dictionary for the pretrained model.
+            pretrained_model_name_or_path (Union[str, os.PathLike]): A string representing the name or path of the pretrained model. It can be either a string or a PathLike object. This parameter is used to
+fetch the configuration dictionary for the pretrained model.
         
         Returns:
             PretrainedConfig: An instance of the 'PretrainedConfig' class representing the configuration of the pretrained model. The method returns this configuration for further use.

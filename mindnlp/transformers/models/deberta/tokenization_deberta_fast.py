@@ -319,7 +319,8 @@ class DebertaTokenizerFast(PreTrainedTokenizerFast):
             BatchEncoding: A BatchEncoding object containing the encoded inputs.
             
         Raises:
-            AssertionError: If `is_split_into_words` is True and `add_prefix_space` is False, an AssertionError is raised with a message indicating that the DebertaTokenizerFast class needs to be instantiated with `add_prefix_space=True` to use it with pretokenized inputs.
+            AssertionError: If `is_split_into_words` is True and `add_prefix_space` is False, an AssertionError is raised with a message indicating that the DebertaTokenizerFast class needs to be instantiated
+with `add_prefix_space=True` to use it with pretokenized inputs.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
 

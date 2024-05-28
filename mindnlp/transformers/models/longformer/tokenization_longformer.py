@@ -300,14 +300,16 @@ class LongformerTokenizer(PreTrainedTokenizer):
         Raises:
             None.
         
-        This method calculates and returns the vocabulary size of the LongformerTokenizer. The vocabulary size represents the number of unique tokens in the tokenizer's encoder. The encoder is a component of the LongformerTokenizer that is responsible for encoding input text into numerical representations.
+        This method calculates and returns the vocabulary size of the LongformerTokenizer. The vocabulary size represents the number of unique tokens in the tokenizer's encoder. The encoder is a component of
+the LongformerTokenizer that is responsible for encoding input text into numerical representations.
         
         Example:
             >>> tokenizer = LongformerTokenizer()
             >>> tokenizer.vocab_size()
             50000
         
-        In the above example, the vocab_size() method is called on an instance of the LongformerTokenizer class, resulting in the return value of 50000, which represents the number of unique tokens in the tokenizer's encoder.
+        In the above example, the vocab_size() method is called on an instance of the LongformerTokenizer class, resulting in the return value of 50000, which represents the number of unique tokens in the
+tokenizer's encoder.
         """
         return len(self.encoder)
 
@@ -323,7 +325,8 @@ class LongformerTokenizer(PreTrainedTokenizer):
         - self: The instance of the LongformerTokenizer class.
         
         Returns:
-        - vocab (dict): A dictionary containing the vocabulary. It is a combination of the encoder and added_tokens_encoder. The encoder is copied into the vocab dictionary, and then the added_tokens_encoder is updated into the vocab dictionary.
+        - vocab (dict): A dictionary containing the vocabulary. It is a combination of the encoder and added_tokens_encoder. The encoder is copied into the vocab dictionary, and then the added_tokens_encoder
+is updated into the vocab dictionary.
         
         Raises:
         This method does not raise any exceptions.

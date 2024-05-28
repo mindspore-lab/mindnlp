@@ -179,7 +179,8 @@ class MegatronBertSelfAttention(nn.Cell):
         transpose_for_scores(self, x: mindspore.Tensor) -> mindspore.Tensor:
             Transposes the input tensor to match the attention scores shape.
     
-        construct(self, hidden_states: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, encoder_hidden_states: Optional[mindspore.Tensor] = None, encoder_attention_mask: Optional[mindspore.Tensor] = None, past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None, output_attentions: Optional[bool] = False) -> Tuple[mindspore.Tensor]:
+        construct(self, hidden_states: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, encoder_hidden_states: Optional[mindspore.Tensor] =
+None, encoder_attention_mask: Optional[mindspore.Tensor] = None, past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None, output_attentions: Optional[bool] = False) -> Tuple[mindspore.Tensor]:
             Computes the self-attention scores and applies attention weights to the input hidden states.
     
     Returns:
@@ -381,7 +382,8 @@ class MegatronBertSelfOutput(nn.Cell):
     
     The __init__ method initializes the MegatronBertSelfOutput cell with the given configuration, including setting up dense layers and dropout for processing the hidden states.
     
-    The construct method takes the hidden_states and residual tensors as input and processes the hidden states using the defined dense and dropout layers. It then returns the sum of the original residual and the processed hidden states.
+    The construct method takes the hidden_states and residual tensors as input and processes the hidden states using the defined dense and dropout layers. It then returns the sum of the original residual and
+the processed hidden states.
     
     Note: This class assumes the availability of the mindspore library for specific tensor operations.
     """
@@ -448,7 +450,8 @@ class MegatronBertAttention(nn.Cell):
     Methods:
         __init__(self, config): Initializes the MegatronBertAttention instance.
         prune_heads(self, heads): Prunes the specified attention heads.
-        construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False): Performs the attention mechanism computation.
+        construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False): Performs the attention
+mechanism computation.
     
     """
     def __init__(self, config):
@@ -484,7 +487,8 @@ class MegatronBertAttention(nn.Cell):
         - heads: A list that contains the indices of the attention heads to be pruned. These indices correspond to the specific attention heads that should be removed from the self-attention mechanism.
         
         Returns:
-        This method does not return any value explicitly (returns None). However, it modifies the internal state of the MegatronBertAttention instance by pruning the specified attention heads from the self-attention mechanism.
+        This method does not return any value explicitly (returns None). However, it modifies the internal state of the MegatronBertAttention instance by pruning the specified attention heads from the
+self-attention mechanism.
         
         Raises:
         - No specific exceptions are documented to be raised within this method. However, potential exceptions that might occur during the execution could include:
@@ -580,7 +584,8 @@ class MegatronBertIntermediate(nn.Cell):
             config (object): The configuration object containing the settings for the MegatronBertIntermediate. It should have the following attributes:
                 - hidden_size (int): The size of the hidden layer.
                 - intermediate_size (int): The size of the intermediate layer.
-                - hidden_act (str or function): The activation function for the hidden layer. If it is a string, it should be one of the predefined activation functions available in the ACT2FN dictionary. If it is a function, it should be a custom activation function.
+                - hidden_act (str or function): The activation function for the hidden layer. If it is a string, it should be one of the predefined activation functions available in the ACT2FN dictionary. If
+it is a function, it should be a custom activation function.
         
         Returns:
             None. This method does not return any value.
@@ -779,7 +784,8 @@ class MegatronBertLayer(nn.Cell):
         """
         Constructs a MegatronBertLayer.
         
-        This method performs the forward pass of a MegatronBertLayer. It takes in various input tensors and returns the outputs after applying self-attention and cross-attention mechanisms, as well as feed-forward layers.
+        This method performs the forward pass of a MegatronBertLayer. It takes in various input tensors and returns the outputs after applying self-attention and cross-attention mechanisms, as well as
+feed-forward layers.
         
         Args:
             self (MegatronBertLayer): An instance of the MegatronBertLayer class.
@@ -792,7 +798,8 @@ class MegatronBertLayer(nn.Cell):
             output_attentions (Optional[bool]): An optional flag indicating whether to output attentions.
         
         Returns:
-            Tuple[mindspore.Tensor]: A tuple containing the outputs of the MegatronBertLayer. The first element is the layer output tensor of shape (batch_size, seq_length, hidden_size). If the layer is a decoder, the tuple also contains the present key-value tensor of shape (2, batch_size, num_heads, seq_length, hidden_size).
+            Tuple[mindspore.Tensor]: A tuple containing the outputs of the MegatronBertLayer. The first element is the layer output tensor of shape (batch_size, seq_length, hidden_size). If the layer is a
+decoder, the tuple also contains the present key-value tensor of shape (2, batch_size, num_heads, seq_length, hidden_size).
         
         Raises:
             AttributeError: If `encoder_hidden_states` are passed and cross-attention layers are not instantiated by setting `config.add_cross_attention=True`.
@@ -879,7 +886,8 @@ class MegatronBertLayer(nn.Cell):
 class MegatronBertEncoder(nn.Cell):
 
     """
-    The MegatronBertEncoder class represents a transformer encoder for Megatron-BERT. It inherits from nn.Cell and is responsible for encoding input sequences using multiple layers of transformer blocks. The class provides methods for constructing the encoder and performing forward pass computations, including handling gradient checkpointing and caching for efficient training and inference.
+    The MegatronBertEncoder class represents a transformer encoder for Megatron-BERT. It inherits from nn.Cell and is responsible for encoding input sequences using multiple layers of transformer blocks. The
+class provides methods for constructing the encoder and performing forward pass computations, including handling gradient checkpointing and caching for efficient training and inference.
     
     Attributes:
         config: The configuration parameters for the encoder.
@@ -889,11 +897,15 @@ class MegatronBertEncoder(nn.Cell):
     
     Methods:
         __init__(self, config): Initializes the MegatronBertEncoder with the provided configuration.
-        construct(self, hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_values, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the encoder and performs forward pass computations, optionally returning hidden states, attentions, and cross-attentions based on the specified parameters.
+        construct(self, hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_values, use_cache, output_attentions, output_hidden_states, return_dict): Constructs
+the encoder and performs forward pass computations, optionally returning hidden states, attentions, and cross-attentions based on the specified parameters.
     
-    The construct method handles the processing of input hidden states, attention masks, head masks, encoder hidden states, encoder attention masks, past key values, and caching options. It iterates through the stacked transformer layers, applying gradient checkpointing if enabled, and computes the final hidden states with layer normalization. Additionally, it returns the output as a BaseModelOutputWithPastAndCrossAttentions object if return_dict is True.
+    The construct method handles the processing of input hidden states, attention masks, head masks, encoder hidden states, encoder attention masks, past key values, and caching options. It iterates through
+the stacked transformer layers, applying gradient checkpointing if enabled, and computes the final hidden states with layer normalization. Additionally, it returns the output as a
+BaseModelOutputWithPastAndCrossAttentions object if return_dict is True.
     
-    Note: The MegatronBertEncoder class is designed for use in the Megatron-BERT architecture and is designed to work in conjunction with other components such as MegatronBertLayer and LayerNorm for efficient transformer-based encoding.
+    Note: The MegatronBertEncoder class is designed for use in the Megatron-BERT architecture and is designed to work in conjunction with other components such as MegatronBertLayer and LayerNorm for efficient
+transformer-based encoding.
     """
     def __init__(self, config):
 
@@ -943,9 +955,11 @@ class MegatronBertEncoder(nn.Cell):
             self (MegatronBertEncoder): The instance of MegatronBertEncoder.
             hidden_states (mindspore.Tensor): The hidden states of the input sequence. Shape: (batch_size, sequence_length, hidden_size).
             attention_mask (Optional[mindspore.Tensor]): The attention mask tensor. Shape: (batch_size, sequence_length) or (batch_size, sequence_length, sequence_length). Defaults to None.
-            head_mask (Optional[mindspore.Tensor]): The head mask tensor. Shape: (num_heads,) or (num_layers, num_heads) or (batch_size, num_layers, num_heads) or (batch_size, num_heads, sequence_length, sequence_length). Defaults to None.
+            head_mask (Optional[mindspore.Tensor]): The head mask tensor. Shape: (num_heads,) or (num_layers, num_heads) or (batch_size, num_layers, num_heads) or (batch_size, num_heads, sequence_length,
+sequence_length). Defaults to None.
             encoder_hidden_states (Optional[mindspore.Tensor]): The hidden states of the encoder sequence. Shape: (batch_size, encoder_sequence_length, hidden_size). Defaults to None.
-            encoder_attention_mask (Optional[mindspore.Tensor]): The attention mask tensor for the encoder. Shape: (batch_size, encoder_sequence_length) or (batch_size, encoder_sequence_length, encoder_sequence_length). Defaults to None.
+            encoder_attention_mask (Optional[mindspore.Tensor]): The attention mask tensor for the encoder. Shape: (batch_size, encoder_sequence_length) or (batch_size, encoder_sequence_length,
+encoder_sequence_length). Defaults to None.
             past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]]): The past key value tensors. Defaults to None.
             use_cache (Optional[bool]): Whether to use cache. Defaults to None.
             output_attentions (Optional[bool]): Whether to output attentions. Defaults to False.
@@ -1104,7 +1118,8 @@ class MegatronBertPredictionHeadTransform(nn.Cell):
 
     """Represents a transformation head for the Megatron-BERT prediction head.
     
-    This class inherits from nn.Cell and provides methods for transforming hidden states as part of the Megatron-BERT prediction head. It includes a dense layer, activation function transformation, and layer normalization.
+    This class inherits from nn.Cell and provides methods for transforming hidden states as part of the Megatron-BERT prediction head. It includes a dense layer, activation function transformation, and layer
+normalization.
     
     Attributes:
         dense (nn.Dense): The dense layer for transforming the hidden states.
@@ -1238,9 +1253,11 @@ class MegatronBertOnlyMLMHead(nn.Cell):
     """
     Represents a Megatron-style MLM head for BERT models, which includes only the MLM prediction head without the rest of the model.
     
-    This class inherits from nn.Cell and is designed to be used in conjunction with a BERT model for masked language modeling tasks. It contains methods for initializing the prediction head and generating prediction scores based on the input sequence output.
+    This class inherits from nn.Cell and is designed to be used in conjunction with a BERT model for masked language modeling tasks. It contains methods for initializing the prediction head and generating
+prediction scores based on the input sequence output.
     
-    The class includes an __init__ method to initialize the prediction head with the provided configuration, and a construct method to generate prediction scores using the sequence output tensor. The prediction scores are obtained by passing the sequence output through the prediction head.
+    The class includes an __init__ method to initialize the prediction head with the provided configuration, and a construct method to generate prediction scores using the sequence output tensor. The
+prediction scores are obtained by passing the sequence output through the prediction head.
     
     Note: This class assumes that the MegatronBertLMPredictionHead class is available for use in creating the MLM prediction head.
     
@@ -1291,10 +1308,12 @@ class MegatronBertOnlyNSPHead(nn.Cell):
     """
     This class represents the NSP (Next Sentence Prediction) head for the Megatron-BERT model.
     
-    The MegatronBertOnlyNSPHead class inherits from the nn.Cell class and is responsible for predicting whether two sentences follow each other in a text. It is used in the Megatron-BERT model to perform the next sentence prediction task.
+    The MegatronBertOnlyNSPHead class inherits from the nn.Cell class and is responsible for predicting whether two sentences follow each other in a text. It is used in the Megatron-BERT model to perform the
+next sentence prediction task.
     
     Attributes:
-        seq_relationship (nn.Dense): A densely connected layer that maps the input features to a score indicating the likelihood of the next sentence prediction. The layer has a hidden size of `config.hidden_size` and output size of 2, representing the two possible classes (follows or does not follow).
+        seq_relationship (nn.Dense): A densely connected layer that maps the input features to a score indicating the likelihood of the next sentence prediction. The layer has a hidden size of
+`config.hidden_size` and output size of 2, representing the two possible classes (follows or does not follow).
     
     Methods:
         __init__(self, config):
@@ -1697,9 +1716,11 @@ class MegatronBertModel(MegatronBertPreTrainedModel):
 class MegatronBertForPreTraining(MegatronBertPreTrainedModel):
 
     """
-    The `MegatronBertForPreTraining` class represents a pre-trained Megatron-BERT model for pre-training tasks. It inherits from the `MegatronBertPreTrainedModel` class and provides methods for constructing the model, retrieving and setting output embeddings, and performing pre-training tasks such as masked language modeling and next sentence prediction.
+    The `MegatronBertForPreTraining` class represents a pre-trained Megatron-BERT model for pre-training tasks. It inherits from the `MegatronBertPreTrainedModel` class and provides methods for constructing
+the model, retrieving and setting output embeddings, and performing pre-training tasks such as masked language modeling and next sentence prediction.
     
-    The `construct` method takes input tensors for various model inputs and optional labels, and returns pre-training outputs including loss, prediction logits, sequence relationship logits, hidden states, and attentions. This method supports both batch and sequence-level losses for masked language modeling and next sentence prediction.
+    The `construct` method takes input tensors for various model inputs and optional labels, and returns pre-training outputs including loss, prediction logits, sequence relationship logits, hidden states, and
+attentions. This method supports both batch and sequence-level losses for masked language modeling and next sentence prediction.
     
     The `get_output_embeddings` method returns the decoder for predictions, while the `set_output_embeddings` method allows for updating the decoder with new embeddings.
     
@@ -1849,7 +1870,9 @@ class MegatronBertForPreTraining(MegatronBertPreTrainedModel):
 class MegatronBertForCausalLM(MegatronBertPreTrainedModel):
 
     '''
-    A class that represents the MegatronBERT model for Causal Language Modeling. This class inherits from MegatronBertPreTrainedModel and provides methods for model initialization, output embeddings, input preparation for generation, cache reordering, and model construction. It also includes detailed explanations for the model's input and output parameters, as well as usage examples. The methods within the class enable fine-tuning and using the model for causal language modeling tasks. 
+    A class that represents the MegatronBERT model for Causal Language Modeling. This class inherits from MegatronBertPreTrainedModel and provides methods for model initialization, output embeddings, input
+preparation for generation, cache reordering, and model construction. It also includes detailed explanations for the model's input and output parameters, as well as usage examples. The methods within the class
+enable fine-tuning and using the model for causal language modeling tasks. 
     '''
     _tied_weights_keys = ["cls.predictions.decoder"]
 
@@ -2082,7 +2105,8 @@ class MegatronBertForCausalLM(MegatronBertPreTrainedModel):
 class MegatronBertForMaskedLM(MegatronBertPreTrainedModel):
 
     """
-    This class represents a MegatronBert model for Masked Language Modeling (MLM). It inherits from the MegatronBertPreTrainedModel and includes methods for initializing the model, getting and setting output embeddings, constructing the model, and preparing inputs for generation. The class provides functionality for performing masked language modeling tasks using the MegatronBert model.
+    This class represents a MegatronBert model for Masked Language Modeling (MLM). It inherits from the MegatronBertPreTrainedModel and includes methods for initializing the model, getting and setting output
+embeddings, constructing the model, and preparing inputs for generation. The class provides functionality for performing masked language modeling tasks using the MegatronBert model.
     
     Attributes:
         config (MegatronBertConfig): The configuration for the MegatronBert model.
@@ -2091,7 +2115,8 @@ class MegatronBertForMaskedLM(MegatronBertPreTrainedModel):
         __init__(config): Initializes the MegatronBertForMaskedLM model with the given configuration.
         get_output_embeddings(): Retrieves the output embeddings of the model.
         set_output_embeddings(new_embeddings): Sets the output embeddings of the model to the specified new embeddings.
-        construct(input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, encoder_hidden_states, encoder_attention_mask, labels, output_attentions, output_hidden_states, return_dict): Constructs the model with the given input and optional arguments, and returns the MaskedLMOutput.
+        construct(input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, encoder_hidden_states, encoder_attention_mask, labels, output_attentions, output_hidden_states,
+return_dict): Constructs the model with the given input and optional arguments, and returns the MaskedLMOutput.
         prepare_inputs_for_generation(input_ids, attention_mask, **model_kwargs): Prepares the input for generation by updating the input_ids and attention_mask for the model.
     
     Note: For consistency, always use triple double quotes around docstrings.
@@ -2161,7 +2186,8 @@ class MegatronBertForMaskedLM(MegatronBertPreTrainedModel):
         Raises:
             None.
         
-        This method is used to set the output embeddings for the MegatronBertForMaskedLM model. The new embeddings are assigned to the model's predictions.decoder attribute, which represents the decoder layer responsible for generating output embeddings during inference. The method does not return any value and modifies the model directly.
+        This method is used to set the output embeddings for the MegatronBertForMaskedLM model. The new embeddings are assigned to the model's predictions.decoder attribute, which represents the decoder layer
+responsible for generating output embeddings during inference. The method does not return any value and modifies the model directly.
         """
         self.cls.predictions.decoder = new_embeddings
 
@@ -2409,13 +2435,16 @@ class MegatronBertForNextSentencePrediction(MegatronBertPreTrainedModel):
 class MegatronBertForSequenceClassification(MegatronBertPreTrainedModel):
 
     """
-    This class represents a MegatronBERT model for sequence classification tasks. It inherits from the MegatronBertPreTrainedModel class and includes methods for initializing the model and generating classification outputs. 
+    This class represents a MegatronBERT model for sequence classification tasks. It inherits from the MegatronBertPreTrainedModel class and includes methods for initializing the model and generating
+classification outputs. 
     
-    The `construct` method takes various input tensors and computes the sequence classification/regression loss based on the configured problem type. It returns the classification logits and optionally the loss, hidden states, and attentions. 
+    The `construct` method takes various input tensors and computes the sequence classification/regression loss based on the configured problem type. It returns the classification logits and optionally the
+loss, hidden states, and attentions. 
     
     The `__init__` method initializes the model with the provided configuration and sets up the BERT model, dropout layer, and classifier for sequence classification.
     
-    The class also provides detailed documentation for the `construct` method, including information about the input and output tensors, as well as the optional labels for computing the classification/regression loss.
+    The class also provides detailed documentation for the `construct` method, including information about the input and output tensors, as well as the optional labels for computing the
+classification/regression loss.
     
     For complete method signatures and code, please refer to the source code. 
     """
@@ -2518,11 +2547,13 @@ class MegatronBertForMultipleChoice(MegatronBertPreTrainedModel):
     """
     A Python class representing the MegatronBertForMultipleChoice model, which is designed for multiple choice classification tasks. It is a subclass of the MegatronBertPreTrainedModel.
     
-    The MegatronBertForMultipleChoice model consists of a MegatronBertModel, a dropout layer, and a classifier. The MegatronBertModel encodes the input sequence using the BERT architecture, while the dropout layer helps prevent overfitting. The classifier then produces logits for each choice in the multiple choice question.
+    The MegatronBertForMultipleChoice model consists of a MegatronBertModel, a dropout layer, and a classifier. The MegatronBertModel encodes the input sequence using the BERT architecture, while the dropout
+layer helps prevent overfitting. The classifier then produces logits for each choice in the multiple choice question.
     
     Methods:
         - __init__(self, config): Initializes the MegatronBertForMultipleChoice model with the given configuration.
-        - construct(self, input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Constructs the model and performs forward pass given the input tensors. It returns the logits for each choice and optionally computes the loss.
+        - construct(self, input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Constructs the model and performs
+forward pass given the input tensors. It returns the logits for each choice and optionally computes the loss.
     
     Attributes:
         - bert: The MegatronBertModel used for encoding the input sequence.
@@ -2648,9 +2679,12 @@ class MegatronBertForTokenClassification(MegatronBertPreTrainedModel):
     """
     This class represents a token classification model based on the Megatron BERT architecture. It inherits from the MegatronBertPreTrainedModel class and includes functionality for token classification tasks.
     
-    The __init__ method initializes the MegatronBertForTokenClassification instance with the provided configuration. It sets the number of labels, initializes the BERT model without a pooling layer, sets the dropout probability, and initializes the classifier.
+    The __init__ method initializes the MegatronBertForTokenClassification instance with the provided configuration. It sets the number of labels, initializes the BERT model without a pooling layer, sets the
+dropout probability, and initializes the classifier.
     
-    The construct method takes input tensors for token classification, such as input_ids, attention_mask, token_type_ids, position_ids, head_mask, and inputs_embeds. It also supports optional arguments for labels, output_attentions, output_hidden_states, and return_dict. The method returns TokenClassifierOutput containing the loss, logits, hidden states, and attentions. If labels are provided, it computes the token classification loss using cross-entropy.
+    The construct method takes input tensors for token classification, such as input_ids, attention_mask, token_type_ids, position_ids, head_mask, and inputs_embeds. It also supports optional arguments for
+labels, output_attentions, output_hidden_states, and return_dict. The method returns TokenClassifierOutput containing the loss, logits, hidden states, and attentions. If labels are provided, it computes the
+token classification loss using cross-entropy.
     
     The class provides detailed docstrings for each method, including parameter descriptions and return types for improved documentation and understanding.
     """
@@ -2749,7 +2783,8 @@ class MegatronBertForQuestionAnswering(MegatronBertPreTrainedModel):
     
     Methods:
         __init__(self, config): Initializes the MegatronBertForQuestionAnswering instance.
-        construct(self, input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, start_positions, end_positions, output_attentions, output_hidden_states, return_dict): Constructs the Megatron-BERT model and generates predictions for question answering tasks.
+        construct(self, input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, start_positions, end_positions, output_attentions, output_hidden_states, return_dict): Constructs the
+Megatron-BERT model and generates predictions for question answering tasks.
     
     """
     def __init__(self, config):

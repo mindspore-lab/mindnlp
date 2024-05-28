@@ -845,10 +845,12 @@ class MSConvBertModel(ConvBertPreTrainedModel):
             None.
         
         Description:
-        This method allows for the setting of new word embeddings for the MSConvBertModel. The new_embeddings parameter should be a tensor containing the new word embeddings. The method updates the self.embeddings.word_embeddings attribute of the MSConvBertModel instance with the provided new_embeddings.
+        This method allows for the setting of new word embeddings for the MSConvBertModel. The new_embeddings parameter should be a tensor containing the new word embeddings. The method updates the
+self.embeddings.word_embeddings attribute of the MSConvBertModel instance with the provided new_embeddings.
         
         Note:
-        The new_embeddings tensor should have the same shape as the existing word_embeddings tensor. It is important to ensure that the dimensions of the new_embeddings tensor match the word_embeddings tensor of the model, otherwise unexpected behavior may occur.
+        The new_embeddings tensor should have the same shape as the existing word_embeddings tensor. It is important to ensure that the dimensions of the new_embeddings tensor match the word_embeddings tensor
+of the model, otherwise unexpected behavior may occur.
         """
         self.embeddings.word_embeddings = new_embeddings
 

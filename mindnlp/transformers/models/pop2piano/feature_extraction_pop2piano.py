@@ -268,7 +268,8 @@ class Pop2PianoFeatureExtractor(SequenceFeatureExtractor):
             add_zero_line (bool): A flag indicating whether to add a zero line at the end of each padded feature. Defaults to True.
         
         Returns:
-            tuple: A tuple containing the padded features and attention masks. The padded features are of type np.ndarray and have been concatenated along the 0th axis. The attention masks are also of type np.ndarray and have been concatenated along the 0th axis.
+            tuple: A tuple containing the padded features and attention masks. The padded features are of type np.ndarray and have been concatenated along the 0th axis. The attention masks are also of type
+np.ndarray and have been concatenated along the 0th axis.
         
         Raises:
             ValueError: If the input features are not of type np.ndarray or if the feature shapes are inconsistent.

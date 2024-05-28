@@ -179,7 +179,9 @@ class VipLlavaPreTrainedModel(PreTrainedModel):
     The VipLlavaPreTrainedModel class provides methods for initializing the weights of the model and checking whether the model supports SDPA (Semi-Definite Programming Algorithm).
     
     Methods:
-    - _init_weights(module): Initializes the weights of the given module using random normal distribution with a standard deviation determined by the configuration. If the module has a class_embedding attribute, it sets the data of the class_embedding tensor with random values. If the module is an instance of nn.Dense or nn.Conv2d, it sets the data of the weight tensor with random values and initializes the bias tensor with zeros. If the module is an instance of nn.Embedding, it sets the data of the weight tensor with random values and initializes the padding_idx tensor with zeros.
+    - _init_weights(module): Initializes the weights of the given module using random normal distribution with a standard deviation determined by the configuration. If the module has a class_embedding
+attribute, it sets the data of the class_embedding tensor with random values. If the module is an instance of nn.Dense or nn.Conv2d, it sets the data of the weight tensor with random values and initializes the
+bias tensor with zeros. If the module is an instance of nn.Embedding, it sets the data of the weight tensor with random values and initializes the padding_idx tensor with zeros.
     - _supports_sdpa: Retrieves the language_model attribute of the class to check whether the model supports SDPA or not.
     
     Note: Please refer to the PreTrainedModel class for additional inherited methods and attributes.
@@ -317,7 +319,8 @@ VIPLLAVA_INPUTS_DOCSTRING = r"""
 class VipLlavaForConditionalGeneration(VipLlavaPreTrainedModel):
 
     """
-    This class represents a model for conditional generation using the VipLlava architecture. It inherits from VipLlavaPreTrainedModel and provides methods for preparing inputs for generation, constructing the model, and reordering cache. 
+    This class represents a model for conditional generation using the VipLlava architecture. It inherits from VipLlavaPreTrainedModel and provides methods for preparing inputs for generation, constructing the
+model, and reordering cache. 
     
     Methods:
         - construct: Generates output based on input tokens, image features, attention mask, and other optional parameters. It returns a tuple or VipLlavaCausalLMOutputWithPast object.
@@ -364,7 +367,8 @@ class VipLlavaForConditionalGeneration(VipLlavaPreTrainedModel):
             self: An instance of the VipLlavaForConditionalGeneration class.
         
         Returns:
-            None. This method returns the input embeddings of the language model used for conditional generation. The embeddings are obtained by calling the 'get_input_embeddings()' method of the language model.
+            None. This method returns the input embeddings of the language model used for conditional generation. The embeddings are obtained by calling the 'get_input_embeddings()' method of the language
+model.
         
         Raises:
             None. This method does not raise any exceptions.
@@ -489,7 +493,9 @@ class VipLlavaForConditionalGeneration(VipLlavaPreTrainedModel):
         Raises:
             None.
         
-        This method resizes the token embeddings of the VipLlavaForConditionalGeneration model based on the provided parameters. It first resizes the token embeddings of the underlying language model using the 'resize_token_embeddings' method. It then updates the 'vocab_size' configuration parameter and the 'vocab_size' attribute of the model to reflect the new size of the embeddings. Finally, it returns the resized token embeddings as an instance of nn.Embedding.
+        This method resizes the token embeddings of the VipLlavaForConditionalGeneration model based on the provided parameters. It first resizes the token embeddings of the underlying language model using the
+'resize_token_embeddings' method. It then updates the 'vocab_size' configuration parameter and the 'vocab_size' attribute of the model to reflect the new size of the embeddings. Finally, it returns the resized
+token embeddings as an instance of nn.Embedding.
         """
         model_embeds = self.language_model.resize_token_embeddings(
             new_num_tokens, pad_to_multiple_of)
@@ -638,7 +644,8 @@ class VipLlavaForConditionalGeneration(VipLlavaPreTrainedModel):
         >>> model = VipLlavaForConditionalGeneration.from_pretrained("llava-hf/vip-llava-7b-hf", device_map="auto", torch_dtype=torch.float16)
         >>> processor = AutoProcessor.from_pretrained("llava-hf/vip-llava-7b-hf")
 
-        >>> prompt = "A chat between a curious human and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the human's questions.###Human: <image>\n{}###Assistant:"
+        >>> prompt = "A chat between a curious human and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the human's questions.###Human:
+<image>\n{}###Assistant:"
         >>> question = "Can you please describe this image?"
         >>> prompt = prompt.format(question)
         >>> url = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/diffusers/compel-neg.png"

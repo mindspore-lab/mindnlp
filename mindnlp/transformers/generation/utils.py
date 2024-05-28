@@ -884,7 +884,8 @@ class GenerationMixin:
             - bos_token_id (int, optional): The ID of the beginning-of-sentence token. If provided, it overrides the value set in 'generation_config.bos_token_id'. Default is None.
         
         Returns:
-            int: The selected decoder start token ID. If 'decoder_start_token_id' is not None, it is returned. Otherwise, if 'bos_token_id' is not None, it is returned. If neither is defined, a ValueError is raised.
+            int: The selected decoder start token ID. If 'decoder_start_token_id' is not None, it is returned. Otherwise, if 'bos_token_id' is not None, it is returned. If neither is defined, a ValueError is
+raised.
         
         Raises:
             ValueError: If neither 'decoder_start_token_id' nor 'bos_token_id' is defined, this exception is raised to indicate that at least one of them must be defined for encoder-decoder generation.
@@ -1268,7 +1269,8 @@ class GenerationMixin:
             Union[LogitsProcessorList, StoppingCriteriaList]: The merged list of criteria processors or stopping criteria.
         
         Raises:
-            ValueError: If a custom stopping criteria or logits processor of the same type as the default already exists, with detailed information about the conflicting objects and a suggestion for resolving the conflict.
+            ValueError: If a custom stopping criteria or logits processor of the same type as the default already exists, with detailed information about the conflicting objects and a suggestion for resolving
+the conflict.
         """
         if len(custom_list) == 0:
             return default_list

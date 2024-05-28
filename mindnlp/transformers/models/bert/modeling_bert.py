@@ -275,14 +275,17 @@ class BertSelfAttention(nn.Cell):
             self (BertSelfAttention): The instance of the BertSelfAttention class.
             hidden_states (mindspore.Tensor): The input hidden states of the model. It has shape (batch_size, sequence_length, hidden_size).
             attention_mask (Optional[mindspore.Tensor]): The attention mask tensor to mask certain positions in the input. It has shape (batch_size, sequence_length) or (batch_size, 1, 1, sequence_length).
-            head_mask (Optional[mindspore.Tensor]): The head mask tensor to mask certain heads of the attention mechanism. It has shape (num_attention_heads,) or (batch_size, num_attention_heads) or (batch_size, num_attention_heads, sequence_length, sequence_length).
+            head_mask (Optional[mindspore.Tensor]): The head mask tensor to mask certain heads of the attention mechanism. It has shape (num_attention_heads,) or (batch_size, num_attention_heads) or
+(batch_size, num_attention_heads, sequence_length, sequence_length).
             encoder_hidden_states (Optional[mindspore.Tensor]): The hidden states of the encoder. It has shape (batch_size, encoder_sequence_length, hidden_size).
             encoder_attention_mask (Optional[mindspore.Tensor]): The attention mask tensor for the encoder. It has shape (batch_size, 1, 1, encoder_sequence_length).
-            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): The cached key and value tensors from previous steps. It is a tuple containing two tensors of shape (batch_size, num_attention_heads, sequence_length, head_size).
+            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): The cached key and value tensors from previous steps. It is a tuple containing two tensors of shape (batch_size, num_attention_heads,
+sequence_length, head_size).
             output_attentions (Optional[bool]): Whether to output attention probabilities.
         
         Returns:
-            Tuple[mindspore.Tensor]: A tuple containing the computed context layer and the attention probabilities. The context layer has shape (batch_size, sequence_length, hidden_size) and the attention probabilities have shape (batch_size, num_attention_heads, sequence_length, sequence_length).
+            Tuple[mindspore.Tensor]: A tuple containing the computed context layer and the attention probabilities. The context layer has shape (batch_size, sequence_length, hidden_size) and the attention
+probabilities have shape (batch_size, num_attention_heads, sequence_length, sequence_length).
         
         Raises:
             None
@@ -496,11 +499,15 @@ class BertAttention(nn.Cell):
         Args:
             self (BertAttention): The instance of the BertAttention class.
             hidden_states (mindspore.Tensor): The input tensor containing the hidden states of the model. The shape should be [batch_size, sequence_length, hidden_size].
-            attention_mask (Optional[mindspore.Tensor]): An optional tensor containing the attention mask for the input. If provided, the shape should be [batch_size, 1, sequence_length, sequence_length] and the values should be 0 or 1. Default is None.
+            attention_mask (Optional[mindspore.Tensor]): An optional tensor containing the attention mask for the input. If provided, the shape should be [batch_size, 1, sequence_length, sequence_length] and
+the values should be 0 or 1. Default is None.
             head_mask (Optional[mindspore.Tensor]): An optional tensor containing the head mask for the input. If provided, the shape should be [num_heads] and the values should be 0 or 1. Default is None.
-            encoder_hidden_states (Optional[mindspore.Tensor]): An optional tensor containing the hidden states of the encoder. If provided, the shape should be [batch_size, sequence_length, hidden_size]. Default is None.
-            encoder_attention_mask (Optional[mindspore.Tensor]): An optional tensor containing the attention mask for the encoder input. If provided, the shape should be [batch_size, 1, sequence_length, sequence_length] and the values should be 0 or 1. Default is None.
-            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): An optional tuple containing the past key and value tensors. If provided, the shape should be [(batch_size, num_heads, sequence_length, head_size), (batch_size, num_heads, sequence_length, head_size)]. Default is None.
+            encoder_hidden_states (Optional[mindspore.Tensor]): An optional tensor containing the hidden states of the encoder. If provided, the shape should be [batch_size, sequence_length, hidden_size].
+Default is None.
+            encoder_attention_mask (Optional[mindspore.Tensor]): An optional tensor containing the attention mask for the encoder input. If provided, the shape should be [batch_size, 1, sequence_length,
+sequence_length] and the values should be 0 or 1. Default is None.
+            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): An optional tuple containing the past key and value tensors. If provided, the shape should be [(batch_size, num_heads, sequence_length,
+head_size), (batch_size, num_heads, sequence_length, head_size)]. Default is None.
             output_attentions (Optional[bool]): An optional boolean value indicating whether to output attentions. Default is False.
         
         Returns:
@@ -977,7 +984,8 @@ class BertLMPredictionHead(nn.Cell):
         
         Args:
             self: The object instance of the BertLMPredictionHead class.
-            config: A configuration object containing settings for the prediction head. It is of type dict or a custom configuration class. The config parameter is used to configure the prediction head's behavior and settings.
+            config: A configuration object containing settings for the prediction head. It is of type dict or a custom configuration class. The config parameter is used to configure the prediction head's
+behavior and settings.
         
         Returns:
             None. This method does not return any value.
@@ -1814,7 +1822,8 @@ class BertForMaskedLM(BertPreTrainedModel):
         
         The 'config' parameter is an instance of the BertConfig class, which contains various settings and hyperparameters for the model. It is used to configure the model architecture and behavior. 
         
-        Note that if the 'is_decoder' attribute of the 'config' parameter is set to True, a warning message is logged, reminding the user to set 'is_decoder' to False when using the 'BertForMaskedLM' model with bi-directional self-attention.
+        Note that if the 'is_decoder' attribute of the 'config' parameter is set to True, a warning message is logged, reminding the user to set 'is_decoder' to False when using the 'BertForMaskedLM' model
+with bi-directional self-attention.
         
         The method initializes two attributes of the instance:
         - 'bert': An instance of the 'BertModel' class, which represents the BERT model without the MLM head. The 'config' parameter is passed to the 'BertModel' constructor to configure the model architecture.
@@ -2572,7 +2581,8 @@ class BertForPreTraining(BertPreTrainedModel):
             return_dict (Optional[bool]): Whether to return the output as a dictionary. Default is None.
         
         Returns:
-            Union[Tuple[mindspore.Tensor], BertForPreTrainingOutput]: A tuple containing the prediction scores for masked language modeling and next sentence prediction tasks, and additional outputs if specified.
+            Union[Tuple[mindspore.Tensor], BertForPreTrainingOutput]: A tuple containing the prediction scores for masked language modeling and next sentence prediction tasks, and additional outputs if
+specified.
         
         Raises:
             None
@@ -2615,7 +2625,8 @@ class BertForPreTraining(BertPreTrainedModel):
 class BertDualSelfAttention(nn.Cell):
 
     """
-    The BertDualSelfAttention class represents the dual self-attention mechanism used in the BERT model. This class implements the mechanism for both real and imaginary parts of the self-attention mechanism. It inherits from the nn.Cell class and provides methods for attention score computation and context layer generation.
+    The BertDualSelfAttention class represents the dual self-attention mechanism used in the BERT model. This class implements the mechanism for both real and imaginary parts of the self-attention mechanism.
+It inherits from the nn.Cell class and provides methods for attention score computation and context layer generation.
     
     Attributes:
         config: A configuration object containing the model's hyperparameters.
@@ -2631,7 +2642,8 @@ class BertDualSelfAttention(nn.Cell):
     
     Methods:
         transpose_for_scores(input_x): Transposes the input tensor for computing attention scores.
-        construct(hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_value, output_attentions): Constructs the dual self-attention mechanism using the provided input tensors.
+        construct(hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_value, output_attentions): Constructs the dual self-attention mechanism using the provided
+input tensors.
     
     Note:
         The construct method raises a NotImplementedError for cross-attention and past_key_value arguments, as these functionalities are not implemented yet.
@@ -2707,7 +2719,8 @@ class BertDualSelfAttention(nn.Cell):
             output_attentions (Optional[bool]): An optional boolean flag indicating whether to output the attention scores.
         
         Returns:
-            Tuple[mindspore.Tensor, Optional[mindspore.Tensor]]: A tuple containing the context layer tensor with shape (batch_size, sequence_length, hidden_size) and optionally the attention scores tensor with shape (batch_size, num_attention_heads, sequence_length, sequence_length).
+            Tuple[mindspore.Tensor, Optional[mindspore.Tensor]]: A tuple containing the context layer tensor with shape (batch_size, sequence_length, hidden_size) and optionally the attention scores tensor
+with shape (batch_size, num_attention_heads, sequence_length, sequence_length).
         
         Raises:
             NotImplementedError: If the functionality for cross-attention or incremental decoding is not implemented.
@@ -2835,7 +2848,8 @@ class BertDualSelfOutput(nn.Cell):
 class BertDualAttention(nn.Cell):
 
     """
-    This class represents a BertDualAttention module that inherits from nn.Cell. It contains methods for initializing the module, pruning attention heads, and constructing the attention mechanism for BERT models.
+    This class represents a BertDualAttention module that inherits from nn.Cell. It contains methods for initializing the module, pruning attention heads, and constructing the attention mechanism for BERT
+models.
     
     Attributes:
         config: Configuration for the BertDualAttention module.
@@ -2946,7 +2960,8 @@ class BertDualIntermediate(nn.Cell):
     """
     This class represents a dual intermediate layer in a BERT model.
     
-    The BertDualIntermediate class is a subclass of nn.Cell and is used to construct the dual intermediate layer in a BERT model. It takes in a configuration object as input, which specifies the hidden size and intermediate size. The class initializes the hidden size and intermediate size attributes based on the provided configuration.
+    The BertDualIntermediate class is a subclass of nn.Cell and is used to construct the dual intermediate layer in a BERT model. It takes in a configuration object as input, which specifies the hidden size
+and intermediate size. The class initializes the hidden size and intermediate size attributes based on the provided configuration.
     
     Attributes:
         hidden_size (int): The size of the hidden state in the dual intermediate layer.
@@ -3446,7 +3461,8 @@ class BertDualModel(BertPreTrainedModel):
         Raises:
             None.
         
-        This method retrieves the input embeddings, represented by the 'word_embeddings' attribute of the BertDualModel instance. The embeddings are used to encode the input data into numerical representations suitable for processing by the model.
+        This method retrieves the input embeddings, represented by the 'word_embeddings' attribute of the BertDualModel instance. The embeddings are used to encode the input data into numerical representations
+suitable for processing by the model.
         
         Note that this method does not modify any attributes or perform any calculations. It simply returns the existing input embeddings.
         
@@ -3615,11 +3631,13 @@ class BertDualModel(BertPreTrainedModel):
 class BertDualForSequenceClassification(BertPreTrainedModel):
 
     """
-    The BertDualForSequenceClassification class represents a dual BERT model for sequence classification tasks. This class inherits from BertPreTrainedModel and provides methods for initializing the model and processing input data for sequence classification.
+    The BertDualForSequenceClassification class represents a dual BERT model for sequence classification tasks. This class inherits from BertPreTrainedModel and provides methods for initializing the model and
+processing input data for sequence classification.
     
     The __init__ method initializes the BertDualForSequenceClassification instance by setting the number of labels, BERT model configuration, dropout, and classifier layers.
     
-    The construct method processes input data for sequence classification using the BERT model. It accepts input tensors such as input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, labels, and additional parameters for controlling the output format. The method returns the classification logits and can also calculate the loss based on the problem type and labels provided.
+    The construct method processes input data for sequence classification using the BERT model. It accepts input tensors such as input_ids, attention_mask, token_type_ids, position_ids, head_mask,
+inputs_embeds, labels, and additional parameters for controlling the output format. The method returns the classification logits and can also calculate the loss based on the problem type and labels provided.
     
     Note: This docstring is based on the provided code and may need to be updated with additional information about the class attributes, methods, and usage.
     """

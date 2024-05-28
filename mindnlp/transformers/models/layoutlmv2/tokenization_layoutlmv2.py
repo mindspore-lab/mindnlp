@@ -703,7 +703,8 @@ class LayoutLMv2Tokenizer(PreTrainedTokenizer):
         
         Args:
             self (LayoutLMv2Tokenizer): An instance of the LayoutLMv2Tokenizer class.
-            batch_text_or_text_pairs (Union[List[TextInput], List[TextInputPair], List[PreTokenizedInput]]): A list of input texts or text pairs to be encoded. The input can be either a single text, a text pair, or a pre-tokenized input.
+            batch_text_or_text_pairs (Union[List[TextInput], List[TextInputPair], List[PreTokenizedInput]]): A list of input texts or text pairs to be encoded. The input can be either a single text, a text
+pair, or a pre-tokenized input.
             is_pair (bool, optional): Indicates whether the input is a text pair. Defaults to None.
             boxes (Optional[List[List[List[int]]]], optional): A list of bounding boxes for each token in the input. Defaults to None.
             word_labels (Optional[Union[List[int], List[List[int]]]], optional): A list of word labels for each token in the input. Defaults to None.
@@ -1121,7 +1122,8 @@ class LayoutLMv2Tokenizer(PreTrainedTokenizer):
             BatchEncoding: A batch of encoded inputs in the form of tensors.
         
         Raises:
-            NotImplementedError: If return_offsets_mapping is set to True. This feature is not available when using Python tokenizers. To use this feature, change your tokenizer to one deriving from transformers.PreTrainedTokenizerFast. More information on available tokenizers can be found at https://github.com/huggingface/transformers/pull/2674.
+            NotImplementedError: If return_offsets_mapping is set to True. This feature is not available when using Python tokenizers. To use this feature, change your tokenizer to one deriving from
+transformers.PreTrainedTokenizerFast. More information on available tokenizers can be found at https://github.com/huggingface/transformers/pull/2674.
         """
         if return_offsets_mapping:
             raise NotImplementedError(

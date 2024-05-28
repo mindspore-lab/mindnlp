@@ -432,6 +432,7 @@ class Wav2Vec2Config(PretrainedConfig):
         Raises:
             None.
         
-        This method calculates the ratio of inputs to logits by multiplying the convolution stride values. The convolution stride values are accessed using the self.conv_stride attribute. The functools.reduce() function is used to multiply all the stride values together. If there are no stride values, the ratio is assumed to be 1. The calculated ratio is then returned as the output of this method.
+        This method calculates the ratio of inputs to logits by multiplying the convolution stride values. The convolution stride values are accessed using the self.conv_stride attribute. The
+functools.reduce() function is used to multiply all the stride values together. If there are no stride values, the ratio is assumed to be 1. The calculated ratio is then returned as the output of this method.
         """
         return functools.reduce(operator.mul, self.conv_stride, 1)

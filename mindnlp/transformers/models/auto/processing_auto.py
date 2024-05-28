@@ -163,7 +163,8 @@ class AutoProcessor:
             None. This method does not return a value.
         
         Raises:
-            EnvironmentError: This method raises an EnvironmentError with the message 'AutoProcessor is designed to be instantiated using the `AutoProcessor.from_pretrained(pretrained_model_name_or_path)` method.'
+            EnvironmentError: This method raises an EnvironmentError with the message 'AutoProcessor is designed to be instantiated using the `AutoProcessor.from_pretrained(pretrained_model_name_or_path)`
+method.'
         """
         raise EnvironmentError(
             "AutoProcessor is designed to be instantiated "

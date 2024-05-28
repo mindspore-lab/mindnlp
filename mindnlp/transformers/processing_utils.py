@@ -61,7 +61,8 @@ class ProcessorMixin:
         None. This method does not return any value.
         
         Raises:
-        - TypeError: Raised if an unexpected keyword argument is provided, if multiple values are provided for a single argument, or if the arguments provided do not match the required attributes of the processor.
+        - TypeError: Raised if an unexpected keyword argument is provided, if multiple values are provided for a single argument, or if the arguments provided do not match the required attributes of the
+processor.
         - ValueError: Raised if the number of arguments provided does not match the required number of attributes for the processor, or if the type of the argument does not match the expected class type.
         """
         # Sanitize args and kwargs

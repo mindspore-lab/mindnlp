@@ -9,7 +9,8 @@ class _MatrixImpl(_MathObjImpl, ABC):
     r"""
     _MatrixImpl is a Python class that represents an implementation of matrix operations. It inherits from _MathObjImpl and is designed to provide functionality for matrix multiplication.
     
-    This class provides an abstract method matmul that must be implemented by subclasses. The matmul method takes four NumPy arrays as input parameters and returns a tuple of two NumPy arrays as output, representing the result of the matrix multiplication operation.
+    This class provides an abstract method matmul that must be implemented by subclasses. The matmul method takes four NumPy arrays as input parameters and returns a tuple of two NumPy arrays as output,
+representing the result of the matrix multiplication operation.
     
     Subclasses of _MatrixImpl are expected to provide concrete implementations of the matmul method to support specific matrix multiplication operations.
     

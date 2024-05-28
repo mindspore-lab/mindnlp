@@ -254,7 +254,8 @@ class AlbertAttention(nn.Cell):
             x (mindspore.Tensor): The input tensor to be transposed. It should have a shape of (batch_size, sequence_length, hidden_size).
         
         Returns:
-            mindspore.Tensor: The transposed tensor with shape (batch_size, num_attention_heads, sequence_length, attention_head_size). The attention_head_size is calculated as hidden_size / num_attention_heads.
+            mindspore.Tensor: The transposed tensor with shape (batch_size, num_attention_heads, sequence_length, attention_head_size). The attention_head_size is calculated as hidden_size /
+num_attention_heads.
         
         Raises:
             None: This method does not raise any exceptions.
@@ -386,9 +387,11 @@ class AlbertLayer(nn.Cell):
     '''
     This class represents an AlbertLayer module, which is a single layer of the Albert model. It inherits from nn.Cell and contains methods for initialization and forward pass computation.
     
-    The __init__ method initializes the AlbertLayer with the provided configuration. It sets various attributes based on the configuration, including chunk size for feed forward, sequence length dimension, layer normalization, attention module, feed forward network, activation function, and dropout.
+    The __init__ method initializes the AlbertLayer with the provided configuration. It sets various attributes based on the configuration, including chunk size for feed forward, sequence length dimension,
+layer normalization, attention module, feed forward network, activation function, and dropout.
     
-    The construct method computes the forward pass for the AlbertLayer. It takes hidden_states, attention_mask, head_mask, output_attentions, and output_hidden_states as input and returns the hidden states along with optional attention outputs.
+    The construct method computes the forward pass for the AlbertLayer. It takes hidden_states, attention_mask, head_mask, output_attentions, and output_hidden_states as input and returns the hidden states
+along with optional attention outputs.
     
     The ff_chunk method is a helper function used within the construct method to perform the feed forward computation.
     
@@ -524,7 +527,9 @@ class AlbertLayerGroup(nn.Cell):
             None
         
         Description:
-            This method initializes an instance of the AlbertLayerGroup class. It takes in a configuration object of type AlbertConfig, which holds the configuration parameters for the Albert model. The method initializes the superclass and creates a list of AlbertLayer objects, each with the given configuration parameters. The number of AlbertLayer objects in the list is determined by the 'inner_group_num' parameter of the configuration object.
+            This method initializes an instance of the AlbertLayerGroup class. It takes in a configuration object of type AlbertConfig, which holds the configuration parameters for the Albert model. The method
+initializes the superclass and creates a list of AlbertLayer objects, each with the given configuration parameters. The number of AlbertLayer objects in the list is determined by the 'inner_group_num'
+parameter of the configuration object.
         """
         super().__init__()
 
@@ -760,7 +765,9 @@ class AlbertForPreTrainingOutput(ModelOutput):
 class AlbertModel(AlbertPreTrainedModel):
 
     """
-    This class represents the AlbertModel, which inherits from AlbertPreTrainedModel. It includes methods for initializing the model, getting and setting input embeddings, pruning heads of the model, and constructing the model. The 'construct' method takes various input parameters and returns the model output. The class also includes detailed comments and error handling for certain scenarios. The 'prune_heads' method is used to prune heads of the model, and the 'construct' method constructs the model based on input parameters. The model outputs are returned based on the specified conditions.
+    This class represents the AlbertModel, which inherits from AlbertPreTrainedModel. It includes methods for initializing the model, getting and setting input embeddings, pruning heads of the model, and
+constructing the model. The 'construct' method takes various input parameters and returns the model output. The class also includes detailed comments and error handling for certain scenarios. The 'prune_heads'
+method is used to prune heads of the model, and the 'construct' method constructs the model based on input parameters. The model outputs are returned based on the specified conditions.
     
     For more information and usage details, refer to the base class 'PreTrainedModel'.
     """
@@ -949,9 +956,12 @@ class AlbertModel(AlbertPreTrainedModel):
 class AlbertForPreTraining(AlbertPreTrainedModel):
 
     """
-    The `AlbertForPreTraining` class represents an Albert model for pre-training, inheriting from `AlbertPreTrainedModel`. It includes methods for initializing the model with the specified configuration, retrieving output embeddings, setting new output embeddings, retrieving input embeddings, and constructing the model for pre-training tasks. The `construct` method accepts various input parameters and returns pre-training outputs. It also includes examples of usage.
+    The `AlbertForPreTraining` class represents an Albert model for pre-training, inheriting from `AlbertPreTrainedModel`. It includes methods for initializing the model with the specified configuration,
+retrieving output embeddings, setting new output embeddings, retrieving input embeddings, and constructing the model for pre-training tasks. The `construct` method accepts various input parameters and returns
+pre-training outputs. It also includes examples of usage.
     
-    The `AlbertForPreTraining` class provides functionality for masked language modeling and next sequence prediction (classification) loss. It utilizes the Albert model, prediction heads, and sentence order prediction head to compute the total loss for pre-training tasks.
+    The `AlbertForPreTraining` class provides functionality for masked language modeling and next sequence prediction (classification) loss. It utilizes the Albert model, prediction heads, and sentence order
+prediction head to compute the total loss for pre-training tasks.
     
     For additional details and examples on how to use the `AlbertForPreTraining` class, please refer to the provided code example and the official documentation for the `transformers` library.
     """
@@ -1272,7 +1282,8 @@ class AlbertSOPHead(nn.Cell):
             pooled_output (mindspore.Tensor): The pooled output tensor obtained from the previous layer. It serves as the input to the method.
         
         Returns:
-            mindspore.Tensor: The output tensor (logits) obtained after applying the dropout and classifier operations on the pooled_output. This tensor represents the final result of the AlbertSOPHead construction process.
+            mindspore.Tensor: The output tensor (logits) obtained after applying the dropout and classifier operations on the pooled_output. This tensor represents the final result of the AlbertSOPHead
+construction process.
         
         Raises:
             None
@@ -1285,7 +1296,10 @@ class AlbertSOPHead(nn.Cell):
 class AlbertForMaskedLM(AlbertPreTrainedModel):
 
     """
-    AlbertForMaskedLM is a class that represents an Albert model for Masked Language Modeling tasks. It inherits from AlbertPreTrainedModel and provides methods for setting and getting output embeddings, input embeddings, and for constructing the model for masked language modeling. The class includes an initialization method that sets up the model with AlbertModel and AlbertMLMHead components, as well as methods for manipulating embeddings and constructing the model for training or inference. The 'construct' method takes various input tensors and parameters for the model and returns the masked language modeling output including the loss and prediction scores. The class is designed to be used in natural language processing tasks where masked language modeling is required.
+    AlbertForMaskedLM is a class that represents an Albert model for Masked Language Modeling tasks. It inherits from AlbertPreTrainedModel and provides methods for setting and getting output embeddings, input
+embeddings, and for constructing the model for masked language modeling. The class includes an initialization method that sets up the model with AlbertModel and AlbertMLMHead components, as well as methods for
+manipulating embeddings and constructing the model for training or inference. The 'construct' method takes various input tensors and parameters for the model and returns the masked language modeling output
+including the loss and prediction scores. The class is designed to be used in natural language processing tasks where masked language modeling is required.
     """
     _tied_weights_keys = ["predictions.decoder.bias", "predictions.decoder.weight"]
 
@@ -1454,11 +1468,14 @@ class AlbertForMaskedLM(AlbertPreTrainedModel):
 class AlbertForSequenceClassification(AlbertPreTrainedModel):
 
     """
-    This class represents an Albert model for sequence classification. It inherits from AlbertPreTrainedModel and includes methods for initializing the model and constructing the sequence classification output. The model utilizes the Albert architecture for natural language processing tasks, such as text classification and regression.
+    This class represents an Albert model for sequence classification. It inherits from AlbertPreTrainedModel and includes methods for initializing the model and constructing the sequence classification
+output. The model utilizes the Albert architecture for natural language processing tasks, such as text classification and regression.
     
-    The __init__ method initializes the AlbertForSequenceClassification model with the provided AlbertConfig. It sets the number of labels, config, Albert model, dropout layer, and classifier for sequence classification.
+    The __init__ method initializes the AlbertForSequenceClassification model with the provided AlbertConfig. It sets the number of labels, config, Albert model, dropout layer, and classifier for sequence
+classification.
     
-    The construct method takes input tensors and optional arguments for sequence classification and returns the sequence classifier output. It also handles the computation of loss based on the problem type and labels provided.
+    The construct method takes input tensors and optional arguments for sequence classification and returns the sequence classifier output. It also handles the computation of loss based on the problem type and
+labels provided.
     
     Note: This docstring is a high-level summary and is not meant to be executed as code.
     """
@@ -1478,7 +1495,8 @@ class AlbertForSequenceClassification(AlbertPreTrainedModel):
             None
         
         Description:
-        This method initializes a new instance of the `AlbertForSequenceClassification` class. It takes in two parameters: `self` and `config`. The `self` parameter represents the instance of the class itself. The `config` parameter is an object of the `AlbertConfig` class, which holds the configuration settings for the model.
+        This method initializes a new instance of the `AlbertForSequenceClassification` class. It takes in two parameters: `self` and `config`. The `self` parameter represents the instance of the class itself.
+The `config` parameter is an object of the `AlbertConfig` class, which holds the configuration settings for the model.
         
         This method performs the following operations:
         1. Calls the `__init__` method of the base class to initialize the inherited attributes.
@@ -1822,11 +1840,15 @@ class AlbertForMultipleChoice(AlbertPreTrainedModel):
     """
     This class represents the Albert model for multiple choice classification tasks. It is a subclass of the AlbertPreTrainedModel.
     
-    The AlbertForMultipleChoice class contains methods for model initialization and construction. It inherits the configuration from AlbertConfig and utilizes the AlbertModel for the underlying Albert architecture.
+    The AlbertForMultipleChoice class contains methods for model initialization and construction. It inherits the configuration from AlbertConfig and utilizes the AlbertModel for the underlying Albert
+architecture.
     
     Methods:
     - __init__(self, config: AlbertConfig): Initializes the AlbertForMultipleChoice model with the given configuration.
-    - construct(self, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, token_type_ids: Optional[mindspore.Tensor] = None, position_ids: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor] = None, labels: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[AlbertForPreTrainingOutput, Tuple]: Constructs the AlbertForMultipleChoice model with the given input tensors and returns the output.
+    - construct(self, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, token_type_ids: Optional[mindspore.Tensor] = None, position_ids:
+Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor] = None, labels: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] =
+None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[AlbertForPreTrainingOutput, Tuple]: Constructs the AlbertForMultipleChoice model with the given input tensors and
+returns the output.
     
     Attributes:
     - albert: The underlying AlbertModel instance.
@@ -1834,7 +1856,8 @@ class AlbertForMultipleChoice(AlbertPreTrainedModel):
     - classifier: Dense layer for classification.
     - config: The AlbertConfig instance used for model initialization.
     
-    Note: The construct method follows the multiple choice classification setup and returns either the classification loss and logits or a tuple containing the loss, logits, hidden states, and attentions, depending on the return_dict parameter.
+    Note: The construct method follows the multiple choice classification setup and returns either the classification loss and logits or a tuple containing the loss, logits, hidden states, and attentions,
+depending on the return_dict parameter.
     
     Please refer to the AlbertConfig documentation for more details on the configuration options used by this class.
     """

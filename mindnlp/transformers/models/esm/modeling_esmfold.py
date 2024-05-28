@@ -202,7 +202,8 @@ def dict_multimap(fn, dicts):
     - fn: A function that will be applied to the values of the dictionaries.
     - dicts: A list of dictionaries.
     
-    The function returns a new dictionary with the same keys as the first dictionary in the input list, where the values are the result of applying the given function to the corresponding values from all the input dictionaries.
+    The function returns a new dictionary with the same keys as the first dictionary in the input list, where the values are the result of applying the given function to the corresponding values from all the
+input dictionaries.
     
     Raises:
     - KeyError: If a key is not found in the dictionaries.
@@ -1465,7 +1466,8 @@ class EsmFoldResidueMLP(nn.Cell):
     """
     This class represents a multi-layer perceptron (MLP) used for folding residues in the ESM (Evolutionary Scale Modeling) framework. It inherits from the nn.Cell class.
     
-    The EsmFoldResidueMLP class implements a MLP architecture with layer normalization, dense layers, ReLU activation, and dropout. The MLP takes an input tensor and applies a series of linear transformations to produce an output tensor. The output tensor is then added element-wise to the input tensor, resulting in the folded residue representation.
+    The EsmFoldResidueMLP class implements a MLP architecture with layer normalization, dense layers, ReLU activation, and dropout. The MLP takes an input tensor and applies a series of linear transformations
+to produce an output tensor. The output tensor is then added element-wise to the input tensor, resulting in the folded residue representation.
     
     Attributes:
         - embed_dim (int): The dimensionality of the input and output tensors.
@@ -1747,7 +1749,8 @@ class EsmCategoricalMixture:
             self: EsmCategoricalMixture
                 The instance of the EsmCategoricalMixture class.
             true: torch.Tensor
-                The true value for which the log probability needs to be calculated. It should be a tensor of shape (batch_size,) where batch_size is the number of samples. The true values should be within the range of valid classes for the categorical mixture model.
+                The true value for which the log probability needs to be calculated. It should be a tensor of shape (batch_size,) where batch_size is the number of samples. The true values should be within the
+range of valid classes for the categorical mixture model.
         
         Returns:
             None: 
@@ -2464,9 +2467,12 @@ class EsmFoldStructureModule(nn.Cell):
     """
     The EsmFoldStructureModule class represents a module for predicting protein structure using Evolutionary Structure Model (ESM) and folding techniques. It inherits from the nn.Cell class.
     
-    The class includes methods for initializing the module, constructing the protein structure prediction, and converting torsion angles to frames and literature positions to atom14 positions. The construct method takes evolutionary formers' output, amino acid indices, and optional sequence mask as input and returns a dictionary of predicted outputs. The _init_residue_constants method initializes constants used in the module for calculating torsion angles to frames and literature positions to atom14 positions.
+    The class includes methods for initializing the module, constructing the protein structure prediction, and converting torsion angles to frames and literature positions to atom14 positions. The construct
+method takes evolutionary formers' output, amino acid indices, and optional sequence mask as input and returns a dictionary of predicted outputs. The _init_residue_constants method initializes constants used
+in the module for calculating torsion angles to frames and literature positions to atom14 positions.
     
-    The class also includes the code for initializing the default frames, group indices, atom masks, and literature positions, and for converting torsion angles to frames and frames and literature positions to atom14 positions.
+    The class also includes the code for initializing the default frames, group indices, atom masks, and literature positions, and for converting torsion angles to frames and frames and literature positions to
+atom14 positions.
     
     Please note that the detailed implementation and usage of the class methods are described in the code provided.
     """
@@ -2637,7 +2643,8 @@ class EsmFoldStructureModule(nn.Cell):
         - default_frames: A tensor containing the default frames for rigid groups. If not already initialized, it is created using the 'restype_rigid_group_default_frame' constant and the provided float_dtype.
         - group_idx: A tensor mapping atom14 indices to rigid group indices. If not already initialized, it is created using the 'restype_atom14_to_rigid_group' constant.
         - atom_mask: A tensor containing the atom14 mask. If not already initialized, it is created using the 'restype_atom14_mask' constant and the provided float_dtype.
-        - lit_positions: A tensor containing the positions of atom14 rigid groups. If not already initialized, it is created using the 'restype_atom14_rigid_group_positions' constant and the provided float_dtype.
+        - lit_positions: A tensor containing the positions of atom14 rigid groups. If not already initialized, it is created using the 'restype_atom14_rigid_group_positions' constant and the provided
+float_dtype.
         
         Note:
         - This method should be called before using any other functionality of the EsmFoldStructureModule class.
@@ -2718,7 +2725,8 @@ class EsmFoldStructureModule(nn.Cell):
 class EsmFoldingTrunk(nn.Cell):
 
     """
-    EsmFoldingTrunk is a neural network cell that represents the trunk of the ESM-Fold model. It inherits from the nn.Cell class and contains methods for initializing and constructing the model, as well as a static method for computing distograms.
+    EsmFoldingTrunk is a neural network cell that represents the trunk of the ESM-Fold model. It inherits from the nn.Cell class and contains methods for initializing and constructing the model, as well as a
+static method for computing distograms.
     
     Attributes:
         config: A configuration object specifying the dimensions and parameters for the ESM-Fold model.
@@ -2728,7 +2736,8 @@ class EsmFoldingTrunk(nn.Cell):
         
         set_chunk_size(self, chunk_size): Sets the chunk size for processing sequences and pair features.
         
-        construct(self, seq_feats, pair_feats, true_aa, residx, mask, no_recycles): Constructs the ESM-Fold model using the provided input tensors and parameters, and returns the predicted structure wrapped in a Coordinates object.
+        construct(self, seq_feats, pair_feats, true_aa, residx, mask, no_recycles): Constructs the ESM-Fold model using the provided input tensors and parameters, and returns the predicted structure wrapped in
+a Coordinates object.
         
         distogram(coords, min_bin, max_bin, num_bins): A static method that computes distograms based on the input coordinates and bin parameters.
     
@@ -2903,9 +2912,11 @@ class EsmFoldingTrunk(nn.Cell):
 class EsmForProteinFolding(EsmPreTrainedModel):
 
     """
-    EsmForProteinFolding is a class that represents a model for protein folding using the ESM (Evolutionary Scale Modeling) approach. It inherits from EsmPreTrainedModel and implements methods for protein structure prediction and inference.
+    EsmForProteinFolding is a class that represents a model for protein folding using the ESM (Evolutionary Scale Modeling) approach. It inherits from EsmPreTrainedModel and implements methods for protein
+structure prediction and inference.
     
-    The class includes methods for initializing the model, converting input sequences to protein structures, and generating Protein Data Bank (PDB) files from model outputs. It also provides functionality for language model representations, masking input sequences, and inferring protein structures from input sequences.
+    The class includes methods for initializing the model, converting input sequences to protein structures, and generating Protein Data Bank (PDB) files from model outputs. It also provides functionality for
+language model representations, masking input sequences, and inferring protein structures from input sequences.
     
     Example usage:
     
@@ -2997,7 +3008,8 @@ class EsmForProteinFolding(EsmPreTrainedModel):
             vocab_list (List[str]): A list of strings representing the vocabulary. Each string corresponds to a specific residue or token.
         
         Returns:
-            mindspore.Tensor: The resulting Tensor representing the reordered vocabulary list. The Tensor contains the indices of the vocabulary list elements, with the first element being the index of '<pad>' and the following elements being the indices of the residues from the 'restypes_with_x' list.
+            mindspore.Tensor: The resulting Tensor representing the reordered vocabulary list. The Tensor contains the indices of the vocabulary list elements, with the first element being the index of '<pad>'
+and the following elements being the indices of the residues from the 'restypes_with_x' list.
         
         Raises:
             None.

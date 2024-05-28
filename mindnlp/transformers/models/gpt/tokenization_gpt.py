@@ -343,9 +343,11 @@ class GPTTokenizer(PreTrainedTokenizer):
         Raises:
             None.
         
-        This method is used to toggle the lower case flag for the GPTTokenizer object. When the lower case flag is set to True, the tokenizer will convert all text to lower case. When the flag is set to False, the tokenizer will preserve the original casing of the text.
+        This method is used to toggle the lower case flag for the GPTTokenizer object. When the lower case flag is set to True, the tokenizer will convert all text to lower case. When the flag is set to False,
+the tokenizer will preserve the original casing of the text.
         
-        Note that changing the lower case flag will affect the tokenization behavior of the GPTTokenizer object. It is recommended to set the lower case flag before tokenizing any text using the tokenizer. By default, the lower case flag is set to True.
+        Note that changing the lower case flag will affect the tokenization behavior of the GPTTokenizer object. It is recommended to set the lower case flag before tokenizing any text using the tokenizer. By
+default, the lower case flag is set to True.
         
         Example usage:
             tokenizer = GPTTokenizer()

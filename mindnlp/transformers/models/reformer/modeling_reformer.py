@@ -477,7 +477,8 @@ class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
     This class represents a self-attention mechanism using Locality Sensitive Hashing (LSH) for efficient attention computation. 
     It inherits from nn.Cell, EfficientAttentionMixin.
     
-    The class implements LSH self-attention mechanism for neural networks. It includes methods for initializing the LSH attention layer, constructing the attention mechanism, computing attention masks, hashing vectors, and other related operations.
+    The class implements LSH self-attention mechanism for neural networks. It includes methods for initializing the LSH attention layer, constructing the attention mechanism, computing attention masks, hashing
+vectors, and other related operations.
     
     Attributes:
         - config: Configuration parameters for the LSH self-attention layer.
@@ -1073,7 +1074,8 @@ class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
             value_vectors = self._look_adjacent(value_vectors, self.num_chunks_before, self.num_chunks_after)
 
         # get logits and dots
-        # (BS, NumAttn, NumHash x NumChunk, Chunk_L x Hidden),(BS, NumAttn, NumHash x NumChunk, Chunk_L * (Num_bef + Num_aft + 1) x Hidden) -> (BS, NumAttn, NumHash x NumChunk, Chunk_L, Chunk_L * (1 + Num_bef + Num_aft))
+        # (BS, NumAttn, NumHash x NumChunk, Chunk_L x Hidden),(BS, NumAttn, NumHash x NumChunk, Chunk_L * (Num_bef + Num_aft + 1) x Hidden) -> (BS, NumAttn, NumHash x NumChunk, Chunk_L, Chunk_L * (1 + Num_bef
++ Num_aft))
         query_key_dots = ops.matmul(query_vectors, key_vectors.swapaxes(-1, -2))
 
         # free memory
@@ -1172,7 +1174,8 @@ class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
 
         """Compute attention mask for LSH self-attention.
         
-        This method computes the attention mask for LSH self-attention based on the given query and key indices, attention mask, query-key dot shape, and the flag indicating whether to use standard self-attention.
+        This method computes the attention mask for LSH self-attention based on the given query and key indices, attention mask, query-key dot shape, and the flag indicating whether to use standard
+self-attention.
         
         Args:
             self (LSHSelfAttention): An instance of the LSHSelfAttention class.
@@ -1465,7 +1468,8 @@ class ReverseSort(nn.Cell):
 class LocalSelfAttention(nn.Cell, EfficientAttentionMixin):
 
     """
-    The `LocalSelfAttention` class is a subclass of `nn.Cell` and `EfficientAttentionMixin` that represents a local self-attention mechanism. This mechanism is commonly used in transformer-based models for processing sequential data.
+    The `LocalSelfAttention` class is a subclass of `nn.Cell` and `EfficientAttentionMixin` that represents a local self-attention mechanism. This mechanism is commonly used in transformer-based models for
+processing sequential data.
     
     Attributes:
     - `num_attention_heads` (int): The number of attention heads.
@@ -1485,7 +1489,8 @@ class LocalSelfAttention(nn.Cell, EfficientAttentionMixin):
     - `mask_value_float32` (mindspore.tensor): The mask value for float32 data type.
     
     Methods:
-    - `construct(hidden_states, attention_mask=None, head_mask=None, past_buckets_states=None, use_cache=False, output_attentions=False, **kwargs)`: Computes the local self-attention mechanism for the given hidden states.
+    - `construct(hidden_states, attention_mask=None, head_mask=None, past_buckets_states=None, use_cache=False, output_attentions=False, **kwargs)`: Computes the local self-attention mechanism for the given
+hidden states.
     - `_compute_attn_mask(query_indices, key_indices, attention_mask, query_key_dots_shape, do_standard_self_attention)`: Computes the attention mask based on query and key indices.
     - `_retrieve_relevant_hidden_states(previous_hidden_states, chunk_length, num_chunks_before)`: Retrieves the relevant hidden states from previous states.
     
@@ -1787,7 +1792,8 @@ class LocalSelfAttention(nn.Cell, EfficientAttentionMixin):
         Raises:
             None
         
-        This static method retrieves relevant hidden states from previous hidden states based on the given parameters. It calculates the start position of the relevant hidden states based on the chunk length and the number of chunks before. The retrieved hidden states are then returned as an array with shape (batch_size, sequence_length, hidden_size), starting from the calculated start position.
+        This static method retrieves relevant hidden states from previous hidden states based on the given parameters. It calculates the start position of the relevant hidden states based on the chunk length
+and the number of chunks before. The retrieved hidden states are then returned as an array with shape (batch_size, sequence_length, hidden_size), starting from the calculated start position.
         """
         start_position = ((previous_hidden_states.shape[1] // chunk_length) - num_chunks_before) * chunk_length
         return previous_hidden_states[:, start_position:]
@@ -1860,7 +1866,9 @@ class ReformerSelfOutput(nn.Cell):
         Raises:
             None
         
-        This method takes in the input hidden states and processes them to construct the output of the Reformer self-attention layer. The hidden states are first passed through a dense layer to transform the dimensions. Then, a dropout operation is applied to the transformed hidden states with a dropout probability specified by the instance variable 'dropout'. The dropout operation is only applied during training. Finally, the processed hidden states are returned as the output of the layer.
+        This method takes in the input hidden states and processes them to construct the output of the Reformer self-attention layer. The hidden states are first passed through a dense layer to transform the
+dimensions. Then, a dropout operation is applied to the transformed hidden states with a dropout probability specified by the instance variable 'dropout'. The dropout operation is only applied during training.
+Finally, the processed hidden states are returned as the output of the layer.
         
         Note: The output does not have any explicit restrictions as it is of type None and does not affect subsequent operations in the model.
         """
@@ -2160,7 +2168,8 @@ class ChunkReformerFeedForward(nn.Cell):
     """
     This class represents a feed-forward module for chunked reformer attention output in a neural network.
     
-    The ChunkReformerFeedForward class inherits from the nn.Cell class and is designed to process attention output in a chunked manner. It applies layer normalization, dense transformation, and output transformation to the input hidden states.
+    The ChunkReformerFeedForward class inherits from the nn.Cell class and is designed to process attention output in a chunked manner. It applies layer normalization, dense transformation, and output
+transformation to the input hidden states.
     
     Attributes:
         chunk_size_feed_forward (int): The size of each chunk for processing the attention output.
@@ -2625,7 +2634,8 @@ class ReformerEncoder(nn.Cell):
     
     Methods:
         - __init__(self, config): Initializes a new instance of the 'ReformerEncoder' class.
-        - construct(self, hidden_states, attention_mask=None, head_mask=None, num_hashes=None, past_buckets_states=None, use_cache=False, orig_sequence_length=None, output_hidden_states=False, output_attentions=False): Constructs the encoder by applying the Reformer layers to the input hidden states.
+        - construct(self, hidden_states, attention_mask=None, head_mask=None, num_hashes=None, past_buckets_states=None, use_cache=False, orig_sequence_length=None, output_hidden_states=False,
+output_attentions=False): Constructs the encoder by applying the Reformer layers to the input hidden states.
     
     """
     def __init__(self, config):
@@ -2744,7 +2754,8 @@ class ReformerEncoder(nn.Cell):
 class ReformerOnlyLMHead(nn.Cell):
 
     """
-    The class 'ReformerOnlyLMHead' represents a language model head for the Reformer model. It inherits from the 'nn.Cell' class and contains methods for initialization, construction, chunking, and weight tying.
+    The class 'ReformerOnlyLMHead' represents a language model head for the Reformer model. It inherits from the 'nn.Cell' class and contains methods for initialization, construction, chunking, and weight
+tying.
     
     Attributes:
         seq_len_dim (int): The dimension representing the sequence length.
@@ -2987,8 +2998,10 @@ class ReformerModel(ReformerPreTrainedModel):
         get_input_embeddings(self): Retrieves the input embeddings layer of the model.
         set_input_embeddings(self, value): Sets the input embeddings layer of the model.
         _prune_heads(self, heads_to_prune): Prunes the attention heads of the model.
-        construct(self, input_ids, attention_mask, position_ids, head_mask, inputs_embeds, num_hashes, past_buckets_states, use_cache, output_hidden_states, output_attentions, return_dict): Constructs the Reformer model with the given input and configurations.
-        _pad_to_mult_of_chunk_length(self, input_ids, inputs_embeds, attention_mask, position_ids, input_shape, padding_length, padded_seq_length): Pads the input tensors to be a multiple of the chunk length according to the Reformer model configuration.
+        construct(self, input_ids, attention_mask, position_ids, head_mask, inputs_embeds, num_hashes, past_buckets_states, use_cache, output_hidden_states, output_attentions, return_dict): Constructs the
+Reformer model with the given input and configurations.
+        _pad_to_mult_of_chunk_length(self, input_ids, inputs_embeds, attention_mask, position_ids, input_shape, padding_length, padded_seq_length): Pads the input tensors to be a multiple of the chunk length
+according to the Reformer model configuration.
     """
     def __init__(self, config):
 
@@ -3291,7 +3304,8 @@ class ReformerModelWithLMHead(ReformerPreTrainedModel):
     """
     A Python class representing a Reformer model with a language modeling head (LMHead). This class inherits from the ReformerPreTrainedModel class.
     
-    The ReformerModelWithLMHead class is designed to be used as a decoder for the Reformer model. It incorporates a ReformerModel, which performs the main computation, and a ReformerOnlyLMHead, which generates the language modeling predictions.
+    The ReformerModelWithLMHead class is designed to be used as a decoder for the Reformer model. It incorporates a ReformerModel, which performs the main computation, and a ReformerOnlyLMHead, which generates
+the language modeling predictions.
     
     Attributes:
         reformer (ReformerModel): The Reformer model used for the main computation.
@@ -3301,12 +3315,14 @@ class ReformerModelWithLMHead(ReformerPreTrainedModel):
         __init__(self, config): Initializes the ReformerModelWithLMHead instance with the given configuration.
         get_output_embeddings(self): Retrieves the decoder of the lm_head.
         set_output_embeddings(self, new_embeddings): Sets the decoder of the lm_head to the provided new_embeddings.
-        construct(self, input_ids, position_ids, attention_mask, head_mask, inputs_embeds, num_hashes, past_buckets_states, use_cache, output_hidden_states, output_attentions, return_dict, labels): Constructs the Reformer model with the given inputs and returns the output.
+        construct(self, input_ids, position_ids, attention_mask, head_mask, inputs_embeds, num_hashes, past_buckets_states, use_cache, output_hidden_states, output_attentions, return_dict, labels): Constructs
+the Reformer model with the given inputs and returns the output.
         prepare_inputs_for_generation(self, input_ids, past_key_values, use_cache, num_hashes, **kwargs): Prepares the inputs for generation by selecting the last token and returning a dictionary of inputs.
         _reorder_cache(self, past_key_values, beam_idx): Reorders the past key values for beam search.
     
     Note:
-        The ReformerModelWithLMHead class assumes that the config parameter has an 'is_decoder' attribute set to True. It also checks specific conditions related to the 'attn_layers' attribute in the config to ensure the correct configuration for causal mask usage.
+        The ReformerModelWithLMHead class assumes that the config parameter has an 'is_decoder' attribute set to True. It also checks specific conditions related to the 'attn_layers' attribute in the config to
+ensure the correct configuration for causal mask usage.
     
     """
     _tied_weights_keys = ["lm_head.decoder.weight", "lm_head.decoder.bias"]
@@ -3351,7 +3367,8 @@ class ReformerModelWithLMHead(ReformerPreTrainedModel):
 
         """Returns the output embeddings of the ReformerModelWithLMHead.
         
-        This method, 'get_output_embeddings', returns the decoder of the language model head of the ReformerModelWithLMHead. The decoder is responsible for mapping the hidden states of the model to the output vocabulary.
+        This method, 'get_output_embeddings', returns the decoder of the language model head of the ReformerModelWithLMHead. The decoder is responsible for mapping the hidden states of the model to the output
+vocabulary.
         
         Args:
             self (ReformerModelWithLMHead): The instance of the ReformerModelWithLMHead class.
@@ -3381,7 +3398,8 @@ class ReformerModelWithLMHead(ReformerPreTrainedModel):
             None.
         
         Note:
-            This method replaces the current embeddings in the lm_head.decoder attribute with the provided new embeddings. The lm_head.decoder is responsible for generating the output of the ReformerModelWithLMHead. By setting new embeddings, the model can be fine-tuned or customized for different tasks or requirements.
+            This method replaces the current embeddings in the lm_head.decoder attribute with the provided new embeddings. The lm_head.decoder is responsible for generating the output of the
+ReformerModelWithLMHead. By setting new embeddings, the model can be fine-tuned or customized for different tasks or requirements.
         """
         self.lm_head.decoder = new_embeddings
 
@@ -3490,11 +3508,14 @@ class ReformerModelWithLMHead(ReformerPreTrainedModel):
         
         Args:
             self: An instance of the ReformerModelWithLMHead class.
-            past_key_values (List[Tuple[torch.Tensor, torch.Tensor]]): A list of tuples, where each tuple contains a past key tensor and a past value tensor for each layer. The past key tensor represents the previous key values, and the past value tensor represents the previous hidden states for each layer. The length of the list corresponds to the number of layers in the model.
+            past_key_values (List[Tuple[torch.Tensor, torch.Tensor]]): A list of tuples, where each tuple contains a past key tensor and a past value tensor for each layer. The past key tensor represents the
+previous key values, and the past value tensor represents the previous hidden states for each layer. The length of the list corresponds to the number of layers in the model.
             beam_idx (torch.Tensor): A tensor representing the indices to reorder the cache. These indices determine the new order of the cache.
         
         Returns:
-            reord_past_buckets_states (List[Tuple[torch.Tensor, torch.Tensor]]): A list of tuples, where each tuple contains the reordered past key tensor and the reordered past value tensor for each layer. The reordered past key tensor represents the previous key values after reordering, and the reordered past value tensor represents the previous hidden states after reordering. The length of the list corresponds to the number of layers in the model.
+            reord_past_buckets_states (List[Tuple[torch.Tensor, torch.Tensor]]): A list of tuples, where each tuple contains the reordered past key tensor and the reordered past value tensor for each layer.
+The reordered past key tensor represents the previous key values after reordering, and the reordered past value tensor represents the previous hidden states after reordering. The length of the list corresponds
+to the number of layers in the model.
         
         Raises:
             None.
@@ -3964,7 +3985,8 @@ class ReformerClassificationHead(nn.Cell):
         
         Args:
             self (ReformerClassificationHead): The instance of the ReformerClassificationHead class.
-            config (object): The configuration object containing the settings for the Reformer model. It should have attributes such as hidden_size (int), classifier_dropout (float, optional), hidden_dropout_prob (float), and num_labels (int). The config object is required and should not be None.
+            config (object): The configuration object containing the settings for the Reformer model. It should have attributes such as hidden_size (int), classifier_dropout (float, optional),
+hidden_dropout_prob (float), and num_labels (int). The config object is required and should not be None.
         
         Returns:
             None: This method does not return any value.
@@ -4011,15 +4033,20 @@ class ReformerForQuestionAnswering(ReformerPreTrainedModel):
     """
     This class represents a Reformer model for question answering tasks. It is a subclass of the ReformerPreTrainedModel.
     
-    The ReformerForQuestionAnswering class implements the necessary methods to perform question answering on a given input sequence. It includes an initialization method, a construction method, and helper methods.
+    The ReformerForQuestionAnswering class implements the necessary methods to perform question answering on a given input sequence. It includes an initialization method, a construction method, and helper
+methods.
     
-    The initialization method (__init__) takes a configuration object as input and initializes the Reformer model, as well as the necessary layers for question answering. The number of labels is also set in this method.
+    The initialization method (__init__) takes a configuration object as input and initializes the Reformer model, as well as the necessary layers for question answering. The number of labels is also set in
+this method.
     
-    The construction method (construct) takes various input tensors and parameters and performs question answering. It utilizes the Reformer model to obtain the sequence output, which is then passed through a dense layer for classification. The start and end logits are obtained from the output and are returned along with other relevant outputs.
+    The construction method (construct) takes various input tensors and parameters and performs question answering. It utilizes the Reformer model to obtain the sequence output, which is then passed through a
+dense layer for classification. The start and end logits are obtained from the output and are returned along with other relevant outputs.
     
-    The construct method also allows optional inputs for start_positions and end_positions, which are used to compute the token classification loss. The loss is calculated using the cross-entropy loss function. If start_positions and end_positions are provided, the total loss is computed as the average of the start and end losses.
+    The construct method also allows optional inputs for start_positions and end_positions, which are used to compute the token classification loss. The loss is calculated using the cross-entropy loss
+function. If start_positions and end_positions are provided, the total loss is computed as the average of the start and end losses.
     
-    The construct method returns the start and end logits, along with other relevant outputs, depending on the value of the return_dict parameter. If return_dict is False, a tuple of outputs is returned. If return_dict is True, a QuestionAnsweringModelOutput object is returned, containing the start_logits, end_logits, hidden_states, and attentions.
+    The construct method returns the start and end logits, along with other relevant outputs, depending on the value of the return_dict parameter. If return_dict is False, a tuple of outputs is returned. If
+return_dict is True, a QuestionAnsweringModelOutput object is returned, containing the start_logits, end_logits, hidden_states, and attentions.
     
     Note: This class inherits from the ReformerPreTrainedModel class, which provides additional functionality for pre-training and fine-tuning the Reformer model.
     """

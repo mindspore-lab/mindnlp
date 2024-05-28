@@ -239,7 +239,8 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
             BatchEncoding: An object of type BatchEncoding containing the encoded inputs.
             
         Raises:
-            AssertionError: If add_prefix_space is False and is_split_into_words is True, it raises an assertion error with the message indicating that the class needs to be instantiated with add_prefix_space=True to use it with pretokenized inputs.
+            AssertionError: If add_prefix_space is False and is_split_into_words is True, it raises an assertion error with the message indicating that the class needs to be instantiated with
+add_prefix_space=True to use it with pretokenized inputs.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
         assert self.add_prefix_space or not is_split_into_words, (
@@ -262,7 +263,8 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
             BatchEncoding: A batch encoding object containing the encoded input sequence.
         
         Raises:
-            AssertionError: If the 'add_prefix_space' attribute is not set to True and the input is split into words. This indicates that the WhisperTokenizerFast instance needs to be instantiated with add_prefix_space=True for use with pretokenized inputs.
+            AssertionError: If the 'add_prefix_space' attribute is not set to True and the input is split into words. This indicates that the WhisperTokenizerFast instance needs to be instantiated with
+add_prefix_space=True for use with pretokenized inputs.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
 
@@ -530,7 +532,8 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
             None: This method does not return any value.
         
         Raises:
-            DeprecationWarning: If the method is called, a DeprecationWarning will be raised to notify that the private method `_normalize` is deprecated and will be removed in v5 of Transformers. Users are encouraged to use the `normalize` method to normalize the input string.
+            DeprecationWarning: If the method is called, a DeprecationWarning will be raised to notify that the private method `_normalize` is deprecated and will be removed in v5 of Transformers. Users are
+encouraged to use the `normalize` method to normalize the input string.
         
         Note:
             The `_normalize` method is a private method intended for internal use only. Its functionality will be replaced by the `normalize` method in future versions of Transformers.
@@ -554,7 +557,8 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
     def _basic_normalize(self, text, remove_diacritics=False):
 
         """
-        This method '_basic_normalize' in the class 'WhisperTokenizerFast' is deprecated and will be removed in v5 of Transformers. It is recommended to use the 'basic_normalize' method for string normalization.
+        This method '_basic_normalize' in the class 'WhisperTokenizerFast' is deprecated and will be removed in v5 of Transformers. It is recommended to use the 'basic_normalize' method for string
+normalization.
         
         Args:
             self: Instance of the WhisperTokenizerFast class.
@@ -667,7 +671,8 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
     def prefix_tokens(self) -> List[int]:
 
         """
-        This method, prefix_tokens, is a member of the class WhisperTokenizerFast and is responsible for generating a list of token IDs that represent the prefix of a transcription or translation sequence. It takes the following parameter:
+        This method, prefix_tokens, is a member of the class WhisperTokenizerFast and is responsible for generating a list of token IDs that represent the prefix of a transcription or translation sequence. It
+takes the following parameter:
         
         Args:
         - self: The instance of the WhisperTokenizerFast class. It is used to access the attributes and methods of the class within the prefix_tokens method.
@@ -676,7 +681,8 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
         - List[int]: Returns a list of integer token IDs representing the prefix of a transcription or translation sequence.
         
         Raises:
-        - ValueError: This exception is raised if the language provided is not supported or if the task provided is not recognized. The exception message provides details about the unsupported language or task and the valid options for language and task, respectively.
+        - ValueError: This exception is raised if the language provided is not supported or if the task provided is not recognized. The exception message provides details about the unsupported language or task
+and the valid options for language and task, respectively.
         """
         bos_token_id = self.convert_tokens_to_ids("<|startoftranscript|>")
         translate_token_id = self.convert_tokens_to_ids("<|translate|>")

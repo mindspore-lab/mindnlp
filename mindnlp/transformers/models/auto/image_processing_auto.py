@@ -285,7 +285,8 @@ class AutoImageProcessor:
             None. This method does not return any value.
         
         Raises:
-            EnvironmentError: Raised when attempting to directly instantiate an AutoImageProcessor object. AutoImageProcessor is designed to be instantiated using the `AutoImageProcessor.from_pretrained(pretrained_model_name_or_path)` method.
+            EnvironmentError: Raised when attempting to directly instantiate an AutoImageProcessor object. AutoImageProcessor is designed to be instantiated using the
+`AutoImageProcessor.from_pretrained(pretrained_model_name_or_path)` method.
         """
         raise EnvironmentError(
             "AutoImageProcessor is designed to be instantiated "

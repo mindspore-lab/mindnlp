@@ -185,7 +185,8 @@ class MBartTokenizerFast(PreTrainedTokenizerFast):
         Raises:
             None.
         
-        This method checks if the slow tokenizer can be saved by verifying the existence of the vocabulary file specified by the 'vocab_file' attribute of the class. If the 'vocab_file' attribute is set and it corresponds to an existing file, the method returns True. Otherwise, it returns False.
+        This method checks if the slow tokenizer can be saved by verifying the existence of the vocabulary file specified by the 'vocab_file' attribute of the class. If the 'vocab_file' attribute is set and it
+corresponds to an existing file, the method returns True. Otherwise, it returns False.
         """
         return os.path.isfile(self.vocab_file) if self.vocab_file else False
 
@@ -350,9 +351,11 @@ class MBartTokenizerFast(PreTrainedTokenizerFast):
             None.
         
         Description:
-        This method switches the tokenizer to the target mode for the MBartTokenizerFast class. In target mode, the tokenizer is configured to tokenize text according to the target language specified during initialization.
+        This method switches the tokenizer to the target mode for the MBartTokenizerFast class. In target mode, the tokenizer is configured to tokenize text according to the target language specified during
+initialization.
         
-        The method takes one parameter, 'self', which refers to an instance of the MBartTokenizerFast class. This parameter is required to access the tokenizer instance and perform the necessary operations to switch to the target mode.
+        The method takes one parameter, 'self', which refers to an instance of the MBartTokenizerFast class. This parameter is required to access the tokenizer instance and perform the necessary operations to
+switch to the target mode.
         
         The method does not raise any exceptions.
         

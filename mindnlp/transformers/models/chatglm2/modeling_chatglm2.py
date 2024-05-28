@@ -64,7 +64,8 @@ class InvalidScoreLogitsProcessor(LogitsProcessor):
     This class represents an invalid score logits processor that handles invalid scores in the input logits.
     
     The InvalidScoreLogitsProcessor is a subclass of the LogitsProcessor class and provides functionality to process invalid score values. 
-    Invalid score values include NaN (Not a Number) and infinity. This processor replaces all invalid scores in the input logits with zeros, except for the score at index 5 which is set to a high value of 50000.0.
+    Invalid score values include NaN (Not a Number) and infinity. This processor replaces all invalid scores in the input logits with zeros, except for the score at index 5 which is set to a high value of
+50000.0.
     
     Usage:
         processor = InvalidScoreLogitsProcessor()
@@ -223,7 +224,8 @@ def split_tensor_along_last_dim(
 class RotaryEmbedding(nn.Cell):
 
     """
-    This class represents a Rotary Position Embedding module that enhances the Transformer model. It provides a mechanism to incorporate positional information into the model's input embeddings, improving its ability to understand the order and relationships between elements in a sequence.
+    This class represents a Rotary Position Embedding module that enhances the Transformer model. It provides a mechanism to incorporate positional information into the model's input embeddings, improving its
+ability to understand the order and relationships between elements in a sequence.
     
     The RotaryEmbedding class inherits from the nn.Cell class, a base class for all neural network modules in the MindSpore framework.
     
@@ -361,7 +363,8 @@ class LayerNorm(nn.LayerNorm):
     """
     This class represents a layer normalization operation in a neural network. 
     
-    Layer normalization is a technique used to normalize the activations of a neural network layer. It helps in improving the training performance and generalization of deep neural networks. The LayerNorm class inherits from the nn.LayerNorm class, which provides the basic functionality for layer normalization.
+    Layer normalization is a technique used to normalize the activations of a neural network layer. It helps in improving the training performance and generalization of deep neural networks. The LayerNorm
+class inherits from the nn.LayerNorm class, which provides the basic functionality for layer normalization.
     
     The LayerNorm class takes the following parameters:
     - normalized_shape: The shape of the input tensor to be normalized.
@@ -499,7 +502,8 @@ class RMSNorm(nn.Cell):
 class CoreAttention(nn.Cell):
 
     """
-    The CoreAttention class represents a core component of attention mechanism for neural network models. This class is used to perform attention operations on query, key, and value layers. It inherits from the nn.Cell class.
+    The CoreAttention class represents a core component of attention mechanism for neural network models. This class is used to perform attention operations on query, key, and value layers. It inherits from
+the nn.Cell class.
     
     Attributes:
         config (ChatGLM2Config): The configuration for the attention mechanism.
@@ -507,9 +511,11 @@ class CoreAttention(nn.Cell):
     
     Methods:
         __init__(self, config, layer_number): Initializes the CoreAttention instance with the provided configuration and layer number.
-        construct(self, query_layer, key_layer, value_layer, attention_mask): Constructs the attention mechanism by performing attention operations on the input query, key, and value layers with the optional attention mask.
+        construct(self, query_layer, key_layer, value_layer, attention_mask): Constructs the attention mechanism by performing attention operations on the input query, key, and value layers with the optional
+attention mask.
     
-    The __init__ method initializes the CoreAttention instance with the given configuration and layer number. The construct method performs attention operations on the query, key, and value layers, and optionally applies the attention mask.
+    The __init__ method initializes the CoreAttention instance with the given configuration and layer number. The construct method performs attention operations on the query, key, and value layers, and
+optionally applies the attention mask.
     
     Note: This docstring is generated based on the provided information. Please add any additional information as needed.
     """
@@ -912,10 +918,12 @@ class MLP(nn.Cell):
         
         Args:
             self (MLP): An instance of the MLP class.
-            hidden_states (Tensor): The hidden states input to the MLP. This should be a tensor of shape (batch_size, hidden_dim), where batch_size is the number of samples in the batch and hidden_dim is the dimension of the hidden states. The hidden states serve as the input to the MLP for constructing the output.
+            hidden_states (Tensor): The hidden states input to the MLP. This should be a tensor of shape (batch_size, hidden_dim), where batch_size is the number of samples in the batch and hidden_dim is the
+dimension of the hidden states. The hidden states serve as the input to the MLP for constructing the output.
         
         Returns:
-            output (Tensor): The output tensor constructed by the MLP. This is a tensor of shape (batch_size, hidden_dim), where batch_size is the number of samples in the batch and hidden_dim is the dimension of the hidden states. The output tensor represents the result of applying the MLP layers to the input hidden states.
+            output (Tensor): The output tensor constructed by the MLP. This is a tensor of shape (batch_size, hidden_dim), where batch_size is the number of samples in the batch and hidden_dim is the dimension
+of the hidden states. The output tensor represents the result of applying the MLP layers to the input hidden states.
         
         Raises:
             None: This method does not raise any exceptions.
@@ -1195,7 +1203,8 @@ class ChatGLM2PreTrainedModel(PreTrainedModel):
                 self (ChatGLM2PreTrainedModel): The instance of the ChatGLM2PreTrainedModel class.
                 input_ids (torch.Tensor): The input sequence tensor of shape (batch_size, seq_length).
                 past_key_values (tuple of torch.Tensor): The past key-value pairs for attention weights of shape (past_length, batch_size, num_heads, past_seq_length, embed_dim).
-                padding_mask (torch.Tensor, optional): The tensor indicating the positions of padding tokens in the input sequence. It has the shape (batch_size, seq_length) and contains 0's for non-padding tokens and 1's for padding tokens. Defaults to None.
+                padding_mask (torch.Tensor, optional): The tensor indicating the positions of padding tokens in the input sequence. It has the shape (batch_size, seq_length) and contains 0's for non-padding
+tokens and 1's for padding tokens. Defaults to None.
         
             Returns:
                 torch.Tensor: The attention mask tensor of shape (batch_size, 1, seq_length, seq_length).
@@ -1302,8 +1311,10 @@ class Embedding(nn.Cell):
 class ChatGLM2Model(ChatGLM2PreTrainedModel):
 
     """
-    This class represents the ChatGLM2Model, which is used for natural language processing tasks. It inherits from the ChatGLM2PreTrainedModel and contains methods for initializing the model, getting input embeddings, getting prompts, constructing the model, and quantizing the model's weights.
-    The class contains attributes for embedding, number of layers, multi-query group number, key-value channels, sequence length, rotary position embedding, encoder, output layer, prefix sequence length, prefix projection, prefix tokens, prefix encoder, and dropout. 
+    This class represents the ChatGLM2Model, which is used for natural language processing tasks. It inherits from the ChatGLM2PreTrainedModel and contains methods for initializing the model, getting input
+embeddings, getting prompts, constructing the model, and quantizing the model's weights.
+    The class contains attributes for embedding, number of layers, multi-query group number, key-value channels, sequence length, rotary position embedding, encoder, output layer, prefix sequence length,
+prefix projection, prefix tokens, prefix encoder, and dropout. 
     The methods included are __init__, get_input_embeddings, get_prompt, construct, and quantize.
     """
     def __init__(self, config: ChatGLM2Config, empty_init=True):
@@ -1504,7 +1515,8 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
 
     """A Python class representing a conditional generation model for chat-based tasks using ChatGLM2.
     
-    This class inherits from ChatGLM2PreTrainedModel and includes methods to initialize the model, update model keyword arguments for generation, prepare inputs for generation, construct the model, reorder cache, process response, build inputs, build stream inputs, chat, stream chat, stream generate, and quantize the model.
+    This class inherits from ChatGLM2PreTrainedModel and includes methods to initialize the model, update model keyword arguments for generation, prepare inputs for generation, construct the model, reorder
+cache, process response, build inputs, build stream inputs, chat, stream chat, stream generate, and quantize the model.
     
     The methods in this class enable the generation of responses for chat-based queries, handling of input data, and model quantization for improved efficiency.
     
@@ -1610,7 +1622,8 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
         Returns:
             dict: A dictionary containing input tensors for generation:
                 - input_ids (mindspore.Tensor): The input tensor of shape (batch_size, seq_length) containing the input sequence indices.
-                - past_key_values (Optional[mindspore.Tensor]): Optional past key values tensor of shape (batch_size, num_heads, past_seq_length, hidden_size_per_head) used for generation in accordance with GPT-2.
+                - past_key_values (Optional[mindspore.Tensor]): Optional past key values tensor of shape (batch_size, num_heads, past_seq_length, hidden_size_per_head) used for generation in accordance with
+GPT-2.
                 - position_ids (mindspore.Tensor): The position ids tensor of shape (batch_size, seq_length) used for generation in accordance with GPT-2.
                 - attention_mask (Optional[mindspore.Tensor]): Optional attention mask tensor of shape (batch_size, seq_length) used for masking out padded tokens.
                 - return_last_logit (bool): Flag indicating whether to return the last logit during generation.
@@ -1942,7 +1955,8 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
             None
         
         Raises:
-            UserWarning: If using `max_length`'s default value to control generation length. This behavior is deprecated and will be removed in v5 of Transformers. It is recommended to use `max_new_tokens` instead.
+            UserWarning: If using `max_length`'s default value to control generation length. This behavior is deprecated and will be removed in v5 of Transformers. It is recommended to use `max_new_tokens`
+instead.
             UserWarning: If both `max_new_tokens` and `max_length` are set. `max_new_tokens` takes precedence.
             UserWarning: If the input length exceeds `max_length` and may lead to unexpected behavior.
         
@@ -2069,11 +2083,14 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
 class ChatGLM2ForSequenceClassification(ChatGLM2PreTrainedModel):
 
     """
-    ChatGLM2ForSequenceClassification is a class representing a pre-trained model for sequence classification based on the ChatGLM2 architecture. It inherits from the ChatGLM2PreTrainedModel and provides methods for initializing the model and generating classification outputs. 
+    ChatGLM2ForSequenceClassification is a class representing a pre-trained model for sequence classification based on the ChatGLM2 architecture. It inherits from the ChatGLM2PreTrainedModel and provides
+methods for initializing the model and generating classification outputs. 
     
-    The class contains an initializer method that takes in a ChatGLM2Config object and an optional boolean parameter for empty initialization. It initializes the model with the provided configuration and sets up the transformer and classifier head layers. 
+    The class contains an initializer method that takes in a ChatGLM2Config object and an optional boolean parameter for empty initialization. It initializes the model with the provided configuration and sets
+up the transformer and classifier head layers. 
     
-    The construct method takes various input tensors and parameters for generating the sequence classification output. It returns a sequence classifier output with past states if the return_dict parameter is set, or a tuple of tensors including logits and transformer outputs. The method also handles the calculation of loss based on the provided labels and problem type.
+    The construct method takes various input tensors and parameters for generating the sequence classification output. It returns a sequence classifier output with past states if the return_dict parameter is
+set, or a tuple of tensors including logits and transformer outputs. The method also handles the calculation of loss based on the provided labels and problem type.
     
     This class provides a comprehensive interface for utilizing the ChatGLM2 model for sequence classification tasks, including handling transformer outputs, dropout, and classification head operations.
     

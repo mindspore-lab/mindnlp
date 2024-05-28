@@ -745,7 +745,8 @@ class LayoutLMv2TokenizerFast(PreTrainedTokenizerFast):
     ) -> BatchEncoding:
 
         """
-        This method encodes the input text and optional text pair into a batch of tokenized and encoded outputs. It provides various options for special tokens, padding and truncation strategies, and return types.
+        This method encodes the input text and optional text pair into a batch of tokenized and encoded outputs. It provides various options for special tokens, padding and truncation strategies, and return
+types.
         
         Args:
             self: The instance of the LayoutLMv2TokenizerFast class.

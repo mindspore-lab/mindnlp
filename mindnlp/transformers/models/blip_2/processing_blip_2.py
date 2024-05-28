@@ -51,7 +51,8 @@ class Blip2Processor(ProcessorMixin):
         Args:
             self: The instance of the class.
             image_processor: An object representing the image processor to be used. It should have the necessary methods and attributes required for image processing.
-            tokenizer: An object representing the tokenizer to be used. It should have the necessary methods and attributes required for tokenization. The 'return_token_type_ids' attribute of the tokenizer will be set to False.
+            tokenizer: An object representing the tokenizer to be used. It should have the necessary methods and attributes required for tokenization. The 'return_token_type_ids' attribute of the tokenizer
+will be set to False.
         
         Returns:
             None.

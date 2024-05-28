@@ -240,7 +240,9 @@ class CpmTokenizer(PreTrainedTokenizer):
         Raises:
             None.
         
-        This method updates the '__dict__' attribute of the 'self' object with the attributes from the serialized state dictionary 'd'. If the 'sp_model_kwargs' attribute doesn't exist in the object, it is initialized as an empty dictionary. Then, a SentencePieceProcessor object 'sp_model' is created with the keyword arguments provided in 'self.sp_model_kwargs'. Finally, the 'vocab_file' is loaded into the 'sp_model'.
+        This method updates the '__dict__' attribute of the 'self' object with the attributes from the serialized state dictionary 'd'. If the 'sp_model_kwargs' attribute doesn't exist in the object, it is
+initialized as an empty dictionary. Then, a SentencePieceProcessor object 'sp_model' is created with the keyword arguments provided in 'self.sp_model_kwargs'. Finally, the 'vocab_file' is loaded into the
+'sp_model'.
         """
         self.__dict__ = d
 
@@ -265,7 +267,8 @@ class CpmTokenizer(PreTrainedTokenizer):
             None: This method does not return any value directly. The preprocessed text is stored internally within the method.
         
         Raises:
-            None: This method does not raise any exceptions explicitly. However, potential exceptions may arise from the use of external functions within the method such as unicodedata.normalize() and unicodedata.combining().
+            None: This method does not raise any exceptions explicitly. However, potential exceptions may arise from the use of external functions within the method such as unicodedata.normalize() and
+unicodedata.combining().
         """
         if self.remove_space:
             outputs = " ".join(inputs.strip().split())

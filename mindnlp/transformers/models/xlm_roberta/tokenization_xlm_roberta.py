@@ -215,7 +215,8 @@ class XLMRobertaTokenizer(PreTrainedTokenizer):
             self: The XLMRobertaTokenizer object itself.
         
         Returns:
-            None. The method returns the state of the XLMRobertaTokenizer object in the form of a dictionary. The state includes a copy of the object's attributes stored in '__dict__' with some modifications. The 'sp_model' attribute is set to None, and the 'sp_model_proto' attribute is set to the serialized model prototype obtained from 'self.sp_model.serialized_model_proto()'.
+            None. The method returns the state of the XLMRobertaTokenizer object in the form of a dictionary. The state includes a copy of the object's attributes stored in '__dict__' with some modifications.
+The 'sp_model' attribute is set to None, and the 'sp_model_proto' attribute is set to the serialized model prototype obtained from 'self.sp_model.serialized_model_proto()'.
         
         Raises:
             None. This method does not raise any exceptions.
@@ -385,7 +386,8 @@ class XLMRobertaTokenizer(PreTrainedTokenizer):
         Raises:
             None.
         
-        This method takes an instance of the XLMRobertaTokenizer class and a string of text as input. It uses the `encode` method of the `sp_model` object to tokenize the text. The tokenized text is returned as a list of strings.
+        This method takes an instance of the XLMRobertaTokenizer class and a string of text as input. It uses the `encode` method of the `sp_model` object to tokenize the text. The tokenized text is returned
+as a list of strings.
         """
         # TODO check if the t5/llama PR also applies here
         return self.sp_model.encode(text, out_type=str)

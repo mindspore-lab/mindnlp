@@ -212,11 +212,14 @@ class CvtConvEmbeddings(nn.Cell):
         
         Args:
             self: The instance of the class.
-            patch_size (int or tuple): The size of the patch or kernel used for convolution. If an int is provided, the patch will be square. If a tuple is provided, it should contain two integers representing the height and width of the patch. 
+            patch_size (int or tuple): The size of the patch or kernel used for convolution. If an int is provided, the patch will be square. If a tuple is provided, it should contain two integers representing
+the height and width of the patch. 
             num_channels (int): The number of input channels for the convolutional layer.
             embed_dim (int): The dimensionality of the output embedding.
-            stride (int or tuple): The stride of the convolution operation. If an int is provided, the same stride is used in both dimensions. If a tuple is provided, it should contain two integers representing the stride in the height and width dimensions.
-            padding (int or tuple): The amount of padding to be added to the input data for the convolution operation. If an int is provided, the same padding is added to both dimensions. If a tuple is provided, it should contain two integers representing the padding in the height and width dimensions.
+            stride (int or tuple): The stride of the convolution operation. If an int is provided, the same stride is used in both dimensions. If a tuple is provided, it should contain two integers
+representing the stride in the height and width dimensions.
+            padding (int or tuple): The amount of padding to be added to the input data for the convolution operation. If an int is provided, the same padding is added to both dimensions. If a tuple is
+provided, it should contain two integers representing the padding in the height and width dimensions.
         
         Returns:
             None. The method initializes the CvtConvEmbeddings class and does not return any value.
@@ -261,7 +264,8 @@ class CvtConvEmbeddings(nn.Cell):
 class CvtSelfAttentionConvProjection(nn.Cell):
 
     """
-    CvtSelfAttentionConvProjection represents a class for performing convolution and normalization operations on input data. This class inherits from nn.Cell and provides methods for initializing the convolution and normalization layers, as well as for constructing the output from the input hidden state.
+    CvtSelfAttentionConvProjection represents a class for performing convolution and normalization operations on input data. This class inherits from nn.Cell and provides methods for initializing the
+convolution and normalization layers, as well as for constructing the output from the input hidden state.
     
     Attributes:
         embed_dim (int): The dimension of the input embedding.
@@ -877,7 +881,9 @@ class CvtIntermediate(nn.Cell):
         Raises:
             None.
         
-        This method takes in the 'hidden_state' and applies transformations to it in order to construct the hidden state of the CvtIntermediate class. The 'hidden_state' is first passed through a dense layer using the 'self.dense' function. Then, the resulting tensor is passed through the activation function specified by the 'self.activation' attribute. The modified hidden state is returned as the output of this method.
+        This method takes in the 'hidden_state' and applies transformations to it in order to construct the hidden state of the CvtIntermediate class. The 'hidden_state' is first passed through a dense layer
+using the 'self.dense' function. Then, the resulting tensor is passed through the activation function specified by the 'self.activation' attribute. The modified hidden state is returned as the output of this
+method.
         
         Note that this method modifies the hidden state in-place and does not create a new object.
         """
@@ -1070,13 +1076,17 @@ class CvtLayer(nn.Cell):
 class CvtStage(nn.Cell):
 
     """
-    The CvtStage class represents a stage in the Cross Vision Transformer (Cvt) model. It inherits from nn.Cell and is designed to handle the processing and transformation of input data within a specific stage of the Cvt model.
+    The CvtStage class represents a stage in the Cross Vision Transformer (Cvt) model. It inherits from nn.Cell and is designed to handle the processing and transformation of input data within a specific stage
+of the Cvt model.
     
-    This class includes methods for initializing the stage with configuration and stage information, as well as constructing the hidden state through a series of operations involving embeddings, layer processing, and token manipulation.
+    This class includes methods for initializing the stage with configuration and stage information, as well as constructing the hidden state through a series of operations involving embeddings, layer
+processing, and token manipulation.
     
-    The class supports the configuration of parameters such as patch size, stride, number of channels, embedding dimensions, padding, dropout rates, depth, number of heads, kernel size, attention and multi-layer perceptron (MLP) settings, and the inclusion of a classification (cls) token.
+    The class supports the configuration of parameters such as patch size, stride, number of channels, embedding dimensions, padding, dropout rates, depth, number of heads, kernel size, attention and
+multi-layer perceptron (MLP) settings, and the inclusion of a classification (cls) token.
     
-    The construct method is responsible for processing the hidden state by applying the configured embeddings, manipulating the hidden state based on the existence of a cls token, and iterating through the layers to transform the hidden state. Additionally, it handles the splitting and reshaping of the hidden state before returning the updated hidden state and cls token.
+    The construct method is responsible for processing the hidden state by applying the configured embeddings, manipulating the hidden state based on the existence of a cls token, and iterating through the
+layers to transform the hidden state. Additionally, it handles the splitting and reshaping of the hidden state before returning the updated hidden state and cls token.
     
     Overall, the CvtStage class provides a structured and configurable framework for managing the transformation of data within a specific stage of the Cvt model.
     """
@@ -1087,7 +1097,9 @@ class CvtStage(nn.Cell):
         
         Args:
             self: The instance of the CvtStage class.
-            config (object): The configuration object containing various parameters such as patch size, stride, number of channels, embedding dimensions, padding, dropout rate, depth, number of heads, kernel size, padding for query, key, and value, stride for key and value, stride for query, method for QKV projection, QKV bias, attention dropout rate, drop rate, drop path rate, MLP ratio, and presence of a classification token. 
+            config (object): The configuration object containing various parameters such as patch size, stride, number of channels, embedding dimensions, padding, dropout rate, depth, number of heads, kernel
+size, padding for query, key, and value, stride for key and value, stride for query, method for QKV projection, QKV bias, attention dropout rate, drop rate, drop path rate, MLP ratio, and presence of a
+classification token. 
             stage (int): The stage of the CvtStage.
         
         Returns:
@@ -1357,7 +1369,8 @@ class CvtModel(CvtPreTrainedModel):
             return_dict (Optional[bool]): Whether to return a dictionary output. Default is None.
         
         Returns:
-            Union[Tuple, BaseModelOutputWithCLSToken]: The constructed model output. If `return_dict` is False, a tuple is returned containing the sequence output and any additional encoder outputs. If `return_dict` is True, a BaseModelOutputWithCLSToken object is returned, which includes the last hidden state, cls token value, and hidden states.
+            Union[Tuple, BaseModelOutputWithCLSToken]: The constructed model output. If `return_dict` is False, a tuple is returned containing the sequence output and any additional encoder outputs. If
+`return_dict` is True, a BaseModelOutputWithCLSToken object is returned, which includes the last hidden state, cls token value, and hidden states.
         
         Raises:
             ValueError: If `pixel_values` is not specified.

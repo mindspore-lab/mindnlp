@@ -243,7 +243,8 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
             self: This parameter represents the instance of the 'BertJapaneseTokenizer' class itself. It is required to access the internal attributes of the object.
         
         Returns:
-            The method returns a dictionary representing the current state of the object. If the 'word_tokenizer_type' attribute of the object is one of ['mecab', 'sudachi', 'jumanpp'], the 'word_tokenizer' attribute is removed from the state dictionary before returning it.
+            The method returns a dictionary representing the current state of the object. If the 'word_tokenizer_type' attribute of the object is one of ['mecab', 'sudachi', 'jumanpp'], the 'word_tokenizer'
+attribute is removed from the state dictionary before returning it.
         
         Raises:
             This method does not raise any exceptions under normal circumstances.
@@ -354,7 +355,9 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
             self: The instance of the BertJapaneseTokenizer class. It is a required parameter for instance method access.
         
         Returns:
-            Returns a dictionary representing the vocabulary. If the subword_tokenizer_type is 'sentencepiece', the vocabulary is constructed by mapping token IDs to their corresponding tokens for the range of 0 to vocab_size. Any added tokens are then added to this vocabulary. If the subword_tokenizer_type is not 'sentencepiece', the vocabulary is a combination of the existing vocabulary and the added_tokens_encoder.
+            Returns a dictionary representing the vocabulary. If the subword_tokenizer_type is 'sentencepiece', the vocabulary is constructed by mapping token IDs to their corresponding tokens for the range of
+0 to vocab_size. Any added tokens are then added to this vocabulary. If the subword_tokenizer_type is not 'sentencepiece', the vocabulary is a combination of the existing vocabulary and the
+added_tokens_encoder.
         
         Raises:
             No specific exceptions are documented to be raised by this method.

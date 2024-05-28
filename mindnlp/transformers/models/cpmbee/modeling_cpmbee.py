@@ -554,7 +554,8 @@ class CpmBeeFFNBlock(nn.Cell):
 class CpmBeeTransformerBlock(nn.Cell):
 
     """
-    This class represents a transformer block of the CPM-BEE model, which is a neural network architecture used for natural language processing tasks. The CpmBeeTransformerBlock class inherits from nn.Cell and contains two sub-blocks: a self-attention block and a feed-forward neural network (FFN) block.
+    This class represents a transformer block of the CPM-BEE model, which is a neural network architecture used for natural language processing tasks. The CpmBeeTransformerBlock class inherits from nn.Cell and
+contains two sub-blocks: a self-attention block and a feed-forward neural network (FFN) block.
     
     Attributes:
         config (CpmBeeConfig): The configuration object for the CPM-BEE model.
@@ -565,7 +566,8 @@ class CpmBeeTransformerBlock(nn.Cell):
         __init__(self, config: CpmBeeConfig, mask_att: bool = False, mask_ffn: bool = False):
             Initializes a new instance of the CpmBeeTransformerBlock class.
             
-        construct(self, hidden_states: mindspore.Tensor, attention_mask: mindspore.Tensor, position_bias: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = False, past_key_values: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None, use_cache: Optional[bool] = None):
+        construct(self, hidden_states: mindspore.Tensor, attention_mask: mindspore.Tensor, position_bias: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = False, past_key_values:
+Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None, use_cache: Optional[bool] = None):
             Applies the transformer block to the input tensor.
             
             Args:
@@ -583,7 +585,8 @@ class CpmBeeTransformerBlock(nn.Cell):
                     A boolean flag indicating whether to return and use the cached past key and value states to speed up decoding. Defaults to `None`.
                     
             Returns:
-                A tuple containing the output tensor of shape `(batch, seq_len, dim_model)`, the attention weights tensor of shape `(batch, num_heads, seq_len, seq_len)`, and the current key value tensor of shape `(2, batch, num_heads, seq_len, dim_head)`.
+                A tuple containing the output tensor of shape `(batch, seq_len, dim_model)`, the attention weights tensor of shape `(batch, num_heads, seq_len, seq_len)`, and the current key value tensor of
+shape `(2, batch, num_heads, seq_len, dim_head)`.
     """
     def __init__(self, config: CpmBeeConfig, mask_att: bool = False, mask_ffn: bool = False):
 
@@ -1199,8 +1202,14 @@ class CpmBeeModel(CpmBeePreTrainedModel):
         - __init__(self, config: CpmBeeConfig): Initializes the CpmBeeModel instance with the given configuration.
         - get_input_embeddings(self): Returns the input embedding instance.
         - set_input_embeddings(self, embeddings, **kwargs): Sets the input embeddings to the given value.
-        - construct(self, input_ids: mindspore.Tensor, input_id_sub: Optional[mindspore.Tensor] = None, length: Optional[mindspore.Tensor] = None, context: Optional[mindspore.Tensor] = None, sample_ids: Optional[mindspore.Tensor] = None, num_segments: Optional[mindspore.Tensor] = None, segment: Optional[mindspore.Tensor] = None, segment_rel_offset: Optional[mindspore.Tensor] = None, segment_rel: Optional[mindspore.Tensor] = None, span: Optional[Dict] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, past_key_values: Optional[List] = None, use_cache: Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs): Constructs the CpmBee model with the provided input and configuration.
-        - inference(self, input_ids: mindspore.Tensor, input_id_sub: Optional[mindspore.Tensor] = None, position: Optional[mindspore.Tensor] = None, context: Optional[mindspore.Tensor] = None, sample_ids: Optional[mindspore.Tensor] = None, num_segments: Optional[mindspore.Tensor] = None, segment: Optional[mindspore.Tensor] = None, segment_rel_offset: Optional[mindspore.Tensor] = None, segment_rel: Optional[mindspore.Tensor] = None, past_states: Optional[Dict] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, past_key_values: Optional[List] = None, use_cache: Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs): Performs inference using the CpmBee model with the provided input and configuration.
+        - construct(self, input_ids: mindspore.Tensor, input_id_sub: Optional[mindspore.Tensor] = None, length: Optional[mindspore.Tensor] = None, context: Optional[mindspore.Tensor] = None, sample_ids:
+Optional[mindspore.Tensor] = None, num_segments: Optional[mindspore.Tensor] = None, segment: Optional[mindspore.Tensor] = None, segment_rel_offset: Optional[mindspore.Tensor] = None, segment_rel:
+Optional[mindspore.Tensor] = None, span: Optional[Dict] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, past_key_values: Optional[List] = None, use_cache:
+Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs): Constructs the CpmBee model with the provided input and configuration.
+        - inference(self, input_ids: mindspore.Tensor, input_id_sub: Optional[mindspore.Tensor] = None, position: Optional[mindspore.Tensor] = None, context: Optional[mindspore.Tensor] = None, sample_ids:
+Optional[mindspore.Tensor] = None, num_segments: Optional[mindspore.Tensor] = None, segment: Optional[mindspore.Tensor] = None, segment_rel_offset: Optional[mindspore.Tensor] = None, segment_rel:
+Optional[mindspore.Tensor] = None, past_states: Optional[Dict] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, past_key_values: Optional[List] = None, use_cache:
+Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs): Performs inference using the CpmBee model with the provided input and configuration.
     """
     def __init__(self, config: CpmBeeConfig):
 
@@ -1557,23 +1566,27 @@ class CpmBeeBeamHypotheses(BeamHypotheses):
     """
     This class represents a set of beam hypotheses for the CpmBee model. It is derived from the BeamHypotheses class.
     
-    The CpmBeeBeamHypotheses class is used to store and manage a list of beam hypotheses along with their scores and beam indices. Each hypothesis consists of a sequence of predicted tokens and a corresponding sum of log probabilities. The class provides methods to add new hypotheses, update the list of hypotheses, and retrieve the best hypotheses based on their scores.
+    The CpmBeeBeamHypotheses class is used to store and manage a list of beam hypotheses along with their scores and beam indices. Each hypothesis consists of a sequence of predicted tokens and a corresponding
+sum of log probabilities. The class provides methods to add new hypotheses, update the list of hypotheses, and retrieve the best hypotheses based on their scores.
     
     Attributes:
-        beams (List[Tuple[float, List, Optional[mindspore.Tensor]]]): A list of tuples representing the beam hypotheses. Each tuple contains the hypothesis score, the predicted token sequence, and the beam indices.
+        beams (List[Tuple[float, List, Optional[mindspore.Tensor]]]): A list of tuples representing the beam hypotheses. Each tuple contains the hypothesis score, the predicted token sequence, and the beam
+indices.
         worst_score (float): The score of the worst hypothesis in the list.
         num_beams (int): The maximum number of beam hypotheses to be stored.
         length_penalty (float): The length penalty factor applied to the hypothesis scores.
     
     Methods:
         add(self, hyp: List, sum_logprobs: float, beam_indices: Optional[mindspore.Tensor] = None)
-            Add a new hypothesis to the list of beam hypotheses. The hypothesis is represented by a sequence of predicted tokens and its sum of log probabilities. Optionally, the beam indices can also be provided.
+            Add a new hypothesis to the list of beam hypotheses. The hypothesis is represented by a sequence of predicted tokens and its sum of log probabilities. Optionally, the beam indices can also be
+provided.
         
         update(self)
             Update the list of beam hypotheses by removing the worst hypothesis if the maximum number of hypotheses is exceeded.
         
         get_best(self, num_best: int) -> List[Tuple[float, List, Optional[mindspore.Tensor]]]
-            Retrieve the best `num_best` beam hypotheses based on their scores. The hypotheses are returned as a list of tuples, where each tuple contains the hypothesis score, the predicted token sequence, and the beam indices.
+            Retrieve the best `num_best` beam hypotheses based on their scores. The hypotheses are returned as a list of tuples, where each tuple contains the hypothesis score, the predicted token sequence,
+and the beam indices.
     """
     def add(self, hyp: List, sum_logprobs: float, beam_indices: Optional[mindspore.Tensor] = None):
         """
@@ -1853,7 +1866,8 @@ class CpmBeeBeamSearchScorer(BeamSearchScorer):
         Raises:
             None.
         
-        This method iterates over the beam hypotheses generated during the beam search process and selects the best hypothesis from each beam. The best hypothesis is determined based on the maximum score assigned to it. The selected best hypotheses are then returned as a tuple of mindspore.Tensor objects.
+        This method iterates over the beam hypotheses generated during the beam search process and selects the best hypothesis from each beam. The best hypothesis is determined based on the maximum score
+assigned to it. The selected best hypotheses are then returned as a tuple of mindspore.Tensor objects.
         
         Note:
             - The beam hypotheses are internally stored in the _beam_hyps attribute of the CpmBeeBeamSearchScorer instance.
@@ -1930,11 +1944,15 @@ class CpmBeeBeamSearchScorer(BeamSearchScorer):
 class CpmBeeForCausalLM(CpmBeePreTrainedModel):
 
     """
-    This class represents a CPMBee model for Causal Language Modeling tasks. It inherits from CpmBeePreTrainedModel and implements methods for model initialization, inference, beam search generation, input embeddings handling, and more.
+    This class represents a CPMBee model for Causal Language Modeling tasks. It inherits from CpmBeePreTrainedModel and implements methods for model initialization, inference, beam search generation, input
+embeddings handling, and more.
     
-    The class includes methods for initializing the model, constructing the model for inference, performing inference, getting and setting input embeddings, getting and setting output embeddings, preparing inputs for generation, updating model kwargs for generation, reordering cache during generation, expanding inputs for generation, adjusting logits during generation, performing beam search for generation, and generating outputs based on input data using beam search.
+    The class includes methods for initializing the model, constructing the model for inference, performing inference, getting and setting input embeddings, getting and setting output embeddings, preparing
+inputs for generation, updating model kwargs for generation, reordering cache during generation, expanding inputs for generation, adjusting logits during generation, performing beam search for generation, and
+generating outputs based on input data using beam search.
     
-    The `generate` method processes input data using the model to generate responses, filling placeholders in the input data with generated text. It accepts a dictionary or a list of dictionaries as input and returns a dictionary or a list of dictionaries with the '<ans>' field filled with generated text.
+    The `generate` method processes input data using the model to generate responses, filling placeholders in the input data with generated text. It accepts a dictionary or a list of dictionaries as input and
+returns a dictionary or a list of dictionaries with the '<ans>' field filled with generated text.
     
     For more details on the methods and their parameters, please refer to the method docstrings within the class implementation.
     """

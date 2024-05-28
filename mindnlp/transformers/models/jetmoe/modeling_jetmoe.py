@@ -192,13 +192,19 @@ def _get_unpad_data(attention_mask):
 class JetMoERMSNorm(nn.Cell):
 
     """
-    The 'JetMoERMSNorm' class is a custom implementation of the root mean square normalization (RMSNorm) module, specifically designed for the JetMoE model. It inherits from the 'nn.Cell' class, which is a base class for all neural network modules in MindSpore.
+    The 'JetMoERMSNorm' class is a custom implementation of the root mean square normalization (RMSNorm) module, specifically designed for the JetMoE model. It inherits from the 'nn.Cell' class, which is a
+base class for all neural network modules in MindSpore.
     
-    This class provides a trainable normalization layer that performs RMS normalization on the input hidden states. The normalization is applied along the last dimension of the input tensor, reducing the variance across that dimension.
+    This class provides a trainable normalization layer that performs RMS normalization on the input hidden states. The normalization is applied along the last dimension of the input tensor, reducing the
+variance across that dimension.
     
-    The constructor '__init__' initializes the 'JetMoERMSNorm' module. It takes two parameters: 'hidden_size' specifies the size of the hidden states, and 'eps' (default value 1e-06) is the epsilon value used for numerical stability in the normalization calculation.
+    The constructor '__init__' initializes the 'JetMoERMSNorm' module. It takes two parameters: 'hidden_size' specifies the size of the hidden states, and 'eps' (default value 1e-06) is the epsilon value used
+for numerical stability in the normalization calculation.
     
-    The 'construct' method is the main functionality of the 'JetMoERMSNorm' module. It performs the RMS normalization on the input 'hidden_states' tensor. The method first converts the input tensor to 'mindspore.float32' to ensure consistent data type for the calculations. It then computes the variance along the last dimension of the tensor using the 'pow' and 'mean' operations. Afterward, the input tensor is multiplied element-wise by the reciprocal square root of the variance plus epsilon, using the 'rsqrt' and 'ops' operations. Finally, the normalized tensor is multiplied element-wise by the weight tensor and converted back to the original input data type.
+    The 'construct' method is the main functionality of the 'JetMoERMSNorm' module. It performs the RMS normalization on the input 'hidden_states' tensor. The method first converts the input tensor to
+'mindspore.float32' to ensure consistent data type for the calculations. It then computes the variance along the last dimension of the tensor using the 'pow' and 'mean' operations. Afterward, the input tensor
+is multiplied element-wise by the reciprocal square root of the variance plus epsilon, using the 'rsqrt' and 'ops' operations. Finally, the normalized tensor is multiplied element-wise by the weight tensor and
+converted back to the original input data type.
     
     Note that the 'JetMoERMSNorm' module is intended to be used as a part of the JetMoE model and can be applied to the hidden states of the model's components.
     
@@ -240,7 +246,8 @@ class JetMoERMSNorm(nn.Cell):
 class JetMoERotaryEmbedding(nn.Cell):
 
     """
-    The JetMoERotaryEmbedding class represents a rotary position embedding module that can be used in neural network models. It inherits from the nn.Cell class and provides functionality for generating rotary position embeddings based on the input sequence length.
+    The JetMoERotaryEmbedding class represents a rotary position embedding module that can be used in neural network models. It inherits from the nn.Cell class and provides functionality for generating rotary
+position embeddings based on the input sequence length.
     
     Attributes:
         dim (int): The dimension of the position embeddings.
@@ -458,7 +465,8 @@ class JetMoEAttention(nn.Cell):
             use_cache (bool, optional): Whether to use cache for the key-value pairs. Defaults to False.
         
         Returns:
-            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing the attention output tensor with shape (batch_size, sequence_length, hidden_size), the attention weights tensor (if output_attentions is True), and the updated past key-value cache.
+            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing the attention output tensor with shape (batch_size, sequence_length, hidden_size), the
+attention weights tensor (if output_attentions is True), and the updated past key-value cache.
         
         Raises:
             ValueError: If the attention weights or mask have invalid shapes.
@@ -558,14 +566,16 @@ class JetMoEBlock(nn.Cell):
     The block is designed to be used within a larger neural network model for various natural language processing tasks.
     
     The class provides methods for initialization and forward pass computation. 
-    During initialization, it sets up the necessary components including input layer normalization, self-attention mechanism, post-attention layer normalization, and the MLP with MoE architecture based on the provided configuration.
+    During initialization, it sets up the necessary components including input layer normalization, self-attention mechanism, post-attention layer normalization, and the MLP with MoE architecture based on the
+provided configuration.
     
     The 'construct' method performs the forward pass computation of the JetMoEBlock module. 
     It takes input hidden states, optional position IDs, past key-value states, attention mask, and other optional arguments. 
     The method computes the self-attention output, updates the hidden states, applies the MLP operation, and returns the final outputs. 
     Optional outputs such as attention weights and cached states can also be returned based on the method arguments.
     
-    Overall, the 'JetMoEBlock' class encapsulates the functionality of a JetMoE block within a neural network model, providing the necessary components for attention-based computations and expert-based transformations.
+    Overall, the 'JetMoEBlock' class encapsulates the functionality of a JetMoE block within a neural network model, providing the necessary components for attention-based computations and expert-based
+transformations.
     """
     def __init__(self, config: JetMoEConfig, layer_idx: Optional[int] = None):
         """
@@ -932,7 +942,9 @@ class JetMoEForCausalLM(JetMoEPreTrainedModel):
     '''
     The JetMoEForCausalLM class represents a JetMoE model for causal language modeling. It inherits from the JetMoEPreTrainedModel.
     
-    This class includes methods for initializing the model, getting and setting input and output embeddings, setting and getting the decoder, constructing the model, preparing inputs for generation, and reordering cache. The construct method handles the generation of outputs based on input and model configuration, while the prepare_inputs_for_generation method prepares inputs for the generation process. Additionally, the _reorder_cache method is a static method for reordering past key values based on beam index.
+    This class includes methods for initializing the model, getting and setting input and output embeddings, setting and getting the decoder, constructing the model, preparing inputs for generation, and
+reordering cache. The construct method handles the generation of outputs based on input and model configuration, while the prepare_inputs_for_generation method prepares inputs for the generation process.
+Additionally, the _reorder_cache method is a static method for reordering past key values based on beam index.
     
     The class also includes attributes for model configuration, vocabulary size, auxiliary loss coefficient, LM head, and tie_word_embeddings.
     
@@ -1263,7 +1275,8 @@ class JetMoEForCausalLM(JetMoEPreTrainedModel):
 class JetMoEForSequenceClassification(JetMoEPreTrainedModel):
 
     """
-    JetMoEForSequenceClassification is a class that represents a sequence classification model based on the JetMoE architecture. It is designed to handle tasks such as sentiment analysis, text classification, and natural language inference.
+    JetMoEForSequenceClassification is a class that represents a sequence classification model based on the JetMoE architecture. It is designed to handle tasks such as sentiment analysis, text classification,
+and natural language inference.
     
     This class inherits from the JetMoEPreTrainedModel class, which provides a set of pre-trained parameters and methods for fine-tuning the model on specific downstream tasks.
     
@@ -1272,9 +1285,12 @@ class JetMoEForSequenceClassification(JetMoEPreTrainedModel):
     - __init__(self, config): Initializes the JetMoEForSequenceClassification instance with the given configuration.
     - get_input_embeddings(self): Returns the input embeddings used by the model.
     - set_input_embeddings(self, value): Sets the input embeddings of the model to the given value.
-    - construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the sequence classification model and computes the output logits. It takes several optional arguments such as input_ids, attention_mask, and labels, and returns a tuple containing the loss, logits, and other outputs.
+    - construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the sequence classification
+model and computes the output logits. It takes several optional arguments such as input_ids, attention_mask, and labels, and returns a tuple containing the loss, logits, and other outputs.
     
-    The JetMoEForSequenceClassification class follows the configuration provided to initialize the model, including the number of labels for the classification task. It utilizes the JetMoEModel for the main transformer architecture and applies a score layer to compute the logits. The construct method handles the computation of the model's output based on the given inputs and labels, including handling different problem types (regression, single-label classification, or multi-label classification) and computing the loss.
+    The JetMoEForSequenceClassification class follows the configuration provided to initialize the model, including the number of labels for the classification task. It utilizes the JetMoEModel for the main
+transformer architecture and applies a score layer to compute the logits. The construct method handles the computation of the model's output based on the given inputs and labels, including handling different
+problem types (regression, single-label classification, or multi-label classification) and computing the loss.
     
     Note: This docstring does not include the method signatures or any other code for clarity and readability.
     """
@@ -1336,7 +1352,8 @@ class JetMoEForSequenceClassification(JetMoEPreTrainedModel):
         Raises:
             None.
         
-        This method allows you to set the input embeddings for the JetMoEForSequenceClassification model. The input embeddings should be provided as an object that provides the embedding functionality. By setting the input embeddings, you can customize the way the model represents the input data.
+        This method allows you to set the input embeddings for the JetMoEForSequenceClassification model. The input embeddings should be provided as an object that provides the embedding functionality. By
+setting the input embeddings, you can customize the way the model represents the input data.
         
         Note:
         The 'embed_tokens' attribute of the 'model' instance is updated with the provided 'value' to set the input embeddings.

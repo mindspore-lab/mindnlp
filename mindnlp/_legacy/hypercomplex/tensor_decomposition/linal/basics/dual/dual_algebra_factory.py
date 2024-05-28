@@ -10,7 +10,8 @@ class DualAlgebraFactory(AlgebraFactory):
     r"""
     The DualAlgebraFactory class represents a factory for creating instances of dual algebra objects including matrices, vectors, and scalars. It inherits from the AlgebraFactory class.
     
-    This class provides methods to obtain implementations of dual algebra objects, such as matrices, vectors, and scalars. The get_matrix_impl method returns an instance of _DualAlgebraImpl for matrices, the get_vector_impl method returns an instance of _DualAlgebraImpl for vectors, and the get_scalar_impl method returns an instance of _DualAlgebraImpl for scalars.
+    This class provides methods to obtain implementations of dual algebra objects, such as matrices, vectors, and scalars. The get_matrix_impl method returns an instance of _DualAlgebraImpl for matrices, the
+get_vector_impl method returns an instance of _DualAlgebraImpl for vectors, and the get_scalar_impl method returns an instance of _DualAlgebraImpl for scalars.
     
     Note: The actual implementations of _DualAlgebraImpl for matrices, vectors, and scalars are returned by the respective methods.
     """

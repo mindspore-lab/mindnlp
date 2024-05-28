@@ -165,14 +165,16 @@ class QuestionAnsweringArgumentHandler(ArgumentHandler):
         
         Args:
         - self: (object) The instance of the QuestionAnsweringArgumentHandler class.
-        - item: (SquadExample or dict) The input item to be normalized. If the item is a SquadExample instance, it is returned as is. If it is a dictionary, it should contain keys 'question' and 'context'. The 'question' key should not be None or empty. The 'context' key should not be None or empty. The item can also be a dictionary to create a SquadExample using QuestionAnsweringPipeline.create_sample method.
+        - item: (SquadExample or dict) The input item to be normalized. If the item is a SquadExample instance, it is returned as is. If it is a dictionary, it should contain keys 'question' and 'context'. The
+'question' key should not be None or empty. The 'context' key should not be None or empty. The item can also be a dictionary to create a SquadExample using QuestionAnsweringPipeline.create_sample method.
         
         Returns:
         - None: This method does not return any value explicitly.
         
         Raises:
         - KeyError: Raised if the input dictionary does not contain the keys 'question' and 'context'.
-        - ValueError: Raised if the 'question' or 'context' key is None or empty in the input dictionary. Also raised if the item is a string and its length is 0. Additionally, raised if the input item is not of type SquadExample or dict.
+        - ValueError: Raised if the 'question' or 'context' key is None or empty in the input dictionary. Also raised if the item is a string and its length is 0. Additionally, raised if the input item is not
+of type SquadExample or dict.
         """
         if isinstance(item, SquadExample):
             return item
@@ -457,7 +459,8 @@ class QuestionAnsweringPipeline(ChunkPipeline):
             self (object): The instance of the QuestionAnsweringPipeline class.
             example (dict or SquadExample): The input example for the Question Answering task. This can be provided as a dictionary with keys: 'question' and 'context', or as a SquadExample object.
             padding (str): Determines the padding strategy. It can take the values 'do_not_pad' or other padding strategies supported by the tokenizer.
-            doc_stride (int): The maximum distance between chunks of input context when splitting long contexts for processing. If not provided, it defaults to half of the max_seq_len or 128, whichever is smaller.
+            doc_stride (int): The maximum distance between chunks of input context when splitting long contexts for processing. If not provided, it defaults to half of the max_seq_len or 128, whichever is
+smaller.
             max_question_len (int): The maximum length allowed for the input question. If the input question exceeds this length, it will be truncated.
             max_seq_len (int): The maximum length allowed for the input sequence. If not provided, it defaults to the minimum of the maximum length supported by the tokenizer and 384.
         
@@ -722,7 +725,8 @@ class QuestionAnsweringPipeline(ChunkPipeline):
         - Tuple[int, int]: A tuple containing the start and end character indices within the specified sequence.
         
         Raises:
-        - Exception: If an error occurs during the process of retrieving the character indices, an Exception is raised. This may occur if the token-to-word or word-to-chars mappings are not available or encounter an unexpected issue.
+        - Exception: If an error occurs during the process of retrieving the character indices, an Exception is raised. This may occur if the token-to-word or word-to-chars mappings are not available or
+encounter an unexpected issue.
         """
         if align_to_words:
             try:

@@ -23,7 +23,9 @@ class BgeM3Config(PretrainedConfig):
     """
     A class representing the configuration for a BgeM3 model. 
     
-    This class inherits from the PretrainedConfig class and defines the configuration parameters for a BgeM3 model, including vocabulary size, hidden size, number of hidden layers, number of attention heads, intermediate size, activation function, dropout probabilities, maximum position embeddings, type vocabulary size, initializer range, layer normalization epsilon, padding token ID, beginning of sequence token ID, end of sequence token ID, position embedding type, cache usage, classifier dropout, Colbert dimension, sentence pooling method, and unused tokens.
+    This class inherits from the PretrainedConfig class and defines the configuration parameters for a BgeM3 model, including vocabulary size, hidden size, number of hidden layers, number of attention heads,
+intermediate size, activation function, dropout probabilities, maximum position embeddings, type vocabulary size, initializer range, layer normalization epsilon, padding token ID, beginning of sequence token
+ID, end of sequence token ID, position embedding type, cache usage, classifier dropout, Colbert dimension, sentence pooling method, and unused tokens.
     
     Parameters:
     - vocab_size (int): The size of the vocabulary.

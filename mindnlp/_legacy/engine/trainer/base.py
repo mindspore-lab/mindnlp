@@ -166,11 +166,14 @@ class Trainer:
         Raises:
             None
         
-        This method initializes the training function for the Trainer class. It sets the forward function and the train function if they are not already set. The forward function is responsible for performing the forward pass of the neural network and calculating the loss. The train function is responsible for executing a single training step, which includes the forward pass, backpropagation, and optimizer update.
+        This method initializes the training function for the Trainer class. It sets the forward function and the train function if they are not already set. The forward function is responsible for performing
+the forward pass of the neural network and calculating the loss. The train function is responsible for executing a single training step, which includes the forward pass, backpropagation, and optimizer update.
         
-        If the forward function is None, it is determined based on whether the Trainer has an objective network or not. If an objective network is present, the default forward function without a loss function is used. Otherwise, the default forward function with a loss function and loss scaler is used.
+        If the forward function is None, it is determined based on whether the Trainer has an objective network or not. If an objective network is present, the default forward function without a loss function
+is used. Otherwise, the default forward function with a loss function and loss scaler is used.
         
-        If the train function is None, the default train step function is used. The default train step function utilizes the forward function, the optimizer, the loss scaler, and other optional parameters such as gradient checking and automatic mixed precision (AMP) level.
+        If the train function is None, the default train step function is used. The default train step function utilizes the forward function, the optimizer, the loss scaler, and other optional parameters such
+as gradient checking and automatic mixed precision (AMP) level.
         
         Note:
             The forward function, train function, and other parameters are initialized during the Trainer's initialization process.

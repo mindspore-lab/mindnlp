@@ -104,11 +104,14 @@ class BertGenerationSelfOutput(nn.Cell):
 class BertGenerationSelfAttention(nn.Cell):
 
     """
-    This class represents a self-attention mechanism for the generation of BERT (Bidirectional Encoder Representations from Transformers) models. It inherits from the nn.Cell class and provides methods for performing attention calculations.
+    This class represents a self-attention mechanism for the generation of BERT (Bidirectional Encoder Representations from Transformers) models. It inherits from the nn.Cell class and provides methods for
+performing attention calculations.
     
-    The class initializes with the given configuration and optional position embedding type, and it validates the configuration parameters. It also includes methods for reshaping input tensors and performing attention calculations.
+    The class initializes with the given configuration and optional position embedding type, and it validates the configuration parameters. It also includes methods for reshaping input tensors and performing
+attention calculations.
     
-    The construct method takes hidden_states as input and applies self-attention calculations. It supports optional input tensors such as attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, and past_key_value. It also provides an option to output attention probabilities if needed.
+    The construct method takes hidden_states as input and applies self-attention calculations. It supports optional input tensors such as attention_mask, head_mask, encoder_hidden_states,
+encoder_attention_mask, and past_key_value. It also provides an option to output attention probabilities if needed.
     
     This class is designed to be used as part of BERT model generation and provides essential functionality for self-attention mechanisms.
     
@@ -302,11 +305,13 @@ class BertGenerationAttention(nn.Cell):
     """
     This class represents the attention mechanism for generating BERT (Bidirectional Encoder Representations from Transformers) output. It inherits from the nn.Cell class.
     
-    The BertGenerationAttention class initializes the attention mechanism with the given configuration and position embedding type. It includes methods for pruning attention heads and constructing the attention output based on the input hidden states and optional masks or past key values.
+    The BertGenerationAttention class initializes the attention mechanism with the given configuration and position embedding type. It includes methods for pruning attention heads and constructing the
+attention output based on the input hidden states and optional masks or past key values.
     
     The prune_heads method prunes the specified attention heads from the attention mechanism, updating the internal parameters accordingly.
     
-    The construct method computes the attention output based on the input hidden states, optional attention mask, head mask, encoder hidden states, encoder attention mask, past key value, and output attentions flag. It returns a tuple containing the attention output and other optional outputs.
+    The construct method computes the attention output based on the input hidden states, optional attention mask, head mask, encoder hidden states, encoder attention mask, past key value, and output attentions
+flag. It returns a tuple containing the attention output and other optional outputs.
     
     """
     def __init__(self, config, position_embedding_type=None):
@@ -337,7 +342,8 @@ class BertGenerationAttention(nn.Cell):
         
         Args:
             self (object): The instance of the class.
-            heads (list): A list containing the indices of attention heads to be pruned. It is expected that the list is non-empty, and each element within the list is an integer representing the index of the attention head to be pruned.
+            heads (list): A list containing the indices of attention heads to be pruned. It is expected that the list is non-empty, and each element within the list is an integer representing the index of the
+attention head to be pruned.
         
         Returns:
             None. This method does not explicitly return a value, as it operates by modifying the state of the 'BertGenerationAttention' instance.
@@ -346,7 +352,8 @@ class BertGenerationAttention(nn.Cell):
             - ValueError: If the provided 'heads' list is empty, a ValueError is raised to indicate that the pruning operation cannot be performed without any specified attention heads to prune.
             - TypeError: If the 'heads' parameter is not a list or if its elements are not integers, a TypeError is raised to indicate incorrect input data type. 
         
-        Note: The method operates by modifying the internal state of the 'BertGenerationAttention' instance, including updating the attention heads, query, key, value, and other related attributes based on the specified 'heads' to be pruned.
+        Note: The method operates by modifying the internal state of the 'BertGenerationAttention' instance, including updating the attention heads, query, key, value, and other related attributes based on the
+specified 'heads' to be pruned.
         """
         if len(heads) == 0:
             return
@@ -551,7 +558,8 @@ class BertGenerationOutput(nn.Cell):
 class BertGenerationLayer(nn.Cell):
 
     """
-    The BertGenerationLayer class represents a layer in a BERT (Bidirectional Encoder Representations from Transformers) model specifically designed for generation tasks. This layer includes self-attention mechanisms and feed-forward neural networks. It can be used as part of a decoder model with the option to add cross-attention layers for interacting with encoder hidden states.
+    The BertGenerationLayer class represents a layer in a BERT (Bidirectional Encoder Representations from Transformers) model specifically designed for generation tasks. This layer includes self-attention
+mechanisms and feed-forward neural networks. It can be used as part of a decoder model with the option to add cross-attention layers for interacting with encoder hidden states.
     
     Attributes:
         - chunk_size_feed_forward: The chunk size used to process feed-forward operations.
@@ -590,7 +598,8 @@ class BertGenerationLayer(nn.Cell):
             None. This method does not return any value.
         
         Raises:
-            ValueError: If add_cross_attention is True but the layer is not used as a decoder model, a ValueError is raised with a message indicating that the layer should be used as a decoder model if cross attention is added.
+            ValueError: If add_cross_attention is True but the layer is not used as a decoder model, a ValueError is raised with a message indicating that the layer should be used as a decoder model if cross
+attention is added.
         """
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
@@ -703,7 +712,8 @@ class BertGenerationLayer(nn.Cell):
             None: This method does not return any value but modifies the input attention output through the feed-forward process.
         
         Raises:
-            No specific exceptions are raised within this method under normal circumstances. However, potential exceptions could arise from the 'output' method or other internal operations called within this method.
+            No specific exceptions are raised within this method under normal circumstances. However, potential exceptions could arise from the 'output' method or other internal operations called within this
+method.
         """
         intermediate_output = self.intermediate(attention_output)
         layer_output = self.output(intermediate_output, attention_output)
@@ -716,9 +726,12 @@ class BertEncoder(nn.Cell):
     """
     The BertEncoder class represents a transformer encoder for BERT (Bidirectional Encoder Representations from Transformers). It inherits from the nn.Cell class.
     
-    The BertEncoder class initializes with the provided configuration and constructs the layers for the transformer encoder based on the BERT model architecture. It also provides methods for processing input data through the encoder layers to generate output representations.
+    The BertEncoder class initializes with the provided configuration and constructs the layers for the transformer encoder based on the BERT model architecture. It also provides methods for processing input
+data through the encoder layers to generate output representations.
     
-    The construct method processes the input hidden states through the encoder layers, optionally using attention masks, head masks, and past key values. It supports gradient checkpointing and caching of intermediate results to optimize memory usage during training. The method returns the final hidden state, past key values, hidden states at all layers, self-attentions, and cross-attentions based on the specified output settings.
+    The construct method processes the input hidden states through the encoder layers, optionally using attention masks, head masks, and past key values. It supports gradient checkpointing and caching of
+intermediate results to optimize memory usage during training. The method returns the final hidden state, past key values, hidden states at all layers, self-attentions, and cross-attentions based on the
+specified output settings.
     
     For detailed usage instructions and additional information, refer to the specific method and attribute documentation within the class implementation.
     """
@@ -776,7 +789,8 @@ class BertEncoder(nn.Cell):
         
         Returns:
         - Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]: 
-            Depending on the 'return_dict' flag, returns either a tuple containing hidden states, next decoder cache, all hidden states, self attentions, and cross attentions, or a BaseModelOutputWithPastAndCrossAttentions object containing the last hidden state, past key values, hidden states, attentions, and cross attentions.
+            Depending on the 'return_dict' flag, returns either a tuple containing hidden states, next decoder cache, all hidden states, self attentions, and cross attentions, or a
+BaseModelOutputWithPastAndCrossAttentions object containing the last hidden state, past key values, hidden states, attentions, and cross attentions.
         
         Raises:
         - None
@@ -1245,7 +1259,10 @@ class BertGenerationOnlyLMHead(nn.Cell):
 class BertGenerationDecoder(BertGenerationPreTrainedModel):
 
     """
-    This class represents a decoder model for BERT generation. It extends the BertGenerationPreTrainedModel and provides methods for initializing the model, constructing the model outputs, preparing inputs for generation, and reordering cache. The class includes methods for initializing the model, retrieving and setting output embeddings, constructing the model outputs, preparing inputs for generation, and reordering cache. The detailed docstrings for each method provide information about the parameters, return types, and usage examples. This class is designed to be used as part of the BERT generation framework and provides essential functionality for decoding and generating outputs based on input sequences.
+    This class represents a decoder model for BERT generation. It extends the BertGenerationPreTrainedModel and provides methods for initializing the model, constructing the model outputs, preparing inputs for
+generation, and reordering cache. The class includes methods for initializing the model, retrieving and setting output embeddings, constructing the model outputs, preparing inputs for generation, and
+reordering cache. The detailed docstrings for each method provide information about the parameters, return types, and usage examples. This class is designed to be used as part of the BERT generation framework
+and provides essential functionality for decoding and generating outputs based on input sequences.
     """
     _tied_weights_keys = ["lm_head.decoder.weight", "lm_head.decoder.bias"]
 

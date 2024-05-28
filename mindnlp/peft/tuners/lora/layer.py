@@ -33,7 +33,8 @@ from .config import LoraConfig
 class LoraLayer(BaseTunerLayer):
 
     r"""
-    The `LoraLayer` class represents a layer that implements LOcal Response Adjustment (LORA) for neural network models. It inherits from the `BaseTunerLayer` class and provides methods for updating and scaling the layer's parameters, as well as performing mixed batch forward operations.
+    The `LoraLayer` class represents a layer that implements LOcal Response Adjustment (LORA) for neural network models. It inherits from the `BaseTunerLayer` class and provides methods for updating and
+scaling the layer's parameters, as well as performing mixed batch forward operations.
     
     Attributes:
         base_layer (nn.Cell): The base layer used for computation.
@@ -475,9 +476,13 @@ class Linear(nn.Cell, LoraLayer):
     r"""
     The Linear class represents a customizable linear layer with support for LoRA (Learned Optimizer Rate Annealing) adapters. This class inherits from the nn.Cell and LoraLayer classes. 
     
-    The class includes methods for initializing the layer, merging and unmerging adapter weights, computing delta weights for adapters, constructing the layer's forward pass, and generating a string representation of the class.
+    The class includes methods for initializing the layer, merging and unmerging adapter weights, computing delta weights for adapters, constructing the layer's forward pass, and generating a string
+representation of the class.
     
-    The __init__ method initializes the Linear layer with specified parameters and configures the LoRA adapters. The merge method combines the active adapter weights into the base weights, with an option to perform a safe merge operation. The unmerge method reverses the merge operation by unmerging all merged adapter layers from the base weights. The get_delta_weight method computes the delta weight for a given adapter. The construct method applies the constructed linear layer to input data, with support for adapter-specific adjustments. The __repr__ method returns a string representation of the Linear class prefixed with 'lora.'.
+    The __init__ method initializes the Linear layer with specified parameters and configures the LoRA adapters. The merge method combines the active adapter weights into the base weights, with an option to
+perform a safe merge operation. The unmerge method reverses the merge operation by unmerging all merged adapter layers from the base weights. The get_delta_weight method computes the delta weight for a given
+adapter. The construct method applies the constructed linear layer to input data, with support for adapter-specific adjustments. The __repr__ method returns a string representation of the Linear class prefixed
+with 'lora.'.
     """
     # Lora implemented in a dense layer
     def __init__(
@@ -710,11 +715,14 @@ class Linear(nn.Cell, LoraLayer):
 class Embedding(nn.Cell, LoraLayer):
 
     r"""
-    The 'Embedding' class represents a customizable adapter layer that can be integrated into neural network architectures. It inherits functionalities from the nn.Cell and LoraLayer classes, providing a flexible mechanism for adapting neural network behavior.
+    The 'Embedding' class represents a customizable adapter layer that can be integrated into neural network architectures. It inherits functionalities from the nn.Cell and LoraLayer classes, providing a
+flexible mechanism for adapting neural network behavior.
     
-    The class includes methods for initializing the adapter layer, updating its parameters, merging adapter weights into base weights, unmerging adapter layers, computing delta weights, and performing mixed batch forward passes. It also allows for embedding computations and the construction of the adapted network output.
+    The class includes methods for initializing the adapter layer, updating its parameters, merging adapter weights into base weights, unmerging adapter layers, computing delta weights, and performing mixed
+batch forward passes. It also allows for embedding computations and the construction of the adapted network output.
     
-    The 'Embedding' class is designed to enhance neural network performance by introducing adapter layers that can adapt to specific tasks or data characteristics, offering a versatile approach to model adaptation and specialization.
+    The 'Embedding' class is designed to enhance neural network performance by introducing adapter layers that can adapt to specific tasks or data characteristics, offering a versatile approach to model
+adaptation and specialization.
     """
     # LoRA implemented in a Embedding layer
     def __init__(
@@ -1305,7 +1313,9 @@ class Conv2d(nn.Cell, LoraLayer):
         Raises:
             None.
         
-        This method takes the weight tensor of the Conv2d layer, the additional lora_weight tensor, and a scaling factor as input. It calculates the normalized weight tensor by adding the scaled lora_weight tensor to the weight tensor. Then, it applies L2 normalization to the resulting tensor along dimensions (1, 2, 3) and returns the normalized weight tensor. The purpose of this method is to compute the weight normalization required for the Conv2d layer's computations.
+        This method takes the weight tensor of the Conv2d layer, the additional lora_weight tensor, and a scaling factor as input. It calculates the normalized weight tensor by adding the scaled lora_weight
+tensor to the weight tensor. Then, it applies L2 normalization to the resulting tensor along dimensions (1, 2, 3) and returns the normalized weight tensor. The purpose of this method is to compute the weight
+normalization required for the Conv2d layer's computations.
         """
         # calculate L2 norm of weight matrix, channel-wise
         weight = weight + scaling * lora_weight

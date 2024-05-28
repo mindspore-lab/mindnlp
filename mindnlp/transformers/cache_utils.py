@@ -244,7 +244,8 @@ class SinkCache(Cache):
         
         - `self` (SinkCache): The `self` parameter refers to the instance of the `SinkCache` class that is being initialized.
         
-        - `window_length` (int): The `window_length` parameter specifies the length of the window used for caching. This value determines the size of the cache and affects the number of tokens that can be stored.
+        - `window_length` (int): The `window_length` parameter specifies the length of the window used for caching. This value determines the size of the cache and affects the number of tokens that can be
+stored.
         
         - `num_sink_tokens` (int): The `num_sink_tokens` parameter represents the number of sink tokens. Sink tokens are special tokens used in the caching mechanism.
         
@@ -298,7 +299,8 @@ class SinkCache(Cache):
         Raises:
             None
         
-        This method applies the rotary positional embedding to the key states using the provided cosine and sine values. The embedding is applied by element-wise multiplication of the key states with the cosine values, and element-wise multiplication of the half-rotated key states with the sine values. The resulting rotated key states are then returned.
+        This method applies the rotary positional embedding to the key states using the provided cosine and sine values. The embedding is applied by element-wise multiplication of the key states with the
+cosine values, and element-wise multiplication of the half-rotated key states with the sine values. The resulting rotated key states are then returned.
         """
         rotated_key_states = (key_states * cos) + (self._rotate_half(key_states) * sin)
         return rotated_key_states
@@ -551,7 +553,8 @@ class StaticCache(Cache):
             ValueError: If the method 'get_seq_length' is not implemented for the StaticCache layer.
         
         Note:
-            This method calculates the usable length of a sequence in the StaticCache layer. It takes into account any changes in the sequence length and the layer index. If 'new_sequence_length' is not provided, the method assumes the sequence length remains unchanged. If 'layer_idx' is not provided, the method defaults to the first layer (index 0).
+            This method calculates the usable length of a sequence in the StaticCache layer. It takes into account any changes in the sequence length and the layer index. If 'new_sequence_length' is not
+provided, the method assumes the sequence length remains unchanged. If 'layer_idx' is not provided, the method defaults to the first layer (index 0).
         
         Example:
             >>> cache = StaticCache()

@@ -295,16 +295,19 @@ class BlenderbotSmallAttention(nn.Cell):
 class BlenderbotSmallEncoderLayer(nn.Cell):
 
     """
-    This class represents a single layer of the BlenderbotSmall model encoder. The layer consists of self-attention mechanism followed by feedforward neural network blocks with layer normalization and residual connections. 
+    This class represents a single layer of the BlenderbotSmall model encoder. The layer consists of self-attention mechanism followed by feedforward neural network blocks with layer normalization and residual
+connections. 
     
-    The class initializes the encoder layer with configuration parameters and defines a 'construct' method that processes the input hidden states through the self-attention mechanism and feedforward neural network blocks. The method also includes functionality for dropout, layer normalization, and handling of attention masks and head masks. 
+    The class initializes the encoder layer with configuration parameters and defines a 'construct' method that processes the input hidden states through the self-attention mechanism and feedforward neural
+network blocks. The method also includes functionality for dropout, layer normalization, and handling of attention masks and head masks. 
     
     Parameters:
         config (BlenderbotSmallConfig): Configuration object containing model hyperparameters.
         
     Methods:
         - __init__(self, config: BlenderbotSmallConfig): Initializes the encoder layer with the provided configuration settings.
-        - construct(self, hidden_states: mindspore.Tensor, attention_mask: mindspore.Tensor, layer_head_mask: mindspore.Tensor, output_attentions: Optional[bool] = False) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor]]: Processes the input hidden states through the self-attention mechanism and feedforward neural network blocks, with optional attention outputs.
+        - construct(self, hidden_states: mindspore.Tensor, attention_mask: mindspore.Tensor, layer_head_mask: mindspore.Tensor, output_attentions: Optional[bool] = False) -> Tuple[mindspore.Tensor,
+Optional[mindspore.Tensor]]: Processes the input hidden states through the self-attention mechanism and feedforward neural network blocks, with optional attention outputs.
     
     Attributes:
         - embed_dim: Dimension of the embedding space.
@@ -590,9 +593,13 @@ class BlenderbotSmallPreTrainedModel(PreTrainedModel):
     
     The `BlenderbotSmallPreTrainedModel` class provides methods for initializing the weights of the model and generating dummy inputs for testing purposes.
     
-    To initialize the weights, the `_init_weights` method is called with a specified `cell` object. If the `cell` is of type `nn.Dense`, the weights are initialized using the normal distribution with a standard deviation of `self.config.init_std`. If the `cell` has biases, they are initialized to zeros. If the `cell` is of type `nn.Embedding`, the weights are initialized using a normal distribution with a mean of 0.0 and a standard deviation of `self.config.init_std`. If a padding index is provided, the corresponding weights are set to 0.
+    To initialize the weights, the `_init_weights` method is called with a specified `cell` object. If the `cell` is of type `nn.Dense`, the weights are initialized using the normal distribution with a
+standard deviation of `self.config.init_std`. If the `cell` has biases, they are initialized to zeros. If the `cell` is of type `nn.Embedding`, the weights are initialized using a normal distribution with a
+mean of 0.0 and a standard deviation of `self.config.init_std`. If a padding index is provided, the corresponding weights are set to 0.
     
-    The `dummy_inputs` property returns a dictionary of dummy inputs that can be used for testing. It includes 'attention_mask', 'input_ids', and 'decoder_input_ids'. The 'input_ids' tensor contains two rows, with the second row having a padding token represented by `self.config.pad_token_id`. The 'attention_mask' tensor is obtained by checking if each element of 'input_ids' is not equal to the padding token. The 'decoder_input_ids' tensor is the same as the 'input_ids' tensor.
+    The `dummy_inputs` property returns a dictionary of dummy inputs that can be used for testing. It includes 'attention_mask', 'input_ids', and 'decoder_input_ids'. The 'input_ids' tensor contains two rows,
+with the second row having a padding token represented by `self.config.pad_token_id`. The 'attention_mask' tensor is obtained by checking if each element of 'input_ids' is not equal to the padding token. The
+'decoder_input_ids' tensor is the same as the 'input_ids' tensor.
     
     Note: This docstring does not include signatures or any other code.
     """
@@ -665,7 +672,8 @@ class BlenderbotSmallEncoder(BlenderbotSmallPreTrainedModel):
         
         Args:
             self: The instance of the class.
-            config (BlenderbotSmallConfig): The configuration for the encoder, including settings such as dropout, layer drop, embed dimension, padding index, maximum source positions, embed scale, and vocab size. 
+            config (BlenderbotSmallConfig): The configuration for the encoder, including settings such as dropout, layer drop, embed dimension, padding index, maximum source positions, embed scale, and vocab
+size. 
             embed_tokens (Optional[nn.Embedding]): Optional parameter representing the embedding tokens. If not provided, it defaults to None.
         
         Returns:
@@ -912,16 +920,20 @@ class BlenderbotSmallDecoder(BlenderbotSmallPreTrainedModel):
             None.
         
         Description:
-        This method allows setting the input embeddings for the BlenderbotSmallDecoder. The input embeddings are used to represent the input tokens in the decoding process. The 'value' parameter should be a tensor or any other compatible type that contains the desired input embeddings.
+        This method allows setting the input embeddings for the BlenderbotSmallDecoder. The input embeddings are used to represent the input tokens in the decoding process. The 'value' parameter should be a
+tensor or any other compatible type that contains the desired input embeddings.
         
-        Note that the 'value' parameter replaces the existing embeddings set for the 'embed_tokens' attribute of the BlenderbotSmallDecoder instance. Therefore, calling this method will overwrite any previously set input embeddings.
+        Note that the 'value' parameter replaces the existing embeddings set for the 'embed_tokens' attribute of the BlenderbotSmallDecoder instance. Therefore, calling this method will overwrite any
+previously set input embeddings.
         
         Example:
             decoder = BlenderbotSmallDecoder()
             embeddings = torch.tensor([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]])
             decoder.set_input_embeddings(embeddings)
         
-        In the example above, a new instance of BlenderbotSmallDecoder is created. The input embeddings are defined as a tensor with shape (2, 3), representing two tokens with three-dimensional embeddings. The 'set_input_embeddings' method is then called on the decoder instance, passing the embeddings tensor as the 'value' parameter. This updates the 'embed_tokens' attribute of the decoder with the new input embeddings.
+        In the example above, a new instance of BlenderbotSmallDecoder is created. The input embeddings are defined as a tensor with shape (2, 3), representing two tokens with three-dimensional embeddings. The
+'set_input_embeddings' method is then called on the decoder instance, passing the embeddings tensor as the 'value' parameter. This updates the 'embed_tokens' attribute of the decoder with the new input
+embeddings.
         """
         self.embed_tokens = value
 
@@ -1144,7 +1156,8 @@ class BlenderbotSmallModel(BlenderbotSmallPreTrainedModel):
     """
         This class represents the BlenderbotSmallModel, which is a Python implementation of the Blenderbot Small model for chat-based language generation. 
     
-        The BlenderbotSmallModel is a Seq2Seq model that consists of an encoder and a decoder. The encoder encodes the input text into hidden states, while the decoder generates the output text based on the encoded information. The model uses shared embeddings for both the encoder and the decoder.
+        The BlenderbotSmallModel is a Seq2Seq model that consists of an encoder and a decoder. The encoder encodes the input text into hidden states, while the decoder generates the output text based on the
+encoded information. The model uses shared embeddings for both the encoder and the decoder.
     
         This class inherits from the BlenderbotSmallPreTrainedModel.
     
@@ -1171,7 +1184,8 @@ class BlenderbotSmallModel(BlenderbotSmallPreTrainedModel):
             - set_input_embeddings(self, value): Sets the shared input embeddings.
             - get_encoder(self): Returns the encoder of the model.
             - get_decoder(self): Returns the decoder of the model.
-            - construct(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask, cross_attn_head_mask, encoder_outputs, past_key_values, inputs_embeds, decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model with the given inputs and returns the output.
+            - construct(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask, cross_attn_head_mask, encoder_outputs, past_key_values, inputs_embeds,
+decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model with the given inputs and returns the output.
     
         """
     _tied_weights_keys = ["decoder.embed_tokens.weight", "encoder.embed_tokens.weight"]
@@ -1373,7 +1387,10 @@ class BlenderbotSmallModel(BlenderbotSmallPreTrainedModel):
 class BlenderbotSmallForConditionalGeneration(BlenderbotSmallPreTrainedModel):
 
     """
-    This class represents a small Blenderbot model for conditional generation tasks. It is designed to generate responses based on given inputs in a conversational setting. The class provides methods for initializing the model, resizing token embeddings, constructing the model output, preparing inputs for generation, and reordering cache during inference. It inherits from BlenderbotSmallPreTrainedModel and includes functionalities such as getting encoder and decoder, setting output embeddings, and manipulating final logits bias. The class is equipped to handle various input parameters for generating responses and computing loss during training.
+    This class represents a small Blenderbot model for conditional generation tasks. It is designed to generate responses based on given inputs in a conversational setting. The class provides methods for
+initializing the model, resizing token embeddings, constructing the model output, preparing inputs for generation, and reordering cache during inference. It inherits from BlenderbotSmallPreTrainedModel and
+includes functionalities such as getting encoder and decoder, setting output embeddings, and manipulating final logits bias. The class is equipped to handle various input parameters for generating responses
+and computing loss during training.
     """
     base_model_prefix = "model"
     _keys_to_ignore_on_load_unexpected = ["final_logits_bias"]
@@ -1737,7 +1754,10 @@ class BlenderbotSmallDecoderWrapper(BlenderbotSmallPreTrainedModel):
 class BlenderbotSmallForCausalLM(BlenderbotSmallPreTrainedModel):
 
     """
-    Represents the BlenderbotSmallForCausalLM class, which is designed for causal language modeling with the BlenderbotSmall model architecture. This class inherits from BlenderbotSmallPreTrainedModel and provides methods for initializing the model, setting and getting input and output embeddings, setting and getting the decoder, constructing the model, and preparing inputs for generation. It also includes a method for reordering cache during generation. The class includes detailed information about the arguments and returns for the 'construct' and 'prepare_inputs_for_generation' methods. Additionally, example usage and expected outputs are provided for the 'construct' method.
+    Represents the BlenderbotSmallForCausalLM class, which is designed for causal language modeling with the BlenderbotSmall model architecture. This class inherits from BlenderbotSmallPreTrainedModel and
+provides methods for initializing the model, setting and getting input and output embeddings, setting and getting the decoder, constructing the model, and preparing inputs for generation. It also includes a
+method for reordering cache during generation. The class includes detailed information about the arguments and returns for the 'construct' and 'prepare_inputs_for_generation' methods. Additionally, example
+usage and expected outputs are provided for the 'construct' method.
     
     This class encapsulates the functionality for utilizing the BlenderbotSmall model for causal language modeling tasks and provides a comprehensive interface for model manipulation and generation.
     """
@@ -1821,7 +1841,8 @@ class BlenderbotSmallForCausalLM(BlenderbotSmallPreTrainedModel):
             None.
         
         Note:
-            The output embeddings are a representation of the model's internal hidden states after processing the input data. They capture the semantic information learned by the model during training and can be useful for various natural language processing tasks.
+            The output embeddings are a representation of the model's internal hidden states after processing the input data. They capture the semantic information learned by the model during training and can
+be useful for various natural language processing tasks.
         """
         return self.lm_head
 

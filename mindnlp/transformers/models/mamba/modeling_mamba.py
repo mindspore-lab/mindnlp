@@ -250,11 +250,15 @@ class MambaCache:
 class MambaRMSNorm(nn.Cell):
 
     """
-    MambaRMSNorm is a neural network cell that represents a modified version of the RMS normalization layer. It inherits from the nn.Cell class and provides functionality for normalizing hidden states in a neural network.
+    MambaRMSNorm is a neural network cell that represents a modified version of the RMS normalization layer. It inherits from the nn.Cell class and provides functionality for normalizing hidden states in a
+neural network.
     
-    This class initializes the MambaRMSNorm layer with the specified hidden size and epsilon value for variance. The hidden_size parameter determines the size of the input hidden states, while the eps parameter sets the variance epsilon value for numerical stability.
+    This class initializes the MambaRMSNorm layer with the specified hidden size and epsilon value for variance. The hidden_size parameter determines the size of the input hidden states, while the eps
+parameter sets the variance epsilon value for numerical stability.
     
-    The construct method of MambaRMSNorm takes hidden_states as input and performs RMS normalization on the input hidden states. It first converts the input hidden states to float32 data type, calculates the variance of the hidden states, and then applies the RMS normalization using the variance and epsilon values. The normalized hidden states are then multiplied by the weight parameter and converted back to the original input data type before being returned.
+    The construct method of MambaRMSNorm takes hidden_states as input and performs RMS normalization on the input hidden states. It first converts the input hidden states to float32 data type, calculates the
+variance of the hidden states, and then applies the RMS normalization using the variance and epsilon values. The normalized hidden states are then multiplied by the weight parameter and converted back to the
+original input data type before being returned.
     
     Note: The implementation details and usage of this class should be referenced from the source code and any related documentation.
     """
@@ -576,7 +580,8 @@ class MambaModel(MambaPreTrainedModel):
         - return_dict (Optional[bool]): Flag indicating whether to return the output as a dictionary. Default is None.
         
         Returns:
-        - Union[Tuple, MambaOutput]: The return value can be either a tuple containing hidden states, cache parameters, and all hidden states (if not None), or a MambaOutput object containing the last hidden state, cache parameters (if caching is enabled), and all hidden states.
+        - Union[Tuple, MambaOutput]: The return value can be either a tuple containing hidden states, cache parameters, and all hidden states (if not None), or a MambaOutput object containing the last hidden
+state, cache parameters (if caching is enabled), and all hidden states.
         
         Raises:
         - ValueError: Raised if both input_ids and inputs_embeds are specified simultaneously.
@@ -634,9 +639,11 @@ class MambaForCausalLM(MambaPreTrainedModel):
     """
     This class represents a Mamba model for Causal Language Modeling (LM), which is a subclass of MambaPreTrainedModel. 
     
-    The class includes methods for initializing the model, getting and setting the output embeddings, getting and setting the input embeddings, updating model keyword arguments for generation, preparing inputs for generation, and constructing the model for LM tasks. 
+    The class includes methods for initializing the model, getting and setting the output embeddings, getting and setting the input embeddings, updating model keyword arguments for generation, preparing inputs
+for generation, and constructing the model for LM tasks. 
     
-    The 'construct' method takes input_ids, inputs_embeds, cache_params, labels, output_hidden_states, and return_dict as input parameters, and returns the model output for Causal LM tasks. It calculates the loss if labels are provided and returns the loss along with the logits and other relevant outputs.
+    The 'construct' method takes input_ids, inputs_embeds, cache_params, labels, output_hidden_states, and return_dict as input parameters, and returns the model output for Causal LM tasks. It calculates the
+loss if labels are provided and returns the loss along with the logits and other relevant outputs.
     
     The class also provides functionality to handle cache_params, hidden states, and embedding tensors during the model's execution for LM tasks. 
     """
@@ -750,7 +757,8 @@ class MambaForCausalLM(MambaPreTrainedModel):
         Raises:
             None.
         
-        This method updates the model_kwargs dictionary with the 'cache_params' key-value pair from the outputs object, if present. If 'cache_params' is not present in the outputs object, it sets the corresponding value in model_kwargs to None. The method then returns the updated model_kwargs dictionary.
+        This method updates the model_kwargs dictionary with the 'cache_params' key-value pair from the outputs object, if present. If 'cache_params' is not present in the outputs object, it sets the
+corresponding value in model_kwargs to None. The method then returns the updated model_kwargs dictionary.
         """
         model_kwargs["cache_params"] = outputs.get("cache_params", None)
         return model_kwargs

@@ -69,7 +69,8 @@ def _get_unpad_data(attention_mask):
     This function retrieves unpad data from the attention_mask.
     
     Args:
-        attention_mask (Tensor): A 2D tensor representing the attention mask for the input data. Its shape is (batch_size, sequence_length), where batch_size corresponds to the number of input sequences and sequence_length corresponds to the maximum sequence length in the batch.
+        attention_mask (Tensor): A 2D tensor representing the attention mask for the input data. Its shape is (batch_size, sequence_length), where batch_size corresponds to the number of input sequences and
+sequence_length corresponds to the maximum sequence length in the batch.
     
     Returns:
         tuple: A tuple containing the following elements:
@@ -96,7 +97,8 @@ class BarkSelfAttention(nn.Cell):
     """
     Represents a self-attention mechanism for the Bark model.
     
-    This class inherits from nn.Cell and implements a self-attention mechanism for the Bark model. It includes methods for splitting and merging heads, performing attention calculations, and constructing the self-attention mechanism.
+    This class inherits from nn.Cell and implements a self-attention mechanism for the Bark model. It includes methods for splitting and merging heads, performing attention calculations, and constructing the
+self-attention mechanism.
     
     Attributes:
         config: Configuration settings for the self-attention mechanism.
@@ -107,7 +109,8 @@ class BarkSelfAttention(nn.Cell):
         _split_heads(self, tensor, num_heads, attn_head_size): Splits the hidden_size dimension into attn_head_size and num_heads.
         _merge_heads(self, tensor, num_heads, attn_head_size): Merges the attn_head_size dimension and num_attn_heads dimension into hidden_size.
         _attn(self, query, key, value, attention_mask=None, head_mask=None): Performs the attention calculation using the provided query, key, value, attention_mask, and head_mask.
-        construct(self, hidden_states, attention_mask=None, past_key_values=None, head_mask=None, use_cache=False, output_attentions=False): Constructs the self-attention mechanism using the specified parameters and returns the outputs.
+        construct(self, hidden_states, attention_mask=None, past_key_values=None, head_mask=None, use_cache=False, output_attentions=False): Constructs the self-attention mechanism using the specified
+parameters and returns the outputs.
     
     Raises:
         ValueError: If embed_dim is not divisible by num_heads.
@@ -258,7 +261,8 @@ class BarkSelfAttention(nn.Cell):
         - output_attentions (bool, optional): Flag indicating whether to output attention weights. Default is False.
         
         Returns:
-        - outputs (Tuple): A tuple containing the attention output tensor and present key-value tuple. If output_attentions is True, the tuple also includes attention weights. Returns None if no output is generated.
+        - outputs (Tuple): A tuple containing the attention output tensor and present key-value tuple. If output_attentions is True, the tuple also includes attention weights. Returns None if no output is
+generated.
         
         Raises:
         - ValueError: If the dimensions of the input tensors are not compatible for the attention mechanism.
@@ -340,7 +344,8 @@ class BarkLayerNorm(nn.Cell):
         Raises:
             TypeError: If the inputs are not compatible with the normalization process.
         
-        This method normalizes the inputs using the layer norm technique and modifies them in-place. The normalization process involves computing the mean and standard deviation of the inputs and then scaling and shifting them using learned parameters. The normalized inputs are returned as output.
+        This method normalizes the inputs using the layer norm technique and modifies them in-place. The normalization process involves computing the mean and standard deviation of the inputs and then scaling
+and shifting them using learned parameters. The normalized inputs are returned as output.
         
         Please note that this method assumes the inputs are in the correct shape and format for normalization. Any incompatible inputs will raise a TypeError.
         """
@@ -416,7 +421,8 @@ class BarkMLP(nn.Cell):
 class BarkBlock(nn.Cell):
 
     """
-    BarkBlock represents a building block for a neural network model, specifically designed for handling attention mechanisms and MLP layers. This class inherits from nn.Cell and consists of methods for initializing the block and constructing the block's forward pass.
+    BarkBlock represents a building block for a neural network model, specifically designed for handling attention mechanisms and MLP layers. This class inherits from nn.Cell and consists of methods for
+initializing the block and constructing the block's forward pass.
     
     Attributes:
         - layernorm_1: An instance of either BarkLayerNorm or nn.LayerNorm based on the 'is_causal' flag.
@@ -426,7 +432,8 @@ class BarkBlock(nn.Cell):
     
     Methods:
         - __init__(self, config, is_causal=False): Initializes the BarkBlock instance with the given configuration and causal flag.
-        - construct(self, hidden_states, past_key_values=None, attention_mask=None, head_mask=None, use_cache=False, output_attentions=False): Constructs the forward pass of the block using the provided inputs and optional arguments.
+        - construct(self, hidden_states, past_key_values=None, attention_mask=None, head_mask=None, use_cache=False, output_attentions=False): Constructs the forward pass of the block using the provided inputs
+and optional arguments.
     
     Usage Example:
         config = Configuration(hidden_size=512, bias=True)
@@ -571,7 +578,8 @@ class BarkCausalModel(BarkPreTrainedModel):
         - `get_input_embeddings(self)`: Returns the input embedding layer.
         - `set_input_embeddings(self, new_embeddings)`: Sets the input embedding layer.
         - `prepare_inputs_for_generation(self, input_ids, past_key_values=None, **kwargs)`: Prepares the inputs for generation.
-        - `construct(self, input_ids, past_key_values=None, attention_mask=None, position_ids=None, head_mask=None, labels=None, input_embeds=None, use_cache=None, output_attentions=None, output_hidden_states=None, return_dict=None)`: Constructs the model output based on the provided inputs.
+        - `construct(self, input_ids, past_key_values=None, attention_mask=None, position_ids=None, head_mask=None, labels=None, input_embeds=None, use_cache=None, output_attentions=None,
+output_hidden_states=None, return_dict=None)`: Constructs the model output based on the provided inputs.
         - `_reorder_cache(past_key_values, beam_idx)`: Reorders the cache for beam search or beam sampling.
     
     Note: This docstring provides an overview of the class and its methods. For detailed information on each method, please refer to the corresponding method's docstring.
@@ -662,7 +670,8 @@ class BarkCausalModel(BarkPreTrainedModel):
             past_key_values (tuple, optional): The past key values for fast decoding. Defaults to None.
         
         Returns:
-            dict or None: A dictionary containing the prepared input values for generation, including the input_ids, input_embeds, past_key_values, use_cache, position_ids, and attention_mask. Returns None if input_embeds is not provided and use_cache is False.
+            dict or None: A dictionary containing the prepared input values for generation, including the input_ids, input_embeds, past_key_values, use_cache, position_ids, and attention_mask. Returns None if
+input_embeds is not provided and use_cache is False.
         
         Raises:
             ValueError: If the input_ids shape is incompatible with past_key_values.
@@ -921,7 +930,8 @@ class BarkSemanticModel(BarkCausalModel):
             config (Config): Configuration settings for the semantic model.
     
         Methods:
-            generate(self, input_ids: mindspore.Tensor, semantic_generation_config: BarkSemanticGenerationConfig = None, history_prompt: Optional[Dict[str, mindspore.Tensor]] = None, attention_mask: Optional[mindspore.Tensor] = None, **kwargs) -> mindspore.Tensor:
+            generate(self, input_ids: mindspore.Tensor, semantic_generation_config: BarkSemanticGenerationConfig = None, history_prompt: Optional[Dict[str, mindspore.Tensor]] = None, attention_mask:
+Optional[mindspore.Tensor] = None, **kwargs) -> mindspore.Tensor:
                 Generates text semantic tokens from an input prompt and an optional `Bark` speaker prompt.
     
                 Args:
@@ -1856,7 +1866,8 @@ class BarkModel(BarkPreTrainedModel):
     Methods:
     - __init__(self, config): Initializes the BarkModel instance.
     - codec_decode(self, fine_output, output_lengths=None): Turns quantized audio codes into an audio array using the encodec.
-    - generate(self, input_ids: Optional[mindspore.Tensor] = None, history_prompt: Optional[Dict[str, mindspore.Tensor]] = None, return_output_lengths: Optional[bool] = None, **kwargs) -> mindspore.Tensor: Generates audio from an input prompt and an optional speaker prompt.
+    - generate(self, input_ids: Optional[mindspore.Tensor] = None, history_prompt: Optional[Dict[str, mindspore.Tensor]] = None, return_output_lengths: Optional[bool] = None, **kwargs) -> mindspore.Tensor:
+Generates audio from an input prompt and an optional speaker prompt.
     
     Attributes:
     - semantic: An instance of BarkSemanticModel.

@@ -652,7 +652,8 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
         
         Args:
             self: An instance of the class `PreTrainedTokenizerFast`.
-            batch_text_or_text_pairs (Union[List[TextInput], List[TextInputPair], List[PreTokenizedInput], List[PreTokenizedInputPair]]): A list of input texts or text pairs. Each element can be of type `TextInput`, `TextInputPair`, `PreTokenizedInput`, or `PreTokenizedInputPair`.
+            batch_text_or_text_pairs (Union[List[TextInput], List[TextInputPair], List[PreTokenizedInput], List[PreTokenizedInputPair]]): A list of input texts or text pairs. Each element can be of type
+`TextInput`, `TextInputPair`, `PreTokenizedInput`, or `PreTokenizedInputPair`.
             add_special_tokens (bool, optional): Whether to add special tokens to the encoded sequences. Defaults to True.
             padding_strategy (PaddingStrategy, optional): The strategy to use for padding. Defaults to `PaddingStrategy.DO_NOT_PAD`.
             truncation_strategy (TruncationStrategy, optional): The strategy to use for truncation. Defaults to `TruncationStrategy.DO_NOT_TRUNCATE`.

@@ -682,7 +682,8 @@ class _LazyConfigMapping(OrderedDict):
             key (str): The key used to retrieve the corresponding value. It should be a string.
         
         Returns:
-            None: If the key is present in the _extra_content, the associated value is returned. If the key is not in _extra_content but is in _mapping, the value associated with the key is returned after performing necessary module imports and attribute retrieval.
+            None: If the key is present in the _extra_content, the associated value is returned. If the key is not in _extra_content but is in _mapping, the value associated with the key is returned after
+performing necessary module imports and attribute retrieval.
         
         Raises:
             KeyError: If the key is not found in either _extra_content or _mapping, a KeyError is raised.
@@ -1157,7 +1158,8 @@ class AutoConfig:
             None: This method does not return any value directly. It instantiates and returns an instance of the appropriate configuration class based on the model type.
         
         Raises:
-            ValueError: Raised when the provided 'model_type' is not recognized or is not found as a key in the CONFIG_MAPPING dictionary. The exception message indicates the unrecognized model identifier and lists all valid model identifiers available in the CONFIG_MAPPING dictionary.
+            ValueError: Raised when the provided 'model_type' is not recognized or is not found as a key in the CONFIG_MAPPING dictionary. The exception message indicates the unrecognized model identifier and
+lists all valid model identifiers available in the CONFIG_MAPPING dictionary.
         """
         if model_type in CONFIG_MAPPING:
             config_class = CONFIG_MAPPING[model_type]

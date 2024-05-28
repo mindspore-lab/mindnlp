@@ -1532,7 +1532,8 @@ class SpecialTokensMixin:
         Raises:
             None.
         
-        This method sets the mask token ID value for the SpecialTokensMixin class by assigning the provided value to the internal '_mask_token' attribute. If the 'value' parameter is not None, it converts the ID value to tokens using the 'convert_ids_to_tokens' method and assigns the result to the '_mask_token' attribute. If the 'value' parameter is None, the '_mask_token' attribute is set to None.
+        This method sets the mask token ID value for the SpecialTokensMixin class by assigning the provided value to the internal '_mask_token' attribute. If the 'value' parameter is not None, it converts the
+ID value to tokens using the 'convert_ids_to_tokens' method and assigns the result to the '_mask_token' attribute. If the 'value' parameter is None, the '_mask_token' attribute is set to None.
         """
         self._mask_token = self.convert_ids_to_tokens(value) if value is not None else None
 
@@ -1762,7 +1763,8 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
             ValueError: If the specified value does not match the automatically set up length.
             
         Notes:
-            This method is now deprecated and the value is automatically set up based on the model's maximum length and the number of special tokens added. If the value is equal to the model's maximum length minus the number of special tokens added, a deprecation warning is issued. Otherwise, a ValueError is raised.
+            This method is now deprecated and the value is automatically set up based on the model's maximum length and the number of special tokens added. If the value is equal to the model's maximum length
+minus the number of special tokens added, a deprecation warning is issued. Otherwise, a ValueError is raised.
         """
         # For backward compatibility, allow to try to setup 'max_len_sentences_pair'.
         if value == self.model_max_length - self.num_special_tokens_to_add(pair=True) and self.verbose:
@@ -1806,7 +1808,8 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
             self: The instance of the PreTrainedTokenizerBase class.
             
         Returns:
-            A string representing the object with various attributes such as name_or_path, vocab_size, model_max_length, is_fast, padding_side, truncation_side, special_tokens_map, clean_up_tokenization_spaces, and added_tokens_decoder. The added_tokens_decoder section includes a dictionary representation of added tokens and their respective values.
+            A string representing the object with various attributes such as name_or_path, vocab_size, model_max_length, is_fast, padding_side, truncation_side, special_tokens_map,
+clean_up_tokenization_spaces, and added_tokens_decoder. The added_tokens_decoder section includes a dictionary representation of added tokens and their respective values.
         
         Raises:
             None
@@ -1959,11 +1962,15 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
             ImportError: If jinja2 is not installed.
             TemplateError: If there is an error in the Jinja template.
         
-        This method takes a Jinja template for chat messages and compiles it into a Jinja environment. The template is then ready to be used for rendering chat messages. The method uses an LRU cache with a maximum size of 128 to store compiled templates, which provides a performance boost when the same template is used multiple times.
+        This method takes a Jinja template for chat messages and compiles it into a Jinja environment. The template is then ready to be used for rendering chat messages. The method uses an LRU cache with a
+maximum size of 128 to store compiled templates, which provides a performance boost when the same template is used multiple times.
         
-        The method first checks if jinja2 is installed by trying to import the necessary modules. If jinja2 is not installed, an ImportError is raised with a helpful error message. If jinja2 is installed, an ImmutableSandboxedEnvironment is created with the trim_blocks and lstrip_blocks options set to True. This environment ensures that the template is rendered safely and without any leading or trailing white spaces.
+        The method first checks if jinja2 is installed by trying to import the necessary modules. If jinja2 is not installed, an ImportError is raised with a helpful error message. If jinja2 is installed, an
+ImmutableSandboxedEnvironment is created with the trim_blocks and lstrip_blocks options set to True. This environment ensures that the template is rendered safely and without any leading or trailing white
+spaces.
         
-        The method also defines a local function named raise_exception, which is used to raise a TemplateError with a custom error message. This function is added to the Jinja environment's globals under the name 'raise_exception'. This allows the template to raise an error by calling the 'raise_exception' function with an error message as an argument.
+        The method also defines a local function named raise_exception, which is used to raise a TemplateError with a custom error message. This function is added to the Jinja environment's globals under the
+name 'raise_exception'. This allows the template to raise an error by calling the 'raise_exception' function with an error message as an argument.
         
         Finally, the method compiles the chat_template into a Jinja template using the from_string method of the Jinja environment. The compiled template is then returned for further use.
         """

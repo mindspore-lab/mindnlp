@@ -648,7 +648,8 @@ class AutoformerLayernorm(nn.Cell):
         
         Args:
             self: The instance of the class.
-            config (AutoformerConfig): An instance of the AutoformerConfig class containing the configuration parameters for the layernorm. It should have the attribute 'd_model' representing the model dimension.
+            config (AutoformerConfig): An instance of the AutoformerConfig class containing the configuration parameters for the layernorm. It should have the attribute 'd_model' representing the model
+dimension.
         
         Returns:
             None. This method does not return any value.
@@ -751,7 +752,8 @@ class AutoformerAttention(nn.Cell):
         Raises:
             None
         
-        This method reshapes the input tensor according to the desired shape for AutoformerAttention. The tensor is reshaped into a new shape (bsz, seq_len, num_heads, head_dim) and the dimensions are swapped along the second and third axes.
+        This method reshapes the input tensor according to the desired shape for AutoformerAttention. The tensor is reshaped into a new shape (bsz, seq_len, num_heads, head_dim) and the dimensions are swapped
+along the second and third axes.
         
         Note:
             - The `tensor` should have a shape compatible with the desired shape (seq_len * num_heads * head_dim).
@@ -1682,9 +1684,11 @@ class AutoformerModel(AutoformerPreTrainedModel):
         
         - config: The 'config' parameter is of type AutoformerConfig and contains the configuration parameters for the model. It is used to define the behavior and settings of the AutoformerModel instance.
         
-            - config.scaling: A string or boolean value indicating the scaling method to be used. If set to 'mean' or True, the AutoformerMeanScaler class will be used for scaling. If set to 'std', the AutoformerStdScaler class will be used. Otherwise, the AutoformerNOPScaler class will be used.
+            - config.scaling: A string or boolean value indicating the scaling method to be used. If set to 'mean' or True, the AutoformerMeanScaler class will be used for scaling. If set to 'std', the
+AutoformerStdScaler class will be used. Otherwise, the AutoformerNOPScaler class will be used.
             
-            - config.num_static_categorical_features: An integer representing the number of static categorical features in the dataset. If greater than zero, the AutoformerFeatureEmbedder class will be initialized.
+            - config.num_static_categorical_features: An integer representing the number of static categorical features in the dataset. If greater than zero, the AutoformerFeatureEmbedder class will be
+initialized.
             
             - config.cardinality: A list of integers representing the cardinalities of the categorical features. This is used by the AutoformerFeatureEmbedder class for embedding dimensions.
             

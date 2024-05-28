@@ -383,13 +383,16 @@ class SegformerSelfOutput(nn.Cell):
         Description:
         This method is called when a new instance of the SegformerSelfOutput class is created. It initializes the instance by setting up the necessary components for self-attention and output computation.
         
-        The 'config' parameter is an object that stores various settings and configurations for the model. It is used to access the hidden dropout probability, which is used in the dropout layer. The 'hidden_size' parameter specifies the size of the hidden layer in the model.
+        The 'config' parameter is an object that stores various settings and configurations for the model. It is used to access the hidden dropout probability, which is used in the dropout layer. The
+'hidden_size' parameter specifies the size of the hidden layer in the model.
         
         Inside the method, the 'super().__init__()' statement calls the __init__() method of the parent class to ensure proper initialization.
         
-        The 'self.dense' attribute is an instance of the nn.Dense class, which represents a fully connected layer. It takes the 'hidden_size' as both the input and output size. This layer is used for self-attention computation.
+        The 'self.dense' attribute is an instance of the nn.Dense class, which represents a fully connected layer. It takes the 'hidden_size' as both the input and output size. This layer is used for
+self-attention computation.
         
-        The 'self.dropout' attribute is an instance of the nn.Dropout class. It takes the 'config.hidden_dropout_prob' as the dropout probability. This layer is used for regularization during training to prevent overfitting.
+        The 'self.dropout' attribute is an instance of the nn.Dropout class. It takes the 'config.hidden_dropout_prob' as the dropout probability. This layer is used for regularization during training to
+prevent overfitting.
         
         Note that this method does not perform any computations and is solely responsible for setting up the necessary components for the SegformerSelfOutput class.
         """
@@ -782,7 +785,8 @@ class SegformerLayer(nn.Cell):
 class SegformerEncoder(nn.Cell):
 
     """
-    SegformerEncoder is a neural network module that represents the encoder of the Segformer model. It takes input pixel values and produces a sequence of hidden states that can be used for various downstream tasks.
+    SegformerEncoder is a neural network module that represents the encoder of the Segformer model. It takes input pixel values and produces a sequence of hidden states that can be used for various downstream
+tasks.
     
     Inherits from:
         nn.Cell
@@ -969,7 +973,8 @@ class SegformerModel(SegformerPreTrainedModel):
     
     This class is a SegformerModel that inherits from SegformerPreTrainedModel. It is used for performing semantic segmentation tasks using the Segformer architecture.
     
-    The SegformerModel class provides methods for initializing the model, pruning model heads, and constructing the model with input pixel values. It also allows for customization of the output, including attention maps and hidden states.
+    The SegformerModel class provides methods for initializing the model, pruning model heads, and constructing the model with input pixel values. It also allows for customization of the output, including
+attention maps and hidden states.
     
     Methods:
     - __init__(self, config): Initializes the SegformerModel instance with the provided configuration.
@@ -1088,23 +1093,34 @@ class SegformerForImageClassification(SegformerPreTrainedModel):
     """
     This class represents a Segformer model for image classification. It is a subclass of SegformerPreTrainedModel.
     
-    The SegformerForImageClassification class initializes and constructs a Segformer model for image classification. It takes in a configuration object as a parameter, which includes the number of labels for classification.
+    The SegformerForImageClassification class initializes and constructs a Segformer model for image classification. It takes in a configuration object as a parameter, which includes the number of labels for
+classification.
     
-    The constructor (__init__) initializes the SegformerForImageClassification object by calling the superclass's constructor with the provided configuration. It sets the number of labels and creates instances of the SegformerModel and nn.Dense classes. The post_init method is then called.
+    The constructor (__init__) initializes the SegformerForImageClassification object by calling the superclass's constructor with the provided configuration. It sets the number of labels and creates instances
+of the SegformerModel and nn.Dense classes. The post_init method is then called.
     
-    The construct method constructs the Segformer model for image classification. It takes in several optional parameters, including pixel_values (input image tensor), labels (classification labels), output_attentions (whether to output attention weights), output_hidden_states (whether to output hidden states), and return_dict (whether to return results as a dictionary). It returns a tuple or a SegFormerImageClassifierOutput object.
+    The construct method constructs the Segformer model for image classification. It takes in several optional parameters, including pixel_values (input image tensor), labels (classification labels),
+output_attentions (whether to output attention weights), output_hidden_states (whether to output hidden states), and return_dict (whether to return results as a dictionary). It returns a tuple or a
+SegFormerImageClassifierOutput object.
     
-    The labels parameter is an optional tensor that represents the classification labels for computing the image classification/regression loss. The indices in the labels tensor should be in the range of [0, ..., config.num_labels - 1]. If config.num_labels == 1, a regression loss (Mean-Square loss) is computed. If config.num_labels > 1, a classification loss (Cross-Entropy) is computed.
+    The labels parameter is an optional tensor that represents the classification labels for computing the image classification/regression loss. The indices in the labels tensor should be in the range of [0,
+..., config.num_labels - 1]. If config.num_labels == 1, a regression loss (Mean-Square loss) is computed. If config.num_labels > 1, a classification loss (Cross-Entropy) is computed.
     
-    The method first calls the SegformerModel's forward method with the provided inputs and optional parameters. The output of the forward pass is stored in the sequence_output variable. If the reshape_last_stage configuration option is enabled, the sequence_output tensor is permuted and reshaped. Then, the mean of the sequence_output tensor is calculated along the second axis.
+    The method first calls the SegformerModel's forward method with the provided inputs and optional parameters. The output of the forward pass is stored in the sequence_output variable. If the
+reshape_last_stage configuration option is enabled, the sequence_output tensor is permuted and reshaped. Then, the mean of the sequence_output tensor is calculated along the second axis.
     
     The logits tensor is obtained by passing the sequence_output tensor through the classifier module. The loss variable is initially set to None.
     
-    If the labels tensor is provided, the problem_type configuration option is checked to determine the type of loss calculation. If the problem_type is not set, it is inferred based on the number of labels and the data type of the labels tensor. For regression problems with a single label, the problem_type is set to 'regression'. For single-label classification problems, the problem_type is set to 'single_label_classification'. For multi-label classification problems, the problem_type is set to 'multi_label_classification'.
+    If the labels tensor is provided, the problem_type configuration option is checked to determine the type of loss calculation. If the problem_type is not set, it is inferred based on the number of labels
+and the data type of the labels tensor. For regression problems with a single label, the problem_type is set to 'regression'. For single-label classification problems, the problem_type is set to
+'single_label_classification'. For multi-label classification problems, the problem_type is set to 'multi_label_classification'.
     
-    The loss is calculated based on the problem_type. For regression problems with a single label, the mean squared error (MSE) loss is computed. For single-label classification problems, the cross-entropy loss is computed. For multi-label classification problems, the binary cross-entropy with logits loss is computed.
+    The loss is calculated based on the problem_type. For regression problems with a single label, the mean squared error (MSE) loss is computed. For single-label classification problems, the cross-entropy
+loss is computed. For multi-label classification problems, the binary cross-entropy with logits loss is computed.
     
-    Finally, the method returns the computed loss and other outputs depending on the value of the return_dict parameter. If return_dict is False, the method returns a tuple containing the logits and other outputs. If loss is None, the output tuple does not include the loss. If return_dict is True, the method returns a SegFormerImageClassifierOutput object containing the loss, logits, hidden states, and attentions.
+    Finally, the method returns the computed loss and other outputs depending on the value of the return_dict parameter. If return_dict is False, the method returns a tuple containing the logits and other
+outputs. If loss is None, the output tuple does not include the loss. If return_dict is True, the method returns a SegFormerImageClassifierOutput object containing the loss, logits, hidden states, and
+attentions.
     
     Note: This docstring does not include the function signatures or any other code.
     """
@@ -1397,7 +1413,8 @@ class SegformerForSemanticSegmentation(SegformerPreTrainedModel):
         - `construct(self, pixel_values, labels=None, output_attentions=None, output_hidden_states=None, return_dict=None)`: Constructs the semantic segmentation output based on the input pixel values.
             - Parameters:
                 - `pixel_values`: A tensor containing the input pixel values for the image.
-                - `labels` (Optional): Ground truth semantic segmentation maps for computing the loss. Indices should be in the range [0, config.num_labels - 1]. If config.num_labels > 1, a classification loss is computed (Cross-Entropy).
+                - `labels` (Optional): Ground truth semantic segmentation maps for computing the loss. Indices should be in the range [0, config.num_labels - 1]. If config.num_labels > 1, a classification loss
+is computed (Cross-Entropy).
                 - `output_attentions` (Optional): Boolean flag indicating whether to output attention weights.
                 - `output_hidden_states` (Optional): Boolean flag indicating whether to output hidden states.
                 - `return_dict` (Optional): Boolean flag indicating whether to return the output as a dictionary.

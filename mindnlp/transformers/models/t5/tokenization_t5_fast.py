@@ -195,7 +195,8 @@ class T5TokenizerFast(PreTrainedTokenizerFast):
     def _eventually_correct_t5_max_length(pretrained_model_name_or_path, max_model_length, init_max_model_length):
 
         """
-        This method updates the maximum model length for the T5 tokenizer. It checks if the provided `pretrained_model_name_or_path` is valid and compares the `init_max_model_length` with the `max_model_length` to determine the final value.
+        This method updates the maximum model length for the T5 tokenizer. It checks if the provided `pretrained_model_name_or_path` is valid and compares the `init_max_model_length` with the
+`max_model_length` to determine the final value.
         
         Args:
             pretrained_model_name_or_path (str): The name or path of the pretrained model.
@@ -206,12 +207,14 @@ class T5TokenizerFast(PreTrainedTokenizerFast):
             None: This method does not return any value.
         
         Raises:
-            FutureWarning: If the tokenizer was incorrectly instantiated with a deprecated maximum model length, a warning is raised. This is to maintain backwards compatibility and inform the user about possible issues when padding or encoding with `truncation` set to True.
+            FutureWarning: If the tokenizer was incorrectly instantiated with a deprecated maximum model length, a warning is raised. This is to maintain backwards compatibility and inform the user about
+possible issues when padding or encoding with `truncation` set to True.
         
         Note:
             - If `pretrained_model_name_or_path` is in the list of `T5TokenizerFast.max_model_input_sizes`, the deprecated maximum model length will be retrieved.
             - If `init_max_model_length` is provided and different from `max_model_length`, it will be returned as the final value.
-            - If `init_max_model_length` is None, a FutureWarning will be raised to inform about the deprecated behavior and recommend explicit specification of `max_length` or `model_max_length` when encoding or padding sequences longer than the deprecated maximum model length.
+            - If `init_max_model_length` is None, a FutureWarning will be raised to inform about the deprecated behavior and recommend explicit specification of `max_length` or `model_max_length` when encoding
+or padding sequences longer than the deprecated maximum model length.
         """
         if pretrained_model_name_or_path in T5TokenizerFast.max_model_input_sizes:
             deprecated_max_model_length = T5TokenizerFast.max_model_input_sizes[pretrained_model_name_or_path]

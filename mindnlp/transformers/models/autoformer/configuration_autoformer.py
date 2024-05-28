@@ -219,7 +219,8 @@ class AutoformerConfig(PretrainedConfig):
         
             Raises:
                 ValueError: If `cardinality` is not None and `num_static_categorical_features` is greater than 0, but the lengths of `cardinality` and `num_static_categorical_features` do not match.
-                ValueError: If `embedding_dimension` is not None and `num_static_categorical_features` is greater than 0, but the lengths of `embedding_dimension` and `num_static_categorical_features` do not match.
+                ValueError: If `embedding_dimension` is not None and `num_static_categorical_features` is greater than 0, but the lengths of `embedding_dimension` and `num_static_categorical_features` do not
+match.
             """
         # time series specific configuration
         self.prediction_length = prediction_length

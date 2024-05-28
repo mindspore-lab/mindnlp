@@ -332,8 +332,10 @@ class SamImageProcessor(BaseImageProcessor):
         - size (Optional[Dict[str, int]]): The target size for resizing the image in the format {'width': int, 'height': int}. Default is None.
         - resample (PILImageResampling): The resampling filter to be used during image resizing. Default is None.
         - rescale_factor (Optional[float]): The factor by which the image should be rescaled. Default is None.
-        - image_mean (Optional[Union[float, List[float]]]): The mean value to be used for image normalization. It can be a single float value or a list of float values, depending on the input_data_format. Default is None.
-        - image_std (Optional[Union[float, List[float]]]): The standard deviation value to be used for image normalization. It can be a single float value or a list of float values, depending on the input_data_format. Default is None.
+        - image_mean (Optional[Union[float, List[float]]]): The mean value to be used for image normalization. It can be a single float value or a list of float values, depending on the input_data_format.
+Default is None.
+        - image_std (Optional[Union[float, List[float]]]): The standard deviation value to be used for image normalization. It can be a single float value or a list of float values, depending on the
+input_data_format. Default is None.
         - do_pad (Optional[bool]): A flag indicating whether to perform padding on the input image. Default is None.
         - pad_size (Optional[Dict[str, int]]): The size of the padding to be applied in the format {'top': int, 'bottom': int, 'left': int, 'right': int}. Default is None.
         - input_data_format (Optional[Union[str, ChannelDimension]]): The data format of the input image, e.g., 'channels_first' or 'channels_last'. Default is None.

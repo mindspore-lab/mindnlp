@@ -721,7 +721,9 @@ class JsonPipelineDataFormat(PipelineDataFormat):
         Raises:
             None
         
-        This method iterates over the entries stored in the JsonPipelineDataFormat object and yields each entry as a dictionary. If the JsonPipelineDataFormat object is configured with multiple columns, each yielded entry is a dictionary where the keys correspond to the column names and the values are the values of the respective columns for that entry. If the JsonPipelineDataFormat object is not configured with multiple columns, each yielded entry is a single value corresponding to the first column specified in the 'column' attribute of the JsonPipelineDataFormat object.
+        This method iterates over the entries stored in the JsonPipelineDataFormat object and yields each entry as a dictionary. If the JsonPipelineDataFormat object is configured with multiple columns, each
+yielded entry is a dictionary where the keys correspond to the column names and the values are the values of the respective columns for that entry. If the JsonPipelineDataFormat object is not configured with
+multiple columns, each yielded entry is a single value corresponding to the first column specified in the 'column' attribute of the JsonPipelineDataFormat object.
         """
         for entry in self._entries:
             if self.is_multi_columns:
@@ -769,7 +771,9 @@ class PipedPipelineDataFormat(PipelineDataFormat):
             None
         
         Description:
-            This method is used to iterate over input lines read from the standard input. Each line is checked for the presence of a tab character ('\t'). If a tab character is found, the line is split using the tab character as the delimiter. If the PipedPipelineDataFormat instance has a defined column attribute, a dictionary is yielded containing key-value pairs where the keys are the column names and the values are extracted from the corresponding line elements. If the column attribute is not defined, a tuple containing the line elements is yielded.
+            This method is used to iterate over input lines read from the standard input. Each line is checked for the presence of a tab character ('\t'). If a tab character is found, the line is split using
+the tab character as the delimiter. If the PipedPipelineDataFormat instance has a defined column attribute, a dictionary is yielded containing key-value pairs where the keys are the column names and the values
+are extracted from the corresponding line elements. If the column attribute is not defined, a tuple containing the line elements is yielded.
             
             If a line does not contain a tab character, the entire line is yielded as is.
         '''
@@ -809,7 +813,8 @@ class PipedPipelineDataFormat(PipelineDataFormat):
             str: The output file path where the binary data was saved.
         
         Raises:
-            KeyError: If the `output_path` attribute of `self` is None, indicating that an output file path is required when using piped input on pipeline outputting large objects. The error message will prompt the user to provide the output path through the `--output` argument.
+            KeyError: If the `output_path` attribute of `self` is None, indicating that an output file path is required when using piped input on pipeline outputting large objects. The error message will
+prompt the user to provide the output path through the `--output` argument.
         
         """
         if self.output_path is None:
@@ -1180,7 +1185,8 @@ class Pipeline(_ScikitCompat):
         
         Args:
             self (Pipeline): The instance of the Pipeline class.
-            inputs (Union[Dataset, List[Any]]): The input data to iterate over. If inputs is a Dataset object, it will be iterated over by creating a dictionary iterator. If inputs is a list of inputs, each input will be iterated over individually.
+            inputs (Union[Dataset, List[Any]]): The input data to iterate over. If inputs is a Dataset object, it will be iterated over by creating a dictionary iterator. If inputs is a list of inputs, each
+input will be iterated over individually.
             preprocess_params (Any): The parameters used for preprocessing the input data.
             forward_params (Any): The parameters used for the forward pass of the pipeline.
             postprocess_params (Any): The parameters used for postprocessing the output data.
@@ -1206,11 +1212,14 @@ class ChunkPipeline(Pipeline):
     """
     ChunkPipeline is a class that represents a pipeline for chunk processing. It inherits from the Pipeline class.
     
-    The ChunkPipeline class provides a method called run_single, which takes inputs, preprocess_params, forward_params, and postprocess_params as arguments. It performs chunk processing on the inputs using the specified parameters.
+    The ChunkPipeline class provides a method called run_single, which takes inputs, preprocess_params, forward_params, and postprocess_params as arguments. It performs chunk processing on the inputs using the
+specified parameters.
     
-    The run_single method internally calls the preprocess, forward, and postprocess methods to process the inputs. It preprocesses the inputs using the preprocess_params, performs forward processing using the forward_params, and finally postprocesses the outputs using the postprocess_params.
+    The run_single method internally calls the preprocess, forward, and postprocess methods to process the inputs. It preprocesses the inputs using the preprocess_params, performs forward processing using the
+forward_params, and finally postprocesses the outputs using the postprocess_params.
     
-    The preprocess method takes the inputs and preprocess_params as arguments and returns a generator that yields model_inputs. It splits the inputs into chunks and applies preprocessing operations based on the preprocess_params.
+    The preprocess method takes the inputs and preprocess_params as arguments and returns a generator that yields model_inputs. It splits the inputs into chunks and applies preprocessing operations based on
+the preprocess_params.
     
     The forward method takes model_inputs and forward_params as arguments and returns the model_outputs. It applies forward processing operations on the model_inputs based on the forward_params.
     
@@ -1259,7 +1268,8 @@ class ChunkPipeline(Pipeline):
 class PipelineRegistry:
 
     """
-    The PipelineRegistry class represents a registry for managing supported tasks and their corresponding pipelines. It provides methods for registering pipelines, checking tasks, and converting the registry to a dictionary. The class maintains a dictionary of supported tasks and their respective aliases, and also allows for the registration of pipelines for specific tasks.
+    The PipelineRegistry class represents a registry for managing supported tasks and their corresponding pipelines. It provides methods for registering pipelines, checking tasks, and converting the registry
+to a dictionary. The class maintains a dictionary of supported tasks and their respective aliases, and also allows for the registration of pipelines for specific tasks.
     
     Attributes:
         supported_tasks (Dict[str, Any]): A dictionary containing the supported tasks and their associated pipeline implementations and models.

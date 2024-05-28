@@ -230,11 +230,14 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
             None.
         
         Description:
-            This method is a setter for the 'add_bos_token' attribute of the GPTNeoXTokenizerFast class. It allows setting a new value for the attribute and automatically triggers the update_post_processor method.
+            This method is a setter for the 'add_bos_token' attribute of the GPTNeoXTokenizerFast class. It allows setting a new value for the attribute and automatically triggers the update_post_processor
+method.
         
-            The 'add_bos_token' attribute determines whether to add a beginning of sentence (BOS) token during tokenization. When 'add_bos_token' is set to True, a BOS token will be added at the beginning of each tokenized sequence. When 'add_bos_token' is set to False, no BOS token will be added.
+            The 'add_bos_token' attribute determines whether to add a beginning of sentence (BOS) token during tokenization. When 'add_bos_token' is set to True, a BOS token will be added at the beginning of
+each tokenized sequence. When 'add_bos_token' is set to False, no BOS token will be added.
         
-            After setting the new value for 'add_bos_token', the update_post_processor method is called to update the post-processor based on the new value. The update_post_processor method handles any necessary adjustments to the post-processing logic, if required.
+            After setting the new value for 'add_bos_token', the update_post_processor method is called to update the post-processor based on the new value. The update_post_processor method handles any
+necessary adjustments to the post-processing logic, if required.
         
             Note that changing the 'add_bos_token' attribute value will impact the tokenization process and the resulting tokenized sequences.
         

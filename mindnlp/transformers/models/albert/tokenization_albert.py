@@ -284,11 +284,13 @@ class AlbertTokenizer(PreTrainedTokenizer):
             None.
         
         Description:
-        This method is called during unpickling or deserialization of an AlbertTokenizer instance. It sets the internal state of the instance by assigning the provided dictionary 'd' to the '__dict__' attribute. 
+        This method is called during unpickling or deserialization of an AlbertTokenizer instance. It sets the internal state of the instance by assigning the provided dictionary 'd' to the '__dict__'
+attribute. 
         
         If the instance does not have an attribute named 'sp_model_kwargs', it is initialized as an empty dictionary. 
         
-        Then, a SentencePieceProcessor object is created using the 'sp_model_kwargs' and assigned to the 'sp_model' attribute of the instance. The SentencePieceProcessor object is instantiated with the keyword arguments provided through 'self.sp_model_kwargs'.
+        Then, a SentencePieceProcessor object is created using the 'sp_model_kwargs' and assigned to the 'sp_model' attribute of the instance. The SentencePieceProcessor object is instantiated with the keyword
+arguments provided through 'self.sp_model_kwargs'.
         
         Finally, the SentencePieceProcessor object loads the vocabulary file specified by 'self.vocab_file'.
         

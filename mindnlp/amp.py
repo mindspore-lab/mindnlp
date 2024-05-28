@@ -131,9 +131,11 @@ def autocast_decorator(autocast_instance, func):
 class autocast:
 
     r"""
-    The 'autocast' class represents a context manager for automatic mixed precision (AMP) in Python. It provides functionality for enabling or disabling automatic mixed precision for a specific code block and specifying the data type for computations.
+    The 'autocast' class represents a context manager for automatic mixed precision (AMP) in Python. It provides functionality for enabling or disabling automatic mixed precision for a specific code block and
+specifying the data type for computations.
     
-    Upon entering the context, the 'autocast' class sets the enabled state and data type for AMP. Upon exiting the context, it restores the original data type. Additionally, the class can be used as a decorator for functions to apply automatic mixed precision to the decorated function.
+    Upon entering the context, the 'autocast' class sets the enabled state and data type for AMP. Upon exiting the context, it restores the original data type. Additionally, the class can be used as a
+decorator for functions to apply automatic mixed precision to the decorated function.
     
     This class is designed to be used in conjunction with the MindSpore framework for deep learning and neural network computations.
     """

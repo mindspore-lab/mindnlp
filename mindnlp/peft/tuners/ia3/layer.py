@@ -143,7 +143,8 @@ class IA3Layer(BaseTunerLayer):
         Raises:
             None.
         
-        This method resets the IA3 parameters for the specified adapter by setting its data to a constant value of 1.0 using the initializer function. The adapter_name parameter is used to identify the adapter in the ia3_l dictionary. If the adapter_name is not found in the dictionary, no action is taken.
+        This method resets the IA3 parameters for the specified adapter by setting its data to a constant value of 1.0 using the initializer function. The adapter_name parameter is used to identify the adapter
+in the ia3_l dictionary. If the adapter_name is not found in the dictionary, no action is taken.
         """
         if adapter_name in self.ia3_l.keys():
             # initialize learned vector with torch.ones
@@ -172,7 +173,8 @@ class Linear(nn.Cell, IA3Layer):
         - `merged_adapters`: A list of merged adapter names.
     
     Methods:
-        - `__init__(self, base_layer: nn.Cell, adapter_name: str, fan_in_fan_out: bool = False, is_feedforward: bool = False, is_target_conv_1d_layer: bool = False, init_ia3_weights: bool = True, **kwargs) -> None`:
+        - `__init__(self, base_layer: nn.Cell, adapter_name: str, fan_in_fan_out: bool = False, is_feedforward: bool = False, is_target_conv_1d_layer: bool = False, init_ia3_weights: bool = True, **kwargs) ->
+None`:
             Initializes a `Linear` instance with the given parameters.
     
         - `merge(self, safe_merge: bool = False, adapter_names: Optional[List[str]] = None) -> None`:
@@ -292,7 +294,8 @@ class Linear(nn.Cell, IA3Layer):
     def construct(self, x: Tensor, *args: Any, **kwargs: Any) -> Tensor:
 
         r"""
-        This method constructs a tensor using the input tensor 'x' and additional arguments and keyword arguments. It adapts the input tensor based on the configuration of the Linear class, including the use of adapters and merging layers.
+        This method constructs a tensor using the input tensor 'x' and additional arguments and keyword arguments. It adapts the input tensor based on the configuration of the Linear class, including the use
+of adapters and merging layers.
         
         Args:
             x (Tensor): The input tensor to be processed. It should be of the type Tensor.

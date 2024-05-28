@@ -163,7 +163,8 @@ def _to_mat(pairs: List[Tuple[str, int]]) -> np.ndarray:
     This function creates a 4x4 numpy array from a list of key-value pairs.
     
     Args:
-        pairs (List[Tuple[str, int]]): A list of tuples where each tuple consists of a string key and an integer value. The keys represent indices in the resulting 4x4 numpy array, and the values are assigned to those indices.
+        pairs (List[Tuple[str, int]]): A list of tuples where each tuple consists of a string key and an integer value. The keys represent indices in the resulting 4x4 numpy array, and the values are assigned
+to those indices.
     
     Returns:
         np.ndarray: A 4x4 numpy array where the values from the input pairs are placed at the corresponding indices based on the keys.

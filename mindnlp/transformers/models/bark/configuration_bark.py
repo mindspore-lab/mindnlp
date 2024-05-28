@@ -90,7 +90,8 @@ class BarkSubModelConfig(PretrainedConfig):
     - from_pretrained(cls, pretrained_model_name_or_path, cache_dir, force_download, local_files_only, **kwargs): Method to create a BarkSubModelConfig instance from a pretrained model or path.
     
     Note:
-    The from_pretrained method allows creating a BarkSubModelConfig instance from a pretrained model or path, with options to specify the cache directory, force download, and use of local files. The method also handles the configuration dictionary and checks for model type compatibility.
+    The from_pretrained method allows creating a BarkSubModelConfig instance from a pretrained model or path, with options to specify the cache directory, force download, and use of local files. The method
+also handles the configuration dictionary and checks for model type compatibility.
     """
     model_type = "bark_module"
     keys_to_ignore_at_inference = ["past_key_values"]
@@ -244,9 +245,11 @@ class BarkSemanticConfig(BarkSubModelConfig):
 class BarkCoarseConfig(BarkSubModelConfig):
 
     """
-    BarkCoarseConfig is a Python class that represents the configuration settings for the coarse behavior model in the Bark autonomous driving simulation framework. This class inherits from the BarkSubModelConfig class.
+    BarkCoarseConfig is a Python class that represents the configuration settings for the coarse behavior model in the Bark autonomous driving simulation framework. This class inherits from the
+BarkSubModelConfig class.
     
-    The BarkCoarseConfig class provides a set of parameters and options that can be used to configure the behavior of the coarse model. These parameters include settings related to the behavior model itself, such as the desired velocity, acceleration limits, and time horizons, as well as settings for the perception model, such as sensor range and field of view.
+    The BarkCoarseConfig class provides a set of parameters and options that can be used to configure the behavior of the coarse model. These parameters include settings related to the behavior model itself,
+such as the desired velocity, acceleration limits, and time horizons, as well as settings for the perception model, such as sensor range and field of view.
     
     Attributes:
         - desired_velocity (float): The desired velocity of the ego vehicle.
@@ -257,7 +260,8 @@ class BarkCoarseConfig(BarkSubModelConfig):
         - field_of_view (float): The field of view of the perception sensor.
     
     Methods:
-        - __init__(self, desired_velocity, max_acceleration, min_acceleration, horizon_time, perception_range, field_of_view): Initializes a new instance of the BarkCoarseConfig class with the specified parameters.
+        - __init__(self, desired_velocity, max_acceleration, min_acceleration, horizon_time, perception_range, field_of_view): Initializes a new instance of the BarkCoarseConfig class with the specified
+parameters.
         - get_desired_velocity(self): Returns the desired velocity of the ego vehicle.
         - set_desired_velocity(self, desired_velocity): Sets the desired velocity of the ego vehicle.
         - get_max_acceleration(self): Returns the maximum acceleration limit for the ego vehicle.
@@ -279,7 +283,8 @@ class BarkFineConfig(BarkSubModelConfig):
 
     """
     BarkFineConfig represents the configuration settings for a fine-tuning model within the Bark framework. 
-    This class inherits from BarkSubModelConfig and provides parameters for configuring the fine-tuning process, including options for tying word embeddings, specifying the total number of codes, and the number of codes given.
+    This class inherits from BarkSubModelConfig and provides parameters for configuring the fine-tuning process, including options for tying word embeddings, specifying the total number of codes, and the
+number of codes given.
     
     Parameters:
     - tie_word_embeddings (bool): Flag indicating whether to tie word embeddings during fine-tuning.

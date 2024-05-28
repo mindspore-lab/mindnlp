@@ -8,11 +8,16 @@ from mindnlp._legacy.hypercomplex.tensor_decomposition.linal.basics.scalar impor
 class SVD:
 
     r"""
-    The SVD class provides functionalities for performing Singular Value Decomposition (SVD) on matrices. It includes methods for decomposing a matrix into its singular value, left singular vectors, and right singular vectors, as well as auxiliary methods for sorting singular values, dividing rows by singular values, and removing columns from a matrix.
+    The SVD class provides functionalities for performing Singular Value Decomposition (SVD) on matrices. It includes methods for decomposing a matrix into its singular value, left singular vectors, and right
+singular vectors, as well as auxiliary methods for sorting singular values, dividing rows by singular values, and removing columns from a matrix.
     
-    The decompose method takes a matrix and optional parameters for the number of iterations and the QR algorithm to use, and returns the left singular vectors, singular values, and the conjugate transpose of the right singular vectors. The _divide_rows_by_singular_values method divides the rows of the given matrix by the corresponding singular values. The _sort_singular_values method sorts the singular values and the corresponding rows of the input matrix. The _remove_column method removes a specified column from a matrix. The _find_singular_values method calculates the singular values and the left or right singular vectors using the specified QR algorithm and a specified number of iterations.
+    The decompose method takes a matrix and optional parameters for the number of iterations and the QR algorithm to use, and returns the left singular vectors, singular values, and the conjugate transpose of
+the right singular vectors. The _divide_rows_by_singular_values method divides the rows of the given matrix by the corresponding singular values. The _sort_singular_values method sorts the singular values and
+the corresponding rows of the input matrix. The _remove_column method removes a specified column from a matrix. The _find_singular_values method calculates the singular values and the left or right singular
+vectors using the specified QR algorithm and a specified number of iterations.
     
-    The SVD class provides essential functionality for performing SVD and manipulating the resulting singular value, left singular vectors, and right singular vectors. It serves as a valuable tool for matrix analysis and decomposition.
+    The SVD class provides essential functionality for performing SVD and manipulating the resulting singular value, left singular vectors, and right singular vectors. It serves as a valuable tool for matrix
+analysis and decomposition.
     """
 
     @staticmethod

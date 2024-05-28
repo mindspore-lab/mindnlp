@@ -117,7 +117,9 @@ def parse_flag_from_env(key, default=False):
         ValueError: If the environment variable value is set but cannot be parsed as a boolean ('yes' or 'no').
     
     Note:
-        The flag value is retrieved from the environment variable specified by `key`. If the environment variable is not set, the default value is returned. If the environment variable value is set, it is parsed as a boolean using the `strtobool` function from the `distutils.util` module. If the parsing fails, a `ValueError` is raised with a descriptive error message indicating that the value must be either 'yes' or 'no'.
+        The flag value is retrieved from the environment variable specified by `key`. If the environment variable is not set, the default value is returned. If the environment variable value is set, it is
+parsed as a boolean using the `strtobool` function from the `distutils.util` module. If the parsing fails, a `ValueError` is raised with a descriptive error message indicating that the value must be either
+'yes' or 'no'.
     """
     try:
         value = os.environ[key]
@@ -393,11 +395,14 @@ class CaptureStd:
         Raises:
             None
         
-        This method initializes a CaptureStd object with the given parameters. The 'out' parameter determines whether to capture stdout, while the 'err' parameter determines whether to capture stderr. By default, both 'out' and 'err' are set to True. If 'out' is True, a StringIO object is created to capture stdout. If 'out' is False, stdout is not captured and the 'out' attribute is set to 'not capturing stdout'. The same logic applies to 'err' and stderr.
+        This method initializes a CaptureStd object with the given parameters. The 'out' parameter determines whether to capture stdout, while the 'err' parameter determines whether to capture stderr. By
+default, both 'out' and 'err' are set to True. If 'out' is True, a StringIO object is created to capture stdout. If 'out' is False, stdout is not captured and the 'out' attribute is set to 'not capturing
+stdout'. The same logic applies to 'err' and stderr.
         
         The 'replay' parameter determines whether the captured output should be replayed. By default, 'replay' is set to True.
         
-        Note: If 'out' or 'err' is set to True, but the CaptureStd context is not finished yet (i.e., __exit__ is not called), an error message is set to the corresponding attribute indicating that the context was called too early.
+        Note: If 'out' or 'err' is set to True, but the CaptureStd context is not finished yet (i.e., __exit__ is not called), an error message is set to the corresponding attribute indicating that the context
+was called too early.
         """
         self.replay = replay
 
@@ -482,9 +487,11 @@ class CaptureStd:
             None.
         
         Description:
-            The __repr__ method is called when the repr() function is used on an instance of the CaptureStd class. It generates a string representation of the object, which includes the captured stdout and stderr outputs, if any. The generated string representation is returned by the method.
+            The __repr__ method is called when the repr() function is used on an instance of the CaptureStd class. It generates a string representation of the object, which includes the captured stdout and
+stderr outputs, if any. The generated string representation is returned by the method.
         
-            This method checks if the 'out_buf' attribute of the CaptureStd object is not empty. If it is not empty, the captured stdout output is added to the message string. Similarly, if the 'err_buf' attribute is not empty, the captured stderr output is added to the message string. The final message string is then returned by the method.
+            This method checks if the 'out_buf' attribute of the CaptureStd object is not empty. If it is not empty, the captured stdout output is added to the message string. Similarly, if the 'err_buf'
+attribute is not empty, the captured stderr output is added to the message string. The final message string is then returned by the method.
         
             Note that the stdout and stderr outputs are represented as 'stdout: <output>' and 'stderr: <output>' respectively in the message string.
         
@@ -610,7 +617,8 @@ class CaptureLogger:
             None. The method does not explicitly return any value, but it adds a handler to the logger associated with the CaptureLogger instance.
         
         Raises:
-            This method does not raise any exceptions under normal circumstances. However, potential exceptions could be raised if there are issues with adding the handler to the logger, such as improper configuration of the logging system.
+            This method does not raise any exceptions under normal circumstances. However, potential exceptions could be raised if there are issues with adding the handler to the logger, such as improper
+configuration of the logging system.
         """
         self.logger.addHandler(self.sh)
         return self
@@ -786,7 +794,8 @@ class TestCasePlus(unittest.TestCase):
             ValueError: If the root directory of the repository cannot be determined from the test file path.
         
         Description:
-        This method is called before each test case to set up the required environment for the TestCasePlus class. It initializes various directories and paths based on the current test file's location. The method performs the following steps:
+        This method is called before each test case to set up the required environment for the TestCasePlus class. It initializes various directories and paths based on the current test file's location. The
+method performs the following steps:
         
         1. Sets up a list to keep track of temporary directories that need to be cleaned up later.
         2. Retrieves the path of the test file using the inspect module.
@@ -932,7 +941,8 @@ class TestCasePlus(unittest.TestCase):
         Raises:
             None.
         
-        This method returns the tests directory path as a string. The tests directory is obtained from the '_tests_dir' attribute of the TestCasePlus class. The returned string represents the absolute path of the tests directory.
+        This method returns the tests directory path as a string. The tests directory is obtained from the '_tests_dir' attribute of the TestCasePlus class. The returned string represents the absolute path of
+the tests directory.
         
         Example usage:
             >>> test_case = TestCasePlus()

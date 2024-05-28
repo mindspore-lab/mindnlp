@@ -507,7 +507,8 @@ class MSRobertaForMultipleChoice(MSRobertaPreTrainedModel):
             head_mask (torch.Tensor, optional): The tensor of shape (num_hidden_layers, num_attention_heads) containing the head mask. Default: None.
         
         Returns:
-            tuple: A tuple of output tensors. The first element is reshaped_logits of shape (batch_size, num_choices), representing the logits for each choice. The remaining elements are the same as the outputs of the Roberta model.
+            tuple: A tuple of output tensors. The first element is reshaped_logits of shape (batch_size, num_choices), representing the logits for each choice. The remaining elements are the same as the
+outputs of the Roberta model.
         
         Raises:
             TypeError: If the input_ids is not a torch.Tensor.

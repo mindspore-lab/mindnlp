@@ -126,7 +126,8 @@ class TextGenerationPipeline(Pipeline):
     ):
 
         """
-        This method '_sanitize_parameters' in the class 'TextGenerationPipeline' is responsible for sanitizing and processing parameters used in text generation. It takes 13 parameters: self, return_full_text, return_tensors, return_text, return_type, clean_up_tokenization_spaces, prefix, handle_long_generation, stop_sequence, add_special_tokens, truncation, padding, max_length.
+        This method '_sanitize_parameters' in the class 'TextGenerationPipeline' is responsible for sanitizing and processing parameters used in text generation. It takes 13 parameters: self, return_full_text,
+return_tensors, return_text, return_type, clean_up_tokenization_spaces, prefix, handle_long_generation, stop_sequence, add_special_tokens, truncation, padding, max_length.
         
         Args:
         - self: The instance of the class.

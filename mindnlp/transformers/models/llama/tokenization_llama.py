@@ -176,7 +176,8 @@ class LlamaTokenizer(PreTrainedTokenizer):
             None.
         
         Note:
-            You are using the default legacy behavior of the LlamaTokenizer. This means that the previous behavior will be used, and nothing changes. If you want to use the new behavior, set `legacy=False`. Only set this if you understand the implications and have thoroughly read the reason for this change as explained in https://github.com/huggingface/transformers/pull/24565.
+            You are using the default legacy behavior of the LlamaTokenizer. This means that the previous behavior will be used, and nothing changes. If you want to use the new behavior, set `legacy=False`.
+Only set this if you understand the implications and have thoroughly read the reason for this change as explained in https://github.com/huggingface/transformers/pull/24565.
         """
         self.sp_model_kwargs = {} if sp_model_kwargs is None else sp_model_kwargs
         bos_token = AddedToken(bos_token, normalized=False, special=True) if isinstance(bos_token, str) else bos_token
@@ -231,7 +232,8 @@ class LlamaTokenizer(PreTrainedTokenizer):
         Raises:
             None.
         
-        This method calculates and returns the length of the unknown token in the LlamaTokenizer. The unknown token is represented as a string and is encoded using the sp_model.encode() method. The length of the encoded unknown token is then determined using the len() function and returned as an integer value. The method does not modify any internal state or variables of the LlamaTokenizer class.
+        This method calculates and returns the length of the unknown token in the LlamaTokenizer. The unknown token is represented as a string and is encoded using the sp_model.encode() method. The length of
+the encoded unknown token is then determined using the len() function and returned as an integer value. The method does not modify any internal state or variables of the LlamaTokenizer class.
         
         Example usage:
             tokenizer = LlamaTokenizer()

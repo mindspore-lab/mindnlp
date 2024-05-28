@@ -15,9 +15,11 @@ class DualSVD(ABC):
     
     Methods:
     - `_decompose(matrix: Matrix, mult: int) -> Tuple[Matrix, Matrix, Matrix]`: Performs the decomposition of a matrix using dual *-SVD with special restrictions.
-    - `_get_dual_factors(u_real: np.ndarray, s_real: np.ndarray, v_real: np.ndarray, x_dual: np.ndarray, y_dual: np.ndarray, z_dual: np.ndarray) -> Tuple[Matrix, Matrix, Matrix]`: Computes the U, V, and Sigma matrices for T-SVD and *-SVD after the preparatory calculations.
+    - `_get_dual_factors(u_real: np.ndarray, s_real: np.ndarray, v_real: np.ndarray, x_dual: np.ndarray, y_dual: np.ndarray, z_dual: np.ndarray) -> Tuple[Matrix, Matrix, Matrix]`: Computes the U, V, and Sigma
+matrices for T-SVD and *-SVD after the preparatory calculations.
     - `_compute_dual_parts(x_dual: np.ndarray, s_real: np.ndarray, k_dual: np.ndarray, z_dual: np.ndarray, mult: int, rank: int) -> None`: Fills matrices X and Z to get the correct decomposition.
-    - `_swap_transpose_factors(u: np.ndarray, sigma: np.ndarray, v: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]`: Swaps matrices U, V and transposes matrices U, V, Sigma for 'wide' matrices (H > W).
+    - `_swap_transpose_factors(u: np.ndarray, sigma: np.ndarray, v: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]`: Swaps matrices U, V and transposes matrices U, V, Sigma for 'wide' matrices (H >
+W).
     """
     TOLERANCE: float = 1.e-5
 

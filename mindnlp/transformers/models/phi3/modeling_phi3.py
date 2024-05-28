@@ -107,12 +107,15 @@ def _get_unpad_data(attention_mask):
     This function takes an attention_mask as input and returns three values: indices, cu_seqlens, and max_seqlen_in_batch.
     
     Args:
-        attention_mask (tensor): A tensor representing the attention mask. It should have a shape of [batch_size, sequence_length], where batch_size is the number of sequences in the batch and sequence_length is the maximum length of any sequence. The attention mask is used to indicate which tokens should be attended to and which should be ignored.
+        attention_mask (tensor): A tensor representing the attention mask. It should have a shape of [batch_size, sequence_length], where batch_size is the number of sequences in the batch and sequence_length
+is the maximum length of any sequence. The attention mask is used to indicate which tokens should be attended to and which should be ignored.
     
     Returns:
-        indices (tensor): A tensor containing the indices of non-zero values in the flattened attention_mask tensor. This tensor has a shape of [num_non_zero_values], where num_non_zero_values is the total number of non-zero values in the attention_mask.
+        indices (tensor): A tensor containing the indices of non-zero values in the flattened attention_mask tensor. This tensor has a shape of [num_non_zero_values], where num_non_zero_values is the total
+number of non-zero values in the attention_mask.
     
-        cu_seqlens (tensor): A tensor representing the cumulative sum of sequence lengths in the batch. It has a shape of [batch_size + 1] and is padded with a zero at the beginning. The cumulative sum is computed along the 0th axis of the seqlens_in_batch tensor, which is obtained by summing the attention_mask tensor along the -1th axis.
+        cu_seqlens (tensor): A tensor representing the cumulative sum of sequence lengths in the batch. It has a shape of [batch_size + 1] and is padded with a zero at the beginning. The cumulative sum is
+computed along the 0th axis of the seqlens_in_batch tensor, which is obtained by summing the attention_mask tensor along the -1th axis.
     
         max_seqlen_in_batch (int): The maximum sequence length in the batch. This is a scalar value indicating the length of the longest sequence in the batch.
     
@@ -136,7 +139,8 @@ class Phi3RotaryEmbedding(nn.Cell):
     """
     This class represents the Phi3RotaryEmbedding, a rotary positional embedding layer used in neural network models. It is a subclass of nn.Cell.
     
-    The Phi3RotaryEmbedding class provides methods for constructing rotary embeddings based on input tensors and position IDs. It utilizes cosine and sine functions to generate embeddings with rotational properties.
+    The Phi3RotaryEmbedding class provides methods for constructing rotary embeddings based on input tensors and position IDs. It utilizes cosine and sine functions to generate embeddings with rotational
+properties.
     
     Attributes:
         dim (int): The dimension of the embeddings.
@@ -540,7 +544,8 @@ class Phi3Attention(nn.Cell):
             ValueError: If `hidden_size` is not divisible by `num_heads`.
         
         Notes:
-            - Instantiating `Phi3Attention` without passing a `layer_idx` is not recommended and may lead to errors during the forward call if caching is used. It is advised to provide a `layer_idx` when creating this class.
+            - Instantiating `Phi3Attention` without passing a `layer_idx` is not recommended and may lead to errors during the forward call if caching is used. It is advised to provide a `layer_idx` when
+creating this class.
             - The `Phi3Attention` class expects `hidden_size` to be divisible by `num_heads`.
         
             - The following attributes are initialized within the `__init__` method:
@@ -609,7 +614,9 @@ class Phi3Attention(nn.Cell):
         Raises:
             ValueError: If the RoPE scaling type is unknown.
         
-        This method initializes the RoPE based on the provided configurations. If the 'rope_scaling' attribute is None, it creates a Phi3RotaryEmbedding object with the specified parameters. Otherwise, it checks the type of scaling specified in the 'rope_scaling' attribute and creates the appropriate Phi3ScaledRotaryEmbedding object accordingly. The Phi3ScaledRotaryEmbedding objects provide additional scaling options for the Rotary Positional Encoding.
+        This method initializes the RoPE based on the provided configurations. If the 'rope_scaling' attribute is None, it creates a Phi3RotaryEmbedding object with the specified parameters. Otherwise, it
+checks the type of scaling specified in the 'rope_scaling' attribute and creates the appropriate Phi3ScaledRotaryEmbedding object accordingly. The Phi3ScaledRotaryEmbedding objects provide additional scaling
+options for the Rotary Positional Encoding.
         
         The available scaling types are as follows:
             - 'su': Creates a Phi3SuScaledRotaryEmbedding object.
@@ -758,7 +765,9 @@ class Phi3DecoderLayer(nn.Cell):
     
     The __init__ method initializes the Phi3DecoderLayer with the provided configuration and layer index. It sets up the self-attention mechanism, MLP, input layer normalization, and dropout layers.
     
-    The construct method processes the input hidden states through the layer. It applies input layer normalization, self-attention, residual connections, post-attention layer normalization, and the MLP sublayer. The method also handles optional arguments such as attention_mask, position_ids, past_key_value, output_attentions, and use_cache, and returns the resulting hidden states along with optional outputs based on the provided arguments.
+    The construct method processes the input hidden states through the layer. It applies input layer normalization, self-attention, residual connections, post-attention layer normalization, and the MLP
+sublayer. The method also handles optional arguments such as attention_mask, position_ids, past_key_value, output_attentions, and use_cache, and returns the resulting hidden states along with optional outputs
+based on the provided arguments.
     
     Note: The construct method also issues a warning if the 'padding_mask' argument is used, as it is deprecated and will be removed in a future version in favor of 'attention_mask'.
     
@@ -845,7 +854,8 @@ class Phi3DecoderLayer(nn.Cell):
             use_cache (bool, optional): If set to True, `past_key_values` key value states are returned and can be used to speed up decoding (see `past_key_values`). (default: False)
         
         Returns:
-            Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: A tuple containing the hidden states of shape `(batch, seq_len, embed_dim)`. Optionally, the tuple may also contain the attentions tensors of all attention layers and the cached past key and value projection states.
+            Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: A tuple containing the hidden states of shape `(batch, seq_len, embed_dim)`. Optionally, the tuple may also contain the
+attentions tensors of all attention layers and the cached past key and value projection states.
         
         Raises:
             None.
@@ -999,17 +1009,22 @@ class Phi3Model(Phi3PreTrainedModel):
             None
         
         Description:
-        This method initializes a new instance of the Phi3Model class. It takes in a configuration object, 'config', which is of type Phi3Config. The 'config' parameter contains various settings and hyperparameters for the model.
+        This method initializes a new instance of the Phi3Model class. It takes in a configuration object, 'config', which is of type Phi3Config. The 'config' parameter contains various settings and
+hyperparameters for the model.
         
         The method performs the following steps:
         1. Calls the __init__ method of the parent class (super().__init__(config)) to initialize the parent class with the provided configuration.
         2. Sets the 'padding_idx' attribute to the 'pad_token_id' value from the 'config' object. This value represents the padding token index in the vocabulary.
         3. Sets the 'vocab_size' attribute to the 'vocab_size' value from the 'config' object. This value represents the size of the vocabulary.
-        4. Initializes the 'embed_tokens' attribute as an instance of the nn.Embedding class. It takes the 'vocab_size', 'hidden_size', and 'padding_idx' values from the 'config' object as parameters. This embedding layer is responsible for converting input tokens to their corresponding embeddings.
-        5. Initializes the 'embed_dropout' attribute as an instance of the nn.Dropout class. It takes the 'embd_pdrop' value from the 'config' object as a parameter. This dropout layer is applied to the embeddings.
-        6. Initializes the 'layers' attribute as an instance of the nn.CellList class. It contains Phi3DecoderLayer instances, one for each layer index from 0 to 'num_hidden_layers' - 1 (inclusive). Each Phi3DecoderLayer is initialized with the 'config' object and the corresponding layer index.
+        4. Initializes the 'embed_tokens' attribute as an instance of the nn.Embedding class. It takes the 'vocab_size', 'hidden_size', and 'padding_idx' values from the 'config' object as parameters. This
+embedding layer is responsible for converting input tokens to their corresponding embeddings.
+        5. Initializes the 'embed_dropout' attribute as an instance of the nn.Dropout class. It takes the 'embd_pdrop' value from the 'config' object as a parameter. This dropout layer is applied to the
+embeddings.
+        6. Initializes the 'layers' attribute as an instance of the nn.CellList class. It contains Phi3DecoderLayer instances, one for each layer index from 0 to 'num_hidden_layers' - 1 (inclusive). Each
+Phi3DecoderLayer is initialized with the 'config' object and the corresponding layer index.
         7. Sets the '_attn_implementation' attribute to the '_attn_implementation' value from the 'config' object. This value represents the implementation type of the attention mechanism.
-        8. Initializes the 'norm' attribute as an instance of the Phi3RMSNorm class. It takes the 'hidden_size' and 'eps' values from the 'config' object as parameters. This layer applies root mean square normalization to the hidden states.
+        8. Initializes the 'norm' attribute as an instance of the Phi3RMSNorm class. It takes the 'hidden_size' and 'eps' values from the 'config' object as parameters. This layer applies root mean square
+normalization to the hidden states.
         9. Sets the 'gradient_checkpointing' attribute to False. This attribute determines whether gradient checkpointing is enabled during training.
         10. Calls the 'post_init' method, which can be overridden by subclasses to perform additional initialization steps.
         
@@ -1230,7 +1245,8 @@ class Phi3ForCausalLM(Phi3PreTrainedModel):
     """
     A class representing the Phi3 model for causal language modeling.
     
-    This class extends the Phi3PreTrainedModel class and provides methods for initializing the model, setting and getting input and output embeddings, setting and getting the decoder, constructing the model, and preparing inputs for generation.
+    This class extends the Phi3PreTrainedModel class and provides methods for initializing the model, setting and getting input and output embeddings, setting and getting the decoder, constructing the model,
+and preparing inputs for generation.
     
     Attributes:
         model (Phi3Model): The Phi3 model.
@@ -1581,7 +1597,8 @@ class Phi3ForCausalLM(Phi3PreTrainedModel):
         Raises:
             None.
         
-        This static method reorders the cache based on the provided beam index. It iterates through each layer's past key-value states and selects the corresponding states from the past based on the beam index. The reordered past key-value states are then returned as a tuple.
+        This static method reorders the cache based on the provided beam index. It iterates through each layer's past key-value states and selects the corresponding states from the past based on the beam
+index. The reordered past key-value states are then returned as a tuple.
         """
         reordered_past = ()
         for layer_past in past_key_values:
@@ -1606,7 +1623,8 @@ class Phi3ForSequenceClassification(Phi3PreTrainedModel):
         __init__(self, config): Initializes a new instance of the Phi3ForSequenceClassification class.
         get_input_embeddings(self): Retrieves the input embeddings from the Phi3 model.
         set_input_embeddings(self, value): Sets the input embeddings for the Phi3 model.
-        construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the Phi3 model for sequence classification.
+        construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the Phi3 model for sequence
+classification.
     
     """
     def __init__(self, config):
@@ -1770,9 +1788,11 @@ class Phi3ForTokenClassification(Phi3PreTrainedModel):
     """
     Phi3ForTokenClassification is a class that represents a token classification model for Phi3, inheriting from Phi3PreTrainedModel.
     
-    The class includes an __init__ method for initializing the model with a Phi3Config object, setting up the necessary components such as the model architecture, dropout layers, and classifier for token classification.
+    The class includes an __init__ method for initializing the model with a Phi3Config object, setting up the necessary components such as the model architecture, dropout layers, and classifier for token
+classification.
     
-    It also contains a construct method for performing the token classification task, taking input tensors, past key values, attention masks, and other optional arguments. It computes the classification loss using cross-entropy and returns the loss along with logits and hidden states if specified in the return_dict.
+    It also contains a construct method for performing the token classification task, taking input tensors, past key values, attention masks, and other optional arguments. It computes the classification loss
+using cross-entropy and returns the loss along with logits and hidden states if specified in the return_dict.
     
     Attributes:
         num_labels: The number of labels for token classification.

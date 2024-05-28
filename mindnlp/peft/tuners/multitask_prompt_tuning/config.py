@@ -54,7 +54,8 @@ class MultitaskPromptTuningConfig(PromptTuningConfig):
     """
     Represents a configuration class for multitask prompt tuning in a natural language processing model.
     
-    This class inherits from PromptTuningConfig and provides additional configurations specifically for multitask prompt tuning. The class includes methods for initializing the configuration settings, such as setting the prompt type to MULTITASK_PROMPT_TUNING.
+    This class inherits from PromptTuningConfig and provides additional configurations specifically for multitask prompt tuning. The class includes methods for initializing the configuration settings, such as
+setting the prompt type to MULTITASK_PROMPT_TUNING.
     """
     prompt_tuning_init: Union[MultitaskPromptTuningInit, str] = field(
         default=MultitaskPromptTuningInit.RANDOM,

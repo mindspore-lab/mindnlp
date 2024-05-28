@@ -373,7 +373,8 @@ class ConvBertSelfAttention(nn.Cell):
             output_attentions (Optional[bool]): Whether to output attention probabilities. Default is False.
         
         Returns:
-            Tuple[ms.Tensor, Optional[ms.Tensor]]: A tuple containing the context layer tensor of shape [batch_size, sequence_length, hidden_size] and the optional attention probabilities tensor of shape [batch_size, num_attention_heads, sequence_length, sequence_length].
+            Tuple[ms.Tensor, Optional[ms.Tensor]]: A tuple containing the context layer tensor of shape [batch_size, sequence_length, hidden_size] and the optional attention probabilities tensor of shape
+[batch_size, num_attention_heads, sequence_length, sequence_length].
         
         Raises:
             N/A
@@ -971,7 +972,8 @@ class ConvBertEncoder(nn.Cell):
         - return_dict (Optional[bool]): A flag indicating whether to return the output as a dictionary.
         
         Returns:
-        - Union[Tuple, BaseModelOutputWithCrossAttentions]: The output of the method which can be a tuple of relevant values or a BaseModelOutputWithCrossAttentions object containing the processed hidden states, attentions, and cross-attentions.
+        - Union[Tuple, BaseModelOutputWithCrossAttentions]: The output of the method which can be a tuple of relevant values or a BaseModelOutputWithCrossAttentions object containing the processed hidden
+states, attentions, and cross-attentions.
         
         Raises:
         - None
@@ -1866,7 +1868,8 @@ class ConvBertForQuestionAnswering(ConvBertPreTrainedModel):
             return_dict (Optional[bool]): Whether to return a dictionary output. Default is None.
         
         Returns:
-            Union[Tuple, QuestionAnsweringModelOutput]: The model output. If return_dict is False, returns a tuple containing the start logits, end logits, and additional outputs. If return_dict is True, returns a QuestionAnsweringModelOutput object containing the loss, start logits, end logits, hidden states, and attentions.
+            Union[Tuple, QuestionAnsweringModelOutput]: The model output. If return_dict is False, returns a tuple containing the start logits, end logits, and additional outputs. If return_dict is True,
+returns a QuestionAnsweringModelOutput object containing the loss, start logits, end logits, hidden states, and attentions.
         
         Raises:
             None.

@@ -246,7 +246,8 @@ class LoKrModel(BaseTuner):
     def _mark_only_adapters_as_trainable(self, model: nn.Cell) -> None:
 
         r"""
-        The _mark_only_adapters_as_trainable method in the LoKrModel class marks only the adapters in the provided model as trainable, by setting the requires_grad attribute to False for parameters not containing the specified prefix.
+        The _mark_only_adapters_as_trainable method in the LoKrModel class marks only the adapters in the provided model as trainable, by setting the requires_grad attribute to False for parameters not
+containing the specified prefix.
         
         Args:
             self (LoKrModel): The instance of the LoKrModel class.
@@ -411,6 +412,7 @@ class LoKrModel(BaseTuner):
             None. Returns None if the target cell exists in the LoKR configuration; otherwise, raises an exception.
         
         Raises:
-            This method does not raise any exceptions explicitly. However, if the target cell does not exist in the LoKR configuration, further handling may be required based on the context in which this method is used.
+            This method does not raise any exceptions explicitly. However, if the target cell does not exist in the LoKR configuration, further handling may be required based on the context in which this
+method is used.
         """
         return check_target_cell_exists(LoKR_config, key)

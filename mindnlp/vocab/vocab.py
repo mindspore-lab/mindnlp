@@ -38,7 +38,8 @@ class Vocab:
         Initialize the Vocab class with the provided list or dictionary of tokens along with optional special tokens.
         
         Args:
-        - list_or_dict (Union[list, dict]): A list or dictionary containing tokens. If a list is provided, each token will be assigned a unique index. If a dictionary is provided, keys must be strings and values must be integers representing token indices.
+        - list_or_dict (Union[list, dict]): A list or dictionary containing tokens. If a list is provided, each token will be assigned a unique index. If a dictionary is provided, keys must be strings and
+values must be integers representing token indices.
         - special_tokens (Union[list, tuple], optional): A list or tuple containing special tokens to be included in the vocabulary. Defaults to None.
         - special_first (bool, optional): A boolean flag indicating whether special tokens should be added at the beginning of the vocabulary. Defaults to True.
         

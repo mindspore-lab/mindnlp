@@ -103,7 +103,8 @@ class LayerWiseDummyScheduler(LRScheduler):
         
         '''
         
-        This docstring describes the 'get_lr' method in the 'LayerWiseDummyScheduler' class. The method takes one parameter, 'self', which is an instance of the 'LayerWiseDummyScheduler' class. The purpose of this method is to retrieve the learning rates of all parameter groups in the optimizer.
+        This docstring describes the 'get_lr' method in the 'LayerWiseDummyScheduler' class. The method takes one parameter, 'self', which is an instance of the 'LayerWiseDummyScheduler' class. The purpose of
+this method is to retrieve the learning rates of all parameter groups in the optimizer.
         
         The method returns a list, where each element represents the learning rate of a parameter group in the optimizer. The type of the return value is a list.
         
@@ -340,7 +341,8 @@ def _get_cosine_with_hard_restarts_schedule_with_warmup_lr_lambda(
     Raises:
         None.
     
-    This function calculates the learning rate lambda value based on the current step in the training process. It uses a cosine schedule with hard restarts and warm-up. The learning rate lambda value is used to adjust the learning rate during training.
+    This function calculates the learning rate lambda value based on the current step in the training process. It uses a cosine schedule with hard restarts and warm-up. The learning rate lambda value is used
+to adjust the learning rate during training.
     
     The function takes the following parameters:
     - current_step: The current step in the training process. It should be an integer.
@@ -499,7 +501,8 @@ def _get_inverse_sqrt_schedule_lr_lambda(current_step: int, *, num_warmup_steps:
     Raises:
         None.
     
-    This function returns the decayed learning rate value based on the inverse square root schedule. If the current step is less than the number of warm-up steps, it returns the current step divided by the maximum of 1 and the number of warm-up steps. Otherwise, it calculates the decayed learning rate using the inverse square root formula.
+    This function returns the decayed learning rate value based on the inverse square root schedule. If the current step is less than the number of warm-up steps, it returns the current step divided by the
+maximum of 1 and the number of warm-up steps. Otherwise, it calculates the decayed learning rate using the inverse square root formula.
     """
     if current_step < num_warmup_steps:
         return float(current_step) / float(max(1, num_warmup_steps))
@@ -554,7 +557,9 @@ def _get_cosine_schedule_with_warmup_lr_lambda(
     Raises:
         None
     
-    The function calculates the learning rate adjustment based on the number of warmup steps, training steps, number of cycles, and minimum learning rate rate. If the current step is less than the number of warmup steps, the learning rate is linearly increased. Otherwise, the learning rate is adjusted using a cosine function with the given number of cycles. The learning rate is then scaled by the minimum learning rate rate.
+    The function calculates the learning rate adjustment based on the number of warmup steps, training steps, number of cycles, and minimum learning rate rate. If the current step is less than the number of
+warmup steps, the learning rate is linearly increased. Otherwise, the learning rate is adjusted using a cosine function with the given number of cycles. The learning rate is then scaled by the minimum learning
+rate rate.
     
     The function returns the maximum of 0 and the adjusted learning rate factor, ensuring a non-negative learning rate.
     """

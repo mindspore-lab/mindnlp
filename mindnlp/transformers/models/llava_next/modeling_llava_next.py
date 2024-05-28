@@ -214,7 +214,8 @@ class LlavaNextPreTrainedModel(PreTrainedModel):
     """
     Represents a pre-trained model for the LlavaNext model architecture, inheriting from PreTrainedModel.
     
-    This class includes methods for initializing weights based on the configuration settings. It initializes weights for different types of cells such as Dense, Conv2d, and Embedding based on the provided standard deviation value. The initialization process handles class embeddings, biases, and padding indices as needed.
+    This class includes methods for initializing weights based on the configuration settings. It initializes weights for different types of cells such as Dense, Conv2d, and Embedding based on the provided
+standard deviation value. The initialization process handles class embeddings, biases, and padding indices as needed.
     """
     config_class = LlavaNextConfig
     base_model_prefix = "model"
@@ -265,9 +266,12 @@ class LlavaNextPreTrainedModel(PreTrainedModel):
 class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
 
     """
-    This class represents a model for conditional text generation with multimodal capabilities. It is designed to generate text based on input text prompts along with associated images. The model utilizes a pre-trained language model for text generation and incorporates image features for enhanced context understanding.
+    This class represents a model for conditional text generation with multimodal capabilities. It is designed to generate text based on input text prompts along with associated images. The model utilizes a
+pre-trained language model for text generation and incorporates image features for enhanced context understanding.
     
-    The class provides methods for setting and getting input embeddings, output embeddings, decoder, and for tying weights. It also includes functionality for resizing token embeddings and merging input IDs with image features. Additionally, the class offers a 'construct' method for generating text based on input IDs, pixel values, attention masks, and other optional parameters. The 'prepare_inputs_for_generation' method prepares input data for text generation by handling past key values, inputs embeddings, pixel values, and attention masks.
+    The class provides methods for setting and getting input embeddings, output embeddings, decoder, and for tying weights. It also includes functionality for resizing token embeddings and merging input IDs
+with image features. Additionally, the class offers a 'construct' method for generating text based on input IDs, pixel values, attention masks, and other optional parameters. The
+'prepare_inputs_for_generation' method prepares input data for text generation by handling past key values, inputs embeddings, pixel values, and attention masks.
     
     This class inherits from LlavaNextPreTrainedModel and is designed to be used for conditional text generation tasks in a multimodal setting.
     """
@@ -419,7 +423,9 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
         Raises:
             None.
         
-        This method is responsible for tying the weights of the language model used for conditional generation in the LlavaNextForConditionalGeneration class. Tying the weights refers to sharing the parameters of the language model with other parts of the model, such as the encoder or the decoder. By tying the weights, the model can learn more efficiently and effectively by reducing the number of parameters that need to be learned.
+        This method is responsible for tying the weights of the language model used for conditional generation in the LlavaNextForConditionalGeneration class. Tying the weights refers to sharing the parameters
+of the language model with other parts of the model, such as the encoder or the decoder. By tying the weights, the model can learn more efficiently and effectively by reducing the number of parameters that
+need to be learned.
         
         Note:
         This method internally calls the 'tie_weights' method of the language model to perform the weight tying operation.
@@ -755,14 +761,16 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
         Args:
         - self (LlavaNextForConditionalGeneration): The instance of the LlavaNextForConditionalGeneration class.
         - input_ids (Tensor): The input token IDs tensor for text generation.
-        - past_key_values (Cache or tuple of Tensors): The cached key values from previous generation steps. If Cache object is passed, cache_length is obtained from it, else from the tuple of Tensors. Defaults to None.
+        - past_key_values (Cache or tuple of Tensors): The cached key values from previous generation steps. If Cache object is passed, cache_length is obtained from it, else from the tuple of Tensors.
+Defaults to None.
         - inputs_embeds (Tensor): The input embeddings tensor. Defaults to None.
         - pixel_values (Tensor): The pixel values tensor for image inputs. Defaults to None.
         - image_sizes (Tensor): The sizes of the input images. Defaults to None.
         - attention_mask (Tensor): The attention mask tensor to mask certain tokens during generation. Defaults to None.
         
         Returns:
-        - model_inputs (dict): A dictionary containing the model inputs for text generation, including 'inputs_embeds', 'input_ids', 'position_ids', 'past_key_values', 'use_cache', 'attention_mask', 'pixel_values', and 'image_sizes'.
+        - model_inputs (dict): A dictionary containing the model inputs for text generation, including 'inputs_embeds', 'input_ids', 'position_ids', 'past_key_values', 'use_cache', 'attention_mask',
+'pixel_values', and 'image_sizes'.
         
         Raises:
         - TypeError: If past_key_values is not of type Cache or tuple of Tensors.

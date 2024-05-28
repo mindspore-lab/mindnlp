@@ -527,10 +527,12 @@ def _center_to_corners_format_numpy(bboxes_center: np.ndarray) -> np.ndarray:
     Converts bounding boxes from center format to corners format using NumPy operations.
     
     Args:
-        bboxes_center (np.ndarray): A NumPy array representing bounding boxes in center format. The array should have shape (N, 4) where N is the number of bounding boxes. Each row should contain the coordinates of the center (center_x, center_y) and the dimensions (width, height) of a bounding box.
+        bboxes_center (np.ndarray): A NumPy array representing bounding boxes in center format. The array should have shape (N, 4) where N is the number of bounding boxes. Each row should contain the
+coordinates of the center (center_x, center_y) and the dimensions (width, height) of a bounding box.
     
     Returns:
-        np.ndarray: A NumPy array representing bounding boxes in corners format. The returned array has the same shape as bboxes_center and contains the coordinates of the corners (top-left and bottom-right) of each bounding box.
+        np.ndarray: A NumPy array representing bounding boxes in corners format. The returned array has the same shape as bboxes_center and contains the coordinates of the corners (top-left and bottom-right)
+of each bounding box.
     
     Raises:
         None

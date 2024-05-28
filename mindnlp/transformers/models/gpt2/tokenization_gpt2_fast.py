@@ -186,7 +186,8 @@ class GPT2TokenizerFast(PreTrainedTokenizerFast):
         - (BatchEncoding) An instance of the 'BatchEncoding' class containing the encoded inputs.
         
         Raises:
-        - AssertionError: If the 'add_prefix_space' is False and the 'is_split_into_words' is also False, an assertion error is raised with the message 'You need to instantiate GPT2TokenizerFast with add_prefix_space=True to use it with pretokenized inputs'.
+        - AssertionError: If the 'add_prefix_space' is False and the 'is_split_into_words' is also False, an assertion error is raised with the message 'You need to instantiate GPT2TokenizerFast with
+add_prefix_space=True to use it with pretokenized inputs'.
         - Any other exceptions raised by the 'super()._batch_encode_plus' method.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)

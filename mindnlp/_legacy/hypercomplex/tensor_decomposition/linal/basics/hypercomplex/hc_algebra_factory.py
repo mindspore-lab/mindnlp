@@ -40,7 +40,8 @@ class AlgebraFactory(ABC):
             None.
         
         Note:
-            The returned _MatrixImpl object is responsible for providing the functionality related to matrices within the AlgebraFactory. This method is abstract and must be implemented in any subclass of AlgebraFactory. The returned implementation may vary depending on the specific requirements and configuration of the subclass.
+            The returned _MatrixImpl object is responsible for providing the functionality related to matrices within the AlgebraFactory. This method is abstract and must be implemented in any subclass of
+AlgebraFactory. The returned implementation may vary depending on the specific requirements and configuration of the subclass.
         """
         pass
 

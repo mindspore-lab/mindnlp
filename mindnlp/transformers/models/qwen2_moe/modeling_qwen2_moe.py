@@ -157,7 +157,8 @@ class Qwen2MoeRMSNorm(nn.Cell):
     """
     Qwen2MoeRMSNorm is a custom normalization layer that is equivalent to T5LayerNorm. It inherits from the nn.Cell class.
     
-    This normalization layer performs root mean square normalization (RMSNorm) on the input hidden states. It is commonly used in neural network architectures, such as T5 models, to improve the training efficiency and convergence.
+    This normalization layer performs root mean square normalization (RMSNorm) on the input hidden states. It is commonly used in neural network architectures, such as T5 models, to improve the training
+efficiency and convergence.
     
     Parameters:
         - hidden_size (int): The size of the hidden states.
@@ -334,7 +335,8 @@ class Qwen2MoeRotaryEmbedding(nn.Cell):
         Raises:
             ValueError: If seq_len is greater than the maximum sequence length that is cached.
         
-        This method constructs a rotary embedding for the input sequence. It first checks if the provided seq_len is greater than the maximum sequence length that is currently cached. If so, it updates the cosine and sine caches by calling the _set_cos_sin_cache method. The cached cosine and sine values are then returned for the specified sequence length.
+        This method constructs a rotary embedding for the input sequence. It first checks if the provided seq_len is greater than the maximum sequence length that is currently cached. If so, it updates the
+cosine and sine caches by calling the _set_cos_sin_cache method. The cached cosine and sine values are then returned for the specified sequence length.
         
         Note that the returned cosine and sine tensors are converted to the same dtype as the input tensor x.
         """
@@ -762,7 +764,8 @@ class Qwen2MoeSparseMoeBlock(nn.Cell):
 class Qwen2MoeDecoderLayer(nn.Cell):
 
     """
-    The `Qwen2MoeDecoderLayer` class represents a single layer of the Qwen2Moe decoder model. It is designed to be used in the Qwen2MoeDecoder model to process the input hidden states and generate output representations.
+    The `Qwen2MoeDecoderLayer` class represents a single layer of the Qwen2Moe decoder model. It is designed to be used in the Qwen2MoeDecoder model to process the input hidden states and generate output
+representations.
     
     This class inherits from the `nn.Cell` class.
     
@@ -1187,7 +1190,8 @@ class Qwen2MoeModel(Qwen2MoePreTrainedModel):
 class Qwen2MoeForCausalLM(Qwen2MoePreTrainedModel):
 
     """
-    This class represents a Qwen2Moe model for causal language modeling. It is used for generating text based on a given input. The model is initialized with a configuration and consists of a Qwen2MoeModel for encoding and a linear layer (lm_head) for decoding. It also includes methods for getting and setting the input and output embeddings, setting and getting the decoder, and generating text.
+    This class represents a Qwen2Moe model for causal language modeling. It is used for generating text based on a given input. The model is initialized with a configuration and consists of a Qwen2MoeModel for
+encoding and a linear layer (lm_head) for decoding. It also includes methods for getting and setting the input and output embeddings, setting and getting the decoder, and generating text.
     
     Attributes:
     - `model` (Qwen2MoeModel): The Qwen2MoeModel used for encoding.
@@ -1204,7 +1208,8 @@ class Qwen2MoeForCausalLM(Qwen2MoePreTrainedModel):
     - `set_output_embeddings(new_embeddings)`: Sets the output embeddings.
     - `set_decoder(decoder)`: Sets the decoder.
     - `get_decoder()`: Returns the decoder.
-    - `construct(input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, output_router_logits, return_dict)`: Constructs the model with the given inputs and returns the output logits. Optionally computes the masked language modeling loss and the auxiliary loss.
+    - `construct(input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, output_router_logits, return_dict)`: Constructs the model
+with the given inputs and returns the output logits. Optionally computes the masked language modeling loss and the auxiliary loss.
     - `prepare_inputs_for_generation(input_ids, past_key_values, attention_mask, inputs_embeds, **kwargs)`: Prepares the inputs for text generation, taking into account past key values and attention mask.
     - `_reorder_cache(past_key_values, beam_idx)`: Reorders the cache based on the beam index.
     """

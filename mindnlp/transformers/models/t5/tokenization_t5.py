@@ -286,7 +286,9 @@ class T5Tokenizer(PreTrainedTokenizer):
             None: This method does not return any value.
         
         Raises:
-            FutureWarning: If the tokenizer was incorrectly instantiated with a model max length that will be corrected in Transformers v5. This warning is to ensure backward compatibility when padding/encoding with `truncation` set to True. It is recommended not to rely on automatic truncation to the deprecated max length. To encode/pad to sequences longer than the deprecated max length, either instantiate the tokenizer with `model_max_length` or pass `max_length` when encoding/padding.
+            FutureWarning: If the tokenizer was incorrectly instantiated with a model max length that will be corrected in Transformers v5. This warning is to ensure backward compatibility when
+padding/encoding with `truncation` set to True. It is recommended not to rely on automatic truncation to the deprecated max length. To encode/pad to sequences longer than the deprecated max length, either
+instantiate the tokenizer with `model_max_length` or pass `max_length` when encoding/padding.
         """
         if pretrained_model_name_or_path in T5Tokenizer.max_model_input_sizes:
             deprecated_max_model_length = T5Tokenizer.max_model_input_sizes[pretrained_model_name_or_path]

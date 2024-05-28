@@ -20,7 +20,8 @@ class Vector(AbstractVector):
         - `_items_y`: The y-coordinate values of the vector.
     
     Methods:
-        - `__init__(self, algebra_factory: Type[TAlgebraFactory], size: Optional[int] = None, items: Union[Tuple, np.ndarray, List, NoneType] = None) -> None`: Initializes a new instance of `Vector` with the given algebra factory, size, and items.
+        - `__init__(self, algebra_factory: Type[TAlgebraFactory], size: Optional[int] = None, items: Union[Tuple, np.ndarray, List, NoneType] = None) -> None`: Initializes a new instance of `Vector` with the
+given algebra factory, size, and items.
         - `__getitem__(self, key)`: Returns the value at the specified key in the vector.
         - `__neg__(self) -> 'Vector'`: Returns the negation of the vector.
         - `get_algebra_type(self) -> Type[AlgebraFactory]`: Returns the algebra factory type used by the vector.
@@ -144,7 +145,8 @@ class Vector(AbstractVector):
         
         Args:
             self (Vector): The vector instance to which the scalar is being added.
-            that (Union[Scalar, Tuple[np.float64, np.float64]]): The scalar value or tuple of float64 values to be added to the vector. If a Scalar object is provided, it must have the same data type as the vector's algebra type.
+            that (Union[Scalar, Tuple[np.float64, np.float64]]): The scalar value or tuple of float64 values to be added to the vector. If a Scalar object is provided, it must have the same data type as the
+vector's algebra type.
         
         Returns:
             Vector: A new Vector instance resulting from adding the scalar value to the original vector.
@@ -171,7 +173,8 @@ class Vector(AbstractVector):
         
         Args:
             self (Vector): The current vector object.
-            that (Union[Scalar, Tuple[np.float64, np.float64]]): The scalar value or a tuple of two np.float64 values to be subtracted from the vector. If 'that' is a Scalar, it must have the same data type as the current vector's algebra type.
+            that (Union[Scalar, Tuple[np.float64, np.float64]]): The scalar value or a tuple of two np.float64 values to be subtracted from the vector. If 'that' is a Scalar, it must have the same data type as
+the current vector's algebra type.
         
         Returns:
             Vector: A new Vector object resulting from subtracting the scalar from the current vector.

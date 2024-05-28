@@ -175,7 +175,8 @@ class CLIPProcessor(ProcessorMixin):
             None
         
         Raises:
-            FutureWarning: If the method is called, a FutureWarning will be raised to inform the user that `feature_extractor_class` is deprecated and will be removed in v5. It is recommended to use `image_processor_class` instead.
+            FutureWarning: If the method is called, a FutureWarning will be raised to inform the user that `feature_extractor_class` is deprecated and will be removed in v5. It is recommended to use
+`image_processor_class` instead.
         
         Note:
             The returned image processor class is responsible for extracting features from images in the CLIPProcessor.

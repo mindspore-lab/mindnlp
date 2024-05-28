@@ -125,7 +125,8 @@ class AltCLIPOutput(ModelOutput):
             self (AltCLIPOutput): The AltCLIPOutput object to convert to a tuple.
         
         Returns:
-            Tuple[Any]: A tuple representation of the AltCLIPOutput object. The tuple contains the values of all attributes in the object, except for 'text_model_output' and 'vision_model_output'. If any of these attributes are present, their values will be recursively converted to tuples as well.
+            Tuple[Any]: A tuple representation of the AltCLIPOutput object. The tuple contains the values of all attributes in the object, except for 'text_model_output' and 'vision_model_output'. If any of
+these attributes are present, their values will be recursively converted to tuples as well.
         
         Raises:
             None.
@@ -379,7 +380,8 @@ class AltRobertaSelfAttention(nn.Cell):
         Args:
             self: The object instance.
             hidden_states (mindspore.Tensor): The input hidden states. It is a tensor of shape (batch_size, sequence_length, hidden_size).
-            attention_mask (Optional[mindspore.Tensor]): An optional tensor for masking the attention scores. It has the same shape as hidden_states and contains 0s for positions that should be masked and -10000s for positions that should be kept.
+            attention_mask (Optional[mindspore.Tensor]): An optional tensor for masking the attention scores. It has the same shape as hidden_states and contains 0s for positions that should be masked and
+-10000s for positions that should be kept.
             head_mask (Optional[mindspore.Tensor]): An optional tensor for masking the attention scores per head. It has the shape (num_heads,) and is a tensor of 0s and 1s.
             encoder_hidden_states (Optional[mindspore.Tensor]): An optional tensor representing hidden states from the encoder. It has the same shape as hidden_states.
             encoder_attention_mask (Optional[mindspore.Tensor]): An optional tensor for masking the attention scores in encoder_hidden_states. It has the same shape as encoder_hidden_states.
@@ -489,7 +491,8 @@ class AltRobertaSelfOutput(nn.Cell):
 
     """A class representing the self-attention output module of the alternative implementation of the RoBERTa model.
     
-    This class inherits from the `nn.Cell` class and implements the functionality of the self-attention output module in the RoBERTa model. It applies a dense layer, followed by a dropout layer, and then applies layer normalization to the output. The output is the sum of the layer-normalized hidden states and the input tensor.
+    This class inherits from the `nn.Cell` class and implements the functionality of the self-attention output module in the RoBERTa model. It applies a dense layer, followed by a dropout layer, and then
+applies layer normalization to the output. The output is the sum of the layer-normalized hidden states and the input tensor.
     
     Attributes:
         dense (nn.Dense): The dense layer used to transform the hidden states.
@@ -554,7 +557,8 @@ class AltRobertaSelfOutput(nn.Cell):
 class AltRobertaAttention(nn.Cell):
 
     ''' 
-    The AltRobertaAttention class represents the attention mechanism used in the AltRoberta model. This class inherits from nn.Cell and includes methods for initializing the attention mechanism, pruning attention heads, and constructing the attention output.
+    The AltRobertaAttention class represents the attention mechanism used in the AltRoberta model. This class inherits from nn.Cell and includes methods for initializing the attention mechanism, pruning
+attention heads, and constructing the attention output.
     
     Attributes:
         config: The configuration parameters for the attention mechanism.
@@ -563,7 +567,8 @@ class AltRobertaAttention(nn.Cell):
     Methods:
         __init__(self, config, position_embedding_type=None): Initializes the AltRobertaAttention class.
         prune_heads(self, heads): Prunes the specified attention heads from the attention mechanism.
-        construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False): Constructs the attention output using the given inputs.
+        construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False): Constructs the attention
+output using the given inputs.
     
     Note:
         The class inherits from nn.Cell and is designed for use in the AltRoberta model.
@@ -604,7 +609,8 @@ class AltRobertaAttention(nn.Cell):
             None. The method performs in-place modifications on the instance variables of the 'AltRobertaAttention' class.
         
         Raises:
-            This method does not raise any exceptions explicitly. However, it assumes that the input parameters are of the correct type and format. Any exceptions raised within the called functions (e.g., find_pruneable_heads_and_indices, prune_linear_layer) will propagate to the caller.
+            This method does not raise any exceptions explicitly. However, it assumes that the input parameters are of the correct type and format. Any exceptions raised within the called functions (e.g.,
+find_pruneable_heads_and_indices, prune_linear_layer) will propagate to the caller.
         """
         if len(heads) == 0:
             return
@@ -736,7 +742,8 @@ class AltRobertaOutput(nn.Cell):
     """
     Represents the output of an alternative Roberta model.
     
-    This class inherits from nn.Cell and includes methods for initializing the class and constructing the output tensor based on the input hidden states and input tensor. The output tensor is obtained by applying dense layers, dropout, and layer normalization to the input hidden states and input tensor.
+    This class inherits from nn.Cell and includes methods for initializing the class and constructing the output tensor based on the input hidden states and input tensor. The output tensor is obtained by
+applying dense layers, dropout, and layer normalization to the input hidden states and input tensor.
     
     Attributes:
         dense (nn.Dense): A dense layer with the specified intermediate and hidden sizes.
@@ -745,7 +752,8 @@ class AltRobertaOutput(nn.Cell):
     
     Methods:
         __init__(self, config): Initializes the AltRobertaOutput class with the given configuration.
-        construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor: Constructs the output tensor by applying dense layers, dropout, and layer normalization to the input hidden states and input tensor.
+        construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor: Constructs the output tensor by applying dense layers, dropout, and layer normalization to the
+input hidden states and input tensor.
     
     """
     def __init__(self, config):
@@ -957,13 +965,17 @@ class AltRobertaLayer(nn.Cell):
 class AltRobertaEncoder(nn.Cell):
 
     """
-    The 'AltRobertaEncoder' class is responsible for encoding input data using a variation of the Roberta model. This class inherits from the 'nn.Cell' class and provides methods to construct the encoder and generate the output based on the input.
+    The 'AltRobertaEncoder' class is responsible for encoding input data using a variation of the Roberta model. This class inherits from the 'nn.Cell' class and provides methods to construct the encoder and
+generate the output based on the input.
     
-    The class consists of an initialization method that takes a configuration object as input and sets up the encoder layers. The 'construct' method takes various input tensors and optional parameters to construct the encoder output based on the Roberta model's architecture. 
+    The class consists of an initialization method that takes a configuration object as input and sets up the encoder layers. The 'construct' method takes various input tensors and optional parameters to
+construct the encoder output based on the Roberta model's architecture. 
     
-    The 'construct' method supports options such as attention masks, head masks, encoder hidden states, past key values, cache usage, and output configurations. It also handles gradient checkpointing during training if enabled. The method returns the encoder output in the form of a tuple or a custom 'BaseModelOutputWithPastAndCrossAttentions' object based on the specified return dict option.
+    The 'construct' method supports options such as attention masks, head masks, encoder hidden states, past key values, cache usage, and output configurations. It also handles gradient checkpointing during
+training if enabled. The method returns the encoder output in the form of a tuple or a custom 'BaseModelOutputWithPastAndCrossAttentions' object based on the specified return dict option.
     
-    Overall, the 'AltRobertaEncoder' class encapsulates the functionality to encode input data using the specified Roberta model architecture and provides flexibility in configuring the output based on the input parameters.
+    Overall, the 'AltRobertaEncoder' class encapsulates the functionality to encode input data using the specified Roberta model architecture and provides flexibility in configuring the output based on the
+input parameters.
     """
     def __init__(self, config):
 
@@ -1107,7 +1119,8 @@ class AltRobertaPooler(nn.Cell):
     
     This class inherits from the nn.Cell module and provides a custom pooler layer for an alternative implementation of the RoBERTa model.
     
-    The AltRobertaPooler class initializes with a configuration object and includes methods to construct the pooler layer. The constructor initializes the dense layer and activation function. The construct method takes hidden_states as input, extracts the first token tensor, applies the dense layer, applies the activation function, and returns the pooled output.
+    The AltRobertaPooler class initializes with a configuration object and includes methods to construct the pooler layer. The constructor initializes the dense layer and activation function. The construct
+method takes hidden_states as input, extracts the first token tensor, applies the dense layer, applies the activation function, and returns the pooled output.
     
     This class is designed to be used as part of a custom RoBERTa model implementation and provides an alternative approach to pooling hidden states for downstream tasks.
     """
@@ -1750,13 +1763,16 @@ class AltCLIPPreTrainedModel(PreTrainedModel):
 class AltCLIPVisionTransformer(nn.Cell):
 
     """
-    This class represents a vision transformer model for the Alternative Contrastive Learning for Image and Text (AltCLIP) framework. It encapsulates the functionality to process visual inputs using the AltCLIP vision transformer architecture.
+    This class represents a vision transformer model for the Alternative Contrastive Learning for Image and Text (AltCLIP) framework. It encapsulates the functionality to process visual inputs using the
+AltCLIP vision transformer architecture.
     
     The AltCLIPVisionTransformer class inherits from the nn.Cell class and consists of methods for initialization and construction. 
     
-    The __init__ method initializes the AltCLIPVisionTransformer with the provided AltCLIPVisionConfig. It sets up the embeddings, encoder, and layer normalization components required for processing visual inputs.
+    The __init__ method initializes the AltCLIPVisionTransformer with the provided AltCLIPVisionConfig. It sets up the embeddings, encoder, and layer normalization components required for processing visual
+inputs.
     
-    The construct method processes the input pixel values using the initialized components, performs encoding, and returns the last hidden state and pooled output. It also handles the optional arguments for controlling the output format.
+    The construct method processes the input pixel values using the initialized components, performs encoding, and returns the last hidden state and pooled output. It also handles the optional arguments for
+controlling the output format.
     
     For more details on the AltCLIPVisionTransformer model and its usage, refer to the AltCLIPVisionTransformer documentation and examples.
     """
@@ -1833,11 +1849,15 @@ class AltCLIPVisionTransformer(nn.Cell):
 class AltCLIPVisionModel(AltCLIPPreTrainedModel):
 
     """
-    The 'AltCLIPVisionModel' class represents a vision model for the AltCLIP framework. It inherits from the 'AltCLIPPreTrainedModel' class and contains methods for initializing the model, obtaining input embeddings, and constructing the model output. The 'AltCLIPVisionModel' class is designed to work with image inputs and provides flexibility in handling output attentions, hidden states, and return dictionaries. It supports the use of pre-trained models and enables easy integration with image processing pipelines.
+    The 'AltCLIPVisionModel' class represents a vision model for the AltCLIP framework. It inherits from the 'AltCLIPPreTrainedModel' class and contains methods for initializing the model, obtaining input
+embeddings, and constructing the model output. The 'AltCLIPVisionModel' class is designed to work with image inputs and provides flexibility in handling output attentions, hidden states, and return
+dictionaries. It supports the use of pre-trained models and enables easy integration with image processing pipelines.
     
-    The 'AltCLIPVisionModel' class can be instantiated and used to process image data, extract features, and perform inference in the context of the AltCLIP framework. It provides a convenient interface for leveraging vision transformers and accessing model outputs, such as hidden states and pooled representations of images.
+    The 'AltCLIPVisionModel' class can be instantiated and used to process image data, extract features, and perform inference in the context of the AltCLIP framework. It provides a convenient interface for
+leveraging vision transformers and accessing model outputs, such as hidden states and pooled representations of images.
     
-    This class encapsulates the functionality required to utilize vision models within the AltCLIP framework, allowing for seamless integration with image processing workflows and enabling efficient utilization of pre-trained models for various vision-related tasks.
+    This class encapsulates the functionality required to utilize vision models within the AltCLIP framework, allowing for seamless integration with image processing workflows and enabling efficient
+utilization of pre-trained models for various vision-related tasks.
     """
     config_class = AltCLIPVisionConfig
     main_input_name = "pixel_values"
@@ -2138,7 +2158,9 @@ class AltRobertaModel(AltCLIPPreTrainedModel):
 class AltCLIPTextModel(AltCLIPPreTrainedModel):
 
     """
-    Represents an alternative implementation of the CLIP (Contrastive Language-Image Pretraining) model specifically tailored for text. This class extends the AltCLIPPreTrainedModel class and includes methods for initializing the model, getting and setting input embeddings, resizing token embeddings, and constructing the model for inference. The 'construct' method takes various input tensors and optional parameters and returns the model's output, including the last hidden state and the pooled CLS states. Additionally, usage examples are provided for reference.
+    Represents an alternative implementation of the CLIP (Contrastive Language-Image Pretraining) model specifically tailored for text. This class extends the AltCLIPPreTrainedModel class and includes methods
+for initializing the model, getting and setting input embeddings, resizing token embeddings, and constructing the model for inference. The 'construct' method takes various input tensors and optional parameters
+and returns the model's output, including the last hidden state and the pooled CLS states. Additionally, usage examples are provided for reference.
     
     Examples:
         >>> from transformers import AutoProcessor, AltCLIPTextModel

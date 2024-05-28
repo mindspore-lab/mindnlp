@@ -186,7 +186,8 @@ class BigBirdSelfAttention(nn.Cell):
     
     Methods:
     - swapaxes_for_scores(x): Swaps axes in the input tensor for calculating attention scores.
-    - construct(hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_value, output_attentions): Constructs the self-attention mechanism with given inputs and parameters.
+    - construct(hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_value, output_attentions): Constructs the self-attention mechanism with given inputs and
+parameters.
     
     Raises:
     - ValueError: When the hidden size is not a multiple of the number of attention heads.
@@ -1396,13 +1397,15 @@ class BigBirdBlockSparseAttention(nn.Cell):
 class BigBirdSelfOutput(nn.Cell):
 
     """
-    This class represents the self-output layer for the BigBird model. It applies dense transformation, layer normalization, and dropout to the input hidden states, and then adds the input tensor to the normalized hidden states.
+    This class represents the self-output layer for the BigBird model. It applies dense transformation, layer normalization, and dropout to the input hidden states, and then adds the input tensor to the
+normalized hidden states.
     
     This class inherits from nn.Cell and includes an __init__ method for initialization and a construct method for performing the self-output transformation.
     
     The __init__ method initializes the dense transformation, layer normalization, and dropout layers with the given configuration parameters.
     
-    The construct method takes the input hidden states and input tensor as input, applies the dense transformation, dropout, layer normalization, and adds the input tensor to the normalized hidden states, and returns the resulting hidden states.
+    The construct method takes the input hidden states and input tensor as input, applies the dense transformation, dropout, layer normalization, and adds the input tensor to the normalized hidden states, and
+returns the resulting hidden states.
     
     """
     def __init__(self, config):
@@ -1470,7 +1473,8 @@ class BigBirdAttention(nn.Cell):
     Methods:
         - __init__(self, config, seed=None): Initializes a new instance of the BigBirdAttention module.
         - set_attention_type(self, value: str): Sets the attention_type attribute to the specified value.
-        - construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False, band_mask=None, from_mask=None, to_mask=None, from_blocked_mask=None, to_blocked_mask=None): Computes attention and returns the outputs.
+        - construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False, band_mask=None,
+from_mask=None, to_mask=None, from_blocked_mask=None, to_blocked_mask=None): Computes attention and returns the outputs.
     
     """
     def __init__(self, config, seed=None):
@@ -1766,7 +1770,8 @@ class BigBirdLayer(nn.Cell):
     
     Methods:
     - set_attention_type(value: str): Sets the attention type to either 'original_full' or 'block_sparse'.
-    - construct(hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, band_mask=None, from_mask=None, to_mask=None, blocked_encoder_mask=None, past_key_value=None, output_attentions=False): Constructs the layer by performing attention-based computations and returning the outputs.
+    - construct(hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, band_mask=None, from_mask=None, to_mask=None, blocked_encoder_mask=None,
+past_key_value=None, output_attentions=False): Constructs the layer by performing attention-based computations and returning the outputs.
     - feed_forward_chunk(attention_output): Applies the feed-forward computation on the attention output.
     
     """
@@ -1819,7 +1824,8 @@ class BigBirdLayer(nn.Cell):
         
         This method sets the attention type for the BigBirdLayer. The attention type determines the type of attention mechanism used in the layer.
         
-        If the provided attention type is not 'original_full' or 'block_sparse', a ValueError is raised. Otherwise, if the provided attention type is the same as the current attention type, the method returns without making any changes. Otherwise, the attention type is updated, and the set_attention_type method is called on the attention object of the layer.
+        If the provided attention type is not 'original_full' or 'block_sparse', a ValueError is raised. Otherwise, if the provided attention type is the same as the current attention type, the method returns
+without making any changes. Otherwise, the attention type is updated, and the set_attention_type method is called on the attention object of the layer.
         
         If the layer has cross-attention enabled, the set_attention_type method is also called on the crossattention object.
         """
@@ -2030,7 +2036,8 @@ class BigBirdEncoder(nn.Cell):
         Raises:
             ValueError: If the provided value is not 'original_full' or 'block_sparse'.
         
-        This method sets the attention type of the BigBirdEncoder instance to the specified value. If the provided value is not 'original_full' or 'block_sparse', a ValueError is raised. If the provided value is the same as the current attention type, the method does nothing.
+        This method sets the attention type of the BigBirdEncoder instance to the specified value. If the provided value is not 'original_full' or 'block_sparse', a ValueError is raised. If the provided value
+is the same as the current attention type, the method does nothing.
         
         After setting the attention type, this method also updates the attention type for each layer in the BigBirdEncoder instance by calling the set_attention_type method on each layer.
         """
@@ -2084,7 +2091,8 @@ class BigBirdEncoder(nn.Cell):
         - return_dict (bool): Whether to return the output as a dictionary.
         
         Returns:
-        Union[BaseModelOutputWithPastAndCrossAttentions, Tuple]: The output of the BigBird encoder layer, which can be a BaseModelOutputWithPastAndCrossAttentions object or a tuple of relevant tensors based on the 'return_dict' flag.
+        Union[BaseModelOutputWithPastAndCrossAttentions, Tuple]: The output of the BigBird encoder layer, which can be a BaseModelOutputWithPastAndCrossAttentions object or a tuple of relevant tensors based on
+the 'return_dict' flag.
         
         Raises:
         - Warning: If 'use_cache' is set to True while using gradient checkpointing.
@@ -2285,7 +2293,9 @@ class BigBirdLMPredictionHead(nn.Cell):
         Raises:
             None.
         
-        This method takes the input hidden states and performs transformations on them to construct the final hidden states for the BigBirdLMPredictionHead. It first applies the 'transform' method to the hidden states, which applies any necessary pre-processing. Then, it passes the transformed hidden states through the 'decoder' to generate the final constructed hidden states. The constructed hidden states are then returned.
+        This method takes the input hidden states and performs transformations on them to construct the final hidden states for the BigBirdLMPredictionHead. It first applies the 'transform' method to the
+hidden states, which applies any necessary pre-processing. Then, it passes the transformed hidden states through the 'decoder' to generate the final constructed hidden states. The constructed hidden states are
+then returned.
         
         Note: This method does not modify the input hidden states in-place. Instead, it returns the constructed hidden states as a new tensor.
         
@@ -2740,7 +2750,8 @@ class BigBirdModel(BigBirdPreTrainedModel):
         Raises:
             None.
         
-        This method is used to update the input embeddings of the BigBirdModel with a new set of embeddings. It takes in the instance of the BigBirdModel class and the new embeddings to be set as parameters. The 'value' parameter should be an instance of a compatible embedding object.
+        This method is used to update the input embeddings of the BigBirdModel with a new set of embeddings. It takes in the instance of the BigBirdModel class and the new embeddings to be set as parameters.
+The 'value' parameter should be an instance of a compatible embedding object.
         
         Note that changing the input embeddings can have a significant impact on the model's performance, so it should be done carefully and with consideration of the specific task and data being used.
         
@@ -3080,7 +3091,10 @@ class BigBirdModel(BigBirdPreTrainedModel):
 class BigBirdForPreTraining(BigBirdPreTrainedModel):
 
     """
-    This class represents a BigBird model for pre-training tasks, inheriting from BigBirdPreTrainedModel. It includes methods for initialization, getting and setting output embeddings, and constructing the model for pre-training tasks. The constructor initializes the model with the provided configuration, sets up the BigBird model and pre-training heads, and executes post-initialization steps. Methods are provided for retrieving and updating the output embeddings. The 'construct' method takes various input parameters for constructing the model, computes the masked language modeling loss and next sequence prediction loss if labels are provided, and returns the pre-training outputs. An example usage is provided in the docstring. 
+    This class represents a BigBird model for pre-training tasks, inheriting from BigBirdPreTrainedModel. It includes methods for initialization, getting and setting output embeddings, and constructing the
+model for pre-training tasks. The constructor initializes the model with the provided configuration, sets up the BigBird model and pre-training heads, and executes post-initialization steps. Methods are
+provided for retrieving and updating the output embeddings. The 'construct' method takes various input parameters for constructing the model, computes the masked language modeling loss and next sequence
+prediction loss if labels are provided, and returns the pre-training outputs. An example usage is provided in the docstring. 
     """
     _tied_weights_keys = ["cls.predictions.decoder.weight", "cls.predictions.decoder.bias"]
 
@@ -3237,7 +3251,8 @@ class BigBirdForMaskedLM(BigBirdPreTrainedModel):
     """
     BigBirdForMaskedLM includes methods to create a BigBird model for masked language modeling tasks.
     
-    This class inherits from BigBirdPreTrainedModel, and provides functionality to initialize the model, get and set the output embeddings, construct the model for masked language modeling, and prepare inputs for generation.
+    This class inherits from BigBirdPreTrainedModel, and provides functionality to initialize the model, get and set the output embeddings, construct the model for masked language modeling, and prepare inputs
+for generation.
     
     Example:
         >>> import torch
@@ -3474,7 +3489,8 @@ class BigBirdForCausalLM(BigBirdPreTrainedModel):
     """
     This class represents a BigBird model for Causal Language Modeling (LM). It is designed for generating text sequences autoregressively, predicting the next token in a sequence given the previous tokens. 
     
-    The class includes methods for initializing the model, getting and setting output embeddings, constructing the model with various input parameters, preparing inputs for text generation, and reordering cache during decoding. 
+    The class includes methods for initializing the model, getting and setting output embeddings, constructing the model with various input parameters, preparing inputs for text generation, and reordering
+cache during decoding. 
     
     Attributes:
         - bert: BigBirdModel instance representing the core BigBird model.
@@ -3484,7 +3500,8 @@ class BigBirdForCausalLM(BigBirdPreTrainedModel):
         - __init__(self, config): Initializes the BigBirdForCausalLM model with the provided configuration.
         - get_output_embeddings(self): Retrieves the output embeddings from the model.
         - set_output_embeddings(self, new_embeddings): Sets new output embeddings for the model.
-        - construct(self, input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, encoder_hidden_states, encoder_attention_mask, past_key_values, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model for LM generation, taking various input parameters.
+        - construct(self, input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, encoder_hidden_states, encoder_attention_mask, past_key_values, labels, use_cache,
+output_attentions, output_hidden_states, return_dict): Constructs the model for LM generation, taking various input parameters.
         - prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask): Prepares inputs for text generation, handling past key values and attention mask.
         - _reorder_cache(self, past_key_values, beam_idx): Reorders the cache during decoding based on beam index for faster processing.
     
@@ -3932,7 +3949,8 @@ class BigBirdForMultipleChoice(BigBirdPreTrainedModel):
         
     Methods:
         __init__(config): Initializes the BigBirdForMultipleChoice class with the given configuration.
-        construct(input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Constructs the model for multiple choice tasks.
+        construct(input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Constructs the model for multiple choice
+tasks.
     """
     def __init__(self, config):
 
@@ -4028,15 +4046,19 @@ class BigBirdForMultipleChoice(BigBirdPreTrainedModel):
 class BigBirdForTokenClassification(BigBirdPreTrainedModel):
 
     """
-    BigBirdForTokenClassification is a token classification model based on the BigBird architecture. It inherits from BigBirdPreTrainedModel and is designed for token-level classification tasks, such as Named Entity Recognition or Part-of-Speech tagging.
+    BigBirdForTokenClassification is a token classification model based on the BigBird architecture. It inherits from BigBirdPreTrainedModel and is designed for token-level classification tasks, such as Named
+Entity Recognition or Part-of-Speech tagging.
     
-    The class's constructor initializes the model with the provided configuration and sets up the necessary components, including the BigBirdModel, dropout layers, and classifier. It also calls the post_init method for additional setup.
+    The class's constructor initializes the model with the provided configuration and sets up the necessary components, including the BigBirdModel, dropout layers, and classifier. It also calls the post_init
+method for additional setup.
     
-    The construct method takes input tensors and optional arguments for various model outputs, such as attentions and hidden states. It returns the token classification output, including logits for each token, and computes the token classification loss if labels are provided.
+    The construct method takes input tensors and optional arguments for various model outputs, such as attentions and hidden states. It returns the token classification output, including logits for each token,
+and computes the token classification loss if labels are provided.
     
     The labels parameter in the construct method is an optional tensor containing the target labels for token classification. The indices in the labels tensor should be in the range [0, num_labels - 1].
     
-    If return_dict is set to False, the method returns a tuple containing the token logits and additional model outputs. If return_dict is True, the method returns a TokenClassifierOutput object containing the loss, logits, hidden states, and attentions.
+    If return_dict is set to False, the method returns a tuple containing the token logits and additional model outputs. If return_dict is True, the method returns a TokenClassifierOutput object containing the
+loss, logits, hidden states, and attentions.
     
     Note: This docstring is generated based on the provided code snippet and may need to be updated with additional details about the class and its methods.
     """
@@ -4170,7 +4192,8 @@ class BigBirdForQuestionAnsweringHead(nn.Cell):
 class BigBirdForQuestionAnswering(BigBirdPreTrainedModel):
 
     """
-    The `BigBirdForQuestionAnswering` class represents a model for question answering using the BigBird architecture. It is a subclass of `BigBirdPreTrainedModel` and provides methods for training, evaluating, and predicting question answering tasks.
+    The `BigBirdForQuestionAnswering` class represents a model for question answering using the BigBird architecture. It is a subclass of `BigBirdPreTrainedModel` and provides methods for training, evaluating,
+and predicting question answering tasks.
     
     Attributes:
         - `config`: An instance of `BigBirdConfig` that holds the model configuration.
@@ -4181,7 +4204,8 @@ class BigBirdForQuestionAnswering(BigBirdPreTrainedModel):
         
     Methods:
         - `__init__(self, config, add_pooling_layer=False)`: Initializes the `BigBirdForQuestionAnswering` instance.
-        - `construct(self, input_ids, attention_mask, question_lengths, token_type_ids, position_ids, head_mask, inputs_embeds, start_positions, end_positions, output_attentions, output_hidden_states, return_dict)`: Constructs the model for question answering.
+        - `construct(self, input_ids, attention_mask, question_lengths, token_type_ids, position_ids, head_mask, inputs_embeds, start_positions, end_positions, output_attentions, output_hidden_states,
+return_dict)`: Constructs the model for question answering.
         - `prepare_question_mask(q_lengths, maxlen)`: Prepares a question mask for question answering.
     
     Example Usage:

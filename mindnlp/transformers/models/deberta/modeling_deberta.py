@@ -254,7 +254,8 @@ class DropoutContext:
     """
     Represents a context for managing dropout operations within a neural network.
     
-    This class defines a context for managing dropout operations, including setting the dropout rate, mask, scaling factor, and reusing masks across iterations. It is designed to be used within a neural network framework to control dropout behavior during training.
+    This class defines a context for managing dropout operations, including setting the dropout rate, mask, scaling factor, and reusing masks across iterations. It is designed to be used within a neural
+network framework to control dropout behavior during training.
     
     Attributes:
         dropout (float): The dropout rate to be applied.
@@ -600,7 +601,8 @@ class DebertaAttention(nn.Cell):
     """
     This class represents the DebertaAttention module, which is a component of the DeBERTa model. It inherits from the nn.Cell class.
     
-    DebertaAttention applies self-attention mechanism on the input hidden states, allowing the model to focus on different parts of the input sequence. It consists of a DisentangledSelfAttention layer and a DebertaSelfOutput layer.
+    DebertaAttention applies self-attention mechanism on the input hidden states, allowing the model to focus on different parts of the input sequence. It consists of a DisentangledSelfAttention layer and a
+DebertaSelfOutput layer.
     
     Args:
         config (dict): A dictionary containing the configuration parameters for the DebertaAttention module.
@@ -624,7 +626,8 @@ class DebertaAttention(nn.Cell):
                 rel_embeddings (Tensor, optional): The relative embeddings of shape (batch_size, sequence_length, hidden_size).
                 
             Returns:
-                Tensor or Tuple: The attention output tensor of shape (batch_size, sequence_length, hidden_size) or a tuple containing the attention output tensor and the attention matrix if output_attentions is True.
+                Tensor or Tuple: The attention output tensor of shape (batch_size, sequence_length, hidden_size) or a tuple containing the attention output tensor and the attention matrix if output_attentions
+is True.
     """
     def __init__(self, config):
 
@@ -633,7 +636,8 @@ class DebertaAttention(nn.Cell):
         
         Args:
             self (DebertaAttention): The current instance of the DebertaAttention class.
-            config (object): The configuration object containing the settings for the attention module. It should provide the necessary parameters for initializing the DisentangledSelfAttention and DebertaSelfOutput instances.
+            config (object): The configuration object containing the settings for the attention module. It should provide the necessary parameters for initializing the DisentangledSelfAttention and
+DebertaSelfOutput instances.
         
         Returns:
             None. This method does not return anything.
@@ -720,7 +724,8 @@ class DebertaIntermediate(nn.Cell):
             config (object): An object containing the configuration parameters for the DebertaIntermediate class. It should have the following properties:
                 - hidden_size (int): The size of the hidden layer in the intermediate module.
                 - intermediate_size (int): The size of the intermediate layer.
-                - hidden_act (str or object): The activation function for the hidden layer. If it is a string, it should be one of the supported activation functions. If it is an object, it should be a callable that takes a single argument.
+                - hidden_act (str or object): The activation function for the hidden layer. If it is a string, it should be one of the supported activation functions. If it is an object, it should be a
+callable that takes a single argument.
         
         Returns:
             None. The method does not return any value.
@@ -750,7 +755,8 @@ class DebertaIntermediate(nn.Cell):
         Raises:
             None.
         
-        This method takes in the hidden states tensor and applies a series of transformations to it in order to construct the intermediate layer of the Deberta model. The hidden states tensor is first passed through a dense layer, followed by an activation function specified by 'intermediate_act_fn'. The resulting tensor represents the intermediate hidden states and is returned as the output of this method.
+        This method takes in the hidden states tensor and applies a series of transformations to it in order to construct the intermediate layer of the Deberta model. The hidden states tensor is first passed
+through a dense layer, followed by an activation function specified by 'intermediate_act_fn'. The resulting tensor represents the intermediate hidden states and is returned as the output of this method.
         
         Note:
             The 'intermediate_act_fn' attribute should be set prior to calling this method to specify the desired activation function.
@@ -844,7 +850,8 @@ class DebertaLayer(nn.Cell):
     """
     Represents a single layer in the DeBERTa model, containing modules for attention, intermediate processing, and output computation.
     
-    This class inherits from nn.Cell and is responsible for processing input hidden states through attention mechanisms, intermediate processing, and final output computation. It provides a 'construct' method to perform these operations and return the final layer output.
+    This class inherits from nn.Cell and is responsible for processing input hidden states through attention mechanisms, intermediate processing, and final output computation. It provides a 'construct' method
+to perform these operations and return the final layer output.
     
     Attributes:
         attention (DebertaAttention): Module for performing attention mechanism computation.
@@ -996,7 +1003,9 @@ class DebertaEncoder(nn.Cell):
         
         Args:
             self (object): The instance of the DebertaEncoder class.
-            attention_mask (tensor): The attention mask tensor. It can be of dimension 2 or 3. For a 2-dimensional tensor, it is expected to be of shape (batch_size, sequence_length) representing the attention mask for each token in the input sequence. For a 3-dimensional tensor, it is expected to be of shape (batch_size, num_heads, sequence_length) representing the attention mask for each head in the multi-head attention mechanism.
+            attention_mask (tensor): The attention mask tensor. It can be of dimension 2 or 3. For a 2-dimensional tensor, it is expected to be of shape (batch_size, sequence_length) representing the attention
+mask for each token in the input sequence. For a 3-dimensional tensor, it is expected to be of shape (batch_size, num_heads, sequence_length) representing the attention mask for each head in the multi-head
+attention mechanism.
         
         Returns:
             None: This method does not return any value. The attention_mask parameter is modified in place.
@@ -1194,7 +1203,8 @@ def p2c_dynamic_expand(c2p_pos, query_layer, key_layer):
         key_layer (torch.Tensor): The tensor representing the key layer.
     
     Returns:
-        torch.Tensor: The dynamic expanded tensor obtained by expanding the c2p_pos tensor. The shape of the returned tensor is [query_layer.shape[0], query_layer.shape[1], key_layer.shape[-2], key_layer.shape[-2]].
+        torch.Tensor: The dynamic expanded tensor obtained by expanding the c2p_pos tensor. The shape of the returned tensor is [query_layer.shape[0], query_layer.shape[1], key_layer.shape[-2],
+key_layer.shape[-2]].
     
     Raises:
         None.
@@ -1815,7 +1825,8 @@ class DebertaModel(DebertaPreTrainedModel):
 class DebertaForMaskedLM(DebertaPreTrainedModel):
 
     """
-    DebertaForMaskedLM is a class that represents a DeBERTa model for masked language modeling. This class is designed to be used for generating predictions and computing loss in a masked language modeling task. It inherits from DebertaPreTrainedModel, providing additional functionality specific to masked language modeling tasks.
+    DebertaForMaskedLM is a class that represents a DeBERTa model for masked language modeling. This class is designed to be used for generating predictions and computing loss in a masked language modeling
+task. It inherits from DebertaPreTrainedModel, providing additional functionality specific to masked language modeling tasks.
     
     Attributes:
         - deberta: A DebertaModel instance used for processing input sequences.
@@ -1824,9 +1835,11 @@ class DebertaForMaskedLM(DebertaPreTrainedModel):
     Methods:
         - get_output_embeddings(): Retrieves the decoder embeddings used for output predictions.
         - set_output_embeddings(new_embeddings): Sets new decoder embeddings for output predictions.
-        - construct(input_ids, attention_mask, token_type_ids, position_ids, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Constructs the DeBERTa model for masked language modeling, including processing input data, generating predictions, and computing the masked language modeling loss.
+        - construct(input_ids, attention_mask, token_type_ids, position_ids, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Constructs the DeBERTa model for masked language
+modeling, including processing input data, generating predictions, and computing the masked language modeling loss.
     
-    The 'construct' method takes various input parameters such as input_ids, attention_mask, labels, etc., and returns a MaskedLMOutput object containing the loss, prediction scores, hidden states, and attentions. It also allows for customization of return types based on the 'return_dict' parameter.
+    The 'construct' method takes various input parameters such as input_ids, attention_mask, labels, etc., and returns a MaskedLMOutput object containing the loss, prediction scores, hidden states, and
+attentions. It also allows for customization of return types based on the 'return_dict' parameter.
     
     Note: Ensure proper input data formatting as described in the docstring of the 'construct' method for accurate predictions and loss computation.
     """
@@ -2142,11 +2155,15 @@ class DebertaOnlyMLMHead(nn.Cell):
 class DebertaForSequenceClassification(DebertaPreTrainedModel):
 
     """
-    DebertaForSequenceClassification is a class that represents a DeBERTa model for sequence classification tasks. It inherits from DebertaPreTrainedModel and provides functionalities for sequence classification using the DeBERTa model architecture.
+    DebertaForSequenceClassification is a class that represents a DeBERTa model for sequence classification tasks. It inherits from DebertaPreTrainedModel and provides functionalities for sequence
+classification using the DeBERTa model architecture.
     
-    The class includes methods for initializing the model, getting and setting input embeddings, and constructing the model for sequence classification tasks. The 'construct' method takes input tensors such as input_ids, attention_mask, token_type_ids, position_ids, inputs_embeds, and labels to perform sequence classification. It utilizes the DeBERTa model, a context pooler, and a classifier to generate logits for the input sequences and compute the loss based on the specified problem type.
+    The class includes methods for initializing the model, getting and setting input embeddings, and constructing the model for sequence classification tasks. The 'construct' method takes input tensors such as
+input_ids, attention_mask, token_type_ids, position_ids, inputs_embeds, and labels to perform sequence classification. It utilizes the DeBERTa model, a context pooler, and a classifier to generate logits for
+the input sequences and compute the loss based on the specified problem type.
     
-    The 'construct' method also handles different problem types such as regression, single-label classification, and multi-label classification by adjusting the loss computation accordingly. The class provides flexibility in handling various types of sequence classification tasks and supports configurable return options.
+    The 'construct' method also handles different problem types such as regression, single-label classification, and multi-label classification by adjusting the loss computation accordingly. The class provides
+flexibility in handling various types of sequence classification tasks and supports configurable return options.
     
     For more detailed information on the methods and parameters of DebertaForSequenceClassification, refer to the class implementation and the DeBERTa documentation.
     """
@@ -2407,7 +2424,11 @@ class DebertaForTokenClassification(DebertaPreTrainedModel):
 class DebertaForQuestionAnswering(DebertaPreTrainedModel):
 
     """
-    This class represents a Deberta model for question answering tasks. It inherits functionality from the DebertaPreTrainedModel class. The DebertaForQuestionAnswering class includes methods for initializing the model with configuration, and for constructing the model by processing input data and producing question answering model outputs. The construct method takes various input tensors such as input_ids, attention_mask, token_type_ids, position_ids, and inputs_embeds, and returns QuestionAnsweringModelOutput. It also supports optional parameters for controlling the output format and behavior. The class provides detailed documentation for the construct method, including explanations of the input and output parameters and their respective shapes and types. Additionally, the class handles the computation of total loss for question answering tasks based on start and end positions, and returns the final model outputs as a QuestionAnsweringModelOutput object.
+    This class represents a Deberta model for question answering tasks. It inherits functionality from the DebertaPreTrainedModel class. The DebertaForQuestionAnswering class includes methods for initializing
+the model with configuration, and for constructing the model by processing input data and producing question answering model outputs. The construct method takes various input tensors such as input_ids,
+attention_mask, token_type_ids, position_ids, and inputs_embeds, and returns QuestionAnsweringModelOutput. It also supports optional parameters for controlling the output format and behavior. The class
+provides detailed documentation for the construct method, including explanations of the input and output parameters and their respective shapes and types. Additionally, the class handles the computation of
+total loss for question answering tasks based on start and end positions, and returns the final model outputs as a QuestionAnsweringModelOutput object.
     """
     def __init__(self, config):
 

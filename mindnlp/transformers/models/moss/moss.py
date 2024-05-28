@@ -458,7 +458,8 @@ class MossBlock(nn.Cell):
             output_attentions (Optional[bool]): Whether to output the attention weights. Defaults to False.
         
         Returns:
-            Union[Tuple[Tensor], Optional[Tuple[Tensor, Tuple[Tensor, ...]]]]: A tuple containing the output tensor after applying the self-attention and feed-forward layers. If `use_cache` is True, the tuple includes the hidden states and the past hidden states for the self-attention layer. Otherwise, the tuple only includes the hidden states.
+            Union[Tuple[Tensor], Optional[Tuple[Tensor, Tuple[Tensor, ...]]]]: A tuple containing the output tensor after applying the self-attention and feed-forward layers. If `use_cache` is True, the tuple
+includes the hidden states and the past hidden states for the self-attention layer. Otherwise, the tuple only includes the hidden states.
         
         Raises:
             None

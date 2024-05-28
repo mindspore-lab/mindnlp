@@ -171,7 +171,9 @@ class ResNetEmbeddings(nn.Cell):
         Raises:
             ValueError: If the number of channels in the pixel_values tensor does not match the number of channels set in the configuration.
         
-        This method takes in the pixel values of an image and generates embeddings using the ResNet model. It first checks if the number of channels in the pixel_values tensor matches the number of channels set in the configuration. If they do not match, a ValueError is raised. Otherwise, the pixel_values tensor is passed through the embedder and then the pooler to generate the embeddings. The resulting embeddings are returned as a mindspore.Tensor object.
+        This method takes in the pixel values of an image and generates embeddings using the ResNet model. It first checks if the number of channels in the pixel_values tensor matches the number of channels
+set in the configuration. If they do not match, a ValueError is raised. Otherwise, the pixel_values tensor is passed through the embedder and then the pooler to generate the embeddings. The resulting
+embeddings are returned as a mindspore.Tensor object.
         """
         num_channels = pixel_values.shape[1]
         if num_channels != self.num_channels:
@@ -579,7 +581,8 @@ class ResNetPreTrainedModel(PreTrainedModel):
 class ResNetModel(ResNetPreTrainedModel):
 
     """
-    ResNetModel is a class that represents a ResNet model for image processing tasks. This class inherits from ResNetPreTrainedModel and includes methods for initializing the model and constructing its forward pass. 
+    ResNetModel is a class that represents a ResNet model for image processing tasks. This class inherits from ResNetPreTrainedModel and includes methods for initializing the model and constructing its forward
+pass. 
     
     Attributes:
         config: The configuration parameters for the ResNetModel.
@@ -635,7 +638,8 @@ class ResNetModel(ResNetPreTrainedModel):
             BaseModelOutputWithPoolingAndNoAttention: An instance of the BaseModelOutputWithPoolingAndNoAttention class containing the following outputs:
                 - last_hidden_state (mindspore.Tensor): The last hidden state of the encoder. It has a shape of [batch_size, sequence_length, hidden_size].
                 - pooled_output (mindspore.Tensor): The pooled output of the encoder. It has a shape of [batch_size, hidden_size].
-                - hidden_states (Tuple[mindspore.Tensor]): A tuple of hidden states of the encoder if `output_hidden_states` is set to True. Each hidden state is a tensor of shape [batch_size, sequence_length, hidden_size].
+                - hidden_states (Tuple[mindspore.Tensor]): A tuple of hidden states of the encoder if `output_hidden_states` is set to True. Each hidden state is a tensor of shape [batch_size, sequence_length,
+hidden_size].
         
         Raises:
             None.

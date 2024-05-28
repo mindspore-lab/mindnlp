@@ -116,7 +116,8 @@ class TransferDataset():
             None. This method does not return any value directly to the caller but rather accesses the 'num_rows' attribute of the dataset stored in the class.
         
         Raises:
-            No exceptions are explicitly raised by this method. However, if the 'num_rows' attribute is not properly initialized or if there are any issues with accessing the dataset, unexpected errors might occur.
+            No exceptions are explicitly raised by this method. However, if the 'num_rows' attribute is not properly initialized or if there are any issues with accessing the dataset, unexpected errors might
+occur.
         """
         return self.ds.num_rows
 

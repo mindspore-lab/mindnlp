@@ -86,7 +86,8 @@ class MobileBertTokenizer(PreTrainedTokenizer):
         
         Args:
         - self: The instance of the class.
-        - vocab (msVocab, Vocab, str): The vocabulary used for tokenization. If vocab is an instance of msVocab, vocab_dict is obtained from vocab.vocab(). If vocab is an instance of Vocab, vocab_dict is obtained directly from vocab.vocab. If vocab is a path to a file, the file is loaded as the vocabulary. Default is None.
+        - vocab (msVocab, Vocab, str): The vocabulary used for tokenization. If vocab is an instance of msVocab, vocab_dict is obtained from vocab.vocab(). If vocab is an instance of Vocab, vocab_dict is
+obtained directly from vocab.vocab. If vocab is a path to a file, the file is loaded as the vocabulary. Default is None.
         - tokenizer_file (str): Path to the tokenizer file. Default is None.
         - do_lower_case (bool): Whether to convert tokens to lowercase. Default is True.
         - unk_token (str): The token representing unknown words. Default is '[UNK]'.

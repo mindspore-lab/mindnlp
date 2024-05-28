@@ -255,7 +255,8 @@ class CpmAntSelfAttentionBlock(nn.Cell):
             Args:
                 config (CpmAntConfig): The configuration object for the CpmAnt model.
     
-        construct(self, hidden_states: mindspore.Tensor, attention_mask: mindspore.Tensor, position_bias: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = False, past_key_values: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None, use_cache: Optional[bool] = None):
+        construct(self, hidden_states: mindspore.Tensor, attention_mask: mindspore.Tensor, position_bias: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = False, past_key_values:
+Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None, use_cache: Optional[bool] = None):
             Applies the self-attention block to the given hidden states.
             Args:
                 hidden_states (mindspore.Tensor): The input tensor of shape `(batch, len_seq, dim_model)` representing the hidden states.
@@ -335,7 +336,8 @@ class CpmAntDenseGatedACT(nn.Cell):
     """
     A class representing a dense gated activation layer for neural networks in the CPM-ANT model.
     
-    This class inherits from nn.Cell and provides functionality to transform an input tensor from one feature space to another via a nonlinear operation. The transformation is performed using two dense layers with gated activation.
+    This class inherits from nn.Cell and provides functionality to transform an input tensor from one feature space to another via a nonlinear operation. The transformation is performed using two dense layers
+with gated activation.
     
     Attributes:
         w_0 (nn.Dense): The first dense layer for the transformation.
@@ -475,7 +477,8 @@ class CpmAntFFNBlock(nn.Cell):
                 mindspore.Tensor: The updated hidden states after applying the feed-forward operations.
     
     Note:
-        The CpmAntFFNBlock class is typically used as a building block within the CpmAnt model to process intermediate hidden states. It performs layer normalization, feed-forward operations, and optionally applies dropout regularization.
+        The CpmAntFFNBlock class is typically used as a building block within the CpmAnt model to process intermediate hidden states. It performs layer normalization, feed-forward operations, and optionally
+applies dropout regularization.
     
         Example usage:
         
@@ -536,7 +539,8 @@ class CpmAntTransformerBlock(nn.Cell):
     
     Methods:
         __init__(self, config: CpmAntConfig): Initializes a new instance of the CpmAntTransformerBlock class.
-        construct(self, hidden_states: mindspore.Tensor, attention_mask: mindspore.Tensor, position_bias: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = False, past_key_values: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None, use_cache: Optional[bool] = None): Constructs the transformer block.
+        construct(self, hidden_states: mindspore.Tensor, attention_mask: mindspore.Tensor, position_bias: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = False, past_key_values:
+Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None, use_cache: Optional[bool] = None): Constructs the transformer block.
     
     """
     def __init__(self, config: CpmAntConfig):
@@ -606,7 +610,9 @@ class CpmAntEncoder(nn.Cell):
     
     The __init__ method initializes the CpmAntEncoder with the provided CpmAntConfig, setting the number of layers and creating a list of transformer blocks for the encoder.
     
-    The construct method takes input hidden_states, attention_mask, position_bias, and optional parameters to perform the encoding process. It iterates through the encoder layers, applying the attention mechanism and caching key and value projection states if specified. The method returns the final hidden_states, current_key_values, hidden_states of all layers, and attention weights of all layers as per the specified optional outputs.
+    The construct method takes input hidden_states, attention_mask, position_bias, and optional parameters to perform the encoding process. It iterates through the encoder layers, applying the attention
+mechanism and caching key and value projection states if specified. The method returns the final hidden_states, current_key_values, hidden_states of all layers, and attention weights of all layers as per the
+specified optional outputs.
     
     Args:
         hidden_states (mindspore.Tensor):
@@ -788,16 +794,20 @@ class CpmAntSegmentPositionEmbedding(nn.Cell):
     
     Methods:
         - __init__(self, config: CpmAntConfig): Initializes the CpmAntSegmentPositionEmbedding instance with the provided configuration.
-        - construct(self, key_pos: mindspore.Tensor, query_pos: mindspore.Tensor, key_segment: mindspore.Tensor, query_segment: mindspore.Tensor): Constructs the segment position embeddings based on the input key and query positions and segments.
+        - construct(self, key_pos: mindspore.Tensor, query_pos: mindspore.Tensor, key_segment: mindspore.Tensor, query_segment: mindspore.Tensor): Constructs the segment position embeddings based on the input
+key and query positions and segments.
         - _segment_relative_position_bucket(self, query_segment, key_segment): Computes the segment relative position bucket.
         - _position_bucket(self, relative_position, num_buckets=32, max_distance=128): Computes the position bucket.
     
     Detailed Description:
     The CpmAntSegmentPositionEmbedding class is used to compute segment position embeddings for the CPM-ANT model. These embeddings encode the relative positions between different segments in the input tensors.
     
-    The class takes a configuration object (CpmAntConfig) as input during initialization. This configuration object contains various parameters such as the number of attention heads, the number of buckets for segment relative positions, the maximum distance allowed for segment relative positions, and the number of segment types in the model.
+    The class takes a configuration object (CpmAntConfig) as input during initialization. This configuration object contains various parameters such as the number of attention heads, the number of buckets for
+segment relative positions, the maximum distance allowed for segment relative positions, and the number of segment types in the model.
     
-    The construct method is the main function of this class. It takes four input tensors: key_pos, query_pos, key_segment, and query_segment. These tensors represent the positions and segments of the key and query elements. The method checks the shapes of the input tensors and raises an AssertionError if they are not compatible. It then performs various operations to compute the relative position bucket and the position bucket. Finally, it uses the computed embeddings to generate the segment position embeddings.
+    The construct method is the main function of this class. It takes four input tensors: key_pos, query_pos, key_segment, and query_segment. These tensors represent the positions and segments of the key and
+query elements. The method checks the shapes of the input tensors and raises an AssertionError if they are not compatible. It then performs various operations to compute the relative position bucket and the
+position bucket. Finally, it uses the computed embeddings to generate the segment position embeddings.
     
     The _segment_relative_position_bucket method computes the segment relative position bucket based on the query and key segments.
     
@@ -1085,7 +1095,8 @@ class CpmAntPreTrainedModel(PreTrainedModel):
 class CpmAntModel(CpmAntPreTrainedModel):
 
     """
-    CpmAntModel is a class that represents a model for CPM-ANT (Antecedent-Conditioned Prompting) tasks. It inherits from CpmAntPreTrainedModel and includes methods for initializing the model, preparing attention masks, and constructing the model output based on input tensors.
+    CpmAntModel is a class that represents a model for CPM-ANT (Antecedent-Conditioned Prompting) tasks. It inherits from CpmAntPreTrainedModel and includes methods for initializing the model, preparing
+attention masks, and constructing the model output based on input tensors.
     
     Attributes:
         - encoder: CpmAntEncoder object for encoding input data
@@ -1100,7 +1111,9 @@ class CpmAntModel(CpmAntPreTrainedModel):
         - get_input_embeddings(self): Returns the input embeddings
         - set_input_embeddings(self, embeddings, **kwargs): Sets the input embeddings to the given value
         - _prepare_attention_mask(self, input_ids, span, context, length): Prepares the attention mask for the input data
-        - construct(self, input_ids: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None, use_cache: Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPast]: Constructs the model output based on input tensors and optional configurations
+        - construct(self, input_ids: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, past_key_values:
+Optional[Tuple[Tuple[mindspore.Tensor]]] = None, use_cache: Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPast]: Constructs the model
+output based on input tensors and optional configurations
     
     This class provides functionality for processing input data, calculating attention masks, and generating model outputs for CPM-ANT tasks.
     """
@@ -1230,7 +1243,8 @@ class CpmAntModel(CpmAntPreTrainedModel):
             return_dict (Optional[bool]): Whether to return the output as a dictionary. If set to True, the output will be returned as a dictionary. Defaults to None.
         
         Returns:
-            Union[Tuple[mindspore.Tensor], BaseModelOutputWithPast]: The output of the model. If return_dict is set to False, a tuple of outputs will be returned, including hidden_states, present_key_values, all_hidden_states, and all_attentions. If return_dict is set to True, an instance of BaseModelOutputWithPast will be returned, containing the last_hidden_state, past_key_values, hidden_states, and attentions.
+            Union[Tuple[mindspore.Tensor], BaseModelOutputWithPast]: The output of the model. If return_dict is set to False, a tuple of outputs will be returned, including hidden_states, present_key_values,
+all_hidden_states, and all_attentions. If return_dict is set to True, an instance of BaseModelOutputWithPast will be returned, containing the last_hidden_state, past_key_values, hidden_states, and attentions.
         
         Raises:
             None.

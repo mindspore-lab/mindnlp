@@ -493,7 +493,9 @@ class Qwen2Tokenizer(PreTrainedTokenizer):
         Raises:
             None.
         
-        This method takes in an instance of the Qwen2Tokenizer class and a string of text. It prepares the text for tokenization by normalizing it using the 'NFC' (Normalization Form C) Unicode normalization. The normalization ensures that the text is in a standardized form, reducing any potential ambiguities or variations in the text. The method then returns the modified text along with any additional keyword arguments passed to the method.
+        This method takes in an instance of the Qwen2Tokenizer class and a string of text. It prepares the text for tokenization by normalizing it using the 'NFC' (Normalization Form C) Unicode normalization.
+The normalization ensures that the text is in a standardized form, reducing any potential ambiguities or variations in the text. The method then returns the modified text along with any additional keyword
+arguments passed to the method.
         
         Note that this method modifies the text in-place, meaning that the original text variable will be updated with the normalized version. No values are returned explicitly by this method.
         """

@@ -122,7 +122,9 @@ class GPTNeoXPreTrainedModel(PreTrainedModel):
         Raises:
             None.
         
-        This method sets the gradient checkpointing flag to the specified value for the given module. The gradient checkpointing flag determines whether gradient checkpointing is used during the forward pass of the module. Gradient checkpointing can be used to trade compute for memory, as it reduces the memory usage at the expense of additional compute. The flag is only set if the module is an instance of the GPTNeoXModel class.
+        This method sets the gradient checkpointing flag to the specified value for the given module. The gradient checkpointing flag determines whether gradient checkpointing is used during the forward pass
+of the module. Gradient checkpointing can be used to trade compute for memory, as it reduces the memory usage at the expense of additional compute. The flag is only set if the module is an instance of the
+GPTNeoXModel class.
         """
         if isinstance(module, GPTNeoXModel):
             module.gradient_checkpointing = value
@@ -553,7 +555,8 @@ class GPTNeoXLinearScalingRotaryEmbedding(GPTNeoXRotaryEmbedding):
             None.
         
         Description:
-        This method sets the cosine and sine caches for the GPTNeoXLinearScalingRotaryEmbedding instance based on the given sequence length and data type. The cosine and sine caches are used to store precalculated values for efficient computation during the forward pass of the GPTNeoX model.
+        This method sets the cosine and sine caches for the GPTNeoXLinearScalingRotaryEmbedding instance based on the given sequence length and data type. The cosine and sine caches are used to store
+precalculated values for efficient computation during the forward pass of the GPTNeoX model.
         
         The parameters for this method are as follows:
         
@@ -565,7 +568,8 @@ class GPTNeoXLinearScalingRotaryEmbedding(GPTNeoXRotaryEmbedding):
         
         The method first sets the maximum sequence length cached by assigning the value of seq_len to self.max_seq_len_cached.
         
-        Next, it creates a tensor 't' using the 'ops.arange' function with the length of self.max_seq_len_cached and the specified data type. The 'type_as' method is used to ensure that 't' has the same data type as self.inv_freq. 
+        Next, it creates a tensor 't' using the 'ops.arange' function with the length of self.max_seq_len_cached and the specified data type. The 'type_as' method is used to ensure that 't' has the same data
+type as self.inv_freq. 
         
         Then, 't' is divided by self.scaling_factor to scale the values.
         
@@ -573,7 +577,8 @@ class GPTNeoXLinearScalingRotaryEmbedding(GPTNeoXRotaryEmbedding):
         
         The 'ops.cat' function is called to concatenate 'freqs' with itself along the last dimension, creating a tensor 'emb'.
         
-        Finally, 'emb.cos()' and 'emb.sin()' are called to compute the cosine and sine values of 'emb', respectively. The resulting cosine values are stored in self.cos_cached and sine values are stored in self.sin_cached.
+        Finally, 'emb.cos()' and 'emb.sin()' are called to compute the cosine and sine values of 'emb', respectively. The resulting cosine values are stored in self.cos_cached and sine values are stored in
+self.sin_cached.
         
         This method does not return any value but modifies the state of the GPTNeoXLinearScalingRotaryEmbedding instance.
         """
@@ -1396,7 +1401,9 @@ class GPTNeoXForTokenClassification(GPTNeoXPreTrainedModel):
             None
         
         Description:
-        This method initializes the GPTNeoXForTokenClassification model with the provided configuration. It sets the number of labels for token classification based on the configuration. The GPTNeoXModel is instantiated with the provided configuration. Additionally, a dropout layer with a specified dropout rate is added, and a fully connected layer (classifier) is initialized with the hidden size and the number of labels from the configuration. Finally, the post_init() method is called for any post-initialization tasks.
+        This method initializes the GPTNeoXForTokenClassification model with the provided configuration. It sets the number of labels for token classification based on the configuration. The GPTNeoXModel is
+instantiated with the provided configuration. Additionally, a dropout layer with a specified dropout rate is added, and a fully connected layer (classifier) is initialized with the hidden size and the number
+of labels from the configuration. Finally, the post_init() method is called for any post-initialization tasks.
         """
         super().__init__(config)
         self.num_labels = config.num_labels

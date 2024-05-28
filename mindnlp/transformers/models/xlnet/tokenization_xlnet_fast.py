@@ -215,7 +215,8 @@ class XLNetTokenizerFast(PreTrainedTokenizerFast):
         Raises:
             None.
         
-        The 'can_save_slow_tokenizer' method checks if the slow tokenizer can be saved by verifying the existence of the vocabulary file. It returns a boolean value indicating whether the slow tokenizer can be saved or not. If the 'vocab_file' attribute is not set or if the file does not exist, the method returns False. Otherwise, it returns True.
+        The 'can_save_slow_tokenizer' method checks if the slow tokenizer can be saved by verifying the existence of the vocabulary file. It returns a boolean value indicating whether the slow tokenizer can be
+saved or not. If the 'vocab_file' attribute is not set or if the file does not exist, the method returns False. Otherwise, it returns True.
         
         Note that this method does not raise any exceptions.
         """

@@ -197,9 +197,11 @@ class QR:
         Raises:
             None.
         
-        The Gram-Schmidt process is used to orthogonalize a set of vectors in a given matrix. This process takes the input matrix and produces a new matrix where each column vector is orthogonal to all the previous column vectors. The resulting vectors are normalized to have a length of 1.
+        The Gram-Schmidt process is used to orthogonalize a set of vectors in a given matrix. This process takes the input matrix and produces a new matrix where each column vector is orthogonal to all the
+previous column vectors. The resulting vectors are normalized to have a length of 1.
         
-        The method starts by initializing a normalized matrix and a projections matrix. It then iterates over each column in the input matrix. For each column, it calculates the corresponding vector and performs the following steps:
+        The method starts by initializing a normalized matrix and a projections matrix. It then iterates over each column in the input matrix. For each column, it calculates the corresponding vector and
+performs the following steps:
         - If it's not the first column, it calculates the projection of the vector onto the previous normalized vectors.
         - It then calculates the squared length of the vector and its actual length.
         - The vector is then divided by its length to normalize it.

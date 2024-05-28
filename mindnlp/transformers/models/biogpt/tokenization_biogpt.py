@@ -208,9 +208,11 @@ class BioGptTokenizer(PreTrainedTokenizer):
             ValueError: If the language code is invalid or unsupported.
             Exception: If any other error occurs during tokenization.
         
-        This method utilizes the MosesTokenizer from the nltk.translate.moses package to tokenize the input text. It first checks if the MosesTokenizer for the specified language is already cached. If not, it creates a new MosesTokenizer instance for the language and adds it to the cache. The tokenization is then performed using the cached MosesTokenizer object.
+        This method utilizes the MosesTokenizer from the nltk.translate.moses package to tokenize the input text. It first checks if the MosesTokenizer for the specified language is already cached. If not, it
+creates a new MosesTokenizer instance for the language and adds it to the cache. The tokenization is then performed using the cached MosesTokenizer object.
         
-        The 'aggressive_dash_splits', 'return_str', and 'escape' parameters are passed to the tokenize method of the MosesTokenizer. 'aggressive_dash_splits' determines whether to perform aggressive dash splitting, 'return_str' specifies whether to return a string or a list of tokens, and 'escape' determines whether to escape XML/HTML characters in the text before tokenization.
+        The 'aggressive_dash_splits', 'return_str', and 'escape' parameters are passed to the tokenize method of the MosesTokenizer. 'aggressive_dash_splits' determines whether to perform aggressive dash
+splitting, 'return_str' specifies whether to return a string or a list of tokens, and 'escape' determines whether to escape XML/HTML characters in the text before tokenization.
         
         Note: This method assumes that the BioGptTokenizer instance has been properly initialized with the necessary resources for tokenization.
         """
@@ -262,11 +264,13 @@ class BioGptTokenizer(PreTrainedTokenizer):
             None.
         
         Description:
-        This method takes a token and applies Byte Pair Encoding (BPE) to it. BPE is a subword tokenization technique that breaks down a token into a sequence of subword units. The BPE algorithm iteratively merges the most frequent pairs of subword units to create a vocabulary of subword units.
+        This method takes a token and applies Byte Pair Encoding (BPE) to it. BPE is a subword tokenization technique that breaks down a token into a sequence of subword units. The BPE algorithm iteratively
+merges the most frequent pairs of subword units to create a vocabulary of subword units.
         
         The token parameter is the input token to be encoded using BPE. The token is expected to be a string.
         
-        The method returns the BPE-encoded representation of the token as a string. The encoded representation is obtained by iteratively merging the most frequent pairs of subword units until no more merges can be made. The resulting subword units are then joined together to form the encoded token.
+        The method returns the BPE-encoded representation of the token as a string. The encoded representation is obtained by iteratively merging the most frequent pairs of subword units until no more merges
+can be made. The resulting subword units are then joined together to form the encoded token.
         
         Note that the method may use a cache to store previously encoded tokens for efficiency.
         

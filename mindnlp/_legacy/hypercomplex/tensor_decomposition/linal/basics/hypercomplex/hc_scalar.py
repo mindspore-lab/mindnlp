@@ -9,7 +9,9 @@ TAlgebraFactory = TypeVar('TAlgebraFactory', bound=AlgebraFactory)
 class Scalar(AbstractScalar):
 
     r"""
-    The Scalar class represents a scalar value in an algebraic system. It provides methods for arithmetic operations such as addition, subtraction, multiplication, and division, as well as functionality for obtaining the square root, converting to an array, checking if the value is zero, and accessing the real component. The class also includes static methods for creating scalar instances representing zero and one.
+    The Scalar class represents a scalar value in an algebraic system. It provides methods for arithmetic operations such as addition, subtraction, multiplication, and division, as well as functionality for
+obtaining the square root, converting to an array, checking if the value is zero, and accessing the real component. The class also includes static methods for creating scalar instances representing zero and
+one.
     
     Attributes:
         _alg_factory (Type[TAlgebraFactory]): The algebra factory used to create the scalar instance.

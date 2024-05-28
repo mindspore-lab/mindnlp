@@ -442,10 +442,13 @@ class OPTPreTrainedModel(PreTrainedModel):
     """
     This class represents a pre-trained model for optimization tasks in natural language processing (NLP). It is a subclass of the PreTrainedModel class.
     
-    The OPTPreTrainedModel class provides methods and attributes for initializing the weights of different types of cells, such as Dense and Embedding. The weights are initialized using a specified standard deviation, and biases are set to zero if present.
+    The OPTPreTrainedModel class provides methods and attributes for initializing the weights of different types of cells, such as Dense and Embedding. The weights are initialized using a specified standard
+deviation, and biases are set to zero if present.
     
     Methods:
-        - _init_weights(self, cell): Initializes the weights of the given cell based on the specified standard deviation. For Dense cells, the weight data is set using the initializer function with a Normal distribution. If the cell has biases, they are initialized to zero. For Embedding cells, the weight data is filled with random values from a Normal distribution, and if a padding index is provided, the corresponding weight is set to zero.
+        - _init_weights(self, cell): Initializes the weights of the given cell based on the specified standard deviation. For Dense cells, the weight data is set using the initializer function with a Normal
+distribution. If the cell has biases, they are initialized to zero. For Embedding cells, the weight data is filled with random values from a Normal distribution, and if a padding index is provided, the
+corresponding weight is set to zero.
     
     Attributes:
         - config: An instance of a configuration class that stores various settings and hyperparameters for the pre-trained model.
@@ -472,7 +475,9 @@ class OPTPreTrainedModel(PreTrainedModel):
         Raises:
             None.
         
-        This method initializes the weights of the specified neural network cell. If the cell is an instance of nn.Dense, the weight is initialized using the Normal initializer with standard deviation 'self.config.init_std'. If the cell has a bias, the bias is initialized with zeros. If the cell is an instance of nn.Embedding, the weight is initialized with random values drawn from a normal distribution with mean 0 and standard deviation 'self.config.init_std'. If the cell has a padding index, the weight at the padding index is set to 0.
+        This method initializes the weights of the specified neural network cell. If the cell is an instance of nn.Dense, the weight is initialized using the Normal initializer with standard deviation
+'self.config.init_std'. If the cell has a bias, the bias is initialized with zeros. If the cell is an instance of nn.Embedding, the weight is initialized with random values drawn from a normal distribution
+with mean 0 and standard deviation 'self.config.init_std'. If the cell has a padding index, the weight at the padding index is set to 0.
         """
         std = self.config.init_std
         if isinstance(cell, nn.Dense):
@@ -761,7 +766,8 @@ class OPTDecoder(OPTPreTrainedModel):
 class OPTModel(OPTPreTrainedModel):
 
     """
-    The `OPTModel` class represents an OPT (Orphaned Pretrained Transformer) model, which is a specific type of pre-trained transformer model used for various natural language processing tasks. This class inherits from the `OPTPreTrainedModel` class.
+    The `OPTModel` class represents an OPT (Orphaned Pretrained Transformer) model, which is a specific type of pre-trained transformer model used for various natural language processing tasks. This class
+inherits from the `OPTPreTrainedModel` class.
     
     Attributes:
         - `decoder`: An instance of `OPTDecoder` class representing the decoder component of the OPT model.
@@ -771,7 +777,10 @@ class OPTModel(OPTPreTrainedModel):
         - `get_input_embeddings(self)`: Retrieves the input embeddings used by the decoder.
         - `set_input_embeddings(self, value)`: Sets the input embeddings of the decoder.
         - `get_decoder(self)`: Retrieves the decoder instance.
-        - `construct(self, input_ids: mindspore.Tensor = None, attention_mask: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, past_key_values: Optional[List[mindspore.Tensor]] = None, inputs_embeds: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Tuple, BaseModelOutputWithPast]`: Constructs the OPT model by calling the decoder with the provided input parameters. It returns the decoder outputs, which can include the last hidden state, past key values, hidden states, and attentions.
+        - `construct(self, input_ids: mindspore.Tensor = None, attention_mask: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, past_key_values: Optional[List[mindspore.Tensor]]
+= None, inputs_embeds: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] =
+None) -> Union[Tuple, BaseModelOutputWithPast]`: Constructs the OPT model by calling the decoder with the provided input parameters. It returns the decoder outputs, which can include the last hidden state,
+past key values, hidden states, and attentions.
     
     Note:
         - The constructor `__init__` should be called to initialize a new instance of `OPTModel` with a `config` object.
@@ -933,7 +942,8 @@ class OPTForCausalLM(OPTPreTrainedModel):
     - set_output_embeddings(self, new_embeddings): Set new output embeddings for the model's lm_head layer.
     - set_decoder(self, decoder): Set a new decoder for the model.
     - get_decoder(self): Get the current decoder used in the model.
-    - construct(self, input_ids, attention_mask, head_mask, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Construct the model for text generation with various input parameters and return the output.
+    - construct(self, input_ids, attention_mask, head_mask, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Construct the model for text generation
+with various input parameters and return the output.
     - prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, **kwargs): Prepare inputs for text generation by handling past key values and attention masks.
     - _reorder_cache(past_key_values, beam_idx): Reorder the cache elements based on the beam index for efficient decoding.
     
@@ -1026,7 +1036,8 @@ class OPTForCausalLM(OPTPreTrainedModel):
         Raises:
             N/A
         
-        This method retrieves and returns the output embeddings of the OPTForCausalLM model. The output embeddings are the final layer of the model, which are responsible for generating the predictions or outputs based on the input sequences. The output embeddings capture the learned representation of the input sequence and can be used for various downstream tasks.
+        This method retrieves and returns the output embeddings of the OPTForCausalLM model. The output embeddings are the final layer of the model, which are responsible for generating the predictions or
+outputs based on the input sequences. The output embeddings capture the learned representation of the input sequence and can be used for various downstream tasks.
         
         Note: The output embeddings are accessed through the 'lm_head' attribute of the OPTForCausalLM instance.
         
@@ -1309,7 +1320,8 @@ class OPTForSequenceClassification(OPTPreTrainedModel):
     """
     OPTForSequenceClassification
     
-    This class is a sequence classification model based on the OPT (OpenAI's Pretrained Transformer) architecture. It inherits from OPTPreTrainedModel and provides functionalities for sequence classification tasks.
+    This class is a sequence classification model based on the OPT (OpenAI's Pretrained Transformer) architecture. It inherits from OPTPreTrainedModel and provides functionalities for sequence classification
+tasks.
     
     Attributes:
         - num_labels (int): The number of labels for the classification task.
@@ -1318,7 +1330,8 @@ class OPTForSequenceClassification(OPTPreTrainedModel):
         
     Methods:
         - __init__(self, config: OPTConfig): Initializes the OPTForSequenceClassification instance.
-        - construct(self, input_ids, attention_mask, head_mask, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict) -> Union[Tuple, SequenceClassifierOutputWithPast]: Constructs the sequence classification model and returns the output.
+        - construct(self, input_ids, attention_mask, head_mask, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict) -> Union[Tuple,
+SequenceClassifierOutputWithPast]: Constructs the sequence classification model and returns the output.
         - get_input_embeddings(self): Returns the embedding layer for the input tokens.
         - set_input_embeddings(self, value): Sets the embedding layer for the input tokens.
     
@@ -1470,7 +1483,10 @@ class OPTForSequenceClassification(OPTPreTrainedModel):
 class OPTForQuestionAnswering(OPTPreTrainedModel):
 
     '''
-    This class represents a question answering model using the OPT (OpenAI's Public Tenders) architecture. It inherits from OPTPreTrainedModel and provides methods for model construction, obtaining input embeddings, and setting input embeddings. The model is designed to take in various inputs, such as input IDs, attention masks, head masks, past key values, and inputs embeddings, and return outputs for question answering tasks. The construct method allows for flexible input options and returns a tuple or a QuestionAnsweringModelOutput based on the input and return options. The class also provides methods for accessing and updating the input embeddings for the model.
+    This class represents a question answering model using the OPT (OpenAI's Public Tenders) architecture. It inherits from OPTPreTrainedModel and provides methods for model construction, obtaining input
+embeddings, and setting input embeddings. The model is designed to take in various inputs, such as input IDs, attention masks, head masks, past key values, and inputs embeddings, and return outputs for
+question answering tasks. The construct method allows for flexible input options and returns a tuple or a QuestionAnsweringModelOutput based on the input and return options. The class also provides methods for
+accessing and updating the input embeddings for the model.
     '''
     def __init__(self, config: OPTConfig):
 

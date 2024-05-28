@@ -240,7 +240,8 @@ class MSMambaCache:
     """
     The `MSMambaCache` class represents a cache for storing intermediate states and parameters used in the MSMamba algorithm. It is designed to be used in conjunction with the `MSMambaModel` class.
     
-    This class provides functionality for initializing the cache and storing intermediate states and parameters. The cache is used to store the convolutional states (`conv_states`) and the state-space model states (`ssm_states`) for each hidden layer in the MSMamba algorithm. The cache is initialized with zero tensors of appropriate shapes.
+    This class provides functionality for initializing the cache and storing intermediate states and parameters. The cache is used to store the convolutional states (`conv_states`) and the state-space model
+states (`ssm_states`) for each hidden layer in the MSMamba algorithm. The cache is initialized with zero tensors of appropriate shapes.
     
     Attributes:
     - `seqlen_offset`: A parameter representing the sequence length offset.
@@ -474,7 +475,8 @@ class MSMambaPreTrainedModel(PreTrainedModel):
             self: The instance of the MSMambaPreTrainedModel class.
             
         Returns:
-            The method returns a value of type None. If the outputs from the super().__call__(*args, **kwargs) are of type dict, the method returns an instance of ADDict(outputs). Otherwise, it returns the outputs as is.
+            The method returns a value of type None. If the outputs from the super().__call__(*args, **kwargs) are of type dict, the method returns an instance of ADDict(outputs). Otherwise, it returns the
+outputs as is.
         
         Raises:
             No specific exceptions are documented to be raised by this method.
@@ -650,7 +652,8 @@ class MSMambaModel(MSMambaPreTrainedModel):
 class MSMambaForCausalLM(MSMambaPreTrainedModel):
 
     """
-    MSMambaForCausalLM is a class that represents a Mamba model for Causal Language Modeling. It inherits from MSMambaPreTrainedModel and includes methods for setting and getting input and output embeddings, as well as preparing inputs for generation and constructing the model for training and evaluation.
+    MSMambaForCausalLM is a class that represents a Mamba model for Causal Language Modeling. It inherits from MSMambaPreTrainedModel and includes methods for setting and getting input and output embeddings,
+as well as preparing inputs for generation and constructing the model for training and evaluation.
     
     The class includes the following methods:
     - __init__: Initializes the model with a given configuration.
@@ -718,7 +721,8 @@ class MSMambaForCausalLM(MSMambaPreTrainedModel):
         Raises:
             None.
         
-        This method allows for setting the output embeddings of the MSMambaForCausalLM model. The output embeddings are used in the generation of predictions by the language model head. By setting new embeddings, you can modify the characteristics of the generated predictions.
+        This method allows for setting the output embeddings of the MSMambaForCausalLM model. The output embeddings are used in the generation of predictions by the language model head. By setting new
+embeddings, you can modify the characteristics of the generated predictions.
         """
         self.lm_head = new_embeddings
 

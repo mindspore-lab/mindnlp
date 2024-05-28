@@ -400,7 +400,8 @@ class WhisperTokenizer(PreTrainedTokenizer):
             None.
         
         Note:
-            This method builds the vocabulary by converting the token IDs to tokens using the `convert_ids_to_tokens` method of the WhisperTokenizer instance. The tokens and their corresponding IDs are stored in a dictionary. Additionally, any added tokens are also included in the vocabulary.
+            This method builds the vocabulary by converting the token IDs to tokens using the `convert_ids_to_tokens` method of the WhisperTokenizer instance. The tokens and their corresponding IDs are stored
+in a dictionary. Additionally, any added tokens are also included in the vocabulary.
         
         Example:
             >>> tokenizer = WhisperTokenizer()
@@ -408,7 +409,8 @@ class WhisperTokenizer(PreTrainedTokenizer):
             >>> print(vocab)
             {'[PAD]': 0, '[UNK]': 1, '[CLS]': 2, '[SEP]': 3, '[MASK]': 4, 'hello': 5, 'world': 6}
         
-        In the example above, the `get_vocab` method is called on a WhisperTokenizer instance, which returns a dictionary representing the vocabulary of the tokenizer. The vocabulary includes the default special tokens as well as any added tokens.
+        In the example above, the `get_vocab` method is called on a WhisperTokenizer instance, which returns a dictionary representing the vocabulary of the tokenizer. The vocabulary includes the default
+special tokens as well as any added tokens.
         """
         vocab = {self.convert_ids_to_tokens(i): i for i in range(self.vocab_size)}
         vocab.update(self.added_tokens_encoder)
@@ -430,7 +432,8 @@ class WhisperTokenizer(PreTrainedTokenizer):
         Raises:
             None.
         
-        The BPE algorithm is applied to the 'token' by iteratively replacing the most frequent pairs of characters with a new character, until no more pairs can be found. The resulting encoded token is then returned.
+        The BPE algorithm is applied to the 'token' by iteratively replacing the most frequent pairs of characters with a new character, until no more pairs can be found. The resulting encoded token is then
+returned.
         
         The method first checks if the 'token' is already present in the cache. If so, it returns the cached value. Otherwise, it proceeds with the BPE encoding process.
         
@@ -438,9 +441,11 @@ class WhisperTokenizer(PreTrainedTokenizer):
         
         If no pairs are found, the 'token' is already fully encoded and is returned as is.
         
-        Otherwise, the method enters a loop, where it finds the most frequent pair of characters ('bigram') from the 'pairs' list based on the 'bpe_ranks' dictionary. If the 'bigram' is not present in the 'bpe_ranks' dictionary, the loop is terminated.
+        Otherwise, the method enters a loop, where it finds the most frequent pair of characters ('bigram') from the 'pairs' list based on the 'bpe_ranks' dictionary. If the 'bigram' is not present in the
+'bpe_ranks' dictionary, the loop is terminated.
         
-        The method then replaces all occurrences of the 'bigram' in the 'word' with a new character. The 'word' is iterated through, and whenever the current character matches the first character of the 'bigram' and the next character matches the second character of the 'bigram', the new character is appended to the 'new_word' list. Otherwise, the current character is appended as is.
+        The method then replaces all occurrences of the 'bigram' in the 'word' with a new character. The 'word' is iterated through, and whenever the current character matches the first character of the
+'bigram' and the next character matches the second character of the 'bigram', the new character is appended to the 'new_word' list. Otherwise, the current character is appended as is.
         
         The 'new_word' is converted back to a tuple and assigned to 'word'. If the length of 'word' becomes 1, indicating that the token is fully encoded, the loop is terminated.
         
@@ -1026,7 +1031,8 @@ class WhisperTokenizer(PreTrainedTokenizer):
         Raises:
             None.
         
-        This method retrieves the decoder prompt IDs to be used during tokenization. The decoder prompt IDs are based on the provided task, language, and timestamp preferences. By default, the method excludes timestamps from the decoder prompt. The decoder prompt IDs are returned as a list of tuples, where each tuple consists of the rank and token of each forced decoder token.
+        This method retrieves the decoder prompt IDs to be used during tokenization. The decoder prompt IDs are based on the provided task, language, and timestamp preferences. By default, the method excludes
+timestamps from the decoder prompt. The decoder prompt IDs are returned as a list of tuples, where each tuple consists of the rank and token of each forced decoder token.
         
         Note: The decoder prompt IDs exclude the initial token which is reserved for special purposes.
         """

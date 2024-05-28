@@ -254,7 +254,8 @@ class LongT5DenseActDense(nn.Cell):
         
         Args:
             self: Represents the instance of the class.
-            config (LongT5Config): An object of type LongT5Config containing configuration parameters for the dense layers. It specifies the dimensions of the input and output tensors, as well as the dropout rate and activation function to be used.
+            config (LongT5Config): An object of type LongT5Config containing configuration parameters for the dense layers. It specifies the dimensions of the input and output tensors, as well as the dropout
+rate and activation function to be used.
         
         Returns:
             None. This method does not return any value.
@@ -1433,7 +1434,8 @@ class LongT5LayerCrossAttention(nn.Cell):
             tuple: A tuple containing the following elements:
                 - layer_output (torch.Tensor): The output hidden states of the layer. Shape: (batch_size, sequence_length, hidden_size).
                 - attention_probs (torch.Tensor, optional): The attention probabilities. Shape: (batch_size, num_heads, sequence_length, sequence_length). This is only returned when output_attentions=True.
-                - cross_attentions (torch.Tensor, optional): The cross-attention probabilities. Shape: (batch_size, num_heads, sequence_length, sequence_length). This is only returned when output_attentions=True.
+                - cross_attentions (torch.Tensor, optional): The cross-attention probabilities. Shape: (batch_size, num_heads, sequence_length, sequence_length). This is only returned when
+output_attentions=True.
         
         Raises:
             None.
@@ -1788,7 +1790,8 @@ class LongT5Stack(LongT5PreTrainedModel):
         4. Sets the is_decoder attribute to the value of config.is_decoder.
         5. Sets the local_radius attribute to the value of config.local_radius.
         6. Sets the block_len attribute to the local_radius + 1.
-        7. Creates a block attribute as an nn.CellList containing LongT5Block objects. The number of blocks is determined by config.num_layers. Each block is initialized with a relative_attention_bias if it is the first block in the list.
+        7. Creates a block attribute as an nn.CellList containing LongT5Block objects. The number of blocks is determined by config.num_layers. Each block is initialized with a relative_attention_bias if it is
+the first block in the list.
         8. Sets the final_layer_norm attribute to a LongT5LayerNorm object with the specified d_model and layer_norm_epsilon.
         9. Sets the dropout attribute to an nn.Dropout object with the specified dropout_rate.
         10. Sets the gradient_checkpointing attribute to False.
@@ -1894,7 +1897,8 @@ class LongT5Stack(LongT5PreTrainedModel):
         
         Raises:
         - ValueError: If both input_ids and inputs_embeds are specified simultaneously, or if neither input_ids nor inputs_embeds are specified.
-        - AssertionError: If the model is used as a decoder and use_cache is set to True, or if the model is used as a decoder and encoder_attention_mask is not specified while encoder_hidden_states is provided.
+        - AssertionError: If the model is used as a decoder and use_cache is set to True, or if the model is used as a decoder and encoder_attention_mask is not specified while encoder_hidden_states is
+provided.
         '''
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
@@ -2280,7 +2284,8 @@ class LongT5ForConditionalGeneration(LongT5PreTrainedModel):
         """
         Args:
             self: The instance of the LongT5ForConditionalGeneration class.
-            config (LongT5Config): An instance of LongT5Config class containing the configuration parameters for the LongT5 model. It specifies the model dimensions, vocabulary size, and other relevant settings.
+            config (LongT5Config): An instance of LongT5Config class containing the configuration parameters for the LongT5 model. It specifies the model dimensions, vocabulary size, and other relevant
+settings.
         
         Returns:
             None: This method does not return any value.
@@ -2539,7 +2544,8 @@ class LongT5ForConditionalGeneration(LongT5PreTrainedModel):
         
         Args:
             self: The instance of the class.
-            past_key_values (tuple): A tuple containing the past key and value states for each layer in the decoder. The past key and value states are used to speed up decoding. If None, a warning is logged suggesting to set 'use_cache=True' to enhance decoding speed.
+            past_key_values (tuple): A tuple containing the past key and value states for each layer in the decoder. The past key and value states are used to speed up decoding. If None, a warning is logged
+suggesting to set 'use_cache=True' to enhance decoding speed.
             beam_idx (tensor): The indices of the selected beams to be used for reordering the past key and value states.
         
         Returns:

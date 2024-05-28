@@ -72,9 +72,11 @@ class SPTokenizer:
         Raises:
             None.
         
-        This method takes in a string 's' and tokenizes it using the SentencePiece model associated with the SPTokenizer instance. The tokenization process splits the input string into smaller units, such as words or subwords, based on the language or model-specific rules.
+        This method takes in a string 's' and tokenizes it using the SentencePiece model associated with the SPTokenizer instance. The tokenization process splits the input string into smaller units, such as
+words or subwords, based on the language or model-specific rules.
         
-        Note that the tokenization is performed in-place, meaning the original string object is modified. Therefore, the method does not return any value, but updates the internal state of the SPTokenizer instance with the tokenized result.
+        Note that the tokenization is performed in-place, meaning the original string object is modified. Therefore, the method does not return any value, but updates the internal state of the SPTokenizer
+instance with the tokenized result.
         
         Example:
             sp_tokenizer = SPTokenizer()
@@ -214,7 +216,8 @@ class ChatGLM2Tokenizer(PreTrainedTokenizer):
             None: This method returns None if the token does not match any special token. Otherwise, it returns the command associated with the token from the tokenizer's special tokens.
         
         Raises:
-            AssertionError: If the provided token is not present in the special tokens of the ChatGLM2Tokenizer instance, an AssertionError is raised with a message indicating that the token is not a special token for the instance.
+            AssertionError: If the provided token is not present in the special tokens of the ChatGLM2Tokenizer instance, an AssertionError is raised with a message indicating that the token is not a special
+token for the instance.
         """
         if token in self.special_tokens:
             return self.special_tokens[token]

@@ -1098,7 +1098,9 @@ class BatchNorm2d(_UniformOperator):
         """
 
         
-        def __init__(self, num_features: int, eps: float = 1e-05, momentum: float = 0.9, affine: bool = True, gamma_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones', beta_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros', moving_mean_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros', moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones', use_batch_statistics: bool = True, has_diagonal_form: bool = False, data_format='NCHW') -> None:
+        def __init__(self, num_features: int, eps: float = 1e-05, momentum: float = 0.9, affine: bool = True, gamma_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones', beta_init: Union[Tensor, str,
+Initializer, numbers.Number] = 'zeros', moving_mean_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros', moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones',
+use_batch_statistics: bool = True, has_diagonal_form: bool = False, data_format='NCHW') -> None:
             """
             Initializes a BatchNorm2d object.
         
@@ -1122,9 +1124,11 @@ class BatchNorm2d(_UniformOperator):
                 None
             """
             if has_diagonal_form:
-                super(BatchNorm2d, self).__init__(HBatchNorm2d, J1J2BatchNormImpl, num_features=num_features, eps=eps, momentum=momentum, affine=affine, gamma_init=gamma_init, beta_init=beta_init, moving_mean_init=moving_mean_init, moving_var_init=moving_var_init, use_batch_statistics=use_batch_statistics, data_format=data_format)
+                super(BatchNorm2d, self).__init__(HBatchNorm2d, J1J2BatchNormImpl, num_features=num_features, eps=eps, momentum=momentum, affine=affine, gamma_init=gamma_init, beta_init=beta_init,
+moving_mean_init=moving_mean_init, moving_var_init=moving_var_init, use_batch_statistics=use_batch_statistics, data_format=data_format)
             else:
-                super(BatchNorm2d, self).__init__(HBatchNorm2d, BatchNormImpl, num_features=num_features, eps=eps, momentum=momentum, affine=affine, gamma_init=gamma_init, beta_init=beta_init, moving_mean_init=moving_mean_init, moving_var_init=moving_var_init, use_batch_statistics=use_batch_statistics, data_format=data_format)
+                super(BatchNorm2d, self).__init__(HBatchNorm2d, BatchNormImpl, num_features=num_features, eps=eps, momentum=momentum, affine=affine, gamma_init=gamma_init, beta_init=beta_init,
+moving_mean_init=moving_mean_init, moving_var_init=moving_var_init, use_batch_statistics=use_batch_statistics, data_format=data_format)
         
         if has_diagonal_form:
             super(BatchNorm2d, self).__init__(HBatchNorm2d,

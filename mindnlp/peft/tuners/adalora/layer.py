@@ -170,12 +170,14 @@ class AdaLoraLayer(BaseTunerLayer):
         Raises:
             None.
         
-        This method resets the LoRa parameters of the specified adapter by setting their data to random values generated from a normal distribution with a mean of 0.0 and a standard deviation of 0.02. The LoRa parameters include:
+        This method resets the LoRa parameters of the specified adapter by setting their data to random values generated from a normal distribution with a mean of 0.0 and a standard deviation of 0.02. The LoRa
+parameters include:
         - lora_E: The E parameter of LoRa.
         - lora_A: The A parameter of LoRa.
         - lora_B: The B parameter of LoRa.
         
-        Note that the adapter_name parameter must be a valid key in the lora_A dictionary of the AdaLoraLayer instance. If the adapter_name is not found in the dictionary, the method will not perform any reset operation.
+        Note that the adapter_name parameter must be a valid key in the lora_A dictionary of the AdaLoraLayer instance. If the adapter_name is not found in the dictionary, the method will not perform any reset
+operation.
         """
         if adapter_name in self.lora_A.keys():
             self.lora_E[adapter_name].set_data(initializer(
@@ -481,7 +483,8 @@ class RankAllocator:
             step (int): The current step for which the budget and mask indicator need to be calculated. It should be a non-negative integer.
         
         Returns:
-            tuple: A tuple containing the calculated budget and mask indicator. The budget is an integer representing the budget value, and the mask indicator is a boolean indicating whether the mask should be applied.
+            tuple: A tuple containing the calculated budget and mask indicator. The budget is an integer representing the budget value, and the mask indicator is a boolean indicating whether the mask should be
+applied.
         
         Raises:
             No specific exceptions are raised by this method.

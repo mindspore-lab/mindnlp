@@ -317,7 +317,8 @@ class LongformerTokenizerFast(PreTrainedTokenizerFast):
             A BatchEncoding object containing the batch encoded representations of the input sequences.
             
         Raises:
-            AssertionError: Raised if the 'add_prefix_space' attribute is False and the 'is_split_into_words' argument is True. In this case, the method requires the LongformerTokenizerFast instance to be instantiated with 'add_prefix_space=True'.
+            AssertionError: Raised if the 'add_prefix_space' attribute is False and the 'is_split_into_words' argument is True. In this case, the method requires the LongformerTokenizerFast instance to be
+instantiated with 'add_prefix_space=True'.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
         assert self.add_prefix_space or not is_split_into_words, (
@@ -344,7 +345,8 @@ class LongformerTokenizerFast(PreTrainedTokenizerFast):
             BatchEncoding: A BatchEncoding object containing the encoded input sequences. The encoding includes tokenization and optional additional processing based on input arguments.
         
         Raises:
-            AssertionError: Raised when the 'add_prefix_space' property is False and 'is_split_into_words' is True. In this case, it is required to instantiate the LongformerTokenizerFast class with add_prefix_space=True to use pretokenized inputs.
+            AssertionError: Raised when the 'add_prefix_space' property is False and 'is_split_into_words' is True. In this case, it is required to instantiate the LongformerTokenizerFast class with
+add_prefix_space=True to use pretokenized inputs.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
 
@@ -371,7 +373,8 @@ class LongformerTokenizerFast(PreTrainedTokenizerFast):
         Raises:
             None.
         
-        This method saves the vocabulary of the tokenizer to the specified directory. The vocabulary files are saved with the given filename prefix, if provided. The saved vocabulary files can later be loaded using the 'load_vocabulary' method.
+        This method saves the vocabulary of the tokenizer to the specified directory. The vocabulary files are saved with the given filename prefix, if provided. The saved vocabulary files can later be loaded
+using the 'load_vocabulary' method.
         """
         files = self._tokenizer.model.save(save_directory, name=filename_prefix)
         return tuple(files)

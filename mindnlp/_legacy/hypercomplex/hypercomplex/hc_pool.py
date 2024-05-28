@@ -814,7 +814,9 @@ class _AdaptivePoolNd(nn.Cell):
         Raises:
             ValueError: If the input tensor is not at least 2-dimensional.
         
-        This method takes an input tensor and performs adaptive pooling on it. Adaptive pooling is a technique that dynamically adapts the pooling operation according to the input tensor's shape and dimensions. The method first extracts the x and y dimensions from the input tensor using the 'get_x_and_y' function. Then, the '_construct' method is called with the extracted x and y dimensions. The output from '_construct' is then converted to a 2-channel tensor using the 'to_2channel' function. Finally, the resulting tensor is returned as the output of the 'construct' method.
+        This method takes an input tensor and performs adaptive pooling on it. Adaptive pooling is a technique that dynamically adapts the pooling operation according to the input tensor's shape and
+dimensions. The method first extracts the x and y dimensions from the input tensor using the 'get_x_and_y' function. Then, the '_construct' method is called with the extracted x and y dimensions. The output
+from '_construct' is then converted to a 2-channel tensor using the 'to_2channel' function. Finally, the resulting tensor is returned as the output of the 'construct' method.
         """
         x, y = get_x_and_y(u)
         out_x, out_y = self._construct(x, y)

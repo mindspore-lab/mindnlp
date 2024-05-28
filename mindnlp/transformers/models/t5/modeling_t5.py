@@ -1283,7 +1283,8 @@ class T5Model(T5PreTrainedModel):
         
         Args:
             self: A reference to the instance of the class.
-            config (T5Config): An instance of T5Config class containing configuration parameters for the T5 model. It includes parameters such as vocab_size, d_model, is_decoder, use_cache, is_encoder_decoder, and num_decoder_layers. 
+            config (T5Config): An instance of T5Config class containing configuration parameters for the T5 model. It includes parameters such as vocab_size, d_model, is_decoder, use_cache, is_encoder_decoder,
+and num_decoder_layers. 
         
         Returns:
             None: This method does not return any value.
@@ -1516,7 +1517,8 @@ class T5ForConditionalGeneration(T5PreTrainedModel):
         
         Args:
             self: The object instance.
-            config (T5Config): The configuration object for the T5 model. It contains various parameters to customize the model's behavior, such as the model dimension, vocabulary size, and number of decoder layers.
+            config (T5Config): The configuration object for the T5 model. It contains various parameters to customize the model's behavior, such as the model dimension, vocabulary size, and number of decoder
+layers.
         
         Returns:
             None
@@ -1896,7 +1898,8 @@ class T5ForConditionalGeneration(T5PreTrainedModel):
         
         Args:
             self (object): The instance of the class.
-            past_key_values (tuple): The past key value states generated during the model's previous decoding steps. If set to None, a warning is logged to consider setting `use_cache=True` to speed up decoding.
+            past_key_values (tuple): The past key value states generated during the model's previous decoding steps. If set to None, a warning is logged to consider setting `use_cache=True` to speed up
+decoding.
             beam_idx (tensor): The indices of the beam to reorder the cache.
         
         Returns:
@@ -2131,13 +2134,16 @@ class T5ForSequenceClassification(T5PreTrainedModel):
             None
         
         Description:
-        This method initializes an instance of the T5ForSequenceClassification class by setting up the necessary components for sequence classification tasks. It takes in the self parameter, which refers to the instance of the class itself, and the config parameter, which is an instance of the T5Config class.
+        This method initializes an instance of the T5ForSequenceClassification class by setting up the necessary components for sequence classification tasks. It takes in the self parameter, which refers to
+the instance of the class itself, and the config parameter, which is an instance of the T5Config class.
         
-        The config parameter is of type T5Config and represents the configuration object that contains various hyperparameters and settings for the T5 model. It is used to initialize the transformer and classification_head attributes of the T5ForSequenceClassification instance.
+        The config parameter is of type T5Config and represents the configuration object that contains various hyperparameters and settings for the T5 model. It is used to initialize the transformer and
+classification_head attributes of the T5ForSequenceClassification instance.
         
         The transformer attribute is of type T5Model and is responsible for the main transformer model used for sequence classification. It is initialized with the provided config object.
         
-        The classification_head attribute is of type T5ClassificationHead and represents the classification head that is added on top of the transformer model. It is also initialized with the provided config object.
+        The classification_head attribute is of type T5ClassificationHead and represents the classification head that is added on top of the transformer model. It is also initialized with the provided config
+object.
         
         After initializing the transformer and classification_head attributes, the post_init method is called to perform any additional setup or customization required.
         
@@ -2260,11 +2266,16 @@ class T5ForSequenceClassification(T5PreTrainedModel):
 class T5ForQuestionAnswering(T5PreTrainedModel):
 
     """
-    This class represents a T5 model for question answering tasks. It is designed specifically for question answering applications where the model takes input text and outputs answers to questions posed about the input. The model architecture includes an encoder and a decoder, both based on the T5Stack structure. The T5ForQuestionAnswering class provides methods for setting input embeddings, tying weights, accessing the encoder and decoder components, and constructing the model for inference or training.
+    This class represents a T5 model for question answering tasks. It is designed specifically for question answering applications where the model takes input text and outputs answers to questions posed about
+the input. The model architecture includes an encoder and a decoder, both based on the T5Stack structure. The T5ForQuestionAnswering class provides methods for setting input embeddings, tying weights,
+accessing the encoder and decoder components, and constructing the model for inference or training.
     
-    The constructor initializes the T5ForQuestionAnswering model with a T5Config object, setting up the model dimensions, shared embeddings, encoder, decoder, and other necessary components. The model can be fine-tuned for specific question answering tasks by adjusting configurations and utilizing the provided methods.
+    The constructor initializes the T5ForQuestionAnswering model with a T5Config object, setting up the model dimensions, shared embeddings, encoder, decoder, and other necessary components. The model can be
+fine-tuned for specific question answering tasks by adjusting configurations and utilizing the provided methods.
     
-    The construct method executes the forward pass of the model, taking input tensors and generating outputs for question answering. It handles input embeddings, attention masks, decoder inputs, and various optional arguments to control the model's behavior during inference or training. The method returns the model's output, including predicted start and end positions for answering questions, loss values, and other relevant information.
+    The construct method executes the forward pass of the model, taking input tensors and generating outputs for question answering. It handles input embeddings, attention masks, decoder inputs, and various
+optional arguments to control the model's behavior during inference or training. The method returns the model's output, including predicted start and end positions for answering questions, loss values, and
+other relevant information.
     
     Overall, the T5ForQuestionAnswering class encapsulates a T5 model tailored for question answering tasks, providing a convenient interface for utilizing and fine-tuning the model for specific applications.
     """

@@ -49,7 +49,8 @@ class XLNetRelativeAttention(nn.Cell):
 
     """This class represents the relative attention mechanism used in XLNet model for sequence processing tasks.
     
-    The XLNetRelativeAttention class implements the core operations for performing relative positional attention in the XLNet model. It includes methods for initializing the attention mechanism, pruning attention heads, shifting for relative attention score calculation, and processing post-attention outputs.
+    The XLNetRelativeAttention class implements the core operations for performing relative positional attention in the XLNet model. It includes methods for initializing the attention mechanism, pruning
+attention heads, shifting for relative attention score calculation, and processing post-attention outputs.
     
     Attributes:
         - n_head (int): Number of attention heads.
@@ -74,7 +75,8 @@ class XLNetRelativeAttention(nn.Cell):
         - rel_shift_bnij(x, klen=-1): Static method to perform relative shift for attention score calculation with different axis.
         - rel_attn_core(self, q_head, k_head_h, v_head_h, k_head_r, seg_mat=None, attn_mask=None, head_mask=None, output_attentions=False): Method for core relative positional attention operations.
         - post_attention(self, h, attn_vec, residual=True): Method for post-attention processing.
-        - construct(self, h, g, attn_mask_h, attn_mask_g, r, seg_mat, mems=None, target_mapping=None, head_mask=None, output_attentions=False): Method for constructing the attention mechanism with optional outputs.
+        - construct(self, h, g, attn_mask_h, attn_mask_g, r, seg_mat, mems=None, target_mapping=None, head_mask=None, output_attentions=False): Method for constructing the attention mechanism with optional
+outputs.
     
     Note: This class inherits from nn.Cell, which is a base class for neural network cells in the MindSpore framework.
     """
@@ -426,9 +428,11 @@ class XLNetFeedForward(nn.Cell):
     """
     XLNetFeedForward is a class that represents a feed-forward neural network layer for the XLNet model. It inherits from nn.Cell and contains methods for initializing and constructing the feed-forward layer.
     
-    The __init__ method initializes the XLNetFeedForward object with the given configuration. It sets up the layer normalization, dense layers, dropout, and activation function based on the configuration parameters.
+    The __init__ method initializes the XLNetFeedForward object with the given configuration. It sets up the layer normalization, dense layers, dropout, and activation function based on the configuration
+parameters.
     
-    The construct method takes an input tensor and passes it through the feed-forward layer. It applies the layer_1, activation function, dropout, layer_2, and layer normalization operations to the input tensor, and returns the output tensor after the feed-forward processing.
+    The construct method takes an input tensor and passes it through the feed-forward layer. It applies the layer_1, activation function, dropout, layer_2, and layer normalization operations to the input
+tensor, and returns the output tensor after the feed-forward processing.
     """
     def __init__(self, config):
 
@@ -463,7 +467,8 @@ class XLNetFeedForward(nn.Cell):
         - self.dropout: A Dropout layer that randomly sets elements to zero during training to prevent overfitting. It takes the following parameter:
             - p: The probability of an element to be zeroed. Default value is 'config.dropout'.
         
-        - self.activation_function: The activation function used in the feed-forward layer. It can be either a string representing the name of the activation function or a custom activation function. If it is a string, it is looked up in the ACT2FN mapping, which maps activation function names to their corresponding functions. Otherwise, it is directly assigned to the provided activation function.
+        - self.activation_function: The activation function used in the feed-forward layer. It can be either a string representing the name of the activation function or a custom activation function. If it is
+a string, it is looked up in the ACT2FN mapping, which maps activation function names to their corresponding functions. Otherwise, it is directly assigned to the provided activation function.
         
         Note:
         - The 'config' parameter should be an instance of the configuration class, which contains necessary model parameters.
@@ -954,9 +959,13 @@ class XLNetForQuestionAnsweringOutput(ModelOutput):
 class XLNetModel(XLNetPreTrainedModel):
 
     """
-    The XLNetModel class represents a model for XLNet, which is a type of pre-trained model for natural language processing. It inherits from the XLNetPreTrainedModel class and provides methods for initializing the model, creating attention masks, caching memory, and constructing the model for inference. The class also includes methods for managing input embeddings, positional embeddings, and relative positional encoding.
+    The XLNetModel class represents a model for XLNet, which is a type of pre-trained model for natural language processing. It inherits from the XLNetPreTrainedModel class and provides methods for
+initializing the model, creating attention masks, caching memory, and constructing the model for inference. The class also includes methods for managing input embeddings, positional embeddings, and relative
+positional encoding.
     
-    The class includes methods for creating attention masks, caching memory, and constructing the model for inference. It also provides functionality for managing input embeddings, positional embeddings, and relative positional encoding. The class methods are designed to handle various input parameters and configurations for fine-tuning and using the XLNet model for specific NLP tasks. The class is designed to be flexible and efficient for handling different use cases and scenarios.
+    The class includes methods for creating attention masks, caching memory, and constructing the model for inference. It also provides functionality for managing input embeddings, positional embeddings, and
+relative positional encoding. The class methods are designed to handle various input parameters and configurations for fine-tuning and using the XLNet model for specific NLP tasks. The class is designed to be
+flexible and efficient for handling different use cases and scenarios.
     """
     def __init__(self, config):
 
@@ -1468,7 +1477,8 @@ class XLNetLMHeadModel(XLNetPreTrainedModel):
     """
     A Python class representing the XLNetLMHeadModel, which inherits from XLNetPreTrainedModel. 
     
-    XLNetLMHeadModel includes methods for initializing the model, preparing inputs for generation, and constructing the model for language modeling tasks. It also provides a method for reordering the cache during beam search or beam sample generation.
+    XLNetLMHeadModel includes methods for initializing the model, preparing inputs for generation, and constructing the model for language modeling tasks. It also provides a method for reordering the cache
+during beam search or beam sample generation.
     
     The XLNetLMHeadModel class is designed to work with XLNetModel and nn.Dense to process input data, generate predictions, and calculate loss during training.
     
@@ -1746,7 +1756,9 @@ class XLNetForSequenceClassification(XLNetPreTrainedModel):
     To instantiate this class, you need to provide a `config` object as an argument. The `config` object contains various configuration parameters for the XLNet model and the classification layer.
     
     Methods:
-        - `construct`: This method constructs the XLNetForSequenceClassification model by performing the necessary computations. It takes several input tensors, such as `input_ids`, `attention_mask`, `mems`, `perm_mask`, `target_mapping`, `token_type_ids`, `input_mask`, `head_mask`, `inputs_embeds`, `labels`, and various optional arguments. It returns a tuple of outputs, including `loss`, `logits`, `mems`, `hidden_states`, and `attentions`.
+        - `construct`: This method constructs the XLNetForSequenceClassification model by performing the necessary computations. It takes several input tensors, such as `input_ids`, `attention_mask`, `mems`,
+`perm_mask`, `target_mapping`, `token_type_ids`, `input_mask`, `head_mask`, `inputs_embeds`, `labels`, and various optional arguments. It returns a tuple of outputs, including `loss`, `logits`, `mems`,
+`hidden_states`, and `attentions`.
     
     Attributes:
         - `num_labels`: The number of labels in the classification task.
@@ -1756,8 +1768,10 @@ class XLNetForSequenceClassification(XLNetPreTrainedModel):
         - `logits_proj`: The linear layer used to project the sequence summary to the number of labels.
         
     Note:
-        - The `construct` method automatically determines the `problem_type` based on the `config` parameters and the provided `labels`. The `problem_type` can be either 'regression', 'single_label_classification', or 'multi_label_classification'.
-        - The loss function used for regression is Mean-Square Loss (MSELoss), while for classification, it is Cross-Entropy Loss (CrossEntropyLoss) for single-label classification and Binary Cross-Entropy Loss (BCEWithLogitsLoss) for multi-label classification.
+        - The `construct` method automatically determines the `problem_type` based on the `config` parameters and the provided `labels`. The `problem_type` can be either 'regression',
+'single_label_classification', or 'multi_label_classification'.
+        - The loss function used for regression is Mean-Square Loss (MSELoss), while for classification, it is Cross-Entropy Loss (CrossEntropyLoss) for single-label classification and Binary Cross-Entropy
+Loss (BCEWithLogitsLoss) for multi-label classification.
         - The `construct` method allows for various optional arguments, such as `output_attentions`, `output_hidden_states`, and `return_dict`, which control the output format of the XLNet model.
         - The `construct` method returns either a tuple of outputs if `return_dict` is False, or an instance of `XLNetForSequenceClassificationOutput` if `return_dict` is True.
     
@@ -1895,7 +1909,8 @@ class XLNetForTokenClassification(XLNetPreTrainedModel):
     
     Methods:
         __init__(self, config): Initializes the XLNetForTokenClassification instance with the provided configuration.
-        construct(self, input_ids, attention_mask, mems, perm_mask, target_mapping, token_type_ids, input_mask, head_mask, inputs_embeds, labels, use_mems, output_attentions, output_hidden_states, return_dict, **kwargs): 
+        construct(self, input_ids, attention_mask, mems, perm_mask, target_mapping, token_type_ids, input_mask, head_mask, inputs_embeds, labels, use_mems, output_attentions, output_hidden_states, return_dict,
+**kwargs): 
             Constructs the XLNetForTokenClassification model using the input tensors and optional parameters, and computes the token classification loss.
     
         Parameters:
@@ -2020,7 +2035,9 @@ class XLNetForTokenClassification(XLNetPreTrainedModel):
 class XLNetForMultipleChoice(XLNetPreTrainedModel):
 
     """
-    This class represents an XLNet model for multiple choice tasks. It extends the XLNetPreTrainedModel class and provides functionality for constructing the model and handling multiple choice classification tasks. The class includes methods for initializing the model with configuration, constructing the model with input tensors, and computing the loss for multiple choice classification. It utilizes XLNetModel and SequenceSummary modules for processing input data and generating model outputs. The class also incorporates various input and output options to customize the model behavior during training and evaluation.
+    This class represents an XLNet model for multiple choice tasks. It extends the XLNetPreTrainedModel class and provides functionality for constructing the model and handling multiple choice classification
+tasks. The class includes methods for initializing the model with configuration, constructing the model with input tensors, and computing the loss for multiple choice classification. It utilizes XLNetModel and
+SequenceSummary modules for processing input data and generating model outputs. The class also incorporates various input and output options to customize the model behavior during training and evaluation.
     """
     def __init__(self, config):
 
@@ -2131,19 +2148,27 @@ class XLNetForMultipleChoice(XLNetPreTrainedModel):
 class XLNetForQuestionAnsweringSimple(XLNetPreTrainedModel):
 
     """
-    This class represents a simple implementation of the XLNet model for question answering tasks. It is designed specifically for question answering tasks where the start and end positions of the answer in the input sequence need to be predicted.
+    This class represents a simple implementation of the XLNet model for question answering tasks. It is designed specifically for question answering tasks where the start and end positions of the answer in
+the input sequence need to be predicted.
     
     The `XLNetForQuestionAnsweringSimple` class inherits from the `XLNetPreTrainedModel` class, which provides the basic infrastructure and functionality for XLNet models.
     
-    The class has a constructor method `__init__` that initializes the XLNetForQuestionAnsweringSimple instance with the given configuration. The configuration includes the number of labels for the classification task and other model-specific settings. It also initializes the XLNetModel transformer, which is responsible for the main computations of the XLNet model, and the `qa_outputs` module, which is a fully connected layer for predicting start and end positions.
+    The class has a constructor method `__init__` that initializes the XLNetForQuestionAnsweringSimple instance with the given configuration. The configuration includes the number of labels for the
+classification task and other model-specific settings. It also initializes the XLNetModel transformer, which is responsible for the main computations of the XLNet model, and the `qa_outputs` module, which is a
+fully connected layer for predicting start and end positions.
     
-    The `construct` method is the main entry point for using the XLNetForQuestionAnsweringSimple model. It takes various input tensors, such as `input_ids`, `attention_mask`, and `token_type_ids`, which represent the input sequence and its properties. It also takes optional tensors such as `start_positions` and `end_positions`, which are the labels for the positions of the start and end of the answer span in the input sequence.
+    The `construct` method is the main entry point for using the XLNetForQuestionAnsweringSimple model. It takes various input tensors, such as `input_ids`, `attention_mask`, and `token_type_ids`, which
+represent the input sequence and its properties. It also takes optional tensors such as `start_positions` and `end_positions`, which are the labels for the positions of the start and end of the answer span in
+the input sequence.
     
-    The method returns either a tuple or a `XLNetForQuestionAnsweringSimpleOutput` object, depending on the `return_dict` parameter. The output contains the predicted start and end logits, and optionally, the total loss, the transformer's mems, hidden states, and attentions.
+    The method returns either a tuple or a `XLNetForQuestionAnsweringSimpleOutput` object, depending on the `return_dict` parameter. The output contains the predicted start and end logits, and optionally, the
+total loss, the transformer's mems, hidden states, and attentions.
     
-    The `construct` method also handles the computation of the loss if the start and end positions are provided. It clamps the positions to the length of the sequence and applies the CrossEntropyLoss to calculate the start and end losses. The total loss is the average of the start and end losses.
+    The `construct` method also handles the computation of the loss if the start and end positions are provided. It clamps the positions to the length of the sequence and applies the CrossEntropyLoss to
+calculate the start and end losses. The total loss is the average of the start and end losses.
     
-    If the `return_dict` parameter is `False`, the method returns a tuple containing the total loss (if available), the start logits, the end logits, and other optional outputs. If the total loss is not available, the tuple contains only the logits and optional outputs.
+    If the `return_dict` parameter is `False`, the method returns a tuple containing the total loss (if available), the start logits, the end logits, and other optional outputs. If the total loss is not
+available, the tuple contains only the logits and optional outputs.
     
     If the `return_dict` parameter is `True`, the method returns a `XLNetForQuestionAnsweringSimpleOutput` object that encapsulates all the outputs.
     
@@ -2271,7 +2296,9 @@ class XLNetForQuestionAnsweringSimple(XLNetPreTrainedModel):
 class XLNetForQuestionAnswering(XLNetPreTrainedModel):
 
     """
-    The XLNetForQuestionAnswering class represents a XLNet model for question answering. It inherits from XLNetPreTrainedModel and provides methods for constructing the model and processing input data for question answering tasks. The class includes methods for computing start and end positions of the labelled span, determining if a question has an answer or no answer, and computing the plausibility of the answer. Additionally, it provides functionality for handling optional masks of tokens that can't be in answers.
+    The XLNetForQuestionAnswering class represents a XLNet model for question answering. It inherits from XLNetPreTrainedModel and provides methods for constructing the model and processing input data for
+question answering tasks. The class includes methods for computing start and end positions of the labelled span, determining if a question has an answer or no answer, and computing the plausibility of the
+answer. Additionally, it provides functionality for handling optional masks of tokens that can't be in answers.
     
     Example usage:
     

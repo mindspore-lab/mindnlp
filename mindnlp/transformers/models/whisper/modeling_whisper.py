@@ -592,7 +592,8 @@ class WhisperEncoderLayer(nn.Cell):
     - `final_layer_norm` (nn.LayerNorm): Layer normalization module applied to the output of the feed-forward network.
     
     Methods:
-    - `construct(hidden_states, attention_mask, layer_head_mask, output_attentions=False)`: Constructs the encoder layer by applying the self-attention, feed-forward network, and residual connections to the input hidden states.
+    - `construct(hidden_states, attention_mask, layer_head_mask, output_attentions=False)`: Constructs the encoder layer by applying the self-attention, feed-forward network, and residual connections to the
+input hidden states.
     
     Args:
     - `hidden_states` (mindspore.Tensor): The input to the layer of shape `(batch, seq_len, embed_dim)`.
@@ -707,13 +708,16 @@ class WhisperEncoderLayer(nn.Cell):
 class WhisperDecoderLayer(nn.Cell):
 
     """
-    The WhisperDecoderLayer class represents a single layer of the Whisper decoder model, which includes self-attention and cross-attention mechanisms. This class is designed to be used within the WhisperTransformer model for sequence-to-sequence tasks.
+    The WhisperDecoderLayer class represents a single layer of the Whisper decoder model, which includes self-attention and cross-attention mechanisms. This class is designed to be used within the
+WhisperTransformer model for sequence-to-sequence tasks.
     
-    This class inherits from nn.Cell and contains methods for initializing the layer and performing computations on input tensors. The layer consists of self-attention, encoder attention, feedforward neural network, and layer normalization modules.
+    This class inherits from nn.Cell and contains methods for initializing the layer and performing computations on input tensors. The layer consists of self-attention, encoder attention, feedforward neural
+network, and layer normalization modules.
     
     The __init__ method sets up the layer with parameters such as embedding dimensions, attention types, dropout rates, activation functions, and normalization layers.
     
-    The construct method processes input hidden states through the self-attention mechanism, followed by encoder attention if provided. It also handles dropout, residual connections, and feedforward network transformations. The method allows for caching of key-value states and optionally returns attention weights and cached states.
+    The construct method processes input hidden states through the self-attention mechanism, followed by encoder attention if provided. It also handles dropout, residual connections, and feedforward network
+transformations. The method allows for caching of key-value states and optionally returns attention weights and cached states.
     
     Please refer to the method docstrings for detailed information on the input and output parameters, as well as their respective shapes and purposes.
     """
@@ -859,9 +863,12 @@ class WhisperPreTrainedModel(PreTrainedModel):
     """
     This class represents a pre-trained model for the Whisper framework. It inherits from the PreTrainedModel class, providing additional functionality and customization specific to Whisper models.
     
-    The class contains methods for initializing weights and for computing the output length of convolutional layers. The _init_weights method initializes the weights of various types of neural network cells, including dense, convolutional, and embedding layers, as well as custom WhisperEncoder cells. The _get_feat_extract_output_lengths method computes the output length of convolutional layers based on the input lengths provided.
+    The class contains methods for initializing weights and for computing the output length of convolutional layers. The _init_weights method initializes the weights of various types of neural network cells,
+including dense, convolutional, and embedding layers, as well as custom WhisperEncoder cells. The _get_feat_extract_output_lengths method computes the output length of convolutional layers based on the input
+lengths provided.
     
-    Overall, the WhisperPreTrainedModel class serves as a foundational framework for creating and customizing pre-trained models within the Whisper environment, offering flexibility in weight initialization and feature extraction output length computations.
+    Overall, the WhisperPreTrainedModel class serves as a foundational framework for creating and customizing pre-trained models within the Whisper environment, offering flexibility in weight initialization
+and feature extraction output length computations.
     """
     config_class = WhisperConfig
     base_model_prefix = "model"
@@ -1400,7 +1407,8 @@ class WhisperModel(WhisperPreTrainedModel):
     WhisperModel
     Represents a Whisper model for sequence-to-sequence tasks.
     
-    This class inherits from WhisperPreTrainedModel and provides methods for initializing the model, accessing input embeddings, accessing the encoder and decoder, freezing the encoder, masking input features, and constructing the model with various input parameters.
+    This class inherits from WhisperPreTrainedModel and provides methods for initializing the model, accessing input embeddings, accessing the encoder and decoder, freezing the encoder, masking input features,
+and constructing the model with various input parameters.
     
     Example:
         >>> from transformers import AutoFeatureExtractor, WhisperModel
@@ -1647,9 +1655,11 @@ class WhisperModel(WhisperPreTrainedModel):
 class WhisperForConditionalGeneration(WhisperPreTrainedModel):
 
     """
-    The `WhisperForConditionalGeneration` class is a model class for conditional text generation, inheriting from `WhisperPreTrainedModel`. It provides methods for initializing the model, generating sequences of token ids, preparing inputs for generation, and extracting token-level timestamps for predicted tokens.
+    The `WhisperForConditionalGeneration` class is a model class for conditional text generation, inheriting from `WhisperPreTrainedModel`. It provides methods for initializing the model, generating sequences
+of token ids, preparing inputs for generation, and extracting token-level timestamps for predicted tokens.
     
-    The class contains methods such as `construct`, `generate`, `prepare_inputs_for_generation`, and `_reorder_cache` for handling conditional generation tasks. It also includes methods for freezing the encoder, getting the encoder and decoder, and managing the input and output embeddings.
+    The class contains methods such as `construct`, `generate`, `prepare_inputs_for_generation`, and `_reorder_cache` for handling conditional generation tasks. It also includes methods for freezing the
+encoder, getting the encoder and decoder, and managing the input and output embeddings.
     
     The class's main methods include:
     - `construct`: Prepares inputs and generates sequences of token ids for conditional text generation, allowing for the configuration of various generation parameters.
@@ -1658,7 +1668,8 @@ class WhisperForConditionalGeneration(WhisperPreTrainedModel):
     - `_reorder_cache`: Reorders the past key values based on beam indices during generation.
     - `_extract_token_timestamps`: Calculates token-level timestamps using encoder-decoder cross-attentions and dynamic time-warping (DTW) to map each output token to a position in the input audio.
     
-    This class provides a comprehensive set of tools for conditional text generation tasks, including multilingual and multitask generation support, as well as token-level timestamps extraction for predicted tokens.
+    This class provides a comprehensive set of tools for conditional text generation tasks, including multilingual and multitask generation support, as well as token-level timestamps extraction for predicted
+tokens.
     
     For more details on how to use the class and its methods, including code examples, refer to the official documentation and the [following guide](./generation_strategies).
     """
@@ -2232,9 +2243,11 @@ class WhisperForConditionalGeneration(WhisperPreTrainedModel):
         Raises:
             None.
         
-        This static method takes the past key-value states and a beam index tensor, and reorders the past key-value states according to the beam index. It returns the reordered past key-value states as a tuple, where each element in the tuple represents the reordered past state of a layer.
+        This static method takes the past key-value states and a beam index tensor, and reorders the past key-value states according to the beam index. It returns the reordered past key-value states as a
+tuple, where each element in the tuple represents the reordered past state of a layer.
         
-        Note: The returned reordered_past tuple has the same length as the number of layers in the model, and each element in the tuple has the same shape as the corresponding element in the past_key_values tuple.
+        Note: The returned reordered_past tuple has the same length as the number of layers in the model, and each element in the tuple has the same shape as the corresponding element in the past_key_values
+tuple.
         """
         reordered_past = ()
         for layer_past in past_key_values:
@@ -2378,7 +2391,8 @@ class WhisperForCausalLM(WhisperPreTrainedModel):
     - set_input_embeddings(self, value): Sets new input embeddings for the model.
     - set_decoder(self, decoder): Sets the decoder for the model.
     - get_decoder(self): Returns the decoder of the model.
-    - construct(self, input_ids, attention_mask, encoder_outputs, head_mask, cross_attn_head_mask, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict) -> Union[Tuple, CausalLMOutputWithCrossAttentions]: Constructs the model architecture and processes input data for generation.
+    - construct(self, input_ids, attention_mask, encoder_outputs, head_mask, cross_attn_head_mask, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict) ->
+Union[Tuple, CausalLMOutputWithCrossAttentions]: Constructs the model architecture and processes input data for generation.
     - prepare_inputs_for_generation(self, input_ids, past_key_values, use_cache, encoder_outputs, attention_mask, **kwargs): Prepares inputs for text generation based on the provided parameters.
     - _reorder_cache(past_key_values, beam_idx): Reorders cache items based on a given beam index for generation.
     
@@ -2480,7 +2494,8 @@ class WhisperForCausalLM(WhisperPreTrainedModel):
             None.
         
         Description:
-        This method returns the input embeddings of the WhisperForCausalLM model. The input embeddings are responsible for mapping the input tokens to their corresponding embedding vectors. The underlying model's 'get_input_embeddings' function is called to retrieve these embeddings.
+        This method returns the input embeddings of the WhisperForCausalLM model. The input embeddings are responsible for mapping the input tokens to their corresponding embedding vectors. The underlying
+model's 'get_input_embeddings' function is called to retrieve these embeddings.
         
         Note:
         - The returned input embeddings can be used for various downstream tasks such as fine-tuning or feature extraction.
@@ -2769,7 +2784,8 @@ class WhisperForAudioClassification(WhisperPreTrainedModel):
     - `freeze_encoder(self)`: Disables gradient computation for the Whisper encoder, preventing its parameters from being updated during training.
     - `get_input_embeddings(self) -> nn.Cell`: Retrieves the input embeddings from the encoder.
     - `set_input_embeddings(self, value: nn.Cell)`: Sets the input embeddings for the encoder.
-    - `construct(self, input_features, head_mask, encoder_outputs, labels, output_attentions, output_hidden_states, return_dict) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]`: Constructs the forward pass of the model for audio classification.
+    - `construct(self, input_features, head_mask, encoder_outputs, labels, output_attentions, output_hidden_states, return_dict) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]`: Constructs the
+forward pass of the model for audio classification.
     
     Attributes:
     - `encoder`: Instance of the `WhisperEncoder` class used for encoding audio input.

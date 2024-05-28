@@ -9,7 +9,8 @@ from ...configuration_utils import PretrainedConfig
 class CogVLMConfig(PretrainedConfig):
 
     """
-    The `CogVLMConfig` class represents the configuration for a CogVLM (Cognitive Vision Language Model) model. It inherits from the `PretrainedConfig` class and provides a set of parameters to customize the behavior of the CogVLM model.
+    The `CogVLMConfig` class represents the configuration for a CogVLM (Cognitive Vision Language Model) model. It inherits from the `PretrainedConfig` class and provides a set of parameters to customize the
+behavior of the CogVLM model.
     
     Parameters:
         - `vocab_size` (int, optional): The size of the vocabulary. Defaults to 32000.

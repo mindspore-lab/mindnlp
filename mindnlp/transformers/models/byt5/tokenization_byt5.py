@@ -297,7 +297,8 @@ class ByT5Tokenizer(PreTrainedTokenizer):
         Raises:
             None.
         
-        This method saves the vocabulary of the ByT5Tokenizer instance to a file in the specified save_directory. The filename of the vocabulary file is generated based on the provided filename_prefix, if any. If no filename_prefix is provided, the vocabulary file will be named using the default naming convention. The method returns a tuple containing the absolute path of the saved vocabulary file.
+        This method saves the vocabulary of the ByT5Tokenizer instance to a file in the specified save_directory. The filename of the vocabulary file is generated based on the provided filename_prefix, if any.
+If no filename_prefix is provided, the vocabulary file will be named using the default naming convention. The method returns a tuple containing the absolute path of the saved vocabulary file.
         """
         return ()
 

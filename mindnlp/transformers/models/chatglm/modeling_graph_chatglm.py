@@ -488,7 +488,8 @@ class GEGLU(nn.Cell):
         Raises:
             ValueError: If the input tensor `x` has a dimension less than 1.
         
-        This method takes an input tensor `x` and performs the GEGLU operation on it. The GEGLU operation splits the input tensor into two parts, `x1` and `x2`, along the last axis, and multiplies `x1` with the activation function applied to `x2`. The resulting tensor is stored internally in the GEGLU object.
+        This method takes an input tensor `x` and performs the GEGLU operation on it. The GEGLU operation splits the input tensor into two parts, `x1` and `x2`, along the last axis, and multiplies `x1` with
+the activation function applied to `x2`. The resulting tensor is stored internally in the GEGLU object.
         
         Note that the activation function used for the GEGLU operation is defined during the instantiation of the GEGLU object.
         
@@ -1074,7 +1075,8 @@ class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
         Raises:
             None.
         
-        This method retrieves the output embeddings of the MSChatGLMForConditionalGeneration model. The output embeddings are the final representations of the input tokens after being processed by the model's language model head. The embeddings are returned as a tensor.
+        This method retrieves the output embeddings of the MSChatGLMForConditionalGeneration model. The output embeddings are the final representations of the input tokens after being processed by the model's
+language model head. The embeddings are returned as a tensor.
         """
         return self.lm_head
 

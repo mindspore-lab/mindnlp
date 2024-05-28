@@ -174,7 +174,8 @@ class RotaryEmbedding(nn.Cell):
     """
     This class represents a rotary embedding layer that can be used in neural network models. It inherits from the nn.Cell class.
     
-    The RotaryEmbedding layer is designed to provide rotational positional encoding for input sequences. It utilizes sinusoidal functions to generate embeddings that capture the relative positions of elements in a sequence.
+    The RotaryEmbedding layer is designed to provide rotational positional encoding for input sequences. It utilizes sinusoidal functions to generate embeddings that capture the relative positions of elements
+in a sequence.
     
     Initialization:
         - dim (int): The dimensionality of the input sequence.
@@ -479,11 +480,14 @@ class SelfAttention(nn.Cell):
     """
     Represents a self-attention mechanism within a neural network cell for processing sequential data. This class inherits from the nn.Cell class.
     
-    The self-attention mechanism is responsible for computing attention scores between elements in the input sequence and using them to produce weighted context representations. This allows the model to focus on different parts of the input sequence depending on their relevance to the current task.
+    The self-attention mechanism is responsible for computing attention scores between elements in the input sequence and using them to produce weighted context representations. This allows the model to focus
+on different parts of the input sequence depending on their relevance to the current task.
     
-    The SelfAttention class includes methods for splitting tensors, applying attention masks, and constructing the self-attention mechanism. It also encapsulates the initialization of the self-attention layer, including the configuration of attention heads and hidden layer sizes.
+    The SelfAttention class includes methods for splitting tensors, applying attention masks, and constructing the self-attention mechanism. It also encapsulates the initialization of the self-attention layer,
+including the configuration of attention heads and hidden layer sizes.
     
-    The class provides functionality for handling positional encodings, including 2D positional encoding, and includes a method for applying rotary embeddings to the query and key layers based on the positional information.
+    The class provides functionality for handling positional encodings, including 2D positional encoding, and includes a method for applying rotary embeddings to the query and key layers based on the
+positional information.
     
     When instantiated, the SelfAttention class can be used to process input tensors with the self-attention mechanism, optionally using caching and outputting attention probabilities.
     
@@ -820,7 +824,8 @@ class GLMBlock(nn.Cell):
     
     This class inherits from the nn.Cell class and contains the necessary methods and attributes to perform self-attention and MLP operations within a GLM model.
     
-    The GLMBlock class has an initialization method (__init__) that sets up the necessary layers and parameters for self-attention and MLP processing. It also has a construct method that processes the input hidden states through self-attention and MLP layers.
+    The GLMBlock class has an initialization method (__init__) that sets up the necessary layers and parameters for self-attention and MLP processing. It also has a construct method that processes the input
+hidden states through self-attention and MLP layers.
     
     The GLMBlock class is designed to be used as part of a larger GLM model to process input sequences and generate output predictions.
     
@@ -974,7 +979,8 @@ class ChatGLMPreTrainedModel(PreTrainedModel):
         
         Args:
             self: A reference to the instance of the class.
-            input_ids: A tensor representing the input sequence of token IDs. It has a shape of (batch_size, seq_length) where batch_size is the number of input sequences and seq_length is the length of each sequence.
+            input_ids: A tensor representing the input sequence of token IDs. It has a shape of (batch_size, seq_length) where batch_size is the number of input sequences and seq_length is the length of each
+sequence.
         
         Returns:
             None: This method returns None.
@@ -1142,7 +1148,8 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
         Raises:
             None
         
-        This method retrieves the word embeddings used for the input data in the ChatGLMModel. The word embeddings are a numerical representation of words that capture semantic meaning. The embeddings are trained on a large corpus of text data to capture relationships between words.
+        This method retrieves the word embeddings used for the input data in the ChatGLMModel. The word embeddings are a numerical representation of words that capture semantic meaning. The embeddings are
+trained on a large corpus of text data to capture relationships between words.
         
         Note that this method does not modify the input embeddings. It simply returns the existing word embeddings that have been set for the model.
         
@@ -1349,7 +1356,8 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
     """
     This class represents a ChatGLM model for conditional generation, inheriting from ChatGLMPreTrainedModel. 
     
-    The class includes methods for initializing the model, updating model keyword arguments for generation, preparing inputs for generation, constructing the model, reordering cache for beam search or beam sample, processing model responses, and facilitating chat interactions. It also provides methods for streaming chat and generation.
+    The class includes methods for initializing the model, updating model keyword arguments for generation, preparing inputs for generation, constructing the model, reordering cache for beam search or beam
+sample, processing model responses, and facilitating chat interactions. It also provides methods for streaming chat and generation.
     
     The model allows for quantization with a specified number of bits.
     
@@ -1713,7 +1721,8 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
              do_sample=True, top_p=0.7, temperature=0.95, logits_processor=None, **kwargs):
 
         """
-        This method 'chat' is defined in the class 'ChatGLMForConditionalGeneration' and is used for generating a response to a given query using a conditional generation model. It takes the following parameters:
+        This method 'chat' is defined in the class 'ChatGLMForConditionalGeneration' and is used for generating a response to a given query using a conditional generation model. It takes the following
+parameters:
         
         Args:
         - self: The instance of the class.
@@ -1732,7 +1741,8 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         - None: This method does not have a specific return value, but it generates a response to the input query and updates the history of queries and responses.
         
         Raises:
-        - None: This method does not explicitly raise any exceptions. However, the behavior of the method may be influenced by exceptions raised by the tokenizer or the conditional generation model used within the method.
+        - None: This method does not explicitly raise any exceptions. However, the behavior of the method may be influenced by exceptions raised by the tokenizer or the conditional generation model used within
+the method.
         """
         if history is None:
             history = []

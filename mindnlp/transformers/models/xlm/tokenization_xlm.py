@@ -571,7 +571,8 @@ class XLMTokenizer(PreTrainedTokenizer):
         mask_token (`str`, *optional*, defaults to `"<special1>"`):
             The token used for masking values. This is the token used when training this model with masked language
             modeling. This is the token which the model will try to predict.
-        additional_special_tokens (`List[str]`, *optional*, defaults to `['<special0>', '<special1>', '<special2>', '<special3>', '<special4>', '<special5>', '<special6>', '<special7>', '<special8>', '<special9>']`):
+        additional_special_tokens (`List[str]`, *optional*, defaults to `['<special0>', '<special1>', '<special2>', '<special3>', '<special4>', '<special5>', '<special6>', '<special7>', '<special8>',
+'<special9>']`):
             List of additional special tokens.
         lang2id (`Dict[str, int]`, *optional*):
             Dictionary mapping languages string identifiers to their IDs.
@@ -627,7 +628,8 @@ class XLMTokenizer(PreTrainedTokenizer):
             pad_token (str): The padding token (default: '<pad>').
             cls_token (str): The classification token (default: '</s>').
             mask_token (str): The masking token (default: '<special1>').
-            additional_special_tokens (list): List of additional special tokens (default: ['<special0>', '<special1>', '<special2>', '<special3>', '<special4>', '<special5>', '<special6>', '<special7>', '<special8>', '<special9>']).
+            additional_special_tokens (list): List of additional special tokens (default: ['<special0>', '<special1>', '<special2>', '<special3>', '<special4>', '<special5>', '<special6>', '<special7>',
+'<special8>', '<special9>']).
             lang2id (dict): A dictionary mapping languages to IDs.
             id2lang (dict): A dictionary mapping IDs to languages.
             do_lowercase_and_remove_accent (bool): A flag indicating whether to lowercase and remove accents (default: True).
@@ -744,15 +746,18 @@ class XLMTokenizer(PreTrainedTokenizer):
             None.
         
         Description:
-            This method tokenizes the input text using the MosesTokenizer from the SentencePiece library. It is specifically designed for the XLMTokenizer class. The tokenization process splits the text into individual tokens based on language-specific rules and returns the tokenized output.
+            This method tokenizes the input text using the MosesTokenizer from the SentencePiece library. It is specifically designed for the XLMTokenizer class. The tokenization process splits the text into
+individual tokens based on language-specific rules and returns the tokenized output.
         
             - The 'self' parameter is used to access the instance variables and methods of the XLMTokenizer class.
             - The 'text' parameter represents the text that needs to be tokenized.
             - The 'lang' parameter specifies the language of the text, which is used to determine the appropriate tokenizer.
         
-            If the MosesTokenizer for the specified language is not already cached, it is instantiated and stored in the cache_moses_tokenizer dictionary of the XLMTokenizer instance. Subsequent invocations of the method with the same language will reuse the cached tokenizer. This caching mechanism optimizes performance by avoiding repeated instantiation of tokenizers.
+            If the MosesTokenizer for the specified language is not already cached, it is instantiated and stored in the cache_moses_tokenizer dictionary of the XLMTokenizer instance. Subsequent invocations of
+the method with the same language will reuse the cached tokenizer. This caching mechanism optimizes performance by avoiding repeated instantiation of tokenizers.
         
-            The method calls the 'tokenize' function of the MosesTokenizer object to perform the actual tokenization. The 'return_str' parameter is set to False, indicating that the method should return a list of tokens rather than a single string. The 'escape' parameter is set to False, indicating that no escaping of special characters should be performed during tokenization.
+            The method calls the 'tokenize' function of the MosesTokenizer object to perform the actual tokenization. The 'return_str' parameter is set to False, indicating that the method should return a list
+of tokens rather than a single string. The 'escape' parameter is set to False, indicating that no escaping of special characters should be performed during tokenization.
         
             Note: The MosesTokenizer relies on pre-trained language-specific models for accurate tokenization. Make sure to have these models available for the desired languages.
         

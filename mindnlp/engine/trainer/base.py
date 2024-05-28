@@ -797,7 +797,8 @@ class Trainer:
         
             If the model is a PEFT model, the method checks if the active adapter is available and loads the adapter model if it exists. Otherwise, a warning message is logged.
         
-            If `save_safetensors` flag is enabled and the best safe model checkpoint is available, the method loads the safe model state dictionary. Otherwise, it loads the model state dictionary using MindSpore's `load_checkpoint` function.
+            If `save_safetensors` flag is enabled and the best safe model checkpoint is available, the method loads the safe model state dictionary. Otherwise, it loads the model state dictionary using
+MindSpore's `load_checkpoint` function.
         
             If the best model checkpoint is not found, but the weights index file exists, the method attempts to load the sharded checkpoint using the `load_sharded_checkpoint` function.
         
@@ -1244,7 +1245,8 @@ class Trainer:
         
         '''
         
-        The method `_load_from_checkpoint` is responsible for loading the model from a checkpoint directory. It takes three parameters: `self`, `resume_from_checkpoint`, and an optional parameter `model`. The method does not return any value (`None`).
+        The method `_load_from_checkpoint` is responsible for loading the model from a checkpoint directory. It takes three parameters: `self`, `resume_from_checkpoint`, and an optional parameter `model`. The
+method does not return any value (`None`).
         
         - `self` (Trainer): The `Trainer` instance on which the method is called.
         - `resume_from_checkpoint` (str): The path to the checkpoint directory from which the model will be loaded.
@@ -1252,11 +1254,16 @@ class Trainer:
         
         The method first checks if a valid checkpoint can be found at the given `resume_from_checkpoint` directory. If no valid checkpoint is found, a `ValueError` is raised.
         
-        If a valid checkpoint is found, the method proceeds to load the model. It first checks if a configuration file (`CONFIG_NAME`) is present in the checkpoint directory. If a configuration file is found, it loads the configuration using the `PretrainedConfig.from_json_file` method.
+        If a valid checkpoint is found, the method proceeds to load the model. It first checks if a configuration file (`CONFIG_NAME`) is present in the checkpoint directory. If a configuration file is found,
+it loads the configuration using the `PretrainedConfig.from_json_file` method.
         
-        Next, the method checks if either the weights file (`weights_file`) or the safe weights file (`safe_weights_file`) is present in the checkpoint directory. If either of these files is found, the method checks if the `save_safetensors` flag is enabled. If the flag is enabled and the safe weights file is present, it loads the model's state dictionary using the `safe_load_file` method. Otherwise, it uses the `mindspore.load_checkpoint` method to load the model's state dictionary. The method then loads the state dictionary into the model using the `model.load_state_dict` method, with the `False` argument indicating that strict loading should be disabled. After loading the state dictionary, any temporary variables are deleted and any warnings are issued using the `_issue_warnings_after_load` method.
+        Next, the method checks if either the weights file (`weights_file`) or the safe weights file (`safe_weights_file`) is present in the checkpoint directory. If either of these files is found, the method
+checks if the `save_safetensors` flag is enabled. If the flag is enabled and the safe weights file is present, it loads the model's state dictionary using the `safe_load_file` method. Otherwise, it uses the
+`mindspore.load_checkpoint` method to load the model's state dictionary. The method then loads the state dictionary into the model using the `model.load_state_dict` method, with the `False` argument indicating
+that strict loading should be disabled. After loading the state dictionary, any temporary variables are deleted and any warnings are issued using the `_issue_warnings_after_load` method.
         
-        If neither the weights file nor the safe weights file is found, the method calls the `load_sharded_checkpoint` method to load the model from the checkpoint directory, with the `prefer_safe` parameter indicating whether to prefer safe tensors.
+        If neither the weights file nor the safe weights file is found, the method calls the `load_sharded_checkpoint` method to load the model from the checkpoint directory, with the `prefer_safe` parameter
+indicating whether to prefer safe tensors.
         
         Note: The method assumes that the necessary imports and variables are already defined.
         """

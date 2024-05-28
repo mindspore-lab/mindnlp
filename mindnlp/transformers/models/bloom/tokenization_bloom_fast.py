@@ -173,7 +173,8 @@ class BloomTokenizerFast(PreTrainedTokenizerFast):
             A `BatchEncoding` object that contains the encoded representations of the inputs.
             
         Raises:
-            Exception: If the `add_prefix_space` parameter is False and `is_split_into_words` is True. In this case, the `BloomTokenizerFast` class needs to be instantiated with `add_prefix_space=True` to work with pretokenized inputs.
+            Exception: If the `add_prefix_space` parameter is False and `is_split_into_words` is True. In this case, the `BloomTokenizerFast` class needs to be instantiated with `add_prefix_space=True` to work
+with pretokenized inputs.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
         if not (self.add_prefix_space or not is_split_into_words):
@@ -199,7 +200,8 @@ class BloomTokenizerFast(PreTrainedTokenizerFast):
             Exception: If the BloomTokenizerFast instance is not instantiated with add_prefix_space=True and the input is pretokenized.
         
         Note:
-            This method is used to encode the input sequence into a batch of encoded sequences. It checks if the BloomTokenizerFast instance is instantiated with add_prefix_space=True and the input is not pretokenized. If not, it raises an exception.
+            This method is used to encode the input sequence into a batch of encoded sequences. It checks if the BloomTokenizerFast instance is instantiated with add_prefix_space=True and the input is not
+pretokenized. If not, it raises an exception.
         
         Example:
             

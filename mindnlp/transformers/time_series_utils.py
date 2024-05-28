@@ -221,7 +221,8 @@ class DistributionOutput:
         """
         Method: _base_distribution
         
-        This method is a helper method for the DistributionOutput class. It creates an instance of the distribution class specified by the class variable 'distribution_class' using the provided 'distr_args' and returns it.
+        This method is a helper method for the DistributionOutput class. It creates an instance of the distribution class specified by the class variable 'distribution_class' using the provided 'distr_args'
+and returns it.
         
         Args:
             - self: A reference to the current instance of the DistributionOutput class.

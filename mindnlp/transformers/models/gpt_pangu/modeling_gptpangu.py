@@ -50,7 +50,8 @@ class GPTPanguAttention(nn.Cell):
         - _attn(query, key, value, attention_mask=None, head_mask=None): Computes the attention mechanism using the query, key, and value tensors, with optional attention and head masks.
         - _split_heads(tensor, num_heads, attn_head_size): Splits the hidden_size dimension of the given tensor into attn_head_size and num_heads.
         - _merge_heads(tensor, num_heads, attn_head_size): Merges attn_head_size dimension and num_attn_heads dimension into hidden_size.
-        - construct(hidden_states, layer_past=None, attention_mask=None, head_mask=None, custom_query=None, use_cache=False, output_attentions=False): Constructs the attention mechanism using the provided hidden_states and optional past layers, masks, custom query, cache usage, and attention output flag.
+        - construct(hidden_states, layer_past=None, attention_mask=None, head_mask=None, custom_query=None, use_cache=False, output_attentions=False): Constructs the attention mechanism using the provided
+hidden_states and optional past layers, masks, custom query, cache usage, and attention output flag.
     """
     def __init__(self, config):
 
@@ -473,7 +474,8 @@ class GPTPanguModel(GPTPanguPreTrainedModel):
 
     """GPTPanguModel
     
-    This class represents a GPT-Pangu model, which is a variant of the GPT (Generative Pre-trained Transformer) model. It is designed for pre-training and fine-tuning on large-scale Chinese text data. The GPTPanguModel class inherits from the GPTPanguPreTrainedModel class.
+    This class represents a GPT-Pangu model, which is a variant of the GPT (Generative Pre-trained Transformer) model. It is designed for pre-training and fine-tuning on large-scale Chinese text data. The
+GPTPanguModel class inherits from the GPTPanguPreTrainedModel class.
     
     Attributes:
         embed_dim (int): The dimensionality of the embedding layer.
@@ -576,11 +578,13 @@ class GPTPanguModel(GPTPanguPreTrainedModel):
             self (GPTPanguModel): The object instance.
             input_ids (torch.Tensor, optional): The input tensor of shape (batch_size, sequence_length). It represents the input token IDs. Defaults to None.
             past_key_values (tuple, optional): The tuple of past key values. Each element in the tuple is a tensor of shape (batch_size, num_heads, sequence_length, hidden_size//num_heads). Defaults to None.
-            attention_mask (torch.Tensor, optional): The attention mask tensor of shape (batch_size, sequence_length). It indicates which tokens should be attended to and which ones should not. Defaults to None.
+            attention_mask (torch.Tensor, optional): The attention mask tensor of shape (batch_size, sequence_length). It indicates which tokens should be attended to and which ones should not. Defaults to
+None.
             token_type_ids (torch.Tensor, optional): The token type IDs tensor of shape (batch_size, sequence_length). It represents the token type embeddings. Defaults to None.
             position_ids (torch.Tensor, optional): The position IDs tensor of shape (batch_size, sequence_length). It represents the position embeddings. Defaults to None.
             head_mask (torch.Tensor, optional): The head mask tensor of shape (num_layers, num_heads). It specifies which heads should be masked for each layer. Defaults to None.
-            inputs_embeds (torch.Tensor, optional): The input embeddings tensor of shape (batch_size, sequence_length, hidden_size). It represents the input embeddings directly instead of using input_ids. Defaults to None.
+            inputs_embeds (torch.Tensor, optional): The input embeddings tensor of shape (batch_size, sequence_length, hidden_size). It represents the input embeddings directly instead of using input_ids.
+Defaults to None.
             use_cache (bool, optional): Whether to use cache for faster decoding. Defaults to None.
             output_attentions (bool, optional): Whether to output attention weights. Defaults to None.
             output_hidden_states (bool, optional): Whether to output hidden states. Defaults to None.
@@ -720,11 +724,15 @@ class GPTPanguForCausalLM(GPTPanguPreTrainedModel):
     """
     The GPTPanguForCausalLM class represents a Pangu model for causal language modeling. It inherits from the GPTPanguPreTrainedModel class.
     
-    This class includes methods for initializing the model, getting and setting output embeddings, preparing inputs for generation, and generating outputs based on input data. Additionally, it provides a method for re-ordering the past key values cache when using beam search or beam sampling.
+    This class includes methods for initializing the model, getting and setting output embeddings, preparing inputs for generation, and generating outputs based on input data. Additionally, it provides a
+method for re-ordering the past key values cache when using beam search or beam sampling.
     
-    The __init__ method initializes the model with a given configuration and sets up the transformer and lm_head layers. The get_output_embeddings and set_output_embeddings methods deal with accessing and modifying the output embeddings for the model. The prepare_inputs_for_generation method prepares input data for generation, considering past key values, attention mask, position ids, and token type ids. The construct method constructs outputs based on input data, including handling labels for language modeling and computing loss.
+    The __init__ method initializes the model with a given configuration and sets up the transformer and lm_head layers. The get_output_embeddings and set_output_embeddings methods deal with accessing and
+modifying the output embeddings for the model. The prepare_inputs_for_generation method prepares input data for generation, considering past key values, attention mask, position ids, and token type ids. The
+construct method constructs outputs based on input data, including handling labels for language modeling and computing loss.
     
-    The _reorder_cache method is a static method used to re-order the past_key_values cache when beam search or beam sample methods are called, ensuring correct alignment with the beam index at each generation step.
+    The _reorder_cache method is a static method used to re-order the past_key_values cache when beam search or beam sample methods are called, ensuring correct alignment with the beam index at each generation
+step.
     """
     def __init__(self, config):
 

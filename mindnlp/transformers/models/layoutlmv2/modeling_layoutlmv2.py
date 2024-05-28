@@ -254,11 +254,13 @@ class LayoutLMv2SelfAttention(nn.Cell):
         Args:
             self (LayoutLMv2SelfAttention): The instance of the LayoutLMv2SelfAttention class.
             hidden_states (Tensor): The input hidden states with shape (batch_size, sequence_length, hidden_size).
-            attention_mask (Tensor, optional): The attention mask with shape (batch_size, sequence_length). It is a binary mask where 1's indicate the positions to attend and 0's indicate the positions to ignore. Defaults to None.
+            attention_mask (Tensor, optional): The attention mask with shape (batch_size, sequence_length). It is a binary mask where 1's indicate the positions to attend and 0's indicate the positions to
+ignore. Defaults to None.
             head_mask (Tensor, optional): The head mask with shape (num_heads,) or (num_layers, num_heads). It masks the attention weights of specific heads. Defaults to None.
             output_attentions (bool, optional): Whether to output the attention probabilities. Defaults to False.
             rel_pos (Tensor, optional): The relative position bias with shape (num_heads, sequence_length, sequence_length). It contains relative position information between each token pair. Defaults to None.
-            rel_2d_pos (Tensor, optional): The relative 2D position bias with shape (num_heads, sequence_length, sequence_length). It contains relative 2D position information between each token pair. Defaults to None.
+            rel_2d_pos (Tensor, optional): The relative 2D position bias with shape (num_heads, sequence_length, sequence_length). It contains relative 2D position information between each token pair. Defaults
+to None.
         
         Returns:
             tuple: A tuple containing the context layer and attention probabilities if output_attentions is True, otherwise only the context layer.

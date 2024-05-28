@@ -380,7 +380,8 @@ class XLNetTokenizer(PreTrainedTokenizer):
             self: The instance of the XLNetTokenizer class.
             token_ids (List[int]): A list of token IDs to be decoded into a string.
             skip_special_tokens (bool): A flag indicating whether to skip special tokens during decoding. Defaults to False.
-            clean_up_tokenization_spaces (bool): A flag indicating whether to clean up tokenization spaces in the decoded text. If None, the value is determined by the clean_up_tokenization_spaces attribute of the XLNetTokenizer instance.
+            clean_up_tokenization_spaces (bool): A flag indicating whether to clean up tokenization spaces in the decoded text. If None, the value is determined by the clean_up_tokenization_spaces attribute of
+the XLNetTokenizer instance.
             spaces_between_special_tokens (bool): A flag indicating whether to include spaces between special tokens in the decoded text. Defaults to True.
             **kwargs: Additional keyword arguments. 'use_source_tokenizer' is a supported argument to control the use of the source tokenizer during decoding.
         

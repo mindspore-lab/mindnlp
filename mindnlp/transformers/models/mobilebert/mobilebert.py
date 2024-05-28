@@ -419,7 +419,9 @@ class MobileBertAttention(nn.Cell):
         Raises:
             None
         
-        This method constructs the attention mechanism for the MobileBert model. It takes the query_tensor, key_tensor, and value_tensor as inputs and performs self-attention calculation. The attention_output is then computed using the attention mechanism and the layer_input. The method returns a tuple containing the attention_output and any additional outputs obtained from the attention mechanism. The attention_mask and head_mask can be optionally provided to control the attention calculation, and output_attentions can be set to True to obtain the attention values.
+        This method constructs the attention mechanism for the MobileBert model. It takes the query_tensor, key_tensor, and value_tensor as inputs and performs self-attention calculation. The attention_output
+is then computed using the attention mechanism and the layer_input. The method returns a tuple containing the attention_output and any additional outputs obtained from the attention mechanism. The
+attention_mask and head_mask can be optionally provided to control the attention calculation, and output_attentions can be set to True to obtain the attention values.
         """
         self_outputs = self.self(
             query_tensor,
@@ -651,7 +653,8 @@ class BottleneckLayer(nn.Cell):
             TypeError: If the input hidden_states is not a tensor.
             ValueError: If the input hidden_states is not of the expected shape.
         
-        This method applies the bottleneck transformation to the input hidden states. It first applies a linear transformation using a dense layer, followed by layer normalization. The resulting tensor is then returned as the output of the bottleneck layer.
+        This method applies the bottleneck transformation to the input hidden states. It first applies a linear transformation using a dense layer, followed by layer normalization. The resulting tensor is then
+returned as the output of the bottleneck layer.
         """
         layer_input = self.dense(hidden_states)
         layer_input = self.LayerNorm(layer_input)
@@ -1186,7 +1189,8 @@ class MobileBertOnlyMLMHead(nn.Cell):
         
         Args:
             self (MobileBertOnlyMLMHead): The instance of the MobileBertOnlyMLMHead class.
-            sequence_output (Tensor): The output tensor from the MobileBERT model, representing the sequence of hidden-states for each input token. The shape of the tensor should be (batch_size, sequence_length, hidden_size).
+            sequence_output (Tensor): The output tensor from the MobileBERT model, representing the sequence of hidden-states for each input token. The shape of the tensor should be (batch_size,
+sequence_length, hidden_size).
         
         Returns:
             Tensor: The prediction scores for the masked tokens. The shape of the tensor is (batch_size, sequence_length, vocab_size).
@@ -1283,7 +1287,8 @@ class MobileBertPreTrainedModel(PreTrainedModel):
         Raises:
             None.
         
-        This method retrieves the input embeddings of the MobileBertPreTrainedModel instance. The input embeddings are used as the initial embeddings for the model's input tokens. The method does not return any value but updates the instance by setting the input embeddings.
+        This method retrieves the input embeddings of the MobileBertPreTrainedModel instance. The input embeddings are used as the initial embeddings for the model's input tokens. The method does not return
+any value but updates the instance by setting the input embeddings.
         
         Note:
             The MobileBertPreTrainedModel class should be initialized before calling this method.
@@ -1337,7 +1342,8 @@ class MobileBertPreTrainedModel(PreTrainedModel):
         Raises:
             None.
         
-        This method is responsible for retrieving the position embeddings for the MobileBertPreTrainedModel. Position embeddings are used in natural language processing models to capture the positional information of words or tokens in a sequence.
+        This method is responsible for retrieving the position embeddings for the MobileBertPreTrainedModel. Position embeddings are used in natural language processing models to capture the positional
+information of words or tokens in a sequence.
         
         The 'self' parameter represents an instance of the MobileBertPreTrainedModel class, which is required to access the position embeddings specific to that instance.
         
@@ -1376,13 +1382,16 @@ class MobileBertModel(MobileBertPreTrainedModel):
         
         The 'self' parameter refers to the instance of the MobileBertModel class that is being initialized.
         
-        The 'config' parameter is an object that contains hyperparameters and settings for the model. It is used to configure the MobileBertEmbeddings, MobileBertEncoder, and MobileBertPooler components of the MobileBertModel.
+        The 'config' parameter is an object that contains hyperparameters and settings for the model. It is used to configure the MobileBertEmbeddings, MobileBertEncoder, and MobileBertPooler components of the
+MobileBertModel.
         
-        The 'add_pooling_layer' parameter is a boolean flag that determines whether a pooling layer should be added to the MobileBertModel. If set to True, a MobileBertPooler component will be added to the model. If set to False, no pooling layer will be added.
+        The 'add_pooling_layer' parameter is a boolean flag that determines whether a pooling layer should be added to the MobileBertModel. If set to True, a MobileBertPooler component will be added to the
+model. If set to False, no pooling layer will be added.
         
         The method does not return any value.
         
-        Note: The MobileBertModel consists of three main components: MobileBertEmbeddings, MobileBertEncoder, and MobileBertPooler. These components are initialized within this method and can be accessed using the respective instance variables: 'self.embeddings', 'self.encoder', and 'self.pooler'. The number of hidden layers in the model can be accessed using the 'self.num_hidden_layers' instance variable.
+        Note: The MobileBertModel consists of three main components: MobileBertEmbeddings, MobileBertEncoder, and MobileBertPooler. These components are initialized within this method and can be accessed using
+the respective instance variables: 'self.embeddings', 'self.encoder', and 'self.pooler'. The number of hidden layers in the model can be accessed using the 'self.num_hidden_layers' instance variable.
         """
         super().__init__(config)
         self.embeddings = MobileBertEmbeddings(config)

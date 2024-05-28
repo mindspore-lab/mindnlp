@@ -232,7 +232,8 @@ class BigBirdTokenizer(PreTrainedTokenizer):
     def __getstate__(self):
 
         """
-        The '__getstate__' method in the 'BigBirdTokenizer' class is used to retrieve the current state of the object for serialization. This method takes one parameter, 'self', which refers to the instance of the 'BigBirdTokenizer' class.
+        The '__getstate__' method in the 'BigBirdTokenizer' class is used to retrieve the current state of the object for serialization. This method takes one parameter, 'self', which refers to the instance of
+the 'BigBirdTokenizer' class.
         
         Args:
             self (BigBirdTokenizer): The instance of the 'BigBirdTokenizer' class.

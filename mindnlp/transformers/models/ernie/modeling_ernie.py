@@ -275,7 +275,8 @@ class ErnieSelfAttention(nn.Cell):
         Args:
             self (ErnieSelfAttention): The instance of the ErnieSelfAttention class.
             hidden_states (mindspore.Tensor): The input hidden states of the model. Shape: (batch_size, sequence_length, hidden_size).
-            attention_mask (Optional[mindspore.Tensor]): The attention mask tensor. It is a binary tensor of shape (batch_size, sequence_length) where 1 indicates a valid token and 0 indicates a padded token. Defaults to None.
+            attention_mask (Optional[mindspore.Tensor]): The attention mask tensor. It is a binary tensor of shape (batch_size, sequence_length) where 1 indicates a valid token and 0 indicates a padded token.
+Defaults to None.
             head_mask (Optional[mindspore.Tensor]): The head mask tensor. It is a binary tensor of shape (num_attention_heads,) indicating which heads to mask. Defaults to None.
             encoder_hidden_states (Optional[mindspore.Tensor]): The hidden states of the encoder. Shape: (batch_size, encoder_sequence_length, hidden_size). Defaults to None.
             encoder_attention_mask (Optional[mindspore.Tensor]): The attention mask tensor for the encoder. Shape: (batch_size, encoder_sequence_length). Defaults to None.
@@ -283,7 +284,8 @@ class ErnieSelfAttention(nn.Cell):
             output_attentions (Optional[bool]): Whether to output attention probabilities. Defaults to False.
         
         Returns:
-            Tuple[mindspore.Tensor]: A tuple containing the context layer tensor and optionally the attention probabilities tensor. The context layer tensor has shape (batch_size, sequence_length, hidden_size) and represents the output of the self-attention mechanism.
+            Tuple[mindspore.Tensor]: A tuple containing the context layer tensor and optionally the attention probabilities tensor. The context layer tensor has shape (batch_size, sequence_length, hidden_size)
+and represents the output of the self-attention mechanism.
         
         Raises:
             None: This method does not raise any exceptions.
@@ -998,7 +1000,8 @@ class ErniePooler(nn.Cell):
     """
     ErniePooler class represents a pooler layer for an ERNIE model. 
     
-    This class inherits from nn.Cell and implements a pooler layer that takes hidden states as input, processes the first token tensor through a dense layer and activation function, and returns the pooled output.
+    This class inherits from nn.Cell and implements a pooler layer that takes hidden states as input, processes the first token tensor through a dense layer and activation function, and returns the pooled
+output.
     
     Attributes:
         dense (nn.Dense): A dense layer with the specified hidden size.
@@ -1059,7 +1062,8 @@ class ErniePooler(nn.Cell):
 class ErniePredictionHeadTransform(nn.Cell):
 
     """
-    This class represents the transformation head for the ERNIE prediction model. It performs various operations such as dense transformation, activation function application, and layer normalization on the input hidden states.
+    This class represents the transformation head for the ERNIE prediction model. It performs various operations such as dense transformation, activation function application, and layer normalization on the
+input hidden states.
     
     Inherits from:
         nn.Cell
@@ -1308,7 +1312,8 @@ class ErnieOnlyNSPHead(nn.Cell):
 class ErniePreTrainingHeads(nn.Cell):
 
     """
-    The ErniePreTrainingHeads class represents the pre-training heads for ERNIE model, used for predicting masked tokens and sequence relationships. It inherits from nn.Cell and provides methods for initializing the prediction heads and making predictions.
+    The ErniePreTrainingHeads class represents the pre-training heads for ERNIE model, used for predicting masked tokens and sequence relationships. It inherits from nn.Cell and provides methods for
+initializing the prediction heads and making predictions.
     
     Methods:
     - __init__(self, config): Initializes the ErniePreTrainingHeads instance with the given configuration.
@@ -1657,9 +1662,11 @@ class ErnieForPreTraining(ErniePreTrainedModel):
     """
     This class represents an Ernie model for pre-training tasks. It inherits from the ErniePreTrainedModel. 
     
-    The class includes methods for initializing the model, getting and setting output embeddings, and constructing the model for pre-training tasks. The `construct` method takes various input tensors and optional arguments, and returns the output of the model for pre-training. It also includes detailed information about the expected input parameters, optional arguments, and return values.
+    The class includes methods for initializing the model, getting and setting output embeddings, and constructing the model for pre-training tasks. The `construct` method takes various input tensors and
+optional arguments, and returns the output of the model for pre-training. It also includes detailed information about the expected input parameters, optional arguments, and return values.
     
-    The class also provides an example of how to use the model for pre-training tasks using the AutoTokenizer and example inputs. The example demonstrates how to tokenize input text, generate model outputs, and access specific logits from the model.
+    The class also provides an example of how to use the model for pre-training tasks using the AutoTokenizer and example inputs. The example demonstrates how to tokenize input text, generate model outputs,
+and access specific logits from the model.
     
     For more details on the usage and functionality of the ErnieForPreTraining class, refer to the provided code and docstring examples.
     """
@@ -1814,11 +1821,14 @@ class ErnieForCausalLM(ErniePreTrainedModel):
     It is designed for generating text predictions based on input sequences, with a focus on predicting the next word in a sequence. 
     The model includes functionality for constructing the model, setting and getting output embeddings, preparing inputs for text generation, and reordering cache during generation.
     
-    The class includes methods for initializing the model, constructing the model for inference or training, setting and getting output embeddings, preparing inputs for text generation, and reordering cache during generation.
+    The class includes methods for initializing the model, constructing the model for inference or training, setting and getting output embeddings, preparing inputs for text generation, and reordering cache
+during generation.
     
-    The 'construct' method constructs the model for inference or training, taking various input tensors such as input ids, attention masks, token type ids, and more. It returns the model outputs including the language modeling loss and predictions.
+    The 'construct' method constructs the model for inference or training, taking various input tensors such as input ids, attention masks, token type ids, and more. It returns the model outputs including the
+language modeling loss and predictions.
     
-    The 'prepare_inputs_for_generation' method prepares input tensors for text generation, including handling past key values and attention masks. It returns a dictionary containing the input ids, attention mask, past key values, and use_cache flag.
+    The 'prepare_inputs_for_generation' method prepares input tensors for text generation, including handling past key values and attention masks. It returns a dictionary containing the input ids, attention
+mask, past key values, and use_cache flag.
     
     The '_reorder_cache' method reorders the past key values during generation based on the beam index used for parallel decoding.
     
@@ -2060,15 +2070,18 @@ class ErnieForCausalLM(ErniePreTrainedModel):
 class ErnieForMaskedLM(ErniePreTrainedModel):
 
     """
-    This class represents a model for Masked Language Modeling using the ERNIE (Enhanced Representation through kNowledge Integration) architecture. It is designed for generating predictions for masked tokens within a sequence of text.
+    This class represents a model for Masked Language Modeling using the ERNIE (Enhanced Representation through kNowledge Integration) architecture. It is designed for generating predictions for masked tokens
+within a sequence of text.
     
-    The class inherits from ErniePreTrainedModel and implements methods for initializing the model, getting and setting output embeddings, constructing the model for training or inference, and preparing inputs for text generation.
+    The class inherits from ErniePreTrainedModel and implements methods for initializing the model, getting and setting output embeddings, constructing the model for training or inference, and preparing inputs
+for text generation.
     
     Methods:
     - __init__(self, config): Initializes the ErnieForMaskedLM model with the given configuration.
     - get_output_embeddings(self): Retrieves the output embeddings from the model.
     - set_output_embeddings(self, new_embeddings): Sets new output embeddings for the model.
-    - construct(self, input_ids, attention_mask, token_type_ids, task_type_ids, position_ids, head_mask, inputs_embeds, encoder_hidden_states, encoder_attention_mask, labels, output_attentions, output_hidden_states, return_dict): Constructs the model for training or inference, computing the masked language modeling loss and prediction scores.
+    - construct(self, input_ids, attention_mask, token_type_ids, task_type_ids, position_ids, head_mask, inputs_embeds, encoder_hidden_states, encoder_attention_mask, labels, output_attentions,
+output_hidden_states, return_dict): Constructs the model for training or inference, computing the masked language modeling loss and prediction scores.
     - prepare_inputs_for_generation(self, input_ids, attention_mask, **model_kwargs): Prepares inputs for text generation, including handling padding and dummy tokens.
     
     Note: This class assumes the existence of the ErnieModel and ErnieOnlyMLMHead classes for the ERNIE architecture.
@@ -2248,13 +2261,17 @@ class ErnieForMaskedLM(ErniePreTrainedModel):
 class ErnieForNextSentencePrediction(ErniePreTrainedModel):
 
     """
-    ErnieForNextSentencePrediction is a class that represents a model for next sentence prediction using the ERNIE (Enhanced Representation through kNowledge IntEgration) architecture. This class inherits from the ErniePreTrainedModel class.
+    ErnieForNextSentencePrediction is a class that represents a model for next sentence prediction using the ERNIE (Enhanced Representation through kNowledge IntEgration) architecture. This class inherits from
+the ErniePreTrainedModel class.
     
-    The ERNIE model is designed for various natural language processing tasks, including next sentence prediction. It takes input sequences and predicts whether the second sequence follows the first sequence in a given pair.
+    The ERNIE model is designed for various natural language processing tasks, including next sentence prediction. It takes input sequences and predicts whether the second sequence follows the first sequence
+in a given pair.
     
-    The class's code initializes an instance of the ErnieForNextSentencePrediction class with the provided configuration. It creates an ERNIE model and a next sentence prediction head. The post_init() method is called to perform additional setup after the initialization.
+    The class's code initializes an instance of the ErnieForNextSentencePrediction class with the provided configuration. It creates an ERNIE model and a next sentence prediction head. The post_init() method
+is called to perform additional setup after the initialization.
     
-    The construct() method constructs the model using the provided input tensors and other optional arguments. It returns the predicted next sentence relationship scores. The method also supports computing the next sequence prediction loss if labels are provided.
+    The construct() method constructs the model using the provided input tensors and other optional arguments. It returns the predicted next sentence relationship scores. The method also supports computing the
+next sequence prediction loss if labels are provided.
     
     The labels parameter is used to compute the next sequence prediction loss. It should be a tensor of shape (batch_size,) where each value indicates the relationship between the input sequences:
     - 0 indicates sequence B is a continuation of sequence A.
@@ -2395,7 +2412,8 @@ class ErnieForSequenceClassification(ErniePreTrainedModel):
     """
     This class represents an ERNIE model for sequence classification tasks. It is a subclass of the `ErniePreTrainedModel` class.
     
-    The `ErnieForSequenceClassification` class has an initialization method and a `construct` method. The initialization method initializes the ERNIE model and sets up the classifier layers. The `construct` method performs the forward pass of the model and returns the output.
+    The `ErnieForSequenceClassification` class has an initialization method and a `construct` method. The initialization method initializes the ERNIE model and sets up the classifier layers. The `construct`
+method performs the forward pass of the model and returns the output.
     
     Attributes:
         - num_labels (int): The number of labels for the sequence classification task.
@@ -2406,7 +2424,8 @@ class ErnieForSequenceClassification(ErniePreTrainedModel):
         
     Methods:
         - __init__(self, config): Initializes the `ErnieForSequenceClassification` instance.
-        - construct(self, input_ids, attention_mask, token_type_ids, task_type_ids, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Performs the forward pass of the ERNIE model and returns the output.
+        - construct(self, input_ids, attention_mask, token_type_ids, task_type_ids, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Performs the forward
+pass of the ERNIE model and returns the output.
     
     Example usage:
     
@@ -2522,7 +2541,8 @@ class ErnieForMultipleChoice(ErniePreTrainedModel):
     """
     This class represents an Ernie model for multiple choice tasks. It inherits from the ErniePreTrainedModel class.
     
-    The ErnieForMultipleChoice class initializes an Ernie model with the given configuration. It constructs the model by passing input tensors through the Ernie model layers and applies dropout and classification layers to generate the logits for multiple choice classification.
+    The ErnieForMultipleChoice class initializes an Ernie model with the given configuration. It constructs the model by passing input tensors through the Ernie model layers and applies dropout and
+classification layers to generate the logits for multiple choice classification.
     
     Usage:
         model = ErnieForMultipleChoice(config)
@@ -2535,14 +2555,16 @@ class ErnieForMultipleChoice(ErniePreTrainedModel):
         __init__(self, config)
             Initializes the ErnieForMultipleChoice class with the given configuration.
     
-        construct(self, input_ids=None, attention_mask=None, token_type_ids=None, task_type_ids=None, position_ids=None, head_mask=None, inputs_embeds=None, labels=None, output_attentions=None, output_hidden_states=None, return_dict=None)
+        construct(self, input_ids=None, attention_mask=None, token_type_ids=None, task_type_ids=None, position_ids=None, head_mask=None, inputs_embeds=None, labels=None, output_attentions=None,
+output_hidden_states=None, return_dict=None)
             Constructs the Ernie model for multiple choice tasks and returns the model outputs.
     
     Returns:
         Union[Tuple[mindspore.Tensor], MultipleChoiceModelOutput]: The model outputs, which can include the loss, logits, hidden states, and attentions.
     
     Note:
-        The labels argument should be provided for computing the multiple choice classification loss. Indices in labels should be in the range [0, num_choices-1], where num_choices is the size of the second dimension of the input tensors (input_ids).
+        The labels argument should be provided for computing the multiple choice classification loss. Indices in labels should be in the range [0, num_choices-1], where num_choices is the size of the second
+dimension of the input tensors (input_ids).
     
     """
     # Copied from transformers.models.bert.modeling_bert.BertForMultipleChoice.__init__ with Bert->Ernie,bert->ernie
@@ -2646,11 +2668,15 @@ class ErnieForMultipleChoice(ErniePreTrainedModel):
 class ErnieForTokenClassification(ErniePreTrainedModel):
 
     """
-    This class represents a token classification model based on the Ernie architecture. It is used for token-level classification tasks such as Named Entity Recognition (NER) and part-of-speech tagging. The model inherits from the ErniePreTrainedModel class and utilizes the ErnieModel for token embeddings and hidden representations. It includes methods for model initialization and forward propagation to compute token classification logits and loss.
+    This class represents a token classification model based on the Ernie architecture. It is used for token-level classification tasks such as Named Entity Recognition (NER) and part-of-speech tagging. The
+model inherits from the ErniePreTrainedModel class and utilizes the ErnieModel for token embeddings and hidden representations. It includes methods for model initialization and forward propagation to compute
+token classification logits and loss.
     
-    The class's constructor initializes the model with the provided configuration, sets the number of classification labels, and configures the ErnieModel with the specified parameters. Additionally, it sets up the dropout and classifier layers.
+    The class's constructor initializes the model with the provided configuration, sets the number of classification labels, and configures the ErnieModel with the specified parameters. Additionally, it sets
+up the dropout and classifier layers.
     
-    The construct method takes input tensors and optional arguments for token classification, and returns the token classification output. It also computes the token classification loss if labels are provided. The method supports various optional parameters for controlling the model's behavior during inference.
+    The construct method takes input tensors and optional arguments for token classification, and returns the token classification output. It also computes the token classification loss if labels are provided.
+The method supports various optional parameters for controlling the model's behavior during inference.
     
     Note: The docstring is based on the provided information and does not include specific code signatures.
     """
@@ -2747,15 +2773,20 @@ class ErnieForTokenClassification(ErniePreTrainedModel):
 class ErnieForQuestionAnswering(ErniePreTrainedModel):
 
     """
-    ErnieForQuestionAnswering is a class that represents a model for question answering tasks using the ERNIE (Enhanced Representation through kNowledge Integration) architecture. This class inherits from ErniePreTrainedModel and provides methods for constructing the model and performing question answering inference.
+    ErnieForQuestionAnswering is a class that represents a model for question answering tasks using the ERNIE (Enhanced Representation through kNowledge Integration) architecture. This class inherits from
+ErniePreTrainedModel and provides methods for constructing the model and performing question answering inference.
     
-    The class constructor initializes the model with the provided configuration. The model architecture includes an ERNIE model with the option to add a pooling layer. Additionally, it includes a dense layer for question answering outputs.
+    The class constructor initializes the model with the provided configuration. The model architecture includes an ERNIE model with the option to add a pooling layer. Additionally, it includes a dense layer
+for question answering outputs.
     
-    The construct method takes various input tensors and performs the question answering computation. It supports optional inputs for start and end positions, attention masks, token type IDs, task type IDs, position IDs, head masks, and input embeddings. The method returns the question-answering model output, which includes the start and end logits for the predicted answer spans.
+    The construct method takes various input tensors and performs the question answering computation. It supports optional inputs for start and end positions, attention masks, token type IDs, task type IDs,
+position IDs, head masks, and input embeddings. The method returns the question-answering model output, which includes the start and end logits for the predicted answer spans.
     
-    The method also allows for customizing the return of outputs by specifying the return_dict parameter. If the return_dict parameter is not provided, the method uses the default value from the model's configuration.
+    The method also allows for customizing the return of outputs by specifying the return_dict parameter. If the return_dict parameter is not provided, the method uses the default value from the model's
+configuration.
     
-    Overall, the ErnieForQuestionAnswering class encapsulates the functionality for performing question answering tasks using the ERNIE model and provides a high-level interface for constructing the model and performing inference.
+    Overall, the ErnieForQuestionAnswering class encapsulates the functionality for performing question answering tasks using the ERNIE model and provides a high-level interface for constructing the model and
+performing inference.
     """
     # Copied from transformers.models.bert.modeling_bert.BertForQuestionAnswering.__init__ with Bert->Ernie,bert->ernie
     def __init__(self, config):

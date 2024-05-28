@@ -644,7 +644,8 @@ class CallbackHandler(TrainerCallback):
         - None: This method does not return any value explicitly. It sets 'control.should_evaluate' to False and triggers the 'on_evaluate' event using 'self.call_event'.
         
         Raises:
-        - No specific exceptions are documented to be raised by this method. However, exceptions could potentially be raised within the 'call_event' method if any issues arise during the event triggering process.
+        - No specific exceptions are documented to be raised by this method. However, exceptions could potentially be raised within the 'call_event' method if any issues arise during the event triggering
+process.
         """
         control.should_evaluate = False
         return self.call_event("on_evaluate", args, state, control, metrics=metrics)
@@ -1210,7 +1211,8 @@ class EarlyStoppingCallback(TrainerCallback):
     def on_evaluate(self, args, state, control, metrics, **kwargs):
 
         r"""
-        This method 'on_evaluate' is a part of the 'EarlyStoppingCallback' class and is responsible for evaluating the metrics and performing early stopping if the specified metric value does not meet the criteria.
+        This method 'on_evaluate' is a part of the 'EarlyStoppingCallback' class and is responsible for evaluating the metrics and performing early stopping if the specified metric value does not meet the
+criteria.
         
         Args:
         - self: (object) The instance of the class.

@@ -2148,8 +2148,11 @@ class SequenceSummary(nn.Cell):
         Raises:
             NotImplementedError: If the 'summary_type' attribute in the config is set to 'attn'.
         
-        This method initializes the SequenceSummary instance with the provided configuration. It sets the 'summary_type' attribute to the value obtained from the config, defaulting to 'last' if not specified. If 'summary_type' is 'attn', it raises a NotImplementedError.
-        The method then initializes the 'summary' attribute as an nn.Identity() object and checks if 'summary_use_proj' is specified in the config and is set to True. If so, it creates a Dense layer for summarization based on the 'summary_proj_to_labels' and 'num_labels' attributes in the config. The activation function for the summarization is determined based on the 'summary_activation' attribute in the config, defaulting to nn.Identity() if not specified.
+        This method initializes the SequenceSummary instance with the provided configuration. It sets the 'summary_type' attribute to the value obtained from the config, defaulting to 'last' if not specified.
+If 'summary_type' is 'attn', it raises a NotImplementedError.
+        The method then initializes the 'summary' attribute as an nn.Identity() object and checks if 'summary_use_proj' is specified in the config and is set to True. If so, it creates a Dense layer for
+summarization based on the 'summary_proj_to_labels' and 'num_labels' attributes in the config. The activation function for the summarization is determined based on the 'summary_activation' attribute in the
+config, defaulting to nn.Identity() if not specified.
         The first and last dropout layers are initialized based on the 'summary_first_dropout' and 'summary_last_dropout' attributes in the config, respectively, using nn.Identity() if not specified.
         """
         super().__init__()

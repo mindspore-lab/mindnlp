@@ -478,7 +478,8 @@ def get_default_vocab_list():
         None.
     
     Returns:
-        List: A list of default vocabulary items including '<cls>', '<pad>', '<eos>', '<unk>', 'L', 'A', 'G', 'V', 'S', 'E', 'R', 'T', 'I', 'D', 'P', 'K', 'Q', 'N', 'F', 'Y', 'M', 'H', 'W', 'C', 'X', 'B', 'U', 'Z', 'O', '.', '-', '<null_1>', '<mask>'.
+        List: A list of default vocabulary items including '<cls>', '<pad>', '<eos>', '<unk>', 'L', 'A', 'G', 'V', 'S', 'E', 'R', 'T', 'I', 'D', 'P', 'K', 'Q', 'N', 'F', 'Y', 'M', 'H', 'W', 'C', 'X', 'B', 'U',
+'Z', 'O', '.', '-', '<null_1>', '<mask>'.
     
     Raises:
         None.

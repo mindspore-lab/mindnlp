@@ -397,9 +397,12 @@ class ConvNextEncoder(nn.Cell):
     
     This class inherits from the nn.Cell class, which is a base class for all neural network layers in the MindSpore framework.
     
-    The ConvNextEncoder class initializes a list of stages, where each stage consists of a ConvNextStage module. The number of stages is defined by the config.num_stages attribute. Each stage performs convolutional operations with different parameters, such as input and output channels, stride, and depth. The drop_path_rates parameter specifies the drop path rates for each stage.
+    The ConvNextEncoder class initializes a list of stages, where each stage consists of a ConvNextStage module. The number of stages is defined by the config.num_stages attribute. Each stage performs
+convolutional operations with different parameters, such as input and output channels, stride, and depth. The drop_path_rates parameter specifies the drop path rates for each stage.
     
-    The construct method of the ConvNextEncoder class takes a tensor of hidden states as input and performs the forward pass through each stage. It optionally returns a tuple containing all hidden states at each stage, as specified by the output_hidden_states parameter. If return_dict is set to True, it returns an instance of the BaseModelOutputWithNoAttention class, which encapsulates the last hidden state and all hidden states.
+    The construct method of the ConvNextEncoder class takes a tensor of hidden states as input and performs the forward pass through each stage. It optionally returns a tuple containing all hidden states at
+each stage, as specified by the output_hidden_states parameter. If return_dict is set to True, it returns an instance of the BaseModelOutputWithNoAttention class, which encapsulates the last hidden state and
+all hidden states.
     
     Note that this docstring is generated based on the provided code, and the actual implementation may contain additional methods or attributes.
     
@@ -515,7 +518,8 @@ class ConvNextModel(ConvNextPreTrainedModel):
     
     The __init__ method initializes the ConvNextModel with the provided configuration. It sets up the embeddings, encoder, and layer normalization based on the configuration parameters.
     
-    The construct method processes the input pixel values using the embeddings and encoder, and returns the last hidden state and pooled output. It allows for customization of returning hidden states and outputs as specified in the configuration parameters.
+    The construct method processes the input pixel values using the embeddings and encoder, and returns the last hidden state and pooled output. It allows for customization of returning hidden states and
+outputs as specified in the configuration parameters.
     
     Note: This docstring is based on the provided code snippet and does not include complete signatures or any other code.
     """
@@ -611,7 +615,8 @@ class ConvNextForImageClassification(ConvNextPreTrainedModel):
 
     """ConvNextForImageClassification
     
-    This class represents a Convolutional Neural Network (CNN) model for image classification using the ConvNext architecture. The model is designed for tasks such as single-label or multi-label classification and regression. It inherits from the ConvNextPreTrainedModel class.
+    This class represents a Convolutional Neural Network (CNN) model for image classification using the ConvNext architecture. The model is designed for tasks such as single-label or multi-label classification
+and regression. It inherits from the ConvNextPreTrainedModel class.
     
     Attributes:
         num_labels (int): The number of labels in the classification task.
@@ -712,8 +717,10 @@ class ConvNextBackbone(ConvNextPreTrainedModel, BackboneMixin):
     """
     This class represents the ConvNext backbone used in a ConvNext model for image processing tasks. It inherits functionality from ConvNextPreTrainedModel and BackboneMixin. 
     
-    The ConvNextBackbone class initializes the backbone architecture with ConvNextEmbeddings and ConvNextEncoder components. It also sets up layer normalization for hidden states based on the specified configuration.
-    The construct method processes input pixel values through the embeddings and encoder, optionally returning hidden states and feature maps. It handles the logic for outputting the desired information based on the configuration settings.
+    The ConvNextBackbone class initializes the backbone architecture with ConvNextEmbeddings and ConvNextEncoder components. It also sets up layer normalization for hidden states based on the specified
+configuration.
+    The construct method processes input pixel values through the embeddings and encoder, optionally returning hidden states and feature maps. It handles the logic for outputting the desired information based
+on the configuration settings.
     
     Returns:
         BackboneOutput: A named tuple containing the feature maps and hidden states of the backbone.

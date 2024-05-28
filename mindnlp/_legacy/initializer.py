@@ -116,7 +116,9 @@ class XavierNormal(Initializer):
         Raises:
             None.
         
-        This method calculates the fan-in and fan-out values based on the shape of the input array. The fan-in represents the number of input units to a layer, while the fan-out represents the number of output units. It then computes the standard deviation using the gain value specified in the XavierNormal instance and the fan-in and fan-out values. The Xavier Normal distribution is defined as a Gaussian distribution with zero mean and variance equal to 2.0 / (fan_in + fan_out). Finally, random values are generated from this distribution and assigned to the array.
+        This method calculates the fan-in and fan-out values based on the shape of the input array. The fan-in represents the number of input units to a layer, while the fan-out represents the number of output
+units. It then computes the standard deviation using the gain value specified in the XavierNormal instance and the fan-in and fan-out values. The Xavier Normal distribution is defined as a Gaussian
+distribution with zero mean and variance equal to 2.0 / (fan_in + fan_out). Finally, random values are generated from this distribution and assigned to the array.
         """
         fan_in, fan_out = _calculate_fan_in_and_fan_out(arr.shape)
 
