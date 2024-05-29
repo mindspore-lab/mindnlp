@@ -24,3 +24,4 @@ from .p_tuning import PromptEncoder, PromptEncoderConfig, PromptEncoderReparamet
 from .prefix_tuning import PrefixTuningConfig, PrefixEncoder
 from .prompt_tuning import PromptEmbedding, PromptTuningConfig, PromptTuningInit
 from .multitask_prompt_tuning import MultitaskPromptEmbedding, MultitaskPromptTuningConfig, MultitaskPromptTuningInit
+from .poly import PolyConfig, PolyModel

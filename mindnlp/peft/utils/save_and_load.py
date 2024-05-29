@@ -84,6 +84,8 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
         to_return = {k: state_dict[k] for k in state_dict if "ia3_" in k}
     elif config.peft_type == PeftType.LOKR:
         to_return = {k: state_dict[k] for k in state_dict if "lokr_" in k}
+    elif config.peft_type == PeftType.POLY:
+        to_return = {k: state_dict[k] for k in state_dict if "poly_" in k}
     elif config.peft_type == PeftType.LOHA:
         to_return = {k: state_dict[k] for k in state_dict if "hada_" in k}
     elif config.is_prompt_learning:
@@ -139,6 +141,7 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
         PeftType.ADALORA,
         PeftType.LOKR,
         PeftType.LOHA,
+        PeftType.POLY,
     ):
         peft_model_state_dict = {}
         parameter_prefix = {
@@ -147,6 +150,7 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
             PeftType.ADALORA: "lora_",
             PeftType.LOKR: "lokr_",
             PeftType.LOHA: "hada_",
+            PeftType.POLY: "poly_",
         }[config.peft_type]
         for k, v in state_dict.items():
             if parameter_prefix in k:
@@ -178,6 +182,7 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
     if config.peft_type == PeftType.MULTITASK_PROMPT_TUNING:
         model.prompt_encoder[adapter_name].load_state_dict(peft_model_state_dict, strict=False)
     return load_result
+
 
 def load_peft_weights(model_id: str,) -> dict:
     r"""

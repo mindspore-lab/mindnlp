@@ -40,6 +40,8 @@ from .tuners import (
     PromptTuningConfig,
     LoHaConfig,
     LoHaModel,
+    PolyConfig,
+    PolyModel,
     PrefixTuningConfig,
     PromptEncoderConfig
 )
@@ -65,6 +67,7 @@ PEFT_TYPE_TO_CONFIG_MAPPING = {
     "IA3": IA3Config,
     "LOKR": LoKrConfig,
     "LOHA": LoHaConfig,
+    "POLY": PolyConfig,
 }
 
 PEFT_TYPE_TO_TUNER_MAPPING = {
@@ -73,6 +76,7 @@ PEFT_TYPE_TO_TUNER_MAPPING = {
     "IA3": IA3Model,
     "LOKR": LoKrModel,
     "LOHA": LoHaModel,
+    "POLY": PolyModel,
 }
 
 
