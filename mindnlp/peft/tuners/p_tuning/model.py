@@ -141,7 +141,7 @@ class PromptEncoder(nn.Cell):
             else:
                 raise ValueError("Prompt encoder type not recognized. Please use one of MLP (recommended) or LSTM.")
 
-    def forward(self, indices):
+    def construct(self, indices):
         """
         Forward method in the PromptEncoder class.
         

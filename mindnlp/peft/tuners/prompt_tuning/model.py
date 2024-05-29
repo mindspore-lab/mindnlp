@@ -40,7 +40,7 @@ class PromptEmbedding(nn.Cell):
     ...     task_type="SEQ_2_SEQ_LM",
     ...     num_virtual_tokens=20,
     ...     token_dim=768,
-    ...     num_transformer_subcells=1,
+    ...     num_transformer_submodules=1,
     ...     num_attention_heads=12,
     ...     num_layers=12,
     ...     prompt_tuning_init="TEXT",
@@ -83,7 +83,7 @@ class PromptEmbedding(nn.Cell):
         """
         super().__init__()
 
-        total_virtual_tokens = config.num_virtual_tokens * config.num_transformer_subcells
+        total_virtual_tokens = config.num_virtual_tokens * config.num_transformer_submodules
         self.embedding = nn.Embedding(total_virtual_tokens, config.token_dim)
         if config.prompt_tuning_init == PromptTuningInit.TEXT and not config.inference_mode:
             from ....transformers import AutoTokenizer
@@ -101,6 +101,7 @@ class PromptEmbedding(nn.Cell):
                 init_token_ids = init_token_ids * num_reps
             init_token_ids = init_token_ids[:total_virtual_tokens]
             init_token_ids = mindspore.tensor(init_token_ids)
+            word_embedding_weights = word_embeddings(init_token_ids).copy()
             word_embedding_weights = word_embedding_weights.to(mindspore.float32)
             self.embedding.weight = Parameter(word_embedding_weights)
 

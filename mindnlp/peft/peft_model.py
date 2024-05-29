@@ -216,8 +216,8 @@ class PeftModel(nn.Cell):
         if transformer_backbone is None:
             transformer_backbone = self.base_model
 
-        if config.num_transformer_subcells is None:
-            config.num_transformer_subcells = 2 if config.task_type == TaskType.SEQ_2_SEQ_LM else 1
+        if config.num_transformer_submodules is None:
+            config.num_transformer_submodules = 2 if config.task_type == TaskType.SEQ_2_SEQ_LM else 1
 
         for named_param, value in list(transformer_backbone.parameters_and_names()):
 
@@ -238,7 +238,7 @@ class PeftModel(nn.Cell):
 
         self.prompt_encoder.update(CellDict({adapter_name: prompt_encoder}))
         self.prompt_tokens[adapter_name] = ops.arange(
-            config.num_virtual_tokens * config.num_transformer_subcells
+            config.num_virtual_tokens * config.num_transformer_submodules
         ).long()
 
     def load_adapter(self, model_id: str, adapter_name: str, is_trainable: bool = False, **kwargs):
@@ -329,10 +329,10 @@ class PeftModel(nn.Cell):
                 peft_config.num_attention_heads,
                 peft_config.token_dim // peft_config.num_attention_heads,
             )
-            if peft_config.num_transformer_subcells == 2:
+            if peft_config.num_transformer_submodules == 2:
                 past_key_values = ops.cat([past_key_values, past_key_values], axis=2)
             past_key_values = past_key_values.permute([2, 0, 3, 1, 4]).split(
-                peft_config.num_transformer_subcells * 2
+                peft_config.num_transformer_submodules * 2
             )
             if TRANSFORMERS_MODELS_TO_PREFIX_TUNING_POSTPROCESS_MAPPING.get(self.config.model_type, None) is not None:
                 post_process_fn = TRANSFORMERS_MODELS_TO_PREFIX_TUNING_POSTPROCESS_MAPPING[self.config.model_type]
@@ -826,21 +826,21 @@ class PeftModelForSeq2SeqLM(PeftModel):
 
             if attention_mask is not None:
                 # concat prompt attention mask
-                prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens)
+                prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens, dtype=attention_mask.dtype)
                 kwargs["attention_mask"] = ops.cat((prefix_attention_mask, attention_mask), axis=1)
             # concat prompt labels
             if labels is not None:
-                if peft_config.num_transformer_subcells == 1:
+                if peft_config.num_transformer_submodules == 1:
                     kwargs["labels"] = labels
-                elif peft_config.num_transformer_subcells == 2:
+                elif peft_config.num_transformer_submodules == 2:
                     prefix_labels = ops.full((batch_size, peft_config.num_virtual_tokens), -100)
                     kwargs["labels"] = ops.cat((prefix_labels, labels), axis=1)
-            prompts = self.get_prompt(batch_size=batch_size)
+            prompts = self.get_prompt(batch_size=batch_size, task_ids=task_ids)
             prompts = prompts.to(inputs_embeds.dtype)
             inputs_embeds = ops.cat((prompts[:, : peft_config.num_virtual_tokens], inputs_embeds), axis=1)
-            if peft_config.num_transformer_subcells == 1:
+            if peft_config.num_transformer_submodules == 1:
                 return self.base_model(inputs_embeds=inputs_embeds, **kwargs)
-            elif peft_config.num_transformer_subcells == 2:
+            elif peft_config.num_transformer_submodules == 2:
                 decoder_inputs_embeds = ops.cat(
                     (prompts[:, peft_config.num_virtual_tokens :], decoder_inputs_embeds), axis=1
                 )
