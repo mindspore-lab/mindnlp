@@ -253,7 +253,7 @@ original module for reference. The class includes methods for enabling and disab
         self._active_adapter = adapter_name
 
 
-def custom_get_subcell(model: mindspore.nn.Cell, target: str) -> mindspore.nn.Cell:
+def custom_get_subcell(model: nn.Cell, target: str) -> nn.Cell:
     """
     Returns the subcell given by ``target`` if it exists, otherwise throws an error.
     功能和 torch.nn.Module 相似
@@ -262,7 +262,7 @@ def custom_get_subcell(model: mindspore.nn.Cell, target: str) -> mindspore.nn.Ce
         return model
 
     atoms: List[str] = target.split(".")
-    mod: mindspore.nn.Cell = model
+    mod: nn.Cell = model
 
     for item in atoms:
         if not hasattr(mod, item):
@@ -270,7 +270,7 @@ def custom_get_subcell(model: mindspore.nn.Cell, target: str) -> mindspore.nn.Ce
 
         mod = getattr(mod, item)
 
-        if not isinstance(mod, mindspore.nn.Cell):
+        if not isinstance(mod, nn.Cell):
             raise AttributeError("`" + item + "` is not an nn.Module")
 
     return mod
@@ -416,17 +416,17 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
         decoder_start_token_id (`int`): The id of the `start` token.
     """
     shifted_input_ids = input_ids.new_zeros(input_ids.shape)
-    shifted_input_ids[:, 1:] = input_ids[:, :-1].clone()
+    shifted_input_ids[:, 1:] = input_ids[:, :-1]
     shifted_input_ids[:, 0] = decoder_start_token_id
 
     if pad_token_id is None:
         raise ValueError("self.model.config.pad_token_id has to be defined.")
     # replace possible -100 values in labels by `pad_token_id`
-    shifted_input_ids.masked_fill(shifted_input_ids == -100, pad_token_id)
+    shifted_input_ids = shifted_input_ids.masked_fill(shifted_input_ids == -100, pad_token_id)
 
     return shifted_input_ids
 
-class Conv1D(mindspore.nn.Cell):
+class Conv1D(nn.Cell):
     """
     1D-convolutional layer Basically works like a linear layer but the weights are transposed.
 
