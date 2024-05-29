@@ -46,6 +46,8 @@ from .tuners import (
     PrefixTuningConfig,
     LoHaConfig,
     LoHaModel,
+    PolyConfig,
+    PolyModel,
 )
 
 from .utils import (
