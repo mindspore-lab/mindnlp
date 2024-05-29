@@ -42,8 +42,10 @@ from .tuners import (
     LoHaModel,
     PolyConfig,
     PolyModel,
+    LNTuningConfig,
+    LNTuningModel,
     PrefixTuningConfig,
-    PromptEncoderConfig
+    PromptEncoderConfig,
 )
 
 MODEL_TYPE_TO_PEFT_MODEL_MAPPING = {
@@ -68,6 +70,7 @@ PEFT_TYPE_TO_CONFIG_MAPPING = {
     "LOKR": LoKrConfig,
     "LOHA": LoHaConfig,
     "POLY": PolyConfig,
+    "LN_TUNING": LNTuningConfig,
 }
 
 PEFT_TYPE_TO_TUNER_MAPPING = {
@@ -77,6 +80,7 @@ PEFT_TYPE_TO_TUNER_MAPPING = {
     "LOKR": LoKrModel,
     "LOHA": LoHaModel,
     "POLY": PolyModel,
+    "LN_TUNING": LNTuningModel,
 }
 
 
