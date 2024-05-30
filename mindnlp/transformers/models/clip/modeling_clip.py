@@ -1339,7 +1339,7 @@ layers, and scaling of logits for calculating similarity scores. It also include
 
         self.visual_projection = nn.Dense(self.vision_embed_dim, self.projection_dim, has_bias=False)
         self.text_projection = nn.Dense(self.text_embed_dim, self.projection_dim, has_bias=False)
-        self.logit_scale = Parameter(mindspore.tensor([self.config.logit_scale_init_value]))
+        self.logit_scale = mindspore.tensor([self.config.logit_scale_init_value])
 
         # Initialize weights and apply final processing
         self.post_init()
