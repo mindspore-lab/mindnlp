@@ -25,4 +25,3 @@ __all__.extend(modeling_vit.__all__)
 __all__.extend(configuration_vit.__all__)
 __all__.extend(image_processing_vit.__all__)
 __all__.extend(feature_extraction_vit.__all__)
-

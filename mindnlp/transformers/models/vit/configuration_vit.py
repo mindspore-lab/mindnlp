@@ -13,15 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """ ViT model configuration"""
-
-from collections import OrderedDict
-from typing import Mapping
-
-from packaging import version
-
-from ...configuration_utils import PretrainedConfig
-
 from mindnlp.utils import logging
+from ...configuration_utils import PretrainedConfig
 
 
 logger = logging.get_logger(__name__)
@@ -125,5 +118,3 @@ class ViTConfig(PretrainedConfig):
         self.encoder_stride = encoder_stride
 
 __all__ = ["ViTConfig"]
-
-

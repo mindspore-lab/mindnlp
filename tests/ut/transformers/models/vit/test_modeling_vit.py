@@ -209,7 +209,7 @@ class ViTModelTest(ModelTesterMixin, unittest.TestCase):
             model = model_class(config)
             self.assertIsInstance(model.get_input_embeddings(), (nn.Cell))
             x = model.get_output_embeddings()
-            self.assertTrue(x is None or isinstance(x, nn.Linear))
+            self.assertTrue(x is None or isinstance(x, nn.Dense))
 
     def test_model(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
