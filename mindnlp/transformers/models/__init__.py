@@ -116,7 +116,7 @@ from . import (
     timesformer,
     tinybert,
     vipllava,
-    vit，
+    vit,
     wav2vec2,
     wav2vec2_with_lm,
     whisper,
