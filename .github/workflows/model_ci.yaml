@@ -10,6 +10,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          ref: refs/pull/${{ github.event.issue.number }}/head
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -20,6 +22,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements/requirements.txt
+
+      - name: Analysing the mindnlp code with pylint
+        run: |
+          pylint mindnlp --rcfile=.github/pylint.conf
 
       - name: Parse comment
         id: parse_comment
