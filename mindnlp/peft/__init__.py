@@ -51,6 +51,8 @@ from .tuners import (
     LoHaModel,
     PolyConfig,
     PolyModel,
+    LNTuningConfig,
+    LNTuningModel,
 )
 
 from .utils import (
