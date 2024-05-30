@@ -17,18 +17,18 @@ from mindspore import ops
 # needed for prefix-tuning of bloom model
 def bloom_model_postprocess_past_key_value(past_key_values):
     r"""
-    This function takes a single parameter 'past_key_values' and performs post-processing on it. 
-    
+    This function takes a single parameter 'past_key_values' and performs post-processing on it.
+
     Args:
         past_key_values (Tensor): A tensor containing past key values. The shape of the tensor is (total_layers, batch_size, num_attention_heads, num_virtual_tokens, head_dim).
-    
+
     Returns:
-        tuple: A tuple containing two elements, 'keys' and 'values'. 
+        tuple: A tuple containing two elements, 'keys' and 'values'.
             - 'keys' (Tensor): A tensor containing the processed keys. The shape of the tensor is (total_layers // 2, batch_size * num_attention_heads, head_dim, num_virtual_tokens).
             - 'values' (Tensor): A tensor containing the processed values. The shape of the tensor is (total_layers // 2, batch_size * num_attention_heads, num_virtual_tokens, head_dim).
-    
+
     Raises:
-        None.    
+        None.
     """
     past_key_values = ops.cat(past_key_values)
     total_layers, batch_size, num_attention_heads, num_virtual_tokens, head_dim = past_key_values.shape
@@ -47,10 +47,10 @@ def starcoder_model_postprocess_past_key_value(past_key_values):
     r"""
     Args:
         past_key_values (list): A list of past key values in a specific format.
-        
+
     Returns:
         tuple: A tuple containing processed key values.
-    
+
     Raises:
         None.
     """
@@ -66,6 +66,28 @@ def starcoder_model_postprocess_past_key_value(past_key_values):
 TRANSFORMERS_MODELS_TO_PREFIX_TUNING_POSTPROCESS_MAPPING = {
     "bloom": bloom_model_postprocess_past_key_value,
     "gpt_bigcode": starcoder_model_postprocess_past_key_value,
+}
+TRANSFORMERS_MODELS_TO_LNTUNING_TARGET_MODULES_MAPPING = {
+    "llama": ["input_layernorm", "post_attention_layernorm", "norm"],
+    "bloom": ["input_layernorm", "post_attention_layernorm", "ln_f"],
+    "llava": [
+        "multi_modal_projector",
+        "input_layernorm",
+        "post_attention_layernorm",
+        "norm",
+        "embed_tokens",
+        "lm_head",
+    ],
+    "t5": ["layer_norm", "final_layer_norm"],
+    "mt5": ["layer_norm", "final_layer_norm"],
+    "bart": ["self_attn_layer_norm", "encoder_attn_layer_norm", "final_layer_norm"],
+    "gpt2": ["ln_1", "ln_2", "ln_f"],
+    "blip-2": ["layernorm", "LayerNorm", "final_layer_norm", "self_attn_layer_norm"],
+    "gptj": ["ln_1", "ln_f"],
+    "falcon": ["input_layernorm", "post_attention_layernorm", "ln_f"],
+    "mistral": ["input_layernorm", "post_attention_layernorm", "norm"],
+    "phi": ["input_layernorm", "final_layernorm"],
+    "gemma": ["input_layernorm", "post_attention_layernorm", "norm"],
 }
 
 TRANSFORMERS_MODELS_TO_LNTUNING_TARGET_MODULES_MAPPING = {

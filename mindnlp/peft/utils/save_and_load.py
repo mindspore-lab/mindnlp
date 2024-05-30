@@ -86,6 +86,8 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
         to_return = {k: state_dict[k] for k in state_dict if "lokr_" in k}
     elif config.peft_type == PeftType.POLY:
         to_return = {k: state_dict[k] for k in state_dict if "poly_" in k}
+    elif config.peft_type == PeftType.LN_TUNING:
+        to_return = {k: state_dict[k] for k in state_dict if "ln_tuning_" in k}
     elif config.peft_type == PeftType.LOHA:
         to_return = {k: state_dict[k] for k in state_dict if "hada_" in k}
     elif config.is_prompt_learning:
@@ -142,6 +144,7 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
         PeftType.LOKR,
         PeftType.LOHA,
         PeftType.POLY,
+        PeftType.LN_TUNING,
     ):
         peft_model_state_dict = {}
         parameter_prefix = {
@@ -151,6 +154,7 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
             PeftType.LOKR: "lokr_",
             PeftType.LOHA: "hada_",
             PeftType.POLY: "poly_",
+            PeftType.LN_TUNING: "ln_tuning_",
         }[config.peft_type]
         for k, v in state_dict.items():
             if parameter_prefix in k:

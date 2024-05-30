@@ -41,6 +41,7 @@ from .tuners import (
     PrefixEncoder,
     LoHaModel,
     PolyModel,
+    LNTuningModel,
 )
 from .utils import (
     # SAFETENSORS_WEIGHTS_NAME,
@@ -68,6 +69,7 @@ PEFT_TYPE_TO_MODEL_MAPPING = {
     PeftType.LOKR: LoKrModel,
     PeftType.LOHA: LoHaModel,
     PeftType.POLY: PolyModel,
+    PeftType.LN_TUNING: LNTuningModel,
 }
 
 class PeftModel(nn.Cell):
