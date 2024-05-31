@@ -159,3 +159,5 @@ data*/
 !mindnlp/dataset/
 !docs/api/data/
 *config.json
+
+fusion_result.json

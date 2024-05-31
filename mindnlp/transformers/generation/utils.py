@@ -985,7 +985,7 @@ raised.
             if "attention_mask" in model_kwargs:
                 attention_mask = model_kwargs["attention_mask"]
                 model_kwargs["attention_mask"] = ops.cat(
-                    [attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1))], axis=-1
+                    [attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1), dtype=attention_mask.dtype)], axis=-1
                 )
         else:
             # update decoder attention mask
@@ -1407,7 +1407,7 @@ the conflict.
             raise ValueError("Cannot extend attention mask to a length less than it already is")
 
         model_kwargs[key] = ops.cat(
-            [mask, mask.new_ones((mask.shape[0], mask_extension_length))],
+            [mask, mask.new_ones((mask.shape[0], mask_extension_length), dtype=mask.dtype)],
             axis=-1,
         )
 

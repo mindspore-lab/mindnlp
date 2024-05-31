@@ -586,13 +586,18 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
                 pass
             else:
                 # instantial a new Parameter since mindspore.Parameter do not support assign_value with different shape
-                replace_references(output_embeddings.bias, Parameter(ops.pad(
-                    output_embeddings.bias.data,
-                    (0, output_embeddings.weight.shape[0] -
-                    output_embeddings.bias.shape[0]),
-                    "constant",
-                    0,
-                ), name=output_embeddings.bias.name, requires_grad=output_embeddings.bias.requires_grad))
+                if output_embeddings.weight.shape[0] - output_embeddings.bias.shape[0] > 0:
+                    new_bias = ops.pad(
+                        output_embeddings.bias.data,
+                        (0, output_embeddings.weight.shape[0] -
+                        output_embeddings.bias.shape[0]),
+                        "constant",
+                        0,
+                    )
+                else:
+                    new_bias = output_embeddings.bias[:output_embeddings.weight.shape[0]]
+                new_bias = Parameter(new_bias, name=output_embeddings.bias.name, requires_grad=output_embeddings.bias.requires_grad)
+                replace_references(output_embeddings.bias, new_bias)
 
         if hasattr(output_embeddings, "out_channels") and hasattr(input_embeddings, "vocab_size"):
             output_embeddings.out_channels = input_embeddings.vocab_size
