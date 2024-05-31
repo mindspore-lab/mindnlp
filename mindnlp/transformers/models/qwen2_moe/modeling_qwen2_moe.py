@@ -76,7 +76,7 @@ def load_balancing_loss_func(
         return 0
 
     if isinstance(gate_logits, tuple):
-        concatenated_gate_logits = ops.cat(list(gate_logits), dim=0)
+        concatenated_gate_logits = ops.cat(list(gate_logits), axis=0)
 
     routing_weights = ops.softmax(concatenated_gate_logits, axis=-1)
 
@@ -142,7 +142,7 @@ def _get_unpad_data(attention_mask):
     seqlens_in_batch = attention_mask.sum(dim=-1, dtype=mindspore.int32)
     indices = ops.nonzero(attention_mask.flatten()).flatten()
     max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, dim=0, dtype=mindspore.int32), (1, 0))
+    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0))
     return (
         indices,
         cu_seqlens,

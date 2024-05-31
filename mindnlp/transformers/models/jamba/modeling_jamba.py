@@ -921,9 +921,7 @@ the router logits have a shape of (batch_size * sequence_length, 1).
             final_hidden_states = self.experts[0](hidden_states)
             router_logits = ops.ones(
                 (batch_size * sequence_length, 1),
-                device=hidden_states.device,
                 dtype=hidden_states.dtype,
-                requires_grad=hidden_states.requires_grad,
             )
             return final_hidden_states, router_logits
 
