@@ -59,7 +59,7 @@ class CNNEncoder(EncoderBase):
         (8, 16)
 
     """
-    def __init__(self, embedding, convs, conv_layer_activation=nn.Tanh(), output_dim=None):
+    def __init__(self, embedding, convs, conv_layer_activation, output_dim=None):
         r"""
         This method initializes an instance of the CNNEncoder class.
         

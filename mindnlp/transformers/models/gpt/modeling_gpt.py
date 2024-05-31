@@ -44,7 +44,7 @@ OPENAI_GPT_PRETRAINED_MODEL_ARCHIVE_LIST = [
 ]
 
 
-ACT_FNS = {"relu": nn.ReLU(), "silu": silu, "gelu": gelu_new, "swish": silu}
+ACT_FNS = {"relu": ops.relu, "silu": silu, "gelu": gelu_new, "swish": silu}
 
 
 class Attention(nn.Cell):
