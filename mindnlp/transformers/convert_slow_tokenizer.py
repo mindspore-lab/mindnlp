@@ -50,6 +50,14 @@ def import_protobuf(error_message=""):
         return sentencepiece_model_pb2
     raise ImportError(PROTOBUF_IMPORT_ERROR.format(error_message))
 
+def _get_prepend_scheme(add_prefix_space: bool, original_tokenizer) -> str:
+    if add_prefix_space:
+        prepend_scheme = "always"
+        if not getattr(original_tokenizer, "legacy", True):
+            prepend_scheme = "first"
+    else:
+        prepend_scheme = "never"
+    return prepend_scheme
 
 class SentencePieceExtractor:
     """
@@ -924,7 +932,8 @@ sentencepiece version would convert these unknown tokens into a sequence of byte
         Raises:
             No specific exceptions are raised by this method under normal operation.
         """
-        return pre_tokenizers.Metaspace(replacement=replacement, add_prefix_space=add_prefix_space)
+        prepend_scheme = _get_prepend_scheme(add_prefix_space, self.original_tokenizer)
+        return pre_tokenizers.Metaspace(replacement=replacement, prepend_scheme=prepend_scheme)
 
     def post_processor(self):
         """
@@ -963,7 +972,8 @@ any other necessary adjustments to ensure the accuracy and integrity of the conv
         Raises:
             None: This method does not explicitly raise any exceptions.
         """
-        return decoders.Metaspace(replacement=replacement, add_prefix_space=add_prefix_space)
+        prepend_scheme = _get_prepend_scheme(add_prefix_space, self.original_tokenizer)
+        return decoders.Metaspace(replacement=replacement, prepend_scheme=prepend_scheme)
 
     def converted(self) -> Tokenizer:
         """
@@ -987,12 +997,15 @@ any other necessary adjustments to ensure the accuracy and integrity of the conv
 
         replacement = "▁"
         add_prefix_space = True
+        if hasattr(self.original_tokenizer, "add_prefix_space"):
+            add_prefix_space = self.original_tokenizer.add_prefix_space
+
         pre_tokenizer = self.pre_tokenizer(replacement, add_prefix_space)
         if pre_tokenizer is not None:
             tokenizer.pre_tokenizer = pre_tokenizer
 
         tokenizer.decoder = self.decoder(replacement, add_prefix_space)
-        post_processor = self.post_processor() # pylint: disable=assignment-from-none
+        post_processor = self.post_processor()
         if post_processor:
             tokenizer.post_processor = post_processor
 

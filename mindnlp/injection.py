@@ -988,6 +988,8 @@ class Embedding(nn.Cell):
         return f'vocab_size={self.vocab_size}, embedding_size={self.embedding_size}, use_one_hot={self.use_one_hot}, ' \
             f'weight={self.weight}, dtype={self.dtype}, padding_idx={self.padding_idx}'
 
+
+
 class Conv1d(_Conv):
     """patched Conv1d"""
     def __init__(self,
@@ -1059,12 +1061,87 @@ class Conv1d(_Conv):
             RuntimeError: If the method encounters any runtime issues during processing.
         """
         x = x.expand_dims(2)
-        output = self.conv2d(x, self.weight.expand_dims(2))
+        if DEVICE_TARGET == 'Ascend':
+            x_dtype = x.dtype
+            output = self.conv2d(x.astype(mindspore.float16), self.weight.expand_dims(2).astype(mindspore.float16))
+        else:
+            output = self.conv2d(x, self.weight.expand_dims(2))
+        if DEVICE_TARGET == 'Ascend':
+            output = output.astype(x_dtype)
+
         if self.has_bias:
             output = ops.bias_add(output, self.bias)
 
         output = output.squeeze(2)
         return output
+
+
+class Conv2d(_Conv):
+    r"""
+    2D convolution layer.
+    """
+
+    def __init__(self,
+                in_channels,
+                out_channels,
+                kernel_size,
+                stride=1,
+                pad_mode='same',
+                padding=0,
+                dilation=1,
+                group=1,
+                has_bias=False,
+                weight_init=None,
+                bias_init=None,
+                data_format='NCHW',
+                dtype=mstype.float32):
+        """Initialize Conv2d."""
+        kernel_size = Validator.twice(kernel_size)
+        stride = Validator.twice(stride)
+        self._dilation = dilation
+        dilation = Validator.twice(dilation)
+        Validator.check_positive_int(group, 'group', self.cls_name)
+        if not (in_channels % group == 0 and out_channels % group == 0):
+            raise ValueError(f"The argument 'group' should be divisible by 'in_channels' " \
+                             f"and 'out_channels', but got group:{group}, in_channels:{in_channels}, " \
+                             f"out_channels:{out_channels}.")
+        super(Conv2d, self).__init__(
+            in_channels,
+            out_channels,
+            kernel_size,
+            stride,
+            pad_mode,
+            padding,
+            dilation,
+            group,
+            has_bias,
+            weight_init,
+            bias_init,
+            data_format,
+            dtype=dtype)
+        self.conv2d = ops.Conv2D(out_channel=self.out_channels,
+                               kernel_size=self.kernel_size,
+                               mode=1,
+                               pad_mode=self.pad_mode,
+                               pad=self.padding,
+                               stride=self.stride,
+                               dilation=self.dilation,
+                               group=self.group,
+                               data_format=self.data_format)
+        self.bias_add = ops.BiasAdd(data_format=self.data_format)
+
+    def construct(self, x):
+        if DEVICE_TARGET == 'Ascend':
+            x_dtype = x.dtype
+            output = self.conv2d(x.astype(mindspore.float16), self.weight.astype(mindspore.float16))
+        else:
+            output = self.conv2d(x, self.weight)
+        if DEVICE_TARGET == 'Ascend':
+            output = output.astype(x_dtype)
+        if self.has_bias:
+            output = self.bias_add(output, self.bias)
+        return output
+
 
 class Conv1dTranspose(_Conv):
     """patched Conv1dTranspose"""
@@ -1510,6 +1587,7 @@ nn.Cell.parameters_dict = parameters_dict
 
 nn.LayerNorm = LayerNorm
 nn.Conv1d = Conv1d
+nn.Conv2d = Conv2d
 nn.Conv1dTranspose = Conv1dTranspose
 nn.Embedding = Embedding
 nn.Dense = Dense
