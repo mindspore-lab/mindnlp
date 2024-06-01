@@ -120,6 +120,7 @@ from . import (
     wav2vec2,
     wav2vec2_with_lm,
     whisper,
+    x_clip,
     xlm,
     xlm_roberta,
     xlnet
@@ -229,6 +230,7 @@ from .vit import *
 from .whisper import *
 from .wav2vec2 import *
 from .wav2vec2_with_lm import *
+from .x_clip import *
 from .xlm import *
 from .xlm_roberta import *
 from .xlnet import *
@@ -338,6 +340,7 @@ __all__.extend(vit.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)
 __all__.extend(wav2vec2_with_lm.__all__)
+__all__.extend(x_clip.__all__)
 __all__.extend(xlm.__all__)
 __all__.extend(xlm_roberta.__all__)
 __all__.extend(xlnet.__all__)
