@@ -97,6 +97,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("roberta", "RobertaConfig"),
         ("sam", "SamConfig"),
         ("segformer", "SegformerConfig"),
+        ("squeezebert", "SqueezeBertConfig"),
         ("starcoder2", "Starcoder2Config"),
         ("t5", "T5Config"),
         ("timesformer", "TimesformerConfig"),
@@ -651,16 +652,16 @@ class _LazyConfigMapping(OrderedDict):
     def __init__(self, mapping):
         """
         Initializes a new instance of the _LazyConfigMapping class.
-        
+
         Args:
             self (object): The instance of the _LazyConfigMapping class.
-            mapping (dict): A dictionary containing the initial mapping for the configuration. 
+            mapping (dict): A dictionary containing the initial mapping for the configuration.
                            The keys represent the configuration keys, and the values represent the corresponding values.
                            This parameter is required and must be of type dict.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -671,17 +672,17 @@ class _LazyConfigMapping(OrderedDict):
     def __getitem__(self, key):
         """
         __getitem__
-        
+
         Retrieve the value associated with the given key from the _LazyConfigMapping object.
-        
+
         Args:
             self (_LazyConfigMapping): The instance of the _LazyConfigMapping class.
             key (str): The key used to retrieve the corresponding value. It should be a string.
-        
+
         Returns:
             None: If the key is present in the _extra_content, the associated value is returned. If the key is not in _extra_content but is in _mapping, the value associated with the key is returned after
 performing necessary module imports and attribute retrieval.
-        
+
         Raises:
             KeyError: If the key is not found in either _extra_content or _mapping, a KeyError is raised.
             AttributeError: If the attribute associated with the value corresponding to the key is not found in the dynamically imported module, an AttributeError is raised.
@@ -708,13 +709,13 @@ performing necessary module imports and attribute retrieval.
     def keys(self):
         """
         This method returns a list of all the keys in the _LazyConfigMapping object.
-        
+
         Args:
             self (_LazyConfigMapping): The instance of the _LazyConfigMapping class.
-        
+
         Returns:
             list: A list containing all the keys in the _mapping and _extra_content attributes of the _LazyConfigMapping object.
-        
+
         Raises:
             None
         """
@@ -723,14 +724,14 @@ performing necessary module imports and attribute retrieval.
     def values(self):
         """
         This method returns a list containing the values of the mapping and any extra content in the _LazyConfigMapping class.
-        
+
         Args:
             self (_LazyConfigMapping): The instance of the _LazyConfigMapping class.
                 This parameter is used to access the instance's mapping and extra content.
-        
+
         Returns:
             list: A list containing the values of the mapping and any extra content in the _LazyConfigMapping class.
-        
+
         Raises:
             N/A
         """
@@ -742,13 +743,13 @@ performing necessary module imports and attribute retrieval.
         """
         items(self)
             This method returns a list of key-value pairs from the _LazyConfigMapping instance.
-        
+
         Args:
             self (_LazyConfigMapping): The instance of the _LazyConfigMapping class.
-        
+
         Returns:
             list: A list of key-value pairs from the _LazyConfigMapping instance.
-        
+
         Raises:
             None.
         """
@@ -759,13 +760,13 @@ performing necessary module imports and attribute retrieval.
     def __iter__(self):
         """
         Iterates over the keys of the '_LazyConfigMapping' instance.
-        
+
         Args:
             self (object): The instance of the '_LazyConfigMapping' class.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -774,14 +775,14 @@ performing necessary module imports and attribute retrieval.
     def __contains__(self, item):
         """
         Check if the given item is contained within the '_LazyConfigMapping' object.
-        
+
         Args:
             self (_LazyConfigMapping): The instance of the '_LazyConfigMapping' class.
             item: The item to be checked for containment within the object. It can be of any type.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -812,14 +813,14 @@ class _LazyLoadAllMappings(OrderedDict):
     def __init__(self, mapping):
         """
         Initializes an instance of the '_LazyLoadAllMappings' class.
-        
+
         Args:
             self: An instance of the '_LazyLoadAllMappings' class.
             mapping: A dictionary containing the mapping data to be used by the instance.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             None.
         """
@@ -830,15 +831,15 @@ class _LazyLoadAllMappings(OrderedDict):
     def _initialize(self):
         """
         Initializes the lazy loading of all mappings for the _LazyLoadAllMappings class.
-        
+
         Args:
             self: _LazyLoadAllMappings - The instance of the _LazyLoadAllMappings class.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
-            FutureWarning: If ALL_PRETRAINED_CONFIG_ARCHIVE_MAP is deprecated and will be removed in v5 of Transformers. 
+            FutureWarning: If ALL_PRETRAINED_CONFIG_ARCHIVE_MAP is deprecated and will be removed in v5 of Transformers.
             It does not contain all available model checkpoints. Refer to hf.co/models for that.
         """
         if self._initialized:
@@ -860,16 +861,16 @@ class _LazyLoadAllMappings(OrderedDict):
     def __getitem__(self, key):
         """
         __getitem__
-        
+
         This method retrieves the value associated with the specified key from the _LazyLoadAllMappings instance.
-        
+
         Args:
             self (_LazyLoadAllMappings): The instance of the _LazyLoadAllMappings class.
             key: The key for which the associated value needs to be retrieved. Type: Any hashable object.
-        
+
         Returns:
             None: This method returns the value associated with the specified key. If the key is not found, a KeyError is raised.
-        
+
         Raises:
             KeyError: If the specified key is not found in the _LazyLoadAllMappings instance.
         """
@@ -879,13 +880,13 @@ class _LazyLoadAllMappings(OrderedDict):
     def keys(self):
         """
         Returns a list of all the keys in the mappings.
-        
+
         Args:
             self (obj): An instance of the _LazyLoadAllMappings class.
-        
+
         Returns:
             None: This method does not return anything.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -895,16 +896,16 @@ class _LazyLoadAllMappings(OrderedDict):
     def values(self):
         """
         Method 'values' in the class '_LazyLoadAllMappings' returns the values of the internal data dictionary after initialization.
-        
+
         Args:
             self (object): The instance of the class.
                 This parameter represents the current instance of the class '_LazyLoadAllMappings'.
                 It is required to access the internal data and perform necessary operations.
-        
+
         Returns:
             None.
             This method does not return any specific value but retrieves and returns the values of the internal data dictionary.
-        
+
         Raises:
             No specific exceptions are raised by this method under normal circumstances.
             However, if there are any issues during the initialization process, unexpected behavior may occur.
@@ -915,16 +916,16 @@ class _LazyLoadAllMappings(OrderedDict):
     def items(self):
         """
         Method 'items' in the class '_LazyLoadAllMappings' retrieves the keys of the data after initialization.
-        
+
         Args:
             self (object): The instance of the class.
                 This parameter is required to access the instance attributes and methods.
                 It must be an instance of the class '_LazyLoadAllMappings'.
-        
+
         Returns:
             None.
             This method returns the keys of the data stored in the '_data' attribute after initialization.
-        
+
         Raises:
             No exceptions are explicitly raised within this method.
         """
@@ -934,15 +935,15 @@ class _LazyLoadAllMappings(OrderedDict):
     def __iter__(self):
         """
         __iter__
-        
+
         This method returns an iterator object for the _LazyLoadAllMappings instance.
-        
+
         Args:
             self (_LazyLoadAllMappings): The instance of the _LazyLoadAllMappings class.
-        
+
         Returns:
             iter: An iterator object for the _data attribute of the _LazyLoadAllMappings instance.
-        
+
         Raises:
             None
         """
@@ -952,7 +953,7 @@ class _LazyLoadAllMappings(OrderedDict):
     def __contains__(self, item):
         """
         This method '__contains__' in the class '_LazyLoadAllMappings' determines if the specified item is contained within the data structure.
-        
+
         Args:
             self (_LazyLoadAllMappings): The instance of the _LazyLoadAllMappings class.
                 This parameter represents the current object instance.
@@ -960,10 +961,10 @@ class _LazyLoadAllMappings(OrderedDict):
                 Type: Any
                 Purpose: To specify the item to be checked.
                 Restrictions: None
-        
+
         Returns:
             None: This method returns None if the specified item is found within the data structure, otherwise it returns False.
-        
+
         Raises:
             None: This method does not explicitly raise any exceptions.
         """
@@ -979,22 +980,22 @@ ALL_PRETRAINED_CONFIG_ARCHIVE_MAP = _LazyLoadAllMappings(
 def _get_class_name(model_class: Union[str, List[str]]):
     """
     This function returns a formatted string representing the class name or names provided as the 'model_class' parameter.
-    
+
     Args:
         model_class (Union[str, List[str]]): The class name or names to be formatted. It can be a string or a list of strings.
-            If 'model_class' is a list, the function will join the class names using ' or '. Empty strings or None values 
+            If 'model_class' is a list, the function will join the class names using ' or '. Empty strings or None values
             in the list will be ignored.
-    
+
     Returns:
-        str: A formatted string representing the class name or names provided. The class name(s) will be enclosed in 
+        str: A formatted string representing the class name or names provided. The class name(s) will be enclosed in
             backticks for clarity.
-    
+
     Raises:
         None: This function does not raise any exceptions.
-    
+
     Note:
-        The function can be called with either a single class name or a list of class names. If the 'model_class' parameter 
-        is a list, the resulting string will represent the joined class names using ' or ' as the separator. Empty strings 
+        The function can be called with either a single class name or a list of class names. If the 'model_class' parameter
+        is a list, the resulting string will represent the joined class names using ' or ' as the separator. Empty strings
         or None values will be ignored.
     """
     if isinstance(model_class, (list, tuple)):
@@ -1008,12 +1009,12 @@ def _list_model_options(indent, config_to_class=None, use_model_types=True):
         indent (str): The string used for indentation in the output.
         config_to_class (dict): A dictionary mapping model configurations to their corresponding classes.
             Defaults to None.
-        use_model_types (bool): A flag indicating whether to use model types or configurations. 
+        use_model_types (bool): A flag indicating whether to use model types or configurations.
             Defaults to True.
-            
+
     Returns:
         str: A formatted string containing the model options.
-    
+
     Raises:
         ValueError: If `use_model_types` is set to False and `config_to_class` is not provided.
     """
@@ -1057,15 +1058,15 @@ def _list_model_options(indent, config_to_class=None, use_model_types=True):
 
 def replace_list_option_in_docstrings(config_to_class=None, use_model_types=True):
     """
-    This function decorates another function's docstring to include a section for listing options related to model types. 
-    
+    This function decorates another function's docstring to include a section for listing options related to model types.
+
     Args:
         config_to_class (optional): A dictionary representing the configuration to class mapping. Defaults to None.
         use_model_types (optional): A boolean indicating whether model types should be used. Defaults to True.
-    
+
     Returns:
         None: This function does not return any value.
-    
+
     Raises:
         ValueError: If the input function's docstring does not contain an empty 'List options' section as a placeholder.
     """
@@ -1104,17 +1105,17 @@ class AutoConfig:
     def __init__(self):
         """
         Initialize AutoConfig.
-        
+
         Args:
             self: The instance of the AutoConfig class. It is automatically passed when the method is called.
                 Purpose: Represents the instance of the AutoConfig class.
                 Restrictions: None.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
-            EnvironmentError: If the AutoConfig is instantiated directly using the `__init__` method, it raises an EnvironmentError with the message 
+            EnvironmentError: If the AutoConfig is instantiated directly using the `__init__` method, it raises an EnvironmentError with the message
             'AutoConfig is designed to be instantiated using the `AutoConfig.from_pretrained(pretrained_model_name_or_path)` method.'.
         """
         raise EnvironmentError(
@@ -1126,14 +1127,14 @@ class AutoConfig:
     def for_model(cls, model_type: str, *args, **kwargs):
         """
         This class method 'for_model' in the 'AutoConfig' class is used to instantiate a configuration class based on the provided model type.
-        
+
         Args:
             cls (class): The class itself, automatically passed as the first parameter.
             model_type (str): A string representing the type of the model for which the configuration class needs to be instantiated. It must be a key within the CONFIG_MAPPING dictionary.
-        
+
         Returns:
             None: This method does not return any value directly. It instantiates and returns an instance of the appropriate configuration class based on the model type.
-        
+
         Raises:
             ValueError: Raised when the provided 'model_type' is not recognized or is not found as a key in the CONFIG_MAPPING dictionary. The exception message indicates the unrecognized model identifier and
 lists all valid model identifiers available in the CONFIG_MAPPING dictionary.
