@@ -97,6 +97,7 @@ from . import (
     olmo,
     openelm,
     opt,
+    owlvit,
     pegasus,
     phi,
     phi3,
@@ -206,6 +207,7 @@ from .nezha import *
 from .olmo import *
 from .openelm import *
 from .opt import *
+from .owlvit import *
 from .pegasus import *
 from .phi import *
 from .phi3 import *
@@ -315,6 +317,7 @@ __all__.extend(nezha.__all__)
 __all__.extend(olmo.__all__)
 __all__.extend(openelm.__all__)
 __all__.extend(opt.__all__)
+__all__.extend(owlvit.__all__)
 __all__.extend(pegasus.__all__)
 __all__.extend(phi.__all__)
 __all__.extend(phi3.__all__)
