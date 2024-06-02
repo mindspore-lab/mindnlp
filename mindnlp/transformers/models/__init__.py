@@ -111,6 +111,7 @@ from . import (
     seamless_m4t,
     seamless_m4t_v2,
     segformer,
+    stablelm,
     starcoder2,
     t5,
     timesformer,
@@ -220,6 +221,7 @@ from .sam import *
 from .seamless_m4t import *
 from .seamless_m4t_v2 import *
 from .segformer import *
+from .stablelm import *
 from .starcoder2 import *
 from .tinybert import *
 from .t5 import *
@@ -329,6 +331,7 @@ __all__.extend(sam.__all__)
 __all__.extend(seamless_m4t.__all__)
 __all__.extend(seamless_m4t_v2.__all__)
 __all__.extend(segformer.__all__)
+__all__.extend(stablelm.__all__)
 __all__.extend(starcoder2.__all__)
 __all__.extend(t5.__all__)
 __all__.extend(timesformer.__all__)
