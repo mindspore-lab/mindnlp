@@ -21,6 +21,7 @@ import numpy as np
 from mindspore import nn, ops
 from mindspore.common.initializer import Normal, initializer
 
+from mindnlp.modules.functional import finfo
 from mindnlp.utils import logging
 
 from ...modeling_outputs import (
@@ -53,7 +54,7 @@ def positional_encoding(position, d_model_size, dtype):
     sines = ops.sin(angle_rads[:, 0::2])
     cosines = ops.cos(angle_rads[:, 1::2])
 
-    pos_encoding = ops.cat([sines, cosines], axis=-1)
+    pos_encoding = ops.cat((sines, cosines), axis=-1)
     return pos_encoding
 
 
@@ -118,8 +119,8 @@ class MultiHeadAttention(nn.Cell):
         self.pruned_heads = self.pruned_heads.union(heads)
 
     def split_into_heads(self, x, batch_size):
-        x = x.reshape(batch_size, -1, self.num_heads, self.depth)
-        return x.permute([0, 2, 1, 3])
+        x = ops.reshape(x, (batch_size, -1, self.num_heads, self.depth))
+        return x.permute(0, 2, 1, 3)
 
     def construct(
         self,
@@ -153,7 +154,7 @@ class MultiHeadAttention(nn.Cell):
             present = (None,)
 
         output = scaled_dot_product_attention(q, k, v, mask, attention_mask, head_mask)
-        scaled_attention = output[0].permute([0, 2, 1, 3])
+        scaled_attention = output[0].permute(0, 2, 1, 3)
         attn = output[1]
         original_size_attention = scaled_attention.reshape(
             batch_size, -1, self.d_model_size
@@ -234,26 +235,30 @@ class CTRLPreTrainedModel(PreTrainedModel):
         if isinstance(cell, (nn.Dense, Conv1D)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range)))
+            cell.weight.set_data(
+                initializer(
+                    Normal(self.config.initializer_range),
+                    cell.weight.shape,
+                    cell.weight.dtype,
+                )
+            )
             if cell.bias is not None:
                 cell.bias.set_data(
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )
         elif isinstance(cell, nn.Embedding):
 
-            embedding_table = np.random.normal(
-                0.0, self.config.initializer_range, cell.embedding_table.shape
+            weight = np.random.normal(
+                0.0, self.config.initializer_range, cell.weight.shape
             )
             if cell.padding_idx:
-                embedding_table[cell.padding_idx] = 0
-            cell.embedding_table.set_data(
-                mindspore.Tensor(embedding_table, cell.embedding_table.dtype)
-            )
+                weight[cell.padding_idx] = 0
+            cell.weight.set_data(mindspore.Tensor(weight, cell.weight.dtype))
         elif isinstance(cell, nn.LayerNorm):
-            cell.gamma.set_data(initializer("ones", cell.gamma.shape, cell.gamma.dtype))
             cell.weight.set_data(
-                initializer("zeros", cell.weight.shape, cell.weight.dtype)
+                initializer("ones", cell.weight.shape, cell.weight.dtype)
             )
+            cell.bias.set_data(initializer("zeros", cell.bias.shape, cell.bias.dtype))
 
 
 class CTRLModel(CTRLPreTrainedModel):
@@ -356,15 +361,13 @@ class CTRLModel(CTRLPreTrainedModel):
         elif input_ids is not None:
             self.warn_if_padding_and_no_attention_mask(input_ids, attention_mask)
             input_shape = input_ids.shape
-            input_ids = input_ids.view(-1, input_shape[-1])
+            input_ids = input_ids.reshape(-1, input_shape[-1])
             batch_size = input_ids.shape[0]
         elif inputs_embeds is not None:
             input_shape = inputs_embeds.shape[:-1]
             batch_size = inputs_embeds.shape[0]
         else:
             raise ValueError("You have to specify either input_ids or inputs_embeds")
-
-        device = input_ids.device if input_ids is not None else inputs_embeds.device
 
         if past_key_values is None:
             past_length = 0
@@ -383,7 +386,7 @@ class CTRLModel(CTRLPreTrainedModel):
         if attention_mask is not None:
             if batch_size <= 0:
                 raise ValueError("batch_size has to be defined and > 0")
-            attention_mask = attention_mask.view(batch_size, -1)
+            attention_mask = attention_mask.reshape(batch_size, -1)
             # We create a 3D attention mask from a 2D tensor mask.
             # Sizes are [batch_size, 1, 1, to_seq_length]
             # So we can broadcast to [batch_size, num_heads, from_seq_length, to_seq_length]
@@ -397,13 +400,13 @@ class CTRLModel(CTRLPreTrainedModel):
             # Since we are adding it to the raw scores before the softmax, this is
             # effectively the same as removing these entirely.
             attention_mask = attention_mask.to(dtype=self.dtype)  # fp16 compatibility
-            attention_mask = (1.0 - attention_mask) * np.finfo(self.dtype).min
+            attention_mask = (1.0 - attention_mask) * finfo(self.dtype, "min")
 
         # Prepare head mask if needed
         head_mask = self.get_head_mask(head_mask, self.config.n_layer)
 
         if token_type_ids is not None:
-            token_type_ids = token_type_ids.view(-1, input_shape[-1])
+            token_type_ids = token_type_ids.reshape(-1, input_shape[-1])
             token_type_embeds = self.w(token_type_ids)
             token_type_embeds *= np.sqrt(self.d_model_size)
         else:
@@ -582,7 +585,7 @@ class CTRLLMHeadModel(CTRLPreTrainedModel):
             # Flatten the tokens
             loss_fct = ops.cross_entropy
             loss = loss_fct(
-                shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1)
+                shift_logits.reshape(-1, shift_logits.shape[-1]), shift_labels.reshape(-1)
             )
 
         if not return_dict:
@@ -606,14 +609,14 @@ class CTRLLMHeadModel(CTRLPreTrainedModel):
         [`~PreTrainedModel.beam_sample`] is called. This is required to match `past_key_values` with the correct
         beam_idx at every generation step.
         """
-        return tuple(
-            tuple(
-                past_state.index_select(0, beam_idx.to(past_state.device))
-                for past_state in layer_past
+        reordered_past = ()
+        for layer_past in past_key_values:
+            reordered_past += (
+                tuple(
+                    past_state.index_select(0, beam_idx) for past_state in layer_past
+                ),
             )
-            for layer_past in past_key_values
-        )
-
+        return reordered_past
 
 class CTRLForSequenceClassification(CTRLPreTrainedModel):
     def __init__(self, config):
@@ -759,7 +762,6 @@ class CTRLForSequenceClassification(CTRLPreTrainedModel):
                     ops.eq(input_ids, self.config.pad_token_id).int().argmax(-1) - 1
                 )
                 sequence_lengths = sequence_lengths % input_ids.shape[-1]
-                sequence_lengths = sequence_lengths.to(logits.device)
             else:
                 sequence_lengths = -1
                 logger.warning(
@@ -791,7 +793,7 @@ class CTRLForSequenceClassification(CTRLPreTrainedModel):
             elif self.config.problem_type == "single_label_classification":
                 loss_fct = ops.cross_entropy
                 loss = loss_fct(
-                    pooled_logits.view(-1, self.num_labels), labels.view(-1)
+                    pooled_logits.reshape(-1, self.num_labels), labels.reshape(-1)
                 )
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = ops.binary_cross_entropy_with_logits
