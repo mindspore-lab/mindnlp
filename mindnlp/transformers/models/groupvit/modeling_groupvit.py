@@ -62,7 +62,7 @@ def hard_softmax(logits: mindspore.Tensor, dim: int):
     y_soft = ops.softmax(logits,axis=dim)
     # Straight through.
     index = y_soft.max(dim, keepdims=True, return_indices=True)[1]
-    y_hard = ops.tensor_scatter_elements(ops.zeros_like(logits), dim, index, 1)
+    y_hard = ops.tensor_scatter_elements(ops.zeros_like(logits,dtype=mindspore.float32), index, ops.ones_like(index,dtype=mindspore.float32), dim)
     y_soft = ops.stop_gradient(y_soft)
     ret = y_hard - y_soft + y_soft
 
@@ -83,7 +83,7 @@ def gumbel_softmax(logits: mindspore.Tensor, tau: float = 1, hard: bool = False,
     if hard:
         # Straight through.
         index = y_soft.max(dim, keepdims=True, return_indices=True)[1]
-        y_hard = ops.tensor_scatter_elements(ops.zeros_like(logits), dim, index, 1)
+        y_hard = ops.tensor_scatter_elements(ops.zeros_like(logits,dtype=mindspore.float32), index, ops.ones_like(index,dtype=mindspore.float32), dim)
         y_soft = ops.stop_gradient(y_soft)
         ret = y_hard - y_soft + y_soft
     else:
@@ -340,7 +340,7 @@ class GroupViTPatchEmbeddings(nn.Cell):
         self.patch_size = patch_size
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, embed_dim, kernel_size=patch_size, stride=patch_size)
+        self.projection = nn.Conv2d(num_channels, embed_dim, kernel_size=patch_size, stride=patch_size,has_bias=True)
 
     def construct(self, pixel_values: mindspore.Tensor, interpolate_pos_encoding: bool = False) -> mindspore.Tensor:
         batch_size, num_channels, height, width = pixel_values.shape
@@ -775,7 +775,6 @@ class GroupViTPreTrainedModel(PreTrainedModel):
             factor = self.config.initializer_factor
             in_proj_std = (cell.embed_dim**-0.5) * ((2 * cell.config.num_hidden_layers) ** -0.5) * factor
             out_proj_std = (cell.embed_dim**-0.5) * factor
-            
             cell.q_proj.weight.set_data(initializer(Normal(in_proj_std),
                                         cell.q_proj.weight.shape, cell.q_proj.weight.dtype))
             cell.k_proj.weight.set_data(initializer(Normal(in_proj_std),
@@ -789,7 +788,6 @@ class GroupViTPreTrainedModel(PreTrainedModel):
             factor = self.config.initializer_factor
             in_proj_std = (cell.config.hidden_size**-0.5) * ((2 * cell.config.num_hidden_layers) ** -0.5) * factor
             fc_std = (2 * cell.config.hidden_size) ** -0.5 * factor
-            
             cell.fc1.weight.set_data(initializer(Normal(fc_std),
                                     cell.fc1.weight.shape, cell.fc1.weight.dtype))
             cell.fc2.weight.set_data(initializer(Normal(in_proj_std),
@@ -1244,7 +1242,7 @@ class GroupViTModel(GroupViTPreTrainedModel):
             nn.ReLU(),
             nn.Dense(self.projection_intermediate_dim, self.projection_dim, has_bias=True),
         )
-        self.logit_scale = mindspore.tensor([self.config.logit_scale_init_value])
+        self.logit_scale = Parameter(mindspore.Tensor([self.config.logit_scale_init_value]))
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1416,7 +1414,6 @@ class GroupViTModel(GroupViTPreTrainedModel):
         # normalized features
         image_embeds = image_embeds / image_embeds.norm(ord=2, dim=-1, keepdim=True)
         text_embeds = text_embeds / text_embeds.norm(ord=2, dim=-1, keepdim=True)
-
         # cosine similarity as logits
         logit_scale = self.logit_scale.exp()
         logits_per_text = ops.matmul(text_embeds, image_embeds.t()) * logit_scale

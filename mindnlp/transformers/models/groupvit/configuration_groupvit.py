@@ -15,8 +15,7 @@
 """GroupViT model configuration"""
 
 import os
-from collections import OrderedDict
-from typing import  Any, Mapping, Optional, Union
+from typing import  Union
 from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
 

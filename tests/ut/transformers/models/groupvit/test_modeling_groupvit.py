@@ -13,9 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Testing suite for the PyTorch GroupViT model."""
-
+# pylint: disable=missing-timeout
 import inspect
-import os
 import random
 import tempfile
 import unittest
@@ -576,7 +575,7 @@ class GroupViTModelIntegrationTest(unittest.TestCase):
 
         image = prepare_img()
         inputs = processor(
-            text=["a photo of a cat", "a photo of a dog"], images=image, padding=True, return_tensors="pt"
+            text=["a photo of a cat", "a photo of a dog"], images=image, padding=True, return_tensors="ms"
         )
 
         # forward pass
@@ -593,5 +592,5 @@ class GroupViTModelIntegrationTest(unittest.TestCase):
         )
 
         expected_logits = mindspore.tensor([[13.3523, 6.3629]])
-
-        self.assertTrue(np.allclose(outputs.logits_per_image, expected_logits, atol=1e-3))
+        print(outputs.logits_per_image.asnumpy())
+        self.assertTrue(np.allclose(outputs.logits_per_image.asnumpy(), expected_logits.asnumpy(), atol=1e-3))
