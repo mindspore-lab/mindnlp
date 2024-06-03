@@ -17,10 +17,10 @@ class PatchEmbedding(nn.Cell):
         Args:
             self (PatchEmbedding): The PatchEmbedding instance itself.
             config (object): An object containing configuration settings for the PatchEmbedding.
-                - in_channels (int): Number of input channels.
-                - hidden_size (int): Size of the hidden layer.
-                - patch_size (int): Size of the patch/kernel.
-                - num_positions (int): Number of positions for position embedding.
+                >   - in_channels (int): Number of input channels.
+                >   - hidden_size (int): Size of the hidden layer.
+                >   - patch_size (int): Size of the patch/kernel.
+                >   - num_positions (int): Number of positions for position embedding.
         
         Returns:
             None. This method initializes the PatchEmbedding object with the specified configurations.
@@ -70,11 +70,11 @@ class Attention(nn.Cell):
             self (Attention): The instance of the Attention class.
             config (object): An object containing configuration parameters for the attention mechanism.
                 It must have the following attributes:
-                    - num_heads (int): The number of attention heads to use.
-                    - hidden_size (int): The size of the hidden layers in the attention mechanism.
+                    >   - num_heads (int): The number of attention heads to use.
+                    >   - hidden_size (int): The size of the hidden layers in the attention mechanism.
                 The config object should adhere to the following restrictions:
-                    - num_heads: Must be a positive integer.
-                    - hidden_size: Must be a positive integer.
+                    >    - num_heads: Must be a positive integer.
+                    >   - hidden_size: Must be a positive integer.
         
         Returns:
             None: This method does not return any value.
@@ -198,8 +198,8 @@ class TransformerLayer(nn.Cell):
             self (TransformerLayer): The instance of the TransformerLayer class.
             config (object): The configuration object containing the settings for the TransformerLayer.
                 Expected attributes:
-                - hidden_size (int): The size of the hidden layers in the TransformerLayer.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - hidden_size (int): The size of the hidden layers in the TransformerLayer.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
         
         Returns:
             None. This method initializes the TransformerLayer object with the specified configuration settings.
@@ -229,17 +229,17 @@ class TransformerLayer(nn.Cell):
             None.
         
         Description:
-        This method constructs a TransformerLayer by applying various operations on the input hidden states. It follows the standard Transformer architecture.
+            This method constructs a TransformerLayer by applying various operations on the input hidden states. It follows the standard Transformer architecture.
+
+            The method performs the following steps:
+            >   1. Apply attention mechanism to the hidden_states using self.attention.
+            >   2. Apply input layer normalization to the attention output using self.input_layernorm.
+            >   3. Add the attention output and the input layer normalized attention output.
+            >   4. Apply multi-layer perceptron (MLP) to the resulting hidden_states using self.mlp.
+            >   5. Apply post-attention layer normalization to the MLP output using self.post_attention_layernorm.
+            >   6. Add the hidden_states and the post-attention layer normalized MLP output.
         
-        The method performs the following steps:
-        1. Apply attention mechanism to the hidden_states using self.attention.
-        2. Apply input layer normalization to the attention output using self.input_layernorm.
-        3. Add the attention output and the input layer normalized attention output.
-        4. Apply multi-layer perceptron (MLP) to the resulting hidden_states using self.mlp.
-        5. Apply post-attention layer normalization to the MLP output using self.post_attention_layernorm.
-        6. Add the hidden_states and the post-attention layer normalized MLP output.
-        
-        Note that this method modifies the hidden_states in-place and does not return any value.
+            Note that this method modifies the hidden_states in-place and does not return any value.
         """
         attention_input = hidden_states
         attention_output = self.attention(attention_input)
@@ -257,10 +257,10 @@ class Transformer(nn.Cell):
     Represents a Transformer model for sequence-to-sequence tasks.
     
     This class inherits from the nn.Cell class and implements the Transformer architecture, which consists of multiple Transformer layers. Each layer module applies self-attention mechanism and position-wise
-feed-forward networks to input hidden states.
+    feed-forward networks to input hidden states.
     
     The Transformer class initializes with a configuration object and creates a list of Transformer layers based on the specified number of hidden layers in the configuration. The construct method applies the
-series of Transformer layers to the input hidden states, resulting in transformed hidden states.
+    series of Transformer layers to the input hidden states, resulting in transformed hidden states.
     
     This class provides an efficient and flexible implementation of the Transformer model for various natural language processing tasks, such as machine translation and language modeling.
     """
@@ -272,7 +272,7 @@ series of Transformer layers to the input hidden states, resulting in transforme
             self (object): The instance of the Transformer class.
             config (object): An object containing configuration parameters for the Transformer.
                 This object should have the following attributes:
-                    - num_hidden_layers (int): The number of hidden layers in the Transformer.
+                    >   - num_hidden_layers (int): The number of hidden layers in the Transformer.
                 The config object is used to initialize the layers in the Transformer with TransformerLayer instances.
         
         Returns:
@@ -310,7 +310,7 @@ class GLU(nn.Cell):
     This class represents a Gated Linear Unit (GLU) module, which is used in neural networks for processing sequential data. It is implemented as a subclass of the nn.Cell class.
     
     GLU applies a gating mechanism to the input data, allowing it to selectively pass through different branches of the network. It consists of several layers, including linear projections, layer
-normalization, activation functions, and dense transformations.
+    normalization, activation functions, and dense transformations.
     
     Attributes:
         linear_proj (nn.Dense): A linear projection layer that maps the input features to the hidden size.
@@ -325,6 +325,7 @@ normalization, activation functions, and dense transformations.
         construct(x): Performs the forward pass through the GLU module, taking the input data 'x' and returning the transformed output.
     
     Example usage:
+        ```python
         config = Configuration(hidden_size=256, intermediate_size=512)
         in_features = 128
         x = torch.randn(batch_size, in_features)
@@ -332,7 +333,7 @@ normalization, activation functions, and dense transformations.
         output = glu.construct(x)
     
         # 'output' now contains the transformed input data after passing through the GLU module.
-    
+        ```
     """
     def __init__(self, config, in_features):
         """

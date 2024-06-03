@@ -227,7 +227,7 @@ the current vector's algebra type.
             The division operation is performed element-wise on the vector. If 'that' is a Scalar object, it must have the same 
             algebra type as the current Vector object.
         
-        Example:
+        Examples:
             >>> vec = Vector(alg_factory, size, items)
             >>> scalar = Scalar(alg_factory, value)
             >>> result = vec.div_scalar(scalar)
@@ -373,7 +373,7 @@ the current vector's algebra type.
             - The method stores the x and y components of each scalar in separate arrays '_items_x' and '_items_y'.
               These arrays are created by reshaping and converting the 'items' list to numpy arrays.
         
-        Example:
+        Examples:
             # Create an instance of the Vector class
             v = Vector()
         
@@ -575,7 +575,7 @@ the current vector's algebra type.
             The size of the new Vector object will be the same as the size of the current instance.
             Each element in the new Vector object will be initialized to zero using the Scalar.zero() method.
         
-        Example:
+        Examples:
             >>> v = Vector(alg_factory, items=[1, 2, 3])
             >>> v._zeros_like()
             Vector(alg_factory, items=[0, 0, 0])

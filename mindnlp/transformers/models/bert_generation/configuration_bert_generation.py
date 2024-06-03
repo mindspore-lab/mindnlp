@@ -70,20 +70,20 @@ class BertGenerationConfig(PretrainedConfig):
             Whether or not the model should return the last key/values attentions (not used by all models). Only
             relevant if `config.is_decoder=True`.
 
-    Examples:
+    Example:
+        ```python
+        >>> from transformers import BertGenerationConfig, BertGenerationEncoder
 
-    ```python
-    >>> from transformers import BertGenerationConfig, BertGenerationEncoder
+        >>> # Initializing a BertGeneration config
+        >>> configuration = BertGenerationConfig()
 
-    >>> # Initializing a BertGeneration config
-    >>> configuration = BertGenerationConfig()
+        >>> # Initializing a model (with random weights) from the config
+        >>> model = BertGenerationEncoder(configuration)
 
-    >>> # Initializing a model (with random weights) from the config
-    >>> model = BertGenerationEncoder(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "bert-generation"
 
     def __init__(

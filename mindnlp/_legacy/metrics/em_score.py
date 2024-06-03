@@ -88,7 +88,7 @@ def em_score_fn(preds, examples):
     Raises:
         RuntimeError: If `preds` and `examples` have different lengths.
 
-    Example:
+    Examples:
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
@@ -133,7 +133,7 @@ class EmScore(Metric):
     Args:
         name (str): Name of the metric.
 
-    Example:
+    Examples:
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor

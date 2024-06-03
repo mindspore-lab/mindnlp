@@ -73,7 +73,7 @@ def rouge_n_fn(cand_list, ref_list, n_size=1):
     Raises:
         RuntimeError: If the reference size is 0.
 
-    Example:
+    Examples:
         >>> from mindnlp.common.metrics import rouge_n
         >>> cand_list = ["the", "cat", "was", "found", "under", "the", "bed"]
         >>> ref_list = [["the", "cat", "was", "under", "the", "bed"]]
@@ -131,7 +131,7 @@ def rouge_l_fn(cand_list, ref_list, beta=1.2):
     Returns:
         - **rougel_score** (float) - The computed result.
 
-    Example:
+    Examples:
         >>> from mindnlp.common.metrics import rouge_l
         >>> cand_list = ["The","cat","The","cat","on","the","mat"]
         >>> ref_list = [["The","cat","is","on","the","mat"],
@@ -180,7 +180,7 @@ class RougeN(Metric):
         n_size (int): N_gram value. Default: 1.
         name (str): Name of the metric.
 
-    Example:
+    Examples:
         >>> from mindnlp.common.metrics import RougeN
         >>> cand_list = ["the", "cat", "was", "found", "under", "the", "bed"]
         >>> ref_list = [["the", "cat", "was", "under", "the", "bed"]]
@@ -298,7 +298,7 @@ class RougeL(Metric):
         beta (float): A hyperparameter to decide the weight of recall. Defaults: 1.2.
         name (str): Name of the metric.
 
-    Example:
+    Examples:
         >>> from mindnlp.common.metrics import RougeL
         >>> cand_list = ["The","cat","The","cat","on","the","mat"]
         >>> ref_list = [["The","cat","is","on","the","mat"],

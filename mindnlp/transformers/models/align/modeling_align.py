@@ -159,7 +159,7 @@ def contrastive_loss(logits: mindspore.Tensor) -> mindspore.Tensor:
     
     Args:
         logits (mindspore.Tensor): The input tensor representing the logits. It is a 1-D tensor of shape (N,), where N is the number of classes. The logits are usually the output of the model before applying
-the softmax function.
+        the softmax function.
     
     Returns:
         mindspore.Tensor: The computed contrastive loss as a scalar tensor.
@@ -174,7 +174,7 @@ def align_loss(similarity: mindspore.Tensor) -> mindspore.Tensor:
     """
     Args:
         similarity (mindspore.Tensor): A tensor representing the similarity between two sets of embeddings. It is used to calculate the contrastive loss for alignment. The tensor should have the shape
-(batch_size, embedding_size).
+        (batch_size, embedding_size).
     
     Returns:
         mindspore.Tensor: A tensor representing the alignment loss, which is the average of the contrastive loss calculated for captions and images.
@@ -243,25 +243,22 @@ class AlignVisionEmbeddings(nn.Cell):
             None.
         
         Description:
-        This method initializes the AlignVisionEmbeddings instance by setting the values of various attributes. It takes two parameters: 'self' which refers to the instance of the class, and 'config' which is
-an object of type AlignVisionConfig.
-        
-        The 'self.out_dim' attribute is set to the rounded value of the 'config' parameter by calling the 'round_filters' method.
-        The 'self.padding' attribute is set to an instance of nn.ZeroPad2d with a padding of (0, 1, 0, 1).
-        The 'self.convolution' attribute is set to an instance of nn.Conv2d with the following parameters:
-            - 'config.num_channels' as the input channels
-            - 'self.out_dim' as the output channels
-            - kernel size of 3
-            - stride of 2
-            - pad_mode set to 'valid'
-            - has_bias set to False
-        The 'self.batchnorm' attribute is set to an instance of nn.BatchNorm2d with the following parameters:
-            - 'self.out_dim' as the number of channels
-            - 'config.batch_norm_eps' as the epsilon value for numerical stability
-            - 'config.batch_norm_momentum' as the momentum value for batch normalization
-        The 'self.activation' attribute is set to the value corresponding to 'config.hidden_act' in the ACT2FN dictionary.
-        
-        This method does not return any value.
+            This method initializes the AlignVisionEmbeddings instance by setting the values of various attributes. It takes two parameters: 'self' which refers to the instance of the class, and 'config' which is
+            an object of type AlignVisionConfig.
+            The 'self.out_dim' attribute is set to the rounded value of the 'config' parameter by calling the 'round_filters' method.
+            The 'self.padding' attribute is set to an instance of nn.ZeroPad2d with a padding of (0, 1, 0, 1).
+            The 'self.convolution' attribute is set to an instance of nn.Conv2d with the following parameters:
+            >   - 'config.num_channels' as the input channels
+            >   - 'self.out_dim' as the output channels
+            >   - kernel size of 3
+            >   - stride of 2
+            >   - pad_mode set to 'valid'
+            >   - has_bias set to False
+            The 'self.batchnorm' attribute is set to an instance of nn.BatchNorm2d with the following parameters:
+            >   - 'self.out_dim' as the number of channels
+            >   - 'config.batch_norm_eps' as the epsilon value for numerical stability
+            >   - 'config.batch_norm_momentum' as the momentum value for batch normalization
+            The 'self.activation' attribute is set to the value corresponding to 'config.hidden_act' in the ACT2FN dictionary.
         """
         super().__init__()
 
@@ -288,11 +285,12 @@ an object of type AlignVisionConfig.
             None.
         
         This method performs the following steps to construct the aligned vision embeddings:
-        1. Padding: The pixel_values tensor is padded to ensure that the dimensions are compatible with the subsequent convolution operation.
-        2. Convolution: The padded tensor is convolved using a predefined set of filters to extract features.
-        3. Batch Normalization: The features tensor is normalized to improve the stability and speed of the training process.
-        4. Activation: The normalized features are passed through an activation function to introduce non-linearity.
-        5. The resulting tensor is returned as the aligned vision embeddings.
+
+        >   1. Padding: The pixel_values tensor is padded to ensure that the dimensions are compatible with the subsequent convolution operation.
+        >   2. Convolution: The padded tensor is convolved using a predefined set of filters to extract features.
+        >   3. Batch Normalization: The features tensor is normalized to improve the stability and speed of the training process.
+        >   4. Activation: The normalized features are passed through an activation function to introduce non-linearity.
+        >   5. The resulting tensor is returned as the aligned vision embeddings.
         """
         features = self.padding(pixel_values)
         features = self.convolution(features)
@@ -309,20 +307,20 @@ class AlignVisionDepthwiseConv2d(nn.Conv2d):
     Represents a depthwise convolutional layer for aligning vision data in 2D space. This class inherits from nn.Conv2d.
     
     This class initializes a depthwise convolutional layer for aligning vision data in 2D space. It allows for specifying the number of input channels, depth multiplier, kernel size, stride, padding, dilation,
-whether to include bias, and the padding mode. The depthwise convolutional layer applies a different kernel to each input channel, producing an output with the same number of channels.
+    whether to include bias, and the padding mode. The depthwise convolutional layer applies a different kernel to each input channel, producing an output with the same number of channels.
     
     Parameters:
-    - in_channels (int): Number of channels in the input image data.
-    - depth_multiplier (int, optional): Multiplication factor for the number of output channels. Default is 1.
-    - kernel_size (int or tuple, optional): Size of the convolutional kernel. Default is 3.
-    - stride (int or tuple, optional): Stride of the convolution. Default is 1.
-    - padding (int or tuple, optional): Zero-padding added to both sides of the input. Default is 0.
-    - dilation (int or tuple, optional): Spacing between kernel elements. Default is 1.
-    - has_bias (bool, optional): Whether to include a bias term. Default is True.
-    - pad_mode (str, optional): Padding mode. Default is 'zeros'.
+        in_channels (int): Number of channels in the input image data.
+        depth_multiplier (int, optional): Multiplication factor for the number of output channels. Default is 1.
+        kernel_size (int or tuple, optional): Size of the convolutional kernel. Default is 3.
+        stride (int or tuple, optional): Stride of the convolution. Default is 1.
+        padding (int or tuple, optional): Zero-padding added to both sides of the input. Default is 0.
+        dilation (int or tuple, optional): Spacing between kernel elements. Default is 1.
+        has_bias (bool, optional): Whether to include a bias term. Default is True.
+        pad_mode (str, optional): Padding mode. Default is 'zeros'.
     
     Note:
-    The output_channels parameter is automatically calculated based on the input_channels and depth_multiplier.
+        The output_channels parameter is automatically calculated based on the input_channels and depth_multiplier.
     
     """
     def __init__(
@@ -412,7 +410,7 @@ class AlignVisionExpansionLayer(nn.Cell):
         Args:
             self: The instance of the AlignVisionExpansionLayer class.
             hidden_states (mindspore.Tensor): The input tensor representing the hidden states. It should be a tensor of shape (N, C, H, W), where N is the batch size, C is the number of channels, and H, W are
-the height and width of the input feature map.
+            the height and width of the input feature map.
         
         Returns:
             mindspore.Tensor: Returns a tensor representing the expanded hidden states after the expansion layer operations.
@@ -737,9 +735,9 @@ class AlignVisionBlock(nn.Cell):
             None.
         
         This method takes the input hidden states and performs a series of operations to process them. The method first assigns the input tensor to the variable 'embeddings'. Then, if the 'expand_ratio'
-attribute of the AlignVisionBlock instance is not equal to 1, the hidden states tensor is passed through the 'expansion' function to expand its dimensions. After that, the expanded tensor is passed through the
-'depthwise_conv' function to perform depthwise convolution. The resulting tensor is then passed through the 'squeeze_excite' function for squeeze-and-excitation. Finally, the method applies the 'projection'
-function to combine the original 'embeddings' tensor and the processed hidden states tensor. The resulting tensor is returned as the output of the method.
+        attribute of the AlignVisionBlock instance is not equal to 1, the hidden states tensor is passed through the 'expansion' function to expand its dimensions. After that, the expanded tensor is passed through the
+        'depthwise_conv' function to perform depthwise convolution. The resulting tensor is then passed through the 'squeeze_excite' function for squeeze-and-excitation. Finally, the method applies the 'projection'
+        function to combine the original 'embeddings' tensor and the processed hidden states tensor. The resulting tensor is returned as the output of the method.
         """
         embeddings = hidden_states
         # Expansion and depthwise convolution phase
@@ -768,15 +766,15 @@ class AlignVisionEncoder(nn.Cell):
         Args:
             self (AlignVisionEncoder): The instance of the AlignVisionEncoder class.
             config (AlignVisionConfig): An instance of AlignVisionConfig containing the configuration parameters for the encoder.
-                - depth_coefficient (float): A coefficient used for computing the number of repeated blocks.
-                - in_channels (list): List of input channel dimensions for each block.
-                - out_channels (list): List of output channel dimensions for each block.
-                - strides (list): List of stride values for each block.
-                - kernel_sizes (list): List of kernel sizes for each block.
-                - expand_ratios (list): List of expansion ratios for each block.
-                - num_block_repeats (list): List of integers representing the number of times each block should be repeated.
-                - depthwise_padding (set): Set of block numbers on which depthwise padding should be adjusted.
-                - drop_connect_rate (float): The rate at which to apply drop connect regularization.
+                >   - depth_coefficient (float): A coefficient used for computing the number of repeated blocks.
+                >   - in_channels (list): List of input channel dimensions for each block.
+                >   - out_channels (list): List of output channel dimensions for each block.
+                >   - strides (list): List of stride values for each block.
+                >   - kernel_sizes (list): List of kernel sizes for each block.
+                >   - expand_ratios (list): List of expansion ratios for each block.
+                >   - num_block_repeats (list): List of integers representing the number of times each block should be repeated.
+                >   - depthwise_padding (set): Set of block numbers on which depthwise padding should be adjusted.
+                >   - drop_connect_rate (float): The rate at which to apply drop connect regularization.
         
         Returns:
             None: This method does not return any value.
@@ -874,14 +872,14 @@ class AlignTextEmbeddings(nn.Cell):
         Args:
             self: The instance of the class.
             config (object): An object containing configuration parameters.
-                - vocab_size (int): The size of the vocabulary.
-                - hidden_size (int): The size of the hidden state.
-                - pad_token_id (int): The index of the padding token.
-                - max_position_embeddings (int): The maximum number of positions.
-                - type_vocab_size (int): The size of the token type vocabulary.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
-                - hidden_dropout_prob (float): The dropout probability for hidden layers.
-                - position_embedding_type (str, optional): The type of position embeddings. Defaults to 'absolute'.
+                >   - vocab_size (int): The size of the vocabulary.
+                >   - hidden_size (int): The size of the hidden state.
+                >   - pad_token_id (int): The index of the padding token.
+                >   - max_position_embeddings (int): The maximum number of positions.
+                >   - type_vocab_size (int): The size of the token type vocabulary.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - hidden_dropout_prob (float): The dropout probability for hidden layers.
+                >   - position_embedding_type (str, optional): The type of position embeddings. Defaults to 'absolute'.
         
         Returns:
             None
@@ -981,27 +979,6 @@ class AlignTextSelfAttention(nn.Cell):
         position_embedding_type (str): The type of position embedding used.
         distance_embedding (nn.Embedding): The embedding layer for distance information.
         is_decoder (bool): Indicates whether the module is used as a decoder.
-    
-    Methods:
-        swapaxes_for_scores(x: mindspore.Tensor) -> mindspore.Tensor:
-            Reshapes the input tensor for calculating attention scores.
-        
-        construct(hidden_states: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, 
-                  head_mask: Optional[mindspore.Tensor] = None, encoder_hidden_states: Optional[mindspore.Tensor] = None, 
-                  encoder_attention_mask: Optional[mindspore.Tensor] = None, 
-                  past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None, 
-                  output_attentions: Optional[bool] = False) -> Tuple[mindspore.Tensor]:
-            Applies self-attention mechanism on the input hidden states.
-            Args:
-                hidden_states (mindspore.Tensor): The input hidden states.
-                attention_mask (Optional[mindspore.Tensor]): The attention mask tensor indicating which positions should be attended to.
-                head_mask (Optional[mindspore.Tensor]): The mask tensor indicating which attention heads to mask.
-                encoder_hidden_states (Optional[mindspore.Tensor]): The hidden states of the encoder.
-                encoder_attention_mask (Optional[mindspore.Tensor]): The attention mask tensor for the encoder.
-                past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): The cached key-value pairs from previous attention computations.
-                output_attentions (Optional[bool]): Indicates whether to return attention scores.
-            Returns:
-                Tuple[mindspore.Tensor]: The output context layer tensor, and optionally, the attention scores and past key-value pairs.
     """
     def __init__(self, config, position_embedding_type=None):
         """
@@ -1010,14 +987,14 @@ class AlignTextSelfAttention(nn.Cell):
         Args:
             self: The instance of the class.
             config: An object containing configuration parameters for the attention mechanism. It must have the following attributes:
-                - hidden_size (int): The size of the hidden states.
-                - num_attention_heads (int): The number of attention heads.
-                - embedding_size (optional, int): The size of the embeddings if different from hidden_size (default: None).
-                - attention_probs_dropout_prob (float): The dropout probability for attention probabilities.
-                - position_embedding_type (optional, str): The type of position embedding to use (default: None). 
+                >   - hidden_size (int): The size of the hidden states.
+                >   - num_attention_heads (int): The number of attention heads.
+                >   - embedding_size (optional, int): The size of the embeddings if different from hidden_size (default: None).
+                >   - attention_probs_dropout_prob (float): The dropout probability for attention probabilities.
+                >   - position_embedding_type (optional, str): The type of position embedding to use (default: None).
                   If not provided, it is obtained from the config object.
-                - max_position_embeddings (int): The maximum number of positions for relative position embeddings.
-                - is_decoder (bool): Whether the attention mechanism is used as a decoder.
+                >   - max_position_embeddings (int): The maximum number of positions for relative position embeddings.
+                >   - is_decoder (bool): Whether the attention mechanism is used as a decoder.
         
             position_embedding_type (optional, str): The type of position embedding to use. If not provided, it defaults 
             to 'absolute' if not specified in the config object.
@@ -1064,15 +1041,15 @@ class AlignTextSelfAttention(nn.Cell):
         
         Returns:
             mindspore.Tensor: A tensor of shape (batch_size, num_attention_heads, sequence_length, attention_head_size), where the axes have been swapped and permuted for aligning the text self-attention
-scores.
+            scores.
         
         Raises:
             None.
         
         This method takes in a tensor 'x' and performs the following operations:
-        1. Computes the new shape of the tensor by appending the number of attention heads and attention head size dimensions to the existing shape.
-        2. Reshapes the tensor 'x' to the new shape calculated in the previous step.
-        3. Permutes the axes of the tensor 'x' to align the text self-attention scores, specifically the second and third dimensions are swapped.
+        >   1. Computes the new shape of the tensor by appending the number of attention heads and attention head size dimensions to the existing shape.
+        >   2. Reshapes the tensor 'x' to the new shape calculated in the previous step.
+        >   3. Permutes the axes of the tensor 'x' to align the text self-attention scores, specifically the second and third dimensions are swapped.
         
         The method then returns the tensor 'x' with the swapped and permuted axes, which can be used for further computations within the AlignTextSelfAttention class.
         """
@@ -1099,16 +1076,16 @@ scores.
             attention_mask (Optional[mindspore.Tensor]): The optional input tensor of shape (batch_size, sequence_length) representing the attention mask. Default is None.
             head_mask (Optional[mindspore.Tensor]): The optional input tensor of shape (num_attention_heads, sequence_length, sequence_length) representing the head mask. Default is None.
             encoder_hidden_states (Optional[mindspore.Tensor]): The optional input tensor of shape (batch_size, encoder_sequence_length, hidden_size) representing the hidden states of the encoder sequence.
-Default is None.
+            Default is None.
             encoder_attention_mask (Optional[mindspore.Tensor]): The optional input tensor of shape (batch_size, encoder_sequence_length) representing the attention mask for the encoder sequence. Default is
-None.
+            None.
             past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): The optional input tensor of shape (2, batch_size, num_attention_heads, past_sequence_length, head_size) representing the past key-value
-states. Default is None.
+            states. Default is None.
             output_attentions (Optional[bool]): Whether to output attention probabilities. Default is False.
         
         Returns:
             Tuple[mindspore.Tensor]: A tuple containing the output context layer tensor of shape (batch_size, sequence_length, hidden_size) and optionally the attention probabilities tensor of shape
-(batch_size, num_attention_heads, sequence_length, sequence_length), and if self.is_decoder is True, the past key-value states tensor of shape (2, batch_size, num_attention_heads, sequence_length, head_size).
+            (batch_size, num_attention_heads, sequence_length, sequence_length), and if self.is_decoder is True, the past key-value states tensor of shape (2, batch_size, num_attention_heads, sequence_length, head_size).
         
         Raises:
             None.
@@ -1209,12 +1186,12 @@ states. Default is None.
 class AlignTextSelfOutput(nn.Cell):
 
     """
-        A class representing the output of self-aligning text data.
-        
-        This class is used to perform operations on text data for self-alignment. It includes layers for dense transformation,
-        layer normalization, and dropout. The input consists of hidden states and an input tensor, and the output is the 
-        transformed hidden states after applying dense transformation, dropout, and layer normalization.
-        """
+    A class representing the output of self-aligning text data.
+
+    This class is used to perform operations on text data for self-alignment. It includes layers for dense transformation,
+    layer normalization, and dropout. The input consists of hidden states and an input tensor, and the output is the
+    transformed hidden states after applying dense transformation, dropout, and layer normalization.
+    """
     def __init__(self, config):
         """
         This method initializes an instance of the AlignTextSelfOutput class.
@@ -1222,9 +1199,9 @@ class AlignTextSelfOutput(nn.Cell):
         Args:
             self: The instance of the AlignTextSelfOutput class.
             config: An object containing configuration parameters for the alignment text self output. It is expected to have the following attributes:
-                - hidden_size (int): The size of the hidden state.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
-                - hidden_dropout_prob (float): The dropout probability for the hidden state.
+                >   - hidden_size (int): The size of the hidden state.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - hidden_dropout_prob (float): The dropout probability for the hidden state.
         
         Returns:
             None. This method does not return any value.
@@ -1245,13 +1222,13 @@ class AlignTextSelfOutput(nn.Cell):
         Args:
             self (AlignTextSelfOutput): An instance of the AlignTextSelfOutput class.
             hidden_states (mindspore.Tensor): The hidden states.
-                - Shape: (batch_size, sequence_length, hidden_size).
+                >   - Shape: (batch_size, sequence_length, hidden_size).
             input_tensor (mindspore.Tensor): The input tensor.
-                - Shape: (batch_size, sequence_length, hidden_size).
+                >   - Shape: (batch_size, sequence_length, hidden_size).
         
         Returns:
             mindspore.Tensor: The aligned text self output tensor.
-                - Shape: (batch_size, sequence_length, hidden_size).
+                >   - Shape: (batch_size, sequence_length, hidden_size).
         
         Raises:
             None.
@@ -1282,17 +1259,17 @@ class AlignTextAttention(nn.Cell):
             A set containing the indices of pruned attention heads.
     
     Methods:
-        - __init__(config, position_embedding_type=None)
+        __init__:
             Initializes the AlignTextAttention instance with the provided configuration and position embedding type.
         
-        - prune_heads(heads)
+        prune_heads:
             Prunes the specified attention heads from the self-attention mechanism.
         
-        - construct(hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False)
+        construct:
             Constructs the attention output based on the given input tensors and parameters.
     
     Returns:
-        Tuple[mindspore.Tensor]
+        Tuple[mindspore.Tensor]:
             A tuple containing the attention output tensor and any additional outputs generated during the attention process.
     
     """
@@ -1306,7 +1283,7 @@ class AlignTextAttention(nn.Cell):
             position_embedding_type (str, optional): Specifies the type of position embedding to be used. Defaults to None.
         
         Returns:
-            None. This method does not return any value explicitly.
+            None: This method does not return any value explicitly.
         
         Raises:
             N/A
@@ -1365,20 +1342,20 @@ class AlignTextAttention(nn.Cell):
         This method constructs attention output based on the input hidden states and optional parameters for the AlignTextAttention class.
         
         Args:
-        - self: The instance of the class.
-        - hidden_states (mindspore.Tensor): The input hidden states tensor.
-        - attention_mask (Optional[mindspore.Tensor]): Optional tensor specifying which elements should be attended to.
-        - head_mask (Optional[mindspore.Tensor]): Optional tensor to mask specific attention heads.
-        - encoder_hidden_states (Optional[mindspore.Tensor]): Optional tensor of hidden states from an encoder.
-        - encoder_attention_mask (Optional[mindspore.Tensor]): Optional tensor for encoder attention mask.
-        - past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): Optional tuple of past key and value tensors.
-        - output_attentions (Optional[bool]): Optional flag to output the attentions.
+            self: The instance of the class.
+            hidden_states (mindspore.Tensor): The input hidden states tensor.
+            attention_mask (Optional[mindspore.Tensor]): Optional tensor specifying which elements should be attended to.
+            head_mask (Optional[mindspore.Tensor]): Optional tensor to mask specific attention heads.
+            encoder_hidden_states (Optional[mindspore.Tensor]): Optional tensor of hidden states from an encoder.
+            encoder_attention_mask (Optional[mindspore.Tensor]): Optional tensor for encoder attention mask.
+            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): Optional tuple of past key and value tensors.
+            output_attentions (Optional[bool]): Optional flag to output the attentions.
         
         Returns:
-        - Tuple[mindspore.Tensor]: A tuple containing the attention output tensor.
+            Tuple[mindspore.Tensor]: A tuple containing the attention output tensor.
         
         Raises:
-        - None
+            - None
         """
         self_outputs = self.self(
             hidden_states,
@@ -1407,14 +1384,15 @@ class AlignTextIntermediate(nn.Cell):
     It also constructs the neural network by applying the intermediate activation function to the hidden states after passing through the dense layer.
     
     Attributes:
-        - dense (nn.Dense): Dense layer for processing hidden states.
-        - intermediate_act_fn (Activation function): Function for intermediate activation of hidden states.
+        dense (nn.Dense): Dense layer for processing hidden states.
+        intermediate_act_fn (Activation function): Function for intermediate activation of hidden states.
     
     Methods:
-        - __init__(self, config): Initializes the neural network module with the given configuration.
-        - construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor: Constructs the neural network by processing the hidden states.
+        __init__: Initializes the neural network module with the given configuration.
+        construct: Constructs the neural network by processing the hidden states.
     
-    Note: The class is designed for aligning text with intermediate processing steps in a neural network architecture.
+    Note:
+        The class is designed for aligning text with intermediate processing steps in a neural network architecture.
     """
     def __init__(self, config):
         """
@@ -1423,12 +1401,12 @@ class AlignTextIntermediate(nn.Cell):
         Args:
             self: The instance of the class.
             config: An object of type 'Config' that holds the configuration settings.
-                This parameter is required for initializing the class and configuring its behavior.
-                It should be an instance of the 'Config' class defined elsewhere.
-                The 'Config' class should have the following attributes:
-                    - hidden_size: An integer representing the size of the hidden layer.
-                    - intermediate_size: An integer representing the size of the intermediate layer.
-                    - hidden_act: Either a string indicating the activation function for the hidden layer,
+                >- This parameter is required for initializing the class and configuring its behavior.
+                    It should be an instance of the 'Config' class defined elsewhere.
+                >- The 'Config' class should have the following attributes:
+                >   - hidden_size: An integer representing the size of the hidden layer.
+                >   - intermediate_size: An integer representing the size of the intermediate layer.
+                >   - hidden_act: Either a string indicating the activation function for the hidden layer,
                       or a callable object representing the activation function itself.
                       If it is a string, it should be one of the activation functions defined in the ACT2FN dictionary.
                       If it is a callable object, it will be used directly as the activation function.
@@ -1478,10 +1456,10 @@ class AlignTextOutput(nn.Cell):
         config (object): The configuration object for the align text output.
     
     Methods:
-        __init__(self, config):
+        __init__:
             Initializes the align text output cell with the given configuration.
     
-        construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+        construct:
             Constructs the align text output using the provided hidden states and input tensor.
     
         Args:
@@ -1499,10 +1477,10 @@ class AlignTextOutput(nn.Cell):
             self (AlignTextOutput): The instance of the AlignTextOutput class.
             config: An object containing configuration parameters for the AlignTextOutput class.
                 It must have the following attributes:
-                - intermediate_size (int): The size of the intermediate layer.
-                - hidden_size (int): The size of the hidden layer.
-                - layer_norm_eps (float): The epsilon value for LayerNorm.
-                - hidden_dropout_prob (float): The dropout probability for the hidden layer.
+                >   - intermediate_size (int): The size of the intermediate layer.
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - layer_norm_eps (float): The epsilon value for LayerNorm.
+                >   - hidden_dropout_prob (float): The dropout probability for the hidden layer.
         
         Returns:
             None. This method does not return any value.
@@ -1562,13 +1540,12 @@ class AlignTextLayer(nn.Cell):
         output (AlignTextOutput): An instance of AlignTextOutput for final output processing.
     
     Methods:
-        __init__(self, config): Initializes the AlignTextLayer with configuration settings.
+        __init__: Initializes the AlignTextLayer with configuration settings.
         
-        construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, 
-                  encoder_attention_mask=None, past_key_value=None, output_attentions=False): 
+        construct:
             Constructs the layer with attention mechanisms and handles cross-attention if added.
         
-        feed_forward_chunk(self, attention_output): Performs feed-forward chunk processing on the attention output.
+        feed_forward_chunk: Performs feed-forward chunk processing on the attention output.
     
     Raises:
         ValueError: Raised under specific conditions such as incorrect usage as a decoder model or missing cross-attention layers.
@@ -1581,16 +1558,16 @@ class AlignTextLayer(nn.Cell):
         Args:
             self: The instance of the AlignTextLayer class.
             config: A configuration object containing parameters for the AlignTextLayer.
-                - Type: Config object
-                - Purpose: Contains settings and hyperparameters for the AlignTextLayer.
-                - Restrictions: Must be provided for proper initialization.
+                >   - Type: Config object
+                >   - Purpose: Contains settings and hyperparameters for the AlignTextLayer.
+                >   - Restrictions: Must be provided for proper initialization.
                 
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
             ValueError: Raised if self.add_cross_attention is True and self.is_decoder is False.
-                - Purpose: Ensures that cross attention is only added when the model is used as a decoder.
+                >   - Purpose: Ensures that cross attention is only added when the model is used as a decoder.
         """
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
@@ -1627,7 +1604,7 @@ class AlignTextLayer(nn.Cell):
             encoder_hidden_states (Optional[mindspore.Tensor]): The hidden states of the encoder. Shape: (batch_size, encoder_sequence_length, hidden_size).
             encoder_attention_mask (Optional[mindspore.Tensor]): The attention mask for the encoder. Shape: (batch_size, encoder_sequence_length).
             past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): The past key-value pairs. Shape: ((self_attention_past_key, self_attention_past_value), (cross_attention_past_key,
-cross_attention_past_value)).
+            cross_attention_past_value)).
             output_attentions (Optional[bool]): Whether to output attentions. Default: False.
         
         Returns:
@@ -1699,9 +1676,9 @@ cross_attention_past_value)).
         Args:
             self (AlignTextLayer): An instance of the AlignTextLayer class.
             attention_output: The input attention output tensor.
-                - Type: Tensor
-                - Purpose: Represents the attention output from a previous layer.
-                - Restrictions: None
+                >   - Type: Tensor
+                >   - Purpose: Represents the attention output from a previous layer.
+                >   - Restrictions: None
         
         Returns:
             None: This method does not return any value.
@@ -1721,11 +1698,11 @@ class AlignTextEncoder(nn.Cell):
     This class represents an AlignTextEncoder that inherits from nn.Cell. 
     
     The AlignTextEncoder initializes with a configuration and constructs the encoder layer with align text functionality. It supports gradient checkpointing during training and provides options to output
-hidden states, attentions, and cross-attentions. The encoder can handle various input tensors such as hidden states, attention masks, head masks, encoder hidden states, encoder attention masks, past key
-values, and caching. 
+    hidden states, attentions, and cross-attentions. The encoder can handle various input tensors such as hidden states, attention masks, head masks, encoder hidden states, encoder attention masks, past key
+    values, and caching.
     
     The construct method processes the input tensors through the encoder layers, applying gradient checkpointing if enabled during training. It iterates through each layer to generate hidden states and
-optional outputs like next decoder cache, all hidden states, self-attentions, and cross-attentions. The method returns the desired outputs based on the return_dict flag.
+    optional outputs like next decoder cache, all hidden states, self-attentions, and cross-attentions. The method returns the desired outputs based on the return_dict flag.
     
     This class provides a flexible and efficient way to encode text data using alignment techniques within a neural network architecture.
     """
@@ -1736,12 +1713,12 @@ optional outputs like next decoder cache, all hidden states, self-attentions, an
         Args:
             self: The instance of the class.
             config: A configuration object containing parameters for the AlignTextEncoder.
-                Type: dict
-                Purpose: Specifies the configuration settings for the AlignTextEncoder.
-                Restrictions: Must be a valid dictionary object.
+                >   - Type: dict
+                >   - Purpose: Specifies the configuration settings for the AlignTextEncoder.
+                >   - Restrictions: Must be a valid dictionary object.
         
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
             N/A
@@ -1768,24 +1745,24 @@ optional outputs like next decoder cache, all hidden states, self-attentions, an
         This method constructs the AlignTextEncoder model.
         
         Args:
-        - self: The instance of the AlignTextEncoder class.
-        - hidden_states (mindspore.Tensor): The input hidden states.
-        - attention_mask (Optional[mindspore.Tensor]): Optional attention mask tensor. Defaults to None.
-        - head_mask (Optional[mindspore.Tensor]): Optional head mask tensor. Defaults to None.
-        - encoder_hidden_states (Optional[mindspore.Tensor]): Optional encoder hidden states tensor. Defaults to None.
-        - encoder_attention_mask (Optional[mindspore.Tensor]): Optional encoder attention mask tensor. Defaults to None.
-        - past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]]): Optional tuple of past key values. Defaults to None.
-        - use_cache (Optional[bool]): Optional boolean flag for caching. Defaults to None.
-        - output_attentions (Optional[bool]): Optional boolean flag to output attentions. Defaults to False.
-        - output_hidden_states (Optional[bool]): Optional boolean flag to output hidden states. Defaults to False.
-        - return_dict (Optional[bool]): Optional boolean flag to return a dictionary. Defaults to True.
+            self: The instance of the AlignTextEncoder class.
+            hidden_states (mindspore.Tensor): The input hidden states.
+            attention_mask (Optional[mindspore.Tensor]): Optional attention mask tensor. Defaults to None.
+            head_mask (Optional[mindspore.Tensor]): Optional head mask tensor. Defaults to None.
+            encoder_hidden_states (Optional[mindspore.Tensor]): Optional encoder hidden states tensor. Defaults to None.
+            encoder_attention_mask (Optional[mindspore.Tensor]): Optional encoder attention mask tensor. Defaults to None.
+            past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]]): Optional tuple of past key values. Defaults to None.
+            use_cache (Optional[bool]): Optional boolean flag for caching. Defaults to None.
+            output_attentions (Optional[bool]): Optional boolean flag to output attentions. Defaults to False.
+            output_hidden_states (Optional[bool]): Optional boolean flag to output hidden states. Defaults to False.
+            return_dict (Optional[bool]): Optional boolean flag to return a dictionary. Defaults to True.
         
         Returns:
-        - Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]: The constructed output of the model.
+            Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]: The constructed output of the model.
         
         Raises:
-        - Warning: Raised if `use_cache=True` is incompatible with gradient checkpointing. Sets `use_cache=False` in such case.
-        - Other exceptions may be raised during the execution of the method based on internal conditions.
+            - Warning: Raised if `use_cache=True` is incompatible with gradient checkpointing. Sets `use_cache=False` in such case.
+            - Other exceptions may be raised during the execution of the method based on internal conditions.
         """
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
@@ -1873,10 +1850,10 @@ class AlignTextPooler(nn.Cell):
         activation (nn.Tanh): An activation function that applies the hyperbolic tangent to the pooled output.
     
     Methods:
-        __init__(self, config):
+        __init__:
             Initializes the AlignTextPooler instance with the given configuration.
             
-        construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+        construct:
             Constructs the pooled output by aligning the input hidden states and applying pooling.
     
     """
@@ -1887,9 +1864,9 @@ class AlignTextPooler(nn.Cell):
         Args:
             self: The instance of the class.
             config: An object containing configuration parameters for the AlignTextPooler.
-                Type: object
-                Purpose: Specifies the configuration settings for the AlignTextPooler.
-                Restrictions: Must be a valid configuration object.
+                >   - Type: object
+                >   - Purpose: Specifies the configuration settings for the AlignTextPooler.
+                >   - Restrictions: Must be a valid configuration object.
         
         Returns:
             None. The method initializes the AlignTextPooler class and does not return any value.
@@ -1970,7 +1947,7 @@ class AlignTextModel(AlignPreTrainedModel):
     The `set_input_embeddings` method allows for setting custom word embeddings as input to the model.
     
     The `construct` method constructs the model for inference based on the input parameters such as input tokens, attention mask, token type ids, etc. It returns the model outputs including the last hidden
-state and pooled output.
+    state and pooled output.
     
     The class also includes examples of how to use the model for text alignment tasks.
     
@@ -2049,21 +2026,22 @@ state and pooled output.
     ) -> Union[Tuple, BaseModelOutputWithPoolingAndCrossAttentions]:
         r"""
         Returns:
+            Union[Tuple, BaseModelOutputWithPoolingAndCrossAttentions]
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import AutoTokenizer, AlignTextModel
 
-        ```python
-        >>> from transformers import AutoTokenizer, AlignTextModel
+            >>> model = AlignTextModel.from_pretrained("kakaobrain/align-base")
+            >>> tokenizer = AutoTokenizer.from_pretrained("kakaobrain/align-base")
 
-        >>> model = AlignTextModel.from_pretrained("kakaobrain/align-base")
-        >>> tokenizer = AutoTokenizer.from_pretrained("kakaobrain/align-base")
+            >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
 
-        >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
-
-        >>> outputs = model(**inputs)
-        >>> last_hidden_state = outputs.last_hidden_state
-        >>> pooled_output = outputs.pooler_output  # pooled (EOS token) states
-        ```"""
+            >>> outputs = model(**inputs)
+            >>> last_hidden_state = outputs.last_hidden_state
+            >>> pooled_output = outputs.pooler_output  # pooled (EOS token) states
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -2137,19 +2115,19 @@ class AlignVisionModel(AlignPreTrainedModel):
 
     """
     This class represents an AlignVision model for vision tasks, which includes functionalities for processing images and generating embeddings using a vision encoder. The model supports different pooling
-strategies for extracting features from the encoded image representations. It inherits from AlignPreTrainedModel and provides methods for initializing the model, accessing input embeddings, and constructing
-the model output.
+    strategies for extracting features from the encoded image representations. It inherits from AlignPreTrainedModel and provides methods for initializing the model, accessing input embeddings, and constructing
+    the model output.
     
     The model's constructor takes an AlignVisionConfig object as a parameter to configure the model's behavior. It initializes the model's components including embeddings and encoder based on the provided
-configuration, and sets up the pooling strategy based on the specified pooling type in the configuration.
+    configuration, and sets up the pooling strategy based on the specified pooling type in the configuration.
     
     The 'get_input_embeddings' method returns the input embeddings generated by the model's convolutional layers for further processing.
     
     The 'construct' method processes input pixel values to generate embeddings using the model's embeddings and encoder components. It then applies the pooling strategy to extract features from the encoded
-image representations. The method returns the last hidden state, pooled output, and additional encoder outputs based on the specified return format.
+    image representations. The method returns the last hidden state, pooled output, and additional encoder outputs based on the specified return format.
     
     The class provides examples in the docstring to demonstrate how to use the model for image processing tasks, including loading an image, processing it with the model, and accessing the output hidden states
-and pooled output for further analysis.
+    and pooled output for further analysis.
     """
     config_class = AlignVisionConfig
     main_input_name = "pixel_values"
@@ -2170,22 +2148,22 @@ and pooled output for further analysis.
             ValueError: If the 'pooling_type' in the config is not one of ['mean', 'max'].
         
         Description:
-        This method initializes an instance of the AlignVisionModel class. It takes in a config object which contains the configuration parameters for the model. The 'config' parameter is of type
-AlignVisionConfig.
-        
-        Inside the method, the superclass's __init__ method is called with the 'config' parameter. The 'config' is then assigned to the 'self.config' attribute.
-        
-        The method also initializes the 'embeddings' attribute with an instance of AlignVisionEmbeddings, passing in the 'config' parameter. Similarly, the 'encoder' attribute is initialized with an instance
-of AlignVisionEncoder, passing in the 'config' parameter.
-        
-        The 'pooler' attribute is dynamically set based on the value of the 'pooling_type' in the 'config'. If 'pooling_type' is set to 'mean', the 'pooler' attribute is set to a partial function 'ops.mean'
-with the specified axis and keep_dims parameters. If 'pooling_type' is set to 'max', the 'pooler' attribute is set to an instance of nn.MaxPool2d with the specified 'hidden_dim' and 'ceil_mode' parameters.
-        
-        If the 'pooling_type' in the 'config' is not one of ['mean', 'max'], a ValueError is raised.
-        
-        Finally, the 'post_init' method is called.
-        
-        This method does not return any value.
+            This method initializes an instance of the AlignVisionModel class. It takes in a config object which contains the configuration parameters for the model. The 'config' parameter is of type
+            AlignVisionConfig.
+
+            Inside the method, the superclass's __init__ method is called with the 'config' parameter. The 'config' is then assigned to the 'self.config' attribute.
+
+            The method also initializes the 'embeddings' attribute with an instance of AlignVisionEmbeddings, passing in the 'config' parameter. Similarly, the 'encoder' attribute is initialized with an instance
+            of AlignVisionEncoder, passing in the 'config' parameter.
+
+            The 'pooler' attribute is dynamically set based on the value of the 'pooling_type' in the 'config'. If 'pooling_type' is set to 'mean', the 'pooler' attribute is set to a partial function 'ops.mean'
+            with the specified axis and keep_dims parameters. If 'pooling_type' is set to 'max', the 'pooler' attribute is set to an instance of nn.MaxPool2d with the specified 'hidden_dim' and 'ceil_mode' parameters.
+
+            If the 'pooling_type' in the 'config' is not one of ['mean', 'max'], a ValueError is raised.
+
+            Finally, the 'post_init' method is called.
+
+            This method does not return any value.
         """
         super().__init__(config)
         self.config = config
@@ -2227,26 +2205,27 @@ with the specified axis and keep_dims parameters. If 'pooling_type' is set to 'm
     ) -> Union[Tuple, BaseModelOutputWithPoolingAndNoAttention]:
         r"""
         Returns:
+            Union[Tuple, BaseModelOutputWithPoolingAndNoAttention]
 
-        Examples:
+        Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, AlignVisionModel
 
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, AlignVisionModel
+            >>> model = AlignVisionModel.from_pretrained("kakaobrain/align-base")
+            >>> processor = AutoProcessor.from_pretrained("kakaobrain/align-base")
 
-        >>> model = AlignVisionModel.from_pretrained("kakaobrain/align-base")
-        >>> processor = AutoProcessor.from_pretrained("kakaobrain/align-base")
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> inputs = processor(images=image, return_tensors="pt")
 
-        >>> inputs = processor(images=image, return_tensors="pt")
-
-        >>> outputs = model(**inputs)
-        >>> last_hidden_state = outputs.last_hidden_state
-        >>> pooled_output = outputs.pooler_output  # pooled CLS states
-        ```"""
+            >>> outputs = model(**inputs)
+            >>> last_hidden_state = outputs.last_hidden_state
+            >>> pooled_output = outputs.pooler_output  # pooled CLS states
+            ```
+        """
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
@@ -2281,7 +2260,7 @@ class AlignModel(AlignPreTrainedModel):
 
     """
     The `AlignModel` class is a model for aligning text and image embeddings. It is designed to compute image-text similarity scores using pre-trained text and vision models. The class inherits from the
-`AlignPreTrainedModel` class.
+    `AlignPreTrainedModel` class.
     
     Class Attributes:
         - `projection_dim`: The dimension of the projection layer.
@@ -2292,16 +2271,10 @@ class AlignModel(AlignPreTrainedModel):
         - `temperature`: A parameter for scaling the similarity scores.
         
     Methods:
-        - `__init__(self, config: AlignConfig)`: Initializes the `AlignModel` class.
-        - `get_text_features(self, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, token_type_ids: Optional[mindspore.Tensor] = None, position_ids:
-Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool]
-= None, return_dict: Optional[bool] = None) -> mindspore.Tensor`: Computes the text embeddings.
-        - `get_image_features(self, pixel_values: Optional[mindspore.Tensor] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> mindspore.Tensor`: Computes the image
-embeddings.
-        - `construct(self, input_ids: Optional[mindspore.Tensor] = None, pixel_values: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, token_type_ids:
-Optional[mindspore.Tensor] = None, position_ids: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor] = None, return_loss: Optional[bool] =
-None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Tuple, AlignOutput]`: Constructs the model and computes the image-text
-similarity scores.
+        `__init__`: Initializes the `AlignModel` class.
+        `get_text_features`: Computes the text embeddings.
+        `get_image_features`: Computes the image embeddings.
+        `construct`: Constructs the model and computes the image-text similarity scores.
     
     Please see the code examples in the docstrings of each method for usage details.
     """
@@ -2314,12 +2287,12 @@ similarity scores.
         Args:
             self: The instance of the AlignModel class.
             config (AlignConfig): An object containing the configuration settings for the AlignModel.
-                - text_config (AlignTextConfig): The configuration settings for the text model.
-                - vision_config (AlignVisionConfig): The configuration settings for the vision model.
-                - projection_dim (int): The dimension for the projection.
+                >   - text_config (AlignTextConfig): The configuration settings for the text model.
+                >   - vision_config (AlignVisionConfig): The configuration settings for the vision model.
+                >   - projection_dim (int): The dimension for the projection.
             
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
             ValueError: If the config.text_config is not of type AlignTextConfig.
@@ -2371,17 +2344,17 @@ similarity scores.
             text_features (`mindspore.Tensor` of shape `(batch_size, output_dim`): The text embeddings obtained by
             applying the projection layer to the pooled output of [`AlignTextModel`].
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import AutoTokenizer, AlignModel
 
-        ```python
-        >>> from transformers import AutoTokenizer, AlignModel
+            >>> model = AlignModel.from_pretrained("kakaobrain/align-base")
+            >>> tokenizer = AutoTokenizer.from_pretrained("kakaobrain/align-base")
 
-        >>> model = AlignModel.from_pretrained("kakaobrain/align-base")
-        >>> tokenizer = AutoTokenizer.from_pretrained("kakaobrain/align-base")
-
-        >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
-        >>> text_features = model.get_text_features(**inputs)
-        ```"""
+            >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
+            >>> text_features = model.get_text_features(**inputs)
+            ```
+        """
         # Use ALIGN model's config for some fields (if specified) instead of those of vision & text components.
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -2417,23 +2390,23 @@ similarity scores.
             image_features (`mindspore.Tensor` of shape `(batch_size, output_dim`): The image embeddings obtained by
             applying the projection layer to the pooled output of [`AlignVisionModel`].
 
-        Examples:
+        Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, AlignModel
 
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, AlignModel
+            >>> model = AlignModel.from_pretrained("kakaobrain/align-base")
+            >>> processor = AutoProcessor.from_pretrained("kakaobrain/align-base")
 
-        >>> model = AlignModel.from_pretrained("kakaobrain/align-base")
-        >>> processor = AutoProcessor.from_pretrained("kakaobrain/align-base")
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> inputs = processor(images=image, return_tensors="pt")
 
-        >>> inputs = processor(images=image, return_tensors="pt")
-
-        >>> image_features = model.get_image_features(**inputs)
-        ```"""
+            >>> image_features = model.get_image_features(**inputs)
+            ```
+        """
         # Use ALIGN model's config for some fields (if specified) instead of those of vision & text components.
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -2466,28 +2439,29 @@ similarity scores.
     ) -> Union[Tuple, AlignOutput]:
         r"""
         Returns:
+            Union[Tuple, AlignOutput]
 
-        Examples:
+        Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, AlignModel
 
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, AlignModel
+            >>> model = AlignModel.from_pretrained("kakaobrain/align-base")
+            >>> processor = AutoProcessor.from_pretrained("kakaobrain/align-base")
 
-        >>> model = AlignModel.from_pretrained("kakaobrain/align-base")
-        >>> processor = AutoProcessor.from_pretrained("kakaobrain/align-base")
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> inputs = processor(
+            ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="pt", padding=True
+            ... )
 
-        >>> inputs = processor(
-        ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="pt", padding=True
-        ... )
-
-        >>> outputs = model(**inputs)
-        >>> logits_per_image = outputs.logits_per_image  # this is the image-text similarity score
-        >>> probs = logits_per_image.softmax(dim=1)  # we can take the softmax to get the label probabilities
-        ```"""
+            >>> outputs = model(**inputs)
+            >>> logits_per_image = outputs.logits_per_image  # this is the image-text similarity score
+            >>> probs = logits_per_image.softmax(dim=1)  # we can take the softmax to get the label probabilities
+            ```
+        """
         # Use ALIGN model's config for some fields (if specified) instead of those of vision & text components.
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (

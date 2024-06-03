@@ -1103,7 +1103,7 @@ def strided_slice(input_x,
 
     During the slicing process, the fragment (end-begin)/strides are extracted from each dimension.
 
-    Example: For Tensor `input_x` with shape :math:`(5, 6, 7)`,
+    Examples: For Tensor `input_x` with shape :math:`(5, 6, 7)`,
     set `begin`, `end` and `strides` to (1, 3, 2), (3, 5, 6),
     (1, 1, 2) respectively, then elements from index 1 to 3 are extrected for dim 0, index 3 to 5
     are extrected for dim 1 and index 2 to 6 with a `stirded` of 2 are extrected for dim 2, this
@@ -1113,7 +1113,7 @@ def strided_slice(input_x,
     then all elements are extracted from the missing dims, it behaves like all the
     missing dims are filled with zeros, size of that missing dim and ones.
 
-    Example: For Tensor `input_x` with shape :math:`(5, 6, 7)`,
+    Examples: For Tensor `input_x` with shape :math:`(5, 6, 7)`,
     set `begin`, `end` and `strides` to (1, 3),
     (3, 5), (1, 1) respectively, then elements from index 1 to 3 are extrected
     for dim 0, index 3 to 5 are extrected for dim 1 and index 3 to 5 are extrected

@@ -42,7 +42,7 @@ def pearson_correlation_fn(preds, labels):
     Raises:
         RuntimeError: If `preds` and `labels` have different lengths.
 
-    Example:
+    Examples:
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
@@ -102,7 +102,7 @@ class PearsonCorrelation(Metric):
     Args:
         name (str): Name of the metric.
 
-    Example:
+    Examples:
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor

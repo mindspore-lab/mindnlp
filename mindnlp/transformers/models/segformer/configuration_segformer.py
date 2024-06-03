@@ -74,19 +74,19 @@ class SegformerConfig(PretrainedConfig):
             The index that is ignored by the loss function of the semantic segmentation model.
 
     Example:
+        ```python
+        >>> from transformers import SegformerModel, SegformerConfig
 
-    ```python
-    >>> from transformers import SegformerModel, SegformerConfig
+        >>> # Initializing a SegFormer nvidia/segformer-b0-finetuned-ade-512-512 style configuration
+        >>> configuration = SegformerConfig()
 
-    >>> # Initializing a SegFormer nvidia/segformer-b0-finetuned-ade-512-512 style configuration
-    >>> configuration = SegformerConfig()
+        >>> # Initializing a model from the nvidia/segformer-b0-finetuned-ade-512-512 style configuration
+        >>> model = SegformerModel(configuration)
 
-    >>> # Initializing a model from the nvidia/segformer-b0-finetuned-ade-512-512 style configuration
-    >>> model = SegformerModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "segformer"
 
     def __init__(

@@ -217,7 +217,7 @@ columns.
         Note:
             The division operation is performed element-wise between the Matrix and the scalar value.
         
-        Example:
+        Examples:
             >>> matrix = Matrix([[1, 2, 3], [4, 5, 6]])
             >>> scalar = 2
             >>> result = matrix.div_scalar(scalar)
@@ -456,7 +456,7 @@ provided, a deep copy of it will be made. If a list is provided, a numpy array w
         Note:
             This method is useful for creating a new 'Matrix' object with the same shape and data type as an existing matrix, while providing new data values.
         
-        Example:
+        Examples:
             
             original_matrix = Matrix([[1, 2], [3, 4]])
             new_matrix = original_matrix._full_like([[5, 6], [7, 8]])

@@ -50,16 +50,17 @@ class BloomTokenizerFast(PreTrainedTokenizerFast):
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
 
-    ```python
-    >>> from transformers import BloomTokenizerFast
+    Example:
+        ```python
+        >>> from transformers import BloomTokenizerFast
 
-    >>> tokenizer = BloomTokenizerFast.from_pretrained("bigscience/bloom")
-    >>> tokenizer("Hello world")["input_ids"]
-    [59414, 8876]
+        >>> tokenizer = BloomTokenizerFast.from_pretrained("bigscience/bloom")
+        >>> tokenizer("Hello world")["input_ids"]
+        [59414, 8876]
 
-    >>> tokenizer(" Hello world")["input_ids"]
-    [86153, 8876]
-    ```
+        >>> tokenizer(" Hello world")["input_ids"]
+        [86153, 8876]
+        ```
 
     You can get around that behavior by passing `add_prefix_space=True` when instantiating this tokenizer, but since
     the model was not pretrained this way, it might yield a decrease in performance.
@@ -117,22 +118,22 @@ class BloomTokenizerFast(PreTrainedTokenizerFast):
         Initialize a BloomTokenizerFast object.
         
         Args:
-        - self: The instance of the class.
-        - vocab_file (str): Path to a vocabulary file.
-        - merges_file (str): Path to a merges file.
-        - tokenizer_file (str): Path to a tokenizer file.
-        - unk_token (str): The unknown token.
-        - bos_token (str): The beginning of sequence token.
-        - eos_token (str): The end of sequence token.
-        - pad_token (str): The padding token.
-        - add_prefix_space (bool): Flag indicating whether to add prefix space.
-        - clean_up_tokenization_spaces (bool): Flag indicating whether to clean up tokenization spaces.
+            self: The instance of the class.
+            vocab_file (str): Path to a vocabulary file.
+            merges_file (str): Path to a merges file.
+            tokenizer_file (str): Path to a tokenizer file.
+            unk_token (str): The unknown token.
+            bos_token (str): The beginning of sequence token.
+            eos_token (str): The end of sequence token.
+            pad_token (str): The padding token.
+            add_prefix_space (bool): Flag indicating whether to add prefix space.
+            clean_up_tokenization_spaces (bool): Flag indicating whether to clean up tokenization spaces.
         
         Returns:
-        - None: This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
-        - None: This method does not explicitly raise any exceptions.
+            None: This method does not explicitly raise any exceptions.
         """
         super().__init__(
             vocab_file,
@@ -171,7 +172,7 @@ class BloomTokenizerFast(PreTrainedTokenizerFast):
             
         Raises:
             Exception: If the `add_prefix_space` parameter is False and `is_split_into_words` is True. In this case, the `BloomTokenizerFast` class needs to be instantiated with `add_prefix_space=True` to work
-with pretokenized inputs.
+            with pretokenized inputs.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
         if not (self.add_prefix_space or not is_split_into_words):
@@ -197,7 +198,7 @@ with pretokenized inputs.
         
         Note:
             This method is used to encode the input sequence into a batch of encoded sequences. It checks if the BloomTokenizerFast instance is instantiated with add_prefix_space=True and the input is not
-pretokenized. If not, it raises an exception.
+            pretokenized. If not, it raises an exception.
         
         Example:
             
@@ -234,9 +235,10 @@ pretokenized. If not, it raises an exception.
         The vocabulary files are saved using the 'filename_prefix' if provided, or a default name if not specified.
         
         Example:
+            ```python
             tokenizer = BloomTokenizerFast()
             tokenizer.save_vocabulary('/path/to/save', 'vocab_')
-            
+            ```
             This will save the tokenizer's vocabulary files in the '/path/to/save' directory with file names
             prefixed by 'vocab_'. The method returns a tuple of file names that were saved.
         """

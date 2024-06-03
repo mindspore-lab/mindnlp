@@ -76,17 +76,14 @@ class PegasusTokenizer(PreTrainedTokenizer):
             Will be passed to the `SentencePieceProcessor.__init__()` method. The [Python wrapper for
             SentencePiece](https://github.com/google/sentencepiece/tree/master/python) can be used, among other things,
             to set:
-
-            - `enable_sampling`: Enable subword regularization.
-            - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
-
-              - `nbest_size = {0,1}`: No sampling is performed.
-              - `nbest_size > 1`: samples from the nbest_size results.
-              - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
-                using forward-filtering-and-backward-sampling algorithm.
-
-            - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
-              BPE-dropout.
+            >   - `enable_sampling`: Enable subword regularization.
+            >   - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
+            >       - `nbest_size = {0,1}`: No sampling is performed.
+            >       - `nbest_size > 1`: samples from the nbest_size results.
+            >       - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
+                        using forward-filtering-and-backward-sampling algorithm.
+            >   - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
+                    BPE-dropout.
     """
     vocab_files_names = VOCAB_FILES_NAMES
     model_input_names = ["input_ids", "attention_mask"]
@@ -108,22 +105,22 @@ class PegasusTokenizer(PreTrainedTokenizer):
         Initialize a PegasusTokenizer object.
         
         Args:
-        - vocab_file (str): Path to the vocabulary file.
-        - pad_token (str, optional): Token representing padding. Default is '<pad>'.
-        - eos_token (str, optional): Token representing end of sentence. Default is '</s>'.
-        - unk_token (str, optional): Token representing unknown tokens. Default is '<unk>'.
-        - mask_token (str, optional): Token representing masked tokens. Default is '<mask_2>'.
-        - mask_token_sent (str, optional): Token representing masked tokens at sentence level. Default is '<mask_1>'.
-        - additional_special_tokens (List[str], optional): List of additional special tokens. Default is None.
-        - offset (int): Offset value for special tokens.
-        - sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional arguments for SentencePieceProcessor. Default is None.
+            vocab_file (str): Path to the vocabulary file.
+            pad_token (str, optional): Token representing padding. Default is '<pad>'.
+            eos_token (str, optional): Token representing end of sentence. Default is '</s>'.
+            unk_token (str, optional): Token representing unknown tokens. Default is '<unk>'.
+            mask_token (str, optional): Token representing masked tokens. Default is '<mask_2>'.
+            mask_token_sent (str, optional): Token representing masked tokens at sentence level. Default is '<mask_1>'.
+            additional_special_tokens (List[str], optional): List of additional special tokens. Default is None.
+            offset (int): Offset value for special tokens.
+            sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional arguments for SentencePieceProcessor. Default is None.
         
         Returns:
-        None
+            None
         
         Raises:
-        - TypeError: If additional_special_tokens is not a list.
-        - ValueError: If additional_special_tokens contain an incorrectly shifted list of unknown tokens.
+            - TypeError: If additional_special_tokens is not a list.
+            - ValueError: If additional_special_tokens contain an incorrectly shifted list of unknown tokens.
         """
         self.offset = offset
         if additional_special_tokens is not None:
@@ -220,10 +217,12 @@ class PegasusTokenizer(PreTrainedTokenizer):
             The vocabulary includes both the base tokenizer's vocabulary and any additional tokens that have been added using the `add_tokens` method.
         
         Example:
+            ```python
             >>> tokenizer = PegasusTokenizer()
             >>> vocab = tokenizer.get_vocab()
             >>> print(vocab)
             {'<s>': 0, '</s>': 1, '<unk>': 2, '<pad>': 3, '<mask>': 4, 'additional_token': 5, ...}
+            ```
         """
         vocab = {self.convert_ids_to_tokens(i): i for i in range(self.vocab_size)}
         vocab.update(self.added_tokens_encoder)
@@ -262,7 +261,7 @@ class PegasusTokenizer(PreTrainedTokenizer):
         
         Raises:
             No specific exceptions are documented to be raised by this method. However, potential exceptions that could occur during the execution of this method may include any exceptions raised by the
-SentencePieceProcessor class methods like Load, if there are issues with loading the vocabulary file specified in the state information.
+            SentencePieceProcessor class methods like Load, if there are issues with loading the vocabulary file specified in the state information.
         """
         self.__dict__ = d
 
@@ -342,8 +341,8 @@ SentencePieceProcessor class methods like Load, if there are issues with loading
         Build model inputs from a sequence or a pair of sequences for sequence classification tasks by concatenating
         and adding special tokens. A PEGASUS sequence has the following format, where `X` represents the sequence:
 
-        - single sequence: `X </s>`
-        - pair of sequences: `A B </s>` (not intended use)
+        >   - single sequence: `X </s>`
+        >   - pair of sequences: `A B </s>` (not intended use)
 
         BOS is never used. Pairs of sequences are not the expected use case, but they will be handled without a
         separator.

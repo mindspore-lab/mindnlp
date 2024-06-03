@@ -52,25 +52,25 @@ class LlavaConfig(PretrainedConfig):
             The index of the layer to select the vision feature.
 
     Example:
+        ```python
+        >>> from transformers import LlavaForConditionalGeneration, LlavaConfig, CLIPVisionConfig, LlamaConfig
 
-    ```python
-    >>> from transformers import LlavaForConditionalGeneration, LlavaConfig, CLIPVisionConfig, LlamaConfig
+        >>> # Initializing a CLIP-vision config
+        >>> vision_config = CLIPVisionConfig()
 
-    >>> # Initializing a CLIP-vision config
-    >>> vision_config = CLIPVisionConfig()
+        >>> # Initializing a Llama config
+        >>> text_config = LlamaConfig()
 
-    >>> # Initializing a Llama config
-    >>> text_config = LlamaConfig()
+        >>> # Initializing a Llava llava-1.5-7b style configuration
+        >>> configuration = LlavaConfig(vision_config, text_config)
 
-    >>> # Initializing a Llava llava-1.5-7b style configuration
-    >>> configuration = LlavaConfig(vision_config, text_config)
+        >>> # Initializing a model from the llava-1.5-7b style configuration
+        >>> model = LlavaForConditionalGeneration(configuration)
 
-    >>> # Initializing a model from the llava-1.5-7b style configuration
-    >>> model = LlavaForConditionalGeneration(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "llava"
     is_composition = False
 
@@ -203,11 +203,13 @@ class LlavaConfig(PretrainedConfig):
             None.
         
         This method is used to set the vocabulary size for the LlavaConfig class. The vocabulary size determines the number of unique words that can be stored in the vocabulary. It is important to set an
-appropriate vocabulary size based on the application and the amount of available memory. The vocabulary size can only be set to a positive integer value, otherwise an error will be raised.
+        appropriate vocabulary size based on the application and the amount of available memory. The vocabulary size can only be set to a positive integer value, otherwise an error will be raised.
         
         Example:
+            ```python
             config = LlavaConfig()
             config.vocab_size = 10000
+            ```
         """
         self._vocab_size = value
 

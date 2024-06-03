@@ -227,7 +227,7 @@ different byte orders without the need for manual byte swapping or conversion.
         The LoadEndianness class can be used to specify the byte order when loading data from a file, network, or any other data source. Simply import the class and use the desired constant to set the byte
 order.
     
-    Example:
+    Examples:
         >>> load_endianness = LoadEndianness.BIG_ENDIAN
         >>> data = load_data(source_file, byte_order=load_endianness)
         >>> print(data)
@@ -752,7 +752,7 @@ class FakeParameter:
     Usage:
         [Explain how to use the 'FakeParameter' class, including any important details or considerations]
     
-    Example:
+    Examples:
         [Provide an example usage of the 'FakeParameter' class]
     
         >>> [code example]
@@ -790,7 +790,7 @@ class FakeStorage:
         - This class is not intended for production use and should only be used for testing or development purposes.
         - It is recommended to replace instances of 'FakeStorage' with a real storage system before deploying the application.
     
-    Example:
+    Examples:
         from fake_storage import FakeStorage
     
         storage = FakeStorage()

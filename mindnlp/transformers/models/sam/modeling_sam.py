@@ -113,10 +113,10 @@ class SamPatchEmbeddings(nn.Cell):
         Args:
             self: The object instance.
             config: An object that stores configuration parameters for the SamPatchEmbeddings class.
-                - image_size: The size of the input image as a tuple or a single integer.
-                - patch_size: The size of each patch as a tuple or a single integer.
-                - num_channels: The number of channels in the input image.
-                - hidden_size: The size of the hidden layer in the projection operation.
+                >- image_size: The size of the input image as a tuple or a single integer.
+                >- patch_size: The size of each patch as a tuple or a single integer.
+                >- num_channels: The number of channels in the input image.
+                >- hidden_size: The size of the hidden layer in the projection operation.
         
         Returns:
             None. This method does not return any value.
@@ -192,11 +192,10 @@ class SamMLPBlock(nn.Cell):
         
         Args:
             self: The instance of the SamMLPBlock class.
-            config: An object containing configuration parameters for the MLP block.
-                    It is expected to have the following attributes:
-                    - hidden_size (int): The size of the hidden layer.
-                    - mlp_dim (int): The dimension of the MLP layer.
-                    - hidden_act (str): The activation function to be applied to the hidden layers.
+            config: An object containing configuration parameters for the MLP block. It is expected to have the following attributes:
+                    >- hidden_size (int): The size of the hidden layer.
+                    >- mlp_dim (int): The dimension of the MLP layer.
+                    >- hidden_act (str): The activation function to be applied to the hidden layers.
             
         Returns:
             None. This method does not return any value.
@@ -253,8 +252,8 @@ class SamLayerNorm(nn.Cell):
             NotImplementedError: If the specified data format is not supported.
         
         This method initializes the SamLayerNorm object with the provided parameters. It sets the weight and bias parameters as trainable variables, initializes the epsilon value for numerical stability, and
-validates the data format. The normalized_shape parameter represents the size of each dimension of the input tensor. The eps parameter is used to avoid division by zero when normalizing the input tensor. The
-data_format parameter specifies the layout of the input tensor, which can be either 'channels_last' or 'channels_first'. If an unsupported data format is provided, a NotImplementedError is raised.
+        validates the data format. The normalized_shape parameter represents the size of each dimension of the input tensor. The eps parameter is used to avoid division by zero when normalizing the input tensor. The
+        data_format parameter specifies the layout of the input tensor, which can be either 'channels_last' or 'channels_first'. If an unsupported data format is provided, a NotImplementedError is raised.
         """
         super().__init__()
         self.weight = Parameter(ops.ones(normalized_shape))
@@ -392,7 +391,7 @@ class SamAttention(nn.Cell):
             key (Tensor): The key tensor of shape (batch_size, seq_length, embedding_dim) representing the key values.
             value (Tensor): The value tensor of shape (batch_size, seq_length, embedding_dim) representing the value values.
             attention_similarity (Tensor, optional): The attention similarity tensor of shape (batch_size, num_attention_heads, seq_length, seq_length) representing the similarity scores between tokens.
-Defaults to None.
+                Defaults to None.
         
         Returns:
             Tensor: The output tensor of shape (batch_size, seq_length, embedding_dim) representing the attended values.
@@ -433,10 +432,10 @@ class SamTwoWayAttentionBlock(nn.Cell):
 
     """
     A transformer block with four layers: 
-        (1) self-attention of sparse inputs 
-        (2) cross attention of sparse inputs -> dense inputs 
-        (3) mlp block on sparse inputs 
-        (4) cross attention of dense inputs -> sparse inputs
+        >1. self-attention of sparse inputs
+        >2. cross attention of sparse inputs -> dense inputs
+        >3. mlp block on sparse inputs
+        >4. cross attention of dense inputs -> sparse inputs
     
     This class represents a SamTwoWayAttentionBlock that implements a transformer block with the above-described layers. 
     It inherits from nn.Cell and is designed to handle attention mechanisms between sparse and dense inputs.
@@ -457,12 +456,6 @@ class SamTwoWayAttentionBlock(nn.Cell):
         layer_norm3 (nn.LayerNorm): Layer normalization for the third layer.
         layer_norm4 (nn.LayerNorm): Layer normalization for the fourth layer.
         cross_attn_image_to_token (SamAttention): Cross-attention from image to token inputs.
-    
-    Methods:
-        construct(self, queries: Tensor, keys: Tensor, query_point_embedding: Tensor, key_point_embedding: Tensor, 
-                  attention_similarity: Tensor, output_attentions: bool = False) -> Tuple[Tensor, Tensor, Optional[Tensor]]:
-            Constructs the transformer block by performing operations for each layer as described in the class code.
-            Returns a tuple of updated queries and keys, and optionally the attention output if `output_attentions` is True.
     
     Note:
         This class is specialized for two-way attention mechanisms in transformer architectures and is used to process sparse and dense inputs efficiently.
@@ -577,17 +570,17 @@ class SamTwoWayTransformer(nn.Cell):
     This class represents a two-way transformer model called SamTwoWayTransformer. It is a subclass of nn.Cell.
     
     SamTwoWayTransformer is designed to perform two-way attention between point embeddings and image embeddings. It consists of multiple layers of SamTwoWayAttentionBlock, followed by a final attention step
-using SamAttention. The class also includes a layer normalization step.
+    using SamAttention. The class also includes a layer normalization step.
     
     The main purpose of this class is to construct the transformer model and generate the outputs based on the given inputs. The inputs include point embeddings, image embeddings, image positional embeddings,
-attention similarity, target embeddings (optional), and various optional parameters to control the output format.
+    attention similarity, target embeddings (optional), and various optional parameters to control the output format.
     
     The constructor (__init__) initializes the SamTwoWayTransformer instance with a configuration object (config) of type SamMaskDecoderConfig. It sets the configuration, number of hidden layers, and
-initializes the list of layers.
+    initializes the list of layers.
     
     The construct method takes the point embeddings, image embeddings, image positional embeddings, attention similarity, target embedding, and optional parameters as inputs. It performs the necessary
-computations to generate the outputs of the transformer model. The method supports optional arguments to control the output format, such as output_attentions, output_hidden_states, and return_dict. The method
-returns a tuple containing the queries, keys, and optionally, all the attention outputs.
+    computations to generate the outputs of the transformer model. The method supports optional arguments to control the output format, such as output_attentions, output_hidden_states, and return_dict. The method
+    returns a tuple containing the queries, keys, and optionally, all the attention outputs.
     
     Please note that this class requires the image_embeddings parameter to be specified. If it is not provided, a ValueError will be raised.
     
@@ -709,27 +702,27 @@ class SamFeedForward(nn.Cell):
 
     """
     SamFeedForward is a class representing a feedforward neural network model with customizable parameters for input, hidden, and output dimensions, as well as the number of layers. The class allows for the
-option of applying a sigmoid activation function to the output layer.
+    option of applying a sigmoid activation function to the output layer.
     
     Parameters:
-    - input_dim (int): The dimension of the input data.
-    - hidden_dim (int): The dimension of the hidden layers.
-    - output_dim (int): The dimension of the output data.
-    - num_layers (int): The number of hidden layers in the network.
-    - sigmoid_output (bool, optional): If True, applies a sigmoid activation function to the output layer. Defaults to False.
+        input_dim (int): The dimension of the input data.
+        hidden_dim (int): The dimension of the hidden layers.
+        output_dim (int): The dimension of the output data.
+        num_layers (int): The number of hidden layers in the network.
+        sigmoid_output (bool, optional): If True, applies a sigmoid activation function to the output layer. Defaults to False.
     
     Attributes:
-    - num_layers (int): The number of hidden layers in the network.
-    - activation (nn.ReLU): The rectified linear unit (ReLU) activation function.
-    - proj_in (nn.Dense): The linear transformation for input data to the hidden layer.
-    - proj_out (nn.Dense): The linear transformation for the last hidden layer to the output data.
-    - layers (nn.CellList): List of Dense layers for the hidden layers in the network.
+        num_layers (int): The number of hidden layers in the network.
+        activation (nn.ReLU): The rectified linear unit (ReLU) activation function.
+        proj_in (nn.Dense): The linear transformation for input data to the hidden layer.
+        proj_out (nn.Dense): The linear transformation for the last hidden layer to the output data.
+        layers (nn.CellList): List of Dense layers for the hidden layers in the network.
     
     Methods:
-    - construct(hidden_states): Constructs the feedforward network by applying linear transformations and activation functions to the input data through the hidden layers, and finally to the output data.
+        construct(hidden_states): Constructs the feedforward network by applying linear transformations and activation functions to the input data through the hidden layers, and finally to the output data.
     
     Returns:
-    - hidden_states: The output data after passing through the feedforward network, with optional sigmoid activation applied.
+        hidden_states: The output data after passing through the feedforward network, with optional sigmoid activation applied.
     
     """
     def __init__(
@@ -791,27 +784,27 @@ class SamMaskDecoder(nn.Cell):
     A class representing a Mask Decoder module for generating masks based on image and prompt embeddings.
     
     This class inherits from nn.Cell and contains methods for initializing the decoder and constructing the masks based on input embeddings. The decoder architecture includes components such as transformers,
-convolutional layers, embeddings, and feedforward networks to generate masks with optional attentions and predictions.
+    convolutional layers, embeddings, and feedforward networks to generate masks with optional attentions and predictions.
     
     Attributes:
-        - hidden_size (int): The size of the hidden layers in the decoder.
-        - num_multimask_outputs (int): The number of multimask outputs to be generated.
-        - num_mask_tokens (int): The total number of mask tokens used in the decoder.
-        - iou_token (nn.Embedding): Embedding layer for IOU tokens.
-        - mask_tokens (nn.Embedding): Embedding layer for mask tokens.
-        - transformer (SamTwoWayTransformer): Transformer network used in the decoding process.
-        - upscale_conv1 (nn.Conv2dTranspose): Transposed convolutional layer for upscaling.
-        - upscale_conv2 (nn.Conv2dTranspose): Additional transposed convolutional layer for upscaling.
-        - upscale_layer_norm (SamLayerNorm): Layer normalization applied after upscaling.
-        - activation (nn.GELU): Activation function used in the decoder.
-        - output_hypernetworks_mlps (nn.CellList): List of feedforward networks for output hypernetworks.
-        - iou_prediction_head (SamFeedForward): Feedforward network for IOU prediction.
+        hidden_size (int): The size of the hidden layers in the decoder.
+        num_multimask_outputs (int): The number of multimask outputs to be generated.
+        num_mask_tokens (int): The total number of mask tokens used in the decoder.
+        iou_token (nn.Embedding): Embedding layer for IOU tokens.
+        mask_tokens (nn.Embedding): Embedding layer for mask tokens.
+        transformer (SamTwoWayTransformer): Transformer network used in the decoding process.
+        upscale_conv1 (nn.Conv2dTranspose): Transposed convolutional layer for upscaling.
+        upscale_conv2 (nn.Conv2dTranspose): Additional transposed convolutional layer for upscaling.
+        upscale_layer_norm (SamLayerNorm): Layer normalization applied after upscaling.
+        activation (nn.GELU): Activation function used in the decoder.
+        output_hypernetworks_mlps (nn.CellList): List of feedforward networks for output hypernetworks.
+        iou_prediction_head (SamFeedForward): Feedforward network for IOU prediction.
     
     Methods:
-        - __init__(self, config: SamMaskDecoderConfig): Initializes the Mask Decoder with the provided configuration.
-        - construct(self, image_embeddings: mindspore.Tensor, image_positional_embeddings: mindspore.Tensor, sparse_prompt_embeddings: mindspore.Tensor, dense_prompt_embeddings: mindspore.Tensor,
-multimask_output: bool, output_attentions: Optional[bool] = None, attention_similarity: mindspore.Tensor = None, target_embedding: mindspore.Tensor = None) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
-Predicts masks based on input embeddings and returns the generated masks along with optional attentions.
+        __init__(self, config: SamMaskDecoderConfig): Initializes the Mask Decoder with the provided configuration.
+        construct(self, image_embeddings: mindspore.Tensor, image_positional_embeddings: mindspore.Tensor, sparse_prompt_embeddings: mindspore.Tensor, dense_prompt_embeddings: mindspore.Tensor,
+    multimask_output: bool, output_attentions: Optional[bool] = None, attention_similarity: mindspore.Tensor = None, target_embedding: mindspore.Tensor = None) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
+    Predicts masks based on input embeddings and returns the generated masks along with optional attentions.
     
     For more details on the functionality and usage of the Mask Decoder class, refer to the method descriptions and class attributes above.
     """
@@ -822,18 +815,18 @@ Predicts masks based on input embeddings and returns the generated masks along w
         Args:
             self: The instance of the SamMaskDecoder class.
             config (SamMaskDecoderConfig): An instance of the SamMaskDecoderConfig class containing the configuration parameters for the SamMaskDecoder. It includes the following attributes:
-                - hidden_size (int): The size of the hidden state.
-                - num_multimask_outputs (int): The number of multimask outputs.
-                - num_mask_tokens (int): The number of mask tokens, which is calculated as config.num_multimask_outputs + 1.
-                - iou_token (nn.Embedding): An embedding for the intersection over union (IOU) token with a shape of (1, hidden_size).
-                - mask_tokens (nn.Embedding): An embedding for the mask tokens with a shape of (num_mask_tokens, hidden_size).
-                - transformer (SamTwoWayTransformer): The SamTwoWayTransformer instance.
-                - upscale_conv1 (nn.Conv2dTranspose): The first convolution layer for upscaling.
-                - upscale_conv2 (nn.Conv2dTranspose): The second convolution layer for upscaling.
-                - upscale_layer_norm (SamLayerNorm): The layer normalization for upscaling.
-                - activation (nn.GELU): The activation function.
-                - output_hypernetworks_mlps (nn.CellList): A list of SamFeedForward instances for output hypernetworks.
-                - iou_prediction_head (SamFeedForward): The SamFeedForward instance for IOU prediction head.
+                >- hidden_size (int): The size of the hidden state.
+                >- num_multimask_outputs (int): The number of multimask outputs.
+                >- num_mask_tokens (int): The number of mask tokens, which is calculated as config.num_multimask_outputs + 1.
+                >- iou_token (nn.Embedding): An embedding for the intersection over union (IOU) token with a shape of (1, hidden_size).
+                >- mask_tokens (nn.Embedding): An embedding for the mask tokens with a shape of (num_mask_tokens, hidden_size).
+                >- transformer (SamTwoWayTransformer): The SamTwoWayTransformer instance.
+                >- upscale_conv1 (nn.Conv2dTranspose): The first convolution layer for upscaling.
+                >- upscale_conv2 (nn.Conv2dTranspose): The second convolution layer for upscaling.
+                >- upscale_layer_norm (SamLayerNorm): The layer normalization for upscaling.
+                >- activation (nn.GELU): The activation function.
+                >- output_hypernetworks_mlps (nn.CellList): A list of SamFeedForward instances for output hypernetworks.
+                >- iou_prediction_head (SamFeedForward): The SamFeedForward instance for IOU prediction head.
         
         Returns:
             None: This method does not return any value.
@@ -1017,19 +1010,19 @@ class SamMaskEmbedding(nn.Cell):
 
     """
     This class represents a mask embedding module used for generating dense embeddings from input masks. It consists of several convolutional and normalization layers for processing the input masks and
-producing dense embeddings. The class inherits from nn.Cell.
+    producing dense embeddings. The class inherits from nn.Cell.
     
     Attributes:
-        - mask_input_channels (int): Number of input channels for the mask
-        - activation (function): Activation function used in the module
-        - conv1 (nn.Conv2d): Convolutional layer 1
-        - conv2 (nn.Conv2d): Convolutional layer 2
-        - conv3 (nn.Conv2d): Convolutional layer 3
-        - layer_norm1 (SamLayerNorm): Layer normalization for the first layer
-        - layer_norm2 (SamLayerNorm): Layer normalization for the second layer
+        mask_input_channels (int): Number of input channels for the mask
+        activation (function): Activation function used in the module
+        conv1 (nn.Conv2d): Convolutional layer 1
+        conv2 (nn.Conv2d): Convolutional layer 2
+        conv3 (nn.Conv2d): Convolutional layer 3
+        layer_norm1 (SamLayerNorm): Layer normalization for the first layer
+        layer_norm2 (SamLayerNorm): Layer normalization for the second layer
     
     Methods:
-        - construct(masks): Processes the input masks through the convolutional and normalization layers to generate dense embeddings
+        construct(masks): Processes the input masks through the convolutional and normalization layers to generate dense embeddings
     """
     def __init__(self, config: SamPromptEncoderConfig):
         """
@@ -1073,14 +1066,13 @@ producing dense embeddings. The class inherits from nn.Cell.
             None.
         
         This method applies a series of convolutional layers to the input masks to generate dense embeddings. The process involves the following steps:
-        
-        1. Convolution 1: Applies a 2D convolutional operation to the masks tensor, resulting in hidden states.
-        2. Layer Normalization 1: Performs layer normalization on the hidden states.
-        3. Activation: Applies an activation function to the normalized hidden states.
-        4. Convolution 2: Applies another 2D convolutional operation to the activated hidden states.
-        5. Layer Normalization 2: Performs layer normalization on the hidden states from the second convolution.
-        6. Activation: Applies the activation function to the normalized hidden states from the second convolution.
-        7. Convolution 3: Applies a final 2D convolutional operation to the normalized hidden states from the second convolution.
+            >1. Convolution 1: Applies a 2D convolutional operation to the masks tensor, resulting in hidden states.
+            >2. Layer Normalization 1: Performs layer normalization on the hidden states.
+            >3. Activation: Applies an activation function to the normalized hidden states.
+            >4. Convolution 2: Applies another 2D convolutional operation to the activated hidden states.
+            >5. Layer Normalization 2: Performs layer normalization on the hidden states from the second convolution.
+            >6. Activation: Applies the activation function to the normalized hidden states from the second convolution.
+            >7. Convolution 3: Applies a final 2D convolutional operation to the normalized hidden states from the second convolution.
             
         After these steps, the method returns the dense embeddings.
         """
@@ -1428,28 +1420,28 @@ class SamVisionLayer(nn.Cell):
 
     """
     This class represents a vision layer in the SamVision model. It inherits from the nn.Cell class and implements the necessary methods and functionality for performing attention-based operations on input
-image tokens.
+    image tokens.
     
     Attributes:
-    - layer_norm1: An instance of nn.LayerNorm which applies layer normalization to the input hidden states.
-    - attn: An instance of the SamVisionAttention class which performs attention computation on the hidden states.
-    - layer_norm2: An instance of nn.LayerNorm which applies layer normalization to the output hidden states.
-    - mlp: An instance of the SamMLPBlock class which applies multi-layer perceptron operations to the output hidden states.
-    - window_size: An integer representing the size of the attention windows.
+        layer_norm1: An instance of nn.LayerNorm which applies layer normalization to the input hidden states.
+        attn: An instance of the SamVisionAttention class which performs attention computation on the hidden states.
+        layer_norm2: An instance of nn.LayerNorm which applies layer normalization to the output hidden states.
+        mlp: An instance of the SamMLPBlock class which applies multi-layer perceptron operations to the output hidden states.
+        window_size: An integer representing the size of the attention windows.
     
     Methods:
-    - window_partition(hidden_states, window_size): Partitions the input hidden states into non-overlapping windows with padding if needed.
-    - window_unpartition(windows, window_size, padding_shape, original_shape): Unpartitions the windows into original sequences, removing padding.
-    - construct(hidden_states, output_attentions=False): Constructs the output hidden states by applying layer normalization, attention, and MLP operations.
+        window_partition(hidden_states, window_size): Partitions the input hidden states into non-overlapping windows with padding if needed.
+        window_unpartition(windows, window_size, padding_shape, original_shape): Unpartitions the windows into original sequences, removing padding.
+        construct(hidden_states, output_attentions=False): Constructs the output hidden states by applying layer normalization, attention, and MLP operations.
     
     Example usage:
-    
-    config = Configuration()
-    window_size = 16
-    vision_layer = SamVisionLayer(config, window_size)
-    hidden_states = torch.randn(batch_size, height, width, channel)
-    output = vision_layer.construct(hidden_states)
-    
+        ```python
+        config = Configuration()
+        window_size = 16
+        vision_layer = SamVisionLayer(config, window_size)
+        hidden_states = torch.randn(batch_size, height, width, channel)
+        output = vision_layer.construct(hidden_states)
+        ```
     """
     def __init__(self, config, window_size):
         """
@@ -1626,14 +1618,14 @@ class SamVisionNeck(nn.Cell):
         """Constructs the hidden states in the SamVisionNeck class.
         
         This method takes in two parameters: self and hidden_states. The hidden_states parameter represents the input hidden states and should be a tensor. The purpose of this parameter is to provide the input
-for constructing the hidden states. There are no restrictions on the shape or size of the hidden_states tensor.
+        for constructing the hidden states. There are no restrictions on the shape or size of the hidden_states tensor.
         
         The method performs the following operations on the hidden_states:
-        1. Permute the dimensions of the hidden_states tensor using the permute() function, with the dimensions permuted as (0, 3, 1, 2).
-        2. Apply the conv1 layer to the permuted hidden_states tensor.
-        3. Apply the layer_norm1 layer to the output of the conv1 layer.
-        4. Apply the conv2 layer to the output of the layer_norm1 layer.
-        5. Apply the layer_norm2 layer to the output of the conv2 layer.
+            >1. Permute the dimensions of the hidden_states tensor using the permute() function, with the dimensions permuted as (0, 3, 1, 2).
+            >2. Apply the conv1 layer to the permuted hidden_states tensor.
+            >3. Apply the layer_norm1 layer to the output of the conv1 layer.
+            >4. Apply the conv2 layer to the output of the layer_norm1 layer.
+            >5. Apply the layer_norm2 layer to the output of the conv2 layer.
         
         The method returns the final constructed hidden states tensor.
         
@@ -1660,17 +1652,17 @@ class SamVisionEncoder(nn.Cell):
 
     """
     The SamVisionEncoder class represents a vision encoder for processing image data using the SAM (Self-Attention Model) architecture. It inherits from the nn.Cell class and is designed to be used within the
-MindSpore framework for deep learning applications.
+    MindSpore framework for deep learning applications.
     
     The class initializes with a SamVisionConfig object and sets various attributes based on the provided configuration. It includes methods for retrieving input embeddings and constructing the encoder output
-based on the input pixel values. The construction process involves passing the input through the patch embeddings, applying positional embeddings if configured, processing the input through multiple vision
-layers, and finally passing the output through a vision neck module.
+    based on the input pixel values. The construction process involves passing the input through the patch embeddings, applying positional embeddings if configured, processing the input through multiple vision
+    layers, and finally passing the output through a vision neck module.
     
     The class also provides options for controlling the output of attentions and hidden states, as well as the ability to return the output as a dictionary. Additionally, it supports gradient checkpointing
-during training for efficient memory usage.
+    during training for efficient memory usage.
     
     Overall, the SamVisionEncoder class encapsulates the functionality for encoding image data using the SAM architecture, providing a flexible and configurable interface for vision processing tasks within the
-MindSpore framework.
+    MindSpore framework.
     """
     def __init__(self, config: SamVisionConfig):
         """
@@ -1833,9 +1825,10 @@ class SamPreTrainedModel(PreTrainedModel):
         This class assumes that the model is built using cells from the Sam library, such as nn.Dense, nn.Conv2d, nn.Conv2dTranspose, and nn.Embedding.
     
     Example usage:
+        ```python
         >>> model = SamPreTrainedModel(config)
         >>> model._init_weights(cell)
-    
+        ```
     """
     config_class = SamConfig
     base_model_prefix = "sam"
@@ -1872,26 +1865,11 @@ class SamModel(SamPreTrainedModel):
 
     """
     The `SamModel` class is a Python class that represents a model for image segmentation tasks. It is a subclass of the `SamPreTrainedModel` class.
-    
-    The `SamModel` class has the following methods:
-    
-    - `__init__(self, config)`: Initializes the `SamModel` instance by setting up the shared image embedding, vision encoder, prompt encoder, and mask decoder.
-    
-    - `get_input_embeddings(self)`: Returns the input embeddings of the vision encoder.
-    
-    - `get_image_wide_positional_embeddings(self)`: Returns the positional embeddings for image-wide attention.
-    
-    - `get_image_embeddings(self, pixel_values, output_attentions, output_hidden_states, return_dict)`: Returns the image embeddings by passing the pixel values through the vision encoder.
-    
-    - `get_prompt_embeddings(self, input_points, input_labels, input_boxes, input_masks)`: Returns the prompt embeddings by passing the input points, labels, boxes, and masks through the prompt encoder.
-    
-    - `construct(self, pixel_values, input_points, input_labels, input_boxes, input_masks, image_embeddings, multimask_output, attention_similarity, target_embedding, output_attentions, output_hidden_states,
-return_dict)`: Constructs the model by passing the input data through the vision encoder, image-wide positional embeddings, prompt encoder, and mask decoder. Returns a list of dictionaries containing the model
-outputs.
-    
+
     The `SamModel` class is typically used for image segmentation tasks. An example of how to use the `SamModel` class is provided in the docstring.
     
-    Note: This docstring provides an overview of the `SamModel` class and its methods. For more detailed information on the parameters and return types of each method, please refer to the method docstrings.
+    Note:
+        This docstring provides an overview of the `SamModel` class and its methods. For more detailed information on the parameters and return types of each method, please refer to the method docstrings.
     """
     _tied_weights_keys = ["prompt_encoder.shared_embedding.positional_embedding"]
 
@@ -2039,8 +2017,8 @@ outputs.
         **kwargs,
     ) -> List[Dict[str, mindspore.Tensor]]:
         r"""
-        Example:
 
+        Example:
         ```python
         >>> from PIL import Image
         >>> import requests

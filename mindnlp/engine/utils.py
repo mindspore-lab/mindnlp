@@ -426,7 +426,7 @@ of a scheduler in a system.
     Usage:
         To use the SchedulerType class, create a new instance with a name and value, and optionally provide custom implementations for the __str__ and __repr__ methods.
     
-        Example:
+        Examples:
         >> type1 = SchedulerType("Type 1", 1)
         >> print(type1)
         Type 1

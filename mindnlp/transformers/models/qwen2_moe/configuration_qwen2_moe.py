@@ -96,18 +96,20 @@ class Qwen2MoeConfig(PretrainedConfig):
         router_aux_loss_coef (`float`, *optional*, defaults to 0.001):
             The aux loss factor for the total loss.
 
-    ```python
-    >>> from transformers import Qwen2MoeModel, Qwen2MoeConfig
+    Example:
+        ```python
+        >>> from transformers import Qwen2MoeModel, Qwen2MoeConfig
 
-    >>> # Initializing a Qwen2MoE style configuration
-    >>> configuration = Qwen2MoeConfig()
+        >>> # Initializing a Qwen2MoE style configuration
+        >>> configuration = Qwen2MoeConfig()
 
-    >>> # Initializing a model from the Qwen1.5-MoE-A2.7B" style configuration
-    >>> model = Qwen2MoeModel(configuration)
+        >>> # Initializing a model from the Qwen1.5-MoE-A2.7B" style configuration
+        >>> model = Qwen2MoeModel(configuration)
 
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "qwen2_moe"
     keys_to_ignore_at_inference = ["past_key_values"]
 

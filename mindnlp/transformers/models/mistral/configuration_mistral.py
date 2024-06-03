@@ -85,18 +85,20 @@ class MistralConfig(PretrainedConfig):
         attention_dropout (`float`, *optional*, defaults to 0.0):
             The dropout ratio for the attention probabilities.
 
-    ```python
-    >>> from transformers import MistralModel, MistralConfig
+    Example:
+        ```python
+        >>> from transformers import MistralModel, MistralConfig
 
-    >>> # Initializing a Mistral 7B style configuration
-    >>> configuration = MistralConfig()
+        >>> # Initializing a Mistral 7B style configuration
+        >>> configuration = MistralConfig()
 
-    >>> # Initializing a model from the Mistral 7B style configuration
-    >>> model = MistralModel(configuration)
+        >>> # Initializing a model from the Mistral 7B style configuration
+        >>> model = MistralModel(configuration)
 
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "mistral"
     keys_to_ignore_at_inference = ["past_key_values"]
 

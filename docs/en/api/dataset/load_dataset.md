@@ -91,7 +91,7 @@ A dataset is a directory that contains:
 
 
 
-Example:
+Examples:
 
 
 1. Load a dataset from the Hugging Face Hub:

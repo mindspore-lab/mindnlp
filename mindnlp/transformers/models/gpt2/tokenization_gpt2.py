@@ -105,16 +105,17 @@ class GPT2Tokenizer(PreTrainedTokenizer):
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
 
-    ```python
-    >>> from transformers import GPT2Tokenizer
+    Example:
+        ```python
+        >>> from transformers import GPT2Tokenizer
 
-    >>> tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-    >>> tokenizer("Hello world")["input_ids"]
-    [15496, 995]
+        >>> tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+        >>> tokenizer("Hello world")["input_ids"]
+        [15496, 995]
 
-    >>> tokenizer(" Hello world")["input_ids"]
-    [18435, 995]
-    ```
+        >>> tokenizer(" Hello world")["input_ids"]
+        [18435, 995]
+        ```
 
     You can get around that behavior by passing `add_prefix_space=True` when instantiating this tokenizer or when you
     call it on some text, but since the model was not pretrained this way, it might yield a decrease in performance.
@@ -412,13 +413,13 @@ class GPT2Tokenizer(PreTrainedTokenizer):
             OSError: If the save_directory is not a valid directory.
         
         This method saves the vocabulary of the GPT2Tokenizer instance to the specified save_directory. The vocabulary is saved in two files: a vocabulary file and a merge file. The vocabulary file contains
-the encoder dictionary in JSON format, and the merge file contains the BPE merge indices.
+        the encoder dictionary in JSON format, and the merge file contains the BPE merge indices.
         
         If the save_directory does not exist or is not a directory, an OSError is raised. The filename_prefix parameter is optional and can be used to add a prefix to the filename of the saved vocabulary
-files. If filename_prefix is not provided, no prefix will be added to the filenames.
+        files. If filename_prefix is not provided, no prefix will be added to the filenames.
         
         The method returns a tuple containing the paths of the saved vocabulary files, i.e., (vocab_file, merge_file). The vocab_file path points to the saved vocabulary file, and the merge_file path points to
-the saved merge file.
+        the saved merge file.
         """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")

@@ -282,31 +282,31 @@ class WhisperTokenizer(PreTrainedTokenizer):
         This method initializes an instance of the WhisperTokenizer class.
         
         Args:
-        - self: The instance of the class.
-        - vocab_file (str): The path to the vocabulary file containing the token encoding.
-        - merges_file (str): The path to the file containing BPE merges for tokenization.
-        - normalizer_file (str, optional): The path to the file containing English spelling normalizer. Defaults to None.
-        - errors (str): The error handling scheme to use for encoding/decoding errors. Defaults to 'replace'.
-        - unk_token (str): The unknown token to be used during tokenization. Defaults to 'endoftext'.
-        - bos_token (str): The beginning of sentence token. Defaults to 'endoftext'.
-        - eos_token (str): The end of sentence token. Defaults to 'endoftext'.
-        - pad_token (str, optional): The padding token. Defaults to None.
-        - add_prefix_space (bool): Whether to add a prefix space during tokenization. Defaults to False.
-        - language (str, optional): The language of the text. Defaults to None.
-        - task (str, optional): The task for tokenization. Defaults to None.
-        - predict_timestamps (bool): Whether to predict timestamps. Defaults to False.
+            self: The instance of the class.
+            vocab_file (str): The path to the vocabulary file containing the token encoding.
+            merges_file (str): The path to the file containing BPE merges for tokenization.
+            normalizer_file (str, optional): The path to the file containing English spelling normalizer. Defaults to None.
+            errors (str): The error handling scheme to use for encoding/decoding errors. Defaults to 'replace'.
+            unk_token (str): The unknown token to be used during tokenization. Defaults to 'endoftext'.
+            bos_token (str): The beginning of sentence token. Defaults to 'endoftext'.
+            eos_token (str): The end of sentence token. Defaults to 'endoftext'.
+            pad_token (str, optional): The padding token. Defaults to None.
+            add_prefix_space (bool): Whether to add a prefix space during tokenization. Defaults to False.
+            language (str, optional): The language of the text. Defaults to None.
+            task (str, optional): The task for tokenization. Defaults to None.
+            predict_timestamps (bool): Whether to predict timestamps. Defaults to False.
         
         Returns:
-        None. The method does not return any value.
+            None. The method does not return any value.
         
         Raises:
-        - FileNotFoundError: If the vocab_file, merges_file, or normalizer_file does not exist.
-        - ValueError: If the provided unk_token, bos_token, eos_token, or pad_token is not a string.
-        - TypeError: If the provided unk_token, bos_token, eos_token, or pad_token is not a string or an AddedToken instance.
-        - UnicodeDecodeError: If an error occurs during the decoding of vocab_file or merges_file.
-        - KeyError: If an error occurs during the creation of the bpe_ranks dictionary.
-        - re.error: If an error occurs during the compilation of regular expressions.
-        - json.JSONDecodeError: If an error occurs during the decoding of normalizer_file.
+            FileNotFoundError: If the vocab_file, merges_file, or normalizer_file does not exist.
+            ValueError: If the provided unk_token, bos_token, eos_token, or pad_token is not a string.
+            TypeError: If the provided unk_token, bos_token, eos_token, or pad_token is not a string or an AddedToken instance.
+            UnicodeDecodeError: If an error occurs during the decoding of vocab_file or merges_file.
+            KeyError: If an error occurs during the creation of the bpe_ranks dictionary.
+            re.error: If an error occurs during the compilation of regular expressions.
+            json.JSONDecodeError: If an error occurs during the decoding of normalizer_file.
         """
         bos_token = (
             AddedToken(bos_token, lstrip=False, rstrip=False, normalized=False, special=True)
@@ -397,16 +397,18 @@ class WhisperTokenizer(PreTrainedTokenizer):
         
         Note:
             This method builds the vocabulary by converting the token IDs to tokens using the `convert_ids_to_tokens` method of the WhisperTokenizer instance. The tokens and their corresponding IDs are stored
-in a dictionary. Additionally, any added tokens are also included in the vocabulary.
+            in a dictionary. Additionally, any added tokens are also included in the vocabulary.
         
         Example:
+            ```python
             >>> tokenizer = WhisperTokenizer()
             >>> vocab = tokenizer.get_vocab()
             >>> print(vocab)
             {'[PAD]': 0, '[UNK]': 1, '[CLS]': 2, '[SEP]': 3, '[MASK]': 4, 'hello': 5, 'world': 6}
+            ```
         
         In the example above, the `get_vocab` method is called on a WhisperTokenizer instance, which returns a dictionary representing the vocabulary of the tokenizer. The vocabulary includes the default
-special tokens as well as any added tokens.
+        special tokens as well as any added tokens.
         """
         vocab = {self.convert_ids_to_tokens(i): i for i in range(self.vocab_size)}
         vocab.update(self.added_tokens_encoder)
@@ -428,7 +430,7 @@ special tokens as well as any added tokens.
             None.
         
         The BPE algorithm is applied to the 'token' by iteratively replacing the most frequent pairs of characters with a new character, until no more pairs can be found. The resulting encoded token is then
-returned.
+        returned.
         
         The method first checks if the 'token' is already present in the cache. If so, it returns the cached value. Otherwise, it proceeds with the BPE encoding process.
         
@@ -437,10 +439,10 @@ returned.
         If no pairs are found, the 'token' is already fully encoded and is returned as is.
         
         Otherwise, the method enters a loop, where it finds the most frequent pair of characters ('bigram') from the 'pairs' list based on the 'bpe_ranks' dictionary. If the 'bigram' is not present in the
-'bpe_ranks' dictionary, the loop is terminated.
+        'bpe_ranks' dictionary, the loop is terminated.
         
         The method then replaces all occurrences of the 'bigram' in the 'word' with a new character. The 'word' is iterated through, and whenever the current character matches the first character of the
-'bigram' and the next character matches the second character of the 'bigram', the new character is appended to the 'new_word' list. Otherwise, the current character is appended as is.
+        'bigram' and the next character matches the second character of the 'bigram', the new character is appended to the 'new_word' list. Otherwise, the current character is appended as is.
         
         The 'new_word' is converted back to a tuple and assigned to 'word'. If the length of 'word' becomes 1, indicating that the token is fully encoded, the loop is terminated.
         
@@ -493,14 +495,15 @@ returned.
     def set_prefix_tokens(self, language: str = None, task: str = None, predict_timestamps: bool = None):
         """
         Override the prefix tokens appended to the start of the label sequence. This method can be used standalone to
-        update the prefix tokens as required when fine-tuning. Example:
+        update the prefix tokens as required when fine-tuning.
 
-        ```python
-        >>> # instantiate the tokenizer and set the prefix token to Spanish
-        >>> tokenizer = WhisperTokenizer.from_pretrained("openai/whisper-tiny", language="spanish")
-        >>> # now switch the prefix token from Spanish to French
-        >>> tokenizer.set_prefix_tokens(language="french")
-        ```
+        Example:
+            ```python
+            >>> # instantiate the tokenizer and set the prefix token to Spanish
+            >>> tokenizer = WhisperTokenizer.from_pretrained("openai/whisper-tiny", language="spanish")
+            >>> # now switch the prefix token from Spanish to French
+            >>> tokenizer.set_prefix_tokens(language="french")
+            ```
 
         Args:
             language (`str`, *optional*, defaults to `None`):
@@ -862,6 +865,7 @@ returned.
             - If both `normalize` and `basic_normalize` are False, the decoded text will be the concatenation of the tokens without any additional cleaning.
         
         Example:
+            ```python
             >>> tokenizer = WhisperTokenizer()
             >>> tokens = [101, 2023, 2003, 1037, 2307, 1055, 1006, 102]
             >>> decoded_text = tokenizer._decode(tokens, skip_special_tokens=True, normalize=True)
@@ -875,6 +879,7 @@ returned.
             >>> decoded_text = tokenizer._decode(tokens)
             >>> print(decoded_text)
             '[CLS]thequickbrownfox[SEP]'
+            ```
         """
         self._decode_use_source_tokenizer = kwargs.pop("use_source_tokenizer", False)
         filtered_tokens = self.convert_ids_to_tokens(token_ids, skip_special_tokens=skip_special_tokens)
@@ -974,15 +979,15 @@ returned.
         This method prepares the input text for tokenization by potentially adding a prefix space.
         
         Args:
-        - self: Reference to the current instance of the class.
-        - text (str): The input text to be tokenized.
-        - is_split_into_words (bool): A flag indicating whether the text is already split into words or not. Default is False.
+            self: Reference to the current instance of the class.
+            text (str): The input text to be tokenized.
+            is_split_into_words (bool): A flag indicating whether the text is already split into words or not. Default is False.
         
         Returns:
-        - tuple: A tuple containing the modified text and any remaining keyword arguments.
+            tuple: A tuple containing the modified text and any remaining keyword arguments.
         
         Raises:
-        - None
+            None
         """
         add_prefix_space = kwargs.pop("add_prefix_space", self.add_prefix_space)
         if is_split_into_words or add_prefix_space:
@@ -1020,9 +1025,10 @@ returned.
             None.
         
         This method retrieves the decoder prompt IDs to be used during tokenization. The decoder prompt IDs are based on the provided task, language, and timestamp preferences. By default, the method excludes
-timestamps from the decoder prompt. The decoder prompt IDs are returned as a list of tuples, where each tuple consists of the rank and token of each forced decoder token.
+        timestamps from the decoder prompt. The decoder prompt IDs are returned as a list of tuples, where each tuple consists of the rank and token of each forced decoder token.
         
-        Note: The decoder prompt IDs exclude the initial token which is reserved for special purposes.
+        Note:
+            The decoder prompt IDs exclude the initial token which is reserved for special purposes.
         """
         self.set_prefix_tokens(task=task, language=language, predict_timestamps=not no_timestamps)
         # prefix tokens are of the form: <|startoftranscript|> <|lang_id|> <|task|> <|notimestamps|>

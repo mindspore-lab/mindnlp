@@ -148,9 +148,9 @@ class HammingDiversityLogitsProcessor(LogitsProcessor):
             mindspore.Tensor: Returns the updated scores tensor after applying the diversity penalty.
         
         Raises:
-            - ValueError: If the input_ids, scores, current_tokens, or beam_group_idx are of incorrect or incompatible types.
-            - IndexError: If the beam_group_idx is out of range.
-            - RuntimeError: If there is an issue with the calculation or update process.
+            ValueError: If the input_ids, scores, current_tokens, or beam_group_idx are of incorrect or incompatible types.
+            IndexError: If the beam_group_idx is out of range.
+            RuntimeError: If there is an issue with the calculation or update process.
         """
         # hamming diversity: penalise using same token in current group which was used in previous groups at
         # the same time step
@@ -219,9 +219,9 @@ class EncoderRepetitionPenaltyLogitsProcessor(LogitsProcessor):
             mindspore.Tensor: Returns a tensor with repetition penalty applied to the logits.
         
         Raises:
-            - ValueError: If the dimensions of input_ids and scores do not match.
-            - TypeError: If the input_ids or scores are not instances of mindspore.Tensor.
-            - RuntimeError: If there is an issue with the scatter operation during processing.
+            ValueError: If the dimensions of input_ids and scores do not match.
+            TypeError: If the input_ids or scores are not instances of mindspore.Tensor.
+            RuntimeError: If there is an issue with the scatter operation during processing.
         """
         score = ops.gather_elements(scores, 1, self.encoder_input_ids)
 
@@ -272,9 +272,9 @@ class RepetitionPenaltyLogitsProcessor(LogitsProcessor):
             mindspore.Tensor: A Tensor with repetition penalty applied to the input logits.
         
         Raises:
-            - ValueError: If the input_ids and scores are not of the expected shape or type.
-            - IndexError: If there is an indexing error while processing the input_ids or scores.
-            - RuntimeError: If there is any runtime issue during the processing of the repetition penalty.
+            ValueError: If the input_ids and scores are not of the expected shape or type.
+            IndexError: If there is an indexing error while processing the input_ids or scores.
+            RuntimeError: If there is any runtime issue during the processing of the repetition penalty.
         
         Note:
             The repetition penalty factor is controlled by the 'penalty' attribute of the RepetitionPenaltyLogitsProcessor instance.
@@ -456,8 +456,8 @@ class EncoderNoRepeatNGramLogitsProcessor(LogitsProcessor):
                 Shape: (num_hypos, vocab_size)
         
         Raises:
-            - TypeError: If the input_ids or scores parameters are not of type mindspore.Tensor.
-            - ValueError: If the dimensions of input_ids and scores do not match the expected shapes.
+            TypeError: If the input_ids or scores parameters are not of type mindspore.Tensor.
+            ValueError: If the dimensions of input_ids and scores do not match the expected shapes.
         """
         # B x num_beams
         num_hypos = scores.shape[0]
@@ -497,19 +497,18 @@ class NoBadWordsLogitsProcessor(LogitsProcessor):
             bad_words_ids (List[List[int]]): A list of lists containing the IDs of bad words. Each inner list represents a sequence of bad word IDs.
                 The outer list contains multiple sequences of bad word IDs. The parameter is expected to be a non-empty list of lists of positive integers.
             eos_token_id (Union[int, List[int]]): An integer or a list of integers representing the end-of-sequence token ID(s). If a single integer is provided, it is converted to a list with a single
-element. 
-                If this parameter is None, it is automatically assigned an empty list. It is expected to be a positive integer or a list of positive integers.
+                element. If this parameter is None, it is automatically assigned an empty list. It is expected to be a positive integer or a list of positive integers.
         
         Returns:
             None. The method performs initialization and does not return any value.
         
         Raises:
             ValueError: 
-                - If `bad_words_ids` is not a non-empty list.
-                - If `bad_words_ids` is not a list of lists.
-                - If any list in `bad_words_ids` is not a list of positive integers.
-                - If `eos_token_id` is not a positive integer or a list of positive integers.
-                - If the banned words token sequences cannot have an empty list.
+                >- If `bad_words_ids` is not a non-empty list.
+                >- If `bad_words_ids` is not a list of lists.
+                >- If any list in `bad_words_ids` is not a list of positive integers.
+                >- If `eos_token_id` is not a positive integer or a list of positive integers.
+                >- If the banned words token sequences cannot have an empty list.
         """
         if not isinstance(bad_words_ids, List) or len(bad_words_ids) == 0:
             raise ValueError(f"`bad_words_ids` has to be a non-empty list, but is {bad_words_ids}.")
@@ -552,16 +551,16 @@ element.
         Args:
             self: An instance of the 'NoBadWordsLogitsProcessor' class.
             input_ids (mindspore.Tensor): A tensor containing the input IDs.
-                - Type: mindspore.Tensor
-                - Purpose: Holds the input IDs for processing.
+                >- Type: mindspore.Tensor
+                >- Purpose: Holds the input IDs for processing.
             scores (mindspore.Tensor): A tensor containing the scores.
-                - Type: mindspore.Tensor
-                - Purpose: Represents the scores to be processed.
+                >- Type: mindspore.Tensor
+                >- Purpose: Represents the scores to be processed.
         
         Returns:
             mindspore.Tensor: A tensor containing the processed scores.
-                - Type: mindspore.Tensor
-                - Purpose: Represents the scores after applying the 'No Bad Words' logic.
+                >- Type: mindspore.Tensor
+                >- Purpose: Represents the scores after applying the 'No Bad Words' logic.
         
         Raises:
             None.
@@ -630,18 +629,20 @@ element.
             None
         
         Description:
-        This method takes the previous input IDs and calculates the banned bad word IDs based on the pre-defined bad word sequences. It iterates over each slice of the previous input IDs and checks if any of
-the bad word sequences match with the preceding tokens. If a match is found, the corresponding bad word ID is added to the list of banned tokens. The banned tokens for each slice are then appended to the final
-list of banned tokens.
+            This method takes the previous input IDs and calculates the banned bad word IDs based on the pre-defined bad word sequences. It iterates over each slice of the previous input IDs and checks if any of
+            the bad word sequences match with the preceding tokens. If a match is found, the corresponding bad word ID is added to the list of banned tokens.
+            The banned tokens for each slice are then appended to the final list of banned tokens.
         
         Note:
-        - The bad word sequences are specified in the 'bad_words_id_length_greater_than_1' attribute of the NoBadWordsLogitsProcessor class.
+            >- The bad word sequences are specified in the 'bad_words_id_length_greater_than_1' attribute of the NoBadWordsLogitsProcessor class.
         
         Example:
+            ```python
             processor = NoBadWordsLogitsProcessor()
             prev_input_ids = [[1, 2, 3], [4, 5, 6]]
             banned_tokens = processor._calc_banned_bad_words_ids(prev_input_ids)
             # banned_tokens will contain the banned bad word IDs based on the previous input IDs.
+            ```
         """
         banned_tokens = []
         for prev_input_ids_slice in prev_input_ids:
@@ -721,7 +722,7 @@ class MinLengthLogitsProcessor(LogitsProcessor):
             self (MinLengthLogitsProcessor): The current instance of the MinLengthLogitsProcessor class.
             min_length (int): The minimum length of the processed logits. It must be a positive integer.
             eos_token_id (Union[int, List[int]]): The end-of-sequence token ID or a list of end-of-sequence token IDs. If an integer is provided, it will be converted to a list. It must be a list of positive
-integers.
+                integers.
         
         Returns:
             None: This method does not return any value.
@@ -817,7 +818,7 @@ class MinNewTokensLengthLogitsProcessor(LogitsProcessor):
             mindspore.Tensor: Returns the updated scores tensor after processing based on the input_ids and prompt_length_to_skip attribute.
         
         Raises:
-            - ValueError: If the new_tokens_length is calculated to be less than the min_new_tokens threshold.
+            ValueError: If the new_tokens_length is calculated to be less than the min_new_tokens threshold.
         """
         new_tokens_length = input_ids.shape[-1] - self.prompt_length_to_skip
         if new_tokens_length < self.min_new_tokens:
@@ -852,8 +853,8 @@ class PrefixConstrainedLogitsProcessor(LogitsProcessor):
             None. This method initializes the PrefixConstrainedLogitsProcessor object.
         
         Raises:
-            - TypeError: If prefix_allowed_tokens_fn is not a callable object or if num_beams is not an integer.
-            - ValueError: If num_beams is less than or equal to zero.
+            TypeError: If prefix_allowed_tokens_fn is not a callable object or if num_beams is not an integer.
+            ValueError: If num_beams is less than or equal to zero.
         """
         self._prefix_allowed_tokens_fn = prefix_allowed_tokens_fn
         self._num_beams = num_beams
@@ -864,15 +865,15 @@ class PrefixConstrainedLogitsProcessor(LogitsProcessor):
         
         This method takes 3 parameters:
         Args:
-        - self: The instance of the class.
-        - input_ids (mindspore.Tensor): The input tensor containing token IDs. It is used to identify the batch and beam ID.
-        - scores (mindspore.Tensor): The input tensor containing scores for each token.
+            self: The instance of the class.
+            input_ids (mindspore.Tensor): The input tensor containing token IDs. It is used to identify the batch and beam ID.
+            scores (mindspore.Tensor): The input tensor containing scores for each token.
         
         Returns:
-        - mindspore.Tensor: Returns the processed tensor with added mask values.
+            mindspore.Tensor: Returns the processed tensor with added mask values.
         
         Raises:
-        - None
+            None
         '''
         mask = ops.full_like(scores, -math.inf)
         for batch_id, beam_sent in enumerate(input_ids.view(-1, self._num_beams, input_ids.shape[-1])):
@@ -911,18 +912,18 @@ class ForcedBOSTokenLogitsProcessor(LogitsProcessor):
         This method, '__call__', is a part of the 'ForcedBOSTokenLogitsProcessor' class. It takes three parameters: self, input_ids, and scores. The method returns a value of type 'mindspore.Tensor'.
         
         Args:
-            - self: The instance of the 'ForcedBOSTokenLogitsProcessor' class.
-            - input_ids (mindspore.Tensor): The input tensor containing the IDs of the tokens.
-            - scores (mindspore.Tensor): The tensor containing the scores for each token.
+            self: The instance of the 'ForcedBOSTokenLogitsProcessor' class.
+            input_ids (mindspore.Tensor): The input tensor containing the IDs of the tokens.
+            scores (mindspore.Tensor): The tensor containing the scores for each token.
         
         Returns:
-            - mindspore.Tensor: The tensor containing the modified scores.
+            mindspore.Tensor: The tensor containing the modified scores.
         
         Raises:
-            - None
+            None
         
         This method modifies the scores tensor by adjusting the scores based on the input IDs. If the length of the input_ids tensor is 1, the scores for all tokens except the 'bos_token_id' are set to
-negative infinity, and the score for the 'bos_token_id' is set to 0. The modified scores tensor is then returned.
+        negative infinity, and the score for the 'bos_token_id' is set to 0. The modified scores tensor is then returned.
         """
         cur_len = input_ids.shape[-1]
         if cur_len == 1:
@@ -1001,7 +1002,7 @@ class InfNanRemoveLogitsProcessor(LogitsProcessor):
             self: An instance of the InfNanRemoveLogitsProcessor class.
             input_ids (mindspore.Tensor): A tensor containing the input IDs.
             scores (mindspore.Tensor): A tensor containing the scores to be processed. Any NaN values in the scores will be replaced with 0.0, and any infinite values will be replaced with the maximum value
-for the data type.
+                for the data type.
         
         Returns:
             mindspore.Tensor: A tensor containing the processed scores after replacing NaN and infinite values.
@@ -1041,8 +1042,8 @@ class ExponentialDecayLengthPenalty(LogitsProcessor):
         Args:
             self: The instance of the class.
             exponential_decay_length_penalty (Tuple): A tuple containing two elements: 
-                - The start point for the exponential decay length penalty regulation.
-                - The factor for the exponential decay length penalty regulation.
+                >- The start point for the exponential decay length penalty regulation.
+                >- The factor for the exponential decay length penalty regulation.
             eos_token_id (Union[int, List[int]]): The ID or list of IDs representing the end-of-sequence token(s).
             input_ids_seq_length (int): The length of the input sequence.
         
@@ -1077,8 +1078,8 @@ class ExponentialDecayLengthPenalty(LogitsProcessor):
                 The returned tensor has the same shape as the input 'scores'.
         
         Raises:
-            - ValueError: If the length of input_ids is not consistent with the shape of scores.
-            - TypeError: If input_ids or scores are not of type mindspore.Tensor.
+            ValueError: If the length of input_ids is not consistent with the shape of scores.
+            TypeError: If input_ids or scores are not of type mindspore.Tensor.
         """
         cur_len = input_ids.shape[-1]
         if cur_len > self.regulation_start:
@@ -1109,7 +1110,7 @@ class SuppressTokensLogitsProcessor(LogitsProcessor):
     def __call__(self, input_ids, scores):
         """
         The '__call__' method in the 'SuppressTokensLogitsProcessor' class modifies the 'scores' array by setting the values of specific tokens to negative infinity. It takes three parameters: 'self',
-'input_ids', and 'scores'. The method does not return any value.
+        'input_ids', and 'scores'. The method does not return any value.
         
         Args:
             self (SuppressTokensLogitsProcessor): An instance of the 'SuppressTokensLogitsProcessor' class.
@@ -1226,7 +1227,7 @@ class LogitNormalization(LogitsProcessor, LogitsWarper):
         Class: LogitNormalization
         
         Description:
-        This class provides a method for logit normalization.
+            This class provides a method for logit normalization.
         
         __call__ method:
         
@@ -1323,8 +1324,8 @@ class TopPLogitsWarper(LogitsWarper):
         
         Raises:
             ValueError: 
-                - If top_p is not a float greater than 0 or less than 1.
-                - If min_tokens_to_keep is not a positive integer.
+                >- If top_p is not a float greater than 0 or less than 1.
+                >- If min_tokens_to_keep is not a positive integer.
         """
         top_p = float(top_p)
         if top_p < 0 or top_p > 1.0:
@@ -1524,28 +1525,28 @@ class EpsilonLogitsWarper(LogitsWarper):
         min_tokens_to_keep (`int`, *optional*, defaults to 1):
             Minimum number of tokens that cannot be filtered.
 
-    Examples:
-    ```python
-    >>> from transformers import AutoTokenizer, AutoModelForCausalLM, set_seed
+    Example:
+        ```python
+        >>> from transformers import AutoTokenizer, AutoModelForCausalLM, set_seed
 
-    >>> set_seed(0)
-    >>> model = AutoModelForCausalLM.from_pretrained("distilgpt2")
-    >>> tokenizer = AutoTokenizer.from_pretrained("distilgpt2")
+        >>> set_seed(0)
+        >>> model = AutoModelForCausalLM.from_pretrained("distilgpt2")
+        >>> tokenizer = AutoTokenizer.from_pretrained("distilgpt2")
 
-    >>> inputs = tokenizer("A sequence: 1, 2", return_tensors="pt")
+        >>> inputs = tokenizer("A sequence: 1, 2", return_tensors="pt")
 
-    >>> # With sampling, the output is unexpected -- sometimes too unexpected.
-    >>> outputs = model.generate(**inputs, do_sample=True)
-    >>> print(tokenizer.batch_decode(outputs, skip_special_tokens=True)[0])
-    A sequence: 1, 2, 0, 2, 2. 2, 2, 2, 2
+        >>> # With sampling, the output is unexpected -- sometimes too unexpected.
+        >>> outputs = model.generate(**inputs, do_sample=True)
+        >>> print(tokenizer.batch_decode(outputs, skip_special_tokens=True)[0])
+        A sequence: 1, 2, 0, 2, 2. 2, 2, 2, 2
 
-    >>> # With epsilon sampling, the output gets restricted to high-probability tokens. Note that this is similar to
-    >>> # Top P sampling, which restricts tokens based on their cumulative probability.
-    >>> # Pro tip: The paper recomends using `epsilon_cutoff` values between 3e-4 and 9e-4
-    >>> outputs = model.generate(**inputs, do_sample=True, epsilon_cutoff=0.1)
-    >>> print(tokenizer.batch_decode(outputs, skip_special_tokens=True)[0])
-    A sequence: 1, 2, 3, 4, 5, 6, 7, 8, 9
-    ```
+        >>> # With epsilon sampling, the output gets restricted to high-probability tokens. Note that this is similar to
+        >>> # Top P sampling, which restricts tokens based on their cumulative probability.
+        >>> # Pro tip: The paper recomends using `epsilon_cutoff` values between 3e-4 and 9e-4
+        >>> outputs = model.generate(**inputs, do_sample=True, epsilon_cutoff=0.1)
+        >>> print(tokenizer.batch_decode(outputs, skip_special_tokens=True)[0])
+        A sequence: 1, 2, 3, 4, 5, 6, 7, 8, 9
+        ```
     """
     def __init__(self, epsilon: float, filter_value: float = -float("Inf"), min_tokens_to_keep: int = 1):
         """
@@ -1630,28 +1631,28 @@ class EtaLogitsWarper(LogitsWarper):
             For example, if `min_tokens_to_keep` is set to 1, at least one token will always be kept for generation,
             even if all tokens have probabilities below the cutoff `eta`.
 
-    Examples:
-    ```python
-    >>> from transformers import AutoTokenizer, AutoModelForCausalLM, set_seed
+    Example:
+        ```python
+        >>> from transformers import AutoTokenizer, AutoModelForCausalLM, set_seed
 
-    >>> set_seed(0)
-    >>> model = AutoModelForCausalLM.from_pretrained("distilgpt2")
-    >>> tokenizer = AutoTokenizer.from_pretrained("distilgpt2")
+        >>> set_seed(0)
+        >>> model = AutoModelForCausalLM.from_pretrained("distilgpt2")
+        >>> tokenizer = AutoTokenizer.from_pretrained("distilgpt2")
 
-    >>> inputs = tokenizer("A sequence: 1, 2", return_tensors="pt")
+        >>> inputs = tokenizer("A sequence: 1, 2", return_tensors="pt")
 
-    >>> # With sampling, the output is unexpected -- sometimes too unexpected.
-    >>> outputs = model.generate(**inputs, do_sample=True)
-    >>> print(tokenizer.batch_decode(outputs, skip_special_tokens=True)[0])
-    A sequence: 1, 2, 0, 2, 2. 2, 2, 2, 2
+        >>> # With sampling, the output is unexpected -- sometimes too unexpected.
+        >>> outputs = model.generate(**inputs, do_sample=True)
+        >>> print(tokenizer.batch_decode(outputs, skip_special_tokens=True)[0])
+        A sequence: 1, 2, 0, 2, 2. 2, 2, 2, 2
 
-    >>> # With eta sampling, the output gets restricted to high-probability tokens. You can see it as a dynamic form of
-    >>> # epsilon sampling that adapts its cutoff probability based on the entropy (high entropy = lower cutoff).
-    >>> # Pro tip: The paper recomends using `eta_cutoff` values between 3e-4 to 4e-3
-    >>> outputs = model.generate(**inputs, do_sample=True, eta_cutoff=0.1)
-    >>> print(tokenizer.batch_decode(outputs, skip_special_tokens=True)[0])
-    A sequence: 1, 2, 3, 4, 5, 6, 7, 8, 9
-    ```
+        >>> # With eta sampling, the output gets restricted to high-probability tokens. You can see it as a dynamic form of
+        >>> # epsilon sampling that adapts its cutoff probability based on the entropy (high entropy = lower cutoff).
+        >>> # Pro tip: The paper recomends using `eta_cutoff` values between 3e-4 to 4e-3
+        >>> outputs = model.generate(**inputs, do_sample=True, eta_cutoff=0.1)
+        >>> print(tokenizer.batch_decode(outputs, skip_special_tokens=True)[0])
+        A sequence: 1, 2, 3, 4, 5, 6, 7, 8, 9
+        ```
     """
     def __init__(self, epsilon: float, filter_value: float = -float("Inf"), min_tokens_to_keep: int = 1):
         """Initialize a new instance of the EtaLogitsWarper class.
@@ -1688,15 +1689,15 @@ class EtaLogitsWarper(LogitsWarper):
         This method '__call__' in the class 'EtaLogitsWarper' takes three parameters:
         
         Args:
-        - self: The instance of the class.
-        - input_ids (mindspore.Tensor): The input tensor containing the IDs.
-        - scores (mindspore.Tensor): The input tensor containing the scores.
+            self: The instance of the class.
+            input_ids (mindspore.Tensor): The input tensor containing the IDs.
+            scores (mindspore.Tensor): The input tensor containing the scores.
         
         Returns:
-        - mindspore.Tensor: Returns a tensor after applying certain operations on the input scores.
+            mindspore.Tensor: Returns a tensor after applying certain operations on the input scores.
         
         Raises:
-        - None
+            None
         """
         # Calculate the adaptive cutoff
         probabilities = scores.softmax(dim=-1)
@@ -1734,43 +1735,42 @@ class SequenceBiasLogitsProcessor(LogitsProcessor):
             will always be applied. Otherwise, the bias will only be applied if the sequence in question is about to be
             completed (in the token selection step after this processor is applied).
 
-    Examples:
+    Example:
+        ```python
+        >>> from transformers import AutoTokenizer, AutoModelForCausalLM
 
-    ```python
-    >>> from transformers import AutoTokenizer, AutoModelForCausalLM
+        >>> model = AutoModelForCausalLM.from_pretrained("gpt2")
+        >>> tokenizer = AutoTokenizer.from_pretrained("gpt2")
+        >>> inputs = tokenizer(["The full name of Donald is Donald"], return_tensors="pt")
 
-    >>> model = AutoModelForCausalLM.from_pretrained("gpt2")
-    >>> tokenizer = AutoTokenizer.from_pretrained("gpt2")
-    >>> inputs = tokenizer(["The full name of Donald is Donald"], return_tensors="pt")
+        >>> summary_ids = model.generate(inputs["input_ids"], max_new_tokens=4)
+        >>> print(tokenizer.batch_decode(summary_ids, skip_special_tokens=True)[0])
+        The full name of Donald is Donald J. Trump Jr
 
-    >>> summary_ids = model.generate(inputs["input_ids"], max_new_tokens=4)
-    >>> print(tokenizer.batch_decode(summary_ids, skip_special_tokens=True)[0])
-    The full name of Donald is Donald J. Trump Jr
-
-    >>> # Now let's control generation through a bias. Please note that the tokenizer is initialized differently!
-    >>> tokenizer_with_prefix_space = AutoTokenizer.from_pretrained("gpt2", add_prefix_space=True)
-
-
-    >>> def get_tokens_as_tuple(word):
-    ...     return tuple(tokenizer_with_prefix_space([word], add_special_tokens=False).input_ids[0])
+        >>> # Now let's control generation through a bias. Please note that the tokenizer is initialized differently!
+        >>> tokenizer_with_prefix_space = AutoTokenizer.from_pretrained("gpt2", add_prefix_space=True)
 
 
-    >>> # If we add a negative bias without beam search, it may become "stuck" in a prefix without good continuations
-    >>> sequence_bias = {get_tokens_as_tuple("Trump"): -10.0}
-    >>> biased_ids = model.generate(inputs["input_ids"], max_new_tokens=4, sequence_bias=sequence_bias)
-    >>> print(tokenizer.batch_decode(biased_ids, skip_special_tokens=True)[0])
-    The full name of Donald is Donald J. Donald,
+        >>> def get_tokens_as_tuple(word):
+        ...     return tuple(tokenizer_with_prefix_space([word], add_special_tokens=False).input_ids[0])
 
-    >>> biased_ids = model.generate(inputs["input_ids"], max_new_tokens=4, num_beams=4, sequence_bias=sequence_bias)
-    >>> print(tokenizer.batch_decode(biased_ids, skip_special_tokens=True)[0])
-    The full name of Donald is Donald Rumsfeld,
 
-    >>> # We can also add a positive bias to nudge the model towards specific tokens or continuations
-    >>> sequence_bias = {get_tokens_as_tuple("Donald Duck"): 10.0}
-    >>> biased_ids = model.generate(inputs["input_ids"], max_new_tokens=4, num_beams=4, sequence_bias=sequence_bias)
-    >>> print(tokenizer.batch_decode(biased_ids, skip_special_tokens=True)[0])
-    The full name of Donald is Donald Duck.
-    ```
+        >>> # If we add a negative bias without beam search, it may become "stuck" in a prefix without good continuations
+        >>> sequence_bias = {get_tokens_as_tuple("Trump"): -10.0}
+        >>> biased_ids = model.generate(inputs["input_ids"], max_new_tokens=4, sequence_bias=sequence_bias)
+        >>> print(tokenizer.batch_decode(biased_ids, skip_special_tokens=True)[0])
+        The full name of Donald is Donald J. Donald,
+
+        >>> biased_ids = model.generate(inputs["input_ids"], max_new_tokens=4, num_beams=4, sequence_bias=sequence_bias)
+        >>> print(tokenizer.batch_decode(biased_ids, skip_special_tokens=True)[0])
+        The full name of Donald is Donald Rumsfeld,
+
+        >>> # We can also add a positive bias to nudge the model towards specific tokens or continuations
+        >>> sequence_bias = {get_tokens_as_tuple("Donald Duck"): 10.0}
+        >>> biased_ids = model.generate(inputs["input_ids"], max_new_tokens=4, num_beams=4, sequence_bias=sequence_bias)
+        >>> print(tokenizer.batch_decode(biased_ids, skip_special_tokens=True)[0])
+        The full name of Donald is Donald Duck.
+        ```
     """
     def __init__(self, sequence_bias: Dict[Tuple[int], float]):
         """
@@ -1779,7 +1779,7 @@ class SequenceBiasLogitsProcessor(LogitsProcessor):
         Args:
             self: The object instance.
             sequence_bias (Dict[Tuple[int], float]): A dictionary containing the sequence bias values. The keys are tuples of integers representing the sequence positions, and the values are floats
-representing the bias for each position. 
+                representing the bias for each position.
         
         Returns:
             None. This method does not return any value.
@@ -1889,15 +1889,15 @@ class AlternatingCodebooksLogitsProcessor(LogitsProcessor):
         Args:
             self: An instance of the 'AlternatingCodebooksLogitsProcessor' class.
             input_ids (mindspore.Tensor): A tensor containing the input IDs.
-                - Shape: (batch_size, sequence_length).
-                - The sequence length represents the length of the input IDs.
+                >- Shape: (batch_size, sequence_length).
+                >- The sequence length represents the length of the input IDs.
             scores (mindspore.Tensor): A tensor containing the scores.
-                - Shape: (batch_size, vocabulary_size).
-                - The vocabulary size represents the total number of elements in the vocabulary.
+                >- Shape: (batch_size, vocabulary_size).
+                >- The vocabulary size represents the total number of elements in the vocabulary.
         
         Returns:
             mindspore.Tensor: A tensor representing the modified scores.
-                - Shape: (batch_size, vocabulary_size).
+                >- Shape: (batch_size, vocabulary_size).
         
         Raises:
             None.
@@ -1941,30 +1941,29 @@ class UnbatchedClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
             Whether to cache key/values during the negative prompt forward pass.
 
 
-    Examples:
+    Example:
+        ```python
+        >>> from transformers import AutoTokenizer, AutoModelForCausalLM
 
-    ```python
-    >>> from transformers import AutoTokenizer, AutoModelForCausalLM
+        >>> model = AutoModelForCausalLM.from_pretrained("gpt2")
+        >>> tokenizer = AutoTokenizer.from_pretrained("gpt2")
+        >>> inputs = tokenizer(["Today, a dragon flew over Paris, France,"], return_tensors="pt")
+        >>> out = model.generate(inputs["input_ids"], guidance_scale=1.5)
+        >>> tokenizer.batch_decode(out, skip_special_tokens=True)[0]
+        'Today, a dragon flew over Paris, France, killing at least 50 people and injuring more than 100'
 
-    >>> model = AutoModelForCausalLM.from_pretrained("gpt2")
-    >>> tokenizer = AutoTokenizer.from_pretrained("gpt2")
-    >>> inputs = tokenizer(["Today, a dragon flew over Paris, France,"], return_tensors="pt")
-    >>> out = model.generate(inputs["input_ids"], guidance_scale=1.5)
-    >>> tokenizer.batch_decode(out, skip_special_tokens=True)[0]
-    'Today, a dragon flew over Paris, France, killing at least 50 people and injuring more than 100'
+        >>> # with a negative prompt
+        >>> neg_inputs = tokenizer(["A very happy event happened,"], return_tensors="pt")
+        >>> out = model.generate(inputs["input_ids"], guidance_scale=2, negative_prompt_ids=neg_inputs["input_ids"])
+        >>> tokenizer.batch_decode(out, skip_special_tokens=True)[0]
+        'Today, a dragon flew over Paris, France, killing at least 130 people. French media reported that'
 
-    >>> # with a negative prompt
-    >>> neg_inputs = tokenizer(["A very happy event happened,"], return_tensors="pt")
-    >>> out = model.generate(inputs["input_ids"], guidance_scale=2, negative_prompt_ids=neg_inputs["input_ids"])
-    >>> tokenizer.batch_decode(out, skip_special_tokens=True)[0]
-    'Today, a dragon flew over Paris, France, killing at least 130 people. French media reported that'
-
-    >>> # with a positive prompt
-    >>> neg_inputs = tokenizer(["A very happy event happened,"], return_tensors="pt")
-    >>> out = model.generate(inputs["input_ids"], guidance_scale=0, negative_prompt_ids=neg_inputs["input_ids"])
-    >>> tokenizer.batch_decode(out, skip_special_tokens=True)[0]
-    "Today, a dragon flew over Paris, France, and I'm very happy to be here. I"
-    ```
+        >>> # with a positive prompt
+        >>> neg_inputs = tokenizer(["A very happy event happened,"], return_tensors="pt")
+        >>> out = model.generate(inputs["input_ids"], guidance_scale=0, negative_prompt_ids=neg_inputs["input_ids"])
+        >>> tokenizer.batch_decode(out, skip_special_tokens=True)[0]
+        "Today, a dragon flew over Paris, France, and I'm very happy to be here. I"
+        ```
     """
     def __init__(
         self,
@@ -2087,33 +2086,32 @@ class WhisperTimeStampLogitsProcessor(LogitsProcessor):
                     Used to set the maximum value of the initial timestamp. This is used to prevent the model from
                     predicting timestamps that are too far in the future.
 
-    Examples:
-    ``` python
-    >>> from transformers import AutoProcessor, WhisperForConditionalGeneration,GenerationConfig
-    >>> from datasets import load_dataset
+    Example:
+        ``` python
+        >>> from transformers import AutoProcessor, WhisperForConditionalGeneration,GenerationConfig
+        >>> from datasets import load_dataset
 
-    >>> processor = AutoProcessor.from_pretrained("openai/whisper-tiny.en")
-    >>> model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
-    >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
-    >>> inputs = processor(ds[3]["audio"]["array"], return_tensors="pt")
-    >>> input_features = inputs.input_features
+        >>> processor = AutoProcessor.from_pretrained("openai/whisper-tiny.en")
+        >>> model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
+        >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
+        >>> inputs = processor(ds[3]["audio"]["array"], return_tensors="pt")
+        >>> input_features = inputs.input_features
 
-    >>> #Displaying timestamps
-    >>> generated_ids = model.generate(inputs=input_features, return_timestamps=True)
-    >>> transcription = processor.batch_decode(generated_ids, skip_special_tokens=False)[0]
-    >>> print("Transcription:", transcription)
-    Transcription: <|startoftranscript|><|0.00|> He has grave doubts whether Sir Frederick Layton's work is really Greek after all, and can<|6.44|><|6.44|> discover in it but little of rocky
-Ithaca.<|9.44|><|endoftext|>
+        >>> #Displaying timestamps
+        >>> generated_ids = model.generate(inputs=input_features, return_timestamps=True)
+        >>> transcription = processor.batch_decode(generated_ids, skip_special_tokens=False)[0]
+        >>> print("Transcription:", transcription)
+        Transcription: <|startoftranscript|><|0.00|> He has grave doubts whether Sir Frederick Layton's work is really Greek after all,
+        and can<|6.44|><|6.44|> discover in it but little of rocky Ithaca.<|9.44|><|endoftext|>
 
-
-    >>> #No timestamps & change EOS:
-    >>> #This allows the user to select a specific token to terminate the sequence on, in this case it's the word "can"(460)
-    >>> model.generation_config.eos_token_id = 460
-    >>> generated_ids = model.generate(inputs=input_features,return_timestamps=False)
-    >>> transcription = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-    >>> print("Transcription:", transcription)
-    Transcription:  He has grave doubts whether Sir Frederick Layton's work is really Greek after all and can
-    ```
+        >>> #No timestamps & change EOS:
+        >>> #This allows the user to select a specific token to terminate the sequence on, in this case it's the word "can"(460)
+        >>> model.generation_config.eos_token_id = 460
+        >>> generated_ids = model.generate(inputs=input_features,return_timestamps=False)
+        >>> transcription = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+        >>> print("Transcription:", transcription)
+        Transcription:  He has grave doubts whether Sir Frederick Layton's work is really Greek after all and can
+        ```
     """
     def __init__(self, generate_config):  # support for the kwargs
         """
@@ -2124,10 +2122,10 @@ Ithaca.<|9.44|><|endoftext|>
             generate_config (object): An object containing configuration settings for generating timestamps.
                 This parameter is required for initializing the processor.
                 It should contain the following attributes:
-                    - eos_token_id (int): The token ID for the end of sentence.
-                    - no_timestamps_token_id (int): The token ID for no timestamps.
-                    - forced_decoder_ids (list): A list of forced decoder IDs.
-                    - max_initial_timestamp_index (int): The maximum initial timestamp index.
+                    >- eos_token_id (int): The token ID for the end of sentence.
+                    >- no_timestamps_token_id (int): The token ID for no timestamps.
+                    >- forced_decoder_ids (list): A list of forced decoder IDs.
+                    >- max_initial_timestamp_index (int): The maximum initial timestamp index.
         
         Returns:
             None: This method does not return any value.
@@ -2290,22 +2288,21 @@ class ClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
             Higher guidance scale encourages the model to generate samples that are more closely linked to the input
             prompt, usually at the expense of poorer quality.
 
-    Examples:
+    Example:
+        ```python
+        >>> from transformers import AutoProcessor, MusicgenForConditionalGeneration
 
-    ```python
-    >>> from transformers import AutoProcessor, MusicgenForConditionalGeneration
+        >>> processor = AutoProcessor.from_pretrained("facebook/musicgen-small")
+        >>> model = MusicgenForConditionalGeneration.from_pretrained("facebook/musicgen-small")
 
-    >>> processor = AutoProcessor.from_pretrained("facebook/musicgen-small")
-    >>> model = MusicgenForConditionalGeneration.from_pretrained("facebook/musicgen-small")
-
-    >>> inputs = processor(
-    ...     text=["80s pop track with bassy drums and synth", "90s rock song with loud guitars and heavy drums"],
-    ...     padding=True,
-    ...     return_tensors="pt",
-    ... )
-    >>> audio_values = model.generate(**inputs, do_sample=True, guidance_scale=3, max_new_tokens=256)
-    ```
-    """
+        >>> inputs = processor(
+        ...     text=["80s pop track with bassy drums and synth", "90s rock song with loud guitars and heavy drums"],
+        ...     padding=True,
+        ...     return_tensors="pt",
+        ... )
+        >>> audio_values = model.generate(**inputs, do_sample=True, guidance_scale=3, max_new_tokens=256)
+        ```
+        """
     def __init__(self, guidance_scale):
         """
         Initializes a new instance of the ClassifierFreeGuidanceLogitsProcessor class.
@@ -2344,20 +2341,21 @@ class ClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
             ValueError: If the shape of the scores tensor does not meet the required conditions.
         
         The '__call__' method processes the logits to generate processed scores for a classifier with free guidance. It expects two parameters: 'input_ids' and 'scores'. The method returns a tensor of type
-'mindspore.Tensor' which contains the processed scores.
+        'mindspore.Tensor' which contains the processed scores.
         
         The 'input_ids' parameter is a tensor that holds the input IDs for the classifier. It is used to determine the batch size and shape of the scores tensor. There are no specific restrictions on this
-parameter.
+        parameter.
         
         The 'scores' parameter is a tensor that holds the logits for the classifier. It is expected to have twice the batch size of the input IDs tensor, with the first half of the batches corresponding to the
-conditional inputs and the second half corresponding to the unconditional inputs. The shape of the scores tensor should be (2 * input_ids.shape[0], ...). The method raises a ValueError if the shape of the
-scores tensor does not meet this requirement.
+        conditional inputs and the second half corresponding to the unconditional inputs. The shape of the scores tensor should be (2 * input_ids.shape[0], ...). The method raises a ValueError if the shape of the
+        scores tensor does not meet this requirement.
         
         The method splits the scores tensor into two parts: 'cond_logits' and 'uncond_logits'. 'cond_logits' represents the logits for the conditional inputs, while 'uncond_logits' represents the logits for
-the unconditional inputs. These logits are then processed using the guidance scale specified in the instance of the ClassifierFreeGuidanceLogitsProcessor class. The final processed scores are obtained by
-adding 'uncond_logits' to the difference between 'cond_logits' and 'uncond_logits', multiplied by the guidance scale.
+        the unconditional inputs. These logits are then processed using the guidance scale specified in the instance of the ClassifierFreeGuidanceLogitsProcessor class. The final processed scores are obtained by
+        adding 'uncond_logits' to the difference between 'cond_logits' and 'uncond_logits', multiplied by the guidance scale.
         
-        Note: This method assumes that the 'split' function splits the tensor into two parts along the first dimension (axis=0).
+        Note:
+            This method assumes that the 'split' function splits the tensor into two parts along the first dimension (axis=0).
         """
         # simple check to make sure we have compatible batch sizes between our
         # logits scores (cond + uncond) and input ids (cond only)

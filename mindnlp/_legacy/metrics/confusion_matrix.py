@@ -39,7 +39,7 @@ def confusion_matrix_fn(preds, labels, class_num=2):
     Raises:
         ValueError: If `preds` and `labels` do not have valid dimensions.
 
-    Example:
+    Examples:
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
@@ -84,7 +84,7 @@ class ConfusionMatrix(Metric):
         class_num (int): Number of classes in the dataset. Default: 2.
         name (str): Name of the metric.
 
-    Example:
+    Examples:
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor

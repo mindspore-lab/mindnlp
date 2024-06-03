@@ -14,7 +14,7 @@ Args:
 
 
 
-Example:
+Examples:
 
 ```python
 import mindspore as ms

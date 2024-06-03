@@ -148,10 +148,12 @@ class ByT5Tokenizer(PreTrainedTokenizer):
             The vocabulary includes both the original vocabulary of the tokenizer and any additional tokens that have been added.
         
         Example:
+            ```python
             >>> tokenizer = ByT5Tokenizer()
             >>> vocab = tokenizer.get_vocab()
             >>> print(vocab)
             {'<unk>': 0, '<pad>': 1, 'hello': 2, 'world': 3, ...}
+            ```
         """
         vocab = {self.convert_ids_to_tokens(i): i for i in range(self.vocab_size + self.offset)}
         vocab.update(self.added_tokens_encoder)
@@ -224,8 +226,8 @@ class ByT5Tokenizer(PreTrainedTokenizer):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A sequence has the following format:
 
-        - single sequence: `X </s>`
-        - pair of sequences: `A </s> B </s>`
+        >   - single sequence: `X </s>`
+        >   - pair of sequences: `A </s> B </s>`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -292,7 +294,7 @@ class ByT5Tokenizer(PreTrainedTokenizer):
             None.
         
         This method saves the vocabulary of the ByT5Tokenizer instance to a file in the specified save_directory. The filename of the vocabulary file is generated based on the provided filename_prefix, if any.
-If no filename_prefix is provided, the vocabulary file will be named using the default naming convention. The method returns a tuple containing the absolute path of the saved vocabulary file.
+        If no filename_prefix is provided, the vocabulary file will be named using the default naming convention. The method returns a tuple containing the absolute path of the saved vocabulary file.
         """
         return ()
 

@@ -368,7 +368,7 @@ def squad_convert_examples_to_features(
     Returns:
         list of [`~data.processors.squad.SquadFeatures`]
 
-    Example:
+    Examples:
 
     ```python
     processor = SquadV2Processor()
@@ -423,7 +423,7 @@ def squad_convert_examples_to_features(
     del new_features
     return features
 
-class SquadExample:
+class SquadExamples:
     """
     A single training/test example for the Squad dataset, as loaded from disk.
 

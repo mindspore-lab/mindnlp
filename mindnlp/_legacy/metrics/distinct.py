@@ -32,7 +32,7 @@ def distinct_fn(cand_list, n_size=2):
     Returns:
         - **distinct_score** (float) - The computed result.
 
-    Example:
+    Examples:
         >>> from mindnlp.common.metrics import distinct
         >>> cand_list = ["The", "cat", "The", "cat", "on", "the", "mat"]
         >>> distinct_score = distinct(cand_list)
@@ -66,7 +66,7 @@ class Distinct(Metric):
         n_size (int): N_gram value. Defaults: 2.
         name (str): Name of the metric.
 
-    Example:
+    Examples:
         >>> from mindnlp.common.metrics import Distinct
         >>> cand_list = ["The", "cat", "The", "cat", "on", "the", "mat"]
         >>> metric = Distinct()

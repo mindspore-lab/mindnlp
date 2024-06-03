@@ -46,7 +46,7 @@ class AdaptionPromptConfig(PeftConfig):
         This method sets the 'peft_type' attribute of the 'AdaptionPromptConfig' instance to 'PeftType.ADAPTION_PROMPT'.
         The 'peft_type' attribute represents the type of the adaption prompt configuration.
         
-        Example:
+        Examples:
             config = AdaptionPromptConfig()
             config.__post_init__()
             print(config.peft_type)  # Output: PeftType.ADAPTION_PROMPT

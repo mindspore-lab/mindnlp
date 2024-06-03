@@ -113,7 +113,7 @@ class GatedRepoError(RepositoryNotFoundError):
 
     Note: derives from `RepositoryNotFoundError` to ensure backward compatibility.
 
-    Example:
+    Examples:
 
     ```py
     >>> from huggingface_hub import model_info
@@ -131,7 +131,7 @@ class EntryNotFoundError(MSHTTPError):
     Raised when trying to access a hf.co URL with a valid repository and revision
     but an invalid filename.
 
-    Example:
+    Examples:
 
     ```py
     >>> from huggingface_hub import hf_hub_download
@@ -171,7 +171,7 @@ class BadRequestError(MSHTTPError, ValueError):
     """
     Raised by `hf_raise_for_status` when the server returns a HTTP 400 error.
 
-    Example:
+    Examples:
 
     ```py
     >>> resp = requests.post("hf.co/api/check", ...)
@@ -187,7 +187,7 @@ def hf_raise_for_status(response: Response, endpoint_name: Optional[str] = None)
     This helper is meant to be the unique method to raise_for_status when making a call
     to the Hugging Face Hub.
 
-    Example:
+    Examples:
     ```py
         import requests
         from huggingface_hub.utils import get_session, hf_raise_for_status, MSHTTPError

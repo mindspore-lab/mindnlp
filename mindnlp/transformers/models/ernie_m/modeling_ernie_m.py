@@ -58,7 +58,7 @@ class ErnieMEmbeddings(nn.Cell):
         Args:
             self (object): The instance of the ErnieMEmbeddings class.
             config (object): An object containing configuration parameters for the ErnieMEmbeddings instance, including the hidden size, vocabulary size, maximum position embeddings, padding token ID, layer
-normalization epsilon, and hidden dropout probability.
+                normalization epsilon, and hidden dropout probability.
         
         Returns:
             None: This method does not return any value.
@@ -127,7 +127,7 @@ class ErnieMSelfAttention(nn.Cell):
     """A module that implements the self-attention mechanism used in ERNIE model.
     
     This module contains the `ErnieMSelfAttention` class, which represents the self-attention mechanism used in the ERNIE model. It is a subclass of `nn.Cell` and is responsible for calculating the attention
-scores and producing the context layer.
+        scores and producing the context layer.
     
     Attributes:
         num_attention_heads (int): The number of attention heads in the self-attention mechanism.
@@ -142,20 +142,17 @@ scores and producing the context layer.
         is_decoder (bool): Whether the self-attention mechanism is used in a decoder module.
     
     Methods:
-        transpose_for_scores(x: mindspore.Tensor) -> mindspore.Tensor:
+        transpose_for_scores:
             Reshapes the input tensor for calculating attention scores.
         
-        construct(hidden_states: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, 
-                  head_mask: Optional[mindspore.Tensor] = None, encoder_hidden_states: Optional[mindspore.Tensor] = None, 
-                  encoder_attention_mask: Optional[mindspore.Tensor] = None, 
-                  past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None, 
-                  output_attentions: Optional[bool] = False) -> Tuple[mindspore.Tensor]:
+        construct:
             Constructs the self-attention mechanism by calculating attention scores and producing the context layer.
     
-    Examples:
+    Example:
+        ```python
         >>> config = ErnieConfig(hidden_size=768, num_attention_heads=12, attention_probs_dropout_prob=0.1)
         >>> self_attention = ErnieMSelfAttention(config)
-    
+        ```
         """
     def __init__(self, config, position_embedding_type=None):
         """
@@ -229,23 +226,23 @@ scores and producing the context layer.
         This method constructs the self-attention mechanism for the ErnieMSelfAttention class.
         
         Args:
-        - self: The instance of the class.
-        - hidden_states (mindspore.Tensor): The input tensor representing the hidden states.
-        - attention_mask (Optional[mindspore.Tensor]): Optional tensor for masking attention scores. Defaults to None.
-        - head_mask (Optional[mindspore.Tensor]): Optional tensor for masking attention heads. Defaults to None.
-        - encoder_hidden_states (Optional[mindspore.Tensor]): Optional tensor representing hidden states from an encoder. Defaults to None.
-        - encoder_attention_mask (Optional[mindspore.Tensor]): Optional tensor for masking encoder attention scores. Defaults to None.
-        - past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): Optional tuple of past key and value tensors. Defaults to None.
-        - output_attentions (Optional[bool]): Flag indicating whether to output attentions. Defaults to False.
+            self: The instance of the class.
+            hidden_states (mindspore.Tensor): The input tensor representing the hidden states.
+            attention_mask (Optional[mindspore.Tensor]): Optional tensor for masking attention scores. Defaults to None.
+            head_mask (Optional[mindspore.Tensor]): Optional tensor for masking attention heads. Defaults to None.
+            encoder_hidden_states (Optional[mindspore.Tensor]): Optional tensor representing hidden states from an encoder. Defaults to None.
+            encoder_attention_mask (Optional[mindspore.Tensor]): Optional tensor for masking encoder attention scores. Defaults to None.
+            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): Optional tuple of past key and value tensors. Defaults to None.
+            output_attentions (Optional[bool]): Flag indicating whether to output attentions. Defaults to False.
         
         Returns:
-        Tuple[mindspore.Tensor]: A tuple containing the context layer tensor and optionally the attention probabilities tensor.
+            Tuple[mindspore.Tensor]: A tuple containing the context layer tensor and optionally the attention probabilities tensor.
         
         Raises:
-        - ValueError: If the input tensor shapes are incompatible for matrix multiplication.
-        - ValueError: If the position_embedding_type specified is not supported.
-        - RuntimeError: If there is an issue with applying softmax or dropout operations.
-        - RuntimeError: If there is an issue with reshaping the context layer tensor.
+            - ValueError: If the input tensor shapes are incompatible for matrix multiplication.
+            - ValueError: If the position_embedding_type specified is not supported.
+            - RuntimeError: If there is an issue with applying softmax or dropout operations.
+            - RuntimeError: If there is an issue with reshaping the context layer tensor.
         """
         mixed_query_layer = self.q_proj(hidden_states)
 
@@ -374,15 +371,15 @@ class ErnieMAttention(nn.Cell):
         This method 'prune_heads' belongs to the class 'ErnieMAttention' and is responsible for pruning specific attention heads in the model based on the provided list of heads.
         
         Args:
-        - self: Instance of the 'ErnieMAttention' class. It is used to access attributes and methods within the class.
-        - heads: A list containing the indices of the attention heads that need to be pruned. Each element in the list should be an integer representing the index of the head to be pruned.
+            self: Instance of the 'ErnieMAttention' class. It is used to access attributes and methods within the class.
+            heads: A list containing the indices of the attention heads that need to be pruned. Each element in the list should be an integer representing the index of the head to be pruned.
         
         Returns:
-        None. This method does not return any value but modifies the attention heads in the model in-place.
+            None. This method does not return any value but modifies the attention heads in the model in-place.
         
         Raises:
-        This method does not explicitly raise any exceptions. However, it is assumed that the functions called within this method, such as 'find_pruneable_heads_and_indices' and 'prune_linear_layer', may raise
-exceptions related to input validation or processing errors.
+            This method does not explicitly raise any exceptions. However, it is assumed that the functions called within this method, such as 'find_pruneable_heads_and_indices' and 'prune_linear_layer', may raise
+            exceptions related to input validation or processing errors.
         """
         if len(heads) == 0:
             return
@@ -448,22 +445,22 @@ class ErnieMEncoderLayer(nn.Cell):
 
     """
     The ErnieMEncoderLayer class represents a single layer of the ErnieM (Enhanced Representation through kNowledge Integration) encoder, which is designed for natural language processing tasks. This class
-inherits from the nn.Cell class and implements the functionality for processing input hidden states using multi-head self-attention mechanism and feedforward neural network layers with layer normalization and
-dropout.
+    inherits from the nn.Cell class and implements the functionality for processing input hidden states using multi-head self-attention mechanism and feedforward neural network layers with layer normalization and
+    dropout.
     
     Attributes:
-        - self_attn: Instance of ErnieMAttention for multi-head self-attention mechanism.
-        - linear1: Instance of nn.Dense for the first feedforward neural network layer.
-        - dropout: Instance of nn.Dropout for applying dropout within the feedforward network.
-        - linear2: Instance of nn.Dense for the second feedforward neural network layer.
-        - norm1: Instance of nn.LayerNorm for the first layer normalization.
-        - norm2: Instance of nn.LayerNorm for the second layer normalization.
-        - dropout1: Instance of nn.Dropout for applying dropout after the first feedforward network layer.
-        - dropout2: Instance of nn.Dropout for applying dropout after the second feedforward network layer.
-        - activation: Activation function for the feedforward network.
+        self_attn: Instance of ErnieMAttention for multi-head self-attention mechanism.
+        linear1: Instance of nn.Dense for the first feedforward neural network layer.
+        dropout: Instance of nn.Dropout for applying dropout within the feedforward network.
+        linear2: Instance of nn.Dense for the second feedforward neural network layer.
+        norm1: Instance of nn.LayerNorm for the first layer normalization.
+        norm2: Instance of nn.LayerNorm for the second layer normalization.
+        dropout1: Instance of nn.Dropout for applying dropout after the first feedforward network layer.
+        dropout2: Instance of nn.Dropout for applying dropout after the second feedforward network layer.
+        activation: Activation function for the feedforward network.
     
     Methods:
-        - construct(self, hidden_states, attention_mask=None, head_mask=None, past_key_value=None, output_attentions=True): 
+        construct(self, hidden_states, attention_mask=None, head_mask=None, past_key_value=None, output_attentions=True):
             Applies the multi-head self-attention mechanism and feedforward network layers to the input hidden states, optionally producing attention weights.
     
             Args:
@@ -483,12 +480,12 @@ dropout.
         Args:
             self (ErnieMEncoderLayer): The instance of the ErnieMEncoderLayer class.
             config (object): An object containing configuration parameters for the encoder layer.
-                - hidden_dropout_prob (float): The probability of dropout for hidden layers. Default is 0.1.
-                - act_dropout (float): The probability of dropout for activation functions. Default is the value of hidden_dropout_prob.
-                - hidden_size (int): The size of the hidden layers.
-                - intermediate_size (int): The size of the intermediate layers.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
-                - hidden_act (str or function): The activation function to be used. If a string, it will be converted to a function using ACT2FN dictionary.
+                >   - hidden_dropout_prob (float): The probability of dropout for hidden layers. Default is 0.1.
+                >   - act_dropout (float): The probability of dropout for activation functions. Default is the value of hidden_dropout_prob.
+                >   - hidden_size (int): The size of the hidden layers.
+                >   - intermediate_size (int): The size of the intermediate layers.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - hidden_act (str or function): The activation function to be used. If a string, it will be converted to a function using ACT2FN dictionary.
         
         Returns:
             None: This method does not return any value.
@@ -581,7 +578,7 @@ class ErnieMEncoder(nn.Cell):
     ErnieMEncoder represents a multi-layer Transformer-based encoder model for processing sequences of input data. 
     
     The ErnieMEncoder class inherits from nn.Cell and implements a multi-layer Transformer-based encoder, with the ability to return hidden states and attention weights if specified. The class provides methods
-for initializing the model and processing input data through its layers.
+    for initializing the model and processing input data through its layers.
     
     Attributes:
         config: A configuration object containing the model's hyperparameters.
@@ -717,10 +714,10 @@ class ErnieMPooler(nn.Cell):
         Args:
             self (ErnieMPooler): An instance of the ErnieMPooler class.
             hidden_states (mindspore.Tensor): A tensor containing the hidden states from the ERNIE model. 
-                It should have the shape (batch_size, sequence_length, hidden_size) where:
-                    - batch_size: The number of sequences in the batch.
-                    - sequence_length: The length of each input sequence.
-                    - hidden_size: The size of the hidden state vectors.
+                >   - It should have the shape (batch_size, sequence_length, hidden_size) where:
+                >       - batch_size: The number of sequences in the batch.
+                >       - sequence_length: The length of each input sequence.
+                >       - hidden_size: The size of the hidden state vectors.
         
         Returns:
             mindspore.Tensor: A tensor representing the pooled output of the ERNIE model. 
@@ -769,8 +766,8 @@ class ErnieMModel(ErnieMPreTrainedModel):
 
     """
     This class represents an ERNIE-M (Enhanced Representation through kNowledge Integration) model for multi-purpose pre-training and fine-tuning on downstream tasks. It incorporates ERNIE-M embeddings,
-encoder, and optional pooling layer. The class provides methods for initializing, getting and setting input embeddings, pruning model heads, and constructing the model with various input and output options.
-The class inherits from ErnieMPreTrainedModel and extends its functionality to support specific ERNIE-M model architecture and operations.
+    encoder, and optional pooling layer. The class provides methods for initializing, getting and setting input embeddings, pruning model heads, and constructing the model with various input and output options.
+    The class inherits from ErnieMPreTrainedModel and extends its functionality to support specific ERNIE-M model architecture and operations.
     """
     def __init__(self, config, add_pooling_layer=True):
         """
@@ -942,35 +939,32 @@ class ErnieMForSequenceClassification(ErnieMPreTrainedModel):
     It inherits from ErnieMPreTrainedModel and implements methods for initializing the model and constructing predictions.
     
     Attributes:
-        - num_labels: Number of labels for sequence classification.
-        - config: Configuration object for the model.
-        - ernie_m: ErnieMModel instance for processing input sequences.
-        - dropout: Dropout layer for regularization.
-        - classifier: Dense layer for classification predictions.
+        num_labels: Number of labels for sequence classification.
+        config: Configuration object for the model.
+        ernie_m: ErnieMModel instance for processing input sequences.
+        dropout: Dropout layer for regularization.
+        classifier: Dense layer for classification predictions.
     
     Methods:
-        - __init__(self, config): Initializes the ErnieMForSequenceClassification instance with the provided configuration.
-        - construct(self, input_ids, attention_mask, position_ids, head_mask, inputs_embeds, past_key_values, use_cache, output_hidden_states, output_attentions, return_dict, labels): 
+        __init__(self, config): Initializes the ErnieMForSequenceClassification instance with the provided configuration.
+        construct(self, input_ids, attention_mask, position_ids, head_mask, inputs_embeds, past_key_values, use_cache, output_hidden_states, output_attentions, return_dict, labels):
             Constructs the model for making predictions on input sequences and computes the loss based on predicted labels.
-    
-            Args:
-                - input_ids (Optional[mindspore.Tensor]): Tensor of input token IDs.
-                - attention_mask (Optional[mindspore.Tensor]): Tensor of attention masks.
-                - position_ids (Optional[mindspore.Tensor]): Tensor of position IDs.
-                - head_mask (Optional[mindspore.Tensor]): Tensor of head masks.
-                - inputs_embeds (Optional[mindspore.Tensor]): Tensor of input embeddings.
-                - past_key_values (Optional[List[mindspore.Tensor]]): List of past key values for caching.
-                - use_cache (Optional[bool]): Flag for using caching.
-                - output_hidden_states (Optional[bool]): Flag for outputting hidden states.
-                - output_attentions (Optional[bool]): Flag for outputting attentions.
-                - return_dict (Optional[bool]): Flag for returning output in a dictionary format.
-                - labels (Optional[mindspore.Tensor]): Tensor of target labels for computing loss.
-    
-            Returns:
-                - Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]: Tuple of model outputs and loss.
-    
-            Raises:
-                - ValueError: If the provided labels are not in the expected format or number.
+            >   - Args:
+            >       - input_ids (Optional[mindspore.Tensor]): Tensor of input token IDs.
+            >       - attention_mask (Optional[mindspore.Tensor]): Tensor of attention masks.
+            >       - position_ids (Optional[mindspore.Tensor]): Tensor of position IDs.
+            >       - head_mask (Optional[mindspore.Tensor]): Tensor of head masks.
+            >       - inputs_embeds (Optional[mindspore.Tensor]): Tensor of input embeddings.
+            >       - past_key_values (Optional[List[mindspore.Tensor]]): List of past key values for caching.
+            >       - use_cache (Optional[bool]): Flag for using caching.
+            >       - output_hidden_states (Optional[bool]): Flag for outputting hidden states.
+            >       - output_attentions (Optional[bool]): Flag for outputting attentions.
+            >       - return_dict (Optional[bool]): Flag for returning output in a dictionary format.
+            >       - labels (Optional[mindspore.Tensor]): Tensor of target labels for computing loss.
+            >   - Returns:
+            >       - Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]: Tuple of model outputs and loss.
+            >   - Raises:
+            >       - ValueError: If the provided labels are not in the expected format or number.
     """
     # Copied from transformers.models.bert.modeling_bert.BertForSequenceClassification.__init__ with Bert->ErnieM,bert->ernie_m
     def __init__(self, config):
@@ -981,10 +975,10 @@ class ErnieMForSequenceClassification(ErnieMPreTrainedModel):
             self: The instance of the class.
             config (object): The configuration object containing settings for the model initialization.
                 It must have the following attributes:
-                    - num_labels (int): The number of labels for classification.
-                    - classifier_dropout (float, optional): The dropout probability for the classifier layer. 
-                      If not provided, it defaults to the hidden dropout probability.
-                    - hidden_dropout_prob (float): The default hidden dropout probability.
+                    >   - num_labels (int): The number of labels for classification.
+                    >   - classifier_dropout (float, optional): The dropout probability for the classifier layer.
+                            If not provided, it defaults to the hidden dropout probability.
+                    >   - hidden_dropout_prob (float): The default hidden dropout probability.
         
         Returns:
             None. This method does not return any value.
@@ -1022,10 +1016,10 @@ class ErnieMForSequenceClassification(ErnieMPreTrainedModel):
         labels: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        >    labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1084,14 +1078,14 @@ class ErnieMForMultipleChoice(ErnieMPreTrainedModel):
     It inherits from ErnieMPreTrainedModel and implements methods for constructing the model and computing the multiple choice classification loss. 
     
     Attributes:
-        - ernie_m (ErnieMModel): The ERNIE-M model used for processing inputs.
-        - dropout (nn.Dropout): Dropout layer used in the classifier.
-        - classifier (nn.Dense): Dense layer for classification.
+        ernie_m (ErnieMModel): The ERNIE-M model used for processing inputs.
+        dropout (nn.Dropout): Dropout layer used in the classifier.
+        classifier (nn.Dense): Dense layer for classification.
         
     Methods:
-        - __init__(self, config): Initializes the ErnieMForMultipleChoice model with the given configuration.
-        - construct(self, input_ids, attention_mask, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Constructs the model for multiple choice question
-answering and computes the classification loss.
+        __init__(self, config): Initializes the ErnieMForMultipleChoice model with the given configuration.
+        construct(self, input_ids, attention_mask, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Constructs the model for multiple choice question
+            answering and computes the classification loss.
     
     The construct method takes various input tensors and parameters, processes them through the ERNIE-M model, applies dropout, and computes the classification logits. 
     If labels are provided, it calculates the cross-entropy loss. The method returns the loss and model outputs based on the return_dict parameter.
@@ -1138,10 +1132,10 @@ answering and computes the classification loss.
         return_dict: Optional[bool] = True,
     ) -> Union[Tuple[mindspore.Tensor], MultipleChoiceModelOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
-            num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
-            `input_ids` above)
+        >    labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
+                num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
+                `input_ids` above)
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
@@ -1194,28 +1188,29 @@ class ErnieMForTokenClassification(ErnieMPreTrainedModel):
     This class represents a fine-tuned ErnieM model for token classification tasks. It inherits from the ErnieMPreTrainedModel class.
     
     The ErnieMForTokenClassification class implements the necessary methods and attributes for token classification tasks. It takes a configuration object as input during initialization and sets up the model
-architecture accordingly. The model consists of an ErnieMModel instance, a dropout layer, and a classifier layer.
+    architecture accordingly. The model consists of an ErnieMModel instance, a dropout layer, and a classifier layer.
     
     Methods:
-    - __init__(self, config): Initializes the ErnieMForTokenClassification instance with the given configuration. It sets the number of labels, creates an ErnieMModel object, initializes the dropout layer, and
-creates the classifier layer.
+        __init__(self, config): Initializes the ErnieMForTokenClassification instance with the given configuration. It sets the number of labels, creates an ErnieMModel object, initializes the dropout layer, and
+        creates the classifier layer.
     
-    - construct(self, input_ids, attention_mask, position_ids, head_mask, inputs_embeds, past_key_values, output_hidden_states, output_attentions, return_dict, labels): Constructs the forward pass of the
-model. It takes various input tensors and returns the token classification output. Optionally, it can also compute the token classification loss if labels are provided.
+        construct(self, input_ids, attention_mask, position_ids, head_mask, inputs_embeds, past_key_values, output_hidden_states, output_attentions, return_dict, labels): Constructs the forward pass of the
+        model. It takes various input tensors and returns the token classification output. Optionally, it can also compute the token classification loss if labels are provided.
     
     Attributes:
-    - num_labels: The number of possible labels for the token classification task.
+        num_labels: The number of possible labels for the token classification task.
     
     Usage example:
+        ```python
+        config = ErnieMConfig()
+        model = ErnieMForTokenClassification(config)
+        input_ids = ...
+        attention_mask = ...
+        output = model.construct(input_ids=input_ids, attention_mask=attention_mask)
+        ```
     
-    config = ErnieMConfig()
-    model = ErnieMForTokenClassification(config)
-    input_ids = ...
-    attention_mask = ...
-    output = model.construct(input_ids=input_ids, attention_mask=attention_mask)
-    
-    
-    Note: It is important to provide the input tensors in the correct shape and format to ensure proper model functioning.
+    Note:
+        It is important to provide the input tensors in the correct shape and format to ensure proper model functioning.
     """
     # Copied from transformers.models.bert.modeling_bert.BertForTokenClassification.__init__ with Bert->ErnieM,bert->ernie_m
     def __init__(self, config):
@@ -1259,8 +1254,8 @@ model. It takes various input tensors and returns the token classification outpu
         labels: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple[mindspore.Tensor], TokenClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        >    labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1303,23 +1298,23 @@ class ErnieMForQuestionAnswering(ErnieMPreTrainedModel):
     ErnieMForQuestionAnswering is a class that represents a fine-tuned ErnieM model for question answering tasks. It is a subclass of ErnieMPreTrainedModel.
     
     This class extends the functionality of the base ErnieM model by adding a question answering head on top of it. It takes as input the configuration of the model and initializes the necessary components.
-The class provides a method called 'construct' which performs the forward pass of the model for question answering.
+    The class provides a method called 'construct' which performs the forward pass of the model for question answering.
     
     The 'construct' method takes several input tensors such as 'input_ids', 'attention_mask', 'position_ids', 'head_mask', and 'inputs_embeds'. It also supports optional inputs like 'start_positions',
-'end_positions', 'output_attentions', 'output_hidden_states', and 'return_dict'. The method returns the question answering model output, which includes the start and end logits, hidden states, attentions, and
-an optional total loss.
+    'end_positions', 'output_attentions', 'output_hidden_states', and 'return_dict'. The method returns the question answering model output, which includes the start and end logits, hidden states, attentions, and
+    an optional total loss.
     
     The 'construct' method internally calls the 'ernie_m' method of the base ErnieM model to obtain the sequence output. It then passes the sequence output through a dense layer 'qa_outputs' to get the logits
-for the start and end positions. The logits are then processed to obtain the final start and end logits. If 'start_positions' and 'end_positions' are provided, the method calculates the cross-entropy loss for
-the predicted logits and the provided positions. The total loss is computed as the average of the start and end losses.
+    for the start and end positions. The logits are then processed to obtain the final start and end logits. If 'start_positions' and 'end_positions' are provided, the method calculates the cross-entropy loss for
+    the predicted logits and the provided positions. The total loss is computed as the average of the start and end losses.
     
     The 'construct' method returns the model output in a structured manner based on the 'return_dict' parameter. If 'return_dict' is False, the method returns a tuple containing the total loss, start logits,
-end logits, and any additional hidden states or attentions. If 'return_dict' is True, the method returns an instance of the 'QuestionAnsweringModelOutput' class, which encapsulates the output elements as
-attributes.
+    end logits, and any additional hidden states or attentions. If 'return_dict' is True, the method returns an instance of the 'QuestionAnsweringModelOutput' class, which encapsulates the output elements as
+    attributes.
     
     Note:
-    - If 'start_positions' and 'end_positions' are not provided, the total loss will be None.
-    - The start and end positions are clamped to the length of the sequence and positions outside the sequence are ignored for computing the loss.
+        - If 'start_positions' and 'end_positions' are not provided, the total loss will be None.
+        - The start and end positions are clamped to the length of the sequence and positions outside the sequence are ignored for computing the loss.
     
     """
     # Copied from transformers.models.bert.modeling_bert.BertForQuestionAnswering.__init__ with Bert->ErnieM,bert->ernie_m

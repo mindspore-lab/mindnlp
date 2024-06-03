@@ -53,15 +53,15 @@ class ProcessorMixin:
         This method initializes an instance of the ProcessorMixin class.
         
         Args:
-        - self (ProcessorMixin): The instance of the ProcessorMixin class.
+            self (ProcessorMixin): The instance of the ProcessorMixin class.
           
         Returns:
-        None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
-        - TypeError: Raised if an unexpected keyword argument is provided, if multiple values are provided for a single argument, or if the arguments provided do not match the required attributes of the
-processor.
-        - ValueError: Raised if the number of arguments provided does not match the required number of attributes for the processor, or if the type of the argument does not match the expected class type.
+            - TypeError: Raised if an unexpected keyword argument is provided, if multiple values are provided for a single argument, or if the arguments provided do not match the required attributes of the
+                processor.
+            - ValueError: Raised if the number of arguments provided does not match the required number of attributes for the processor, or if the type of the argument does not match the expected class type.
         """
         # Sanitize args and kwargs
         for key in kwargs:
@@ -176,12 +176,12 @@ processor.
             pretrained_model_name_or_path (`str` or `os.PathLike`):
                 This can be either:
 
-                - a string, the *model id* of a pretrained feature_extractor hosted inside a model repo on
+                >- a string, the *model id* of a pretrained feature_extractor hosted inside a model repo on
                   hf-mirror.com. Valid model ids can be located at the root-level, like `bert-base-uncased`, or
                   namespaced under a user or organization name, like `dbmdz/bert-base-german-cased`.
-                - a path to a *directory* containing a feature extractor file saved using the
+                >- a path to a *directory* containing a feature extractor file saved using the
                   [`~SequenceFeatureExtractor.save_pretrained`] method, e.g., `./my_model_directory/`.
-                - a path or url to a saved feature extractor JSON *file*, e.g.,
+                >- a path or url to a saved feature extractor JSON *file*, e.g.,
                   `./my_model_directory/preprocessor_config.json`.
             **kwargs
                 Additional keyword arguments passed along to both

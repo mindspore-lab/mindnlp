@@ -54,7 +54,7 @@ class IA3Model(BaseTuner):
     Returns:
         IA3Model ([`mindspore.nn.Cell`]): The IA3Lora model.
 
-    Example:
+    Examples:
 
         ```py
         >>> from transformers import AutoModelForSeq2SeqLM, ia3Config
@@ -522,7 +522,7 @@ class IA3Model(BaseTuner):
                 The list of adapter names that should be merged. If None, all active adapters will be merged. Defaults
                 to `None`.
 
-        Example:
+        Examples:
 
         ```py
         >>> from transformers import AutoModelForCausalLM

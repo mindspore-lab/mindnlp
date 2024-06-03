@@ -95,16 +95,17 @@ class CodeGenTokenizer(PreTrainedTokenizer):
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
 
-    ```python
-    >>> from transformers import CodeGenTokenizer
+    Example:
+        ```python
+        >>> from transformers import CodeGenTokenizer
 
-    >>> tokenizer = CodeGenTokenizer.from_pretrained("Salesforce/codegen-350M-mono")
-    >>> tokenizer("Hello world")["input_ids"]
-    [15496, 995]
+        >>> tokenizer = CodeGenTokenizer.from_pretrained("Salesforce/codegen-350M-mono")
+        >>> tokenizer("Hello world")["input_ids"]
+        [15496, 995]
 
-    >>> tokenizer(" Hello world")["input_ids"]
-    [18435, 995]
-    ```
+        >>> tokenizer(" Hello world")["input_ids"]
+        [18435, 995]
+        ```
 
     You can get around that behavior by passing `add_prefix_space=True` when instantiating this tokenizer or when you
     call it on some text, but since the model was not pretrained this way, it might yield a decrease in performance.
@@ -188,7 +189,9 @@ class CodeGenTokenizer(PreTrainedTokenizer):
             This method initializes the CodeGenTokenizer class by loading the vocabulary and merges files, setting the error handling scheme, and initializing various attributes.
         
         Example:
+            ```python
             >>> tokenizer = CodeGenTokenizer('vocab.txt', 'merges.txt', errors='ignore', unk_token='<unk>', bos_token='<s>')
+            ```
         """
         bos_token = AddedToken(bos_token, special=True) if isinstance(bos_token, str) else bos_token
         eos_token = AddedToken(eos_token, special=True) if isinstance(eos_token, str) else eos_token
@@ -446,7 +449,6 @@ class CodeGenTokenizer(PreTrainedTokenizer):
         """
         Converts a sequence of ids in a string, using the tokenizer and vocabulary with options to remove special
         tokens and clean up tokenization spaces.
-
         Similar to doing `self.convert_tokens_to_string(self.convert_ids_to_tokens(token_ids))`.
 
         Args:
@@ -484,15 +486,15 @@ class CodeGenTokenizer(PreTrainedTokenizer):
         This method 'truncate' is defined in the 'CodeGenTokenizer' class and is used to truncate a given completion based on specified patterns.
         
         Args:
-        - self: The instance of the class.
-        - completion (str): The completion string to be truncated.
-        - truncate_before_pattern (list of str): A list of patterns to truncate the completion string before.
+            self: The instance of the class.
+            completion (str): The completion string to be truncated.
+            truncate_before_pattern (list of str): A list of patterns to truncate the completion string before.
         
         Returns:
-        None: This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
-        - No specific exceptions are raised within this method.
+            - No specific exceptions are raised within this method.
         """
         def find_re(string, pattern, start_pos):
             m = pattern.search(string, start_pos)

@@ -122,27 +122,27 @@ class BertweetTokenizer(PreTrainedTokenizer):
         Initialize the BertweetTokenizer class with the provided parameters.
         
         Args:
-        - self: The instance of the class.
-        - vocab_file (str): The path to the vocabulary file.
-        - merges_file (str): The path to the merges file.
-        - normalization (bool): Flag indicating whether normalization should be applied (default is False).
-        - bos_token (str): Beginning of sentence token (default is '<s>').
-        - eos_token (str): End of sentence token (default is '</s>').
-        - sep_token (str): Separator token (default is '</s>').
-        - cls_token (str): Class token (default is '<s>').
-        - unk_token (str): Unknown token (default is '<unk>').
-        - pad_token (str): Padding token (default is '<pad>').
-        - mask_token (str): Mask token (default is '<mask>').
+            self: The instance of the class.
+            vocab_file (str): The path to the vocabulary file.
+            merges_file (str): The path to the merges file.
+            normalization (bool): Flag indicating whether normalization should be applied (default is False).
+            bos_token (str): Beginning of sentence token (default is '<s>').
+            eos_token (str): End of sentence token (default is '</s>').
+            sep_token (str): Separator token (default is '</s>').
+            cls_token (str): Class token (default is '<s>').
+            unk_token (str): Unknown token (default is '<unk>').
+            pad_token (str): Padding token (default is '<pad>').
+            mask_token (str): Mask token (default is '<mask>').
         
         Returns:
-        None. This method initializes the BertweetTokenizer instance with the provided parameters.
+            None. This method initializes the BertweetTokenizer instance with the provided parameters.
         
         Raises:
-        - ImportError: If the 'emoji' library is not installed, a warning is logged, and emoticons or emojis will not be converted to text. 
-          To resolve this, install emoji library using 'pip3 install emoji==0.6.0'.
-        - FileNotFoundError: If the vocab_file or merges_file cannot be found or accessed.
-        - IOError: If there is an issue reading the merges_file with UTF-8 encoding.
-        - Exception: Any other unforeseen exceptions that might occur during the initialization process.
+            - ImportError: If the 'emoji' library is not installed, a warning is logged, and emoticons or emojis will not be converted to text.
+              To resolve this, install emoji library using 'pip3 install emoji==0.6.0'.
+            - FileNotFoundError: If the vocab_file or merges_file cannot be found or accessed.
+            - IOError: If there is an issue reading the merges_file with UTF-8 encoding.
+            - Exception: Any other unforeseen exceptions that might occur during the initialization process.
         """
         try:
             from emoji import demojize
@@ -197,8 +197,8 @@ class BertweetTokenizer(PreTrainedTokenizer):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A BERTweet sequence has the following format:
 
-        - single sequence: `<s> X </s>`
-        - pair of sequences: `<s> A </s></s> B </s>`
+        >   - single sequence: `<s> X </s>`
+        >   - pair of sequences: `<s> A </s></s> B </s>`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -295,8 +295,8 @@ class BertweetTokenizer(PreTrainedTokenizer):
                 Represents the tokenizer object.
                 
         Returns:
-            None. Returns a dictionary that combines the encoder and added tokens encoder.
-            The keys are word pieces and the values are their corresponding IDs.
+            None: Returns a dictionary that combines the encoder and added tokens encoder.
+                The keys are word pieces and the values are their corresponding IDs.
         
         Raises:
             None.
@@ -313,7 +313,7 @@ class BertweetTokenizer(PreTrainedTokenizer):
         
         Returns:
             str or None: The processed token after applying the BPE algorithm. If the input token is not found in the cache and the BPE algorithm is applied, the processed token is returned. If the input token
-is found in the cache, the corresponding processed token is returned from the cache. If the input token is not found in the cache and the BPE algorithm is not applied, None is returned.
+            is found in the cache, the corresponding processed token is returned from the cache. If the input token is not found in the cache and the BPE algorithm is not applied, None is returned.
         
         Raises:
             None: This method does not raise any specific exceptions.
@@ -726,21 +726,22 @@ def _replace_html_entities(text, keep=(), remove_illegal=True, encoding="utf-8")
             If `True`, entities that can't be converted are removed. Otherwise, entities that can't be converted are
             kept "as is".
 
-    Returns: A unicode string with the entities removed.
+    Returns:
+        A unicode string with the entities removed.
 
     See https://github.com/scrapy/w3lib/blob/master/w3lib/html.py
 
-    Examples:
+    Example:
+        ```python
+        >>> from nltk.tokenize.casual import _replace_html_entities
 
-    ```python
-    >>> from nltk.tokenize.casual import _replace_html_entities
+        >>> _replace_html_entities(b"Price: &pound;100")
+        'Price: \\xa3100'
 
-    >>> _replace_html_entities(b"Price: &pound;100")
-    'Price: \\xa3100'
-
-    >>> print(_replace_html_entities(b"Price: &pound;100"))
-    Price: £100
-    ```"""
+        >>> print(_replace_html_entities(b"Price: &pound;100"))
+        Price: £100
+        ```
+    """
     def _convert_entity(match):
         entity_body = match.group(3)
         if match.group(1):
@@ -778,23 +779,23 @@ def _replace_html_entities(text, keep=(), remove_illegal=True, encoding="utf-8")
 
 class TweetTokenizer:
     r"""
-    Examples:
+    Example:
+        ```python
+        >>> # Tokenizer for tweets.
+        >>> from nltk.tokenize import TweetTokenizer
 
-    ```python
-    >>> # Tokenizer for tweets.
-    >>> from nltk.tokenize import TweetTokenizer
+        >>> tknzr = TweetTokenizer()
+        >>> s0 = "This is a cooool #dummysmiley: :-) :-P <3 and some arrows < > -> <--"
+        >>> tknzr.tokenize(s0)
+        ['This', 'is', 'a', 'cooool', '#dummysmiley', ':', ':-)', ':-P', '<3', 'and', 'some', 'arrows', '<', '>', '->', '<--']
 
-    >>> tknzr = TweetTokenizer()
-    >>> s0 = "This is a cooool #dummysmiley: :-) :-P <3 and some arrows < > -> <--"
-    >>> tknzr.tokenize(s0)
-    ['This', 'is', 'a', 'cooool', '#dummysmiley', ':', ':-)', ':-P', '<3', 'and', 'some', 'arrows', '<', '>', '->', '<--']
-
-    >>> # Examples using *strip_handles* and *reduce_len parameters*:
-    >>> tknzr = TweetTokenizer(strip_handles=True, reduce_len=True)
-    >>> s1 = "@remy: This is waaaaayyyy too much for you!!!!!!"
-    >>> tknzr.tokenize(s1)
-    [':', 'This', 'is', 'waaayyy', 'too', 'much', 'for', 'you', '!', '!', '!']
-    ```"""
+        >>> # Examples using *strip_handles* and *reduce_len parameters*:
+        >>> tknzr = TweetTokenizer(strip_handles=True, reduce_len=True)
+        >>> s1 = "@remy: This is waaaaayyyy too much for you!!!!!!"
+        >>> tknzr.tokenize(s1)
+        [':', 'This', 'is', 'waaayyy', 'too', 'much', 'for', 'you', '!', '!', '!']
+        ```
+    """
     def __init__(self, preserve_case=True, reduce_len=False, strip_handles=False):
         """
         Initializes a TweetTokenizer object with the specified parameters.

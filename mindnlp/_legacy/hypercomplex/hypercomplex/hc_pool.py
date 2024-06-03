@@ -675,7 +675,7 @@ class AvgPool1d(_PoolNd):
         Note:
             This method is used internally by the 'AvgPool1d' class to validate the shape of the input before performing the average pooling operation. It ensures that the input has exactly 3 dimensions.
         
-        Example:
+        Examples:
             >>> pool = AvgPool1d()
             >>> in_shape = (32, 64, 10)
             >>> pool._shape_check(in_shape)

@@ -130,7 +130,7 @@ as addition, subtraction, multiplication, and division with scalars and other ve
         Raises:
             None.
         
-        Example:
+        Examples:
             >>> v = Vector([1, 2, 3])
             >>> v.add_scalar(5)
             Vector([6, 7, 8])
@@ -204,7 +204,7 @@ as addition, subtraction, multiplication, and division with scalars and other ve
         Note:
             - The scalar value must not be zero, as division by zero is undefined.
         
-        Example:
+        Examples:
             vector = Vector([1, 2, 3, 4])
             scalar = Scalar(2)
             result = vector.div_scalar(scalar)

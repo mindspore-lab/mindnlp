@@ -56,10 +56,10 @@ def _get_unpad_data(attention_mask):
     """
     This function takes an attention_mask as input and performs the following operations:
     
-    1. Calculates the sum of attention_mask along the last axis, treating it as a tensor of shape (batch_size, sequence_length).
-    2. Flattens the attention_mask tensor and finds the indices of non-zero elements.
-    3. Computes the maximum sequence length in the batch.
-    4. Computes the cumulative sum of sequence lengths along the batch axis, padded with a zero at the beginning.
+    >   1. Calculates the sum of attention_mask along the last axis, treating it as a tensor of shape (batch_size, sequence_length).
+    >   2. Flattens the attention_mask tensor and finds the indices of non-zero elements.
+    >   3. Computes the maximum sequence length in the batch.
+    >   4. Computes the cumulative sum of sequence lengths along the batch axis, padded with a zero at the beginning.
     
     Args:
         attention_mask (Tensor): A tensor of shape (batch_size, sequence_length) representing the attention mask.
@@ -574,34 +574,34 @@ class WhisperEncoderLayer(nn.Cell):
     The `WhisperEncoderLayer` class represents a single layer of the Whisper Encoder, which is used in the training and inference process of the Whisper model. This class inherits from the `nn.Cell` class.
     
     Attributes:
-    - `embed_dim` (int): The dimension size of the input embedding.
-    - `self_attn` (nn.Cell): The self-attention module used in the encoder layer.
-    - `self_attn_layer_norm` (nn.LayerNorm): Layer normalization module applied to the output of the self-attention module.
-    - `dropout` (float): Dropout probability applied to the output of the self-attention module.
-    - `activation_fn` (function): Activation function applied to the output of the feed-forward network.
-    - `activation_dropout` (float): Dropout probability applied to the output of the activation function.
-    - `fc1` (nn.Dense): First fully connected layer of the feed-forward network.
-    - `fc2` (nn.Dense): Second fully connected layer of the feed-forward network.
-    - `final_layer_norm` (nn.LayerNorm): Layer normalization module applied to the output of the feed-forward network.
+        `embed_dim` (int): The dimension size of the input embedding.
+        `self_attn` (nn.Cell): The self-attention module used in the encoder layer.
+        `self_attn_layer_norm` (nn.LayerNorm): Layer normalization module applied to the output of the self-attention module.
+        `dropout` (float): Dropout probability applied to the output of the self-attention module.
+        `activation_fn` (function): Activation function applied to the output of the feed-forward network.
+        `activation_dropout` (float): Dropout probability applied to the output of the activation function.
+        `fc1` (nn.Dense): First fully connected layer of the feed-forward network.
+        `fc2` (nn.Dense): Second fully connected layer of the feed-forward network.
+        `final_layer_norm` (nn.LayerNorm): Layer normalization module applied to the output of the feed-forward network.
     
     Methods:
-    - `construct(hidden_states, attention_mask, layer_head_mask, output_attentions=False)`: Constructs the encoder layer by applying the self-attention, feed-forward network, and residual connections to the
-input hidden states.
+        `construct(hidden_states, attention_mask, layer_head_mask, output_attentions=False)`: Constructs the encoder layer by applying the self-attention, feed-forward network, and residual connections to the
+        input hidden states.
     
     Args:
-    - `hidden_states` (mindspore.Tensor): The input to the layer of shape `(batch, seq_len, embed_dim)`.
-    - `attention_mask` (mindspore.Tensor): The attention mask of size `(batch, 1, tgt_len, src_len)`, where padding elements are indicated by very large negative values.
-    - `layer_head_mask` (mindspore.Tensor): The mask for attention heads in a given layer of size `(encoder_attention_heads,)`.
-    - `output_attentions` (bool, optional): Whether or not to return the attentions tensors of all attention layers.
+        `hidden_states` (mindspore.Tensor): The input to the layer of shape `(batch, seq_len, embed_dim)`.
+        `attention_mask` (mindspore.Tensor): The attention mask of size `(batch, 1, tgt_len, src_len)`, where padding elements are indicated by very large negative values.
+        `layer_head_mask` (mindspore.Tensor): The mask for attention heads in a given layer of size `(encoder_attention_heads,)`.
+        `output_attentions` (bool, optional): Whether or not to return the attentions tensors of all attention layers.
     
     Returns:
-    - `(mindspore.Tensor)`: The output hidden states of the encoder layer.
+        `(mindspore.Tensor)`: The output hidden states of the encoder layer.
     
     Raises:
-    - None
+        None
     
     Note:
-    - The construct method does not include the signatures or any other code.
+        The construct method does not include the signatures or any other code.
     """
     def __init__(self, config: WhisperConfig):
         """
@@ -611,15 +611,15 @@ input hidden states.
             self: The instance of the class.
             config (WhisperConfig): The configuration object for the WhisperEncoderLayer.
                 It contains various settings and parameters for the WhisperEncoderLayer.
-                - config.d_model (int): The embedding dimension.
-                - config._flash_attn_2_enabled (bool, optional): Whether to enable the flash_attention_2.
+                >   - config.d_model (int): The embedding dimension.
+                >   - config._flash_attn_2_enabled (bool, optional): Whether to enable the flash_attention_2.
                     Defaults to False.
-                - config.encoder_attention_heads (int): The number of attention heads in the self-attention layer.
-                - config.attention_dropout (float): The dropout probability for the attention layer.
-                - config.dropout (float): The dropout probability for the layer.
-                - config.activation_function (str): The activation function to be used.
-                - config.activation_dropout (float): The dropout probability for the activation function.
-                - config.encoder_ffn_dim (int): The dimension of the feed-forward network.
+                >   - config.encoder_attention_heads (int): The number of attention heads in the self-attention layer.
+                >   - config.attention_dropout (float): The dropout probability for the attention layer.
+                >   - config.dropout (float): The dropout probability for the layer.
+                >   - config.activation_function (str): The activation function to be used.
+                >   - config.activation_dropout (float): The dropout probability for the activation function.
+                >   - config.encoder_ffn_dim (int): The dimension of the feed-forward network.
         
         Returns:
             None. This method initializes the WhisperEncoderLayer object.
@@ -701,15 +701,15 @@ class WhisperDecoderLayer(nn.Cell):
 
     """
     The WhisperDecoderLayer class represents a single layer of the Whisper decoder model, which includes self-attention and cross-attention mechanisms. This class is designed to be used within the
-WhisperTransformer model for sequence-to-sequence tasks.
+    WhisperTransformer model for sequence-to-sequence tasks.
     
     This class inherits from nn.Cell and contains methods for initializing the layer and performing computations on input tensors. The layer consists of self-attention, encoder attention, feedforward neural
-network, and layer normalization modules.
+    network, and layer normalization modules.
     
     The __init__ method sets up the layer with parameters such as embedding dimensions, attention types, dropout rates, activation functions, and normalization layers.
     
     The construct method processes input hidden states through the self-attention mechanism, followed by encoder attention if provided. It also handles dropout, residual connections, and feedforward network
-transformations. The method allows for caching of key-value states and optionally returns attention weights and cached states.
+    transformations. The method allows for caching of key-value states and optionally returns attention weights and cached states.
     
     Please refer to the method docstrings for detailed information on the input and output parameters, as well as their respective shapes and purposes.
     """
@@ -855,11 +855,11 @@ class WhisperPreTrainedModel(PreTrainedModel):
     This class represents a pre-trained model for the Whisper framework. It inherits from the PreTrainedModel class, providing additional functionality and customization specific to Whisper models.
     
     The class contains methods for initializing weights and for computing the output length of convolutional layers. The _init_weights method initializes the weights of various types of neural network cells,
-including dense, convolutional, and embedding layers, as well as custom WhisperEncoder cells. The _get_feat_extract_output_lengths method computes the output length of convolutional layers based on the input
-lengths provided.
+    including dense, convolutional, and embedding layers, as well as custom WhisperEncoder cells. The _get_feat_extract_output_lengths method computes the output length of convolutional layers based on the input
+    lengths provided.
     
     Overall, the WhisperPreTrainedModel class serves as a foundational framework for creating and customizing pre-trained models within the Whisper environment, offering flexibility in weight initialization
-and feature extraction output length computations.
+    and feature extraction output length computations.
     """
     config_class = WhisperConfig
     base_model_prefix = "model"
@@ -1032,9 +1032,8 @@ class WhisperEncoder(WhisperPreTrainedModel):
                 but it is not used. By default the silence in the input log mel spectrogram are ignored.
             head_mask (`mindspore.Tensor` of shape `(encoder_layers, encoder_attention_heads)`, *optional*):
                 Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
+                >   - 1 indicates the head is **not masked**,
+                >   - 0 indicates the head is **masked**.
             output_attentions (`bool`, *optional*):
                 Whether or not to return the attentions tensors of all attention layers. See `attentions` under
                 returned tensors for more detail.
@@ -1128,15 +1127,15 @@ class WhisperDecoder(WhisperPreTrainedModel):
         Args:
             self: The instance of the class.
             config (WhisperConfig): An instance of WhisperConfig containing the configuration parameters for the decoder.
-                - dropout (float): The dropout probability.
-                - decoder_layerdrop (float): The layer dropout probability for the decoder.
-                - pad_token_id (int): The token id used for padding.
-                - max_target_positions (int): The maximum target sequence length.
-                - max_source_positions (int): The maximum source sequence length.
-                - d_model (int): The dimensionality of the model.
-                - scale_embedding (bool): Indicates whether to scale the embeddings.
-                - vocab_size (int): The size of the vocabulary.
-                - decoder_layers (int): The number of decoder layers.
+                >   - dropout (float): The dropout probability.
+                >   - decoder_layerdrop (float): The layer dropout probability for the decoder.
+                >   - pad_token_id (int): The token id used for padding.
+                >   - max_target_positions (int): The maximum target sequence length.
+                >   - max_source_positions (int): The maximum source sequence length.
+                >   - d_model (int): The dimensionality of the model.
+                >   - scale_embedding (bool): Indicates whether to scale the embeddings.
+                >   - vocab_size (int): The size of the vocabulary.
+                >   - decoder_layers (int): The number of decoder layers.
         
         Returns:
             None. This method initializes the instance attributes and does not return any value.
@@ -1221,9 +1220,8 @@ class WhisperDecoder(WhisperPreTrainedModel):
                 [What are input IDs?](../glossary#input-ids)
             attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
             encoder_hidden_states (`mindspore.Tensor` of shape `(batch_size, encoder_sequence_length, hidden_size)`, *optional*):
@@ -1231,16 +1229,14 @@ class WhisperDecoder(WhisperPreTrainedModel):
                 of the decoder.
             head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
                 Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
+                >   - 1 indicates the head is **not masked**,
+                >   - 0 indicates the head is **masked**.
 
             cross_attn_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
                 Mask to nullify selected heads of the attention modules in encoder to avoid performing cross-attention
                 on hidden heads. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
+                >   - 1 indicates the head is **not masked**,
+                >   - 0 indicates the head is **masked**.
 
             past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
                 Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
@@ -1389,9 +1385,10 @@ class WhisperModel(WhisperPreTrainedModel):
     Represents a Whisper model for sequence-to-sequence tasks.
     
     This class inherits from WhisperPreTrainedModel and provides methods for initializing the model, accessing input embeddings, accessing the encoder and decoder, freezing the encoder, masking input features,
-and constructing the model with various input parameters.
+    and constructing the model with various input parameters.
     
     Example:
+        ```python
         >>> from transformers import AutoFeatureExtractor, WhisperModel
         >>> from datasets import load_dataset
     
@@ -1404,6 +1401,7 @@ and constructing the model with various input parameters.
         >>> last_hidden_state = model(input_features, decoder_input_ids=decoder_input_ids).last_hidden_state
         >>> list(last_hidden_state.shape)
         [1, 2, 512]
+        ```
     """
     def __init__(self, config: WhisperConfig):
         """
@@ -1557,22 +1555,24 @@ and constructing the model with various input parameters.
     ) -> Union[Tuple[mindspore.Tensor], Seq2SeqModelOutput]:
         r"""
         Returns:
+            `Union[Tuple[mindspore.Tensor], Seq2SeqModelOutput]`
 
         Example:
-         ```python
-         >>> from transformers import AutoFeatureExtractor, WhisperModel
-         >>> from datasets import load_dataset
+             ```python
+             >>> from transformers import AutoFeatureExtractor, WhisperModel
+             >>> from datasets import load_dataset
 
-         >>> model = WhisperModel.from_pretrained("openai/whisper-base")
-         >>> feature_extractor = AutoFeatureExtractor.from_pretrained("openai/whisper-base")
-         >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
-         >>> inputs = feature_extractor(ds[0]["audio"]["array"], return_tensors="pt")
-         >>> input_features = inputs.input_features
-         >>> decoder_input_ids = torch.tensor([[1, 1]]) * model.config.decoder_start_token_id
-         >>> last_hidden_state = model(input_features, decoder_input_ids=decoder_input_ids).last_hidden_state
-         >>> list(last_hidden_state.shape)
-         [1, 2, 512]
-         ```"""
+             >>> model = WhisperModel.from_pretrained("openai/whisper-base")
+             >>> feature_extractor = AutoFeatureExtractor.from_pretrained("openai/whisper-base")
+             >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
+             >>> inputs = feature_extractor(ds[0]["audio"]["array"], return_tensors="pt")
+             >>> input_features = inputs.input_features
+             >>> decoder_input_ids = torch.tensor([[1, 1]]) * model.config.decoder_start_token_id
+             >>> last_hidden_state = model(input_features, decoder_input_ids=decoder_input_ids).last_hidden_state
+             >>> list(last_hidden_state.shape)
+             [1, 2, 512]
+             ```
+         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1631,20 +1631,20 @@ class WhisperForConditionalGeneration(WhisperPreTrainedModel):
 
     """
     The `WhisperForConditionalGeneration` class is a model class for conditional text generation, inheriting from `WhisperPreTrainedModel`. It provides methods for initializing the model, generating sequences
-of token ids, preparing inputs for generation, and extracting token-level timestamps for predicted tokens.
+    of token ids, preparing inputs for generation, and extracting token-level timestamps for predicted tokens.
     
     The class contains methods such as `construct`, `generate`, `prepare_inputs_for_generation`, and `_reorder_cache` for handling conditional generation tasks. It also includes methods for freezing the
-encoder, getting the encoder and decoder, and managing the input and output embeddings.
+    encoder, getting the encoder and decoder, and managing the input and output embeddings.
     
     The class's main methods include:
-    - `construct`: Prepares inputs and generates sequences of token ids for conditional text generation, allowing for the configuration of various generation parameters.
-    - `generate`: Generates sequences of token ids for models with a language modeling head, allowing for custom logits processors, stopping criteria, and other advanced generation parameters.
-    - `prepare_inputs_for_generation`: Prepares input data for generation, including decoder input ids, past key values, cache usage, encoder outputs, and attention masks.
-    - `_reorder_cache`: Reorders the past key values based on beam indices during generation.
-    - `_extract_token_timestamps`: Calculates token-level timestamps using encoder-decoder cross-attentions and dynamic time-warping (DTW) to map each output token to a position in the input audio.
+    >   - `construct`: Prepares inputs and generates sequences of token ids for conditional text generation, allowing for the configuration of various generation parameters.
+    >   - `generate`: Generates sequences of token ids for models with a language modeling head, allowing for custom logits processors, stopping criteria, and other advanced generation parameters.
+    >   - `prepare_inputs_for_generation`: Prepares input data for generation, including decoder input ids, past key values, cache usage, encoder outputs, and attention masks.
+    >   - `_reorder_cache`: Reorders the past key values based on beam indices during generation.
+    >   - `_extract_token_timestamps`: Calculates token-level timestamps using encoder-decoder cross-attentions and dynamic time-warping (DTW) to map each output token to a position in the input audio.
     
     This class provides a comprehensive set of tools for conditional text generation tasks, including multilingual and multitask generation support, as well as token-level timestamps extraction for predicted
-tokens.
+    tokens.
     
     For more details on how to use the class and its methods, including code examples, refer to the official documentation and the [following guide](./generation_strategies).
     """
@@ -1792,27 +1792,28 @@ tokens.
             only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
+            Union[Tuple[mindspore.Tensor], Seq2SeqLMOutput]
 
         Example:
+            ```python
+            >>> from transformers import AutoProcessor, WhisperForConditionalGeneration
+            >>> from datasets import load_dataset
 
-        ```python
-        >>> from transformers import AutoProcessor, WhisperForConditionalGeneration
-        >>> from datasets import load_dataset
+            >>> processor = AutoProcessor.from_pretrained("openai/whisper-tiny.en")
+            >>> model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
 
-        >>> processor = AutoProcessor.from_pretrained("openai/whisper-tiny.en")
-        >>> model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
+            >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
 
-        >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
+            >>> inputs = processor(ds[0]["audio"]["array"], return_tensors="pt")
+            >>> input_features = inputs.input_features
 
-        >>> inputs = processor(ds[0]["audio"]["array"], return_tensors="pt")
-        >>> input_features = inputs.input_features
+            >>> generated_ids = model.generate(inputs=input_features)
 
-        >>> generated_ids = model.generate(inputs=input_features)
-
-        >>> transcription = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-        >>> transcription
-        ' Mr. Quilter is the apostle of the middle classes, and we are glad to welcome his gospel.'
-        ```"""
+            >>> transcription = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+            >>> transcription
+            ' Mr. Quilter is the apostle of the middle classes, and we are glad to welcome his gospel.'
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if labels is not None:
@@ -1945,24 +1946,20 @@ tokens.
                 specific kwargs should not be prefixed and decoder specific kwargs should be prefixed with *decoder_*.
 
         Return:
-            [`~utils.ModelOutput`] or `mindspore.Tensor`: A [`~utils.ModelOutput`] (if `return_dict_in_generate=True`
-            or when `config.return_dict_in_generate=True`) or a `mindspore.Tensor`.
-
-                If the model is *not* an encoder-decoder model (`model.config.is_encoder_decoder=False`), the possible
+            [`~utils.ModelOutput`] or `mindspore.Tensor`:
+                > A [`~utils.ModelOutput`] (if `return_dict_in_generate=True` or when `config.return_dict_in_generate=True`) or a `mindspore.Tensor`.
+                >- If the model is *not* an encoder-decoder model (`model.config.is_encoder_decoder=False`), the possible
+                    [`~utils.ModelOutput`] types are:
+                >   - [`~generation.GreedySearchDecoderOnlyOutput`],
+                >   - [`~generation.SampleDecoderOnlyOutput`],
+                >   - [`~generation.BeamSearchDecoderOnlyOutput`],
+                >   - [`~generation.BeamSampleDecoderOnlyOutput`]
+                >- If the model is an encoder-decoder model (`model.config.is_encoder_decoder=True`), the possible
                 [`~utils.ModelOutput`] types are:
-
-                    - [`~generation.GreedySearchDecoderOnlyOutput`],
-                    - [`~generation.SampleDecoderOnlyOutput`],
-                    - [`~generation.BeamSearchDecoderOnlyOutput`],
-                    - [`~generation.BeamSampleDecoderOnlyOutput`]
-
-                If the model is an encoder-decoder model (`model.config.is_encoder_decoder=True`), the possible
-                [`~utils.ModelOutput`] types are:
-
-                    - [`~generation.GreedySearchEncoderDecoderOutput`],
-                    - [`~generation.SampleEncoderDecoderOutput`],
-                    - [`~generation.BeamSearchEncoderDecoderOutput`],
-                    - [`~generation.BeamSampleEncoderDecoderOutput`]
+                >   - [`~generation.GreedySearchEncoderDecoderOutput`],
+                >   - [`~generation.SampleEncoderDecoderOutput`],
+                >   - [`~generation.BeamSearchEncoderDecoderOutput`],
+                >   - [`~generation.BeamSampleEncoderDecoderOutput`]
         """
         if generation_config is None:
             generation_config = self.generation_config
@@ -2166,11 +2163,11 @@ tokens.
         Returns:
             dict: A dictionary containing the prepared inputs for generation.
                 It includes the following keys:
-                - 'encoder_outputs' (torch.Tensor): The output of the encoder.
-                - 'past_key_values' (tuple): The past key values for caching computations in auto-regressive decoding.
-                - 'decoder_input_ids' (torch.Tensor): The input tensor for the decoder.
-                - 'use_cache' (bool): Whether to use caching for fast decoding.
-                - 'decoder_attention_mask' (None): The attention mask for the decoder input.
+                >   - 'encoder_outputs' (torch.Tensor): The output of the encoder.
+                >   - 'past_key_values' (tuple): The past key values for caching computations in auto-regressive decoding.
+                >   - 'decoder_input_ids' (torch.Tensor): The input tensor for the decoder.
+                >   - 'use_cache' (bool): Whether to use caching for fast decoding.
+                >   - 'decoder_attention_mask' (None): The attention mask for the decoder input.
         
         Raises:
             None.
@@ -2211,10 +2208,11 @@ tokens.
             None.
         
         This static method takes the past key-value states and a beam index tensor, and reorders the past key-value states according to the beam index. It returns the reordered past key-value states as a
-tuple, where each element in the tuple represents the reordered past state of a layer.
+        tuple, where each element in the tuple represents the reordered past state of a layer.
         
-        Note: The returned reordered_past tuple has the same length as the number of layers in the model, and each element in the tuple has the same shape as the corresponding element in the past_key_values
-tuple.
+        Note:
+            The returned reordered_past tuple has the same length as the number of layers in the model, and each element in the tuple has the same shape as the corresponding element in the past_key_values
+            tuple.
         """
         reordered_past = ()
         for layer_past in past_key_values:
@@ -2278,9 +2276,9 @@ class WhisperDecoderWrapper(WhisperPreTrainedModel):
             self: The instance of the class.
             config (object): The configuration object containing the settings for the decoder.
                 The config object should have the following attributes:
-                    - is_encoder_decoder (bool): Indicates if the WhisperDecoderWrapper is used as an encoder-decoder.
+                    >   - is_encoder_decoder (bool): Indicates if the WhisperDecoderWrapper is used as an encoder-decoder.
                         This should be set to False for the WhisperDecoderWrapper class.
-                    - Other attributes specific to the WhisperDecoder class.
+                    >   - Other attributes specific to the WhisperDecoder class.
         
         Returns:
             None. This method does not return any value.
@@ -2346,19 +2344,19 @@ class WhisperForCausalLM(WhisperPreTrainedModel):
     It inherits from WhisperPreTrainedModel and provides methods for generating text based on input sequences.
     
     Methods:
-    - __init__(self, config): Initializes the WhisperForCausalLM model with the given configuration.
-    - get_output_embeddings(self): Returns the output embeddings of the model.
-    - set_output_embeddings(self, new_embeddings): Sets new output embeddings for the model.
-    - get_input_embeddings(self) -> nn.Cell: Returns the input embeddings of the model.
-    - set_input_embeddings(self, value): Sets new input embeddings for the model.
-    - set_decoder(self, decoder): Sets the decoder for the model.
-    - get_decoder(self): Returns the decoder of the model.
-    - construct(self, input_ids, attention_mask, encoder_outputs, head_mask, cross_attn_head_mask, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict) ->
-Union[Tuple, CausalLMOutputWithCrossAttentions]: Constructs the model architecture and processes input data for generation.
-    - prepare_inputs_for_generation(self, input_ids, past_key_values, use_cache, encoder_outputs, attention_mask, **kwargs): Prepares inputs for text generation based on the provided parameters.
-    - _reorder_cache(past_key_values, beam_idx): Reorders cache items based on a given beam index for generation.
+        __init__: Initializes the WhisperForCausalLM model with the given configuration.
+        get_output_embeddings: Returns the output embeddings of the model.
+        set_output_embeddings: Sets new output embeddings for the model.
+        get_input_embeddings: Returns the input embeddings of the model.
+        set_input_embeddings: Sets new input embeddings for the model.
+        set_decoder: Sets the decoder for the model.
+        get_decoder: Returns the decoder of the model.
+        construct: Constructs the model architecture and processes input data for generation.
+        prepare_inputs_for_generation: Prepares inputs for text generation based on the provided parameters.
+        _reorder_cache: Reorders cache items based on a given beam index for generation.
     
     Example:
+        ```python
         >>> from transformers import WhisperForCausalLM, WhisperForConditionalGeneration, WhisperProcessor
         >>> from datasets import load_dataset
     
@@ -2379,6 +2377,7 @@ Union[Tuple, CausalLMOutputWithCrossAttentions]: Constructs the model architectu
         >>> transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)
         >>> transcription
         ' Mr. Quilter is the apostle of the middle classes and we are glad to welcome his gospel.'
+        ```
     """
     _tied_weights_keys = ["proj_out.weight"]
     main_input_name = "input_ids"
@@ -2452,16 +2451,18 @@ Union[Tuple, CausalLMOutputWithCrossAttentions]: Constructs the model architectu
             None.
         
         Description:
-        This method returns the input embeddings of the WhisperForCausalLM model. The input embeddings are responsible for mapping the input tokens to their corresponding embedding vectors. The underlying
-model's 'get_input_embeddings' function is called to retrieve these embeddings.
+            This method returns the input embeddings of the WhisperForCausalLM model. The input embeddings are responsible for mapping the input tokens to their corresponding embedding vectors. The underlying
+            model's 'get_input_embeddings' function is called to retrieve these embeddings.
         
         Note:
-        - The returned input embeddings can be used for various downstream tasks such as fine-tuning or feature extraction.
-        - It is assumed that the underlying model has a 'get_input_embeddings' method implemented.
+            - The returned input embeddings can be used for various downstream tasks such as fine-tuning or feature extraction.
+            - It is assumed that the underlying model has a 'get_input_embeddings' method implemented.
         
         Example:
+            ```python
             >>> model = WhisperForCausalLM()
             >>> embeddings = model.get_input_embeddings()
+            ```
         """
         return self.model.get_input_embeddings()
 
@@ -2538,20 +2539,20 @@ model's 'get_input_embeddings' function is called to retrieve these embeddings.
                 [`PreTrainedTokenizer.__call__`] for details. [What are input IDs?](../glossary#input-ids)
             attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
                 [What are attention masks?](../glossary#attention-mask)
             encoder_outputs  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
                 Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention
                 if the model is configured as a decoder.
             head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
                 Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
+                >   - 1 indicates the head is **not masked**,
+                >   - 0 indicates the head is **masked**.
             cross_attn_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
                 Mask to nullify selected heads of the cross-attention modules. Mask values selected in `[0, 1]`:
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
+                >   - 1 indicates the head is **not masked**,
+                >   - 0 indicates the head is **masked**.
             past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
                 Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
                 shape `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of
@@ -2573,8 +2574,8 @@ model's 'get_input_embeddings' function is called to retrieve these embeddings.
             use_cache (`bool`, *optional*):
                 If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding
                 (see `past_key_values`).
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
             output_attentions (`bool`, *optional*):
                 Whether or not to return the attentions tensors of all attention layers. See `attentions` under
                 returned tensors for more detail.
@@ -2585,31 +2586,32 @@ model's 'get_input_embeddings' function is called to retrieve these embeddings.
                 Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
 
         Returns:
+            Union[Tuple, CausalLMOutputWithCrossAttentions]
 
         Example:
+            ```python
+            >>> from transformers import WhisperForCausalLM, WhisperForConditionalGeneration, WhisperProcessor
+            >>> from datasets import load_dataset
 
-        ```python
-        >>> from transformers import WhisperForCausalLM, WhisperForConditionalGeneration, WhisperProcessor
-        >>> from datasets import load_dataset
+            >>> processor = WhisperProcessor.from_pretrained("openai/whisper-large-v2")
+            >>> model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large-v2")
 
-        >>> processor = WhisperProcessor.from_pretrained("openai/whisper-large-v2")
-        >>> model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large-v2")
+            >>> assistant_model = WhisperForCausalLM.from_pretrained("distil-whisper/distil-large-v2")
 
-        >>> assistant_model = WhisperForCausalLM.from_pretrained("distil-whisper/distil-large-v2")
+            >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
+            >>> sample = ds[0]["audio"]
+            >>> input_features = processor(
+            ...     sample["array"], sampling_rate=sample["sampling_rate"], return_tensors="pt"
+            ... ).input_features
 
-        >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
-        >>> sample = ds[0]["audio"]
-        >>> input_features = processor(
-        ...     sample["array"], sampling_rate=sample["sampling_rate"], return_tensors="pt"
-        ... ).input_features
+            >>> predicted_ids = model.generate(input_features, assistant_model=assistant_model)
 
-        >>> predicted_ids = model.generate(input_features, assistant_model=assistant_model)
-
-        >>> # decode token ids to text
-        >>> transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)
-        >>> transcription
-        ' Mr. Quilter is the apostle of the middle classes and we are glad to welcome his gospel.'
-        ```"""
+            >>> # decode token ids to text
+            >>> transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)
+            >>> transcription
+            ' Mr. Quilter is the apostle of the middle classes and we are glad to welcome his gospel.'
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -2733,46 +2735,44 @@ class WhisperForAudioClassification(WhisperPreTrainedModel):
     The `WhisperForAudioClassification` class consists of various methods and attributes that are used for audio classification tasks. 
     
     Methods:
-    - `__init__(self, config)`: Initializes the `WhisperForAudioClassification` instance.
-    - `freeze_encoder(self)`: Disables gradient computation for the Whisper encoder, preventing its parameters from being updated during training.
-    - `get_input_embeddings(self) -> nn.Cell`: Retrieves the input embeddings from the encoder.
-    - `set_input_embeddings(self, value: nn.Cell)`: Sets the input embeddings for the encoder.
-    - `construct(self, input_features, head_mask, encoder_outputs, labels, output_attentions, output_hidden_states, return_dict) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]`: Constructs the
-forward pass of the model for audio classification.
+        `__init__`: Initializes the `WhisperForAudioClassification` instance.
+        `freeze_encoder`: Disables gradient computation for the Whisper encoder, preventing its parameters from being updated during training.
+        `get_input_embeddings`: Retrieves the input embeddings from the encoder.
+        `set_input_embeddings`: Sets the input embeddings for the encoder.
+        `construct`: Constructs the forward pass of the model for audio classification.
     
     Attributes:
-    - `encoder`: Instance of the `WhisperEncoder` class used for encoding audio input.
-    - `layer_weights`: Parameter representing weights for weighted layer sum, if enabled.
-    - `projector`: Instance of the `nn.Dense` class used for projecting hidden states.
-    - `classifier`: Instance of the `nn.Dense` class used for classification.
-    - `config`: Configuration object containing model settings.
+        `encoder`: Instance of the `WhisperEncoder` class used for encoding audio input.
+        `layer_weights`: Parameter representing weights for weighted layer sum, if enabled.
+        `projector`: Instance of the `nn.Dense` class used for projecting hidden states.
+        `classifier`: Instance of the `nn.Dense` class used for classification.
+        `config`: Configuration object containing model settings.
     
     Example usage:
-    
-    
-    from transformers import AutoFeatureExtractor, WhisperForAudioClassification
-    from datasets import load_dataset
-    
-    feature_extractor = AutoFeatureExtractor.from_pretrained("sanchit-gandhi/whisper-medium-fleurs-lang-id")
-    model = WhisperForAudioClassification.from_pretrained("sanchit-gandhi/whisper-medium-fleurs-lang-id")
-    
-    ds = load_dataset("google/fleurs", "all", split="validation", streaming=True)
-    sample = next(iter(ds))
-    
-    inputs = feature_extractor(
-        sample["audio"]["array"], sampling_rate=sample["audio"]["sampling_rate"], return_tensors="pt"
-    )
-    input_features = inputs.input_features
-    
-    with torch.no_grad():
-        logits = model(input_features).logits
-    
-    predicted_class_ids = torch.argmax(logits).item()
-    predicted_label = model.config.id2label[predicted_class_ids]
-    predicted_label
-    'Afrikaans'
-    
-    
+        ```python
+        from transformers import AutoFeatureExtractor, WhisperForAudioClassification
+        from datasets import load_dataset
+
+        feature_extractor = AutoFeatureExtractor.from_pretrained("sanchit-gandhi/whisper-medium-fleurs-lang-id")
+        model = WhisperForAudioClassification.from_pretrained("sanchit-gandhi/whisper-medium-fleurs-lang-id")
+
+        ds = load_dataset("google/fleurs", "all", split="validation", streaming=True)
+        sample = next(iter(ds))
+
+        inputs = feature_extractor(
+            sample["audio"]["array"], sampling_rate=sample["audio"]["sampling_rate"], return_tensors="pt"
+        )
+        input_features = inputs.input_features
+
+        with torch.no_grad():
+            logits = model(input_features).logits
+
+        predicted_class_ids = torch.argmax(logits).item()
+        predicted_label = model.config.id2label[predicted_class_ids]
+        predicted_label
+        'Afrikaans'
+        ```
+
     For more details on the class methods and attributes, refer to the individual method docstrings.
     """
     def __init__(self, config):
@@ -2831,14 +2831,14 @@ forward pass of the model for audio classification.
         
         Args:
             self: The instance of the WhisperForAudioClassification class.
-                Type: WhisperForAudioClassification
-                Purpose: Represents the current instance of the class.
-                Restrictions: None
+                >   - Type: WhisperForAudioClassification
+                >   - Purpose: Represents the current instance of the class.
+                >   - Restrictions: None
         
             value: The input embeddings to be set for the encoder.
-                Type: nn.Cell
-                Purpose: Represents the input embeddings used for encoding.
-                Restrictions: Should be an instance of nn.Cell.
+                >   - Type: nn.Cell
+                >   - Purpose: Represents the input embeddings used for encoding.
+                >   - Restrictions: Should be an instance of nn.Cell.
         
         Returns:
             None. This method does not return any value.
@@ -2859,38 +2859,40 @@ forward pass of the model for audio classification.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
 
         Returns:
+            Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]
 
         Example:
+            ```python
+            >>> from transformers import AutoFeatureExtractor, WhisperForAudioClassification
+            >>> from datasets import load_dataset
 
-        ```python
-        >>> from transformers import AutoFeatureExtractor, WhisperForAudioClassification
-        >>> from datasets import load_dataset
+            >>> feature_extractor = AutoFeatureExtractor.from_pretrained("sanchit-gandhi/whisper-medium-fleurs-lang-id")
+            >>> model = WhisperForAudioClassification.from_pretrained("sanchit-gandhi/whisper-medium-fleurs-lang-id")
 
-        >>> feature_extractor = AutoFeatureExtractor.from_pretrained("sanchit-gandhi/whisper-medium-fleurs-lang-id")
-        >>> model = WhisperForAudioClassification.from_pretrained("sanchit-gandhi/whisper-medium-fleurs-lang-id")
+            >>> ds = load_dataset("google/fleurs", "all", split="validation", streaming=True)
+            >>> sample = next(iter(ds))
 
-        >>> ds = load_dataset("google/fleurs", "all", split="validation", streaming=True)
-        >>> sample = next(iter(ds))
+            >>> inputs = feature_extractor(
+            ...     sample["audio"]["array"], sampling_rate=sample["audio"]["sampling_rate"], return_tensors="pt"
+            ... )
+            >>> input_features = inputs.input_features
 
-        >>> inputs = feature_extractor(
-        ...     sample["audio"]["array"], sampling_rate=sample["audio"]["sampling_rate"], return_tensors="pt"
-        ... )
-        >>> input_features = inputs.input_features
+            >>> with torch.no_grad():
+            ...     logits = model(input_features).logits
 
-        >>> with torch.no_grad():
-        ...     logits = model(input_features).logits
-
-        >>> predicted_class_ids = torch.argmax(logits).item()
-        >>> predicted_label = model.config.id2label[predicted_class_ids]
-        >>> predicted_label
-        'Afrikaans'
-        ```"""
+            >>> predicted_class_ids = torch.argmax(logits).item()
+            >>> predicted_label = model.config.id2label[predicted_class_ids]
+            >>> predicted_label
+            'Afrikaans'
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states

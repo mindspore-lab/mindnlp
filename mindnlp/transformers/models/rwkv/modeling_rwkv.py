@@ -294,7 +294,7 @@ class RwkvSelfAttention(nn.Cell):
         Construct method in the RwkvSelfAttention class.
         
         This method constructs the self-attention mechanism for the Rwkv model. It takes in the hidden input, the state, and a flag indicating whether to use cache or not. It returns the output of the
-attention mechanism and the updated state.
+        attention mechanism and the updated state.
         
         Args:
             self: The RwkvSelfAttention object.
@@ -374,11 +374,11 @@ class RwkvFeedForward(nn.Cell):
             self: The instance of the RwkvFeedForward class.
             hidden (array): The input array representing the hidden state. It is used to calculate the key, value, and receptance. The array should have the shape (batch_size, sequence_length, feature_dim).
             state (array, optional): The optional input array representing the state. It is used for calculating the shifted value. If provided, it should have the same shape as 'hidden' (batch_size,
-sequence_length, feature_dim). Default is None.
+                sequence_length, feature_dim). Default is None.
         
         Returns:
             tuple: A tuple containing the calculated receptance and the updated state. The receptance is a weighted value based on the key and shifted values. The updated state represents the modified state
-based on the input hidden array.
+                based on the input hidden array.
         
         Raises:
             ValueError: If the shape of the 'hidden' array is not compatible for the calculations required in the method.
@@ -859,10 +859,11 @@ class RwkvForCausalLM(RwkvPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, RwkvCausalLMOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
-            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
-            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+                `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
+                are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

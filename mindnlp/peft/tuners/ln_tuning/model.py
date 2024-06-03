@@ -50,7 +50,7 @@ class LNTuningModel(BaseTuner):
     Returns:
         'mindspore.nn.Module': The adapted model with LayerNorm tuned on.
 
-    Example:
+    Examples:
 
         ```py
         >>> from mindnlp.transformers import AutoModelForCausalLM

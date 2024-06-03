@@ -436,7 +436,7 @@ class CLIPTokenizer(PreTrainedTokenizer):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A CLIP sequence has the following format:
 
-        - single sequence: `<|startoftext|> X <|endoftext|>`
+        >   - single sequence: `<|startoftext|> X <|endoftext|>`
 
         Pairs of sequences are not the expected use case, but they will be handled without a separator.
 

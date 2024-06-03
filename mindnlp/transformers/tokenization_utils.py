@@ -76,17 +76,16 @@ class Trie:
         This function is idempotent, adding twice the same word will leave the trie unchanged
 
         Example:
+            ```python
+            >>> trie = Trie()
+            >>> trie.add("Hello 友達")
+            >>> trie.data
+            {"H": {"e": {"l": {"l": {"o": {" ": {"友": {"達": {"": 1}}}}}}}}}
 
-        ```python
-        >>> trie = Trie()
-        >>> trie.add("Hello 友達")
-        >>> trie.data
-        {"H": {"e": {"l": {"l": {"o": {" ": {"友": {"達": {"": 1}}}}}}}}}
-
-        >>> trie.add("Hello")
-        >>> trie.data
-        {"H": {"e": {"l": {"l": {"o": {"": 1, " ": {"友": {"達": {"": 1}}}}}}}}}
-        ```
+            >>> trie.add("Hello")
+            >>> trie.data
+            {"H": {"e": {"l": {"l": {"o": {"": 1, " ": {"友": {"達": {"": 1}}}}}}}}}
+            ```
         """
         if not word:
             # Prevent empty string
@@ -107,18 +106,17 @@ class Trie:
         This trie will match the longest possible word first !
 
         Example:
+            ```python
+            >>> trie = Trie()
+            >>> trie.split("[CLS] This is a extra_id_100")
+            ["[CLS] This is a extra_id_100"]
 
-        ```python
-        >>> trie = Trie()
-        >>> trie.split("[CLS] This is a extra_id_100")
-        ["[CLS] This is a extra_id_100"]
-
-        >>> trie.add("[CLS]")
-        >>> trie.add("extra_id_1")
-        >>> trie.add("extra_id_100")
-        >>> trie.split("[CLS] This is a extra_id_100")
-        ["[CLS]", " This is a ", "extra_id_100"]
-        ```
+            >>> trie.add("[CLS]")
+            >>> trie.add("extra_id_1")
+            >>> trie.add("extra_id_100")
+            >>> trie.split("[CLS] This is a extra_id_100")
+            ["[CLS]", " This is a ", "extra_id_100"]
+            ```
         """
         # indexes are counted left of the chars index.
         # "hello", index 0, is left of h, index 1 is between h and e.
@@ -418,7 +416,7 @@ class PreTrainedTokenizer(PreTrainedTokenizerBase):
             None.
         
         This method returns True if the tokenizer is fast, and False otherwise. The tokenizer's speed is determined by various factors, such as its implementation, data size, and computational resources
-available. This information can be useful for optimizing the tokenization process or making decisions based on the tokenizer's performance.
+        available. This information can be useful for optimizing the tokenization process or making decisions based on the tokenizer's performance.
         """
         return False
 
@@ -511,18 +509,18 @@ available. This information can be useful for optimizing the tokenization proces
         Returns:
             `int`: The number of tokens actually added to the vocabulary.
 
-        Examples:
+        Example:
+            ```python
+            # Let's see how to increase the vocabulary of Bert model and tokenizer
+            tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+            model = BertModel.from_pretrained("bert-base-uncased")
 
-        ```python
-        # Let's see how to increase the vocabulary of Bert model and tokenizer
-        tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-        model = BertModel.from_pretrained("bert-base-uncased")
-
-        num_added_toks = tokenizer.add_tokens(["new_tok1", "my_new-tok2"])
-        print("We have added", num_added_toks, "tokens")
-        # Note: resize_token_embeddings expects to receive the full size of the new vocabulary, i.e. the length of the tokenizer.
-        model.resize_token_embeddings(len(tokenizer))
-        ```"""
+            num_added_toks = tokenizer.add_tokens(["new_tok1", "my_new-tok2"])
+            print("We have added", num_added_toks, "tokens")
+            # Note: resize_token_embeddings expects to receive the full size of the new vocabulary, i.e. the length of the tokenizer.
+            model.resize_token_embeddings(len(tokenizer))
+            ```
+        """
         added_tokens = 0
         if new_tokens is None:
             return added_tokens
@@ -788,31 +786,31 @@ available. This information can be useful for optimizing the tokenization proces
         Method to encode text inputs for a transformer model.
         
         Args:
-        - self: The instance of the PreTrainedTokenizer class.
-        - text (Union[TextInput, PreTokenizedInput, EncodedInput]): The input text to encode. It can be a string, a list/tuple of strings, or a list/tuple of integers.
-        - text_pair (Optional[Union[TextInput, PreTokenizedInput, EncodedInput]]): Optional second input text to encode. It follows the same format as 'text'.
-        - add_special_tokens (bool): Whether to add special tokens for the model. Default is True.
-        - padding_strategy (PaddingStrategy): The padding strategy to apply. Default is PaddingStrategy.DO_NOT_PAD.
-        - truncation_strategy (TruncationStrategy): The truncation strategy to apply. Default is TruncationStrategy.DO_NOT_TRUNCATE.
-        - max_length (Optional[int]): The maximum length of the encoded inputs.
-        - stride (int): The stride to use when overflowing tokens. Default is 0.
-        - is_split_into_words (bool): Whether the input is split into words. Default is False.
-        - pad_to_multiple_of (Optional[int]): Pad to a multiple of this value.
-        - return_tensors (Optional[Union[str, TensorType]]): The type of tensors to return.
-        - return_token_type_ids (Optional[bool]): Whether to return token type IDs.
-        - return_attention_mask (Optional[bool]): Whether to return attention masks.
-        - return_overflowing_tokens (bool): Whether to return overflowing tokens.
-        - return_special_tokens_mask (bool): Whether to return a special tokens mask.
-        - return_offsets_mapping (bool): Whether to return offsets mapping. Not available for Python tokenizers.
-        - return_length (bool): Whether to return the length of the input sequence.
-        - verbose (bool): Whether to output verbose information.
+            self: The instance of the PreTrainedTokenizer class.
+            text (Union[TextInput, PreTokenizedInput, EncodedInput]): The input text to encode. It can be a string, a list/tuple of strings, or a list/tuple of integers.
+            text_pair (Optional[Union[TextInput, PreTokenizedInput, EncodedInput]]): Optional second input text to encode. It follows the same format as 'text'.
+            add_special_tokens (bool): Whether to add special tokens for the model. Default is True.
+            padding_strategy (PaddingStrategy): The padding strategy to apply. Default is PaddingStrategy.DO_NOT_PAD.
+            truncation_strategy (TruncationStrategy): The truncation strategy to apply. Default is TruncationStrategy.DO_NOT_TRUNCATE.
+            max_length (Optional[int]): The maximum length of the encoded inputs.
+            stride (int): The stride to use when overflowing tokens. Default is 0.
+            is_split_into_words (bool): Whether the input is split into words. Default is False.
+            pad_to_multiple_of (Optional[int]): Pad to a multiple of this value.
+            return_tensors (Optional[Union[str, TensorType]]): The type of tensors to return.
+            return_token_type_ids (Optional[bool]): Whether to return token type IDs.
+            return_attention_mask (Optional[bool]): Whether to return attention masks.
+            return_overflowing_tokens (bool): Whether to return overflowing tokens.
+            return_special_tokens_mask (bool): Whether to return a special tokens mask.
+            return_offsets_mapping (bool): Whether to return offsets mapping. Not available for Python tokenizers.
+            return_length (bool): Whether to return the length of the input sequence.
+            verbose (bool): Whether to output verbose information.
         
         Returns:
-        - BatchEncoding: A dictionary containing the encoded inputs ready to be fed into the transformer model.
+            BatchEncoding: A dictionary containing the encoded inputs ready to be fed into the transformer model.
         
         Raises:
-        - NotImplementedError: If 'return_offsets_mapping' is set to True, as this feature is not available for Python tokenizers.
-        - ValueError: If the input 'text' is invalid based on the specified conditions.
+            - NotImplementedError: If 'return_offsets_mapping' is set to True, as this feature is not available for Python tokenizers.
+            - ValueError: If the input 'text' is invalid based on the specified conditions.
         """
         def get_input_ids(text):
             if isinstance(text, str):
@@ -899,32 +897,32 @@ available. This information can be useful for optimizing the tokenization proces
         This method '_batch_encode_plus' in the class 'PreTrainedTokenizer' performs batch encoding of text or text pairs.
         
         Args:
-        - self: The instance of the class.
-        - batch_text_or_text_pairs (List): A list of text input or text input pairs to be encoded.
-        - add_special_tokens (bool): Whether to add special tokens during encoding. Default is True.
-        - padding_strategy (PaddingStrategy): The padding strategy to use during encoding. Default is PaddingStrategy.DO_NOT_PAD.
-        - truncation_strategy (TruncationStrategy): The truncation strategy to use during encoding. Default is TruncationStrategy.DO_NOT_TRUNCATE.
-        - max_length (Optional[int]): The maximum length of the encoded sequence. Default is None.
-        - stride (int): The stride for splitting inputs into multiple sequences. Default is 0.
-        - is_split_into_words (bool): Whether the input text is already split into words. Default is False.
-        - pad_to_multiple_of (Optional[int]): Pad the sequence length to be a multiple of this value. Default is None.
-        - return_tensors (Optional[Union[str, TensorType]]): The type of tensor to return. Default is None.
-        - return_token_type_ids (Optional[bool]): Whether to return token type ids. Default is None.
-        - return_attention_mask (Optional[bool]): Whether to return attention masks. Default is None.
-        - return_overflowing_tokens (bool): Whether to return overflowing tokens. Default is False.
-        - return_special_tokens_mask (bool): Whether to return special tokens mask. Default is False.
-        - return_offsets_mapping (bool): Whether to return offsets mapping. Default is False.
-        - return_length (bool): Whether to return the length of the encoded sequence. Default is False.
-        - verbose (bool): Whether to print verbose output. Default is True.
-        - kwargs: Additional keyword arguments.
+            self: The instance of the class.
+            batch_text_or_text_pairs (List): A list of text input or text input pairs to be encoded.
+            add_special_tokens (bool): Whether to add special tokens during encoding. Default is True.
+            padding_strategy (PaddingStrategy): The padding strategy to use during encoding. Default is PaddingStrategy.DO_NOT_PAD.
+            truncation_strategy (TruncationStrategy): The truncation strategy to use during encoding. Default is TruncationStrategy.DO_NOT_TRUNCATE.
+            max_length (Optional[int]): The maximum length of the encoded sequence. Default is None.
+            stride (int): The stride for splitting inputs into multiple sequences. Default is 0.
+            is_split_into_words (bool): Whether the input text is already split into words. Default is False.
+            pad_to_multiple_of (Optional[int]): Pad the sequence length to be a multiple of this value. Default is None.
+            return_tensors (Optional[Union[str, TensorType]]): The type of tensor to return. Default is None.
+            return_token_type_ids (Optional[bool]): Whether to return token type ids. Default is None.
+            return_attention_mask (Optional[bool]): Whether to return attention masks. Default is None.
+            return_overflowing_tokens (bool): Whether to return overflowing tokens. Default is False.
+            return_special_tokens_mask (bool): Whether to return special tokens mask. Default is False.
+            return_offsets_mapping (bool): Whether to return offsets mapping. Default is False.
+            return_length (bool): Whether to return the length of the encoded sequence. Default is False.
+            verbose (bool): Whether to print verbose output. Default is True.
+            kwargs: Additional keyword arguments.
         
         Returns:
-        - BatchEncoding: The encoded batch of inputs as a BatchEncoding object.
+            BatchEncoding: The encoded batch of inputs as a BatchEncoding object.
         
         Raises:
-        - ValueError: If the input is not valid, should be a string, a list/tuple of strings, or a list/tuple of integers.
-        - NotImplementedError: If 'return_offset_mapping' is requested, which is not available when using Python tokenizers. To use this feature, change the tokenizer to one deriving from
-transformers.PreTrainedTokenizerFast.
+            - ValueError: If the input is not valid, should be a string, a list/tuple of strings, or a list/tuple of integers.
+            - NotImplementedError: If 'return_offset_mapping' is requested, which is not available when using Python tokenizers. To use this feature, change the tokenizer to one deriving from
+                transformers.PreTrainedTokenizerFast.
         """
         def get_input_ids(text):
             if isinstance(text, str):
@@ -1117,14 +1115,16 @@ transformers.PreTrainedTokenizerFast.
             None.
         
         Note:
-            - Special tokens refer to tokens like [CLS], [SEP], [PAD], etc.
-            - If skip_special_tokens is set to True, the special tokens will be excluded from the returned text.
+            >- Special tokens refer to tokens like [CLS], [SEP], [PAD], etc.
+            >- If skip_special_tokens is set to True, the special tokens will be excluded from the returned text.
         
         Example:
+            ```python
             tokenizer = PreTrainedTokenizer()
             token_ids = [101, 202, 303, 102]
             text = tokenizer.convert_ids_to_tokens(token_ids)
             # text now contains "[CLS] token1 token2 [SEP]"
+            ```
         """
 
     @overload

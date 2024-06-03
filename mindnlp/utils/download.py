@@ -757,7 +757,7 @@ def try_to_load_from_cache(
             - A special value `_CACHED_NO_EXIST` if the file does not exist at the given commit hash and this fact was
               cached.
 
-    Example:
+    Examples:
 
     ```python
     from huggingface_hub import try_to_load_from_cache, _CACHED_NO_EXIST

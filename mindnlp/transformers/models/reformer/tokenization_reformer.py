@@ -76,17 +76,14 @@ class ReformerTokenizer(PreTrainedTokenizer):
             Will be passed to the `SentencePieceProcessor.__init__()` method. The [Python wrapper for
             SentencePiece](https://github.com/google/sentencepiece/tree/master/python) can be used, among other things,
             to set:
-
-            - `enable_sampling`: Enable subword regularization.
-            - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
-
-              - `nbest_size = {0,1}`: No sampling is performed.
-              - `nbest_size > 1`: samples from the nbest_size results.
-              - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
-                using forward-filtering-and-backward-sampling algorithm.
-
-            - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
-              BPE-dropout.
+            >   - `enable_sampling`: Enable subword regularization.
+            >   - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
+            >       - `nbest_size = {0,1}`: No sampling is performed.
+            >       - `nbest_size > 1`: samples from the nbest_size results.
+            >       - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
+                        using forward-filtering-and-backward-sampling algorithm.
+            >   - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
+                    BPE-dropout.
     """
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
@@ -177,8 +174,8 @@ class ReformerTokenizer(PreTrainedTokenizer):
                 No restrictions.
         
         Returns:
-            None.
-            This method returns a dictionary containing the state of the ReformerTokenizer instance with the 'sp_model' key set to None.
+            None:
+                This method returns a dictionary containing the state of the ReformerTokenizer instance with the 'sp_model' key set to None.
         
         Raises:
             None.

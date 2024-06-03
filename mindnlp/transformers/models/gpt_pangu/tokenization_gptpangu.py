@@ -115,8 +115,8 @@ class GPTPanguTokenizer(PreTrainedTokenizer):
         """
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A BERT sequence has the following format:
-        - single sequence: `[CLS] X [SEP]`
-        - pair of sequences: `[CLS] A [SEP] B [SEP]`
+        >   - single sequence: `[CLS] X [SEP]`
+        >   - pair of sequences: `[CLS] A [SEP] B [SEP]`
         Args:
             token_ids_0 (`List[int]`):
                 List of IDs to which the special tokens will be added.
@@ -159,17 +159,19 @@ class GPTPanguTokenizer(PreTrainedTokenizer):
             None
         
         Note:
-        - If the input tokens are None, the method returns None.
-        - If the input tokens are a string, the method calls the _convert_token_to_id_with_added_voc() method to convert it into a token ID.
-        - If the input tokens contain special tokens, the method identifies their indices and splits the tokens into segments. Each segment is then encoded using the sp.encode() method and appended to the list
-of token IDs.
-        - The method concatenates all the encoded segments and returns the final list of token IDs.
+            - If the input tokens are None, the method returns None.
+            - If the input tokens are a string, the method calls the _convert_token_to_id_with_added_voc() method to convert it into a token ID.
+            - If the input tokens contain special tokens, the method identifies their indices and splits the tokens into segments. Each segment is then encoded using the sp.encode() method and appended to the list
+                of token IDs.
+            - The method concatenates all the encoded segments and returns the final list of token IDs.
         
         Example usage:
+            ```python
             tokenizer = GPTPanguTokenizer()
             tokens = ['Hello', 'world', '!']
             ids = tokenizer.convert_tokens_to_ids(tokens)
             # ids = [123, 456, 789]
+            ```
         """
         if tokens is None:
             return None
@@ -247,11 +249,12 @@ of token IDs.
             The GPTPanguTokenizer must be initialized with a pretrained model before using this method.
         
         Example:
+            ```python
             >>> tokenizer = GPTPanguTokenizer()
             >>> token_ids = [0, 1, 2]
             >>> tokenizer.convert_ids_to_tokens(token_ids)
             ['<s>', 'Hello', '</s>']
-        
+            ```
         """
         return self.decode(ids)
 
@@ -267,7 +270,7 @@ of token IDs.
         
         Returns:
             str: The decoded text corresponding to the provided token IDs. 
-            Whitespace characters ' ' will be replaced with spaces, '▂' will be replaced with spaces, and '▃' will be replaced with newline characters '\n'.
+            Whitespace characters ' ' will be replaced with spaces, '▂' will be replaced with spaces, and '▃' will be replaced with newline characters.
         
         Raises:
             None: This method does not raise any exceptions.

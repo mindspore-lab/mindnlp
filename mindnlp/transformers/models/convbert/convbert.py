@@ -54,13 +54,13 @@ class ConvBertEmbeddings(nn.Cell):
         Args:
             self (ConvBertEmbeddings): The current instance of the ConvBertEmbeddings class.
             config: An object containing the configuration parameters for the ConvBert model.
-                - vocab_size (int): The size of the vocabulary.
-                - embedding_size (int): The size of the word embeddings.
-                - pad_token_id (int): The index of the padding token in the vocabulary.
-                - max_position_embeddings (int): The maximum number of positions in the input sequence.
-                - type_vocab_size (int): The size of the token type vocabulary.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
-                - hidden_dropout_prob (float): The dropout probability for the embeddings.
+                >   - vocab_size (int): The size of the vocabulary.
+                >   - embedding_size (int): The size of the word embeddings.
+                >   - pad_token_id (int): The index of the padding token in the vocabulary.
+                >   - max_position_embeddings (int): The maximum number of positions in the input sequence.
+                >   - type_vocab_size (int): The size of the token type vocabulary.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - hidden_dropout_prob (float): The dropout probability for the embeddings.
             
         Returns:
             None
@@ -364,7 +364,7 @@ class ConvBertSelfAttention(nn.Cell):
         
         Returns:
             Tuple[ms.Tensor, Optional[ms.Tensor]]: A tuple containing the context layer tensor of shape [batch_size, sequence_length, hidden_size] and the optional attention probabilities tensor of shape
-[batch_size, num_attention_heads, sequence_length, sequence_length].
+            [batch_size, num_attention_heads, sequence_length, sequence_length].
         
         Raises:
             N/A
@@ -673,13 +673,13 @@ class ConvBertIntermediate(nn.Cell):
         Args:
             self (ConvBertIntermediate): The current instance of the ConvBertIntermediate class.
             config (object): An object containing configuration parameters for the intermediate layer.
-                - num_groups (int): The number of groups for the intermediate layer.
+                >   - num_groups (int): The number of groups for the intermediate layer.
                     Must be an integer greater than or equal to 1.
-                - hidden_size (int): The size of the hidden layer.
+                >   - hidden_size (int): The size of the hidden layer.
                     Must be an integer specifying the size of the hidden layer.
-                - intermediate_size (int): The size of the intermediate layer.
+                >   - intermediate_size (int): The size of the intermediate layer.
                     Must be an integer specifying the size of the intermediate layer.
-                - hidden_act (str or function): The activation function for the hidden layer.
+                >   - hidden_act (str or function): The activation function for the hidden layer.
                     Must be a string representing a predefined activation function or a custom activation function.
         
         Returns:
@@ -735,12 +735,12 @@ class ConvBertOutput(nn.Cell):
         Args:
             self: The object instance.
             config: An object of type 'config' containing the configuration parameters for the ConvBertOutput class.
-                - num_groups (int): The number of groups. If equal to 1, a Dense layer is used. Otherwise, a GroupedLinearLayer is used.
+                >   - num_groups (int): The number of groups. If equal to 1, a Dense layer is used. Otherwise, a GroupedLinearLayer is used.
                     (Restrictions: Must be a positive integer)
-                - intermediate_size (int): The size of the intermediate layer.
-                - hidden_size (int): The size of the hidden layer.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
-                - hidden_dropout_prob (float): The dropout probability for the hidden layer.
+                >   - intermediate_size (int): The size of the intermediate layer.
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - hidden_dropout_prob (float): The dropout probability for the hidden layer.
                 
         Returns:
             None.
@@ -930,22 +930,22 @@ class ConvBertEncoder(nn.Cell):
         This method constructs the ConvBertEncoder by processing the input hidden states through a series of layers.
         
         Args:
-        - self: The instance of the ConvBertEncoder class.
-        - hidden_states (ms.Tensor): The input hidden states to be processed by the encoder.
-        - attention_mask (Optional[ms.Tensor]): An optional tensor specifying the attention mask for the input.
-        - head_mask (Optional[ms.Tensor]): An optional tensor providing mask for heads in the multi-head attention mechanism.
-        - encoder_hidden_states (Optional[ms.Tensor]): An optional tensor representing hidden states from an encoder.
-        - encoder_attention_mask (Optional[ms.Tensor]): An optional tensor specifying the attention mask for the encoder hidden states.
-        - output_attentions (Optional[bool]): A flag indicating whether to output attention tensors.
-        - output_hidden_states (Optional[bool]): A flag indicating whether to output hidden states at each layer.
-        - return_dict (Optional[bool]): A flag indicating whether to return the output as a dictionary.
+            self: The instance of the ConvBertEncoder class.
+            hidden_states (ms.Tensor): The input hidden states to be processed by the encoder.
+            attention_mask (Optional[ms.Tensor]): An optional tensor specifying the attention mask for the input.
+            head_mask (Optional[ms.Tensor]): An optional tensor providing mask for heads in the multi-head attention mechanism.
+            encoder_hidden_states (Optional[ms.Tensor]): An optional tensor representing hidden states from an encoder.
+            encoder_attention_mask (Optional[ms.Tensor]): An optional tensor specifying the attention mask for the encoder hidden states.
+            output_attentions (Optional[bool]): A flag indicating whether to output attention tensors.
+            output_hidden_states (Optional[bool]): A flag indicating whether to output hidden states at each layer.
+            return_dict (Optional[bool]): A flag indicating whether to return the output as a dictionary.
         
         Returns:
-        - Union[Tuple, BaseModelOutputWithCrossAttentions]: The output of the method which can be a tuple of relevant values or a BaseModelOutputWithCrossAttentions object containing the processed hidden
-states, attentions, and cross-attentions.
-        
+            Union[Tuple, BaseModelOutputWithCrossAttentions]: The output of the method which can be a tuple of relevant values or a BaseModelOutputWithCrossAttentions object containing the processed hidden
+            states, attentions, and cross-attentions.
+
         Raises:
-        - None
+            - None
         """
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
@@ -1016,12 +1016,12 @@ class ConvBertPredictionHeadTransform(nn.Cell):
         Args:
             self (ConvBertPredictionHeadTransform): The instance of the ConvBertPredictionHeadTransform class.
             config: An object containing configuration parameters for the transformation.
-                - Type: Any
-                - Purpose: Specifies the configuration settings for the transformation.
-                - Restrictions: Must contain the following attributes:
-                    - hidden_size: Integer representing the size of the hidden layer.
-                    - hidden_act: Activation function for the hidden layer. Can be a string or a callable.
-                    - layer_norm_eps: Epsilon value for LayerNorm.
+                >   - Type: Any
+                >   - Purpose: Specifies the configuration settings for the transformation.
+                >   - Restrictions: Must contain the following attributes:
+                >       - hidden_size: Integer representing the size of the hidden layer.
+                >       - hidden_act: Activation function for the hidden layer. Can be a string or a callable.
+                >       - layer_norm_eps: Epsilon value for LayerNorm.
         
         Returns:
             None: This method does not return any value.
@@ -1354,10 +1354,10 @@ class ConvBertForMaskedLM(ConvBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, MaskedLMOutput]:
         r"""
-        labels (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
-            config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
-            loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
+        >    labels (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
+                config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
+                loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
@@ -1456,20 +1456,20 @@ class ConvBertForSequenceClassification(ConvBertPreTrainedModel):
     """
     def __init__(self, config):
         """
-            Initializes a new instance of ConvBertForSequenceClassification.
-        
-            Args:
-                self (ConvBertForSequenceClassification): The current instance of the ConvBertForSequenceClassification class.
-                config (ConvBertConfig): The configuration object for ConvBertForSequenceClassification.
-                    - num_labels (int): The number of labels for classification.
-                    - ... (other configuration parameters)
-        
-            Returns:
-                None
-        
-            Raises:
-                None
-            """
+        Initializes a new instance of ConvBertForSequenceClassification.
+
+        Args:
+            self (ConvBertForSequenceClassification): The current instance of the ConvBertForSequenceClassification class.
+            config (ConvBertConfig): The configuration object for ConvBertForSequenceClassification.
+                - num_labels (int): The number of labels for classification.
+                - ... (other configuration parameters)
+
+        Returns:
+            None
+
+        Raises:
+            None
+        """
         super().__init__(config)
         self.num_labels = config.num_labels
         self.config = config
@@ -1493,10 +1493,10 @@ class ConvBertForSequenceClassification(ConvBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutput]:
         r"""
-        labels (`ms.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        >    labels (`ms.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
@@ -1591,10 +1591,10 @@ class ConvBertForMultipleChoice(ConvBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, MultipleChoiceModelOutput]:
         r"""
-        labels (`ms.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
-            num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
-            `input_ids` above)
+        >    labels (`ms.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
+                num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
+                `input_ids` above)
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
@@ -1709,8 +1709,8 @@ class ConvBertForTokenClassification(ConvBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, TokenClassifierOutput]:
         r"""
-        labels (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        >    labels (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
@@ -1811,7 +1811,7 @@ class ConvBertForQuestionAnswering(ConvBertPreTrainedModel):
         
         Returns:
             Union[Tuple, QuestionAnsweringModelOutput]: The model output. If return_dict is False, returns a tuple containing the start logits, end logits, and additional outputs. If return_dict is True,
-returns a QuestionAnsweringModelOutput object containing the loss, start logits, end logits, hidden states, and attentions.
+            returns a QuestionAnsweringModelOutput object containing the loss, start logits, end logits, hidden states, and attentions.
         
         Raises:
             None.

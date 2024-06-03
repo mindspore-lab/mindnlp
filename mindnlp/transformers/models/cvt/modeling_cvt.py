@@ -203,13 +203,13 @@ class CvtConvEmbeddings(nn.Cell):
         Args:
             self: The instance of the class.
             patch_size (int or tuple): The size of the patch or kernel used for convolution. If an int is provided, the patch will be square. If a tuple is provided, it should contain two integers representing
-the height and width of the patch. 
+                the height and width of the patch.
             num_channels (int): The number of input channels for the convolutional layer.
             embed_dim (int): The dimensionality of the output embedding.
             stride (int or tuple): The stride of the convolution operation. If an int is provided, the same stride is used in both dimensions. If a tuple is provided, it should contain two integers
-representing the stride in the height and width dimensions.
+                representing the stride in the height and width dimensions.
             padding (int or tuple): The amount of padding to be added to the input data for the convolution operation. If an int is provided, the same padding is added to both dimensions. If a tuple is
-provided, it should contain two integers representing the padding in the height and width dimensions.
+                provided, it should contain two integers representing the padding in the height and width dimensions.
         
         Returns:
             None. The method initializes the CvtConvEmbeddings class and does not return any value.
@@ -254,7 +254,7 @@ class CvtSelfAttentionConvProjection(nn.Cell):
 
     """
     CvtSelfAttentionConvProjection represents a class for performing convolution and normalization operations on input data. This class inherits from nn.Cell and provides methods for initializing the
-convolution and normalization layers, as well as for constructing the output from the input hidden state.
+    convolution and normalization layers, as well as for constructing the output from the input hidden state.
     
     Attributes:
         embed_dim (int): The dimension of the input embedding.
@@ -263,8 +263,8 @@ convolution and normalization layers, as well as for constructing the output fro
         stride (int): The stride of the convolution operation.
     
     Methods:
-        __init__(self, embed_dim, kernel_size, padding, stride): Initializes the CvtSelfAttentionConvProjection class with the specified parameters.
-        construct(self, hidden_state): Constructs the output from the input hidden state by applying convolution and normalization operations.
+        __init__: Initializes the CvtSelfAttentionConvProjection class with the specified parameters.
+        construct: Constructs the output from the input hidden state by applying convolution and normalization operations.
     
     """
     def __init__(self, embed_dim, kernel_size, padding, stride):
@@ -363,17 +363,17 @@ class CvtSelfAttentionProjection(nn.Cell):
     It provides methods to initialize the projections and apply them sequentially to the input hidden state.
     
     Attributes:
-        - embed_dim (int): The dimensionality of the input embeddings.
-        - kernel_size (int): The size of the convolutional kernel.
-        - padding (int): The amount of padding to apply during convolution.
-        - stride (int): The stride of the convolution operation.
-        - projection_method (str): The method used for projection, default is 'dw_bn' (depthwise batch normalization).
+        embed_dim (int): The dimensionality of the input embeddings.
+        kernel_size (int): The size of the convolutional kernel.
+        padding (int): The amount of padding to apply during convolution.
+        stride (int): The stride of the convolution operation.
+        projection_method (str): The method used for projection, default is 'dw_bn' (depthwise batch normalization).
     
     Methods:
-        - __init__(self, embed_dim, kernel_size, padding, stride, projection_method='dw_bn'): 
+        __init__(self, embed_dim, kernel_size, padding, stride, projection_method='dw_bn'):
             Initializes the projection layer with the specified parameters.
         
-        - construct(self, hidden_state): 
+        construct(self, hidden_state):
             Applies the convolutional projection followed by the linear projection to the input hidden state.
             Returns the projected hidden state.
     
@@ -428,26 +428,26 @@ class CvtSelfAttention(nn.Cell):
     This class represents a Convolutional Self-Attention layer for a neural network model. It inherits from the nn.Cell class.
     
     Attributes:
-        - num_heads (int): The number of attention heads.
-        - embed_dim (int): The dimension of the input embeddings.
-        - kernel_size (int): The size of the convolutional kernel.
-        - padding_q (int): The amount of padding for the query projection convolution.
-        - padding_kv (int): The amount of padding for the key and value projection convolutions.
-        - stride_q (int): The stride for the query projection convolution.
-        - stride_kv (int): The stride for the key and value projection convolutions.
-        - qkv_projection_method (str): The projection method used for the query, key, and value projections.
-        - qkv_bias (bool): Indicates whether bias is added to the query, key, and value projections.
-        - attention_drop_rate (float): The dropout rate for the attention scores.
-        - with_cls_token (bool): Indicates whether a classification token is included in the input.
+        num_heads (int): The number of attention heads.
+        embed_dim (int): The dimension of the input embeddings.
+        kernel_size (int): The size of the convolutional kernel.
+        padding_q (int): The amount of padding for the query projection convolution.
+        padding_kv (int): The amount of padding for the key and value projection convolutions.
+        stride_q (int): The stride for the query projection convolution.
+        stride_kv (int): The stride for the key and value projection convolutions.
+        qkv_projection_method (str): The projection method used for the query, key, and value projections.
+        qkv_bias (bool): Indicates whether bias is added to the query, key, and value projections.
+        attention_drop_rate (float): The dropout rate for the attention scores.
+        with_cls_token (bool): Indicates whether a classification token is included in the input.
     
     Methods:
-        - __init__(self, num_heads, embed_dim, kernel_size, padding_q, padding_kv, stride_q, stride_kv, qkv_projection_method, qkv_bias, attention_drop_rate, with_cls_token=True, **kwargs):
+        __init__(self, num_heads, embed_dim, kernel_size, padding_q, padding_kv, stride_q, stride_kv, qkv_projection_method, qkv_bias, attention_drop_rate, with_cls_token=True, **kwargs):
             Initializes the CvtSelfAttention instance.
         
-        - rearrange_for_multi_head_attention(self, hidden_state):
+        rearrange_for_multi_head_attention(self, hidden_state):
             Rearranges the input hidden state for multi-head attention computations.
         
-        - construct(self, hidden_state, height, width):
+        construct(self, hidden_state, height, width):
             Constructs the CvtSelfAttention layer by performing convolutional projections, multi-head attention calculations, and output rearrangement.
     
     Note:
@@ -476,29 +476,29 @@ class CvtSelfAttention(nn.Cell):
         Initializes the CvtSelfAttention class.
         
         Args:
-        - self: The instance of the class.
-        - num_heads (int): The number of attention heads.
-        - embed_dim (int): The dimension of the input embeddings.
-        - kernel_size (int): The size of the convolutional kernel.
-        - padding_q (int): The padding size for the query projection.
-        - padding_kv (int): The padding size for the key and value projections.
-        - stride_q (int): The stride for the query projection.
-        - stride_kv (int): The stride for the key and value projections.
-        - qkv_projection_method (str): The method used for query, key, and value projections. Can be 'avg' or any other specific projection method.
-        - qkv_bias (bool): Indicates whether bias is applied to the query, key, and value projections.
-        - attention_drop_rate (float): The dropout rate for attention weights.
-        - with_cls_token (bool, optional): Indicates whether the class token is included. Defaults to True.
+            self: The instance of the class.
+            num_heads (int): The number of attention heads.
+            embed_dim (int): The dimension of the input embeddings.
+            kernel_size (int): The size of the convolutional kernel.
+            padding_q (int): The padding size for the query projection.
+            padding_kv (int): The padding size for the key and value projections.
+            stride_q (int): The stride for the query projection.
+            stride_kv (int): The stride for the key and value projections.
+            qkv_projection_method (str): The method used for query, key, and value projections. Can be 'avg' or any other specific projection method.
+            qkv_bias (bool): Indicates whether bias is applied to the query, key, and value projections.
+            attention_drop_rate (float): The dropout rate for attention weights.
+            with_cls_token (bool, optional): Indicates whether the class token is included. Defaults to True.
         
         Returns:
-        None. This method initializes the CvtSelfAttention class and does not return any value.
+            None. This method initializes the CvtSelfAttention class and does not return any value.
         
         Raises:
-        - ValueError: If embed_dim is not a positive integer.
-        - ValueError: If num_heads is not a positive integer.
-        - ValueError: If kernel_size, padding_q, padding_kv, stride_q, or stride_kv is not a positive integer.
-        - ValueError: If qkv_projection_method is not 'avg' or a valid specific projection method.
-        - ValueError: If attention_drop_rate is not in the range [0, 1].
-        - TypeError: If with_cls_token is not a boolean value.
+            - ValueError: If embed_dim is not a positive integer.
+            - ValueError: If num_heads is not a positive integer.
+            - ValueError: If kernel_size, padding_q, padding_kv, stride_q, or stride_kv is not a positive integer.
+            - ValueError: If qkv_projection_method is not 'avg' or a valid specific projection method.
+            - ValueError: If attention_drop_rate is not in the range [0, 1].
+            - TypeError: If with_cls_token is not a boolean value.
         """
         super().__init__()
         self.scale = embed_dim**-0.5
@@ -536,18 +536,18 @@ class CvtSelfAttention(nn.Cell):
             self (CvtSelfAttention): The instance of the CvtSelfAttention class.
                 This parameter is required for accessing the attributes and methods of the class.
             hidden_state (torch.Tensor): The input hidden state tensor of shape (batch_size, hidden_size, _).
-                - batch_size (int): The number of sequences in the batch.
-                - hidden_size (int): The dimensionality of the hidden state.
-                - _ (int): Placeholder dimension for compatibility with the transformer architecture.
+                >   - batch_size (int): The number of sequences in the batch.
+                >   - hidden_size (int): The dimensionality of the hidden state.
+                >   - _ (int): Placeholder dimension for compatibility with the transformer architecture.
                 This tensor represents the input hidden state that needs to be rearranged for multi-head attention computation.
         
         Returns:
-            None
-            This method does not return any value. It rearranges the hidden state tensor in place and does not create a new tensor.
+            None:
+                This method does not return any value. It rearranges the hidden state tensor in place and does not create a new tensor.
         
         Raises:
-            None
-            This method does not explicitly raise any exceptions.
+            None:
+                This method does not explicitly raise any exceptions.
         """
         batch_size, hidden_size, _ = hidden_state.shape
         head_dim = self.embed_dim // self.num_heads
@@ -855,8 +855,8 @@ class CvtIntermediate(nn.Cell):
             None.
         
         This method takes in the 'hidden_state' and applies transformations to it in order to construct the hidden state of the CvtIntermediate class. The 'hidden_state' is first passed through a dense layer
-using the 'self.dense' function. Then, the resulting tensor is passed through the activation function specified by the 'self.activation' attribute. The modified hidden state is returned as the output of this
-method.
+        using the 'self.dense' function. Then, the resulting tensor is passed through the activation function specified by the 'self.activation' attribute. The modified hidden state is returned as the output of this
+        method.
         
         Note that this method modifies the hidden state in-place and does not create a new object.
         """
@@ -873,20 +873,20 @@ class CvtOutput(nn.Cell):
     This class inherits from the 'nn.Cell' class, which is a base class for all neural network cells in the MindSpore framework.
     
     Methods:
-    - __init__(self, embed_dim, mlp_ratio, drop_rate):
+    __init__(self, embed_dim, mlp_ratio, drop_rate):
         Initializes a new instance of the 'CvtOutput' class.
-        Args:
-            embed_dim (int): The dimension of the embedded vectors.
-            mlp_ratio (float): The ratio used to calculate the dimension of the MLP intermediate layer.
-            drop_rate (float): The probability of an element to be zeroed in the dropout layer.
+        >   - Args:
+        >       - embed_dim (int): The dimension of the embedded vectors.
+        >       - mlp_ratio (float): The ratio used to calculate the dimension of the MLP intermediate layer.
+        >       - drop_rate (float): The probability of an element to be zeroed in the dropout layer.
     
-    - construct(self, hidden_state, input_tensor):
+    construct(self, hidden_state, input_tensor):
         Constructs the conversion output module by applying operations to the input tensors.
-        Args:
-            hidden_state (Tensor): The hidden state tensor.
-            input_tensor (Tensor): The input tensor.
-        Returns:
-            Tensor: The final hidden state tensor obtained after applying the conversion operations.
+        >   - Args:
+        >       - hidden_state (Tensor): The hidden state tensor.
+        >       - input_tensor (Tensor): The input tensor.
+        >   - Returns:
+        >       - Tensor: The final hidden state tensor obtained after applying the conversion operations.
     """
     def __init__(self, embed_dim, mlp_ratio, drop_rate):
         """
@@ -1045,16 +1045,16 @@ class CvtStage(nn.Cell):
 
     """
     The CvtStage class represents a stage in the Cross Vision Transformer (Cvt) model. It inherits from nn.Cell and is designed to handle the processing and transformation of input data within a specific stage
-of the Cvt model.
+    of the Cvt model.
     
     This class includes methods for initializing the stage with configuration and stage information, as well as constructing the hidden state through a series of operations involving embeddings, layer
-processing, and token manipulation.
+    processing, and token manipulation.
     
     The class supports the configuration of parameters such as patch size, stride, number of channels, embedding dimensions, padding, dropout rates, depth, number of heads, kernel size, attention and
-multi-layer perceptron (MLP) settings, and the inclusion of a classification (cls) token.
+    multi-layer perceptron (MLP) settings, and the inclusion of a classification (cls) token.
     
     The construct method is responsible for processing the hidden state by applying the configured embeddings, manipulating the hidden state based on the existence of a cls token, and iterating through the
-layers to transform the hidden state. Additionally, it handles the splitting and reshaping of the hidden state before returning the updated hidden state and cls token.
+    layers to transform the hidden state. Additionally, it handles the splitting and reshaping of the hidden state before returning the updated hidden state and cls token.
     
     Overall, the CvtStage class provides a structured and configurable framework for managing the transformation of data within a specific stage of the Cvt model.
     """
@@ -1065,8 +1065,8 @@ layers to transform the hidden state. Additionally, it handles the splitting and
         Args:
             self: The instance of the CvtStage class.
             config (object): The configuration object containing various parameters such as patch size, stride, number of channels, embedding dimensions, padding, dropout rate, depth, number of heads, kernel
-size, padding for query, key, and value, stride for key and value, stride for query, method for QKV projection, QKV bias, attention dropout rate, drop rate, drop path rate, MLP ratio, and presence of a
-classification token. 
+            size, padding for query, key, and value, stride for key and value, stride for query, method for QKV projection, QKV bias, attention dropout rate, drop rate, drop path rate, MLP ratio, and presence of a
+            classification token.
             stage (int): The stage of the CvtStage.
         
         Returns:
@@ -1164,21 +1164,18 @@ class CvtEncoder(nn.Cell):
     Methods:
         __init__(self, config)
             Initializes a new instance of the CvtEncoder class.
-            
-            Args:
-                config (Config): The configuration object for the CvtEncoder.
+            >   - Args:
+            >       - config (Config): The configuration object for the CvtEncoder.
             
         construct(self, pixel_values, output_hidden_states=False, return_dict=True)
             Constructs the converter encoder model.
-            
-            Args:
-                pixel_values (tensor): The input pixel values.
-                output_hidden_states (bool): Whether to output all hidden states. Defaults to False.
-                return_dict (bool): Whether to return the model output as a dictionary. Defaults to True.
-            
-            Returns:
-                BaseModelOutputWithCLSToken: The model output containing the last hidden state, the cls token value, and 
-                all hidden states.
+            >   - Args:
+            >       - pixel_values (tensor): The input pixel values.
+            >       - output_hidden_states (bool): Whether to output all hidden states. Defaults to False.
+            >       - return_dict (bool): Whether to return the model output as a dictionary. Defaults to True.
+            >   - Returns:
+            >       - BaseModelOutputWithCLSToken: The model output containing the last hidden state, the cls token value, and
+                    all hidden states.
     """
     def __init__(self, config):
         """
@@ -1273,13 +1270,13 @@ class CvtModel(CvtPreTrainedModel):
         encoder (CvtEncoder): The encoder component of the CvtModel responsible for processing input data.
     
     Methods:
-        __init__(self, config, add_pooling_layer=True):
+        __init__:
             Initializes the CvtModel instance with the provided configuration.
             
-        _prune_heads(self, heads_to_prune):
+        _prune_heads:
             Prunes specified heads of the model based on the provided dictionary of layer numbers and heads to prune.
             
-        construct(self, pixel_values: Optional[mindspore.Tensor] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Tuple, BaseModelOutputWithCLSToken]:
+        construct:
             Constructs the model output by processing the input pixel values and returning the output hidden states.
             If pixel_values is not provided, a ValueError is raised.
             The output format is determined based on the return_dict flag and the model configuration.
@@ -1331,7 +1328,7 @@ class CvtModel(CvtPreTrainedModel):
         
         Returns:
             Union[Tuple, BaseModelOutputWithCLSToken]: The constructed model output. If `return_dict` is False, a tuple is returned containing the sequence output and any additional encoder outputs. If
-`return_dict` is True, a BaseModelOutputWithCLSToken object is returned, which includes the last hidden state, cls token value, and hidden states.
+            `return_dict` is True, a BaseModelOutputWithCLSToken object is returned, which includes the last hidden state, cls token value, and hidden states.
         
         Raises:
             ValueError: If `pixel_values` is not specified.
@@ -1369,23 +1366,23 @@ class CvtForImageClassification(CvtPreTrainedModel):
     It inherits from the CvtPreTrainedModel class and provides methods for constructing the model and computing image classification/regression loss.
     
     Attributes:
-        - num_labels (int): Number of labels for classification
-        - cvt (CvtModel): CvtModel instance used for image processing
-        - layernorm (nn.LayerNorm): Layer normalization module
-        - classifier (nn.Dense or nn.Identity): Classifier module for final predictions
+        num_labels (int): Number of labels for classification
+        cvt (CvtModel): CvtModel instance used for image processing
+        layernorm (nn.LayerNorm): Layer normalization module
+        classifier (nn.Dense or nn.Identity): Classifier module for final predictions
     
     Methods:
-        - __init__(self, config): Initializes the CvtForImageClassification model with the provided configuration.
-        - construct(self, pixel_values, labels, output_hidden_states, return_dict): Constructs the model and computes loss for image classification.
+        __init__(self, config): Initializes the CvtForImageClassification model with the provided configuration.
+        construct(self, pixel_values, labels, output_hidden_states, return_dict): Constructs the model and computes loss for image classification.
     
     Construct Method Parameters:
-        - pixel_values (Optional[mindspore.Tensor]): Tensor containing pixel values of images
-        - labels (Optional[mindspore.Tensor]): Tensor containing labels for computing classification/regression loss
-        - output_hidden_states (Optional[bool]): Flag to indicate whether to output hidden states
-        - return_dict (Optional[bool]): Flag to indicate whether to return output as a dictionary
+        pixel_values (Optional[mindspore.Tensor]): Tensor containing pixel values of images
+        labels (Optional[mindspore.Tensor]): Tensor containing labels for computing classification/regression loss
+        output_hidden_states (Optional[bool]): Flag to indicate whether to output hidden states
+        return_dict (Optional[bool]): Flag to indicate whether to return output as a dictionary
     
     Returns:
-        - Union[Tuple, ImageClassifierOutputWithNoAttention]: Tuple containing loss and output if return_dict is False. 
+        Union[Tuple, ImageClassifierOutputWithNoAttention]: Tuple containing loss and output if return_dict is False.
           Otherwise, returns an ImageClassifierOutputWithNoAttention instance.
     
     Notes:
@@ -1400,9 +1397,9 @@ class CvtForImageClassification(CvtPreTrainedModel):
         Args:
             self: The object itself.
             config: An instance of the class Config containing the configuration settings.
-                - Type: object
-                - Purpose: Stores the configuration settings for the model.
-                - Restrictions: Must be a valid instance of the Config class.
+                >   - Type: object
+                >   - Purpose: Stores the configuration settings for the model.
+                >   - Restrictions: Must be a valid instance of the Config class.
         
         Returns:
             None
@@ -1431,10 +1428,10 @@ class CvtForImageClassification(CvtPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, ImageClassifierOutputWithNoAttention]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        >    labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         outputs = self.cvt(

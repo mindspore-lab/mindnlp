@@ -255,7 +255,7 @@ def load_dataset(
         - if `split` is not `None`: the dataset requested,
         - if `split` is `None`, a [`Dict`] with each split.
 
-    Example:
+    Examples:
 
     Load a dataset from the Hugging Face Hub:
 

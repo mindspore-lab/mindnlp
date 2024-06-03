@@ -124,16 +124,16 @@ class BatchFeature(UserDict):
         Method: __getstate__
         
         Description:
-        This method is used to retrieve the state of an instance of the 'BatchFeature' class. It returns a dictionary containing the 'data' attribute of the instance.
+            This method is used to retrieve the state of an instance of the 'BatchFeature' class. It returns a dictionary containing the 'data' attribute of the instance.
         
         Args:
-        - self: Represents the instance of the 'BatchFeature' class. It is automatically passed as the first argument when the method is called.
+            self: Represents the instance of the 'BatchFeature' class. It is automatically passed as the first argument when the method is called.
         
         Returns:
-        - None: This method does not explicitly return a value. However, it implicitly returns a dictionary containing the 'data' attribute of the instance.
+            None: This method does not explicitly return a value. However, it implicitly returns a dictionary containing the 'data' attribute of the instance.
         
         Raises:
-        - None: This method does not raise any exceptions.
+            None: This method does not raise any exceptions.
         
         """
         return {"data": self.data}
@@ -153,7 +153,7 @@ class BatchFeature(UserDict):
             None.
         
         This method is automatically called by the pickle module when unpickling a BatchFeature object. It sets the state of the object based on the provided 'state' dictionary. The 'data' key in the 'state'
-dictionary is used to set the 'data' attribute of the BatchFeature object.
+        dictionary is used to set the 'data' attribute of the BatchFeature object.
         """
         if "data" in state:
             self.data = state["data"]
@@ -164,16 +164,16 @@ dictionary is used to set the 'data' attribute of the BatchFeature object.
         Method: keys
         
         Description:
-        This method returns a list of all the keys in the BatchFeature's data dictionary.
+            This method returns a list of all the keys in the BatchFeature's data dictionary.
         
         Args:
-        - self: (object) The instance of the BatchFeature class.
+            self: (object) The instance of the BatchFeature class.
         
         Returns:
-        - None: This method does not return any value, as it directly operates on the instance's data.
+            None: This method does not return any value, as it directly operates on the instance's data.
         
         Raises:
-        - No specific exceptions are documented to be raised by this method.
+            No specific exceptions are documented to be raised by this method.
         '''
         return self.data.keys()
 
@@ -214,7 +214,7 @@ dictionary is used to set the 'data' attribute of the BatchFeature object.
     def _get_is_as_tensor_fns(self, tensor_type: Optional[Union[str, TensorType]] = None):
         """
         This method '_get_is_as_tensor_fns' in the class 'BatchFeature' is responsible for returning functions for checking if a given input is a tensor and converting values to tensors based on the specified
-tensor type.
+        tensor type.
         
         Args:
             self: An instance of the class BatchFeature.
@@ -222,11 +222,11 @@ tensor type.
         
         Returns:
             A tuple containing two functions:
-            - is_tensor: A function that checks whether a given value is a tensor.
-            - as_tensor: A function that converts a given value to a tensor based on the specified tensor_type.
+            >- is_tensor: A function that checks whether a given value is a tensor.
+            >- as_tensor: A function that converts a given value to a tensor based on the specified tensor_type.
         
         Raises:
-            - ImportError: If the tensor_type is set to MindSpore but MindSpore is not installed.
+            ImportError: If the tensor_type is set to MindSpore but MindSpore is not installed.
         """
         if tensor_type is None:
             return None, None
@@ -370,13 +370,13 @@ class FeatureExtractionMixin():
             pretrained_model_name_or_path (`str` or `os.PathLike`):
                 This can be either:
 
-                - a string, the *model id* of a pretrained feature_extractor hosted inside a model repo on
+                >- a string, the *model id* of a pretrained feature_extractor hosted inside a model repo on
                   hf-mirror.com. Valid model ids can be located at the root-level, like `bert-base-uncased`, or
                   namespaced under a user or organization name, like `dbmdz/bert-base-german-cased`.
-                - a path to a *directory* containing a feature extractor file saved using the
+                >- a path to a *directory* containing a feature extractor file saved using the
                   [`~feature_extraction_utils.FeatureExtractionMixin.save_pretrained`] method, e.g.,
                   `./my_model_directory/`.
-                - a path or url to a saved feature extractor JSON *file*, e.g.,
+                >- a path or url to a saved feature extractor JSON *file*, e.g.,
                   `./my_model_directory/preprocessor_config.json`.
             cache_dir (`str` or `os.PathLike`, *optional*):
                 Path to a directory in which a downloaded pretrained model feature extractor should be cached if the
@@ -398,7 +398,6 @@ class FeatureExtractionMixin():
                 git-based system for storing models and other artifacts on hf-mirror.com, so `revision` can be any
                 identifier allowed by git.
 
-
                 <Tip>
 
                 To test a pull request you made on the Hub, you can pass `revision="refs/pr/<pr_number>".
@@ -418,28 +417,28 @@ class FeatureExtractionMixin():
         Returns:
             A feature extractor of type [`~feature_extraction_utils.FeatureExtractionMixin`].
 
-        Examples:
-
-        ```python
-        # We can't instantiate directly the base class *FeatureExtractionMixin* nor *SequenceFeatureExtractor* so let's show the examples on a
-        # derived class: *Wav2Vec2FeatureExtractor*
-        feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
-            "facebook/wav2vec2-base-960h"
-        )  # Download feature_extraction_config from hf-mirror.com and cache.
-        feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
-            "./test/saved_model/"
-        )  # E.g. feature_extractor (or model) was saved using *save_pretrained('./test/saved_model/')*
-        feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained("./test/saved_model/preprocessor_config.json")
-        feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
-            "facebook/wav2vec2-base-960h", return_attention_mask=False, foo=False
-        )
-        assert feature_extractor.return_attention_mask is False
-        feature_extractor, unused_kwargs = Wav2Vec2FeatureExtractor.from_pretrained(
-            "facebook/wav2vec2-base-960h", return_attention_mask=False, foo=False, return_unused_kwargs=True
-        )
-        assert feature_extractor.return_attention_mask is False
-        assert unused_kwargs == {"foo": False}
-        ```"""
+        Example:
+            ```python
+            # We can't instantiate directly the base class *FeatureExtractionMixin* nor *SequenceFeatureExtractor* so let's show the examples on a
+            # derived class: *Wav2Vec2FeatureExtractor*
+            feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
+                "facebook/wav2vec2-base-960h"
+            )  # Download feature_extraction_config from hf-mirror.com and cache.
+            feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
+                "./test/saved_model/"
+            )  # E.g. feature_extractor (or model) was saved using *save_pretrained('./test/saved_model/')*
+            feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained("./test/saved_model/preprocessor_config.json")
+            feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
+                "facebook/wav2vec2-base-960h", return_attention_mask=False, foo=False
+            )
+            assert feature_extractor.return_attention_mask is False
+            feature_extractor, unused_kwargs = Wav2Vec2FeatureExtractor.from_pretrained(
+                "facebook/wav2vec2-base-960h", return_attention_mask=False, foo=False, return_unused_kwargs=True
+            )
+            assert feature_extractor.return_attention_mask is False
+            assert unused_kwargs == {"foo": False}
+            ```
+        """
         kwargs["cache_dir"] = cache_dir
         kwargs["force_download"] = force_download
         kwargs["local_files_only"] = local_files_only

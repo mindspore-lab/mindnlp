@@ -90,19 +90,19 @@ class CodeGenConfig(PretrainedConfig):
             model has a output word embedding layer.
 
     Example:
+        ```python
+        >>> from transformers import CodeGenConfig, CodeGenModel
 
-    ```python
-    >>> from transformers import CodeGenConfig, CodeGenModel
+        >>> # Initializing a CodeGen 6B configuration
+        >>> configuration = CodeGenConfig()
 
-    >>> # Initializing a CodeGen 6B configuration
-    >>> configuration = CodeGenConfig()
+        >>> # Initializing a model (with random weights) from the configuration
+        >>> model = CodeGenModel(configuration)
 
-    >>> # Initializing a model (with random weights) from the configuration
-    >>> model = CodeGenModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "codegen"
     attribute_map = {
         "max_position_embeddings": "n_positions",

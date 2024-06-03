@@ -81,17 +81,14 @@ class BigBirdTokenizer(PreTrainedTokenizer):
             Will be passed to the `SentencePieceProcessor.__init__()` method. The [Python wrapper for
             SentencePiece](https://github.com/google/sentencepiece/tree/master/python) can be used, among other things,
             to set:
-
-            - `enable_sampling`: Enable subword regularization.
-            - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
-
-              - `nbest_size = {0,1}`: No sampling is performed.
-              - `nbest_size > 1`: samples from the nbest_size results.
-              - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
-                using forward-filtering-and-backward-sampling algorithm.
-
-            - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
-              BPE-dropout.
+            >   - `enable_sampling`: Enable subword regularization.
+            >   - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
+            >       - `nbest_size = {0,1}`: No sampling is performed.
+            >       - `nbest_size > 1`: samples from the nbest_size results.
+            >       - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
+                        using forward-filtering-and-backward-sampling algorithm.
+            >   - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
+                    BPE-dropout.
     """
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
@@ -228,7 +225,7 @@ class BigBirdTokenizer(PreTrainedTokenizer):
     def __getstate__(self):
         """
         The '__getstate__' method in the 'BigBirdTokenizer' class is used to retrieve the current state of the object for serialization. This method takes one parameter, 'self', which refers to the instance of
-the 'BigBirdTokenizer' class.
+        the 'BigBirdTokenizer' class.
         
         Args:
             self (BigBirdTokenizer): The instance of the 'BigBirdTokenizer' class.
@@ -415,8 +412,8 @@ the 'BigBirdTokenizer' class.
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A Big Bird sequence has the following format:
 
-        - single sequence: `[CLS] X [SEP]`
-        - pair of sequences: `[CLS] A [SEP] B [SEP]`
+        >   - single sequence: `[CLS] X [SEP]`
+        >   - pair of sequences: `[CLS] A [SEP] B [SEP]`
 
         Args:
             token_ids_0 (`List[int]`):

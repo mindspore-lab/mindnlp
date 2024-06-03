@@ -59,16 +59,16 @@ class InvalidScoreLogitsProcessor(LogitsProcessor):
         Args:
             self: An instance of the 'InvalidScoreLogitsProcessor' class.
             input_ids (mindspore.Tensor): A tensor representing the input IDs.
-                - Shape: Arbitrary.
-                - Data Type: mindspore.Tensor.
+                >   - Shape: Arbitrary.
+                >   - Data Type: mindspore.Tensor.
             scores (mindspore.Tensor): A tensor representing the scores.
-                - Shape: Arbitrary.
-                - Data Type: mindspore.Tensor.
+                >   - Shape: Arbitrary.
+                >   - Data Type: mindspore.Tensor.
         
         Returns:
             mindspore.Tensor: A tensor containing the processed scores.
-                - Shape: Same as the 'scores' tensor.
-                - Data Type: mindspore.Tensor.
+                >   - Shape: Same as the 'scores' tensor.
+                >   - Data Type: mindspore.Tensor.
         
         Raises:
             None.
@@ -92,13 +92,13 @@ class PrefixEncoder(nn.Cell):
         Args:
             self (PrefixEncoder): The instance of the PrefixEncoder class.
             config: A configuration object containing parameters for the PrefixEncoder.
-                - Type: Custom configuration object.
-                - Purpose: To configure the PrefixEncoder with specific settings.
-                - Restrictions: Must contain the following attributes:
-                    - prefix_projection: A boolean indicating whether prefix projection should be used.
-                    - pre_seq_len: An integer representing the length of the input sequence.
-                    - hidden_size: An integer specifying the size of the hidden layers.
-                    - num_layers: An integer indicating the number of layers in the model.
+                >   - Type: Custom configuration object.
+                >   - Purpose: To configure the PrefixEncoder with specific settings.
+                >   - Restrictions: Must contain the following attributes:
+                >       - prefix_projection: A boolean indicating whether prefix projection should be used.
+                >       - pre_seq_len: An integer representing the length of the input sequence.
+                >       - hidden_size: An integer specifying the size of the hidden layers.
+                >       - num_layers: An integer indicating the number of layers in the model.
         
         Returns:
             None: This method does not return any value.
@@ -170,34 +170,35 @@ class RotaryEmbedding(nn.Cell):
     This class represents a rotary embedding layer that can be used in neural network models. It inherits from the nn.Cell class.
     
     The RotaryEmbedding layer is designed to provide rotational positional encoding for input sequences. It utilizes sinusoidal functions to generate embeddings that capture the relative positions of elements
-in a sequence.
+    in a sequence.
     
     Initialization:
-        - dim (int): The dimensionality of the input sequence.
-        - base (int, optional): The base value used in the positional encoding formula. Default is 10000.
-        - precision (mindspore.dtype, optional): The precision of the embeddings. Default is mindspore.float16.
-        - learnable (bool, optional): Flag indicating whether the positional embeddings should be learnable. Default is False.
+        >   - dim (int): The dimensionality of the input sequence.
+        >   - base (int, optional): The base value used in the positional encoding formula. Default is 10000.
+        >   - precision (mindspore.dtype, optional): The precision of the embeddings. Default is mindspore.float16.
+        >   - learnable (bool, optional): Flag indicating whether the positional embeddings should be learnable. Default is False.
     
     Methods:
-        - construct(x, seq_dim=1, seq_len=None):
+        construct(x, seq_dim=1, seq_len=None):
             Constructs the positional embeddings for the input sequence 'x'.
-            Args:
-                - x (Tensor): The input sequence tensor.
-                - seq_dim (int, optional): The sequence dimension index in the input tensor. Default is 1.
-                - seq_len (int, optional): The length of the sequence. If not provided, it will be inferred from the input tensor.
+            >   - Args:
+                >   - x (Tensor): The input sequence tensor.
+                >   - seq_dim (int, optional): The sequence dimension index in the input tensor. Default is 1.
+                >   - seq_len (int, optional): The length of the sequence. If not provided, it will be inferred from the input tensor.
     
-        - _apply(fn):
+        _apply(fn):
             Applies the provided function 'fn' to the cached cosine and sine embeddings.
     
     Attributes:
-        - inv_freq (Tensor or Parameter): The inverse frequency tensor or parameter used in the positional encoding formula.
-        - learnable (bool): Flag indicating whether the positional embeddings are learnable.
-        - max_seq_len_cached (int or None): The maximum sequence length for which the embeddings are cached.
-        - cos_cached (Tensor or None): The cached cosine embeddings.
-        - sin_cached (Tensor or None): The cached sine embeddings.
-        - precision (mindspore.dtype): The precision of the embeddings.
+        inv_freq (Tensor or Parameter): The inverse frequency tensor or parameter used in the positional encoding formula.
+        learnable (bool): Flag indicating whether the positional embeddings are learnable.
+        max_seq_len_cached (int or None): The maximum sequence length for which the embeddings are cached.
+        cos_cached (Tensor or None): The cached cosine embeddings.
+        sin_cached (Tensor or None): The cached sine embeddings.
+        precision (mindspore.dtype): The precision of the embeddings.
     
-    Note: The RotaryEmbedding layer caches the positional embeddings for efficiency. If the sequence length changes during training, the embeddings will be recomputed and cached accordingly.
+    Note:
+        The RotaryEmbedding layer caches the positional embeddings for efficiency. If the sequence length changes during training, the embeddings will be recomputed and cached accordingly.
     """
     def __init__(self, dim, base=10000, precision=mindspore.float16, learnable=False):
         """
@@ -469,17 +470,18 @@ class SelfAttention(nn.Cell):
     Represents a self-attention mechanism within a neural network cell for processing sequential data. This class inherits from the nn.Cell class.
     
     The self-attention mechanism is responsible for computing attention scores between elements in the input sequence and using them to produce weighted context representations. This allows the model to focus
-on different parts of the input sequence depending on their relevance to the current task.
+    on different parts of the input sequence depending on their relevance to the current task.
     
     The SelfAttention class includes methods for splitting tensors, applying attention masks, and constructing the self-attention mechanism. It also encapsulates the initialization of the self-attention layer,
-including the configuration of attention heads and hidden layer sizes.
+    including the configuration of attention heads and hidden layer sizes.
     
     The class provides functionality for handling positional encodings, including 2D positional encoding, and includes a method for applying rotary embeddings to the query and key layers based on the
-positional information.
+    positional information.
     
     When instantiated, the SelfAttention class can be used to process input tensors with the self-attention mechanism, optionally using caching and outputting attention probabilities.
     
-    Note: This docstring is a detailed summary based on the provided code, and it does not include signatures or any other code.
+    Note:
+        This docstring is a detailed summary based on the provided code, and it does not include signatures or any other code.
     """
     def __init__(self, hidden_size, num_attention_heads,
                  layer_id, hidden_size_per_attention_head=None, bias=True,
@@ -498,7 +500,7 @@ positional information.
             position_encoding_2d (bool): Whether to use 2D position encoding.
         
         Returns:
-            None. This method initializes the SelfAttention object.
+            None: This method initializes the SelfAttention object.
         
         Raises:
             None.
@@ -569,8 +571,7 @@ positional information.
         Arguments:
             tensor: input tensor.
             num_partitions: number of partitions to split the tensor
-            contiguous_split_chunks: If True, make each chunk contiguous
-                                    in memory.
+            contiguous_split_chunks: If True, make each chunk contiguous in memory.
         """
         # Get the size and dimension.
         last_dim = tensor.ndim - 1
@@ -660,10 +661,12 @@ class GEGLU(nn.Cell):
             __init__: Initializes the GEGLU instance.
             construct: Constructs the GEGLU network.
     
-        Examples:
+        Example:
+            ```python
             >>> gelu = GEGLU()
             >>> x = Tensor([1, 2, 3, 4, 5, 6])
             >>> output = gelu.construct(x)
+            ```
         """
     def __init__(self):
         """
@@ -698,19 +701,19 @@ class GEGLU(nn.Cell):
             ValueError: If the input tensor `x` does not have at least two dimensions.
         
         Description:
-        This method applies the GEGLU transformation to the input tensor `x`. The GEGLU transformation is performed in two steps:
-        1. The input tensor `x` is split into two parts along the last dimension using the `chunk` function.
-        2. The first part `x1` is multiplied element-wise with the exponential of the second part `x2` after applying the activation function `self.activation_fn`.
+            This method applies the GEGLU transformation to the input tensor `x`. The GEGLU transformation is performed in two steps:
+            >   1. The input tensor `x` is split into two parts along the last dimension using the `chunk` function.
+            >   2. The first part `x1` is multiplied element-wise with the exponential of the second part `x2` after applying the activation function `self.activation_fn`.
         
         Note:
-        The activation function `self.activation_fn` is assumed to be already defined within the GEGLU class.
+            The activation function `self.activation_fn` is assumed to be already defined within the GEGLU class.
         
         Example:
-        
-        geglu_instance = GEGLU()
-        input_tensor = torch.tensor([[1, 2, 3], [4, 5, 6]])
-        geglu_instance.construct(input_tensor)
-        
+            ```python
+            geglu_instance = GEGLU()
+            input_tensor = torch.tensor([[1, 2, 3], [4, 5, 6]])
+            geglu_instance.construct(input_tensor)
+            ```
         This will apply the GEGLU transformation to the input tensor `input_tensor` and return `None`.
         
         """
@@ -727,18 +730,18 @@ class GLU(nn.Cell):
     This class represents a Gated Linear Unit (GLU) neural network layer. It inherits from the nn.Cell class.
     
     Attributes:
-        - layer_id (int): The identifier for the layer.
-        - activation_func (function): The activation function used in the layer.
-        - hidden_size (int): The size of the hidden states.
-        - inner_hidden_size (int): The size of the intermediate hidden states. Defaults to 4 times the hidden size.
-        - dense_h_to_4h (nn.Dense): The linear transformation from hidden states to intermediate hidden states.
-        - dense_4h_to_h (nn.Dense): The linear transformation from intermediate hidden states to hidden states.
+        layer_id (int): The identifier for the layer.
+        activation_func (function): The activation function used in the layer.
+        hidden_size (int): The size of the hidden states.
+        inner_hidden_size (int): The size of the intermediate hidden states. Defaults to 4 times the hidden size.
+        dense_h_to_4h (nn.Dense): The linear transformation from hidden states to intermediate hidden states.
+        dense_4h_to_h (nn.Dense): The linear transformation from intermediate hidden states to hidden states.
     
     Methods:
-        - __init__(self, hidden_size, inner_hidden_size=None, layer_id=None, bias=True, activation_func=gelu, params_dtype=mindspore.float32):
+        __init__(self, hidden_size, inner_hidden_size=None, layer_id=None, bias=True, activation_func=gelu, params_dtype=mindspore.float32):
             Initializes a GLU instance.
             
-        - construct(self, hidden_states):
+        construct(self, hidden_states):
             Constructs the forward pass of the GLU layer.
     
     """
@@ -806,7 +809,7 @@ class GLMBlock(nn.Cell):
     This class inherits from the nn.Cell class and contains the necessary methods and attributes to perform self-attention and MLP operations within a GLM model.
     
     The GLMBlock class has an initialization method (__init__) that sets up the necessary layers and parameters for self-attention and MLP processing. It also has a construct method that processes the input
-hidden states through self-attention and MLP layers.
+    hidden states through self-attention and MLP layers.
     
     The GLMBlock class is designed to be used as part of a larger GLM model to process input sequences and generate output predictions.
     
@@ -830,23 +833,23 @@ hidden states through self-attention and MLP layers.
         Initializes a GLMBlock with the specified parameters.
         
         Args:
-        - hidden_size (int): The size of the hidden layers.
-        - num_attention_heads (int): The number of attention heads to use.
-        - layernorm_epsilon (float): The epsilon value for layer normalization.
-        - layer_id (int): The ID of the layer.
-        - inner_hidden_size (int, optional): The size of the inner hidden layers. Defaults to None.
-        - hidden_size_per_attention_head (int, optional): The size of hidden layers per attention head. Defaults to None.
-        - layernorm (class): The layer normalization class to use. Defaults to nn.LayerNorm.
-        - use_bias (bool): Flag indicating whether to use bias in the model.
-        - params_dtype (dtype): The data type for the parameters. Defaults to mindspore.float32.
-        - num_layers (int): The total number of layers.
-        - position_encoding_2d (bool): Flag indicating whether to use 2D position encoding.
+            hidden_size (int): The size of the hidden layers.
+            num_attention_heads (int): The number of attention heads to use.
+            layernorm_epsilon (float): The epsilon value for layer normalization.
+            layer_id (int): The ID of the layer.
+            inner_hidden_size (int, optional): The size of the inner hidden layers. Defaults to None.
+            hidden_size_per_attention_head (int, optional): The size of hidden layers per attention head. Defaults to None.
+            layernorm (class): The layer normalization class to use. Defaults to nn.LayerNorm.
+            use_bias (bool): Flag indicating whether to use bias in the model.
+            params_dtype (dtype): The data type for the parameters. Defaults to mindspore.float32.
+            num_layers (int): The total number of layers.
+            position_encoding_2d (bool): Flag indicating whether to use 2D position encoding.
         
         Returns:
-        None. This method initializes the GLMBlock object with the specified parameters.
+            None. This method initializes the GLMBlock object with the specified parameters.
         
         Raises:
-        - None
+            None
         """
         super().__init__()
         # Set output layer initialization if not provided.
@@ -957,7 +960,7 @@ class ChatGLMPreTrainedModel(PreTrainedModel):
         Args:
             self: A reference to the instance of the class.
             input_ids: A tensor representing the input sequence of token IDs. It has a shape of (batch_size, seq_length) where batch_size is the number of input sequences and seq_length is the length of each
-sequence.
+                sequence.
         
         Returns:
             None: This method returns None.
@@ -978,19 +981,19 @@ sequence.
 
     def get_position_ids(self, input_ids, mask_positions, use_gmasks=None):
         '''
-            This method calculates the position ids for the given input sequence.
-        
-            Args:
-                self (ChatGLMPreTrainedModel): An instance of the ChatGLMPreTrainedModel class.
-                input_ids (mindspore.Tensor): A 2D tensor of shape (batch_size, seq_length) containing input sequence ids.
-                mask_positions (mindspore.Tensor): A 1D tensor of shape (batch_size,) containing mask positions.
-                use_gmasks (List[bool], optional): A list of length batch_size indicating whether to use global masks for each input sequence. Defaults to None.
-        
-            Returns:
-                position_ids (mindspore.Tensor): A 2D tensor of shape (batch_size, seq_length) containing the position ids.
-        
-            Raises:
-                None
+        This method calculates the position ids for the given input sequence.
+
+        Args:
+            self (ChatGLMPreTrainedModel): An instance of the ChatGLMPreTrainedModel class.
+            input_ids (mindspore.Tensor): A 2D tensor of shape (batch_size, seq_length) containing input sequence ids.
+            mask_positions (mindspore.Tensor): A 1D tensor of shape (batch_size,) containing mask positions.
+            use_gmasks (List[bool], optional): A list of length batch_size indicating whether to use global masks for each input sequence. Defaults to None.
+
+        Returns:
+            position_ids (mindspore.Tensor): A 2D tensor of shape (batch_size, seq_length) containing the position ids.
+
+        Raises:
+            None
         '''
         batch_size, seq_length = input_ids.shape
         if use_gmasks is None:
@@ -1037,16 +1040,16 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
         Args:
             self: The instance of the ChatGLMModel class.
             config (ChatGLMConfig): An object containing configuration parameters for the model.
-                - max_sequence_length (int): The maximum length of input sequences.
-                - hidden_size (int): The size of the hidden layer.
-                - num_attention_heads (int): The number of attention heads.
-                - vocab_size (int): The size of the vocabulary.
-                - num_layers (int): The number of layers in the model.
-                - layernorm_epsilon (float): The epsilon value for layer normalization.
-                - inner_hidden_size (int): The size of the inner hidden layer.
-                - position_encoding_2d (bool): Flag indicating whether to use 2D position encoding.
-                - pre_seq_len (int): The length of the prefix sequence.
-                - prefix_projection (bool): Flag indicating whether to project the prefix or not.
+                >   - max_sequence_length (int): The maximum length of input sequences.
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - num_attention_heads (int): The number of attention heads.
+                >   - vocab_size (int): The size of the vocabulary.
+                >   - num_layers (int): The number of layers in the model.
+                >   - layernorm_epsilon (float): The epsilon value for layer normalization.
+                >   - inner_hidden_size (int): The size of the inner hidden layer.
+                >   - position_encoding_2d (bool): Flag indicating whether to use 2D position encoding.
+                >   - pre_seq_len (int): The length of the prefix sequence.
+                >   - prefix_projection (bool): Flag indicating whether to project the prefix or not.
         
         Returns:
             None. The method initializes the attributes and layers of the ChatGLMModel object.
@@ -1122,16 +1125,18 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
             None
         
         This method retrieves the word embeddings used for the input data in the ChatGLMModel. The word embeddings are a numerical representation of words that capture semantic meaning. The embeddings are
-trained on a large corpus of text data to capture relationships between words.
+        trained on a large corpus of text data to capture relationships between words.
         
         Note that this method does not modify the input embeddings. It simply returns the existing word embeddings that have been set for the model.
         
         Example usage:
+            ```python
             model = ChatGLMModel()
             input_embeddings = model.get_input_embeddings()
         
             # Perform operations on input_embeddings
             ...
+            ```
         """
         return self.word_embeddings
 
@@ -1325,23 +1330,23 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
     This class represents a ChatGLM model for conditional generation, inheriting from ChatGLMPreTrainedModel. 
     
     The class includes methods for initializing the model, updating model keyword arguments for generation, preparing inputs for generation, constructing the model, reordering cache for beam search or beam
-sample, processing model responses, and facilitating chat interactions. It also provides methods for streaming chat and generation.
+    sample, processing model responses, and facilitating chat interactions. It also provides methods for streaming chat and generation.
     
     The model allows for quantization with a specified number of bits.
     
     Methods:
-    - __init__: Initializes the model with a ChatGLMConfig.
-    - get_output_embeddings: Returns the output embeddings.
-    - set_output_embeddings: Sets new output embeddings.
-    - _update_model_kwargs_for_generation: Updates model keyword arguments for generation.
-    - prepare_inputs_for_generation: Prepares inputs for model generation.
-    - construct: Constructs the model for generation and computes the loss if labels are provided.
-    - _reorder_cache: Reorders the past_key_values cache for beam search or beam sample.
-    - process_response: Processes the model response by replacing tokens and punctuations.
-    - chat: Conducts a chat interaction based on the query and history.
-    - stream_chat: Conducts a streaming chat interaction for continuous conversations.
-    - stream_generate: Generates text in a streaming fashion based on input ids and generation configuration.
-    - quantize: Quantizes the model with a specified number of bits.
+        __init__: Initializes the model with a ChatGLMConfig.
+        get_output_embeddings: Returns the output embeddings.
+        set_output_embeddings: Sets new output embeddings.
+        _update_model_kwargs_for_generation: Updates model keyword arguments for generation.
+        prepare_inputs_for_generation: Prepares inputs for model generation.
+        construct: Constructs the model for generation and computes the loss if labels are provided.
+        _reorder_cache: Reorders the past_key_values cache for beam search or beam sample.
+        process_response: Processes the model response by replacing tokens and punctuations.
+        chat: Conducts a chat interaction based on the query and history.
+        stream_chat: Conducts a streaming chat interaction for continuous conversations.
+        stream_generate: Generates text in a streaming fashion based on input ids and generation configuration.
+        quantize: Quantizes the model with a specified number of bits.
     
     For a detailed understanding of the class functionality and methods, refer to the specific method descriptions.
     """
@@ -1682,27 +1687,27 @@ sample, processing model responses, and facilitating chat interactions. It also 
              do_sample=True, top_p=0.7, temperature=0.95, logits_processor=None, **kwargs):
         """
         This method 'chat' is defined in the class 'ChatGLMForConditionalGeneration' and is used for generating a response to a given query using a conditional generation model. It takes the following
-parameters:
+        parameters:
         
         Args:
-        - self: The instance of the class.
-        - tokenizer: An instance of a tokenizer that will be used to encode the prompt and decode the generated response.
-        - query (str): The input query for which a response needs to be generated.
-        - history (List[Tuple[str, str]], optional): A list of tuples containing the previous queries and their corresponding responses. Defaults to None.
-        - max_length (int, optional): The maximum length of the generated response. Defaults to 2048.
-        - num_beams (int, optional): Number of beams for beam search. Defaults to 1.
-        - do_sample (bool, optional): Flag indicating whether to use sampling for generating the response. Defaults to True.
-        - top_p (float, optional): The nucleus sampling top probability. Defaults to 0.7.
-        - temperature (float, optional): The temperature parameter for sampling. Defaults to 0.95.
-        - logits_processor (object, optional): An object for processing the logits. Defaults to None.
-        - **kwargs: Additional keyword arguments for model generation.
+            self: The instance of the class.
+            tokenizer: An instance of a tokenizer that will be used to encode the prompt and decode the generated response.
+            query (str): The input query for which a response needs to be generated.
+            history (List[Tuple[str, str]], optional): A list of tuples containing the previous queries and their corresponding responses. Defaults to None.
+            max_length (int, optional): The maximum length of the generated response. Defaults to 2048.
+            num_beams (int, optional): Number of beams for beam search. Defaults to 1.
+            do_sample (bool, optional): Flag indicating whether to use sampling for generating the response. Defaults to True.
+            top_p (float, optional): The nucleus sampling top probability. Defaults to 0.7.
+            temperature (float, optional): The temperature parameter for sampling. Defaults to 0.95.
+            logits_processor (object, optional): An object for processing the logits. Defaults to None.
+            **kwargs: Additional keyword arguments for model generation.
         
         Returns:
-        - None: This method does not have a specific return value, but it generates a response to the input query and updates the history of queries and responses.
+            None: This method does not have a specific return value, but it generates a response to the input query and updates the history of queries and responses.
         
         Raises:
-        - None: This method does not explicitly raise any exceptions. However, the behavior of the method may be influenced by exceptions raised by the tokenizer or the conditional generation model used within
-the method.
+            None: This method does not explicitly raise any exceptions. However, the behavior of the method may be influenced by exceptions raised by the tokenizer or the conditional generation model used within
+                the method.
         """
         if history is None:
             history = []

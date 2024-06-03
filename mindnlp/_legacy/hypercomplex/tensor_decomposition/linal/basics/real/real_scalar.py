@@ -153,7 +153,7 @@ the division.
         
         Note that both self and that must be instances of the Scalar class. If either of them is not, a TypeError is raised.
         
-        Example:
+        Examples:
             s1 = Scalar(10)
             s2 = Scalar(2)
             result = s1.__truediv__(s2)
@@ -223,7 +223,7 @@ the division.
         Raises:
             None.
         
-        Example:
+        Examples:
             >>> s = Scalar(3.14)
             >>> s.as_array()
             array([3.14])

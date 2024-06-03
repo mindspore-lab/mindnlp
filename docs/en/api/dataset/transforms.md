@@ -116,7 +116,7 @@ Raises:
 
 
 
-Example:
+Examples:
 
 ```python
 import mindspore.dataset as ds
@@ -201,7 +201,7 @@ Raises:
 
 
 
-Example:
+Examples:
 
 ```python
 import numpy as np
@@ -257,7 +257,7 @@ Raises:
     - cut_all(bool,optional):When the cut_all is True, the full-mode word segmentation is used, and all possible words in the sentence are segmented, which may produce more word segmentation results, which are suitable for lexical division in some specific scenarios, but may produce redundant results.
     - HMM(bool,optional):HMM stands for Hidden Markov Model. When HMM is True, Stuttering Segmentation enables the HMM model to recognize new words, such as unlogged words. This can improve the accuracy of word segmentation, especially for some obscure or new words.
 
-    Example:
+    Examples:
 
     ```python
     from mindnlp.dataset.transforms import JiebaTokenizer

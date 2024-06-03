@@ -157,26 +157,25 @@ class Qwen2MoeRMSNorm(nn.Cell):
     Qwen2MoeRMSNorm is a custom normalization layer that is equivalent to T5LayerNorm. It inherits from the nn.Cell class.
     
     This normalization layer performs root mean square normalization (RMSNorm) on the input hidden states. It is commonly used in neural network architectures, such as T5 models, to improve the training
-efficiency and convergence.
+    efficiency and convergence.
     
     Parameters:
-        - hidden_size (int): The size of the hidden states.
-        - eps (float, optional): A small value added to the variance for numerical stability. Defaults to 1e-06.
+        hidden_size (int): The size of the hidden states.
+        eps (float, optional): A small value added to the variance for numerical stability. Defaults to 1e-06.
     
     Methods:
-        - __init__(self, hidden_size, eps=1e-06):
+        __init__(self, hidden_size, eps=1e-06):
             Initializes a new instance of the Qwen2MoeRMSNorm class.
             
-        - construct(self, hidden_states):
+        construct(self, hidden_states):
             Applies RMSNorm normalization to the input hidden_states.
-            
-            Parameters:
-                - hidden_states (Tensor): The input hidden states to be normalized.
-            
-            Returns:
-                - Tensor: The normalized hidden states after applying RMSNorm.
+            >   - Parameters:
+            >       - hidden_states (Tensor): The input hidden states to be normalized.
+            >   - Returns:
+            >       - Tensor: The normalized hidden states after applying RMSNorm.
     
     Example usage:
+        ```python
         # Create a Qwen2MoeRMSNorm instance
         norm_layer = Qwen2MoeRMSNorm(hidden_size=512)
         
@@ -185,6 +184,7 @@ efficiency and convergence.
         normalized_tensor = norm_layer.construct(input_tensor)
         
         # The normalized_tensor now contains the input tensor after applying RMSNorm normalization.
+        ```
     """
     def __init__(self, hidden_size, eps=1e-6):
         """
@@ -216,9 +216,11 @@ efficiency and convergence.
             - The final result is the element-wise multiplication of the hidden_states tensor with the weight tensor, which is then casted back to the input_dtype.
         
         Example:
+            ```python
             >>> qwen = Qwen2MoeRMSNorm()
             >>> hidden_states = mindspore.Tensor(np.random.rand(2, 3, 4), dtype=mindspore.float16)
             >>> qwen.construct(hidden_states)
+            ```
         """
         input_dtype = hidden_states.dtype
         hidden_states = hidden_states.to(mindspore.float32)
@@ -234,24 +236,26 @@ class Qwen2MoeRotaryEmbedding(nn.Cell):
     This class represents a Qwen2MoeRotaryEmbedding, which is a rotary positional embedding used in natural language processing tasks. It is a subclass of the nn.Cell class.
     
     The Qwen2MoeRotaryEmbedding class initializes with the following parameters:
-    - dim (int): The dimension of the embedding.
-    - max_position_embeddings (int): The maximum number of position embeddings.
-    - base (int): The base used in the exponential calculation.
+    >   - dim (int): The dimension of the embedding.
+    >   - max_position_embeddings (int): The maximum number of position embeddings.
+    >   - base (int): The base used in the exponential calculation.
     
     The class provides the following methods:
     
-    __init__(self, dim, max_position_embeddings=2048, base=10000):
+    >  - __init__(self, dim, max_position_embeddings=2048, base=10000):
         Initializes the Qwen2MoeRotaryEmbedding instance.
         
-    _set_cos_sin_cache(self, seq_len, dtype):
+    >  - _set_cos_sin_cache(self, seq_len, dtype):
         Sets the cosine and sine cache for the given sequence length and data type.
         
-    construct(self, x, seq_len=None):
+    >  - construct(self, x, seq_len=None):
         Constructs the rotary embedding for the given input tensor and sequence length.
     
-    Note: The methods above are inherited from the nn.Cell class.
+    Note:
+        The methods above are inherited from the nn.Cell class.
     
     Example usage:
+        ```python
         # Create a Qwen2MoeRotaryEmbedding instance
         embedding = Qwen2MoeRotaryEmbedding(dim=512)
         
@@ -259,6 +263,7 @@ class Qwen2MoeRotaryEmbedding(nn.Cell):
         x = ...  # Input tensor
         seq_len = ...  # Sequence length
         cos_embedding, sin_embedding = embedding.construct(x, seq_len)
+        ```
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
         """
@@ -331,7 +336,7 @@ class Qwen2MoeRotaryEmbedding(nn.Cell):
             ValueError: If seq_len is greater than the maximum sequence length that is cached.
         
         This method constructs a rotary embedding for the input sequence. It first checks if the provided seq_len is greater than the maximum sequence length that is currently cached. If so, it updates the
-cosine and sine caches by calling the _set_cos_sin_cache method. The cached cosine and sine values are then returned for the specified sequence length.
+        cosine and sine caches by calling the _set_cos_sin_cache method. The cached cosine and sine values are then returned for the specified sequence length.
         
         Note that the returned cosine and sine tensors are converted to the same dtype as the input tensor x.
         """
@@ -649,7 +654,7 @@ class Qwen2MoeSparseMoeBlock(nn.Cell):
         shared_expert_gate (nn.Dense): The gate layer for the shared expert.
     
     Methods:
-        construct(hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+        construct:
             Constructs the MoE block by processing the given hidden states.
     
     """
@@ -753,37 +758,16 @@ class Qwen2MoeDecoderLayer(nn.Cell):
 
     """
     The `Qwen2MoeDecoderLayer` class represents a single layer of the Qwen2Moe decoder model. It is designed to be used in the Qwen2MoeDecoder model to process the input hidden states and generate output
-representations.
+    representations.
     
     This class inherits from the `nn.Cell` class.
     
     Attributes:
-        - hidden_size (int): The size of the hidden state.
-        - self_attn (Qwen2MoeAttention): The self-attention mechanism used in the layer.
-        - mlp (Union[Qwen2MoeSparseMoeBlock, Qwen2MoeMLP]): The multi-layer perceptron used in the layer.
-        - input_layernorm (Qwen2MoeRMSNorm): The layer normalization applied to the input hidden states.
-        - post_attention_layernorm (Qwen2MoeRMSNorm): The layer normalization applied after the attention mechanism.
-    
-    Methods:
-        - construct(hidden_states: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, 
-                    position_ids: Optional[mindspore.Tensor] = None, 
-                    past_key_value: Optional[Tuple[mindspore.Tensor]] = None, 
-                    output_attentions: Optional[bool] = False, output_router_logits: Optional[bool] = False, 
-                    use_cache: Optional[bool] = False) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
-            Constructs the layer by applying the necessary operations on the input hidden states.
-            Args:
-                - hidden_states (mindspore.Tensor): The input to the layer of shape `(batch, seq_len, embed_dim)`.
-                - attention_mask (mindspore.Tensor, optional): The attention mask of size `(batch, sequence_length)` 
-                  where padding elements are indicated by 0.
-                - position_ids (mindspore.Tensor, optional): The position IDs of the input hidden states.
-                - past_key_value (Tuple(mindspore.Tensor), optional): Cached past key and value projection states.
-                - output_attentions (bool, optional): Whether or not to return the attentions tensors of all attention layers.
-                - output_router_logits (bool, optional): Whether or not to return the logits of all the routers.
-                - use_cache (bool, optional): If set to `True`, `past_key_values` key value states are returned and can be used 
-                  to speed up decoding.
-            Returns:
-                - outputs (Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]]): The output of the 
-                  layer, which includes the processed hidden states and optional additional tensors.
+        hidden_size (int): The size of the hidden state.
+        self_attn (Qwen2MoeAttention): The self-attention mechanism used in the layer.
+        mlp (Union[Qwen2MoeSparseMoeBlock, Qwen2MoeMLP]): The multi-layer perceptron used in the layer.
+        input_layernorm (Qwen2MoeRMSNorm): The layer normalization applied to the input hidden states.
+        post_attention_layernorm (Qwen2MoeRMSNorm): The layer normalization applied after the attention mechanism.
         
     Note:
         - The `hidden_states` argument represents the input to the layer.
@@ -902,15 +886,15 @@ class Qwen2MoePreTrainedModel(PreTrainedModel):
     This class inherits from PreTrainedModel and contains methods for initializing weights for different types of cells such as Dense and Embedding. 
     
     Methods:
-    - _init_weights(self, cell): Initializes the weights for the given cell. If the cell is a Dense type, it initializes the weight using a normal distribution 
-      with a specified range and initializes the bias to zeros if present. If the cell is an Embedding type, it initializes the weight with random values 
-      within the specified range and handles padding if necessary.
-    
+        _init_weights: Initializes the weights for the given cell. If the cell is a Dense type, it initializes the weight using a normal distribution
+          with a specified range and initializes the bias to zeros if present. If the cell is an Embedding type, it initializes the weight with random values
+          within the specified range and handles padding if necessary.
+
     Parameters:
-    - cell: The cell for which weights need to be initialized. It can be a nn.Dense or nn.Embedding type.
+        cell: The cell for which weights need to be initialized. It can be a nn.Dense or nn.Embedding type.
     
     Returns:
-    This method does not return any value but updates the weights of the input cell based on the specified initialization logic.
+        This method does not return any value but updates the weights of the input cell based on the specified initialization logic.
     """
     config_class = Qwen2MoeConfig
     base_model_prefix = "model"
@@ -1172,27 +1156,27 @@ class Qwen2MoeForCausalLM(Qwen2MoePreTrainedModel):
 
     """
     This class represents a Qwen2Moe model for causal language modeling. It is used for generating text based on a given input. The model is initialized with a configuration and consists of a Qwen2MoeModel for
-encoding and a linear layer (lm_head) for decoding. It also includes methods for getting and setting the input and output embeddings, setting and getting the decoder, and generating text.
+    encoding and a linear layer (lm_head) for decoding. It also includes methods for getting and setting the input and output embeddings, setting and getting the decoder, and generating text.
     
     Attributes:
-    - `model` (Qwen2MoeModel): The Qwen2MoeModel used for encoding.
-    - `vocab_size` (int): The size of the vocabulary.
-    - `lm_head` (nn.Dense): The linear layer used for decoding.
-    - `router_aux_loss_coef` (float): The coefficient for the auxiliary loss.
-    - `num_experts` (int): The number of experts.
-    - `num_experts_per_tok` (int): The number of experts per token.
+        `model` (Qwen2MoeModel): The Qwen2MoeModel used for encoding.
+        `vocab_size` (int): The size of the vocabulary.
+        `lm_head` (nn.Dense): The linear layer used for decoding.
+        `router_aux_loss_coef` (float): The coefficient for the auxiliary loss.
+        `num_experts` (int): The number of experts.
+        `num_experts_per_tok` (int): The number of experts per token.
     
     Methods:
-    - `get_input_embeddings()`: Returns the input embeddings.
-    - `set_input_embeddings(value)`: Sets the input embeddings.
-    - `get_output_embeddings()`: Returns the output embeddings.
-    - `set_output_embeddings(new_embeddings)`: Sets the output embeddings.
-    - `set_decoder(decoder)`: Sets the decoder.
-    - `get_decoder()`: Returns the decoder.
-    - `construct(input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, output_router_logits, return_dict)`: Constructs the model
-with the given inputs and returns the output logits. Optionally computes the masked language modeling loss and the auxiliary loss.
-    - `prepare_inputs_for_generation(input_ids, past_key_values, attention_mask, inputs_embeds, **kwargs)`: Prepares the inputs for text generation, taking into account past key values and attention mask.
-    - `_reorder_cache(past_key_values, beam_idx)`: Reorders the cache based on the beam index.
+        `get_input_embeddings()`: Returns the input embeddings.
+        `set_input_embeddings(value)`: Sets the input embeddings.
+        `get_output_embeddings()`: Returns the output embeddings.
+        `set_output_embeddings(new_embeddings)`: Sets the output embeddings.
+        `set_decoder(decoder)`: Sets the decoder.
+        `get_decoder()`: Returns the decoder.
+        `construct(input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, output_router_logits, return_dict)`: Constructs the model
+            with the given inputs and returns the output logits. Optionally computes the masked language modeling loss and the auxiliary loss.
+        `prepare_inputs_for_generation(input_ids, past_key_values, attention_mask, inputs_embeds, **kwargs)`: Prepares the inputs for text generation, taking into account past key values and attention mask.
+        `_reorder_cache(past_key_values, beam_idx)`: Reorders the cache based on the beam index.
     """
     _tied_weights_keys = ["lm_head.weight"]
 
@@ -1203,11 +1187,11 @@ with the given inputs and returns the output logits. Optionally computes the mas
         Args:
             self (Qwen2MoeForCausalLM): The instance of the class.
             config (dict): A dictionary containing configuration parameters.
-                - vocab_size (int): The size of the vocabulary.
-                - hidden_size (int): The size of the hidden layer.
-                - router_aux_loss_coef (float): Coefficient for router auxiliary loss.
-                - num_experts (int): The total number of experts.
-                - num_experts_per_tok (int): Number of experts per token.
+                >   - vocab_size (int): The size of the vocabulary.
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - router_aux_loss_coef (float): Coefficient for router auxiliary loss.
+                >   - num_experts (int): The total number of experts.
+                >   - num_experts_per_tok (int): Number of experts per token.
         
         Returns:
             None. This method does not return any value.
@@ -1350,23 +1334,24 @@ with the given inputs and returns the output logits. Optionally computes the mas
                 (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
+            `Union[Tuple, MoeCausalLMOutputWithPast]`
 
         Example:
+            ```python
+            >>> from transformers import AutoTokenizer, Qwen2MoeForCausalLM
 
-        ```python
-        >>> from transformers import AutoTokenizer, Qwen2MoeForCausalLM
+            >>> model = Qwen2MoeForCausalLM.from_pretrained(PATH_TO_CONVERTED_WEIGHTS)
+            >>> tokenizer = AutoTokenizer.from_pretrained(PATH_TO_CONVERTED_TOKENIZER)
 
-        >>> model = Qwen2MoeForCausalLM.from_pretrained(PATH_TO_CONVERTED_WEIGHTS)
-        >>> tokenizer = AutoTokenizer.from_pretrained(PATH_TO_CONVERTED_TOKENIZER)
+            >>> prompt = "Hey, are you conscious? Can you talk to me?"
+            >>> inputs = tokenizer(prompt, return_tensors="pt")
 
-        >>> prompt = "Hey, are you conscious? Can you talk to me?"
-        >>> inputs = tokenizer(prompt, return_tensors="pt")
-
-        >>> # Generate
-        >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
-        >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-        "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
-        ```"""
+            >>> # Generate
+            >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
+            >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+            "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_router_logits = (
             output_router_logits if output_router_logits is not None else self.config.output_router_logits
@@ -1443,9 +1428,9 @@ with the given inputs and returns the output logits. Optionally computes the mas
             input_ids (torch.Tensor): The input tensor of shape (batch_size, sequence_length) containing the input IDs.
             past_key_values (Union[Cache, Tuple[torch.Tensor]]): Optional. The past key values used for caching during generation.
                 If past_key_values is an instance of Cache, it represents the cached key values with attributes:
-                    - cache_length (int): The length of the cache.
-                    - past_length (int): The length of the past tokens.
-                    - max_cache_length (Optional[int]): The maximum cache length, if applicable.
+                    >   - cache_length (int): The length of the cache.
+                    >   - past_length (int): The length of the past tokens.
+                    >   - max_cache_length (Optional[int]): The maximum cache length, if applicable.
                 If past_key_values is a tuple, it represents the shape of the past key values tensor.
             attention_mask (torch.Tensor): Optional. The attention mask tensor of shape (batch_size, sequence_length) containing 
                 the attention mask for the input IDs.
@@ -1455,12 +1440,12 @@ with the given inputs and returns the output logits. Optionally computes the mas
         
         Returns:
             dict: A dictionary containing the model inputs for generation with the following keys:
-                - 'inputs_embeds' (torch.Tensor): The input embeddings tensor.
-                - 'input_ids' (torch.Tensor): The input IDs tensor.
-                - 'position_ids' (torch.Tensor): The position IDs tensor.
-                - 'past_key_values' (Union[Cache, Tuple[torch.Tensor]]): The past key values tensor.
-                - 'use_cache' (Optional[bool]): Indicates whether to use cache during generation.
-                - 'attention_mask' (torch.Tensor): The attention mask tensor.
+                >   - 'inputs_embeds' (torch.Tensor): The input embeddings tensor.
+                >   - 'input_ids' (torch.Tensor): The input IDs tensor.
+                >   - 'position_ids' (torch.Tensor): The position IDs tensor.
+                >   - 'past_key_values' (Union[Cache, Tuple[torch.Tensor]]): The past key values tensor.
+                >   - 'use_cache' (Optional[bool]): Indicates whether to use cache during generation.
+                >   - 'attention_mask' (torch.Tensor): The attention mask tensor.
         
         Raises:
             None.
@@ -1557,10 +1542,10 @@ class Qwen2MoeForSequenceClassification(Qwen2MoePreTrainedModel):
         score (nn.Dense): Dense layer for computing the classification scores.
     
     Methods:
-        __init__(config): Initializes the Qwen2MoeForSequenceClassification instance with the provided configuration.
-        get_input_embeddings(): Retrieves the input embeddings from the model.
-        set_input_embeddings(value): Sets the input embeddings of the model to the given value.
-        construct(input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): 
+        __init__: Initializes the Qwen2MoeForSequenceClassification instance with the provided configuration.
+        get_input_embeddings: Retrieves the input embeddings from the model.
+        set_input_embeddings: Sets the input embeddings of the model to the given value.
+        construct:
             Constructs the model for sequence classification based on the input parameters. 
             Computes the classification loss based on the provided labels and problem type.
             Returns a tuple of loss and output if loss is computed, otherwise returns the model outputs.
@@ -1592,16 +1577,16 @@ class Qwen2MoeForSequenceClassification(Qwen2MoePreTrainedModel):
         Method: get_input_embeddings
         
         Description:
-        This method retrieves the input embeddings from the 'Qwen2MoeForSequenceClassification' model.
+            This method retrieves the input embeddings from the 'Qwen2MoeForSequenceClassification' model.
         
         Args:
-        - self: An instance of the 'Qwen2MoeForSequenceClassification' class.
+            self: An instance of the 'Qwen2MoeForSequenceClassification' class.
         
         Returns:
-        - None
+            None
         
         Raises:
-        - None
+            None
         
         """
         return self.model.embed_tokens
@@ -1636,10 +1621,11 @@ class Qwen2MoeForSequenceClassification(Qwen2MoePreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

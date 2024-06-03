@@ -81,7 +81,7 @@ class LoraModel(BaseTuner):
     Returns:
         LoraModel ([`mindspore.nn.Cell`]): The Lora model.
 
-    Example:
+    Examples:
 
         ```py
         >>> from transformers import AutoModelForSeq2SeqLM
@@ -1038,7 +1038,7 @@ class LoraModel(BaseTuner):
             adapter_names (`List[str]`, *optional*):
                 The list of adapter names that should be merged. If None, all active adapters will be merged. Defaults
                 to `None`.
-        Example:
+        Examples:
 
         ```py
         >>> from transformers import AutoModelForCausalLM

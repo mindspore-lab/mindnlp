@@ -290,10 +290,10 @@ class MobileBertSelfOutput(nn.Cell):
         Args:
             self: The instance of the class.
             config: An object containing configuration settings for the MobileBertSelfOutput. It must have the following attributes:
-                - use_bottleneck (bool): A flag indicating whether to use bottleneck layer.
-                - true_hidden_size (int): The true hidden size for the dense layer.
-                - normalization_type (str): The type of normalization to be used.
-                - hidden_dropout_prob (float): The dropout probability for the layer.
+                >   - use_bottleneck (bool): A flag indicating whether to use bottleneck layer.
+                >   - true_hidden_size (int): The true hidden size for the dense layer.
+                >   - normalization_type (str): The type of normalization to be used.
+                >   - hidden_dropout_prob (float): The dropout probability for the layer.
         
         Returns:
             None. This method initializes the MobileBertSelfOutput instance with the specified configuration settings.
@@ -405,8 +405,8 @@ class MobileBertAttention(nn.Cell):
             None
         
         This method constructs the attention mechanism for the MobileBert model. It takes the query_tensor, key_tensor, and value_tensor as inputs and performs self-attention calculation. The attention_output
-is then computed using the attention mechanism and the layer_input. The method returns a tuple containing the attention_output and any additional outputs obtained from the attention mechanism. The
-attention_mask and head_mask can be optionally provided to control the attention calculation, and output_attentions can be set to True to obtain the attention values.
+        is then computed using the attention mechanism and the layer_input. The method returns a tuple containing the attention_output and any additional outputs obtained from the attention mechanism. The
+        attention_mask and head_mask can be optionally provided to control the attention calculation, and output_attentions can be set to True to obtain the attention values.
         """
         self_outputs = self.self(
             query_tensor,
@@ -432,9 +432,9 @@ class MobileBertIntermediate(nn.Cell):
         Args:
             self: The instance of the MobileBertIntermediate class.
             config: An object containing configuration parameters.
-                - Type: Any
-                - Purpose: Configuration settings for the intermediate layer.
-                - Restrictions: Must be a valid configuration object.
+                >   - Type: Any
+                >   - Purpose: Configuration settings for the intermediate layer.
+                >   - Restrictions: Must be a valid configuration object.
         
         Returns:
             None. This method does not return any value.
@@ -481,9 +481,9 @@ class OutputBottleneck(nn.Cell):
         Args:
             self (object): The instance of the class.
             config (object): An object containing configuration settings.
-                - Type: Custom class
-                - Purpose: Contains configuration parameters for the OutputBottleneck.
-                - Restrictions: Must be properly initialized with required attributes.
+                >   - Type: Custom class
+                >   - Purpose: Contains configuration parameters for the OutputBottleneck.
+                >   - Restrictions: Must be properly initialized with required attributes.
         
         Returns:
             None. This method does not return any value.
@@ -535,12 +535,12 @@ class MobileBertOutput(nn.Cell):
         Args:
             self (object): The instance of the class.
             config (object): An object containing configuration parameters for the MobileBertOutput.
-                Parameters:
-                    use_bottleneck (bool): A boolean indicating whether to use bottleneck.
-                    intermediate_size (int): The intermediate size for the dense layer.
-                    true_hidden_size (int): The true hidden size for the dense layer.
-                    normalization_type (str): The type of normalization to be used.
-                    hidden_dropout_prob (float): The dropout probability for the dense layer.
+                >   - Parameters:
+                >       - use_bottleneck (bool): A boolean indicating whether to use bottleneck.
+                >       - intermediate_size (int): The intermediate size for the dense layer.
+                >       - true_hidden_size (int): The true hidden size for the dense layer.
+                >       - normalization_type (str): The type of normalization to be used.
+                >       - hidden_dropout_prob (float): The dropout probability for the dense layer.
         
         Returns:
             None: This method does not return any value.
@@ -594,11 +594,10 @@ class BottleneckLayer(nn.Cell):
         
         Args:
             self: The instance itself.
-            config (object): An object containing configuration parameters for the bottleneck layer.
-                It should have the following attributes:
-                    - hidden_size (int): The size of the hidden layer.
-                    - intra_bottleneck_size (int): The size of the bottleneck layer.
-                    - normalization_type (str): The type of normalization to be used.
+            config (object): An object containing configuration parameters for the bottleneck layer. It should have the following attributes:
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - intra_bottleneck_size (int): The size of the bottleneck layer.
+                >   - normalization_type (str): The type of normalization to be used.
         
         Returns:
             None. This method initializes the BottleneckLayer instance with the provided configuration.
@@ -627,7 +626,7 @@ class BottleneckLayer(nn.Cell):
             ValueError: If the input hidden_states is not of the expected shape.
         
         This method applies the bottleneck transformation to the input hidden states. It first applies a linear transformation using a dense layer, followed by layer normalization. The resulting tensor is then
-returned as the output of the bottleneck layer.
+        returned as the output of the bottleneck layer.
         """
         layer_input = self.dense(hidden_states)
         layer_input = self.LayerNorm(layer_input)
@@ -643,9 +642,9 @@ class Bottleneck(nn.Cell):
         Args:
             self: The instance of the class.
             config (object): The configuration object containing the settings for the 'Bottleneck' instance.
-                - key_query_shared_bottleneck (bool): A flag indicating whether to use a shared bottleneck for key and query.
+                >   - key_query_shared_bottleneck (bool): A flag indicating whether to use a shared bottleneck for key and query.
                     Set to True to enable the shared bottleneck, and False otherwise.
-                - use_bottleneck_attention (bool): A flag indicating whether to use bottleneck attention.
+                >   - use_bottleneck_attention (bool): A flag indicating whether to use bottleneck attention.
                     Set to True to enable bottleneck attention, and False otherwise.
         
         Returns:
@@ -725,20 +724,20 @@ class FFNOutput(nn.Cell):
         Method 'construct' in class 'FFNOutput'.
         
         Args:
-        - self: The instance of the class.
-        - hidden_states (Tensor): The input tensor containing hidden states.
-            Purpose: Represents the hidden states to be processed by the method.
-            Restrictions: Should be a valid tensor object.
-        - residual_tensor (Tensor): The input tensor containing residual values.
-            Purpose: Represents the residual tensor to be added to the processed output.
-            Restrictions: Should be a valid tensor object.
+            self: The instance of the class.
+            hidden_states (Tensor): The input tensor containing hidden states.
+                >   - Purpose: Represents the hidden states to be processed by the method.
+                >   - Restrictions: Should be a valid tensor object.
+            residual_tensor (Tensor): The input tensor containing residual values.
+                >   - Purpose: Represents the residual tensor to be added to the processed output.
+                >   - Restrictions: Should be a valid tensor object.
         
         Returns:
-        - Tensor: The output tensor after processing the hidden states and adding the residual tensor.
-            Purpose: Represents the final processed output tensor.
+            Tensor: The output tensor after processing the hidden states and adding the residual tensor.
+                >   - Purpose: Represents the final processed output tensor.
         
         Raises:
-        - None.
+            None.
         """
         layer_outputs = self.dense(hidden_states)
         layer_outputs = self.LayerNorm(layer_outputs + residual_tensor)
@@ -924,9 +923,9 @@ class MobileBertEncoder(nn.Cell):
         
         Returns:
             Tuple: A tuple containing:
-                - last_hidden_state (Tensor): The last layer hidden states of shape (batch_size, sequence_length, hidden_size).
-                - hidden_states (Tuple): A tuple of hidden states from all layers, each of shape (batch_size, sequence_length, hidden_size). Only included if output_hidden_states is True.
-                - attentions (Tuple): A tuple of attention tensors from all layers, each of shape (batch_size, num_attention_heads, sequence_length, sequence_length). Only included if output_attentions is True.
+                >- last_hidden_state (Tensor): The last layer hidden states of shape (batch_size, sequence_length, hidden_size).
+                >- hidden_states (Tuple): A tuple of hidden states from all layers, each of shape (batch_size, sequence_length, hidden_size). Only included if output_hidden_states is True.
+                >- attentions (Tuple): A tuple of attention tensors from all layers, each of shape (batch_size, num_attention_heads, sequence_length, sequence_length). Only included if output_attentions is True.
         
         Raises:
             None.
@@ -1022,8 +1021,8 @@ class MobileBertPredictionHeadTransform(nn.Cell):
             self (MobileBertPredictionHeadTransform): The instance of the class itself.
             config: The configuration object for the MobileBertPredictionHeadTransform instance.
                 It contains the following attributes:
-                - hidden_size (int): The size of the hidden layers.
-                - hidden_act (str or callable): The activation function for the hidden layers.
+                >   - hidden_size (int): The size of the hidden layers.
+                >   - hidden_act (str or callable): The activation function for the hidden layers.
                     Can be either a string specifying a pre-defined activation function or a callable function.
                 
         Returns:
@@ -1136,7 +1135,7 @@ class MobileBertOnlyMLMHead(nn.Cell):
         Args:
             self (MobileBertOnlyMLMHead): The instance of the MobileBertOnlyMLMHead class.
             sequence_output (Tensor): The output tensor from the MobileBERT model, representing the sequence of hidden-states for each input token. The shape of the tensor should be (batch_size,
-sequence_length, hidden_size).
+                sequence_length, hidden_size).
         
         Returns:
             Tensor: The prediction scores for the masked tokens. The shape of the tensor is (batch_size, sequence_length, vocab_size).
@@ -1229,7 +1228,7 @@ class MobileBertPreTrainedModel(PreTrainedModel):
             None.
         
         This method retrieves the input embeddings of the MobileBertPreTrainedModel instance. The input embeddings are used as the initial embeddings for the model's input tokens. The method does not return
-any value but updates the instance by setting the input embeddings.
+        any value but updates the instance by setting the input embeddings.
         
         Note:
             The MobileBertPreTrainedModel class should be initialized before calling this method.
@@ -1278,15 +1277,17 @@ any value but updates the instance by setting the input embeddings.
             None.
         
         This method is responsible for retrieving the position embeddings for the MobileBertPreTrainedModel. Position embeddings are used in natural language processing models to capture the positional
-information of words or tokens in a sequence.
+        information of words or tokens in a sequence.
         
         The 'self' parameter represents an instance of the MobileBertPreTrainedModel class, which is required to access the position embeddings specific to that instance.
         
         Note that this method does not return any value. Instead, it updates the position embeddings within the MobileBertPreTrainedModel instance directly.
         
         Example usage:
+            ```python
             model = MobileBertPreTrainedModel()
             model.get_position_embeddings()
+            ```
         """
 
 class MobileBertModel(MobileBertPreTrainedModel):
@@ -1309,20 +1310,21 @@ class MobileBertModel(MobileBertPreTrainedModel):
             None.
         
         Description:
-        This method initializes a MobileBertModel object with the provided configuration and optionally adds a pooling layer. The MobileBertModel is a deep learning model for natural language processing tasks.
+            This method initializes a MobileBertModel object with the provided configuration and optionally adds a pooling layer. The MobileBertModel is a deep learning model for natural language processing tasks.
+
+            The 'self' parameter refers to the instance of the MobileBertModel class that is being initialized.
+
+            The 'config' parameter is an object that contains hyperparameters and settings for the model. It is used to configure the MobileBertEmbeddings, MobileBertEncoder, and MobileBertPooler components of the
+                MobileBertModel.
+
+            The 'add_pooling_layer' parameter is a boolean flag that determines whether a pooling layer should be added to the MobileBertModel. If set to True, a MobileBertPooler component will be added to the
+                model. If set to False, no pooling layer will be added.
+
+            The method does not return any value.
         
-        The 'self' parameter refers to the instance of the MobileBertModel class that is being initialized.
-        
-        The 'config' parameter is an object that contains hyperparameters and settings for the model. It is used to configure the MobileBertEmbeddings, MobileBertEncoder, and MobileBertPooler components of the
-MobileBertModel.
-        
-        The 'add_pooling_layer' parameter is a boolean flag that determines whether a pooling layer should be added to the MobileBertModel. If set to True, a MobileBertPooler component will be added to the
-model. If set to False, no pooling layer will be added.
-        
-        The method does not return any value.
-        
-        Note: The MobileBertModel consists of three main components: MobileBertEmbeddings, MobileBertEncoder, and MobileBertPooler. These components are initialized within this method and can be accessed using
-the respective instance variables: 'self.embeddings', 'self.encoder', and 'self.pooler'. The number of hidden layers in the model can be accessed using the 'self.num_hidden_layers' instance variable.
+        Note:
+            The MobileBertModel consists of three main components: MobileBertEmbeddings, MobileBertEncoder, and MobileBertPooler. These components are initialized within this method and can be accessed using
+            the respective instance variables: 'self.embeddings', 'self.encoder', and 'self.pooler'. The number of hidden layers in the model can be accessed using the 'self.num_hidden_layers' instance variable.
         """
         super().__init__(config)
         self.embeddings = MobileBertEmbeddings(config)
@@ -1363,23 +1365,23 @@ the respective instance variables: 'self.embeddings', 'self.encoder', and 'self.
         This method 'construct' in the class 'MobileBertModel' takes 10 parameters:
         
         Args:
-        - self: The instance of the class.
-        - input_ids (Optional[Tensor]): The input tensor containing the token ids. Default is None.
-        - attention_mask (Optional[Tensor]): The attention mask tensor. Default is None.
-        - token_type_ids (Optional[Tensor]): The token type ids tensor. Default is None.
-        - position_ids (Optional[Tensor]): The position ids tensor. Default is None.
-        - head_mask (Optional[Tensor]): The head mask tensor. Default is None.
-        - inputs_embeds (Optional[Tensor]): The input embeddings tensor. Default is None.
-        - output_hidden_states (Optional[bool]): Flag to output hidden states. Default is None.
-        - output_attentions (Optional[bool]): Flag to output attentions. Default is None.
-        - return_dict (Optional[bool]): Flag to return a dictionary. Default is None.
+            self: The instance of the class.
+            input_ids (Optional[Tensor]): The input tensor containing the token ids. Default is None.
+            attention_mask (Optional[Tensor]): The attention mask tensor. Default is None.
+            token_type_ids (Optional[Tensor]): The token type ids tensor. Default is None.
+            position_ids (Optional[Tensor]): The position ids tensor. Default is None.
+            head_mask (Optional[Tensor]): The head mask tensor. Default is None.
+            inputs_embeds (Optional[Tensor]): The input embeddings tensor. Default is None.
+            output_hidden_states (Optional[bool]): Flag to output hidden states. Default is None.
+            output_attentions (Optional[bool]): Flag to output attentions. Default is None.
+            return_dict (Optional[bool]): Flag to return a dictionary. Default is None.
         
         Returns:
-        A Tuple containing the model outputs, including the sequence output, pooled output, hidden states, and attentions.
+            A Tuple containing the model outputs, including the sequence output, pooled output, hidden states, and attentions.
         
         Raises:
-        - ValueError: Raised if both 'input_ids' and 'inputs_embeds' are provided simultaneously.
-        - ValueError: Raised if neither 'input_ids' nor 'inputs_embeds' are specified.
+            - ValueError: Raised if both 'input_ids' and 'inputs_embeds' are provided simultaneously.
+            - ValueError: Raised if neither 'input_ids' nor 'inputs_embeds' are specified.
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1542,27 +1544,27 @@ class MobileBertForPreTraining(MobileBertPreTrainedModel):
         next_sentence_label (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the next sequence prediction (classification) loss. Input should be a sequence pair
             (see `input_ids` docstring) Indices should be in `[0, 1]`:
-
-            - 0 indicates sequence B is a continuation of sequence A,
-            - 1 indicates sequence B is a random sequence.
+            >   - 0 indicates sequence B is a continuation of sequence A,
+            >   - 1 indicates sequence B is a random sequence.
 
         Returns:
+            Tuple
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import AutoTokenizer, MobileBertForPreTraining
 
-        ```python
-        >>> from transformers import AutoTokenizer, MobileBertForPreTraining
+            >>> tokenizer = AutoTokenizer.from_pretrained("google/mobilebert-uncased")
+            >>> model = MobileBertForPreTraining.from_pretrained("google/mobilebert-uncased")
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("google/mobilebert-uncased")
-        >>> model = MobileBertForPreTraining.from_pretrained("google/mobilebert-uncased")
+            >>> input_ids = torch.tensor(tokenizer.encode("Hello, my dog is cute", add_special_tokens=True)).unsqueeze(0)
+            >>> # Batch size 1
+            >>> outputs = model(input_ids)
 
-        >>> input_ids = torch.tensor(tokenizer.encode("Hello, my dog is cute", add_special_tokens=True)).unsqueeze(0)
-        >>> # Batch size 1
-        >>> outputs = model(input_ids)
-
-        >>> prediction_logits = outputs.prediction_logits
-        >>> seq_relationship_logits = outputs.seq_relationship_logits
-        ```"""
+            >>> prediction_logits = outputs.prediction_logits
+            >>> seq_relationship_logits = outputs.seq_relationship_logits
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.mobilebert(
@@ -1655,10 +1657,11 @@ class MobileBertForMaskedLM(MobileBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Tuple:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
-            config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
-            loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
+                config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
+                loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1770,28 +1773,28 @@ class MobileBertForNextSentencePrediction(MobileBertPreTrainedModel):
         labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the next sequence prediction (classification) loss. Input should be a sequence pair
             (see `input_ids` docstring) Indices should be in `[0, 1]`.
-
-            - 0 indicates sequence B is a continuation of sequence A,
-            - 1 indicates sequence B is a random sequence.
+            >   - 0 indicates sequence B is a continuation of sequence A,
+            >   - 1 indicates sequence B is a random sequence.
 
         Returns:
+            Tuple
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import AutoTokenizer, MobileBertForNextSentencePrediction
 
-        ```python
-        >>> from transformers import AutoTokenizer, MobileBertForNextSentencePrediction
+            >>> tokenizer = AutoTokenizer.from_pretrained("google/mobilebert-uncased")
+            >>> model = MobileBertForNextSentencePrediction.from_pretrained("google/mobilebert-uncased")
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("google/mobilebert-uncased")
-        >>> model = MobileBertForNextSentencePrediction.from_pretrained("google/mobilebert-uncased")
+            >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
+            >>> next_sentence = "The sky is blue due to the shorter wavelength of blue light."
+            >>> encoding = tokenizer(prompt, next_sentence, return_tensors="pt")
 
-        >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
-        >>> next_sentence = "The sky is blue due to the shorter wavelength of blue light."
-        >>> encoding = tokenizer(prompt, next_sentence, return_tensors="pt")
-
-        >>> outputs = model(**encoding, labels=torch.LongTensor([1]))
-        >>> loss = outputs.loss
-        >>> logits = outputs.logits
-        ```"""
+            >>> outputs = model(**encoding, labels=torch.LongTensor([1]))
+            >>> loss = outputs.loss
+            >>> logits = outputs.logits
+            ```
+        """
         if "next_sentence_label" in kwargs:
             warnings.warn(
                 "The `next_sentence_label` argument is deprecated and will be removed in a future version, use"
@@ -1874,10 +1877,11 @@ class MobileBertForSequenceClassification(MobileBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Tuple[Tensor]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -2068,10 +2072,11 @@ class MobileBertForMultipleChoice(MobileBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Tuple[Tensor]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
-            num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
-            `input_ids` above)
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
+                num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
+                `input_ids` above)
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
@@ -2166,8 +2171,9 @@ class MobileBertForTokenClassification(MobileBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Tuple[Tensor]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

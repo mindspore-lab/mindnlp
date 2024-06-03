@@ -189,7 +189,7 @@ class InternLMDynamicNTKScalingRotaryEmbedding(InternLMRotaryEmbedding):
     The `InternLMDynamicNTKScalingRotaryEmbedding` class is a Python class that represents a dynamic version of the Neural Tangent Kernel (NTK) Scaling Rotary Embedding used in the context of an InternLM model.
     
     This class inherits from the `InternLMRotaryEmbedding` class and provides additional functionality for dynamically adjusting the NTK scaling factor based on the sequence length. It calculates and caches
-the cosine and sine values necessary for the rotary embeddings.
+    the cosine and sine values necessary for the rotary embeddings.
     
     Attributes:
         scaling_factor (float): The scaling factor used for adjusting the NTK scaling based on sequence length.
@@ -201,9 +201,11 @@ the cosine and sine values necessary for the rotary embeddings.
         _set_cos_sin_cache(self, seq_len, dtype):
             Sets the cosine and sine cache based on the provided sequence length and data type. Calculates the NTK scaling factor, inverse frequencies, and caches the cosine and sine values.
     
-    Note: This class assumes the existence of the `InternLMRotaryEmbedding` superclass.
+    Note:
+        This class assumes the existence of the `InternLMRotaryEmbedding` superclass.
     
     Example usage:
+        ```python
         # Create an instance of InternLMDynamicNTKScalingRotaryEmbedding
         embedding = InternLMDynamicNTKScalingRotaryEmbedding(dim=512, max_position_embeddings=1024, base=20000, scaling_factor=0.8)
     
@@ -212,6 +214,7 @@ the cosine and sine values necessary for the rotary embeddings.
     
         # Call the _set_cos_sin_cache method
         embedding._set_cos_sin_cache(seq_len=512, dtype=torch.float32)
+        ```
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
         """
@@ -240,16 +243,16 @@ the cosine and sine values necessary for the rotary embeddings.
         This method initializes the cosine and sine cache based on the given sequence length and data type.
         
         Args:
-        - self: The instance of the class.
-        - seq_len (int): The length of the input sequence. Must be greater than 0.
-        - dtype: The data type for the calculations. Should be a valid data type compatible with the operations performed.
+            self: The instance of the class.
+            seq_len (int): The length of the input sequence. Must be greater than 0.
+            dtype: The data type for the calculations. Should be a valid data type compatible with the operations performed.
         
         Returns:
-        None: This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
-        - ValueError: If the input sequence length 'seq_len' is not a positive integer.
-        - TypeError: If the provided data type 'dtype' is not valid or compatible with the operations.
+            - ValueError: If the input sequence length 'seq_len' is not a positive integer.
+            - TypeError: If the provided data type 'dtype' is not valid or compatible with the operations.
         """
         self.max_seq_len_cached = seq_len
 
@@ -354,23 +357,23 @@ class InternLMAttention(nn.Cell):
         This method initializes the InternLMAttention class by setting the instance variables and initializing the projection layers.
         
         The `config` parameter is an instance of the InternLMConfig class, which contains the following attributes:
-        - `hidden_size` (int): The size of the hidden state.
-        - `num_attention_heads` (int): The number of attention heads.
-        - `max_position_embeddings` (int): The maximum number of position embeddings.
-        - `bias` (bool): Whether to include bias in the projection layers.
+        >   - `hidden_size` (int): The size of the hidden state.
+        >   - `num_attention_heads` (int): The number of attention heads.
+        >   - `max_position_embeddings` (int): The maximum number of position embeddings.
+        >   - `bias` (bool): Whether to include bias in the projection layers.
         
         The method sets the following instance variables:
-        - `config` (InternLMConfig): The configuration instance.
-        - `hidden_size` (int): The size of the hidden state.
-        - `num_heads` (int): The number of attention heads.
-        - `head_dim` (int): The dimension of each attention head.
-        - `max_position_embeddings` (int): The maximum number of position embeddings.
+        >   - `config` (InternLMConfig): The configuration instance.
+        >   - `hidden_size` (int): The size of the hidden state.
+        >   - `num_heads` (int): The number of attention heads.
+        >   - `head_dim` (int): The dimension of each attention head.
+        >   - `max_position_embeddings` (int): The maximum number of position embeddings.
         
         The method also initializes the following projection layers:
-        - `q_proj` (Dense): The projection layer for the query.
-        - `k_proj` (Dense): The projection layer for the key.
-        - `v_proj` (Dense): The projection layer for the value.
-        - `o_proj` (Dense): The projection layer for the output.
+        >   - `q_proj` (Dense): The projection layer for the query.
+        >   - `k_proj` (Dense): The projection layer for the key.
+        >   - `v_proj` (Dense): The projection layer for the value.
+        >   - `o_proj` (Dense): The projection layer for the output.
         
         If the product of `head_dim` and `num_heads` is not equal to `hidden_size`, a ValueError is raised.
         """
@@ -465,9 +468,9 @@ class InternLMAttention(nn.Cell):
         
         Returns:
             Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing the attention output, attention weights, and the updated past key-value tuple.
-                - attn_output (mindspore.Tensor): The output tensor of shape (batch_size, sequence_length, hidden_size).
-                - attn_weights (Optional[mindspore.Tensor]): The attention weights tensor of shape (batch_size, num_heads, sequence_length, sequence_length). If `output_attentions` is False, it is set to None.
-                - past_key_value (Optional[Tuple[mindspore.Tensor]]): The updated past key-value tuple. If `use_cache` is False, it is set to None.
+                >   - attn_output (mindspore.Tensor): The output tensor of shape (batch_size, sequence_length, hidden_size).
+                >   - attn_weights (Optional[mindspore.Tensor]): The attention weights tensor of shape (batch_size, num_heads, sequence_length, sequence_length). If `output_attentions` is False, it is set to None.
+                >   - past_key_value (Optional[Tuple[mindspore.Tensor]]): The updated past key-value tuple. If `use_cache` is False, it is set to None.
         
         Raises:
             ValueError: If the shape of attention weights is not (batch_size, num_heads, sequence_length, sequence_length).
@@ -535,10 +538,10 @@ class InternLMDecoderLayer(nn.Cell):
         Args:
             self (InternLMDecoderLayer): The instance of the class.
             config (InternLMConfig): The configuration object containing various settings for the decoder layer.
-                - hidden_size (int): The size of the hidden states.
-                - intermediate_size (int): The size of the intermediate layer in the MLP.
-                - hidden_act (str): The activation function to be used in the MLP.
-                - rms_norm_eps (float): The epsilon value used in the RMS normalization.
+                >   - hidden_size (int): The size of the hidden states.
+                >   - intermediate_size (int): The size of the intermediate layer in the MLP.
+                >   - hidden_act (str): The activation function to be used in the MLP.
+                >   - rms_norm_eps (float): The epsilon value used in the RMS normalization.
         
         Returns:
             None. This method does not return any value.
@@ -618,7 +621,7 @@ class InternLMPreTrainedModel(PreTrainedModel):
 
     """
     The 'InternLMPreTrainedModel' class represents a pre-trained language model for internal use. It inherits from the 'PreTrainedModel' class and includes methods for initializing weights and setting gradient
-checkpointing. 
+    checkpointing.
     
     Attributes:
         config: The configuration for the pre-trained model.
@@ -653,12 +656,13 @@ checkpointing.
         It supports two types of cells: `nn.Dense` and `nn.Embedding`.
         
         For `nn.Dense` cells, the weights are initialized using a normal distribution with mean 0 and standard deviation `self.config.initializer_range`. The weights are set using the `set_data` method of the
-`weight` attribute of the cell. If the cell has a bias attribute (`cell.bias`), it is initialized with zeros using the `set_data` method as well.
+        `weight` attribute of the cell. If the cell has a bias attribute (`cell.bias`), it is initialized with zeros using the `set_data` method as well.
         
         For `nn.Embedding` cells, the weights are initialized using a normal distribution with mean 0 and standard deviation `self.config.initializer_range`. The weights are randomly sampled using the
-`np.random.normal` function and set using the `set_data` method of the `weight` attribute of the cell. If the cell has a `padding_idx` attribute (`cell.padding_idx`), the weight at that index is set to 0.
+        `np.random.normal` function and set using the `set_data` method of the `weight` attribute of the cell. If the cell has a `padding_idx` attribute (`cell.padding_idx`), the weight at that index is set to 0.
         
-        Note: This method modifies the weights of the cell in-place and does not return any value.
+        Note:
+            This method modifies the weights of the cell in-place and does not return any value.
         """
         std = self.config.initializer_range
         if isinstance(cell, nn.Dense):
@@ -941,7 +945,7 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
     A class representing an InternLM model for causal language modeling.
     
     This class extends the InternLMPreTrainedModel class and provides additional functionality specific to causal language modeling tasks. It includes methods for initializing the model, setting and getting
-input and output embeddings, setting the decoder, constructing the model, and preparing inputs for generation.
+    input and output embeddings, setting the decoder, constructing the model, and preparing inputs for generation.
     
     Attributes:
         model (InternLMModel): The underlying InternLM model.
@@ -956,31 +960,31 @@ input and output embeddings, setting the decoder, constructing the model, and pr
         set_decoder(self, decoder): Sets the decoder for the model.
         get_decoder(self): Returns the decoder of the model.
         construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model and computes the
-masked language modeling loss.
+            masked language modeling loss.
         prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, **kwargs): Prepares inputs for generation by modifying the input_ids, attention_mask, and position_ids.
     
     Example usage:
-    
-    from transformers import AutoTokenizer, InternLMForCausalLM
-    
-    model = InternLMForCausalLM(config)
-    tokenizer = AutoTokenizer.from_pretrained(model)
-    
-    # Access model attributes
-    input_embeddings = model.get_input_embeddings()
-    output_embeddings = model.get_output_embeddings()
-    
-    # Modify model attributes
-    model.set_input_embeddings(new_input_embeddings)
-    model.set_output_embeddings(new_output_embeddings)
-    
-    # Set decoder
-    model.set_decoder(decoder_model)
-    
-    # Generate text
-    model.construct(input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict)
-    generated_text = model.prepare_inputs_for_generation(input_ids, past_key_values, attention_mask, inputs_embeds, **kwargs)
-    
+        ```python
+        from transformers import AutoTokenizer, InternLMForCausalLM
+
+        model = InternLMForCausalLM(config)
+        tokenizer = AutoTokenizer.from_pretrained(model)
+
+        # Access model attributes
+        input_embeddings = model.get_input_embeddings()
+        output_embeddings = model.get_output_embeddings()
+
+        # Modify model attributes
+        model.set_input_embeddings(new_input_embeddings)
+        model.set_output_embeddings(new_output_embeddings)
+
+        # Set decoder
+        model.set_decoder(decoder_model)
+
+        # Generate text
+        model.construct(input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict)
+        generated_text = model.prepare_inputs_for_generation(input_ids, past_key_values, attention_mask, inputs_embeds, **kwargs)
+        ```
     """
     _auto_class = "AutoModelForCausalLM"
     def __init__(self, config, size=None):
@@ -1024,14 +1028,16 @@ masked language modeling loss.
             None.
         
         This method is used to obtain the input embeddings from the model. The input embeddings are representations of the input tokens that the model uses to process the text. The embeddings capture the
-semantic meaning and contextual information of the tokens, which is crucial for the model's performance.
+        semantic meaning and contextual information of the tokens, which is crucial for the model's performance.
         
         Note:
             The 'embed_tokens' attribute of the 'self.model' object contains the input embeddings. This attribute should be accessed to retrieve the embeddings.
         
         Example usage:
+            ```python
             >>> model = InternLMForCausalLM()
             >>> embeddings = model.get_input_embeddings()
+            ```
         """
         return self.model.embed_tokens
 
@@ -1138,18 +1144,20 @@ semantic meaning and contextual information of the tokens, which is crucial for 
                 config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
                 (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
         Returns:
+            Union[Tuple, CausalLMOutputWithPast]
+
         Example:
-        ```python
-        >>> from transformers import AutoTokenizer, InternLMForCausalLM
-        >>> model = InternLMForCausalLM.from_pretrained(PATH_TO_CONVERTED_WEIGHTS)
-        >>> tokenizer = AutoTokenizer.from_pretrained(PATH_TO_CONVERTED_TOKENIZER)
-        >>> prompt = "Hey, are you consciours? Can you talk to me?"
-        >>> inputs = tokenizer(prompt, return_tensors="pt")
-        >>> # Generate
-        >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
-        >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-        "Hey, are you consciours? Can you talk to me?\nI'm not consciours, but I can talk to you."
-        ```
+            ```python
+            >>> from transformers import AutoTokenizer, InternLMForCausalLM
+            >>> model = InternLMForCausalLM.from_pretrained(PATH_TO_CONVERTED_WEIGHTS)
+            >>> tokenizer = AutoTokenizer.from_pretrained(PATH_TO_CONVERTED_TOKENIZER)
+            >>> prompt = "Hey, are you consciours? Can you talk to me?"
+            >>> inputs = tokenizer(prompt, return_tensors="pt")
+            >>> # Generate
+            >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
+            >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+            "Hey, are you consciours? Can you talk to me?\nI'm not consciours, but I can talk to you."
+            ```
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1213,12 +1221,12 @@ semantic meaning and contextual information of the tokens, which is crucial for 
         
         Returns:
             model_inputs (dict): A dictionary containing the prepared model inputs for generation. It can have the following keys:
-                - 'inputs_embeds' (torch.Tensor): The tensor of embedded inputs, if provided.
-                - 'input_ids' (torch.Tensor): The tensor of tokenized input sequence.
-                - 'position_ids' (torch.Tensor): The tensor of position IDs.
-                - 'past_key_values' (torch.Tensor): The tensor of past key values for generation.
-                - 'use_cache' (bool): A flag indicating whether to use cache or not.
-                - 'attention_mask' (torch.Tensor): The attention mask tensor.
+                >   - 'inputs_embeds' (torch.Tensor): The tensor of embedded inputs, if provided.
+                >   - 'input_ids' (torch.Tensor): The tensor of tokenized input sequence.
+                >   - 'position_ids' (torch.Tensor): The tensor of position IDs.
+                >   - 'past_key_values' (torch.Tensor): The tensor of past key values for generation.
+                >   - 'use_cache' (bool): A flag indicating whether to use cache or not.
+                >   - 'attention_mask' (torch.Tensor): The attention mask tensor.
         
         Raises:
             None.
@@ -1277,23 +1285,24 @@ class InternLMForSequenceClassification(InternLMPreTrainedModel):
     This class represents an InternLM model for sequence classification tasks. It is a subclass of the InternLMPreTrainedModel class.
     
     The InternLMForSequenceClassification class is initialized with a configuration object, which includes the number of labels for the classification task. The model architecture consists of an InternLMModel
-and a score layer.
+    and a score layer.
     
     The class provides methods for getting and setting the input embeddings of the model. The get_input_embeddings method returns the embedded tokens of the model, while the set_input_embeddings method allows
-for setting new input embeddings.
+    for setting new input embeddings.
     
     The construct method is responsible for processing input data and generating classification outputs. It takes several optional parameters, including input_ids, attention_mask, position_ids,
-past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, and return_dict. The method returns either a tuple or a SequenceClassifierOutputWithPast object, depending on the
-value of the return_dict parameter.
+    past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, and return_dict. The method returns either a tuple or a SequenceClassifierOutputWithPast object, depending on the
+    value of the return_dict parameter.
     
     If labels are provided, the method computes the sequence classification loss based on the configured problem type. The problem type can be 'regression', 'single_label_classification', or
-'multi_label_classification', depending on the number of labels and the data type of the labels. The loss is computed using various loss functions, such as mean squared error (MSE) loss, cross-entropy loss, or
-binary cross-entropy with logits loss.
+    'multi_label_classification', depending on the number of labels and the data type of the labels. The loss is computed using various loss functions, such as mean squared error (MSE) loss, cross-entropy loss, or
+    binary cross-entropy with logits loss.
     
     If the return_dict parameter is False, the method returns a tuple containing the pooled logits and other transformer outputs. If the loss is not None, it is included in the tuple. If the return_dict
-parameter is True, the method returns a SequenceClassifierOutputWithPast object, which includes the loss, pooled logits, past key values, hidden states, and attentions.
+    parameter is True, the method returns a SequenceClassifierOutputWithPast object, which includes the loss, pooled logits, past key values, hidden states, and attentions.
     
-    Note: The class assumes that the batch size is 1 or that a padding token ID is defined. If the batch size is greater than 1 and no padding token ID is defined, a ValueError is raised.
+    Note:
+        The class assumes that the batch size is 1 or that a padding token ID is defined. If the batch size is greater than 1 and no padding token ID is defined, a ValueError is raised.
     
     """
     _keys_to_ignore_on_load_missing = [r"lm_head.weight"]
@@ -1306,9 +1315,9 @@ parameter is True, the method returns a SequenceClassifierOutputWithPast object,
             self: The object itself.
             config: An instance of the `InternLMConfig` class containing the configuration parameters for the model.
                 It includes the following attributes:
-                    - num_labels (int): The number of labels for classification.
+                    >   - num_labels (int): The number of labels for classification.
                         This value determines the size of the output layer.
-                    - hidden_size (int): The size of the hidden layers in the model.
+                    >   - hidden_size (int): The size of the hidden layers in the model.
                         This value is used in the `nn.Dense` layer.
                 
         Returns:
@@ -1339,7 +1348,7 @@ parameter is True, the method returns a SequenceClassifierOutputWithPast object,
             None.
         
         This method retrieves the input embeddings from the model's embed_tokens attribute. The input embeddings are used as the input to the model for sequence classification tasks. The method does not modify
-the input embeddings or perform any additional processing. The retrieved input embeddings can be used for further analysis or visualization, if needed.
+        the input embeddings or perform any additional processing. The retrieved input embeddings can be used for further analysis or visualization, if needed.
         """
         return self.model.embed_tokens
 
@@ -1373,10 +1382,11 @@ the input embeddings or perform any additional processing. The retrieved input e
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

@@ -78,19 +78,19 @@ class CvtConfig(PretrainedConfig):
             The epsilon used by the layer normalization layers.
 
     Example:
+        ```python
+        >>> from transformers import CvtConfig, CvtModel
 
-    ```python
-    >>> from transformers import CvtConfig, CvtModel
+        >>> # Initializing a Cvt msft/cvt style configuration
+        >>> configuration = CvtConfig()
 
-    >>> # Initializing a Cvt msft/cvt style configuration
-    >>> configuration = CvtConfig()
+        >>> # Initializing a model (with random weights) from the msft/cvt style configuration
+        >>> model = CvtModel(configuration)
 
-    >>> # Initializing a model (with random weights) from the msft/cvt style configuration
-    >>> model = CvtModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "cvt"
 
     def __init__(

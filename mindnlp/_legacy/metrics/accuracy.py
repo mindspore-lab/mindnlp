@@ -48,7 +48,7 @@ def accuracy_fn(preds, labels):
     Raises:
         RuntimeError: If the number of samples is 0.
 
-    Example:
+    Examples:
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
@@ -99,7 +99,7 @@ class Accuracy(Metric):
     Args:
         name (str): Name of the metric.
 
-    Example:
+    Examples:
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import nn, Tensor

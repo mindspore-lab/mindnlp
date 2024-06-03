@@ -78,18 +78,17 @@ class BasicTextNormalizer:
     The BasicTextNormalizer class is responsible for normalizing text by removing symbols and diacritics (if specified) and splitting letters (if specified). 
     
     Attributes:
-    - remove_diacritics (bool): A flag indicating whether to remove diacritics from the text. Default is False.
-    - split_letters (bool): A flag indicating whether to split letters in the text. Default is False.
+        remove_diacritics (bool): A flag indicating whether to remove diacritics from the text. Default is False.
+        split_letters (bool): A flag indicating whether to split letters in the text. Default is False.
     
     Methods:
-    - __call__(s: str): Normalizes the input text by converting it to lowercase, removing HTML tags and content within parentheses, applying symbol and diacritic removal, and optionally splitting letters if
-the split_letters flag is True. Returns the normalized text.
+        __call__: Normalizes the input text by converting it to lowercase, removing HTML tags and content within parentheses, applying symbol and diacritic removal, and optionally splitting letters if
+            the split_letters flag is True. Returns the normalized text.
     
     Example usage:
-    
-    normalizer = BasicTextNormalizer(remove_diacritics=True, split_letters=False)
-    normalized_text = normalizer('Hello, World!')
-    print(normalized_text)  # Output: 'hello world'
+        normalizer = BasicTextNormalizer(remove_diacritics=True, split_letters=False)
+        normalized_text = normalizer('Hello, World!')
+        print(normalized_text)  # Output: 'hello world'
     
     """
     def __init__(self, remove_diacritics: bool = False, split_letters: bool = False):
@@ -141,11 +140,11 @@ class EnglishNumberNormalizer:
     """
     Convert any spelled-out numbers into arabic numbers, while handling:
 
-    - remove any commas
-    - keep the suffixes such as: `1960s`, `274th`, `32nd`, etc.
-    - spell out currency symbols after the number. e.g. `$20 million` -> `20000000 dollars`
-    - spell out `one` and `ones`
-    - interpret successive single-digit numbers as nominal: `one oh one` -> `101`
+    >   - remove any commas
+    >   - keep the suffixes such as: `1960s`, `274th`, `32nd`, etc.
+    >   - spell out currency symbols after the number. e.g. `$20 million` -> `20000000 dollars`
+    >   - spell out `one` and `ones`
+    >   - interpret successive single-digit numbers as nominal: `one oh one` -> `101`
     """
     def __init__(self):
         """Initializes an instance of the EnglishNumberNormalizer class.
@@ -160,27 +159,27 @@ class EnglishNumberNormalizer:
             None.
         
         This method initializes the instance of the EnglishNumberNormalizer class. It sets up various dictionaries and mappings that are used for normalizing English numbers. The dictionaries include:
-        - 'zeros': A set of strings representing the words 'o', 'oh', and 'zero'.
-        - 'ones': A dictionary with number names as keys and their corresponding values as integers.
-        - 'ones_plural': A dictionary with number names in plural form as keys and their corresponding values and suffixes as tuples.
-        - 'ones_ordinal': A dictionary with ordinal number names as keys and their corresponding values and suffixes as tuples.
-        - 'ones_suffixed': A dictionary combining 'ones_plural' and 'ones_ordinal' dictionaries.
-        - 'tens': A dictionary with tens names as keys and their corresponding values as integers.
-        - 'tens_plural': A dictionary with tens names in plural form as keys and their corresponding values and suffixes as tuples.
-        - 'tens_ordinal': A dictionary with tens names in ordinal form as keys and their corresponding values and suffixes as tuples.
-        - 'tens_suffixed': A dictionary combining 'tens_plural' and 'tens_ordinal' dictionaries.
-        - 'multipliers': A dictionary with multiplier names as keys and their corresponding values as integers.
-        - 'multipliers_plural': A dictionary with multiplier names in plural form as keys and their corresponding values and suffixes as tuples.
-        - 'multipliers_ordinal': A dictionary with multiplier names in ordinal form as keys and their corresponding values and suffixes as tuples.
-        - 'multipliers_suffixed': A dictionary combining 'multipliers_plural' and 'multipliers_ordinal' dictionaries.
-        - 'decimals': A set of strings representing the number names for ones, tens, and zeros.
-        - 'preceding_prefixers': A dictionary with preceding prefix names as keys and their corresponding symbols as values.
-        - 'following_prefixers': A dictionary with following prefix names as keys and their corresponding symbols as values.
-        - 'prefixes': A set of symbols representing both preceding and following prefixes.
-        - 'suffixers': A dictionary with 'per' as key and a dictionary with 'cent' as key and '%' as value.
-        - 'specials': A set of special words.
-        - 'words': A set of all words used for number normalization, derived from various dictionaries.
-        - 'literal_words': A set of literal number words 'one' and 'ones'.
+        >   - 'zeros': A set of strings representing the words 'o', 'oh', and 'zero'.
+        >   - 'ones': A dictionary with number names as keys and their corresponding values as integers.
+        >   - 'ones_plural': A dictionary with number names in plural form as keys and their corresponding values and suffixes as tuples.
+        >   - 'ones_ordinal': A dictionary with ordinal number names as keys and their corresponding values and suffixes as tuples.
+        >   - 'ones_suffixed': A dictionary combining 'ones_plural' and 'ones_ordinal' dictionaries.
+        >   - 'tens': A dictionary with tens names as keys and their corresponding values as integers.
+        >   - 'tens_plural': A dictionary with tens names in plural form as keys and their corresponding values and suffixes as tuples.
+        >   - 'tens_ordinal': A dictionary with tens names in ordinal form as keys and their corresponding values and suffixes as tuples.
+        >   - 'tens_suffixed': A dictionary combining 'tens_plural' and 'tens_ordinal' dictionaries.
+        >   - 'multipliers': A dictionary with multiplier names as keys and their corresponding values as integers.
+        >   - 'multipliers_plural': A dictionary with multiplier names in plural form as keys and their corresponding values and suffixes as tuples.
+        >   - 'multipliers_ordinal': A dictionary with multiplier names in ordinal form as keys and their corresponding values and suffixes as tuples.
+        >   - 'multipliers_suffixed': A dictionary combining 'multipliers_plural' and 'multipliers_ordinal' dictionaries.
+        >   - 'decimals': A set of strings representing the number names for ones, tens, and zeros.
+        >   - 'preceding_prefixers': A dictionary with preceding prefix names as keys and their corresponding symbols as values.
+        >   - 'following_prefixers': A dictionary with following prefix names as keys and their corresponding symbols as values.
+        >   - 'prefixes': A set of symbols representing both preceding and following prefixes.
+        >   - 'suffixers': A dictionary with 'per' as key and a dictionary with 'cent' as key and '%' as value.
+        >   - 'specials': A set of special words.
+        >   - 'words': A set of all words used for number normalization, derived from various dictionaries.
+        >   - 'literal_words': A set of literal number words 'one' and 'ones'.
         """
         super().__init__()
 
@@ -586,9 +585,9 @@ class EnglishNumberNormalizer:
                 ValueError: If the provided string contains invalid numeric values.
         
             The postprocess method performs the following operations on the input string:
-            1. Combines the numeric values of currencies and cents into a standardized format.
-            2. Extracts the cents value and replaces it with the cent symbol '¢'.
-            3. Replaces the numeric representation of '1' with the word 'one'.
+            >   1. Combines the numeric values of currencies and cents into a standardized format.
+            >   2. Extracts the cents value and replaces it with the cent symbol '¢'.
+            >   3. Replaces the numeric representation of '1' with the word 'one'.
         """
         def combine_cents(m: Match):
             try:
@@ -678,7 +677,7 @@ class EnglishTextNormalizer:
 
     """
     The EnglishTextNormalizer class represents a tool for normalizing English text by standardizing spellings, numbers, and formatting. It utilizes various patterns and replacement rules to clean and enhance
-input text.
+    input text.
     
     Attributes:
         ignore_patterns (str): Regular expression pattern to identify and ignore specific words or phrases during text normalization.
@@ -699,7 +698,7 @@ input text.
         Args:
             self (object): The instance of the EnglishTextNormalizer class.
             english_spelling_mapping (dict): A dictionary containing English spelling mappings. The keys are the original spellings, and the values are the corresponding standardized spellings. This parameter
-is used to initialize the EnglishSpellingNormalizer.
+                is used to initialize the EnglishSpellingNormalizer.
         
         Returns:
             None. This method initializes the EnglishTextNormalizer object with the specified English spelling mappings and other default settings.

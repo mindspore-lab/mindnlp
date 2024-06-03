@@ -1,0 +1,1 @@
+:::mindnlp.transformers.pipelines.zero_shot_classification.ZeroShotClassificationPipeline

@@ -64,11 +64,13 @@ class InvalidScoreLogitsProcessor(LogitsProcessor):
     
     The InvalidScoreLogitsProcessor is a subclass of the LogitsProcessor class and provides functionality to process invalid score values. 
     Invalid score values include NaN (Not a Number) and infinity. This processor replaces all invalid scores in the input logits with zeros, except for the score at index 5 which is set to a high value of
-50000.0.
+    50000.0.
     
     Usage:
+        ```python
         processor = InvalidScoreLogitsProcessor()
         processed_scores = processor(input_ids, scores)
+        ```
     
     Attributes:
         None
@@ -78,6 +80,7 @@ class InvalidScoreLogitsProcessor(LogitsProcessor):
             Process the input logits and replace any invalid scores with zeros, except for the score at index 5 which is set to a high value of 50000.0.
     
     Example:
+        ```python
         # Create an instance of the InvalidScoreLogitsProcessor
         processor = InvalidScoreLogitsProcessor()
     
@@ -88,6 +91,7 @@ class InvalidScoreLogitsProcessor(LogitsProcessor):
     
         # Use the processed scores for further computations
         ...
+        ```
     """
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
         """
@@ -107,17 +111,19 @@ class InvalidScoreLogitsProcessor(LogitsProcessor):
         Description:
             The '__call__' method of the InvalidScoreLogitsProcessor class applies a series of operations to the input scores tensor.
             If any of the scores are NaN (not-a-number) or infinite, the tensor is modified as follows:
-                - A new tensor with the same shape and data type as the scores tensor is created, filled with zeros.
-                - The element at index 5 of the last dimension of the new tensor is set to 50000.0.
+                >   - A new tensor with the same shape and data type as the scores tensor is created, filled with zeros.
+                >   - The element at index 5 of the last dimension of the new tensor is set to 50000.0.
             The processed scores tensor is then returned.
         
         Example:
+            ```python
             >>> input_ids = mindspore.Tensor(...)
             >>> scores = mindspore.Tensor(...)
             >>> processor = InvalidScoreLogitsProcessor()
             >>> processed_scores = processor(input_ids, scores)
             >>> print(processed_scores)
             tensor([...])
+            ```
         """
         if ops.isnan(scores).any() or ops.isinf(scores).any():
             scores = ops.zeros_like(scores)
@@ -136,12 +142,12 @@ class PrefixEncoder(nn.Cell):
         
             Args:
                 config (ChatGLM2Config): The configuration object that holds the parameters for the PrefixEncoder.
-                    - `prefix_projection` (bool): Flag indicating whether to use the prefix projection.
-                    - `num_layers` (int): The number of layers.
-                    - `kv_channels` (int): The number of channels in key-value projection.
-                    - `multi_query_group_num` (int): The number of multi-query groups.
-                    - `pre_seq_len` (int): The length of the prefix sequence.
-                    - `hidden_size` (int): The size of the hidden layer.
+                    >   - `prefix_projection` (bool): Flag indicating whether to use the prefix projection.
+                    >   - `num_layers` (int): The number of layers.
+                    >   - `kv_channels` (int): The number of channels in key-value projection.
+                    >   - `multi_query_group_num` (int): The number of multi-query groups.
+                    >   - `pre_seq_len` (int): The length of the prefix sequence.
+                    >   - `hidden_size` (int): The size of the hidden layer.
         
             Returns:
                 None
@@ -220,31 +226,15 @@ class RotaryEmbedding(nn.Cell):
 
     """
     This class represents a Rotary Position Embedding module that enhances the Transformer model. It provides a mechanism to incorporate positional information into the model's input embeddings, improving its
-ability to understand the order and relationships between elements in a sequence.
+    ability to understand the order and relationships between elements in a sequence.
     
     The RotaryEmbedding class inherits from the nn.Cell class, a base class for all neural network modules in the MindSpore framework.
     
     The RotaryEmbedding class contains the following methods:
     
-    - __init__(self, dim, original_impl=False, dtype=None):
-        Initializes a RotaryEmbedding object.
-        :param dim: An integer representing the dimensionality of the input embeddings.
-        :param original_impl: A boolean indicating whether to use the original implementation.
-        :param dtype: The data type of the embeddings. If None, the default data type is used.
-    
-    - construct_impl(self, seq_len: int, n_elem: int, dtype: mindspore.dtype, base: int = 10000):
-        Constructs the rotary position embeddings.
-        :param seq_len: An integer representing the length of the input sequence.
-        :param n_elem: An integer representing the number of elements in the sequence.
-        :param dtype: The data type of the embeddings.
-        :param base: The base value used in the calculation of theta.
-        :return: The constructed rotary position embeddings.
-    
-    - construct(self, max_seq_len, offset=0):
-        Constructs the rotary position embeddings with the given maximum sequence length.
-        :param max_seq_len: An integer representing the maximum length of the input sequence.
-        :param offset: An integer representing the offset value.
-        :return: The constructed rotary position embeddings.
+    >   - __init__(self, dim, original_impl=False, dtype=None): Initializes a RotaryEmbedding object.
+    >   - construct_impl(self, seq_len: int, n_elem: int, dtype: mindspore.dtype, base: int = 10000): Constructs the rotary position embeddings.
+    >   - construct(self, max_seq_len, offset=0): Constructs the rotary position embeddings with the given maximum sequence length.
     
     For more information on the RotaryEmbedding class and its usage, refer to the original implementation at: 
     https://github.com/labmlai/annotated_deep_learning_paper_implementations/blob/master/labml_nn/transformers/rope/__init__.py
@@ -356,22 +346,24 @@ class LayerNorm(nn.LayerNorm):
     This class represents a layer normalization operation in a neural network. 
     
     Layer normalization is a technique used to normalize the activations of a neural network layer. It helps in improving the training performance and generalization of deep neural networks. The LayerNorm
-class inherits from the nn.LayerNorm class, which provides the basic functionality for layer normalization.
+    class inherits from the nn.LayerNorm class, which provides the basic functionality for layer normalization.
     
     The LayerNorm class takes the following parameters:
-    - normalized_shape: The shape of the input tensor to be normalized.
-    - begin_norm_axis: The axis of the input tensor from which normalization should begin. The default value is -1, indicating the last axis.
-    - begin_params_axis: The axis of the input tensor from which parameter initialization should begin. The default value is -1, indicating the last axis.
-    - gamma_init: The initialization method for the scaling factor parameter. The default value is 'ones', which initializes all elements of the scaling factor to 1.
-    - beta_init: The initialization method for the bias parameter. The default value is 'zeros', which initializes all elements of the bias to 0.
-    - eps: A small value added to the denominator for numerical stability. The default value is 1e-07.
-    - dtype: The data type of the input tensor. The default value is mindspore.float32.
+    >   - normalized_shape: The shape of the input tensor to be normalized.
+    >   - begin_norm_axis: The axis of the input tensor from which normalization should begin. The default value is -1, indicating the last axis.
+    >   - begin_params_axis: The axis of the input tensor from which parameter initialization should begin. The default value is -1, indicating the last axis.
+    >   - gamma_init: The initialization method for the scaling factor parameter. The default value is 'ones', which initializes all elements of the scaling factor to 1.
+    >   - beta_init: The initialization method for the bias parameter. The default value is 'zeros', which initializes all elements of the bias to 0.
+    >   - eps: A small value added to the denominator for numerical stability. The default value is 1e-07.
+    >   - dtype: The data type of the input tensor. The default value is mindspore.float32.
     
     The LayerNorm class initializes an instance of the class by calling the __init__ method of the nn.LayerNorm class with the provided parameters.
     
     Example usage:
+        ```python
         # Create a LayerNorm instance with normalized_shape=(256,), begin_norm_axis=1, and gamma_init='ones'
         layer_norm = LayerNorm(normalized_shape=(256,), begin_norm_axis=1, gamma_init='ones')
+        ```
     """
     def __init__(self, normalized_shape, begin_norm_axis=-1, begin_params_axis=-1,
                  gamma_init='ones', beta_init='zeros', eps=1e-7, dtype=mindspore.float32):
@@ -405,31 +397,31 @@ class RMSNorm(nn.Cell):
     The RMSNorm class has the following attributes:
     
     Attributes:
-    - weight (mindspore.Parameter): A trainable parameter representing the weight matrix used for scaling the normalized hidden states.
-    - eps (float): A small value added to the denominator to avoid division by zero.
+        weight (mindspore.Parameter): A trainable parameter representing the weight matrix used for scaling the normalized hidden states.
+        eps (float): A small value added to the denominator to avoid division by zero.
     
     Methods:
-    - __init__(self, normalized_shape, eps=1e-05, dtype=None, **kwargs): Initializes the RMSNorm instance with the provided parameters.
-    - construct(self, hidden_states: mindspore.Tensor): Normalizes the given hidden states using the RMS method.
+        __init__(self, normalized_shape, eps=1e-05, dtype=None, **kwargs): Initializes the RMSNorm instance with the provided parameters.
+        construct(self, hidden_states: mindspore.Tensor): Normalizes the given hidden states using the RMS method.
     
     Usage Example:
-    
-    import mindspore.ops as ops
-    import mindspore.nn as nn
-    import mindspore
-    
-    class RMSNorm(nn.Cell):
-        def __init__(self, normalized_shape, eps=1e-05, dtype=None, **kwargs):
-            super().__init__()
-            self.weight = mindspore.Parameter(ops.zeros(normalized_shape, dtype=dtype))
-            self.eps = eps
-    
-        def construct(self, hidden_states: mindspore.Tensor):
-            input_dtype = hidden_states.dtype
-            variance = hidden_states.to(mindspore.float32).pow(2).mean(-1, keep_dims=True)
-            hidden_states = hidden_states * ops.rsqrt(variance + self.eps)
-            return (self.weight * hidden_states).to(input_dtype)
-    
+        ```python
+        import mindspore.ops as ops
+        import mindspore.nn as nn
+        import mindspore
+
+        class RMSNorm(nn.Cell):
+            def __init__(self, normalized_shape, eps=1e-05, dtype=None, **kwargs):
+                super().__init__()
+                self.weight = mindspore.Parameter(ops.zeros(normalized_shape, dtype=dtype))
+                self.eps = eps
+
+            def construct(self, hidden_states: mindspore.Tensor):
+                input_dtype = hidden_states.dtype
+                variance = hidden_states.to(mindspore.float32).pow(2).mean(-1, keep_dims=True)
+                hidden_states = hidden_states * ops.rsqrt(variance + self.eps)
+                return (self.weight * hidden_states).to(input_dtype)
+        ```
     """
     def __init__(self, normalized_shape, eps=1e-5, dtype=None, **kwargs):
         '''
@@ -467,19 +459,21 @@ class RMSNorm(nn.Cell):
             ValueError: If the hidden_states tensor does not have the expected shape.
         
         Notes:
-            - This method calculates the RMSNorm of the hidden states using the following steps:
-                1. Calculate the variance of the hidden states by squaring each element, taking the mean along the last dimension, and keeping the dimensions intact.
-                2. Normalize the hidden states by dividing them element-wise by the square root of the variance plus a small constant epsilon.
-                3. Multiply the normalized hidden states by the weight parameter of the RMSNorm instance.
-                4. Convert the modified hidden_states tensor back to the same data type as the input hidden_states tensor.
+            >   - This method calculates the RMSNorm of the hidden states using the following steps:
+            >       1. Calculate the variance of the hidden states by squaring each element, taking the mean along the last dimension, and keeping the dimensions intact.
+            >       2. Normalize the hidden states by dividing them element-wise by the square root of the variance plus a small constant epsilon.
+            >       3. Multiply the normalized hidden states by the weight parameter of the RMSNorm instance.
+            >       4. Convert the modified hidden_states tensor back to the same data type as the input hidden_states tensor.
         
-            - The hidden_states parameter should have a shape of (batch_size, sequence_length, hidden_size).
-            - The hidden_states tensor is modified in-place, meaning the changes are made directly to the input tensor.
+            >   - The hidden_states parameter should have a shape of (batch_size, sequence_length, hidden_size).
+            >   - The hidden_states tensor is modified in-place, meaning the changes are made directly to the input tensor.
         
         Example:
+            ```python
             >>> rms_norm = RMSNorm()
             >>> hidden_states = mindspore.Tensor(np.random.randn(3, 5, 10), dtype=mindspore.float32)
             >>> rms_norm.construct(hidden_states)
+            ```
         """
         input_dtype = hidden_states.dtype
         variance = hidden_states.to(mindspore.float32).pow(2).mean(-1, keep_dims=True)
@@ -492,21 +486,21 @@ class CoreAttention(nn.Cell):
 
     """
     The CoreAttention class represents a core component of attention mechanism for neural network models. This class is used to perform attention operations on query, key, and value layers. It inherits from
-the nn.Cell class.
+    the nn.Cell class.
     
     Attributes:
         config (ChatGLM2Config): The configuration for the attention mechanism.
         layer_number (int): The layer number for the attention mechanism.
     
     Methods:
-        __init__(self, config, layer_number): Initializes the CoreAttention instance with the provided configuration and layer number.
-        construct(self, query_layer, key_layer, value_layer, attention_mask): Constructs the attention mechanism by performing attention operations on the input query, key, and value layers with the optional
-attention mask.
+        __init__: Initializes the CoreAttention instance with the provided configuration and layer number.
+        construct: Constructs the attention mechanism by performing attention operations on the input query, key, and value layers with the optional attention mask.
     
     The __init__ method initializes the CoreAttention instance with the given configuration and layer number. The construct method performs attention operations on the query, key, and value layers, and
-optionally applies the attention mask.
+    optionally applies the attention mask.
     
-    Note: This docstring is generated based on the provided information. Please add any additional information as needed.
+    Note:
+        This docstring is generated based on the provided information. Please add any additional information as needed.
     """
     def __init__(self, config: ChatGLM2Config, layer_number):
         """
@@ -575,11 +569,13 @@ optionally applies the attention mask.
             - The context layer is reshaped and returned as the output.
         
         Example:
+            ```python
             >>> query = torch.randn(2, 5, 10)
             >>> key = torch.randn(2, 5, 10)
             >>> value = torch.randn(2, 5, 10)
             >>> attention = CoreAttention()
             >>> attention.construct(query, key, value, None)
+            ```
         """
         # wait for flash attention
         # query_layer, key_layer, value_layer = [k.permute(1, 2, 0, 3) for k in [query_layer, key_layer, value_layer]]
@@ -899,11 +895,11 @@ class MLP(nn.Cell):
         Args:
             self (MLP): An instance of the MLP class.
             hidden_states (Tensor): The hidden states input to the MLP. This should be a tensor of shape (batch_size, hidden_dim), where batch_size is the number of samples in the batch and hidden_dim is the
-dimension of the hidden states. The hidden states serve as the input to the MLP for constructing the output.
+                dimension of the hidden states. The hidden states serve as the input to the MLP for constructing the output.
         
         Returns:
             output (Tensor): The output tensor constructed by the MLP. This is a tensor of shape (batch_size, hidden_dim), where batch_size is the number of samples in the batch and hidden_dim is the dimension
-of the hidden states. The output tensor represents the result of applying the MLP layers to the input hidden states.
+                of the hidden states. The output tensor represents the result of applying the MLP layers to the input hidden states.
         
         Raises:
             None: This method does not raise any exceptions.
@@ -929,10 +925,10 @@ class GLMBlock(nn.Cell):
         Args:
             self: The current instance of the GLMBlock class.
             config (ChatGLM2Config): The configuration object for the GLMBlock.
-                - This parameter specifies the configuration settings for the GLMBlock.
-                - It should be an instance of the ChatGLM2Config class.
+                >   - This parameter specifies the configuration settings for the GLMBlock.
+                >   - It should be an instance of the ChatGLM2Config class.
             layer_number: The layer number of the GLMBlock.
-                - This parameter indicates the position of the GLMBlock within the model.
+                >   - This parameter indicates the position of the GLMBlock within the model.
         
         Returns:
             None
@@ -1043,9 +1039,9 @@ class GLMTransformer(nn.Cell):
         Args:
             self: The instance of the GLMTransformer class.
             config (ChatGLM2Config): An instance of ChatGLM2Config representing the configuration for the GLMTransformer. It should contain the following attributes:
-                - fp32_residual_connection (bool): Indicates whether to use FP32 residual connection.
-                - post_layer_norm (bool): Indicates whether to apply layer normalization after the block.
-                - num_layers (int): The number of layers in the GLMTransformer.
+                >   - fp32_residual_connection (bool): Indicates whether to use FP32 residual connection.
+                >   - post_layer_norm (bool): Indicates whether to apply layer normalization after the block.
+                >   - num_layers (int): The number of layers in the GLMTransformer.
         
         Returns:
             None. This method initializes the GLMTransformer object with the specified configuration.
@@ -1111,11 +1107,11 @@ class GLMTransformer(nn.Cell):
         
         Returns:
             Tuple[Tensor, Tuple[Optional[Tensor], ...], Optional[Tuple[Tensor, ...]], Optional[Tensor]]:
-            - hidden_states (Tensor): The output hidden states.
-            - presents (Tuple[Optional[Tensor], ...]): The key-value caches for each layer, or an empty tuple if `use_cache` is False.
-            - all_hidden_states (Optional[Tuple[Tensor, ...]]): The hidden states for each layer, or None if `output_hidden_states` is False.
-            - all_self_attentions (Optional[Tensor]): The self-attention matrices for each layer, or None.
-        
+                >   - hidden_states (Tensor): The output hidden states.
+                >   - presents (Tuple[Optional[Tensor], ...]): The key-value caches for each layer, or an empty tuple if `use_cache` is False.
+                >   - all_hidden_states (Optional[Tuple[Tensor, ...]]): The hidden states for each layer, or None if `output_hidden_states` is False.
+                >   - all_self_attentions (Optional[Tensor]): The self-attention matrices for each layer, or None.
+
         Raises:
             None.
         """
@@ -1175,7 +1171,7 @@ class ChatGLM2PreTrainedModel(PreTrainedModel):
                 input_ids (torch.Tensor): The input sequence tensor of shape (batch_size, seq_length).
                 past_key_values (tuple of torch.Tensor): The past key-value pairs for attention weights of shape (past_length, batch_size, num_heads, past_seq_length, embed_dim).
                 padding_mask (torch.Tensor, optional): The tensor indicating the positions of padding tokens in the input sequence. It has the shape (batch_size, seq_length) and contains 0's for non-padding
-tokens and 1's for padding tokens. Defaults to None.
+                    tokens and 1's for padding tokens. Defaults to None.
         
             Returns:
                 torch.Tensor: The attention mask tensor of shape (batch_size, 1, seq_length, seq_length).
@@ -1227,11 +1223,11 @@ class Embedding(nn.Cell):
         
         Args:
             self: The instance of the Embedding class.
-            config (ChatGLM2Config): An instance of the ChatGLM2Config class containing the configuration parameters 
-                                    for the Embedding object.
-                                    - type: ChatGLM2Config
-                                    - purpose: Specifies the configuration parameters for the Embedding object.
-                                    - restrictions: None
+            config (ChatGLM2Config):
+                >- An instance of the ChatGLM2Config class containing the configuration parameters for the Embedding object.
+                >   - type: ChatGLM2Config
+                >   - purpose: Specifies the configuration parameters for the Embedding object.
+                >   - restrictions: None
         
         Returns:
             None
@@ -1279,9 +1275,9 @@ class ChatGLM2Model(ChatGLM2PreTrainedModel):
 
     """
     This class represents the ChatGLM2Model, which is used for natural language processing tasks. It inherits from the ChatGLM2PreTrainedModel and contains methods for initializing the model, getting input
-embeddings, getting prompts, constructing the model, and quantizing the model's weights.
+    embeddings, getting prompts, constructing the model, and quantizing the model's weights.
     The class contains attributes for embedding, number of layers, multi-query group number, key-value channels, sequence length, rotary position embedding, encoder, output layer, prefix sequence length,
-prefix projection, prefix tokens, prefix encoder, and dropout. 
+    prefix projection, prefix tokens, prefix encoder, and dropout.
     The methods included are __init__, get_input_embeddings, get_prompt, construct, and quantize.
     """
     def __init__(self, config: ChatGLM2Config, empty_init=True):
@@ -1477,7 +1473,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
     """A Python class representing a conditional generation model for chat-based tasks using ChatGLM2.
     
     This class inherits from ChatGLM2PreTrainedModel and includes methods to initialize the model, update model keyword arguments for generation, prepare inputs for generation, construct the model, reorder
-cache, process response, build inputs, build stream inputs, chat, stream chat, stream generate, and quantize the model.
+    cache, process response, build inputs, build stream inputs, chat, stream chat, stream generate, and quantize the model.
     
     The methods in this class enable the generation of responses for chat-based queries, handling of input data, and model quantization for improved efficiency.
     
@@ -1579,13 +1575,13 @@ cache, process response, build inputs, build stream inputs, chat, stream chat, s
         
         Returns:
             dict: A dictionary containing input tensors for generation:
-                - input_ids (mindspore.Tensor): The input tensor of shape (batch_size, seq_length) containing the input sequence indices.
-                - past_key_values (Optional[mindspore.Tensor]): Optional past key values tensor of shape (batch_size, num_heads, past_seq_length, hidden_size_per_head) used for generation in accordance with
-GPT-2.
-                - position_ids (mindspore.Tensor): The position ids tensor of shape (batch_size, seq_length) used for generation in accordance with GPT-2.
-                - attention_mask (Optional[mindspore.Tensor]): Optional attention mask tensor of shape (batch_size, seq_length) used for masking out padded tokens.
-                - return_last_logit (bool): Flag indicating whether to return the last logit during generation.
-                - use_cache (Optional[bool]): Optional flag indicating whether to use cache during generation.
+                >   - input_ids (mindspore.Tensor): The input tensor of shape (batch_size, seq_length) containing the input sequence indices.
+                >   - past_key_values (Optional[mindspore.Tensor]): Optional past key values tensor of shape (batch_size, num_heads, past_seq_length, hidden_size_per_head) used for generation in accordance with
+                    GPT-2.
+                >   - position_ids (mindspore.Tensor): The position ids tensor of shape (batch_size, seq_length) used for generation in accordance with GPT-2.
+                >   - attention_mask (Optional[mindspore.Tensor]): Optional attention mask tensor of shape (batch_size, seq_length) used for masking out padded tokens.
+                >   - return_last_logit (bool): Flag indicating whether to return the last logit during generation.
+                >   - use_cache (Optional[bool]): Optional flag indicating whether to use cache during generation.
         
         Raises:
             None.
@@ -1786,25 +1782,26 @@ GPT-2.
         This method 'chat' is defined in the class 'ChatGLM2ForConditionalGeneration' and is used for generating a response to a given query in a chat scenario.
         
         Args:
-        - self: Represents the instance of the class.
-        - tokenizer: An object used for tokenizing the input query and decoding the generated response.
-        - query (str): The input query for which a response needs to be generated.
-        - history (List[Tuple[str, str]]): A list of previous query-response pairs. Defaults to an empty list.
-        - max_length (int): The maximum length of the generated response. Defaults to 8192.
-        - num_beams (int): The number of beams to be used in beam search. Defaults to 1.
-        - do_sample (bool): A flag indicating whether sampling should be used during generation. Defaults to True.
-        - top_p (float): The nucleus sampling parameter. Defaults to 0.8.
-        - temperature (float): The temperature parameter for sampling. Defaults to 0.8.
-        - logits_processor: An object for processing the logits during generation. Defaults to None.
+            self: Represents the instance of the class.
+            tokenizer: An object used for tokenizing the input query and decoding the generated response.
+            query (str): The input query for which a response needs to be generated.
+            history (List[Tuple[str, str]]): A list of previous query-response pairs. Defaults to an empty list.
+            max_length (int): The maximum length of the generated response. Defaults to 8192.
+            num_beams (int): The number of beams to be used in beam search. Defaults to 1.
+            do_sample (bool): A flag indicating whether sampling should be used during generation. Defaults to True.
+            top_p (float): The nucleus sampling parameter. Defaults to 0.8.
+            temperature (float): The temperature parameter for sampling. Defaults to 0.8.
+            logits_processor: An object for processing the logits during generation. Defaults to None.
         
         Returns:
-        - response (str): The generated response to the input query.
-        - history (List[Tuple[str, str]]): The updated history including the input query and generated response.
+            response (str): The generated response to the input query.
+            history (List[Tuple[str, str]]): The updated history including the input query and generated response.
         
         Raises:
-        - None
+            None
         
-        Note: The method appends the input query and generated response to the history and returns the generated response along with the updated history.
+        Note:
+            The method appends the input query and generated response to the history and returns the generated response along with the updated history.
         """
         if history is None:
             history = []
@@ -1907,7 +1904,7 @@ GPT-2.
         
         Raises:
             UserWarning: If using `max_length`'s default value to control generation length. This behavior is deprecated and will be removed in v5 of Transformers. It is recommended to use `max_new_tokens`
-instead.
+                instead.
             UserWarning: If both `max_new_tokens` and `max_length` are set. `max_new_tokens` takes precedence.
             UserWarning: If the input length exceeds `max_length` and may lead to unexpected behavior.
         
@@ -2031,13 +2028,13 @@ instead.
 class ChatGLM2ForSequenceClassification(ChatGLM2PreTrainedModel):
     """
     ChatGLM2ForSequenceClassification is a class representing a pre-trained model for sequence classification based on the ChatGLM2 architecture. It inherits from the ChatGLM2PreTrainedModel and provides
-methods for initializing the model and generating classification outputs. 
+    methods for initializing the model and generating classification outputs.
     
     The class contains an initializer method that takes in a ChatGLM2Config object and an optional boolean parameter for empty initialization. It initializes the model with the provided configuration and sets
-up the transformer and classifier head layers. 
+    up the transformer and classifier head layers.
     
     The construct method takes various input tensors and parameters for generating the sequence classification output. It returns a sequence classifier output with past states if the return_dict parameter is
-set, or a tuple of tensors including logits and transformer outputs. The method also handles the calculation of loss based on the provided labels and problem type.
+    set, or a tuple of tensors including logits and transformer outputs. The method also handles the calculation of loss based on the provided labels and problem type.
     
     This class provides a comprehensive interface for utilizing the ChatGLM2 model for sequence classification tasks, including handling transformer outputs, dropout, and classification head operations.
     

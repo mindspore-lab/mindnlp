@@ -123,29 +123,24 @@ class BridgeTowerResidualAttention(nn.Cell):
     Methods:
         __init__(self, config):
             Initializes a new instance of the BridgeTowerResidualAttention class.
-            
-            Args:
-                config: A configuration object that contains the necessary parameters for the attention module.
+            >   - Args:
+                >   - config: A configuration object that contains the necessary parameters for the attention module.
         
         attention(self, hidden_state: mindspore.Tensor, attention_mask: mindspore.Tensor):
             Performs the attention calculation on the given hidden state.
-            
-            Args:
-                hidden_state (mindspore.Tensor): The input hidden state on which the attention calculation is performed.
-                attention_mask (mindspore.Tensor): An optional tensor representing the attention mask.
-                
-            Returns:
-                mindspore.Tensor: The output hidden state after performing the attention calculation.
+            >   - Args:
+                >   - hidden_state (mindspore.Tensor): The input hidden state on which the attention calculation is performed.
+                >   - attention_mask (mindspore.Tensor): An optional tensor representing the attention mask.
+            >   - Returns:
+                >   - mindspore.Tensor: The output hidden state after performing the attention calculation.
         
         construct(self, hidden_state: mindspore.Tensor, attention_mask: mindspore.Tensor = None):
             Constructs the bridge tower residual attention module by applying attention and MLP operations on the input hidden state.
-            
-            Args:
-                hidden_state (mindspore.Tensor): The input hidden state on which the attention and MLP operations are applied.
-                attention_mask (mindspore.Tensor): An optional tensor representing the attention mask.
-                
-            Returns:
-                mindspore.Tensor: The output hidden state after applying the attention and MLP operations.
+            >   - Args:
+                >   - hidden_state (mindspore.Tensor): The input hidden state on which the attention and MLP operations are applied.
+                >   - attention_mask (mindspore.Tensor): An optional tensor representing the attention mask.
+            >   - Returns:
+                >   - mindspore.Tensor: The output hidden state after applying the attention and MLP operations.
     """
     def __init__(self, config):
         """Initialize the BridgeTowerResidualAttention class.
@@ -154,8 +149,8 @@ class BridgeTowerResidualAttention(nn.Cell):
             self: The instance of the class.
             config: An object containing configuration parameters for the model.
                 It should have attributes like hidden_size, layer_norm_eps, etc.
-                Type: object
-                Restrictions: Must be a valid configuration object.
+                >   - Type: object
+                >   - Restrictions: Must be a valid configuration object.
         
         Returns:
             None. This method initializes various layers and attributes of the BridgeTowerResidualAttention class.
@@ -252,9 +247,11 @@ class BridgeTowerTransformer(nn.Cell):
         construct(hidden_state, attention_mask): Constructs the transformer by applying the BridgeTowerResidualAttention blocks to the hidden state.
     
     Usage:
+        ```python
         config = TransformerConfig(hidden_size=512, num_hidden_layers=6, remove_last_layer=False, stop_gradient=True)
         transformer = BridgeTowerTransformer(config)
         hidden_states = transformer.construct(hidden_state, attention_mask)
+        ```
     """
     def __init__(self, config):
         """
@@ -263,10 +260,10 @@ class BridgeTowerTransformer(nn.Cell):
         Args:
             self (object): The instance of the BridgeTowerTransformer class.
             config (object): An object containing configuration parameters for the BridgeTowerTransformer.
-                - hidden_size (int): The size of the hidden layers.
-                - num_hidden_layers (int): The number of hidden layers.
-                - remove_last_layer (bool): A flag indicating whether to remove the last layer.
-                - stop_gradient (bool): A flag indicating whether to stop gradient computation.
+                >   - hidden_size (int): The size of the hidden layers.
+                >   - num_hidden_layers (int): The number of hidden layers.
+                >   - remove_last_layer (bool): A flag indicating whether to remove the last layer.
+                >   - stop_gradient (bool): A flag indicating whether to stop gradient computation.
         
         Returns:
             None: This method does not return any value.
@@ -322,23 +319,23 @@ class BridgeTowerVisionEmbeddings(nn.Cell):
     This class inherits from nn.Cell and is responsible for constructing embeddings for input pixel values based on the provided configuration.
     
     Attributes:
-        - config (BridgeTowerVisionConfig): The configuration object containing parameters for the vision model.
-        - embed_dim (int): The dimension of the embeddings.
-        - image_size (int): The size of the input image.
-        - patch_size (int): The size of the patches used for processing the image.
-        - class_embedding (Parameter): Learnable class embedding vector.
-        - patch_embedding (Conv2d): Convolutional layer for generating patch embeddings.
-        - num_patches (int): Number of patches in the image.
-        - num_positions (int): Total number of positions for embeddings.
-        - position_embedding (Embedding): Embedding layer for positional encodings.
-        - position_ids (Tensor): Tensor containing position indices for embeddings.
+        config (BridgeTowerVisionConfig): The configuration object containing parameters for the vision model.
+        embed_dim (int): The dimension of the embeddings.
+        image_size (int): The size of the input image.
+        patch_size (int): The size of the patches used for processing the image.
+        class_embedding (Parameter): Learnable class embedding vector.
+        patch_embedding (Conv2d): Convolutional layer for generating patch embeddings.
+        num_patches (int): Number of patches in the image.
+        num_positions (int): Total number of positions for embeddings.
+        position_embedding (Embedding): Embedding layer for positional encodings.
+        position_ids (Tensor): Tensor containing position indices for embeddings.
     
     Methods:
-        - construct(pixel_values: Tensor) -> Tensor: Constructs the embeddings for the input pixel values. 
-            Args:
-                - pixel_values (Tensor): Input tensor containing pixel values.
-            Returns:
-                - Tensor: Output embeddings for the input pixel values.
+        construct: Constructs the embeddings for the input pixel values.
+            >   - Args:
+                >   - pixel_values (Tensor): Input tensor containing pixel values.
+            >   - Returns:
+                >   - Tensor: Output embeddings for the input pixel values.
     """
     def __init__(self, config: BridgeTowerVisionConfig):
         """
@@ -347,10 +344,10 @@ class BridgeTowerVisionEmbeddings(nn.Cell):
         Args:
             self (object): The instance of the class.
             config (BridgeTowerVisionConfig): An object of BridgeTowerVisionConfig class containing configuration parameters.
-                - config.hidden_size (int): The size of the hidden dimension.
-                - config.image_size (int): The size of the input image.
-                - config.patch_size (int): The size of the image patch.
-                - config.num_channels (int): The number of input channels.
+                >   - config.hidden_size (int): The size of the hidden dimension.
+                >   - config.image_size (int): The size of the input image.
+                >   - config.patch_size (int): The size of the image patch.
+                >   - config.num_channels (int): The number of input channels.
         
         Returns:
             None. This method initializes the attributes of the BridgeTowerVisionEmbeddings instance.
@@ -421,31 +418,32 @@ class BridgeTowerVisionTransformer(nn.Cell):
         ln_separate (nn.CellList): A list of LayerNorm modules for separate normalization of hidden states in each transformer layer.
     
     Methods:
-        construct(pixel_values: mindspore.Tensor, attention_mask): 
+        construct(pixel_values: mindspore.Tensor, attention_mask):
             Constructs the forward pass of the BridgeTowerVisionTransformer.
-            Args:
-                pixel_values (mindspore.Tensor): A tensor containing the pixel values.
-                attention_mask: A tensor representing the attention mask.
-            Returns:
-                hidden_states (mindspore.Tensor): A tensor containing the processed hidden states.
+            >   - Args:
+                >   - pixel_values (mindspore.Tensor): A tensor containing the pixel values.
+                >   - attention_mask: A tensor representing the attention mask.
+            >   - Returns:
+                >   - hidden_states (mindspore.Tensor): A tensor containing the processed hidden states.
     
-        construct_pre(pixel_values: mindspore.Tensor): 
+        construct_pre(pixel_values: mindspore.Tensor):
             Constructs the forward pass of the BridgeTowerVisionTransformer up to the layer normalization before the transformer layers.
-            Args:
-                pixel_values (mindspore.Tensor): A tensor containing the pixel values.
-            Returns:
-                hidden_states (mindspore.Tensor): A tensor containing the processed hidden states.
+            >   - Args:
+                >   - pixel_values (mindspore.Tensor): A tensor containing the pixel values.
+            >   - Returns:
+                >   - hidden_states (mindspore.Tensor): A tensor containing the processed hidden states.
     
-        construct_post(hidden_state: mindspore.Tensor): 
+        construct_post(hidden_state: mindspore.Tensor):
             Constructs the forward pass of the BridgeTowerVisionTransformer after the transformer layers up to the final layer normalization.
-            Args:
-                hidden_state (mindspore.Tensor): A tensor containing the hidden states.
-            Returns:
-                visual_output_post (mindspore.Tensor): A tensor containing the processed visual output.
+
+            >   - Args:
+                >   - hidden_state (mindspore.Tensor): A tensor containing the hidden states.
+            >   - Returns:
+                >   - visual_output_post (mindspore.Tensor): A tensor containing the processed visual output.
     
     Note:
         The BridgeTowerVisionTransformer class is designed for BridgeTower vision tasks and provides flexibility in layer normalization. It can be used to process pixel values and generate visual
-representations.
+        representations.
     """
     def __init__(self, config):
         """ 
@@ -454,9 +452,9 @@ representations.
         Args:
             self: The instance of the class.
             config: A dictionary containing the configuration parameters for the transformer.
-                - Type: dict
-                - Purpose: It holds the configuration parameters required for initializing the transformer.
-                - Restrictions: Must be a valid dictionary.
+                >   - Type: dict
+                >   - Purpose: It holds the configuration parameters required for initializing the transformer.
+                >   - Restrictions: Must be a valid dictionary.
         
         Returns:
             None: This method does not return any value explicitly.
@@ -536,10 +534,10 @@ representations.
             None.
         
         This method takes in the pixel values of input images and performs the following steps to construct the pre-processed hidden states:
-        1. Passes the pixel values through the 'embeddings' layer to obtain the initial hidden states.
-        2. Applies layer normalization ('ln_pre') to the hidden states.
-        3. Permutes the dimensions of the hidden states to match the expected shape.
-        4. Returns the pre-processed hidden states.
+        >   1. Passes the pixel values through the 'embeddings' layer to obtain the initial hidden states.
+        >   2. Applies layer normalization ('ln_pre') to the hidden states.
+        >   3. Permutes the dimensions of the hidden states to match the expected shape.
+        >   4. Returns the pre-processed hidden states.
         Note that the input images are expected to be in the format (batch_size, sequence_length, num_channels, image_height, image_width).
         The returned tensor represents the pre-processed hidden states and has the shape (sequence_length, batch_size, hidden_size).
         """
@@ -599,9 +597,9 @@ class BridgeTowerLinkTower(nn.Cell):
         Args:
             self: The instance of the class.
             config (Config): An object containing the configuration parameters for the link tower.
-                - link_tower_type (str): The type of link tower. Possible values are 'add', 'scaled_add', or 'interpolate'.
-                - hidden_size (int): The size of the hidden layer.
-                - layer_norm_eps (float): The epsilon value for LayerNorm.
+                >   - link_tower_type (str): The type of link tower. Possible values are 'add', 'scaled_add', or 'interpolate'.
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - layer_norm_eps (float): The epsilon value for LayerNorm.
         
         Returns:
             None
@@ -663,8 +661,8 @@ class BridgeTowerSelfOutput(nn.Cell):
         dropout (nn.Dropout): A layer for applying dropout to hidden states.
     
     Methods:
-        __init__(self, config): Initializes the BridgeTowerSelfOutput cell with the given configuration.
-        construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor: Constructs the self-output operation using the given hidden states and input tensor.
+        __init__: Initializes the BridgeTowerSelfOutput cell with the given configuration.
+        construct: Constructs the self-output operation using the given hidden states and input tensor.
     """
     def __init__(self, config):
         """
@@ -673,17 +671,17 @@ class BridgeTowerSelfOutput(nn.Cell):
         Args:
             self: An instance of the BridgeTowerSelfOutput class.
             config: A configuration object containing parameters for initializing the BridgeTowerSelfOutput.
-                - Type: Any
-                - Purpose: Specifies the configuration settings for the BridgeTowerSelfOutput initialization.
-                - Restrictions: Must contain the necessary parameters for configuring the BridgeTowerSelfOutput.
+                >   - Type: Any
+                >   - Purpose: Specifies the configuration settings for the BridgeTowerSelfOutput initialization.
+                >   - Restrictions: Must contain the necessary parameters for configuring the BridgeTowerSelfOutput.
         
         Returns:
             None. This method does not return any value explicitly.
         
         Raises:
-            - ValueError: If the configuration object 'config' is not provided or is invalid.
-            - TypeError: If the provided configuration object 'config' is not of the expected type.
-            - AttributeError: If there are issues with accessing or setting attributes during initialization.
+            >   - ValueError: If the configuration object 'config' is not provided or is invalid.
+            >   - TypeError: If the provided configuration object 'config' is not of the expected type.
+            >   - AttributeError: If there are issues with accessing or setting attributes during initialization.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -697,18 +695,18 @@ class BridgeTowerSelfOutput(nn.Cell):
         Args:
             self (BridgeTowerSelfOutput): An instance of the BridgeTowerSelfOutput class.
             hidden_states (mindspore.Tensor): The hidden states tensor.
-                - Shape: (batch_size, seq_length, hidden_size)
-                - Purpose: Represents the input hidden states to the layer.
-                - Restrictions: None
+                >   - Shape: (batch_size, seq_length, hidden_size)
+                >   - Purpose: Represents the input hidden states to the layer.
+                >   - Restrictions: None
             input_tensor (mindspore.Tensor): The input tensor.
-                - Shape: (batch_size, seq_length, hidden_size)
-                - Purpose: Represents the input tensor to be added to the hidden states.
-                - Restrictions: None
+                >   - Shape: (batch_size, seq_length, hidden_size)
+                >   - Purpose: Represents the input tensor to be added to the hidden states.
+                >   - Restrictions: None
         
         Returns:
             mindspore.Tensor: The constructed output tensor.
-                - Shape: (batch_size, seq_length, hidden_size)
-                - Purpose: Represents the output of the BridgeTowerSelfOutput layer.
+                >   - Shape: (batch_size, seq_length, hidden_size)
+                >   - Purpose: Represents the output of the BridgeTowerSelfOutput layer.
         
         Raises:
             None: This method does not raise any exceptions.
@@ -730,8 +728,8 @@ class BridgeTowerIntermediate(nn.Cell):
         intermediate_act_fn (function): Activation function applied to the output of the dense layer.
     
     Methods:
-        __init__(self, config): Initializes the BridgeTowerIntermediate instance.
-        construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor: Constructs the bridge tower intermediate module.
+        __init__: Initializes the BridgeTowerIntermediate instance.
+        construct: Constructs the bridge tower intermediate module.
     
     """
     def __init__(self, config):
@@ -741,9 +739,9 @@ class BridgeTowerIntermediate(nn.Cell):
         Args:
             self: The instance of the 'BridgeTowerIntermediate' class.
             config: An object representing the configuration settings for the 'BridgeTowerIntermediate' class.
-                - Type: object
-                - Purpose: Stores the configuration settings required for initialization.
-                - Restrictions: None
+                >   - Type: object
+                >   - Purpose: Stores the configuration settings required for initialization.
+                >   - Restrictions: None
         
         Returns:
             None. This method does not return any value.
@@ -794,7 +792,7 @@ class BridgeTowerOutput(nn.Cell):
         dropout (nn.Dropout): The dropout module with configurable dropout probability.
     
     Methods:
-        construct(hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor: 
+        construct:
             Applies dense transformation, dropout, layer normalization, and residual connection to the input hidden states and input tensor, and returns the transformed hidden states.
     """
     def __init__(self, config):
@@ -856,18 +854,15 @@ class BridgeTowerPooler(nn.Cell):
     Methods:
         __init__(self, config):
             Initializes a new instance of the 'BridgeTowerPooler' class.
-            
-            Args:
-                config (object): An object that contains the configuration parameters for the pooler.
+            >   - Args:
+                >   - config (object): An object that contains the configuration parameters for the pooler.
         
         construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
             Constructs the pooler module by computing the pooled output of the first token tensor.
-            
-            Args:
-                hidden_states (mindspore.Tensor): The input hidden states tensor.
-            
-            Returns:
-                mindspore.Tensor: The computed pooled output tensor.
+            >   - Args:
+                >   - hidden_states (mindspore.Tensor): The input hidden states tensor.
+            >   - Returns:
+                >   - mindspore.Tensor: The computed pooled output tensor.
     """
     def __init__(self, config):
         """
@@ -876,9 +871,9 @@ class BridgeTowerPooler(nn.Cell):
         Args:
             self: The object instance.
             config: An object containing configuration parameters for the BridgeTowerPooler.
-                Type: object
-                Purpose: To configure the BridgeTowerPooler with specified parameters.
-                Restrictions: Must be a valid config object.
+                >   - Type: object
+                >   - Purpose: To configure the BridgeTowerPooler with specified parameters.
+                >   - Restrictions: Must be a valid config object.
         
         Returns:
             None. This method does not return any value.
@@ -905,11 +900,11 @@ class BridgeTowerPooler(nn.Cell):
             None.
             
         Description:
-        This method takes the hidden states tensor and constructs the pooled output tensor for the BridgeTowerPooler model. 
-        The hidden_states tensor should have a shape of (batch_size, sequence_length, hidden_size) and represents the hidden states of the input sequence. 
-        The method extracts the first token tensor from the hidden_states tensor by selecting the first element of each sequence in the batch, resulting in a tensor of shape (batch_size, hidden_size).
-        Then, the first token tensor is passed through a dense layer, followed by an activation function. 
-        The resulting tensor is the pooled output tensor, which is returned as the output of this method.
+            This method takes the hidden states tensor and constructs the pooled output tensor for the BridgeTowerPooler model.
+            The hidden_states tensor should have a shape of (batch_size, sequence_length, hidden_size) and represents the hidden states of the input sequence.
+            The method extracts the first token tensor from the hidden_states tensor by selecting the first element of each sequence in the batch, resulting in a tensor of shape (batch_size, hidden_size).
+            Then, the first token tensor is passed through a dense layer, followed by an activation function.
+            The resulting tensor is the pooled output tensor, which is returned as the output of this method.
         """
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
@@ -938,20 +933,16 @@ class BridgeTowerSelfAttention(nn.Cell):
         is_decoder (bool): Whether the self-attention mechanism is used in a decoder layer.
     
     Methods:
-        swapaxes_for_scores(x: mindspore.Tensor) -> mindspore.Tensor:
+        swapaxes_for_scores:
             Reshapes the input tensor to prepare it for computing attention scores.
     
-        construct(hidden_states: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, 
-                  head_mask: Optional[mindspore.Tensor] = None, encoder_hidden_states: Optional[mindspore.Tensor] = None, 
-                  encoder_attention_mask: Optional[mindspore.Tensor] = None, 
-                  past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None, 
-                  output_attentions: Optional[bool] = False) -> Tuple[mindspore.Tensor]:
+        construct:
             Computes the self-attention mechanism given the input and optional arguments.
     
     Note:
-        - The hidden size must be a multiple of the number of attention heads.
-        - The attention mechanism supports different types of positional embeddings.
-        - The attention mechanism can be used in both encoder and decoder layers of the model.
+        >   - The hidden size must be a multiple of the number of attention heads.
+        >   - The attention mechanism supports different types of positional embeddings.
+        >   - The attention mechanism can be used in both encoder and decoder layers of the model.
     """
     def __init__(self, config, position_embedding_type=None):
         """
@@ -961,12 +952,12 @@ class BridgeTowerSelfAttention(nn.Cell):
             self: The instance of the class.
             config (object): An object containing configuration parameters.
                              Required parameters:
-                                 - hidden_size (int): The size of the hidden layers.
-                                 - num_attention_heads (int): The number of attention heads.
-                                 - embedding_size (int): The size of the embedding.
-                                 - attention_probs_dropout_prob (float): The dropout probability for attention weights.
-                                 - max_position_embeddings (int): The maximum number of position embeddings.
-                                 - is_decoder (bool): Indicates if the model is a decoder.
+                                 >  - hidden_size (int): The size of the hidden layers.
+                                 >  - num_attention_heads (int): The number of attention heads.
+                                 >  - embedding_size (int): The size of the embedding.
+                                 >  - attention_probs_dropout_prob (float): The dropout probability for attention weights.
+                                 >  - max_position_embeddings (int): The maximum number of position embeddings.
+                                 >  - is_decoder (bool): Indicates if the model is a decoder.
             position_embedding_type (str, optional): The type of position embedding to use. Defaults to 'absolute'.
         
         Returns:
@@ -1038,14 +1029,14 @@ class BridgeTowerSelfAttention(nn.Cell):
             attention_mask (Optional[mindspore.Tensor]): An optional input tensor of shape (batch_size, sequence_length) representing the attention mask. Defaults to None.
             head_mask (Optional[mindspore.Tensor]): An optional input tensor of shape (num_heads,) representing the head mask. Defaults to None.
             encoder_hidden_states (Optional[mindspore.Tensor]): An optional input tensor of shape (batch_size, encoder_sequence_length, hidden_size) representing the hidden states of the encoder. Defaults to
-None.
+                None.
             encoder_attention_mask (Optional[mindspore.Tensor]): An optional input tensor of shape (batch_size, encoder_sequence_length) representing the attention mask of the encoder. Defaults to None.
             past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): An optional tuple containing the past key and value tensors. Defaults to None.
             output_attentions (Optional[bool]): An optional flag indicating whether to output attention probabilities. Defaults to False.
         
         Returns:
             Tuple[mindspore.Tensor]: A tuple containing the context layer tensor of shape (batch_size, sequence_length, hidden_size) and optionally attention probabilities tensor of shape (batch_size,
-num_heads, sequence_length, encoder_sequence_length) if output_attentions is True.
+            num_heads, sequence_length, encoder_sequence_length) if output_attentions is True.
         
         Raises:
             None.
@@ -1156,28 +1147,25 @@ class BridgeTowerAttention(nn.Cell):
     Methods:
         __init__(self, config, position_embedding_type=None):
             Initializes a new instance of the BridgeTowerAttention module.
-            
-            Args:
-                config: The configuration for the module.
-                position_embedding_type: The type of position embedding to be used. (optional)
-    
+            >   - Args:
+                >   - config: The configuration for the module.
+                >   - position_embedding_type: The type of position embedding to be used. (optional)
+
         prune_heads(self, heads):
             Prunes specified attention heads from the module.
-            
-            Args:
-                heads: A list of attention head indices to be pruned.
+            >   - Args:
+                >   - heads: A list of attention head indices to be pruned.
     
         construct(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False):
             Performs the forward pass of the BridgeTowerAttention module.
-            
-            Args:
-                hidden_states (mindspore.Tensor): The input hidden states.
-                attention_mask (Optional[mindspore.Tensor]): The attention mask. (optional)
-                head_mask (Optional[mindspore.Tensor]): The head mask. (optional)
-                encoder_hidden_states (Optional[mindspore.Tensor]): The hidden states of the encoder. (optional)
-                encoder_attention_mask (Optional[mindspore.Tensor]): The attention mask for the encoder. (optional)
-                past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): The past key-value tensors. (optional)
-                output_attentions (Optional[bool]): Whether to output attentions. (optional)
+            >   - Args:
+                >   - hidden_states (mindspore.Tensor): The input hidden states.
+                >   - attention_mask (Optional[mindspore.Tensor]): The attention mask. (optional)
+                >   - head_mask (Optional[mindspore.Tensor]): The head mask. (optional)
+                >   - encoder_hidden_states (Optional[mindspore.Tensor]): The hidden states of the encoder. (optional)
+                >   - encoder_attention_mask (Optional[mindspore.Tensor]): The attention mask for the encoder. (optional)
+                >   - past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): The past key-value tensors. (optional)
+                >   - output_attentions (Optional[bool]): Whether to output attentions. (optional)
     
             Returns:
                 Tuple[mindspore.Tensor]: The output tensor of the BridgeTowerAttention module.
@@ -1215,11 +1203,11 @@ class BridgeTowerAttention(nn.Cell):
         
         Raises:
             This method may raise exceptions if:
-            - The 'heads' parameter is not a list.
-            - The 'heads' list contains non-integer elements.
-            - The 'heads' list contains indices that are out of bounds for the attention heads.
-            - Any of the pruning operations encounter errors or exceptions during execution.
-            - Internal functions like 'find_pruneable_heads_and_indices' or 'prune_linear_layer' raise exceptions.
+            >   - The 'heads' parameter is not a list.
+            >   - The 'heads' list contains non-integer elements.
+            >   - The 'heads' list contains indices that are out of bounds for the attention heads.
+            >   - Any of the pruning operations encounter errors or exceptions during execution.
+            >   - Internal functions like 'find_pruneable_heads_and_indices' or 'prune_linear_layer' raise exceptions.
         """
         if len(heads) == 0:
             return
@@ -1286,22 +1274,22 @@ class BridgeTowerBertCrossLayer(nn.Cell):
 
     """
     This Python class, 'BridgeTowerBertCrossLayer', represents a single layer in the BridgeTowerBert model. It is a subclass of nn.Cell and is responsible for performing cross-attention operations between
-hidden states from the encoder and decoder.
+    hidden states from the encoder and decoder.
     
     Attributes:
-    - chunk_size_feed_forward (int): The chunk size used in the forward pass of the feed-forward network.
-    - seq_len_dim (int): The dimension along which the sequence length is defined.
-    - attention (BridgeTowerAttention): An instance of the BridgeTowerAttention class, responsible for performing self-attention operations.
-    - is_decoder (bool): A flag indicating whether the layer is part of the decoder or not.
-    - add_cross_attention (bool): A flag indicating whether to include cross-attention operations or not.
-    - crossattention (BridgeTowerAttention): An instance of the BridgeTowerAttention class, responsible for performing cross-attention operations.
-    - intermediate (BridgeTowerIntermediate): An instance of the BridgeTowerIntermediate class, responsible for applying an intermediate transformation to the attention output.
-    - output (BridgeTowerOutput): An instance of the BridgeTowerOutput class, responsible for producing the final output of the layer.
+        chunk_size_feed_forward (int): The chunk size used in the forward pass of the feed-forward network.
+        seq_len_dim (int): The dimension along which the sequence length is defined.
+        attention (BridgeTowerAttention): An instance of the BridgeTowerAttention class, responsible for performing self-attention operations.
+        is_decoder (bool): A flag indicating whether the layer is part of the decoder or not.
+        add_cross_attention (bool): A flag indicating whether to include cross-attention operations or not.
+        crossattention (BridgeTowerAttention): An instance of the BridgeTowerAttention class, responsible for performing cross-attention operations.
+        intermediate (BridgeTowerIntermediate): An instance of the BridgeTowerIntermediate class, responsible for applying an intermediate transformation to the attention output.
+        output (BridgeTowerOutput): An instance of the BridgeTowerOutput class, responsible for producing the final output of the layer.
     
     Methods:
-    - construct(hidden_states, encoder_hidden_states, attention_mask=None, head_mask=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False): Performs the forward pass of the layer. It
-applies self-attention to the hidden states, followed by cross-attention if specified. The outputs are then passed through the feed-forward chunk function.
-    - feed_forward_chunk(attention_output): Applies the intermediate and output transformations to the attention output.
+        construct(hidden_states, encoder_hidden_states, attention_mask=None, head_mask=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False): Performs the forward pass of the layer. It
+            applies self-attention to the hidden states, followed by cross-attention if specified. The outputs are then passed through the feed-forward chunk function.
+        feed_forward_chunk(attention_output): Applies the intermediate and output transformations to the attention output.
     
     """
     def __init__(self, config):
@@ -1311,9 +1299,9 @@ applies self-attention to the hidden states, followed by cross-attention if spec
         Args:
             self: The instance of the class.
             config: An object representing the configuration settings for the BridgeTowerBertCrossLayer. It must have the following attributes:
-                - chunk_size_feed_forward: An integer representing the chunk size for feed forward layers.
-                - is_decoder: A boolean indicating if the layer is used as a decoder.
-                - add_cross_attention: A boolean indicating whether to add cross attention.
+                >   - chunk_size_feed_forward: An integer representing the chunk size for feed forward layers.
+                >   - is_decoder: A boolean indicating if the layer is used as a decoder.
+                >   - add_cross_attention: A boolean indicating whether to add cross attention.
             
         Returns:
             None. This method does not return any value.
@@ -1421,20 +1409,20 @@ class BridgeTowerTextLayer(nn.Cell):
     This class represents a BridgeTowerTextLayer, which is a component of a neural network model. It inherits from the nn.Cell class.
     
     Attributes:
-    - chunk_size_feed_forward (int): The chunk size for the feed forward operation.
-    - seq_len_dim (int): The dimension along which the sequence length is considered.
-    - attention (BridgeTowerAttention): An instance of the BridgeTowerAttention class.
-    - is_decoder (bool): A flag indicating if the layer is used as a decoder model.
-    - add_cross_attention (bool): A flag indicating if cross attention is added.
-    - crossattention (BridgeTowerAttention): An instance of the BridgeTowerAttention class for cross attention.
-    - intermediate (BridgeTowerIntermediate): An instance of the BridgeTowerIntermediate class.
-    - output (BridgeTowerOutput): An instance of the BridgeTowerOutput class.
+        chunk_size_feed_forward (int): The chunk size for the feed forward operation.
+        seq_len_dim (int): The dimension along which the sequence length is considered.
+        attention (BridgeTowerAttention): An instance of the BridgeTowerAttention class.
+        is_decoder (bool): A flag indicating if the layer is used as a decoder model.
+        add_cross_attention (bool): A flag indicating if cross attention is added.
+        crossattention (BridgeTowerAttention): An instance of the BridgeTowerAttention class for cross attention.
+        intermediate (BridgeTowerIntermediate): An instance of the BridgeTowerIntermediate class.
+        output (BridgeTowerOutput): An instance of the BridgeTowerOutput class.
     
     Methods:
-    - __init__(self, config): Initializes the BridgeTowerTextLayer with the given configuration.
-    - construct(self, hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_value, output_attentions): Constructs the layer by applying attention and feed forward
-operations to the input hidden states.
-    - feed_forward_chunk(self, attention_output): Applies the feed forward operation to the attention output.
+        __init__(self, config): Initializes the BridgeTowerTextLayer with the given configuration.
+        construct(self, hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_value, output_attentions): Constructs the layer by applying attention and feed forward
+            operations to the input hidden states.
+        feed_forward_chunk(self, attention_output): Applies the feed forward operation to the attention output.
     
     """
     def __init__(self, config):
@@ -1444,17 +1432,17 @@ operations to the input hidden states.
         Args:
             self: The instance of the class.
             config (object): An object containing configuration parameters for the BridgeTowerTextLayer.
-                - chunk_size_feed_forward (int): The size of the chunk for feed-forward operations.
-                - seq_len_dim (int): The dimension of the sequence length.
-                - attention (object): An instance of BridgeTowerAttention class.
-                - is_decoder (bool): Indicates if the model is a decoder.
-                - add_cross_attention (bool): Indicates if cross-attention is added.
-                - crossattention (object): An instance of BridgeTowerAttention class for cross-attention.
-                - intermediate (object): An instance of BridgeTowerIntermediate class.
-                - output (object): An instance of BridgeTowerOutput class.
+                >   - chunk_size_feed_forward (int): The size of the chunk for feed-forward operations.
+                >   - seq_len_dim (int): The dimension of the sequence length.
+                >   - attention (object): An instance of BridgeTowerAttention class.
+                >   - is_decoder (bool): Indicates if the model is a decoder.
+                >   - add_cross_attention (bool): Indicates if cross-attention is added.
+                >   - crossattention (object): An instance of BridgeTowerAttention class for cross-attention.
+                >   - intermediate (object): An instance of BridgeTowerIntermediate class.
+                >   - output (object): An instance of BridgeTowerOutput class.
         
         Returns:
-            None. This method initializes the BridgeTowerTextLayer class attributes based on the provided config.
+            None: This method initializes the BridgeTowerTextLayer class attributes based on the provided config.
         
         Raises:
             ValueError: Raised if add_cross_attention is True but the model is not a decoder.
@@ -1598,54 +1586,47 @@ class BridgeTowerTextEncoder(nn.Cell):
     
         construct(hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_values, use_cache, output_attentions, output_hidden_states, return_dict):
             Constructs the text encoder using the specified input tensors and parameters, and returns the output based on the given settings.
-    
-            Parameters:
-                hidden_states: Input tensor representing the hidden states of the text data.
-                attention_mask: Optional tensor for attention masking.
-                head_mask: Optional tensor for masking specific heads in the attention mechanism.
-                encoder_hidden_states: Optional tensor representing hidden states of the encoder.
-                encoder_attention_mask: Optional tensor for encoder attention masking.
-                past_key_values: Optional tuple of past key values for caching.
-                use_cache: Optional boolean indicating whether to use caching during encoding.
-                output_attentions: Optional boolean indicating whether to output attention values.
-                output_hidden_states: Optional boolean indicating whether to output hidden states.
-                return_dict: Optional boolean indicating whether to return the output as a dictionary.
-    
-            Returns:
-                Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]: 
-                The output tensor or a custom data structure containing various encoding outputs.
-    
-            Raises:
-                Warning: If 'use_cache' is set to True while using gradient checkpointing.
+            >   - Parameters:
+                >   - hidden_states: Input tensor representing the hidden states of the text data.
+                >   - attention_mask: Optional tensor for attention masking.
+                >   - head_mask: Optional tensor for masking specific heads in the attention mechanism.
+                >   - encoder_hidden_states: Optional tensor representing hidden states of the encoder.
+                >   - encoder_attention_mask: Optional tensor for encoder attention masking.
+                >   - past_key_values: Optional tuple of past key values for caching.
+                >   - use_cache: Optional boolean indicating whether to use caching during encoding.
+                >   - output_attentions: Optional boolean indicating whether to output attention values.
+                >   - output_hidden_states: Optional boolean indicating whether to output hidden states.
+                >   - return_dict: Optional boolean indicating whether to return the output as a dictionary.
+            >   - Returns:
+                >   - Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]:
+                >   - The output tensor or a custom data structure containing various encoding outputs.
+            >   - Raises:
+                >   - Warning: If 'use_cache' is set to True while using gradient checkpointing.
     
         _gradient_checkpointing_func():
             Internal method for handling gradient checkpointing during encoding.
-    
-            Parameters:
-                layer_module: The specific layer module to apply gradient checkpointing.
-                hidden_states: Input tensor representing hidden states.
-                attention_mask: Tensor for attention masking.
-                layer_head_mask: Tensor for masking specific heads in the attention mechanism.
-                encoder_hidden_states: Tensor representing hidden states of the encoder.
-                encoder_attention_mask: Tensor for encoder attention masking.
-                past_key_value: Tuple of past key values for caching.
-                output_attentions: Boolean indicating whether to output attention values.
-    
-            Returns:
+            >   - Parameters:
+                >   - layer_module: The specific layer module to apply gradient checkpointing.
+                >   -  hidden_states: Input tensor representing hidden states.
+                >   - attention_mask: Tensor for attention masking.
+                >   - layer_head_mask: Tensor for masking specific heads in the attention mechanism.
+                >   - encoder_hidden_states: Tensor representing hidden states of the encoder.
+                >   - encoder_attention_mask: Tensor for encoder attention masking.
+                >   - past_key_value: Tuple of past key values for caching.
+                >   - output_attentions: Boolean indicating whether to output attention values.
+            >   - Returns:
                 Tuple: Output tuple from applying gradient checkpointing on the layer.
-    
+
         BaseModelOutputWithPastAndCrossAttentions():
             Method for organizing and returning the final output structure of the text encoder.
-    
-            Parameters:
-                last_hidden_state: The final hidden state output.
-                past_key_values: Tuple of past key values for caching.
-                hidden_states: Tuple containing all hidden states.
-                attentions: Tuple containing self-attention values.
-                cross_attentions: Tuple containing cross-attention values.
-    
-            Returns:
-                BaseModelOutputWithPastAndCrossAttentions: Custom data structure with organized encoding outputs.
+            >   - Parameters:
+                >   - last_hidden_state: The final hidden state output.
+                >   - past_key_values: Tuple of past key values for caching.
+                >   - hidden_states: Tuple containing all hidden states.
+                >   - attentions: Tuple containing self-attention values.
+                >   - cross_attentions: Tuple containing cross-attention values.
+            >   - Returns:
+                >   - BaseModelOutputWithPastAndCrossAttentions: Custom data structure with organized encoding outputs.
     """
     def __init__(self, config):
         """
@@ -1655,8 +1636,8 @@ class BridgeTowerTextEncoder(nn.Cell):
             self: The instance of the BridgeTowerTextEncoder class.
             config: A dictionary containing configuration parameters for the text encoder.
                 The config parameter should include the following keys:
-                - num_hidden_layers: An integer specifying the number of hidden layers in the text encoder.
-                  Must be a positive integer.
+                >   - num_hidden_layers: An integer specifying the number of hidden layers in the text encoder.
+                    Must be a positive integer.
                   
         Returns:
             None. This method initializes the BridgeTowerTextEncoder instance with the provided configuration.
@@ -1791,14 +1772,14 @@ class BridgeTowerTextEmbeddings(nn.Cell):
         Args:
             self (object): The instance of the BridgeTowerTextEmbeddings class.
             config (object): An object containing configuration parameters for the text embeddings.
-                - vocab_size (int): The size of the vocabulary.
-                - hidden_size (int): The size of the hidden layer.
-                - pad_token_id (int): The index of the padding token in the vocabulary.
-                - max_position_embeddings (int): The maximum number of positions for positional embeddings.
-                - type_vocab_size (int): The size of the type vocabulary.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
-                - hidden_dropout_prob (float): The dropout probability for hidden layers.
-                - position_embedding_type (str, optional): The type of position embedding, defaults to 'absolute'.
+                >   - vocab_size (int): The size of the vocabulary.
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - pad_token_id (int): The index of the padding token in the vocabulary.
+                >   - max_position_embeddings (int): The maximum number of positions for positional embeddings.
+                >   - type_vocab_size (int): The size of the type vocabulary.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - hidden_dropout_prob (float): The dropout probability for hidden layers.
+                >   - position_embedding_type (str, optional): The type of position embedding, defaults to 'absolute'.
         
         Returns:
             None: This method does not return any value.
@@ -1915,7 +1896,8 @@ def create_position_ids_from_input_ids(input_ids, padding_idx, past_key_values_l
     Args:
         x: mindspore.Tensor x:
 
-    Returns: mindspore.Tensor
+    Returns:
+        mindspore.Tensor
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
     mask = input_ids.ne(padding_idx).int()
@@ -1979,12 +1961,12 @@ class BridgeTowerVisionModel(BridgeTowerPreTrainedModel):
     This class inherits from BridgeTowerPreTrainedModel and provides methods for initializing the model, accessing the data type, and constructing the model output based on input images and optional masks.
     
     Attributes:
-    - visual: An instance of BridgeTowerVisionTransformer used for processing visual inputs.
+        visual: An instance of BridgeTowerVisionTransformer used for processing visual inputs.
     
     Methods:
-    - __init__(config): Initializes the BridgeTowerVisionModel with the provided configuration.
-    - dtype: Returns the data type of the patch embeddings weight.
-    - construct(image, image_mask=None): Constructs the model output based on the input image and optional mask.
+        __init__(config): Initializes the BridgeTowerVisionModel with the provided configuration.
+        dtype: Returns the data type of the patch embeddings weight.
+        construct(image, image_mask=None): Constructs the model output based on the input image and optional mask.
     """
     config_class = BridgeTowerVisionConfig
 
@@ -2150,9 +2132,8 @@ class BridgeTowerTextModel(BridgeTowerPreTrainedModel):
         encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
             the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
-
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
+            >   - 1 for tokens that are **not masked**,
+            >   - 0 for tokens that are **masked**.
         past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
             Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
 
@@ -2266,7 +2247,7 @@ class BridgeTowerModel(BridgeTowerPreTrainedModel):
     This class inherits from BridgeTowerPreTrainedModel and implements methods for initializing the model, constructing the model, and getting classification features.
     
     The BridgeTowerModel class includes methods for getting and setting input embeddings, as well as constructing the model for processing multimodal inputs. It also provides a method for obtaining
-classification features from the processed multimodal inputs.
+    classification features from the processed multimodal inputs.
     
     Attributes:
         config: The configuration for the BridgeTowerModel.
@@ -2276,10 +2257,11 @@ classification features from the processed multimodal inputs.
         get_input_embeddings(self): Retrieves the input embeddings from the text model.
         set_input_embeddings(self, value): Sets the input embeddings for the text model.
         construct(self, input_ids, attention_mask, token_type_ids, pixel_values, pixel_mask, head_mask, inputs_embeds, image_embeds, image_token_type_idx, output_attentions, output_hidden_states, return_dict,
-labels): Constructs the model for processing multimodal inputs and returns the model output.
+            labels): Constructs the model for processing multimodal inputs and returns the model output.
         get_cls_features(self, text_features, image_features): Retrieves the classification features from the processed multimodal inputs.
     
-    Examples:
+    Example:
+        ```python
         >>> from transformers import BridgeTowerProcessor, BridgeTowerModel
         >>> from PIL import Image
         >>> import requests
@@ -2295,6 +2277,7 @@ labels): Constructs the model for processing multimodal inputs and returns the m
         >>> outputs = model(**inputs)
         >>> outputs.keys()
         odict_keys(['text_features', 'image_features', 'pooler_output'])
+        ```
     """
     def __init__(self, config):
         """
@@ -2303,8 +2286,8 @@ labels): Constructs the model for processing multimodal inputs and returns the m
         Args:
             self (object): The instance of the BridgeTowerModel class.
             config (object): An object containing configuration settings for the model.
-                - Purpose: Specifies the configuration parameters for the BridgeTowerModel.
-                - Restrictions: Must be a valid configuration object.
+                >   - Purpose: Specifies the configuration parameters for the BridgeTowerModel.
+                >   - Restrictions: Must be a valid configuration object.
         
         Returns:
             None: This method does not return any value.
@@ -2381,10 +2364,10 @@ labels): Constructs the model for processing multimodal inputs and returns the m
             None.
         
         This method retrieves the input embeddings from the underlying text model of the BridgeTowerModel. The input embeddings are representations of the input text that are used for further processing or
-analysis. By calling this method, you can access the input embeddings that have been generated by the text model.
+        analysis. By calling this method, you can access the input embeddings that have been generated by the text model.
         
         Note that the text model must be initialized and trained before calling this method. If the text model has not been initialized or trained, this method may not return the expected embeddings or may
-raise an exception.
+        raise an exception.
         """
         return self.text_model.get_input_embeddings()
 
@@ -2431,26 +2414,27 @@ raise an exception.
         labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels are currently not supported.
         Returns:
+            Union[Tuple[mindspore.Tensor], BridgeTowerModelOutput]:
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import BridgeTowerProcessor, BridgeTowerModel
+            >>> from PIL import Image
+            >>> import requests
 
-        ```python
-        >>> from transformers import BridgeTowerProcessor, BridgeTowerModel
-        >>> from PIL import Image
-        >>> import requests
+            >>> # prepare image and text
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> text = "hello world"
+            >>> processor = BridgeTowerProcessor.from_pretrained("BridgeTower/bridgetower-base")
+            >>> model = BridgeTowerModel.from_pretrained("BridgeTower/bridgetower-base")
 
-        >>> # prepare image and text
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-        >>> text = "hello world"
-        >>> processor = BridgeTowerProcessor.from_pretrained("BridgeTower/bridgetower-base")
-        >>> model = BridgeTowerModel.from_pretrained("BridgeTower/bridgetower-base")
-
-        >>> inputs = processor(image, text, return_tensors="pt")
-        >>> outputs = model(**inputs)
-        >>> outputs.keys()
-        odict_keys(['text_features', 'image_features', 'pooler_output'])
-        ```"""
+            >>> inputs = processor(image, text, return_tensors="pt")
+            >>> outputs = model(**inputs)
+            >>> outputs.keys()
+            odict_keys(['text_features', 'image_features', 'pooler_output'])
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -2667,9 +2651,9 @@ class BridgeTowerPredictionHeadTransform(nn.Cell):
         Args:
             self: The instance of the class.
             config: An object of type 'config' containing the configuration settings.
-                - Type: object
-                - Purpose: Contains the configuration settings for the transformation.
-                - Restrictions: None
+                >   - Type: object
+                >   - Purpose: Contains the configuration settings for the transformation.
+                >   - Restrictions: None
         
         Returns:
             None. This method does not return any value.
@@ -2692,17 +2676,17 @@ class BridgeTowerPredictionHeadTransform(nn.Cell):
         Method: construct
         
         Description:
-        This method constructs the prediction head transformation for the BridgeTower model.
+            This method constructs the prediction head transformation for the BridgeTower model.
         
         Args:
-        - self: (object) The instance of the BridgeTowerPredictionHeadTransform class.
-        - hidden_states: (tensor) The input hidden states to be transformed by the prediction head.
+            self: (object) The instance of the BridgeTowerPredictionHeadTransform class.
+            hidden_states: (tensor) The input hidden states to be transformed by the prediction head.
           
         Returns:
-        - None: This method does not return any value explicitly, as it modifies the hidden_states in place.
+            None: This method does not return any value explicitly, as it modifies the hidden_states in place.
         
         Raises:
-        - None
+            None
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.transform_act_fn(hidden_states)
@@ -2714,7 +2698,7 @@ class BridgeTowerMLMHead(nn.Cell):
 
     """
     BridgeTowerMLMHead represents the Masked Language Model (MLM) head for the BridgeTower model. This class inherits from nn.Cell and implements the MLM head for generating predictions using the provided
-configuration and optional weight.
+    configuration and optional weight.
     
     Attributes:
         config: The configuration settings for the MLM head.
@@ -2774,7 +2758,7 @@ class BridgeTowerITMHead(nn.Cell):
 
     """
     BridgeTowerITMHead is a class representing an ITM (Item-Transaction-Model) head for a Bridge Tower model. This class inherits from nn.Cell and contains methods for initializing the head with a specific
-hidden size and constructing the ITM score based on the input data.
+    hidden size and constructing the ITM score based on the input data.
     
     Attributes:
         fc (nn.Dense): A fully connected layer for computing the ITM score.
@@ -2891,13 +2875,15 @@ class BridgeTowerForMaskedLM(BridgeTowerPreTrainedModel):
             None. This method does not raise any exceptions.
         
         This method sets the output embeddings for the BridgeTowerForMaskedLM model by updating the decoder attribute of the mlm_score object. The new_embeddings parameter should be a tensor representing the
-new embeddings to be used as the output embeddings. The tensor should have a shape of (vocab_size, hidden_size) where vocab_size is the number of tokens in the vocabulary and hidden_size is the size of the
-hidden state of the model.
+        new embeddings to be used as the output embeddings. The tensor should have a shape of (vocab_size, hidden_size) where vocab_size is the number of tokens in the vocabulary and hidden_size is the size of the
+        hidden state of the model.
         
         Example usage:
+            ```python
             model = BridgeTowerForMaskedLM()
             new_embeddings = torch.randn(model.vocab_size, model.hidden_size)
             model.set_output_embeddings(new_embeddings)
+            ```
         """
         self.mlm_score.decoder = new_embeddings
 
@@ -2923,31 +2909,31 @@ hidden state of the model.
             loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
         Returns:
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import BridgeTowerProcessor, BridgeTowerForMaskedLM
+            >>> from PIL import Image
+            >>> import requests
 
-        ```python
-        >>> from transformers import BridgeTowerProcessor, BridgeTowerForMaskedLM
-        >>> from PIL import Image
-        >>> import requests
+            >>> url = "http://images.cocodataset.org/val2017/000000360943.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw).convert("RGB")
+            >>> text = "a <mask> looking out of the window"
 
-        >>> url = "http://images.cocodataset.org/val2017/000000360943.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw).convert("RGB")
-        >>> text = "a <mask> looking out of the window"
+            >>> processor = BridgeTowerProcessor.from_pretrained("BridgeTower/bridgetower-base-itm-mlm")
+            >>> model = BridgeTowerForMaskedLM.from_pretrained("BridgeTower/bridgetower-base-itm-mlm")
 
-        >>> processor = BridgeTowerProcessor.from_pretrained("BridgeTower/bridgetower-base-itm-mlm")
-        >>> model = BridgeTowerForMaskedLM.from_pretrained("BridgeTower/bridgetower-base-itm-mlm")
+            >>> # prepare inputs
+            >>> encoding = processor(image, text, return_tensors="pt")
 
-        >>> # prepare inputs
-        >>> encoding = processor(image, text, return_tensors="pt")
+            >>> # forward pass
+            >>> outputs = model(**encoding)
 
-        >>> # forward pass
-        >>> outputs = model(**encoding)
+            >>> results = processor.decode(outputs.logits.argmax(dim=-1).squeeze(0).tolist())
 
-        >>> results = processor.decode(outputs.logits.argmax(dim=-1).squeeze(0).tolist())
-
-        >>> print(results)
-        .a cat looking out of the window.
-        ```"""
+            >>> print(results)
+            .a cat looking out of the window.
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         outputs = self.bridgetower(
             input_ids,
@@ -2993,7 +2979,8 @@ class BridgeTowerForImageAndTextRetrieval(BridgeTowerPreTrainedModel):
     Returns:
         SequenceClassifierOutput or Tuple[mindspore.Tensor]: The output of the model, including the image-text matching loss and the logits.
     
-    Examples:
+    Example:
+        ```python
         >>> from transformers import BridgeTowerProcessor, BridgeTowerForImageAndTextRetrieval
         >>> import requests
         >>> from PIL import Image
@@ -3007,6 +2994,7 @@ class BridgeTowerForImageAndTextRetrieval(BridgeTowerPreTrainedModel):
         ...     encoding = processor(image, text, return_tensors="pt")
         ...     outputs = model(**encoding)
         ...     scores[text] = outputs.logits[0, 1].item()
+        ```
     """
     def __init__(self, config):
         """
@@ -3051,29 +3039,30 @@ class BridgeTowerForImageAndTextRetrieval(BridgeTowerPreTrainedModel):
             Labels for computing the image-text matching loss. 0 means the pairs don't match and 1 means they match.
             The pairs with 0 will be skipped for calculation.
         Returns:
+            Union[SequenceClassifierOutput, Tuple[mindspore.Tensor]]
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import BridgeTowerProcessor, BridgeTowerForImageAndTextRetrieval
+            >>> import requests
+            >>> from PIL import Image
 
-        ```python
-        >>> from transformers import BridgeTowerProcessor, BridgeTowerForImageAndTextRetrieval
-        >>> import requests
-        >>> from PIL import Image
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> texts = ["An image of two cats chilling on a couch", "A football player scoring a goal"]
 
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-        >>> texts = ["An image of two cats chilling on a couch", "A football player scoring a goal"]
+            >>> processor = BridgeTowerProcessor.from_pretrained("BridgeTower/bridgetower-base-itm-mlm")
+            >>> model = BridgeTowerForImageAndTextRetrieval.from_pretrained("BridgeTower/bridgetower-base-itm-mlm")
 
-        >>> processor = BridgeTowerProcessor.from_pretrained("BridgeTower/bridgetower-base-itm-mlm")
-        >>> model = BridgeTowerForImageAndTextRetrieval.from_pretrained("BridgeTower/bridgetower-base-itm-mlm")
-
-        >>> # forward pass
-        >>> scores = dict()
-        >>> for text in texts:
-        ...     # prepare inputs
-        ...     encoding = processor(image, text, return_tensors="pt")
-        ...     outputs = model(**encoding)
-        ...     scores[text] = outputs.logits[0, 1].item()
-        ```"""
+            >>> # forward pass
+            >>> scores = dict()
+            >>> for text in texts:
+            ...     # prepare inputs
+            ...     encoding = processor(image, text, return_tensors="pt")
+            ...     outputs = model(**encoding)
+            ...     scores[text] = outputs.logits[0, 1].item()
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.bridgetower(
@@ -3166,10 +3155,10 @@ class BridgeTowerForContrastiveLearning(BridgeTowerPreTrainedModel):
     Represents a BridgeTower model for contrastive learning.
     
     This class inherits from BridgeTowerPreTrainedModel and includes initialization and construction methods for contrastive learning. It contains methods for processing input data, calculating contrastive
-loss, and returning outputs for text and image embeddings.
+    loss, and returning outputs for text and image embeddings.
     
     The `construct` method takes input tensors for text and image data, and optional parameters for attention, token types, and masks. It returns a BridgeTowerContrastiveOutput object containing the
-contrastive loss, logits, text embeddings, image embeddings, cross-modal embeddings, hidden states, and attentions.
+    contrastive loss, logits, text embeddings, image embeddings, cross-modal embeddings, hidden states, and attentions.
     
     The example provided demonstrates the usage of the BridgeTowerForContrastiveLearning class for processing images and texts, calculating contrastive loss, and obtaining model outputs.
     
@@ -3219,37 +3208,38 @@ contrastive loss, logits, text embeddings, image embeddings, cross-modal embeddi
         return_loss (`bool`, *optional*):
             Whether or not to return the contrastive loss.
         Returns:
+            Union[BridgeTowerContrastiveOutput, Tuple[mindspore.Tensor]]
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import BridgeTowerProcessor, BridgeTowerForContrastiveLearning
+            >>> import requests
+            >>> from PIL import Image
+            >>> import torch
 
-        ```python
-        >>> from transformers import BridgeTowerProcessor, BridgeTowerForContrastiveLearning
-        >>> import requests
-        >>> from PIL import Image
-        >>> import torch
+            >>> image_urls = [
+            ...     "https://farm4.staticflickr.com/3395/3428278415_81c3e27f15_z.jpg",
+            ...     "http://images.cocodataset.org/val2017/000000039769.jpg",
+            ... ]
+            >>> texts = ["two dogs in a car", "two cats sleeping on a couch"]
+            >>> images = [Image.open(requests.get(url, stream=True).raw) for url in image_urls]
 
-        >>> image_urls = [
-        ...     "https://farm4.staticflickr.com/3395/3428278415_81c3e27f15_z.jpg",
-        ...     "http://images.cocodataset.org/val2017/000000039769.jpg",
-        ... ]
-        >>> texts = ["two dogs in a car", "two cats sleeping on a couch"]
-        >>> images = [Image.open(requests.get(url, stream=True).raw) for url in image_urls]
+            >>> processor = BridgeTowerProcessor.from_pretrained("BridgeTower/bridgetower-large-itm-mlm-itc")
+            >>> model = BridgeTowerForContrastiveLearning.from_pretrained("BridgeTower/bridgetower-large-itm-mlm-itc")
 
-        >>> processor = BridgeTowerProcessor.from_pretrained("BridgeTower/bridgetower-large-itm-mlm-itc")
-        >>> model = BridgeTowerForContrastiveLearning.from_pretrained("BridgeTower/bridgetower-large-itm-mlm-itc")
+            >>> inputs = processor(images, texts, padding=True, return_tensors="pt")
+            >>> loss = model(**inputs, return_loss=True).loss
 
-        >>> inputs = processor(images, texts, padding=True, return_tensors="pt")
-        >>> loss = model(**inputs, return_loss=True).loss
+            >>> inputs = processor(images, texts[::-1], padding=True, return_tensors="pt")
+            >>> loss_swapped = model(**inputs, return_loss=True).loss
 
-        >>> inputs = processor(images, texts[::-1], padding=True, return_tensors="pt")
-        >>> loss_swapped = model(**inputs, return_loss=True).loss
+            >>> print("Loss", round(loss.item(), 4))
+            Loss 0.0019
 
-        >>> print("Loss", round(loss.item(), 4))
-        Loss 0.0019
-
-        >>> print("Loss with swapped images", round(loss_swapped.item(), 4))
-        Loss with swapped images 2.126
-        ```"""
+            >>> print("Loss with swapped images", round(loss_swapped.item(), 4))
+            Loss with swapped images 2.126
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.bridgetower(

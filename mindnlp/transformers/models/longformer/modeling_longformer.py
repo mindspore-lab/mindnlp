@@ -440,13 +440,13 @@ class LongformerEmbeddings(nn.Cell):
         Args:
             self (object): The instance of the class.
             config (object): An object containing configuration parameters for the embeddings.
-                - vocab_size (int): The size of the vocabulary.
-                - hidden_size (int): The size of the hidden layer.
-                - pad_token_id (int): The index of the padding token.
-                - type_vocab_size (int): The size of the type vocabulary.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
-                - hidden_dropout_prob (float): The dropout probability for the hidden layer.
-                - max_position_embeddings (int): The maximum position for positional embeddings.
+                >   - vocab_size (int): The size of the vocabulary.
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - pad_token_id (int): The index of the padding token.
+                >   - type_vocab_size (int): The size of the type vocabulary.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - hidden_dropout_prob (float): The dropout probability for the hidden layer.
+                >   - max_position_embeddings (int): The maximum position for positional embeddings.
         
         Returns:
             None: This method does not return any value.
@@ -544,10 +544,10 @@ class LongformerSelfAttention(nn.Cell):
 
     """
     This class represents the self-attention mechanism used in Longformer models. It handles the computation of attention scores and outputs for both local and global attention patterns, with support for
-sliding window attention. Inherits from nn.Cell.
+    sliding window attention. Inherits from nn.Cell.
     
     The class includes methods for initializing the self-attention layer, constructing the attention mechanism, padding and processing hidden states, and computing attention outputs based on global indices. It
-also provides functions for matrix multiplication with sliding window attention patterns and handling global attention indices.
+    also provides functions for matrix multiplication with sliding window attention patterns and handling global attention indices.
     
     The LongformerSelfAttention class is designed to work seamlessly within Longformer models, ensuring efficient and accurate attention computations for both local and global contexts.
     
@@ -560,7 +560,7 @@ also provides functions for matrix multiplication with sliding window attention 
         Args:
             self: The instance of the class.
             config: An object containing the configuration parameters for the LongformerSelfAttention layer, including hidden_size, num_attention_heads, attention_probs_dropout_prob, and attention_window.
-Type: object. Restrictions: Must contain the specified configuration parameters.
+                Type: object. Restrictions: Must contain the specified configuration parameters.
             layer_id: The ID of the layer. Type: int. Purpose: Identifies the specific layer within the LongformerSelfAttention. Restrictions: Must be a valid layer ID.
         
         Returns:
@@ -619,10 +619,9 @@ Type: object. Restrictions: Must contain the specified configuration parameters.
         *attention_window* happens in [`LongformerModel.forward`] to avoid redoing the padding on each layer.
 
         The *attention_mask* is changed in [`LongformerModel.forward`] from 0, 1, 2 to:
-
-            - -10000: no attention
-            - 0: local attention
-            - +10000: global attention
+            >   - -10000: no attention
+            >   - 0: local attention
+            >   - +10000: global attention
         """
         hidden_states = hidden_states.swapaxes(0, 1)
 
@@ -788,28 +787,27 @@ Type: object. Restrictions: Must contain the specified configuration parameters.
         shift every row 1 step right, converting columns into diagonals.
 
         Example:
-
-        ```python
-        chunked_hidden_states: [
-            0.4983,
-            2.6918,
-            -0.0071,
-            1.0492,
-            -1.8348,
-            0.7672,
-            0.2986,
-            0.0285,
-            -0.7584,
-            0.4206,
-            -0.0405,
-            0.1599,
-            2.0514,
-            -1.1600,
-            0.5372,
-            0.2629,
-        ]
-        window_overlap = num_rows = 4
-        ```
+            ```python
+            chunked_hidden_states: [
+                0.4983,
+                2.6918,
+                -0.0071,
+                1.0492,
+                -1.8348,
+                0.7672,
+                0.2986,
+                0.0285,
+                -0.7584,
+                0.4206,
+                -0.0405,
+                0.1599,
+                2.0514,
+                -1.1600,
+                0.5372,
+                0.2629,
+            ]
+            window_overlap = num_rows = 4
+            ```
 
                      (pad & diagonalize) => [ 0.4983, 2.6918, -0.0071, 1.0492, 0.0000, 0.0000, 0.0000
                        0.0000, -1.8348, 0.7672, 0.2986, 0.0285, 0.0000, 0.0000 0.0000, 0.0000, -0.7584, 0.4206,
@@ -1054,21 +1052,21 @@ Type: object. Restrictions: Must contain the specified configuration parameters.
         This method concatenates the global key attention probabilities with query vectors.
         
         Args:
-        - self: The object instance of the LongformerSelfAttention class.
-        - key_vectors (Tensor): The key vectors used for computing attention probabilities.
-        - query_vectors (Tensor): The query vectors used for computing attention probabilities.
-        - max_num_global_attn_indices (int): The maximum number of global attention indices.
-        - is_index_global_attn_nonzero (Tensor): Tensor indicating non-zero global attention indices.
-        - is_local_index_global_attn_nonzero (Tensor): Tensor indicating non-zero local attention indices for global attention.
-        - is_local_index_no_global_attn_nonzero (Tuple): Tuple containing two Tensors indicating non-zero local attention indices where global attention is not present.
+            self: The object instance of the LongformerSelfAttention class.
+            key_vectors (Tensor): The key vectors used for computing attention probabilities.
+            query_vectors (Tensor): The query vectors used for computing attention probabilities.
+            max_num_global_attn_indices (int): The maximum number of global attention indices.
+            is_index_global_attn_nonzero (Tensor): Tensor indicating non-zero global attention indices.
+            is_local_index_global_attn_nonzero (Tensor): Tensor indicating non-zero local attention indices for global attention.
+            is_local_index_no_global_attn_nonzero (Tuple): Tuple containing two Tensors indicating non-zero local attention indices where global attention is not present.
         
         Returns:
-        - Tensor: The attention probabilities computed from global key vectors concatenated with query vectors.
+            Tensor: The attention probabilities computed from global key vectors concatenated with query vectors.
         
         Raises:
-        - ValueError: If the shape of the parameters is not compatible with the operations.
-        - TypeError: If the data types of the input parameters are not supported.
-        - RuntimeError: If there is an issue during the computation of attention probabilities.
+            - ValueError: If the shape of the parameters is not compatible with the operations.
+            - TypeError: If the data types of the input parameters are not supported.
+            - RuntimeError: If there is an issue during the computation of attention probabilities.
         """
         batch_size = key_vectors.shape[0]
 
@@ -1283,7 +1281,7 @@ class LongformerSelfOutput(nn.Cell):
 
     """
     This class represents the Longformer self-attention mechanism used in the Longformer model. It is responsible for applying a dense layer, layer normalization, and dropout to the hidden states of the input
-tensor.
+    tensor.
     
     Inherits from: nn.Cell
     
@@ -1304,9 +1302,9 @@ tensor.
         Args:
             self (object): The instance of the LongformerSelfOutput class.
             config (object): An object containing configuration settings.
-                - hidden_size (int): The size of the hidden layers.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
-                - hidden_dropout_prob (float): The dropout probability for hidden layers.
+                >   - hidden_size (int): The size of the hidden layers.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - hidden_dropout_prob (float): The dropout probability for hidden layers.
         
         Returns:
             None. This method initializes the LongformerSelfOutput class attributes.
@@ -1598,7 +1596,7 @@ class LongformerLayer(nn.Cell):
     """A class representing a Longformer layer.
     
     This class inherits from the nn.Cell class and implements a single layer of the Longformer model. The Longformer layer consists of three main components: attention, intermediate, and output. It also
-provides methods for constructing the layer and performing feed-forward chunking.
+    provides methods for constructing the layer and performing feed-forward chunking.
     
     Attributes:
         attention (LongformerAttention): The attention module of the layer.
@@ -1610,7 +1608,7 @@ provides methods for constructing the layer and performing feed-forward chunking
     Methods:
         __init__(self, config, layer_id=0): Initializes a new instance of LongformerLayer.
         construct(self, hidden_states, attention_mask=None, layer_head_mask=None, is_index_masked=None, is_index_global_attn=None, is_global_attn=None, output_attentions=False): Constructs the LongformerLayer
-given the input hidden states and optional masks.
+            given the input hidden states and optional masks.
         ff_chunk(self, attn_output): Performs feed-forward chunking on the given attention output.
     
     """
@@ -1716,32 +1714,33 @@ class LongformerEncoder(nn.Cell):
     This class inherits from `nn.Cell` and initializes with a configuration object `config`. The `config` parameter specifies the configuration settings for the LongformerEncoder.
     
     The LongformerEncoder consists of a series of Longformer layers. The number of layers is determined by the `config.num_hidden_layers` parameter. Each layer is represented by an instance of the
-`LongformerLayer` class.
+    `LongformerLayer` class.
     
     The `construct` method is responsible for processing the input sequence through the Longformer layers. It takes the following parameters:
-    - `hidden_states`: The input hidden states of the sequence.
-    - `attention_mask`: An optional attention mask to mask certain positions in the input sequence. Positions with a value less than 0 are considered masked.
-    - `head_mask`: An optional head mask to mask certain heads in each layer. The shape of the head mask should match the number of layers in the LongformerEncoder.
-    - `padding_len`: The length of padding added to the input sequence. This is used to truncate the hidden states and attention tensors.
-    - `output_attentions`: A boolean flag indicating whether to output attention tensors.
-    - `output_hidden_states`: A boolean flag indicating whether to output hidden states of each layer.
-    - `return_dict`: A boolean flag indicating whether to return the output as a LongformerBaseModelOutput dictionary.
+    >   - `hidden_states`: The input hidden states of the sequence.
+    >   - `attention_mask`: An optional attention mask to mask certain positions in the input sequence. Positions with a value less than 0 are considered masked.
+    >   - `head_mask`: An optional head mask to mask certain heads in each layer. The shape of the head mask should match the number of layers in the LongformerEncoder.
+    >   - `padding_len`: The length of padding added to the input sequence. This is used to truncate the hidden states and attention tensors.
+    >   - `output_attentions`: A boolean flag indicating whether to output attention tensors.
+    >   - `output_hidden_states`: A boolean flag indicating whether to output hidden states of each layer.
+    >   - `return_dict`: A boolean flag indicating whether to return the output as a LongformerBaseModelOutput dictionary.
     
     The `construct` method processes the input sequence through each layer of the LongformerEncoder. It keeps track of the hidden states and attention tensors if the corresponding flags are set. If a head mask
-is provided, it is applied to the respective layer. At the end, the method returns a LongformerBaseModelOutput containing the last hidden state, hidden states of all layers, attention tensors, and global
-attention tensors if applicable.
+    is provided, it is applied to the respective layer. At the end, the method returns a LongformerBaseModelOutput containing the last hidden state, hidden states of all layers, attention tensors, and global
+    attention tensors if applicable.
     
-    Note: The LongformerEncoder assumes that the input hidden states and attention mask have compatible shapes.
+    Note:
+        The LongformerEncoder assumes that the input hidden states and attention mask have compatible shapes.
     
     Please refer to the LongformerBaseModelOutput documentation for details on the structure of the output.
     
     Example usage:
-    
-    config = LongformerConfig(num_hidden_layers=12)
-    encoder = LongformerEncoder(config)
-    input_hidden_states = ...
-    output = encoder.construct(input_hidden_states)
-    
+        ```python
+        config = LongformerConfig(num_hidden_layers=12)
+        encoder = LongformerEncoder(config)
+        input_hidden_states = ...
+        output = encoder.construct(input_hidden_states)
+        ```
     """
     def __init__(self, config):
         """
@@ -1751,16 +1750,16 @@ attention tensors if applicable.
             self (object): The LongformerEncoder instance.
             config (dict): A dictionary containing configuration parameters for the LongformerEncoder.
                 The configuration dictionary should include the following keys:
-                    - num_hidden_layers (int): The number of hidden layers in the encoder.
+                    >   - num_hidden_layers (int): The number of hidden layers in the encoder.
         
         Returns:
             None. This method does not return any value explicitly.
         
         Raises:
-            - TypeError: If the provided 'config' parameter is not a dictionary.
-            - ValueError: If the 'num_hidden_layers' key is missing in the configuration dictionary.
-            - ValueError: If the 'num_hidden_layers' value is not a positive integer.
-            - Other potential exceptions related to creating LongformerLayer objects within the CellList.
+            TypeError: If the provided 'config' parameter is not a dictionary.
+            ValueError: If the 'num_hidden_layers' key is missing in the configuration dictionary.
+            ValueError: If the 'num_hidden_layers' value is not a positive integer.
+            Other potential exceptions related to creating LongformerLayer objects within the CellList.
         """
         super().__init__()
         self.config = config
@@ -1780,20 +1779,20 @@ attention tensors if applicable.
         This method constructs the LongformerEncoder by processing the provided input parameters.
         
         Args:
-        - self: The instance of the LongformerEncoder class.
-        - hidden_states (torch.Tensor): The input hidden states to be processed.
-        - attention_mask (torch.Tensor, optional): Masking tensor to filter out certain tokens during attention calculation. Default is None.
-        - head_mask (torch.Tensor, optional): Masking tensor to filter out certain heads in the attention mechanism. Default is None.
-        - padding_len (int, optional): The length of padding to be removed from the final hidden states. Default is 0.
-        - output_attentions (bool, optional): Flag to indicate whether to output attentions. Default is False.
-        - output_hidden_states (bool, optional): Flag to indicate whether to output hidden states. Default is False.
-        - return_dict (bool, optional): Flag to indicate whether to return the results as a dictionary. Default is True.
+            self: The instance of the LongformerEncoder class.
+            hidden_states (torch.Tensor): The input hidden states to be processed.
+            attention_mask (torch.Tensor, optional): Masking tensor to filter out certain tokens during attention calculation. Default is None.
+            head_mask (torch.Tensor, optional): Masking tensor to filter out certain heads in the attention mechanism. Default is None.
+            padding_len (int, optional): The length of padding to be removed from the final hidden states. Default is 0.
+            output_attentions (bool, optional): Flag to indicate whether to output attentions. Default is False.
+            output_hidden_states (bool, optional): Flag to indicate whether to output hidden states. Default is False.
+            return_dict (bool, optional): Flag to indicate whether to return the results as a dictionary. Default is True.
         
         Returns:
-        None. The method directly modifies the hidden states and produces output through side effects.
+            None. The method directly modifies the hidden states and produces output through side effects.
         
         Raises:
-        - AssertionError: If the head_mask does not have the correct shape for the number of layers in the LongformerEncoder.
+            - AssertionError: If the head_mask does not have the correct shape for the number of layers in the LongformerEncoder.
         
         """
         is_index_masked = attention_mask < 0
@@ -1871,10 +1870,10 @@ class LongformerPooler(nn.Cell):
         activation (nn.Tanh): An activation function applied after the transformation.
     
     Methods:
-        __init__(self, config):
+        __init__:
             Initializes a new instance of the LongformerPooler class.
             
-        construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+        construct:
             Constructs the pooled output tensor based on the given hidden states.
             
     """
@@ -1936,9 +1935,9 @@ class LongformerLMHead(nn.Cell):
         Args:
             self: The LongformerLMHead instance to be initialized.
             config: An instance of the configuration class containing the following attributes:
-                - hidden_size (int): The size of the hidden layers.
-                - vocab_size (int): The size of the vocabulary.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - hidden_size (int): The size of the hidden layers.
+                >   - vocab_size (int): The size of the vocabulary.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
         
         Returns:
             None. This method does not return any value.
@@ -2180,7 +2179,7 @@ class LongformerModel(LongformerPreTrainedModel):
         Args:
             self (LongformerModel): An instance of the LongformerModel class.
             attention_mask (mindspore.Tensor): The attention mask tensor. It is a binary tensor of shape (batch_size, sequence_length) where 0 indicates masking and 1 indicates non-masking. If None, the
-global_attention_mask is used.
+                global_attention_mask is used.
             global_attention_mask (mindspore.Tensor): The global attention mask tensor. It is a binary tensor of shape (batch_size, sequence_length) where 0 indicates masking and 1 indicates non-masking.
         
         Returns:
@@ -2216,41 +2215,41 @@ global_attention_mask is used.
         r"""
 
         Returns:
+            Union[Tuple, LongformerBaseModelOutputWithPooling]
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import LongformerModel, AutoTokenizer
 
-        ```python
+            >>> model = LongformerModel.from_pretrained("allenai/longformer-base-4096")
+            >>> tokenizer = AutoTokenizer.from_pretrained("allenai/longformer-base-4096")
 
-        >>> from transformers import LongformerModel, AutoTokenizer
+            >>> SAMPLE_TEXT = " ".join(["Hello world! "] * 1000)  # long input document
+            >>> input_ids = mindspore.Tensor(tokenizer.encode(SAMPLE_TEXT)).unsqueeze(0)  # batch of size 1
 
-        >>> model = LongformerModel.from_pretrained("allenai/longformer-base-4096")
-        >>> tokenizer = AutoTokenizer.from_pretrained("allenai/longformer-base-4096")
-
-        >>> SAMPLE_TEXT = " ".join(["Hello world! "] * 1000)  # long input document
-        >>> input_ids = mindspore.Tensor(tokenizer.encode(SAMPLE_TEXT)).unsqueeze(0)  # batch of size 1
-
-        >>> attention_mask = torch.ones(
-        ...     input_ids.shape, dtype=mindspore.int64
-        ... )  # initialize to local attention
-        >>> global_attention_mask = torch.zeros(
-        ...     input_ids.shape, dtype=mindspore.int64
-        ... )  # initialize to global attention to be deactivated for all tokens
-        >>> global_attention_mask[
-        ...     :,
-        ...     [
-        ...         1,
-        ...         4,
-        ...         21,
-        ...     ],
-        ... ] = 1  # Set global attention to random tokens for the sake of this example
-        >>> # Usually, set global attention based on the task. For example,
-        >>> # classification: the <s> token
-        >>> # QA: question tokens
-        >>> # LM: potentially on the beginning of sentences and paragraphs
-        >>> outputs = model(input_ids, attention_mask=attention_mask, global_attention_mask=global_attention_mask)
-        >>> sequence_output = outputs.last_hidden_state
-        >>> pooled_output = outputs.pooler_output
-        ```"""
+            >>> attention_mask = torch.ones(
+            ...     input_ids.shape, dtype=mindspore.int64
+            ... )  # initialize to local attention
+            >>> global_attention_mask = torch.zeros(
+            ...     input_ids.shape, dtype=mindspore.int64
+            ... )  # initialize to global attention to be deactivated for all tokens
+            >>> global_attention_mask[
+            ...     :,
+            ...     [
+            ...         1,
+            ...         4,
+            ...         21,
+            ...     ],
+            ... ] = 1  # Set global attention to random tokens for the sake of this example
+            >>> # Usually, set global attention based on the task. For example,
+            >>> # classification: the <s> token
+            >>> # QA: question tokens
+            >>> # LM: potentially on the beginning of sentences and paragraphs
+            >>> outputs = model(input_ids, attention_mask=attention_mask, global_attention_mask=global_attention_mask)
+            >>> sequence_output = outputs.last_hidden_state
+            >>> pooled_output = outputs.pooler_output
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -2323,9 +2322,9 @@ class LongformerForMaskedLM(LongformerPreTrainedModel):
 
     """
     This class represents a Longformer model for masked language modeling tasks. It inherits from the LongformerPreTrainedModel class and includes methods for initializing the model, getting and setting output
-embeddings, and constructing the model for masked language modeling tasks. The construct method accepts various input tensors and optional keyword arguments, and returns the LongformerMaskedLMOutput. The
-method also includes an illustrative example of using the model for mask filling. The class provides detailed explanations for various parameters and return values, and includes usage examples for initializing
-the tokenizer and model, as well as performing masked language modeling tasks with long input sequences.
+    embeddings, and constructing the model for masked language modeling tasks. The construct method accepts various input tensors and optional keyword arguments, and returns the LongformerMaskedLMOutput. The
+    method also includes an illustrative example of using the model for mask filling. The class provides detailed explanations for various parameters and return values, and includes usage examples for initializing
+    the tokenizer and model, as well as performing masked language modeling tasks with long input sequences.
     """
     _tied_weights_keys = ["lm_head.decoder"]
 
@@ -2405,33 +2404,34 @@ the tokenizer and model, as well as performing masked language modeling tasks wi
             Used to hide legacy arguments that have been deprecated.
 
         Returns:
+            Union[Tuple, LongformerMaskedLMOutput]
 
         Mask filling example:
+            ```python
+            >>> from transformers import AutoTokenizer, LongformerForMaskedLM
 
-        ```python
-        >>> from transformers import AutoTokenizer, LongformerForMaskedLM
+            >>> tokenizer = AutoTokenizer.from_pretrained("allenai/longformer-base-4096")
+            >>> model = LongformerForMaskedLM.from_pretrained("allenai/longformer-base-4096")
+            ```
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("allenai/longformer-base-4096")
-        >>> model = LongformerForMaskedLM.from_pretrained("allenai/longformer-base-4096")
-        ```
+            Let's try a very long input.
 
-        Let's try a very long input.
+            ```python
+            >>> TXT = (
+            ...     "My friends are <mask> but they eat too many carbs."
+            ...     + " That's why I decide not to eat with them." * 300
+            ... )
+            >>> input_ids = tokenizer([TXT], return_tensors="pt")["input_ids"]
+            >>> logits = model(input_ids).logits
 
-        ```python
-        >>> TXT = (
-        ...     "My friends are <mask> but they eat too many carbs."
-        ...     + " That's why I decide not to eat with them." * 300
-        ... )
-        >>> input_ids = tokenizer([TXT], return_tensors="pt")["input_ids"]
-        >>> logits = model(input_ids).logits
+            >>> masked_index = (input_ids[0] == tokenizer.mask_token_id).nonzero().item()
+            >>> probs = logits[0, masked_index].softmax(dim=0)
+            >>> values, predictions = probs.topk(5)
 
-        >>> masked_index = (input_ids[0] == tokenizer.mask_token_id).nonzero().item()
-        >>> probs = logits[0, masked_index].softmax(dim=0)
-        >>> values, predictions = probs.topk(5)
-
-        >>> tokenizer.decode(predictions).split()
-        ['healthy', 'skinny', 'thin', 'good', 'vegetarian']
-        ```"""
+            >>> tokenizer.decode(predictions).split()
+            ['healthy', 'skinny', 'thin', 'good', 'vegetarian']
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.longformer(
@@ -2472,13 +2472,13 @@ class LongformerForSequenceClassification(LongformerPreTrainedModel):
     This class represents a Longformer model for sequence classification tasks. It extends the functionality of the LongformerPreTrainedModel class by adding specific methods for sequence classification. 
     
     The class includes an initialization method (__init__) that sets up the model with the provided configuration. It also provides a construct method for processing input data and generating classification
-outputs. The construct method supports various parameters for fine-tuning the model and computing classification losses.
+    outputs. The construct method supports various parameters for fine-tuning the model and computing classification losses.
     
     When using this class, users can pass input data such as input_ids, attention_mask, global_attention_mask, and other optional tensors to perform sequence classification. The class handles different types
-of classification tasks based on the configuration provided, such as regression, single-label classification, or multi-label classification. 
+    of classification tasks based on the configuration provided, such as regression, single-label classification, or multi-label classification.
     
     Additionally, the LongformerForSequenceClassification class offers flexibility in returning output in different formats, including returning a tuple of loss and outputs or a
-LongformerSequenceClassifierOutput object containing detailed classification results.
+    LongformerSequenceClassifierOutput object containing detailed classification results.
     
     Overall, the LongformerForSequenceClassification class provides a comprehensive solution for leveraging Longformer models in sequence classification tasks within the specified framework.
     """
@@ -2523,10 +2523,11 @@ LongformerSequenceClassifierOutput object containing detailed classification res
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, LongformerSequenceClassifierOutput]:
         r"""
-        labels (`mindspore.int64Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.int64Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -2593,9 +2594,9 @@ class LongformerClassificationHead(nn.Cell):
         Args:
             self: The object itself.
             config (object): An object containing configuration parameters.
-                - hidden_size (int): The size of the hidden layer.
-                - hidden_dropout_prob (float): The dropout probability for the hidden layer.
-                - num_labels (int): The number of labels for classification.
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - hidden_dropout_prob (float): The dropout probability for the hidden layer.
+                >   - num_labels (int): The number of labels for classification.
         
         Returns:
             None. This method initializes the LongformerClassificationHead class attributes.
@@ -2636,19 +2637,20 @@ class LongformerForQuestionAnswering(LongformerPreTrainedModel):
     This class represents a Longformer model for question answering tasks. It inherits from the LongformerPreTrainedModel class.
     
     The LongformerForQuestionAnswering class contains methods for constructing and running the model. The constructor initializes the model with the given configuration. The model architecture consists of a
-LongformerModel and a linear layer for question answering. 
+    LongformerModel and a linear layer for question answering.
     
     The construct method is used to perform question answering on the input data. It takes several input tensors including input_ids, attention_mask, global_attention_mask, head_mask, token_type_ids,
-position_ids, and inputs_embeds. It also takes start_positions and end_positions as optional labels for the start and end positions of the answer span. The method returns a tuple of outputs including
-start_logits and end_logits which represent the predicted probabilities for the start and end positions of the answer span.
+    position_ids, and inputs_embeds. It also takes start_positions and end_positions as optional labels for the start and end positions of the answer span. The method returns a tuple of outputs including
+    start_logits and end_logits which represent the predicted probabilities for the start and end positions of the answer span.
     
     If start_positions and end_positions are provided, the method also computes the token classification loss based on the predicted logits and the provided labels. The loss is averaged over the batch.
     
-    Note: The method automatically sets the global attention on question tokens. If global_attention_mask is not provided, it is automatically generated based on the input_ids and the sep_token_id from the
-model configuration.
+    Note:
+        The method automatically sets the global attention on question tokens. If global_attention_mask is not provided, it is automatically generated based on the input_ids and the sep_token_id from the
+        model configuration.
     
     The LongformerForQuestionAnswering class also provides an example usage of the model for question answering tasks using the forward method. The example demonstrates how to use the model to predict the
-answer span given a question and a passage.
+    answer span given a question and a passage.
     
     Please refer to the example code for more details on how to use the LongformerForQuestionAnswering class for question answering tasks.
     """
@@ -2659,7 +2661,7 @@ answer span given a question and a passage.
         Args:
             self: The object itself.
             config: An instance of a configuration class representing the model configuration. It should contain the following attributes:
-                - num_labels (int): The number of labels for the question answering task.
+                >   - num_labels (int): The number of labels for the question answering task.
             
         Returns:
             None
@@ -2702,34 +2704,35 @@ answer span given a question and a passage.
             are not taken into account for computing the loss.
 
         Returns:
+            Union[Tuple, LongformerQuestionAnsweringModelOutput]
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import AutoTokenizer, LongformerForQuestionAnswering
 
-        ```python
-        >>> from transformers import AutoTokenizer, LongformerForQuestionAnswering
 
+            >>> tokenizer = AutoTokenizer.from_pretrained("allenai/longformer-large-4096-finetuned-triviaqa")
+            >>> model = LongformerForQuestionAnswering.from_pretrained("allenai/longformer-large-4096-finetuned-triviaqa")
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("allenai/longformer-large-4096-finetuned-triviaqa")
-        >>> model = LongformerForQuestionAnswering.from_pretrained("allenai/longformer-large-4096-finetuned-triviaqa")
+            >>> question, text = "Who was Jim Henson?", "Jim Henson was a nice puppet"
+            >>> encoding = tokenizer(question, text, return_tensors="pt")
+            >>> input_ids = encoding["input_ids"]
 
-        >>> question, text = "Who was Jim Henson?", "Jim Henson was a nice puppet"
-        >>> encoding = tokenizer(question, text, return_tensors="pt")
-        >>> input_ids = encoding["input_ids"]
+            >>> # default is local attention everywhere
+            >>> # the forward method will automatically set global attention on question tokens
+            >>> attention_mask = encoding["attention_mask"]
 
-        >>> # default is local attention everywhere
-        >>> # the forward method will automatically set global attention on question tokens
-        >>> attention_mask = encoding["attention_mask"]
+            >>> outputs = model(input_ids, attention_mask=attention_mask)
+            >>> start_logits = outputs.start_logits
+            >>> end_logits = outputs.end_logits
+            >>> all_tokens = tokenizer.convert_ids_to_tokens(input_ids[0].tolist())
 
-        >>> outputs = model(input_ids, attention_mask=attention_mask)
-        >>> start_logits = outputs.start_logits
-        >>> end_logits = outputs.end_logits
-        >>> all_tokens = tokenizer.convert_ids_to_tokens(input_ids[0].tolist())
-
-        >>> answer_tokens = all_tokens[torch.argmax(start_logits) : torch.argmax(end_logits) + 1]
-        >>> answer = tokenizer.decode(
-        ...     tokenizer.convert_tokens_to_ids(answer_tokens)
-        ... )  # remove space prepending space token
-        ```"""
+            >>> answer_tokens = all_tokens[torch.argmax(start_logits) : torch.argmax(end_logits) + 1]
+            >>> answer = tokenizer.decode(
+            ...     tokenizer.convert_tokens_to_ids(answer_tokens)
+            ... )  # remove space prepending space token
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if global_attention_mask is None:
@@ -2796,17 +2799,17 @@ class LongformerForTokenClassification(LongformerPreTrainedModel):
 
     """
     This class represents a Longformer model for token classification tasks. It is designed for token classification tasks where the goal is to assign labels to individual tokens in a sequence. The class
-inherits from LongformerPreTrainedModel and includes methods for model initialization and forward pass to generate token classification outputs.
+    inherits from LongformerPreTrainedModel and includes methods for model initialization and forward pass to generate token classification outputs.
     
     The class's constructor initializes the LongformerForTokenClassification model with the provided configuration. It sets up the necessary components such as the LongformerModel, dropout layer, and
-classifier for token classification.
+    classifier for token classification.
     
     The 'construct' method takes input tensors such as input_ids, attention_mask, token_type_ids, etc., and returns token classification outputs. It utilizes the Longformer model to generate sequence outputs,
-applies dropout, and passes the output through a classifier to obtain logits. If labels are provided, it computes the cross-entropy loss. The method returns a Tuple containing loss and token classification
-outputs, based on the return_dict parameter.
+    applies dropout, and passes the output through a classifier to obtain logits. If labels are provided, it computes the cross-entropy loss. The method returns a Tuple containing loss and token classification
+    outputs, based on the return_dict parameter.
     
     Note that labels should be indices in the range [0, ..., config.num_labels - 1]. The LongformerForTokenClassification class provides functionality for handling token classification tasks efficiently and
-can be used in various natural language processing applications.
+    can be used in various natural language processing applications.
     """
     def __init__(self, config):
         """
@@ -2815,8 +2818,8 @@ can be used in various natural language processing applications.
         Args:
             self (LongformerForTokenClassification): The current instance of the LongformerForTokenClassification class.
             config (LongformerConfig): The configuration for the Longformer model. It contains the following attributes:
-                - num_labels (int): The number of classification labels.
-                - hidden_dropout_prob (float): The dropout probability for the hidden layers.
+                >   - num_labels (int): The number of classification labels.
+                >   - hidden_dropout_prob (float): The dropout probability for the hidden layers.
         
         Returns:
             None. This method initializes the LongformerForTokenClassification object with the provided configuration.
@@ -2850,7 +2853,8 @@ can be used in various natural language processing applications.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, LongformerTokenClassifierOutput]:
         r"""
-        labels (`mindspore.int64Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+        Args:
+            labels (`mindspore.int64Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -2896,7 +2900,7 @@ class LongformerForMultipleChoice(LongformerPreTrainedModel):
     This class represents a Longformer model for multiple choice tasks. It is a subclass of LongformerPreTrainedModel.
     
     The LongformerForMultipleChoice class includes methods to initialize the model, construct the model, and compute the multiple choice classification loss. It also provides a method to retrieve the model
-output.
+    output.
     
     Attributes:
         longformer (LongformerModel): The Longformer model used for encoding the input.
@@ -2906,7 +2910,7 @@ output.
     Methods:
         __init__(self, config): Initializes the LongformerForMultipleChoice model with the given configuration.
         construct(self, input_ids, token_type_ids, attention_mask, global_attention_mask, head_mask, labels, position_ids, inputs_embeds, output_attentions, output_hidden_states, return_dict): Constructs the
-LongformerForMultipleChoice model with the given inputs and returns the model output.
+            LongformerForMultipleChoice model with the given inputs and returns the model output.
     """
     def __init__(self, config):
         """
@@ -2948,10 +2952,11 @@ LongformerForMultipleChoice model with the given inputs and returns the model ou
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, LongformerMultipleChoiceModelOutput]:
         r"""
-        labels (`mindspore.int64Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
-            num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
-            `input_ids` above)
+        Args:
+            labels (`mindspore.int64Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
+                num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
+                `input_ids` above)
         """
         num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict

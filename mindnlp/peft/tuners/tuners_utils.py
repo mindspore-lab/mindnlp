@@ -527,7 +527,7 @@ any further communication or interaction with external systems.
             The disable_adapters method does not remove or delete the adapters from the BaseTunerLayer instance. It only disables their functionality temporarily. To enable the adapters again, use the
 enable_adapters method.
         
-        Example:
+        Examples:
             >>> tuner_layer = BaseTunerLayer()
             >>> tuner_layer.disable_adapters()
             True

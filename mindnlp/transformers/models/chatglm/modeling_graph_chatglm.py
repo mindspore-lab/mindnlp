@@ -70,10 +70,10 @@ class PrefixEncoder(nn.Cell):
         Args:
             self: The instance of the class.
             config: An object containing configuration parameters. It should have the following attributes:
-                - prefix_projection (bool): A flag indicating whether to use prefix projection.
-                - pre_seq_len (int): The length of the input sequence.
-                - hidden_size (int): The size of the hidden layers.
-                - num_layers (int): The number of layers.
+                >   - prefix_projection (bool): A flag indicating whether to use prefix projection.
+                >   - pre_seq_len (int): The length of the input sequence.
+                >   - hidden_size (int): The size of the hidden layers.
+                >   - num_layers (int): The number of layers.
         
         Returns:
             None. This method does not return any value.
@@ -478,14 +478,16 @@ class GEGLU(nn.Cell):
             ValueError: If the input tensor `x` has a dimension less than 1.
         
         This method takes an input tensor `x` and performs the GEGLU operation on it. The GEGLU operation splits the input tensor into two parts, `x1` and `x2`, along the last axis, and multiplies `x1` with
-the activation function applied to `x2`. The resulting tensor is stored internally in the GEGLU object.
+        the activation function applied to `x2`. The resulting tensor is stored internally in the GEGLU object.
         
         Note that the activation function used for the GEGLU operation is defined during the instantiation of the GEGLU object.
         
         Example:
+            ```python
             >>> g = GEGLU()
             >>> x = torch.tensor([1, 2, 3, 4])
             >>> g.construct(x)
+            ```
         """
         # dim=-1 breaks in jit for pt<1.10
         x1, x2 = x.chunk(2, axis=x.ndim - 1)
@@ -1009,9 +1011,9 @@ class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
         Args:
             self: The instance of the MSChatGLMForConditionalGeneration class.
             config (ChatGLMConfig): An object of type ChatGLMConfig containing configuration parameters for the model.
-                - max_sequence_length (int): The maximum length of input sequences.
-                - position_encoding_2d (bool): Flag indicating whether to use 2D position encoding.
-                - quantization_bit (int): Number of bits to use for quantization.
+                >   - max_sequence_length (int): The maximum length of input sequences.
+                >   - position_encoding_2d (bool): Flag indicating whether to use 2D position encoding.
+                >   - quantization_bit (int): Number of bits to use for quantization.
             
         Returns:
             None: This method does not return any value.
@@ -1049,7 +1051,7 @@ class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
             None.
         
         This method retrieves the output embeddings of the MSChatGLMForConditionalGeneration model. The output embeddings are the final representations of the input tokens after being processed by the model's
-language model head. The embeddings are returned as a tensor.
+        language model head. The embeddings are returned as a tensor.
         """
         return self.lm_head
 
@@ -1134,22 +1136,22 @@ language model head. The embeddings are returned as a tensor.
         This method prepares inputs for generation in the MSChatGLMForConditionalGeneration class.
         
         Args:
-        - self: The instance of the class.
-        - input_ids (mindspore.Tensor): The input tensor containing token ids.
-        - past (Optional[mindspore.Tensor]): The past state tensor (default is None).
-        - past_key_values (Optional[mindspore.Tensor]): The past key values tensor (default is None).
-        - attention_mask (Optional[mindspore.Tensor]): The attention mask tensor (default is None).
-        - position_ids (Optional[mindspore.Tensor]): The position ids tensor (default is None).
-        - **kwargs: Additional keyword arguments.
+            self: The instance of the class.
+            input_ids (mindspore.Tensor): The input tensor containing token ids.
+            past (Optional[mindspore.Tensor]): The past state tensor (default is None).
+            past_key_values (Optional[mindspore.Tensor]): The past key values tensor (default is None).
+            attention_mask (Optional[mindspore.Tensor]): The attention mask tensor (default is None).
+            position_ids (Optional[mindspore.Tensor]): The position ids tensor (default is None).
+            **kwargs: Additional keyword arguments.
         
         Returns:
-        dict: A dictionary containing the prepared inputs for generation including 'input_ids', 'past_key_values', 'position_ids', and 'attention_mask'.
+            dict: A dictionary containing the prepared inputs for generation including 'input_ids', 'past_key_values', 'position_ids', and 'attention_mask'.
         
         Raises:
-        - TypeError: If the input arguments are not of the expected types.
-        - ValueError: If there are issues with the input data or configuration.
-        - IndexError: If there are index out of bounds errors during processing.
-        - Warning: If there are issues with the dtype of attention mask.
+            - TypeError: If the input arguments are not of the expected types.
+            - ValueError: If there are issues with the input data or configuration.
+            - IndexError: If there are index out of bounds errors during processing.
+            - Warning: If there are issues with the dtype of attention mask.
         """
         batch_size, seq_length = input_ids.shape
 
@@ -1238,11 +1240,11 @@ language model head. The embeddings are returned as a tensor.
         
         Returns:
             dict: A dictionary containing the following keys:
-                - 'loss' (None): The loss value. Always None.
-                - 'logits' (mindspore.Tensor): The output logits tensor of shape (batch_size, sequence_length, vocab_size).
-                - 'past_key_values' (Tuple[mindspore.Tensor]): The tuple of tensors containing the key-value pairs from the current attention pass.
-                - 'hidden_states' (mindspore.Tensor): The hidden states tensor of shape (batch_size, sequence_length, hidden_size).
-                - 'attentions' (mindspore.Tensor): The attention tensor of shape (batch_size, num_heads, sequence_length, sequence_length).
+                >   - 'loss' (None): The loss value. Always None.
+                >   - 'logits' (mindspore.Tensor): The output logits tensor of shape (batch_size, sequence_length, vocab_size).
+                >   - 'past_key_values' (Tuple[mindspore.Tensor]): The tuple of tensors containing the key-value pairs from the current attention pass.
+                >   - 'hidden_states' (mindspore.Tensor): The hidden states tensor of shape (batch_size, sequence_length, hidden_size).
+                >   - 'attentions' (mindspore.Tensor): The attention tensor of shape (batch_size, num_heads, sequence_length, sequence_length).
         
         Raises:
             None.

@@ -74,14 +74,14 @@ class AlbertEmbeddings(nn.Cell):
         Args:
             self: The object itself.
             config (AlbertConfig): The configuration object containing various parameters for the embeddings.
-                - `vocab_size` (int): The size of the vocabulary.
-                - `embedding_size` (int): The size of the embeddings.
-                - `pad_token_id` (int): The ID of the padding token.
-                - `max_position_embeddings` (int): The maximum number of positions for the embeddings.
-                - `type_vocab_size` (int): The size of the token type vocabulary.
-                - `layer_norm_eps` (float): The epsilon value for LayerNorm.
-                - `hidden_dropout_prob` (float): The dropout probability for embeddings.
-                - `position_embedding_type` (str, optional): The type of position embeddings. Defaults to 'absolute'.
+                >   - `vocab_size` (int): The size of the vocabulary.
+                >   - `embedding_size` (int): The size of the embeddings.
+                >   - `pad_token_id` (int): The ID of the padding token.
+                >   - `max_position_embeddings` (int): The maximum number of positions for the embeddings.
+                >   - `type_vocab_size` (int): The size of the token type vocabulary.
+                >   - `layer_norm_eps` (float): The epsilon value for LayerNorm.
+                >   - `hidden_dropout_prob` (float): The dropout probability for embeddings.
+                >   - `position_embedding_type` (str, optional): The type of position embeddings. Defaults to 'absolute'.
         
         Returns:
             None
@@ -178,13 +178,13 @@ class AlbertAttention(nn.Cell):
     handling position embeddings, and generating the final contextualized output.
     
     This class inherits from the nn.Cell class and contains the following methods:
-    - __init__(self, config: AlbertConfig): Initializes the AlbertAttention instance with the provided configuration.
-    - transpose_for_scores(self, x: mindspore.Tensor) -> mindspore.Tensor: Transposes the input tensor for calculating attention scores.
-    - prune_heads(self, heads: List[int]) -> None: Prunes specific attention heads from the model.
-    - construct(self, hidden_states: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, 
-      head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False) -> 
-      Union[Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor]]: Constructs the output based on the input 
-      hidden states, applying attention and head masks if provided.
+    >   - __init__(self, config: AlbertConfig): Initializes the AlbertAttention instance with the provided configuration.
+    >   - transpose_for_scores(self, x: mindspore.Tensor) -> mindspore.Tensor: Transposes the input tensor for calculating attention scores.
+    >   - prune_heads(self, heads: List[int]) -> None: Prunes specific attention heads from the model.
+    >   - construct(self, hidden_states: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None,
+          head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False) ->
+          Union[Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor]]: Constructs the output based on the input
+          hidden states, applying attention and head masks if provided.
     
     The AlbertAttention class is a crucial component in the ALBERT model architecture, responsible for capturing 
     interactions between tokens in the input sequence to generate contextualized representations.
@@ -197,17 +197,17 @@ class AlbertAttention(nn.Cell):
         Args:
             self: The instance of the class.
             config (AlbertConfig): An object of type AlbertConfig containing configuration parameters for the Albert model.
-                - config.hidden_size (int): The size of the hidden layers in the model.
-                - config.num_attention_heads (int): The number of attention heads in the model.
-                - config.embedding_size (int, optional): The size of the embeddings in the model.
-                - config.attention_probs_dropout_prob (float): The dropout probability for attention probabilities.
-                - config.hidden_dropout_prob (float): The dropout probability for hidden layers.
-                - config.layer_norm_eps (float): The epsilon value for LayerNorm.
-                - config.position_embedding_type (str): The type of position embedding ('absolute', 'relative_key', 'relative_key_query').
-                - config.max_position_embeddings (int): The maximum position embeddings allowed.
+                >   - config.hidden_size (int): The size of the hidden layers in the model.
+                >   - config.num_attention_heads (int): The number of attention heads in the model.
+                >   - config.embedding_size (int, optional): The size of the embeddings in the model.
+                >   - config.attention_probs_dropout_prob (float): The dropout probability for attention probabilities.
+                >   - config.hidden_dropout_prob (float): The dropout probability for hidden layers.
+                >   - config.layer_norm_eps (float): The epsilon value for LayerNorm.
+                >   - config.position_embedding_type (str): The type of position embedding ('absolute', 'relative_key', 'relative_key_query').
+                >   - config.max_position_embeddings (int): The maximum position embeddings allowed.
         
         Returns:
-            None. This method initializes various attributes and does not return any value.
+            None: This method initializes various attributes and does not return any value.
         
         Raises:
             ValueError: Raised if the hidden_size is not a multiple of the num_attention_heads and no embedding_size is provided.
@@ -250,7 +250,7 @@ class AlbertAttention(nn.Cell):
         
         Returns:
             mindspore.Tensor: The transposed tensor with shape (batch_size, num_attention_heads, sequence_length, attention_head_size). The attention_head_size is calculated as hidden_size /
-num_attention_heads.
+            num_attention_heads.
         
         Raises:
             None: This method does not raise any exceptions.
@@ -311,13 +311,13 @@ num_attention_heads.
         
         Returns:
             Union[Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor]]: 
-                If output_attentions is False, returns a tuple containing:
-                    - layernormed_context_layer (mindspore.Tensor): The output tensor after applying layer normalization 
+                >   - If output_attentions is False, returns a tuple containing:
+                >       - layernormed_context_layer (mindspore.Tensor): The output tensor after applying layer normalization
                       of shape (batch_size, seq_length, hidden_size).
-                If output_attentions is True, returns a tuple containing:
-                    - layernormed_context_layer (mindspore.Tensor): The output tensor after applying layer normalization 
+                >   - If output_attentions is True, returns a tuple containing:
+                >       - layernormed_context_layer (mindspore.Tensor): The output tensor after applying layer normalization
                       of shape (batch_size, seq_length, hidden_size).
-                    - attention_probs (mindspore.Tensor): The attention probabilities tensor of shape 
+                >       - attention_probs (mindspore.Tensor): The attention probabilities tensor of shape
                       (batch_size, num_attention_heads, seq_length, seq_length).
         
         Raises:
@@ -381,14 +381,15 @@ class AlbertLayer(nn.Cell):
     This class represents an AlbertLayer module, which is a single layer of the Albert model. It inherits from nn.Cell and contains methods for initialization and forward pass computation.
     
     The __init__ method initializes the AlbertLayer with the provided configuration. It sets various attributes based on the configuration, including chunk size for feed forward, sequence length dimension,
-layer normalization, attention module, feed forward network, activation function, and dropout.
+    layer normalization, attention module, feed forward network, activation function, and dropout.
     
     The construct method computes the forward pass for the AlbertLayer. It takes hidden_states, attention_mask, head_mask, output_attentions, and output_hidden_states as input and returns the hidden states
-along with optional attention outputs.
+    along with optional attention outputs.
     
     The ff_chunk method is a helper function used within the construct method to perform the feed forward computation.
     
-    Note: This class assumes that the nn module is imported as nn and that the AlbertAttention and ACT2FN classes are defined elsewhere.
+    Note:
+        This class assumes that the nn module is imported as nn and that the AlbertAttention and ACT2FN classes are defined elsewhere.
     '''
     def __init__(self, config: AlbertConfig):
         """Initializes an instance of the AlbertLayer class.
@@ -399,10 +400,10 @@ along with optional attention outputs.
                 This object contains various settings and hyperparameters for the model.
         
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
-            None. This method does not raise any exceptions.
+            None: This method does not raise any exceptions.
         """
         super().__init__()
 
@@ -491,12 +492,10 @@ class AlbertLayerGroup(nn.Cell):
         albert_layers (nn.CellList): A list of AlbertLayer instances that make up the group.
     
     Methods:
-        __init__(self, config: AlbertConfig): 
+        __init__:
             Initializes an instance of the AlbertLayerGroup class.
         
-        construct(self, hidden_states: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, 
-                  head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False, 
-                  output_hidden_states: bool = False) -> Tuple[Union[mindspore.Tensor, Tuple[mindspore.Tensor]], ...]:
+        construct:
             Constructs the AlbertLayerGroup by applying each AlbertLayer in the group to the input hidden_states.
             This method returns the resulting hidden states and optionally the layer attentions and hidden states.
     
@@ -517,8 +516,8 @@ class AlbertLayerGroup(nn.Cell):
         
         Description:
             This method initializes an instance of the AlbertLayerGroup class. It takes in a configuration object of type AlbertConfig, which holds the configuration parameters for the Albert model. The method
-initializes the superclass and creates a list of AlbertLayer objects, each with the given configuration parameters. The number of AlbertLayer objects in the list is determined by the 'inner_group_num'
-parameter of the configuration object.
+            initializes the superclass and creates a list of AlbertLayer objects, each with the given configuration parameters. The number of AlbertLayer objects in the list is determined by the 'inner_group_num'
+            parameter of the configuration object.
         """
         super().__init__()
 
@@ -545,8 +544,8 @@ parameter of the configuration object.
         
         Returns:
             Tuple[Union[mindspore.Tensor, Tuple[mindspore.Tensor]], ...]: A tuple containing the output hidden states of shape (batch_size, sequence_length, hidden_size).
-                If output_hidden_states is True, the tuple also contains the hidden states of all layers.
-                If output_attentions is True, the tuple also contains the attention weights of all layers.
+                <br>If output_hidden_states is True, the tuple also contains the hidden states of all layers.
+                <br>If output_attentions is True, the tuple also contains the attention weights of all layers.
         
         Raises:
             None.
@@ -586,18 +585,16 @@ class AlbertTransformer(nn.Cell):
     
     Methods:
         construct(hidden_states, attention_mask=None, head_mask=None, output_attentions=False, output_hidden_states=False, return_dict=True):
-            Constructs the Albert transformer layers.
-    
-            Args:
-                hidden_states (mindspore.Tensor): The input hidden states.
-                attention_mask (Optional[mindspore.Tensor]): The attention mask tensor (default None).
-                head_mask (Optional[mindspore.Tensor]): The head mask tensor (default None).
-                output_attentions (bool): Whether to output attentions (default False).
-                output_hidden_states (bool): Whether to output hidden states (default False).
-                return_dict (bool): Whether to return the output as a BaseModelOutput instance (default True).
-    
-            Returns:
-                Union[BaseModelOutput, Tuple]: The output as a BaseModelOutput instance or a tuple of tensors.
+            >- Constructs the Albert transformer layers.
+            >- Args:
+            >   - hidden_states (mindspore.Tensor): The input hidden states.
+            >   - attention_mask (Optional[mindspore.Tensor]): The attention mask tensor (default None).
+            >   - head_mask (Optional[mindspore.Tensor]): The head mask tensor (default None).
+            >   - output_attentions (bool): Whether to output attentions (default False).
+            >   - output_hidden_states (bool): Whether to output hidden states (default False).
+            >   - return_dict (bool): Whether to return the output as a BaseModelOutput instance (default True).
+            >- Returns:
+            >   - Union[BaseModelOutput, Tuple]: The output as a BaseModelOutput instance or a tuple of tensors.
     
     """
     def __init__(self, config: AlbertConfig):
@@ -749,8 +746,8 @@ class AlbertModel(AlbertPreTrainedModel):
 
     """
     This class represents the AlbertModel, which inherits from AlbertPreTrainedModel. It includes methods for initializing the model, getting and setting input embeddings, pruning heads of the model, and
-constructing the model. The 'construct' method takes various input parameters and returns the model output. The class also includes detailed comments and error handling for certain scenarios. The 'prune_heads'
-method is used to prune heads of the model, and the 'construct' method constructs the model based on input parameters. The model outputs are returned based on the specified conditions.
+    constructing the model. The 'construct' method takes various input parameters and returns the model output. The class also includes detailed comments and error handling for certain scenarios. The 'prune_heads'
+    method is used to prune heads of the model, and the 'construct' method constructs the model based on input parameters. The model outputs are returned based on the specified conditions.
     
     For more information and usage details, refer to the base class 'PreTrainedModel'.
     """
@@ -936,11 +933,11 @@ class AlbertForPreTraining(AlbertPreTrainedModel):
 
     """
     The `AlbertForPreTraining` class represents an Albert model for pre-training, inheriting from `AlbertPreTrainedModel`. It includes methods for initializing the model with the specified configuration,
-retrieving output embeddings, setting new output embeddings, retrieving input embeddings, and constructing the model for pre-training tasks. The `construct` method accepts various input parameters and returns
-pre-training outputs. It also includes examples of usage.
+    retrieving output embeddings, setting new output embeddings, retrieving input embeddings, and constructing the model for pre-training tasks. The `construct` method accepts various input parameters and returns
+    pre-training outputs. It also includes examples of usage.
     
     The `AlbertForPreTraining` class provides functionality for masked language modeling and next sequence prediction (classification) loss. It utilizes the Albert model, prediction heads, and sentence order
-prediction head to compute the total loss for pre-training tasks.
+    prediction head to compute the total loss for pre-training tasks.
     
     For additional details and examples on how to use the `AlbertForPreTraining` class, please refer to the provided code example and the official documentation for the `transformers` library.
     """
@@ -971,24 +968,26 @@ prediction head to compute the total loss for pre-training tasks.
 
     def get_output_embeddings(self) -> nn.Dense:
         """
-            Retrieves the output embeddings from the AlbertForPreTraining model.
-        
-            Args:
-                self (AlbertForPreTraining): The current instance of the AlbertForPreTraining class.
-        
-            Returns:
-                nn.Dense: The output embeddings of the model.
-        
-            Raises:
-                None.
-        
-            This method returns the output embeddings of the AlbertForPreTraining model. The output embeddings
-            represent the encoded representation of the input sequence. The embeddings are obtained from the 
-            predictions decoder of the model.
-        
-            Example:
-                >>> model = AlbertForPreTraining()
-                >>> embeddings = model.get_output_embeddings()
+        Retrieves the output embeddings from the AlbertForPreTraining model.
+
+        Args:
+            self (AlbertForPreTraining): The current instance of the AlbertForPreTraining class.
+
+        Returns:
+            nn.Dense: The output embeddings of the model.
+
+        Raises:
+            None.
+
+        This method returns the output embeddings of the AlbertForPreTraining model. The output embeddings
+        represent the encoded representation of the input sequence. The embeddings are obtained from the
+        predictions decoder of the model.
+
+        Example:
+            ```python
+            >>> model = AlbertForPreTraining()
+            >>> embeddings = model.get_output_embeddings()
+            ```
         """
         return self.predictions.decoder
 
@@ -1049,23 +1048,24 @@ prediction head to compute the total loss for pre-training tasks.
             sequence B), `1` indicates switched order (sequence B, then sequence A).
 
         Returns:
+            Union[AlbertForPreTrainingOutput, Tuple]
 
         Example:
+            ```python
+            >>> from transformers import AutoTokenizer, AlbertForPreTraining
 
-        ```python
-        >>> from transformers import AutoTokenizer, AlbertForPreTraining
 
+            >>> tokenizer = AutoTokenizer.from_pretrained("albert-base-v2")
+            >>> model = AlbertForPreTraining.from_pretrained("albert-base-v2")
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("albert-base-v2")
-        >>> model = AlbertForPreTraining.from_pretrained("albert-base-v2")
+            >>> input_ids = mindspore.Tensor(tokenizer.encode("Hello, my dog is cute", add_special_tokens=True)).unsqueeze(0)
+            >>> # Batch size 1
+            >>> outputs = model(input_ids)
 
-        >>> input_ids = mindspore.Tensor(tokenizer.encode("Hello, my dog is cute", add_special_tokens=True)).unsqueeze(0)
-        >>> # Batch size 1
-        >>> outputs = model(input_ids)
-
-        >>> prediction_logits = outputs.prediction_logits
-        >>> sop_logits = outputs.sop_logits
-        ```"""
+            >>> prediction_logits = outputs.prediction_logits
+            >>> sop_logits = outputs.sop_logits
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.albert(
@@ -1111,17 +1111,14 @@ class AlbertMLMHead(nn.Cell):
     It includes methods for initializing the MLM head, constructing the prediction scores, and tying the weights. 
     
     This class inherits from the nn.Cell class and implements the following methods:
-    
-    1. __init__(self, config: AlbertConfig):
-       Initializes the AlbertMLMHead with the provided AlbertConfig settings. 
-       Initializes the LayerNorm, bias, dense, decoder, activation, and ties the weights.
-       
-    2. construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-       Constructs the prediction scores based on the input hidden_states tensor. 
-       Applies the dense layer, activation function, LayerNorm, and decoder to generate the prediction scores.
-    
-    3. _tie_weights(self) -> None:
-       Ties the weights by setting the bias attribute equal to the decoder's bias.
+    >- 1. __init__(self, config: AlbertConfig):
+    >   - Initializes the AlbertMLMHead with the provided AlbertConfig settings.
+    >   - Initializes the LayerNorm, bias, dense, decoder, activation, and ties the weights.
+    >- 2. construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    >   - Constructs the prediction scores based on the input hidden_states tensor.
+    >   - Applies the dense layer, activation function, LayerNorm, and decoder to generate the prediction scores.
+    >- 3. _tie_weights(self) -> None:
+    >   - Ties the weights by setting the bias attribute equal to the decoder's bias.
     
     This class is designed to be used as part of an ALBERT model architecture for masked language modeling tasks.
     """
@@ -1132,11 +1129,11 @@ class AlbertMLMHead(nn.Cell):
         Args:
             self: The instance of the class itself.
             config (AlbertConfig): An object of the AlbertConfig class containing the configuration settings for the model.
-                - config.embedding_size (int): The size of the embedding.
-                - config.layer_norm_eps (float): The epsilon value for layer normalization.
-                - config.vocab_size (int): The size of the vocabulary.
-                - config.hidden_size (int): The size of the hidden layer.
-                - config.hidden_act (str): The activation function for the hidden layer.
+                >   - config.embedding_size (int): The size of the embedding.
+                >   - config.layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - config.vocab_size (int): The size of the vocabulary.
+                >   - config.hidden_size (int): The size of the hidden layer.
+                >   - config.hidden_act (str): The activation function for the hidden layer.
         
         Returns:
             None. This method does not return any value.
@@ -1207,13 +1204,14 @@ class AlbertSOPHead(nn.Cell):
         config (AlbertConfig): The configuration object for the ALBERT model.
     
     Methods:
-        __init__(self, config: AlbertConfig): 
+        __init__:
             Initializes the AlbertSOPHead instance.
             
-        construct(self, pooled_output: mindspore.Tensor) -> mindspore.Tensor:
+        construct:
             Constructs the logits for SOP classification based on the pooled_output tensor.
     
     Example:
+        ```python
         from mindspore import nn
         import mindspore.numpy as np
         import mindspore.ops as ops
@@ -1223,6 +1221,7 @@ class AlbertSOPHead(nn.Cell):
         
         pooled_output = np.random.randn(2, config.hidden_size)  # create a random pooled_output tensor
         logits = albert_sop_head.construct(pooled_output)  # construct the logits for SOP classification
+        ```
     """
     def __init__(self, config: AlbertConfig):
         """
@@ -1253,7 +1252,7 @@ class AlbertSOPHead(nn.Cell):
         
         Returns:
             mindspore.Tensor: The output tensor (logits) obtained after applying the dropout and classifier operations on the pooled_output. This tensor represents the final result of the AlbertSOPHead
-construction process.
+            construction process.
         
         Raises:
             None
@@ -1267,9 +1266,9 @@ class AlbertForMaskedLM(AlbertPreTrainedModel):
 
     """
     AlbertForMaskedLM is a class that represents an Albert model for Masked Language Modeling tasks. It inherits from AlbertPreTrainedModel and provides methods for setting and getting output embeddings, input
-embeddings, and for constructing the model for masked language modeling. The class includes an initialization method that sets up the model with AlbertModel and AlbertMLMHead components, as well as methods for
-manipulating embeddings and constructing the model for training or inference. The 'construct' method takes various input tensors and parameters for the model and returns the masked language modeling output
-including the loss and prediction scores. The class is designed to be used in natural language processing tasks where masked language modeling is required.
+    embeddings, and for constructing the model for masked language modeling. The class includes an initialization method that sets up the model with AlbertModel and AlbertMLMHead components, as well as methods for
+    manipulating embeddings and constructing the model for training or inference. The 'construct' method takes various input tensors and parameters for the model and returns the masked language modeling output
+    including the loss and prediction scores. The class is designed to be used in natural language processing tasks where masked language modeling is required.
     """
     _tied_weights_keys = ["predictions.decoder.bias", "predictions.decoder.weight"]
 
@@ -1322,7 +1321,7 @@ including the loss and prediction scores. The class is designed to be used in na
             new_embeddings (nn.Dense): The new embeddings to be set for the output layer of the model.
         
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
             None.
@@ -1368,35 +1367,34 @@ including the loss and prediction scores. The class is designed to be used in na
             loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
 
         Returns:
+            Union[MaskedLMOutput, Tuple]
 
         Example:
+            ```python
+            >>> from transformers import AutoTokenizer, AlbertForMaskedLM
 
-        ```python
+            >>> tokenizer = AutoTokenizer.from_pretrained("albert-base-v2")
+            >>> model = AlbertForMaskedLM.from_pretrained("albert-base-v2")
 
-        >>> from transformers import AutoTokenizer, AlbertForMaskedLM
+            >>> # add mask_token
+            >>> inputs = tokenizer("The capital of [MASK] is Paris.", return_tensors="pt")
+            >>> with torch.no_grad():
+            ...     logits = model(**inputs).logits
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("albert-base-v2")
-        >>> model = AlbertForMaskedLM.from_pretrained("albert-base-v2")
+            >>> # retrieve index of [MASK]
+            >>> mask_token_index = (inputs.input_ids == tokenizer.mask_token_id)[0].nonzero(as_tuple=True)[0]
+            >>> predicted_token_id = logits[0, mask_token_index].argmax(axis=-1)
+            >>> tokenizer.decode(predicted_token_id)
+            'france'
+            ```
 
-        >>> # add mask_token
-        >>> inputs = tokenizer("The capital of [MASK] is Paris.", return_tensors="pt")
-        >>> with torch.no_grad():
-        ...     logits = model(**inputs).logits
-
-        >>> # retrieve index of [MASK]
-        >>> mask_token_index = (inputs.input_ids == tokenizer.mask_token_id)[0].nonzero(as_tuple=True)[0]
-        >>> predicted_token_id = logits[0, mask_token_index].argmax(axis=-1)
-        >>> tokenizer.decode(predicted_token_id)
-        'france'
-        ```
-
-        ```python
-        >>> labels = tokenizer("The capital of France is Paris.", return_tensors="pt")["input_ids"]
-        >>> labels = torch.where(inputs.input_ids == tokenizer.mask_token_id, labels, -100)
-        >>> outputs = model(**inputs, labels=labels)
-        >>> round(outputs.loss.item(), 2)
-        0.81
-        ```
+            ```python
+            >>> labels = tokenizer("The capital of France is Paris.", return_tensors="pt")["input_ids"]
+            >>> labels = torch.where(inputs.input_ids == tokenizer.mask_token_id, labels, -100)
+            >>> outputs = model(**inputs, labels=labels)
+            >>> round(outputs.loss.item(), 2)
+            0.81
+            ```
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1435,15 +1433,16 @@ class AlbertForSequenceClassification(AlbertPreTrainedModel):
 
     """
     This class represents an Albert model for sequence classification. It inherits from AlbertPreTrainedModel and includes methods for initializing the model and constructing the sequence classification
-output. The model utilizes the Albert architecture for natural language processing tasks, such as text classification and regression.
+    output. The model utilizes the Albert architecture for natural language processing tasks, such as text classification and regression.
     
     The __init__ method initializes the AlbertForSequenceClassification model with the provided AlbertConfig. It sets the number of labels, config, Albert model, dropout layer, and classifier for sequence
-classification.
+    classification.
     
     The construct method takes input tensors and optional arguments for sequence classification and returns the sequence classifier output. It also handles the computation of loss based on the problem type and
-labels provided.
+    labels provided.
     
-    Note: This docstring is a high-level summary and is not meant to be executed as code.
+    Note:
+        This docstring is a high-level summary and is not meant to be executed as code.
     """
     def __init__(self, config: AlbertConfig):
         """
@@ -1460,20 +1459,20 @@ labels provided.
             None
         
         Description:
-        This method initializes a new instance of the `AlbertForSequenceClassification` class. It takes in two parameters: `self` and `config`. The `self` parameter represents the instance of the class itself.
-The `config` parameter is an object of the `AlbertConfig` class, which holds the configuration settings for the model.
-        
-        This method performs the following operations:
-        1. Calls the `__init__` method of the base class to initialize the inherited attributes.
-        2. Sets the `num_labels` attribute of the instance to the `num_labels` value from the `config` parameter.
-        3. Sets the `config` attribute of the instance to the `config` parameter.
-        4. Creates a new instance of the `AlbertModel` class, named `albert`, using the `config` parameter.
-        5. Creates a new instance of the `nn.Dropout` class, named `dropout`, with the dropout probability specified in `config.classifier_dropout_prob`.
-        6. Creates a new instance of the `nn.Dense` class, named `classifier`, with the input size of `config.hidden_size` and the output size of `config.num_labels`.
-        7. Calls the `post_init` method to perform any additional initialization steps.
+            This method initializes a new instance of the `AlbertForSequenceClassification` class. It takes in two parameters: `self` and `config`. The `self` parameter represents the instance of the class itself.
+            The `config` parameter is an object of the `AlbertConfig` class, which holds the configuration settings for the model.
+
+            This method performs the following operations:
+            >   1. Calls the `__init__` method of the base class to initialize the inherited attributes.
+            >   2. Sets the `num_labels` attribute of the instance to the `num_labels` value from the `config` parameter.
+            >   3. Sets the `config` attribute of the instance to the `config` parameter.
+            >   4. Creates a new instance of the `AlbertModel` class, named `albert`, using the `config` parameter.
+            >   5. Creates a new instance of the `nn.Dropout` class, named `dropout`, with the dropout probability specified in `config.classifier_dropout_prob`.
+            >   6. Creates a new instance of the `nn.Dense` class, named `classifier`, with the input size of `config.hidden_size` and the output size of `config.num_labels`.
+            >   7. Calls the `post_init` method to perform any additional initialization steps.
         
         Note:
-        The `AlbertForSequenceClassification` class is typically used for sequence classification tasks using the ALBERT model.
+            The `AlbertForSequenceClassification` class is typically used for sequence classification tasks using the ALBERT model.
         """
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -1501,9 +1500,9 @@ The `config` parameter is an object of the `AlbertConfig` class, which holds the
     ) -> Union[SequenceClassifierOutput, Tuple]:
         r"""
         labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+            >   Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1569,16 +1568,11 @@ class AlbertForTokenClassification(AlbertPreTrainedModel):
         config (AlbertConfig): The configuration object for the model.
     
     Methods:
-        __init__(self, config: AlbertConfig): Initializes the AlbertForTokenClassification instance.
-        construct(self, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, 
-                  token_type_ids: Optional[mindspore.Tensor] = None, position_ids: Optional[mindspore.Tensor] = None, 
-                  head_mask: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor] = None, 
-                  labels: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, 
-                  output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> 
-                  Union[TokenClassifierOutput, Tuple]: Constructs the AlbertForTokenClassification model.
+        __init__: Initializes the AlbertForTokenClassification instance.
+        construct: Constructs the AlbertForTokenClassification model.
     
     Example usage:
-    
+        ```python
         # Initialize the configuration object
         config = AlbertConfig(num_labels=10, hidden_size=256, classifier_dropout_prob=0.1)
     
@@ -1593,6 +1587,7 @@ class AlbertForTokenClassification(AlbertPreTrainedModel):
     
         # Calculate the loss
         loss = outputs.loss
+        ```
     
     Note:
         The labels should be tensor of shape `(batch_size, sequence_length)` with indices in the range `[0, ..., num_labels - 1]`.
@@ -1608,7 +1603,7 @@ class AlbertForTokenClassification(AlbertPreTrainedModel):
                 The config parameter should be an instance of AlbertConfig class.
             
         Returns:
-            None. This method initializes the instance of the class.
+            None: This method initializes the instance of the class.
             
         Raises:
             None.
@@ -1643,7 +1638,7 @@ class AlbertForTokenClassification(AlbertPreTrainedModel):
     ) -> Union[TokenClassifierOutput, Tuple]:
         r"""
         labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+            >   Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1692,8 +1687,8 @@ class AlbertForQuestionAnswering(AlbertPreTrainedModel):
         qa_outputs (nn.Dense): A dense layer for computing logits for start and end positions.
     
     Methods:
-        __init__(self, config: AlbertConfig): Initializes the AlbertForQuestionAnswering class with the provided configuration.
-        construct(self, input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, start_positions, end_positions, output_attentions, output_hidden_states, return_dict): 
+        __init__: Initializes the AlbertForQuestionAnswering class with the provided configuration.
+        construct:
             Constructs the Albert model for question answering and computes the loss for token classification based on start and end positions.
             Returns the total loss along with start and end logits if return_dict is False, otherwise returns a QuestionAnsweringModelOutput object.
     """
@@ -1708,7 +1703,7 @@ class AlbertForQuestionAnswering(AlbertPreTrainedModel):
                 The parameter 'config' should be of type AlbertConfig.
         
         Returns:
-            None. The method does not return any value.
+            None: The method does not return any value.
         
         Raises:
             - TypeError: If the 'config' parameter is not of type AlbertConfig.
@@ -1739,14 +1734,15 @@ class AlbertForQuestionAnswering(AlbertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[AlbertForPreTrainingOutput, Tuple]:
         r"""
-        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
+        Args:
+            start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the start of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
+            end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the end of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1804,23 +1800,21 @@ class AlbertForMultipleChoice(AlbertPreTrainedModel):
     This class represents the Albert model for multiple choice classification tasks. It is a subclass of the AlbertPreTrainedModel.
     
     The AlbertForMultipleChoice class contains methods for model initialization and construction. It inherits the configuration from AlbertConfig and utilizes the AlbertModel for the underlying Albert
-architecture.
+    architecture.
     
     Methods:
-    - __init__(self, config: AlbertConfig): Initializes the AlbertForMultipleChoice model with the given configuration.
-    - construct(self, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, token_type_ids: Optional[mindspore.Tensor] = None, position_ids:
-Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor] = None, labels: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] =
-None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[AlbertForPreTrainingOutput, Tuple]: Constructs the AlbertForMultipleChoice model with the given input tensors and
-returns the output.
+        __init__: Initializes the AlbertForMultipleChoice model with the given configuration.
+        construct: Constructs the AlbertForMultipleChoice model with the given input tensors and returns the output.
     
     Attributes:
-    - albert: The underlying AlbertModel instance.
-    - dropout: Dropout layer for regularization.
-    - classifier: Dense layer for classification.
-    - config: The AlbertConfig instance used for model initialization.
+        albert: The underlying AlbertModel instance.
+        dropout: Dropout layer for regularization.
+        classifier: Dense layer for classification.
+        config: The AlbertConfig instance used for model initialization.
     
-    Note: The construct method follows the multiple choice classification setup and returns either the classification loss and logits or a tuple containing the loss, logits, hidden states, and attentions,
-depending on the return_dict parameter.
+    Note:
+        The construct method follows the multiple choice classification setup and returns either the classification loss and logits or a tuple containing the loss, logits, hidden states, and attentions,
+        depending on the return_dict parameter.
     
     Please refer to the AlbertConfig documentation for more details on the configuration options used by this class.
     """
@@ -1863,9 +1857,9 @@ depending on the return_dict parameter.
     ) -> Union[AlbertForPreTrainingOutput, Tuple]:
         r"""
         labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
-            num_choices-1]` where *num_choices* is the size of the second dimension of the input tensors. (see
-            *input_ids* above)
+            >   Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
+                num_choices-1]` where *num_choices* is the size of the second dimension of the input tensors. (see
+                *input_ids* above)
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]

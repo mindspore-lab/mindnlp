@@ -80,17 +80,16 @@ class RobertaTokenizerFast(PreTrainedTokenizerFast):
 
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
+        ```python
+        >>> from transformers import RobertaTokenizerFast
 
-    ```python
-    >>> from transformers import RobertaTokenizerFast
+        >>> tokenizer = RobertaTokenizerFast.from_pretrained("roberta-base")
+        >>> tokenizer("Hello world")["input_ids"]
+        [0, 31414, 232, 2]
 
-    >>> tokenizer = RobertaTokenizerFast.from_pretrained("roberta-base")
-    >>> tokenizer("Hello world")["input_ids"]
-    [0, 31414, 232, 2]
-
-    >>> tokenizer(" Hello world")["input_ids"]
-    [0, 20920, 232, 2]
-    ```
+        >>> tokenizer(" Hello world")["input_ids"]
+        [0, 20920, 232, 2]
+        ```
 
     You can get around that behavior by passing `add_prefix_space=True` when instantiating this tokenizer or when you
     call it on some text, but since the model was not pretrained this way, it might yield a decrease in performance.
@@ -261,8 +260,9 @@ class RobertaTokenizerFast(PreTrainedTokenizerFast):
     @property
     def mask_token(self) -> str:
         """
-        `str`: Mask token, to use when training a model with masked-language modeling. Log an error if used while not
-        having been set.
+        Return:
+            `str`: Mask token, to use when training a model with masked-language modeling. Log an error if used while not
+            having been set.
 
         Roberta tokenizer has a special mask token to be usable in the fill-mask pipeline. The mask token will greedily
         comprise the space before the *<mask>*.
@@ -290,14 +290,14 @@ class RobertaTokenizerFast(PreTrainedTokenizerFast):
         This method, _batch_encode_plus, is a part of the RobertaTokenizerFast class and is responsible for batch encoding inputs.
         
         Args:
-        - self: This parameter represents the instance of the class and is required for accessing the class attributes and methods.
+            self: This parameter represents the instance of the class and is required for accessing the class attributes and methods.
         
         Returns:
-        - BatchEncoding: This method returns a BatchEncoding object that contains the batch-encoded inputs.
+            BatchEncoding: This method returns a BatchEncoding object that contains the batch-encoded inputs.
         
         Raises:
-        - AssertionError: This method may raise an AssertionError if the condition 'self.add_prefix_space or not is_split_into_words' is not met, indicating that the class needs to be instantiated with
-add_prefix_space=True to use it with pretokenized inputs.
+            AssertionError: This method may raise an AssertionError if the condition 'self.add_prefix_space or not is_split_into_words' is not met, indicating that the class needs to be instantiated with
+            add_prefix_space=True to use it with pretokenized inputs.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
         assert self.add_prefix_space or not is_split_into_words, (
@@ -372,25 +372,27 @@ add_prefix_space=True to use it with pretokenized inputs.
             None
         
         Description:
-        This method takes in two sequences of token IDs, token_ids_0 and token_ids_1, and builds a new list of token IDs with special tokens added. The special tokens include the beginning of sequence
-(bos_token_id) and the end of sequence (eos_token_id).
-        
-        The method first adds the bos_token_id to the beginning of the token_ids_0 list, followed by all the token IDs in token_ids_0, and then adds the eos_token_id to the end of the list. If token_ids_1 is
-provided, the method appends the eos_token_id, followed by all the token IDs in token_ids_1, and finally adds another eos_token_id to the end of the list.
-        
-        If token_ids_1 is not provided, the method simply returns the list output containing the special tokens and token_ids_0. If token_ids_1 is provided, the method returns the list output containing the
-special tokens, token_ids_0, special tokens, and token_ids_1.
+            This method takes in two sequences of token IDs, token_ids_0 and token_ids_1, and builds a new list of token IDs with special tokens added. The special tokens include the beginning of sequence
+            (bos_token_id) and the end of sequence (eos_token_id).
+
+            The method first adds the bos_token_id to the beginning of the token_ids_0 list, followed by all the token IDs in token_ids_0, and then adds the eos_token_id to the end of the list. If token_ids_1 is
+            provided, the method appends the eos_token_id, followed by all the token IDs in token_ids_1, and finally adds another eos_token_id to the end of the list.
+
+            If token_ids_1 is not provided, the method simply returns the list output containing the special tokens and token_ids_0. If token_ids_1 is provided, the method returns the list output containing the
+            special tokens, token_ids_0, special tokens, and token_ids_1.
         
         Example usage:
+            ```python
             tokenizer = RobertaTokenizerFast()
             token_ids_0 = [10, 20, 30]
             token_ids_1 = [40, 50, 60]
             output = tokenizer.build_inputs_with_special_tokens(token_ids_0, token_ids_1)
             print(output)
             # Output: [0, 10, 20, 30, 2, 2, 40, 50, 60, 2]
+            ```
         
         Note:
-        - The bos_token_id and eos_token_id are specific token IDs used to mark the beginning and end of a sequence respectively.
+            - The bos_token_id and eos_token_id are specific token IDs used to mark the beginning and end of a sequence respectively.
         """
         output = [self.bos_token_id] + token_ids_0 + [self.eos_token_id]
         if token_ids_1 is None:

@@ -91,17 +91,16 @@ class Qwen2Tokenizer(PreTrainedTokenizer):
 
     Same with GPT2Tokenizer, this tokenizer has been trained to treat spaces like parts of the tokens so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
+        ```python
+        >>> from transformers import Qwen2Tokenizer
 
-    ```python
-    >>> from transformers import Qwen2Tokenizer
+        >>> tokenizer = Qwen2Tokenizer.from_pretrained("Qwen/Qwen-tokenizer")
+        >>> tokenizer("Hello world")["input_ids"]
+        [9707, 1879]
 
-    >>> tokenizer = Qwen2Tokenizer.from_pretrained("Qwen/Qwen-tokenizer")
-    >>> tokenizer("Hello world")["input_ids"]
-    [9707, 1879]
-
-    >>> tokenizer(" Hello world")["input_ids"]
-    [21927, 1879]
-    ```
+        >>> tokenizer(" Hello world")["input_ids"]
+        [21927, 1879]
+        ```
     This is expected.
 
     You should not use GPT2Tokenizer instead, because of the different pretokenization rules.
@@ -306,6 +305,7 @@ class Qwen2Tokenizer(PreTrainedTokenizer):
             the cache, its encoded version is returned directly without recomputing.
         
         Example:
+            ```python
             tokenizer = Qwen2Tokenizer()
             encoded_token = tokenizer.bpe('hello')
             print(encoded_token)
@@ -314,6 +314,7 @@ class Qwen2Tokenizer(PreTrainedTokenizer):
             encoded_token = tokenizer.bpe('world')
             print(encoded_token)
             # Output: 'wo r ld'
+            ```
         """
         if token in self.cache:
             return self.cache[token]
@@ -486,8 +487,8 @@ class Qwen2Tokenizer(PreTrainedTokenizer):
             None.
         
         This method takes in an instance of the Qwen2Tokenizer class and a string of text. It prepares the text for tokenization by normalizing it using the 'NFC' (Normalization Form C) Unicode normalization.
-The normalization ensures that the text is in a standardized form, reducing any potential ambiguities or variations in the text. The method then returns the modified text along with any additional keyword
-arguments passed to the method.
+        The normalization ensures that the text is in a standardized form, reducing any potential ambiguities or variations in the text. The method then returns the modified text along with any additional keyword
+        arguments passed to the method.
         
         Note that this method modifies the text in-place, meaning that the original text variable will be updated with the normalized version. No values are returned explicitly by this method.
         """

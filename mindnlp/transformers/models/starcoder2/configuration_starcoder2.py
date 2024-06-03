@@ -82,19 +82,20 @@ class Starcoder2Config(PretrainedConfig):
         use_bias (`bool`, *optional*, defaults to `True`):
             Whether to use bias term on linear layers of the model.
 
+    Example:
+        ```python
+        >>> from transformers import Starcoder2Model, Starcoder2Config
 
-    ```python
-    >>> from transformers import Starcoder2Model, Starcoder2Config
+        >>> # Initializing a Starcoder2 7B style configuration
+        >>> configuration = Starcoder2Config()
 
-    >>> # Initializing a Starcoder2 7B style configuration
-    >>> configuration = Starcoder2Config()
+        >>> # Initializing a model from the Starcoder2 7B style configuration
+        >>> model = Starcoder2Model(configuration)
 
-    >>> # Initializing a model from the Starcoder2 7B style configuration
-    >>> model = Starcoder2Model(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "starcoder2"
     keys_to_ignore_at_inference = ["past_key_values"]
 

@@ -252,16 +252,16 @@ class ErnieMTokenizer(PreTrainedTokenizer):
         Method: __getstate__
         
         Description:
-        This method is used to retrieve the state of an instance of the ErnieMTokenizer class. It returns a dictionary representing the current state of the instance, with the 'sp_model' attribute set to None.
+            This method is used to retrieve the state of an instance of the ErnieMTokenizer class. It returns a dictionary representing the current state of the instance, with the 'sp_model' attribute set to None.
         
         Args:
-        - self: An instance of the ErnieMTokenizer class.
+            self: An instance of the ErnieMTokenizer class.
         
         Returns:
-        - None: This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
-        - None.
+            None.
         
         """
         state = self.__dict__.copy()
@@ -390,9 +390,8 @@ class ErnieMTokenizer(PreTrainedTokenizer):
         r"""
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. An ErnieM sequence has the following format:
-
-        - single sequence: `[CLS] X [SEP]`
-        - pair of sequences: `[CLS] A [SEP] [SEP] B [SEP]`
+        >   - single sequence: `[CLS] X [SEP]`
+        >   - pair of sequences: `[CLS] A [SEP] [SEP] B [SEP]`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -413,8 +412,8 @@ class ErnieMTokenizer(PreTrainedTokenizer):
         Build offset map from a pair of offset map by concatenating and adding offsets of special tokens. An Ernie-M
         offset_mapping has the following format:
 
-        - single sequence: `(0,0) X (0,0)`
-        - pair of sequences: `(0,0) A (0,0) (0,0) B (0,0)`
+        >   - single sequence: `(0,0) X (0,0)`
+        >   - pair of sequences: `(0,0) A (0,0) (0,0) B (0,0)`
 
         Args:
             offset_mapping_ids_0 (`List[tuple]`):

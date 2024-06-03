@@ -122,33 +122,33 @@ class TextGenerationPipeline(Pipeline):
     ):
         """
         This method '_sanitize_parameters' in the class 'TextGenerationPipeline' is responsible for sanitizing and processing parameters used in text generation. It takes 13 parameters: self, return_full_text,
-return_tensors, return_text, return_type, clean_up_tokenization_spaces, prefix, handle_long_generation, stop_sequence, add_special_tokens, truncation, padding, max_length.
+        return_tensors, return_text, return_type, clean_up_tokenization_spaces, prefix, handle_long_generation, stop_sequence, add_special_tokens, truncation, padding, max_length.
         
         Args:
-        - self: The instance of the class.
-        - return_full_text (bool): Whether to return the full generated text.
-        - return_tensors (bool): Whether to return the generated text as tensors.
-        - return_text (bool): Whether to return the generated text as plain text.
-        - return_type (ReturnType): The type of text to return.
-        - clean_up_tokenization_spaces (bool): Whether to clean up tokenization spaces.
-        - prefix (str): The prefix to be added to the input text.
-        - handle_long_generation (str): The strategy to handle long text generation, expected values are [None, 'hole'].
-        - stop_sequence (str): The sequence to stop text generation at.
-        - add_special_tokens (bool): Whether to add special tokens during text generation.
-        - truncation (bool): Whether to truncate the generated text.
-        - padding (bool): Whether to pad the generated text.
-        - max_length (int): The maximum length of the generated text.
+            self: The instance of the class.
+            return_full_text (bool): Whether to return the full generated text.
+            return_tensors (bool): Whether to return the generated text as tensors.
+            return_text (bool): Whether to return the generated text as plain text.
+            return_type (ReturnType): The type of text to return.
+            clean_up_tokenization_spaces (bool): Whether to clean up tokenization spaces.
+            prefix (str): The prefix to be added to the input text.
+            handle_long_generation (str): The strategy to handle long text generation, expected values are [None, 'hole'].
+            stop_sequence (str): The sequence to stop text generation at.
+            add_special_tokens (bool): Whether to add special tokens during text generation.
+            truncation (bool): Whether to truncate the generated text.
+            padding (bool): Whether to pad the generated text.
+            max_length (int): The maximum length of the generated text.
         
         Returns:
-        - None: This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
-        - ValueError: If the provided 'handle_long_generation' is not a valid value.
-        - ValueError: If 'return_text' is provided while 'return_full_text' is also specified.
-        - ValueError: If 'return_tensors' is provided while 'return_full_text' is also specified.
-        - ValueError: If 'return_text' is provided while 'return_tensors' is also specified.
-        - ValueError: If 'handle_long_generation' is not one of the expected values [None, 'hole'].
-        - Warning: If stopping on a multiple token sequence is attempted, as it is not yet supported.
+            - ValueError: If the provided 'handle_long_generation' is not a valid value.
+            - ValueError: If 'return_text' is provided while 'return_full_text' is also specified.
+            - ValueError: If 'return_tensors' is provided while 'return_full_text' is also specified.
+            - ValueError: If 'return_text' is provided while 'return_tensors' is also specified.
+            - ValueError: If 'handle_long_generation' is not one of the expected values [None, 'hole'].
+            - Warning: If stopping on a multiple token sequence is attempted, as it is not yet supported.
         """
         preprocess_params = {
             "add_special_tokens": add_special_tokens,
@@ -230,8 +230,8 @@ return_tensors, return_text, return_type, clean_up_tokenization_spaces, prefix, 
                 :https://github.com/huggingface/transformers/issues/14033#issuecomment-948385227). This provides common
                 strategies to work around that problem depending on your use case.
 
-                - `None` : default strategy where nothing in particular happens
-                - `"hole"`: Truncates left of input, and leaves a gap wide enough to let generation happen (might
+                >- `None` : default strategy where nothing in particular happens
+                >- `"hole"`: Truncates left of input, and leaves a gap wide enough to let generation happen (might
                   truncate a lot of the prompt and not suitable when generation exceed the model capacity)
             generate_kwargs (`dict`, *optional*):
                 Additional keyword arguments to pass along to the generate method of the model (see the generate method
@@ -241,8 +241,8 @@ return_tensors, return_text, return_type, clean_up_tokenization_spaces, prefix, 
             A list or a list of list of `dict`: Returns one of the following dictionaries (cannot return a combination
             of both `generated_text` and `generated_token_ids`):
 
-            - **generated_text** (`str`, present when `return_text=True`) -- The generated text.
-            - **generated_token_ids** (`torch.Tensor` or `tf.Tensor`, present when `return_tensors=True`) -- The token
+            >- **generated_text** (`str`, present when `return_text=True`) -- The generated text.
+            >- **generated_token_ids** (`torch.Tensor` or `tf.Tensor`, present when `return_tensors=True`) -- The token
               ids of the generated text.
         """
         if isinstance(text_inputs, (list, tuple)) and isinstance(text_inputs[0], (list, tuple, dict)):
@@ -282,9 +282,9 @@ return_tensors, return_text, return_type, clean_up_tokenization_spaces, prefix, 
         
         Returns:
             dict: A dictionary containing the preprocessed inputs for text generation. The dictionary includes the following keys:
-                - 'input_ids' (torch.Tensor): The tokenized input text.
-                - 'attention_mask' (torch.Tensor, optional): The attention mask for the input text, if padding is enabled.
-                - 'prompt_text' (Union[str, Chat]): The original prompt text.
+                >- 'input_ids' (torch.Tensor): The tokenized input text.
+                >- 'attention_mask' (torch.Tensor, optional): The attention mask for the input text, if padding is enabled.
+                >- 'prompt_text' (Union[str, Chat]): The original prompt text.
         
         Raises:
             ValueError: If the number of new tokens exceeds the model's maximum length.
@@ -341,17 +341,17 @@ return_tensors, return_text, return_type, clean_up_tokenization_spaces, prefix, 
         Args:
             self (object): The instance of the TextGenerationPipeline class.
             model_inputs (dict): A dictionary containing the model inputs required for text generation.
-                - input_ids (Tensor): The input token IDs for the model.
-                - attention_mask (Tensor, optional): The attention mask for the model inputs. Defaults to None.
-                - prompt_text (str): The prompt text to influence the text generation.
+                >- input_ids (Tensor): The input token IDs for the model.
+                >- attention_mask (Tensor, optional): The attention mask for the model inputs. Defaults to None.
+                >- prompt_text (str): The prompt text to influence the text generation.
             
             **generate_kwargs (dict): Additional keyword arguments for text generation, such as 'max_length', 'min_length', 'prefix_length', etc.
         
         Returns:
             dict: A dictionary containing the generated text sequence, the input token IDs, and the prompt text. 
-                - generated_sequence (Tensor): The generated text sequence.
-                - input_ids (Tensor): The input token IDs used for generation.
-                - prompt_text (str): The prompt text used for generation.
+                >- generated_sequence (Tensor): The generated text sequence.
+                >- input_ids (Tensor): The input token IDs used for generation.
+                >- prompt_text (str): The prompt text used for generation.
         
         Raises:
             ValueError: If the input_ids shape is invalid (e.g., input_ids.shape[1] == 0).
@@ -407,8 +407,8 @@ return_tensors, return_text, return_type, clean_up_tokenization_spaces, prefix, 
         Returns:
             list: A list of dictionaries containing the post-processed output based on the specified return_type.
             Each dictionary in the list may have the following keys based on the return_type:
-                - 'generated_token_ids': List of token ids if return_type is ReturnType.TENSORS.
-                - 'generated_text': The generated text if return_type is ReturnType.NEW_TEXT or ReturnType.FULL_TEXT.
+                >- 'generated_token_ids': List of token ids if return_type is ReturnType.TENSORS.
+                >- 'generated_text': The generated text if return_type is ReturnType.NEW_TEXT or ReturnType.FULL_TEXT.
         
         Raises:
             TypeError: If model_outputs is not a dictionary or return_type is not a valid ReturnType enum.

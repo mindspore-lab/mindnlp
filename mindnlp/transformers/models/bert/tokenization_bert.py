@@ -199,25 +199,25 @@ class BertTokenizer(PreTrainedTokenizer):
         This method initializes a BertTokenizer object.
         
         Args:
-        - self: The instance of the class.
-        - vocab_file (str): The path to the vocabulary file.
-        - do_lower_case (bool, optional): Whether to convert tokens to lowercase. Default is True.
-        - do_basic_tokenize (bool, optional): Whether to perform basic tokenization. Default is True.
-        - never_split (list, optional): List of tokens that should not be split further.
-        - unk_token (str, optional): The unknown token representation. Default is '[UNK]'.
-        - sep_token (str, optional): The separator token. Default is '[SEP]'.
-        - pad_token (str, optional): The padding token. Default is '[PAD]'.
-        - cls_token (str, optional): The classification token. Default is '[CLS]'.
-        - mask_token (str, optional): The masking token. Default is '[MASK]'.
-        - tokenize_chinese_chars (bool, optional): Whether to tokenize Chinese characters. Default is True.
-        - strip_accents (str, optional): Method to strip accents. None by default.
+            self: The instance of the class.
+            vocab_file (str): The path to the vocabulary file.
+            do_lower_case (bool, optional): Whether to convert tokens to lowercase. Default is True.
+            do_basic_tokenize (bool, optional): Whether to perform basic tokenization. Default is True.
+            never_split (list, optional): List of tokens that should not be split further.
+            unk_token (str, optional): The unknown token representation. Default is '[UNK]'.
+            sep_token (str, optional): The separator token. Default is '[SEP]'.
+            pad_token (str, optional): The padding token. Default is '[PAD]'.
+            cls_token (str, optional): The classification token. Default is '[CLS]'.
+            mask_token (str, optional): The masking token. Default is '[MASK]'.
+            tokenize_chinese_chars (bool, optional): Whether to tokenize Chinese characters. Default is True.
+            strip_accents (str, optional): Method to strip accents. None by default.
         
         Returns:
-        None. This method does not return any value.
+            None. This method does not return any value.
         
         Raises:
-        - ValueError: If the vocab_file path is invalid or the file does not exist.
-        - Exception: Any unexpected errors that may occur during the initialization process.
+            - ValueError: If the vocab_file path is invalid or the file does not exist.
+            - Exception: Any unexpected errors that may occur during the initialization process.
         """
         if not os.path.isfile(vocab_file):
             raise ValueError(
@@ -349,9 +349,8 @@ class BertTokenizer(PreTrainedTokenizer):
         """
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A BERT sequence has the following format:
-
-        - single sequence: `[CLS] X [SEP]`
-        - pair of sequences: `[CLS] A [SEP] B [SEP]`
+            >   - single sequence: `[CLS] X [SEP]`
+            >   - pair of sequences: `[CLS] A [SEP] B [SEP]`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -441,16 +440,18 @@ class BertTokenizer(PreTrainedTokenizer):
             UnicodeEncodeError: If there is an issue encoding the vocabulary file with 'utf-8'.
         
         The method saves the vocabulary of the tokenizer to a file in the specified save_directory. If save_directory is a directory, the vocabulary file will be saved with the default name (or with the
-filename_prefix if provided) in the directory. If save_directory is a file path, the vocabulary file will be saved with the same name as the file in the specified path.
-        
+        filename_prefix if provided) in the directory. If save_directory is a file path, the vocabulary file will be saved with the same name as the file in the specified path.
+
         The vocabulary is saved in a newline-separated format, where each line contains a token from the vocabulary. The tokens are sorted based on their token_index in the vocabulary dictionary. If the token
-indices are not consecutive, a warning message is logged.
-        
+        indices are not consecutive, a warning message is logged.
+
+        ···python
         Example Usage:
             tokenizer = BertTokenizer()
             save_directory = '/path/to/save'
             filename_prefix = 'my-vocab'
             saved_file = tokenizer.save_vocabulary(save_directory, filename_prefix)
+        ```
         """
         index = 0
         if os.path.isdir(save_directory):

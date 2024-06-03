@@ -81,19 +81,19 @@ class AlignTextConfig(PretrainedConfig):
             relevant if `config.is_decoder=True`.
 
     Example:
+        ```python
+        >>> from transformers import AlignTextConfig, AlignTextModel
 
-    ```python
-    >>> from transformers import AlignTextConfig, AlignTextModel
+        >>> # Initializing a AlignTextConfig with kakaobrain/align-base style configuration
+        >>> configuration = AlignTextConfig()
 
-    >>> # Initializing a AlignTextConfig with kakaobrain/align-base style configuration
-    >>> configuration = AlignTextConfig()
+        >>> # Initializing a AlignTextModel (with random weights) from the kakaobrain/align-base style configuration
+        >>> model = AlignTextModel(configuration)
 
-    >>> # Initializing a AlignTextModel (with random weights) from the kakaobrain/align-base style configuration
-    >>> model = AlignTextModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "align_text_model"
 
     def __init__(
@@ -250,19 +250,19 @@ class AlignVisionConfig(PretrainedConfig):
             The drop rate for skip connections.
 
     Example:
+        ```python
+        >>> from transformers import AlignVisionConfig, AlignVisionModel
 
-    ```python
-    >>> from transformers import AlignVisionConfig, AlignVisionModel
+        >>> # Initializing a AlignVisionConfig with kakaobrain/align-base style configuration
+        >>> configuration = AlignVisionConfig()
 
-    >>> # Initializing a AlignVisionConfig with kakaobrain/align-base style configuration
-    >>> configuration = AlignVisionConfig()
+        >>> # Initializing a AlignVisionModel (with random weights) from the kakaobrain/align-base style configuration
+        >>> model = AlignVisionModel(configuration)
 
-    >>> # Initializing a AlignVisionModel (with random weights) from the kakaobrain/align-base style configuration
-    >>> model = AlignVisionModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "align_vision_model"
 
     def __init__(
@@ -404,28 +404,28 @@ class AlignConfig(PretrainedConfig):
             Dictionary of keyword arguments.
 
     Example:
+        ```python
+        >>> from transformers import AlignConfig, AlignModel
 
-    ```python
-    >>> from transformers import AlignConfig, AlignModel
+        >>> # Initializing a AlignConfig with kakaobrain/align-base style configuration
+        >>> configuration = AlignConfig()
 
-    >>> # Initializing a AlignConfig with kakaobrain/align-base style configuration
-    >>> configuration = AlignConfig()
+        >>> # Initializing a AlignModel (with random weights) from the kakaobrain/align-base style configuration
+        >>> model = AlignModel(configuration)
 
-    >>> # Initializing a AlignModel (with random weights) from the kakaobrain/align-base style configuration
-    >>> model = AlignModel(configuration)
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
 
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
+        >>> # We can also initialize a AlignConfig from a AlignTextConfig and a AlignVisionConfig
+        >>> from transformers import AlignTextConfig, AlignVisionConfig
 
-    >>> # We can also initialize a AlignConfig from a AlignTextConfig and a AlignVisionConfig
-    >>> from transformers import AlignTextConfig, AlignVisionConfig
+        >>> # Initializing ALIGN Text and Vision configurations
+        >>> config_text = AlignTextConfig()
+        >>> config_vision = AlignVisionConfig()
 
-    >>> # Initializing ALIGN Text and Vision configurations
-    >>> config_text = AlignTextConfig()
-    >>> config_vision = AlignVisionConfig()
-
-    >>> config = AlignConfig.from_text_vision_configs(config_text, config_vision)
-    ```"""
+        >>> config = AlignConfig.from_text_vision_configs(config_text, config_vision)
+        ```
+    """
     model_type = "align"
 
     def __init__(
