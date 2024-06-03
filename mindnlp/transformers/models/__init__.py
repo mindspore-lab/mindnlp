@@ -45,6 +45,7 @@ from . import (
     bridgetower,
     bros,
     byt5,
+    chinese_clip,
     clip,
     codegen,
     cogvlm,
@@ -73,6 +74,7 @@ from . import (
     gpt_neox,
     gpt_pangu,
     graphormer,
+    groupvit,
     hubert,
     jetmoe,
     layoutlm,
@@ -154,6 +156,7 @@ from .bloom import *
 from .bridgetower import *
 from .bros import *
 from .byt5 import *
+from .chinese_clip import *
 from .clip import *
 from .codegen import *
 from .cogvlm import *
@@ -182,6 +185,7 @@ from .gpt_bigcode import *
 from .gpt_pangu import *
 from .gpt2 import *
 from .graphormer import *
+from .groupvit import *
 from .hubert import *
 from .jetmoe import *
 from .layoutlm import *
@@ -263,6 +267,7 @@ __all__.extend(bloom.__all__)
 __all__.extend(bridgetower.__all__)
 __all__.extend(bros.__all__)
 __all__.extend(byt5.__all__)
+__all__.extend(chinese_clip.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(codegen.__all__)
 __all__.extend(cogvlm.__all__)
@@ -291,6 +296,7 @@ __all__.extend(gpt_pangu.__all__)
 __all__.extend(gpt_bigcode.__all__)
 __all__.extend(gpt2.__all__)
 __all__.extend(graphormer.__all__)
+__all__.extend(groupvit.__all__)
 __all__.extend(hubert.__all__)
 __all__.extend(jetmoe.__all__)
 __all__.extend(layoutlm.__all__)
