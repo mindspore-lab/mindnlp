@@ -62,7 +62,7 @@ def hard_softmax(logits: mindspore.Tensor, dim: int):
     y_soft = ops.softmax(logits,axis=dim)
     # Straight through.
     index = y_soft.max(dim, keepdims=True, return_indices=True)[1]
-    y_hard = ops.tensor_scatter_elements(ops.zeros_like(logits), dim, index, 1.0)
+    y_hard = ops.tensor_scatter_elements(ops.zeros_like(logits), dim, index, 1)
     y_soft = ops.stop_gradient(y_soft)
     ret = y_hard - y_soft + y_soft
 
@@ -83,7 +83,7 @@ def gumbel_softmax(logits: mindspore.Tensor, tau: float = 1, hard: bool = False,
     if hard:
         # Straight through.
         index = y_soft.max(dim, keepdims=True, return_indices=True)[1]
-        y_hard = ops.tensor_scatter_elements(ops.zeros_like(logits), dim, index, 1.0)
+        y_hard = ops.tensor_scatter_elements(ops.zeros_like(logits), dim, index, 1)
         y_soft = ops.stop_gradient(y_soft)
         ret = y_hard - y_soft + y_soft
     else:
