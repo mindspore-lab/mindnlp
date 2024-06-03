@@ -34,7 +34,12 @@ from ...modeling_utils import PreTrainedModel
 
 from .configuration_groupvit import GroupViTConfig, GroupViTTextConfig, GroupViTVisionConfig
 
-
+__all__ = [
+    "GroupViTModel",
+    "GroupViTPreTrainedModel",
+    "GroupViTTextModel",
+    "GroupViTVisionModel",
+]
 logger = logging.get_logger(__name__)
 
 _CHECKPOINT_FOR_DOC = "nvidia/groupvit-gcc-yfcc"
@@ -54,10 +59,10 @@ def groupvit_loss(similarity: mindspore.Tensor) -> mindspore.Tensor:
 
 
 def hard_softmax(logits: mindspore.Tensor, dim: int):
-    y_soft = logits.softmax(dim)
+    y_soft = ops.softmax(logits,axis=dim)
     # Straight through.
     index = y_soft.max(dim, keepdims=True, return_indices=True)[1]
-    y_hard = ops.tensor_scatter_elements(mindspore.zeros_like(logits), dim, index, 1.0)
+    y_hard = ops.tensor_scatter_elements(ops.zeros_like(logits), dim, index, 1.0)
     y_soft = ops.stop_gradient(y_soft)
     ret = y_hard - y_soft + y_soft
 
@@ -73,12 +78,12 @@ def gumbel_softmax(logits: mindspore.Tensor, tau: float = 1, hard: bool = False,
     gumbels = gumbel_dist.sample(logits.shape)
 
     gumbels = (logits + gumbels) / tau  # ~Gumbel(logits,tau)
-    y_soft = gumbels.softmax(dim)
+    y_soft = ops.softmax(gumbels,axis=dim)
 
     if hard:
         # Straight through.
         index = y_soft.max(dim, keepdims=True, return_indices=True)[1]
-        y_hard = ops.tensor_scatter_elements(mindspore.zeros_like(logits), dim, index, 1.0)
+        y_hard = ops.tensor_scatter_elements(ops.zeros_like(logits), dim, index, 1.0)
         y_soft = ops.stop_gradient(y_soft)
         ret = y_hard - y_soft + y_soft
     else:
@@ -315,7 +320,7 @@ class GroupViTModelOutput(ModelOutput):
         )
 
 
-class GroupViTPatchEmbeddings(nn.Module):
+class GroupViTPatchEmbeddings(nn.Cell):
     """
     Image to Patch Embedding.
     """
@@ -405,7 +410,7 @@ class GroupViTVisionEmbeddings(nn.Cell):
 
         embeddings = self.layernorm(embeddings)
 
-        batch_size, seq_len, _ = embeddings.size()
+        batch_size, seq_len, _ = embeddings.shape
 
         # add positional encoding to each token
         if interpolate_pos_encoding:
@@ -544,7 +549,7 @@ class GroupViTStage(nn.Cell):
         return outputs
 
 
-class GroupViTMLP(nn.Module):
+class GroupViTMLP(nn.Cell):
     def __init__(
         self,
         config: GroupViTVisionConfig,
@@ -685,7 +690,7 @@ class GroupViTAttention(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPEncoderLayer with CLIP->GroupViT
-class GroupViTEncoderLayer(nn.Module):
+class GroupViTEncoderLayer(nn.Cell):
     def __init__(self, config: GroupViTConfig):
         super().__init__()
         self.embed_dim = config.hidden_size

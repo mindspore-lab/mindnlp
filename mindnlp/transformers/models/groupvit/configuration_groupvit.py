@@ -20,7 +20,11 @@ from typing import  Any, Mapping, Optional, Union
 from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
 
-
+__all__ = [
+    "GroupViTConfig",
+    "GroupViTTextConfig",
+    "GroupViTVisionConfig",
+]
 
 
 logger = logging.get_logger(__name__)
@@ -118,7 +122,6 @@ class GroupViTTextConfig(PretrainedConfig):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
-        cls._set_token_in_kwargs(kwargs)
 
         config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
 
@@ -243,7 +246,6 @@ class GroupViTVisionConfig(PretrainedConfig):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
-        cls._set_token_in_kwargs(kwargs)
 
         config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
 
