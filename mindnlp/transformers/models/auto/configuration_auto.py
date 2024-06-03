@@ -93,6 +93,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("qwen2", "Qwen2Config"),
         ("qwen2_moe", "Qwen2MoeConfig"),
         ("reformer", "ReformerConfig"),
+        ("rembert", "RemBertConfig"),
         ("resnet", "ResNetConfig"),
         ("roberta", "RobertaConfig"),
         ("sam", "SamConfig"),
