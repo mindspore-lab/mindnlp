@@ -38,8 +38,6 @@ from ...time_series_utils import NormalOutput, StudentTOutput
 
 from .configuration_autoformer import AutoformerConfig
 
-mindspore.set_context(pynative_synchronize=True)
-
 @dataclass
 class AutoFormerDecoderOutput(ModelOutput):
     """
