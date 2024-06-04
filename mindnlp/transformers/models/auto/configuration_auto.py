@@ -106,6 +106,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("squeezebert", "SqueezeBertConfig"),
         ("starcoder2", "Starcoder2Config"),
         ("t5", "T5Config"),
+        ("time_series_transformer","TimeSeriesTransformerConfig"),
         ("timesformer", "TimesformerConfig"),
         ("vipllava", "VipLlavaConfig"),
         ("wav2vec2", "Wav2Vec2Config"),
