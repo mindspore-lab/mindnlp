@@ -64,6 +64,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("convnext", "ConvNextModel"),
         ("cvt", "CvtModel"),
         ("deberta", "DebertaModel"),
+        ("decision_transformer","DecisionTransformerModel"),
         ('encodec', 'EncodecModel'),
         ("esm", "EsmModel"),
         ("ernie", "ErnieModel"),

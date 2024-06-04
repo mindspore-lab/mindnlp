@@ -44,24 +44,9 @@ class GPT2Attention(nn.Cell):
     gpt2 Attention
     """
     def __init__(self, config, is_cross_attention=False, layer_idx=None):
-        """
-        Initialize the GPT2Attention class.
-        
-        Args:
-            self: The object instance.
-            config: An object containing configuration settings for the GPT2Attention model.
-            is_cross_attention (bool): Flag indicating if the attention mechanism is for cross-attention.
-            layer_idx (int or None): Index of the layer.
-        
-        Returns:
-            None. This method initializes the attributes and parameters of the GPT2Attention class.
-        
-        Raises:
-            ValueError: Raised if the `embed_dim` is not divisible by `num_heads`.
-        """
         super().__init__()
-
         max_positions = config.max_position_embeddings
+
         self.bias = Parameter(Tensor(np.tril(np.ones((max_positions, max_positions))).reshape(
                 (1, 1, max_positions, max_positions)
             ), mindspore.bool_), requires_grad=False)
@@ -119,35 +104,7 @@ class GPT2Attention(nn.Cell):
         self.pruned_heads = self.pruned_heads.union(heads)
 
     def _attn(self, query, key, value, attention_mask=None, head_mask=None):
-        """
-        Method _attn in the class GPT2Attention.
-        
-        Args:
-        - self: GPT2Attention object
-            The instance of the GPT2Attention class.
-        - query: Tensor
-            The input query tensor.
-        - key: Tensor
-            The input key tensor.
-        - value: Tensor
-            The input value tensor.
-        - attention_mask: Tensor or None
-            Optional tensor for masking attention scores.
-        - head_mask: Tensor or None
-            Optional tensor for applying head-level mask.
-        
-        Returns:
-        - Tuple (Tensor, Tensor)
-            Tuple containing the attention output tensor and the attention weights tensor.
-        
-        Raises:
-        - ValueError
-            If the input tensors have incompatible shapes.
-        - TypeError
-            If any of the input tensors have incorrect data types.
-        - RuntimeError
-            If an error occurs during the attention calculation process.
-        """
+      
         attn_weights = self.matmul(query, key.swapaxes(-1, -2))
 
         if self.scale_attn_weights:
@@ -184,26 +141,7 @@ class GPT2Attention(nn.Cell):
         return attn_output, attn_weights
 
     def _upcast_and_reordered_attn(self, query, key, value, attention_mask=None, head_mask=None):
-        """
-        This method '_upcast_and_reordered_attn' is a part of the 'GPT2Attention' class and performs upcasting and reordering operations on the provided query, key, and value tensors to compute the attention
-weights and output. The method takes the following parameters:
-        
-        Args:
-        - self: The instance of the class.
-        - query: A tensor representing the query input with shape (batch_size, num_heads, query_sequence_length, hidden_size).
-        - key: A tensor representing the key input with shape (batch_size, num_heads, key_sequence_length, hidden_size).
-        - value: A tensor representing the value input with shape (batch_size, num_heads, key_sequence_length, hidden_size).
-        - attention_mask: An optional tensor with the same shape as attn_weights, used to mask the attention scores.
-        - head_mask: An optional tensor with shape (num_heads,) or (num_layers, num_heads) used to mask the attention scores in the multi-head attention mechanism.
-        
-        Returns:
-        This method returns two output tensors:
-        - attn_output: A tensor representing the output of the attention mechanism with shape (batch_size, num_heads, query_sequence_length, hidden_size).
-        - attn_weights: A tensor representing the attention weights computed during the attention mechanism with shape (batch_size * num_heads, query_sequence_length, key_sequence_length).
-        
-        Raises:
-        - RuntimeError: If the upcasting operation fails, and the attn_weights tensor does not have the required dtype mindspore.float32.
-        """
+      
         # Use `mindspore.baddbmm` (a bit more efficient w/ alpha param for scaling -- from Megatron-LM)
         bsz, num_heads, q_seq_len, _ = query.shape
         _, _, k_seq_len, _ = key.shape
@@ -271,25 +209,6 @@ weights and output. The method takes the following parameters:
             encoder_attention_mask: Optional[Tensor] = None,
             use_cache: Optional[bool] = False,
     ):
-        """
-        This method 'construct' is a part of the 'GPT2Attention' class and is responsible for constructing the attention mechanism with various parameters.
-        
-        Args:
-        - self: The instance of the class.
-        - hidden_states (Tuple[Tensor]): Tuple of tensors representing the hidden states.
-        - layer_past (Optional[Tuple[Tensor]]): Optional tuple of tensors representing past layer states.
-        - attention_mask (Optional[Tensor]): Optional tensor representing attention mask.
-        - head_mask (Optional[Tensor]): Optional tensor representing head mask.
-        - encoder_hidden_states (Optional[Tensor]): Optional tensor representing encoder hidden states.
-        - encoder_attention_mask (Optional[Tensor]): Optional tensor representing encoder attention mask.
-        - use_cache (Optional[bool]): Optional boolean indicating whether to use cache or not.
-        
-        Returns:
-        - None: This method does not return any value.
-        
-        Raises:
-        - ValueError: Raised if 'encoder_hidden_states' is not None and 'q_attn' weights are not defined.
-        """
         if encoder_hidden_states is not None:
             if not hasattr(self, "q_attn"):
                 raise ValueError(
@@ -338,20 +257,6 @@ class GPT2MLP(nn.Cell):
     gpt2 MLP
     """
     def __init__(self, intermediate_size, config):
-        """
-        Initializes an instance of the GPT2MLP class.
-        
-        Args:
-            self: The object itself.
-            intermediate_size (int): The size of the intermediate layer.
-            config (object): The configuration object.
-            
-        Returns:
-            None. This method does not return any value.
-            
-        Raises:
-            None.
-        """
         super().__init__()
         embed_dim = config.hidden_size
         self.c_fc = Conv1D(intermediate_size, embed_dim)
@@ -360,19 +265,7 @@ class GPT2MLP(nn.Cell):
         self.dropout = Dropout(p=config.resid_pdrop)
 
     def construct(self, hidden_states: Tuple[Tensor]):
-        """
-        Constructs the hidden states in the GPT2MLP class.
-        
-        Args:
-            self: An instance of the GPT2MLP class.
-            hidden_states (Tuple[Tensor]): A tuple of tensors representing the hidden states.
-        
-        Returns:
-            None: This method does not return any value.
-        
-        Raises:
-            None: This method does not raise any exceptions.
-        """
+       
         hidden_states = self.c_fc(hidden_states)
         hidden_states = self.act(hidden_states)
         hidden_states = self.c_proj(hidden_states)
@@ -381,30 +274,9 @@ class GPT2MLP(nn.Cell):
 
 
 class GPT2Block(nn.Cell):
-    r"""
-    gpt2 Block
-    """
+  
     def __init__(self, config, layer_idx=None):
-        """
-        Initializes a GPT2Block object.
-        
-        Args:
-            self: The instance of the GPT2Block class.
-            config: An object containing configuration settings for the GPT2Block.
-                Type: Any
-                Purpose: Specifies the configuration settings for the GPT2Block.
-                
-            layer_idx: An integer representing the index of the layer.
-                Type: int or None
-                Purpose: Specifies the index of the layer. If None, the default value is used.
-                Restrictions: Must be an integer or None.
-        
-        Returns:
-            None: This method does not return any value.
-        
-        Raises:
-            None
-        """
+       
         super().__init__()
         hidden_size = config.hidden_size
         inner_dim = config.n_inner if config.n_inner is not None else 4 * hidden_size
@@ -510,7 +382,7 @@ class GPT2PreTrainedModel(PreTrainedModel):
     base_model_prefix = "transformer"
     is_parallelizable = True
     supports_gradient_checkpointing = True
-    _no_split_modules = ["GPT2Block"]
+    _no_split_modules = [gradient_checkpointing "GPT2Block"]
 
     def get_head_mask(self, head_mask, num_hidden_layers, is_attention_chunked=False):
         """
