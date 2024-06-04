@@ -16,10 +16,10 @@
 
 import collections.abc
 from typing import Optional, Tuple, Union
-
-import mindspore
 from mindspore import nn, ops
 from mindspore.common.initializer import initializer, TruncatedNormal, Constant
+import mindspore
+from mindnlp.utils import logging
 
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -27,9 +27,7 @@ from ...modeling_outputs import (
     ImageClassifierOutputWithNoAttention,
 )
 from ...modeling_utils import PreTrainedModel
-from mindnlp.utils import (
-    logging,
-)
+
 from .configuration_swiftformer import SwiftFormerConfig
 
 
@@ -164,7 +162,7 @@ class SwiftFormerConvEncoder(nn.Cell):
         self.act = nn.GELU()
         self.point_wise_conv2 = nn.Conv2d(hidden_dim, dim, kernel_size=1, pad_mode='pad')
         self.drop_path = nn.Dropout(p=config.drop_conv_encoder_rate)
-        self.layer_scale = mindspore.Parameter(mindspore.numpy.ones(dim).unsqueeze(-1).unsqueeze(-1), requires_grad=True)
+        self.layer_scale = mindspore.Parameter(ops.ones(dim).unsqueeze(-1).unsqueeze(-1), requires_grad=True)
 
     def construct(self, x):
         input = x
@@ -190,13 +188,13 @@ class SwiftFormerMlp(nn.Cell):
         super().__init__()
         hidden_features = int(in_features * config.mlp_ratio)
         self.norm1 = nn.BatchNorm2d(in_features, eps=config.batch_norm_eps)
-        self.fc1 = nn.Conv2d(in_features, hidden_features, 1, pad_mode='pad')
+        self.fc1 = nn.Conv2d(in_features, hidden_features, 1, pad_mode='pad',has_bias=True)
         self.act_layer = ACT2FN[config.hidden_act]
         # if isinstance(config.hidden_act, str):
         #     self.act_layer = ACT2CLS[config.hidden_act]
         # else:
         #     self.act_layer = config.hidden_act
-        self.fc2 = nn.Conv2d(hidden_features, in_features, 1, pad_mode='pad')
+        self.fc2 = nn.Conv2d(hidden_features, in_features, 1, pad_mode='pad', has_bias=True)
         self.drop = nn.Dropout(p=config.drop_mlp_rate)
 
     def construct(self, x):
@@ -261,13 +259,13 @@ class SwiftFormerLocalRepresentation(nn.Cell):
     def __init__(self, config: SwiftFormerConfig, dim: int):
         super().__init__()
 
-        self.depth_wise_conv = nn.Conv2d(dim, dim, kernel_size=3, padding=1, group=dim, pad_mode='pad')
+        self.depth_wise_conv = nn.Conv2d(dim, dim, kernel_size=3, padding=1, group=dim, pad_mode='pad', has_bias=True)
         self.norm = nn.BatchNorm2d(dim, eps=config.batch_norm_eps)
-        self.point_wise_conv1 = nn.Conv2d(dim, dim, kernel_size=1, pad_mode='pad')
+        self.point_wise_conv1 = nn.Conv2d(dim, dim, kernel_size=1, pad_mode='pad', has_bias=True)
         self.act = nn.GELU()
-        self.point_wise_conv2 = nn.Conv2d(dim, dim, kernel_size=1, pad_mode='pad')
+        self.point_wise_conv2 = nn.Conv2d(dim, dim, kernel_size=1, pad_mode='pad', has_bias=True)
         self.drop_path = nn.Identity()
-        self.layer_scale = mindspore.Parameter(mindspore.numpy.ones(dim).unsqueeze(-1).unsqueeze(-1), requires_grad=True)
+        self.layer_scale = mindspore.Parameter(ops.ones(dim).unsqueeze(-1).unsqueeze(-1), requires_grad=True)
 
     def construct(self, x):
         input = x
@@ -303,10 +301,10 @@ class SwiftFormerEncoderBlock(nn.Cell):
         self.use_layer_scale = use_layer_scale
         if use_layer_scale:
             self.layer_scale_1 = mindspore.Parameter(
-                layer_scale_init_value * mindspore.numpy.ones(dim).unsqueeze(-1).unsqueeze(-1), requires_grad=True
+                layer_scale_init_value * ops.ones(dim).unsqueeze(-1).unsqueeze(-1), requires_grad=True
             )
             self.layer_scale_2 = mindspore.Parameter(
-                layer_scale_init_value * mindspore.numpy.ones(dim).unsqueeze(-1).unsqueeze(-1), requires_grad=True
+                layer_scale_init_value * ops.ones(dim).unsqueeze(-1).unsqueeze(-1), requires_grad=True
             )
 
     def construct(self, x):
@@ -422,7 +420,7 @@ class SwiftFormerPreTrainedModel(PreTrainedModel):
     def _init_weights(self, module: Union[nn.Dense, nn.Conv2d, nn.LayerNorm]) -> None:
         """Initialize the weights"""
         if isinstance(module, (nn.Conv2d, nn.Dense)):
-            module.weight.set_data(initializer(TruncatedNormal(sigma=0.02), module.weight.shape, module.weight.dtype)) 
+            module.weight.set_data(initializer(TruncatedNormal(sigma=0.02), module.weight.shape, module.weight.dtype))
             if module.bias is not None:
                 module.bias.set_data(initializer(Constant(value=0), module.bias.shape, module.bias.dtype))
         elif isinstance(module, (nn.LayerNorm)):
@@ -471,7 +469,6 @@ class SwiftFormerModel(SwiftFormerPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithNoAttention]:
-        r""" """
 
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -552,7 +549,7 @@ class SwiftFormerForImageClassification(SwiftFormerPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -576,5 +573,8 @@ class SwiftFormerForImageClassification(SwiftFormerPreTrainedModel):
             logits=logits,
             hidden_states=outputs.hidden_states,
         )
-    
-__all__=["SwiftFormerForImageClassification","SwiftFormerPatchEmbedding","SwiftFormerDropPath","SwiftFormerEmbeddings","SwiftFormerConvEncoder","SwiftFormerMlp","SwiftFormerEfficientAdditiveAttention","SwiftFormerLocalRepresentation","SwiftFormerEncoderBlock","SwiftFormerStage","SwiftFormerModel","SwiftFormerPreTrainedModel"]
+
+__all__=["SwiftFormerModel",
+        "SwiftFormerForImageClassification",
+        "SwiftFormerPreTrainedModel",
+    ]

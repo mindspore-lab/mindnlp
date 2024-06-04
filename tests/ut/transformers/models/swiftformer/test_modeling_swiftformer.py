@@ -259,7 +259,7 @@ class SwiftFormerModelIntegrationTest(unittest.TestCase):
 
         image_processor = self.default_image_processor
         image = prepare_img()
-        inputs = image_processor(images=image, return_tensors="pt")
+        inputs = image_processor(images=image, return_tensors="ms")
 
         # forward pass
         outputs = model(**inputs)

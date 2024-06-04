@@ -18,9 +18,8 @@ from collections import OrderedDict
 from typing import Mapping
 
 from packaging import version
-
-from ...configuration_utils import PretrainedConfig
 from mindnlp.utils import logging
+from ...configuration_utils import PretrainedConfig
 
 
 logger = logging.get_logger(__name__)
@@ -142,5 +141,5 @@ class SwiftFormerConfig(PretrainedConfig):
     @property
     def atol_for_validation(self) -> float:
         return 1e-4
-    
+
 __all__=["SwiftFormerConfig"]
