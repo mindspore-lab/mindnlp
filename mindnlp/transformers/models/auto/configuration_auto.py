@@ -103,6 +103,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("vipllava", "VipLlavaConfig"),
         ("wav2vec2", "Wav2Vec2Config"),
         ("whisper", "WhisperConfig"),
+        ("xclip", "XCLIPConfig"),
         ("xlm-roberta", "XLMRobertaConfig"),
         ("layoutlmv2", "LayoutLMv2Config"),
         ("xlnet", "XLNetConfig"),

@@ -100,6 +100,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("t5", "T5Model"),
         ("timesformer", "TimesformerModel"),
         ("whisper", "WhisperModel"),
+        ("xclip", "XCLIPModel"),
         ("xlm-roberta", "XLMRobertaModel"),
 	("xlnet", "XLNetModel"),
     ]
