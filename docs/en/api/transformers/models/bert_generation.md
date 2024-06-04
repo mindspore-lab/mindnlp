@@ -1,0 +1,4 @@
+:::mindnlp.transformers.models.bert_generation.configuration_bert_generation.BertGenerationConfig
+:::mindnlp.transformers.models.bert_generation.modeling_bert_generation.BertGenerationDecoder
+:::mindnlp.transformers.models.bert_generation.modeling_bert_generation.BertGenerationEncoder
+:::mindnlp.transformers.models.bert_generation.modeling_bert_generation.BertGenerationPreTrainedModel

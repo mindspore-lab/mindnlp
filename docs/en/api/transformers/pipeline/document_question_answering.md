@@ -1,0 +1,1 @@
+:::mindnlp.transformers.pipelines.document_question_answering.DocumentQuestionAnsweringPipeline

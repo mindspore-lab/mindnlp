@@ -1,0 +1,9 @@
+:::mindnlp.transformers.models.blip_2.configuration_blip_2.Blip2Config
+:::mindnlp.transformers.models.blip_2.configuration_blip_2.Blip2QFormerConfig
+:::mindnlp.transformers.models.blip_2.configuration_blip_2.Blip2VisionConfig
+:::mindnlp.transformers.models.blip_2.modeling_blip_2.Blip2Model
+:::mindnlp.transformers.models.blip_2.modeling_blip_2.Blip2QFormerModel
+:::mindnlp.transformers.models.blip_2.modeling_blip_2.Blip2PreTrainedModel
+:::mindnlp.transformers.models.blip_2.modeling_blip_2.Blip2ForConditionalGeneration
+:::mindnlp.transformers.models.blip_2.modeling_blip_2.Blip2VisionModel
+:::mindnlp.transformers.models.blip_2.processing_blip_2.Blip2Processor
