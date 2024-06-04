@@ -21,7 +21,7 @@ import numpy as np
 
 import mindspore
 from mindspore import nn, ops
-
+from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
 from ...modeling_outputs import (
@@ -33,7 +33,6 @@ from ...modeling_outputs import (
 )
 from ...modeling_utils import PreTrainedModel
 from ...time_series_utils import NormalOutput, StudentTOutput
-from mindnlp.utils import logging
 from .configuration_time_series_transformer import TimeSeriesTransformerConfig
 
 
@@ -289,7 +288,14 @@ class TimeSeriesTransformerAttention(nn.Cell):
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(self, hidden_states: mindspore.Tensor, key_value_states: Optional[mindspore.Tensor] = None, past_key_value: Optional[Tuple[mindspore.Tensor]] = None, attention_mask: Optional[mindspore.Tensor] = None, layer_head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
+    def construct(
+            self,
+            hidden_states: mindspore.Tensor,
+            key_value_states: Optional[mindspore.Tensor] = None,
+            past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            layer_head_mask: Optional[mindspore.Tensor] = None,
+            output_attentions: bool = False)-> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
 
         # if key_value_states are provided this layer is used as a cross-attention layer
@@ -304,11 +310,7 @@ class TimeSeriesTransformerAttention(nn.Cell):
         # `past_key_value[0].shape[2] == key_value_states.shape[1]`
         # is checking that the `sequence_length` of the `past_key_value` is the same as
         # the provided `key_value_states` to support prefix tuning
-        if (
-        is_cross_attention
-        and past_key_value is not None
-        and past_key_value[0].shape[2] == key_value_states.shape[1]
-        ):
+        if (is_cross_attention and past_key_value is not None and past_key_value[0].shape[2] == key_value_states.shape[1]):
             # reuse k,v, cross_attentions
             key_states = past_key_value[0]
             value_states = past_key_value[1]
@@ -423,11 +425,11 @@ class TimeSeriesTransformerEncoderLayer(nn.Cell):
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
     def construct(
-        self,
-        hidden_states,
-        attention_mask,
-        layer_head_mask,
-        output_attentions: Optional[bool] = False,
+            self,
+            hidden_states,
+            attention_mask,
+            layer_head_mask,
+            output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor]]:
         """
         Args:
@@ -459,9 +461,7 @@ class TimeSeriesTransformerEncoderLayer(nn.Cell):
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
-        if hidden_states.dtype == mindspore.float16 and (
-            ops.isinf(hidden_states).any() or ops.isnan(hidden_states).any()
-        ):
+        if hidden_states.dtype == mindspore.float16 and (ops.isinf(hidden_states).any() or ops.isnan(hidden_states).any()):
             clamp_value = np.finfo(hidden_states.dtype).max - 1000
             hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
@@ -511,16 +511,16 @@ class TimeSeriesTransformerDecoderLayer(nn.Cell):
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
     def construct(
-        self,
-        hidden_states: mindspore.Tensor,
-        attention_mask: Optional[mindspore.Tensor] = None,
-        encoder_hidden_states: Optional[mindspore.Tensor] = None,
-        encoder_attention_mask: Optional[mindspore.Tensor] = None,
-        layer_head_mask: Optional[mindspore.Tensor] = None,
-        cross_attn_layer_head_mask: Optional[mindspore.Tensor] = None,
-        past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
-        output_attentions: Optional[bool] = False,
-        use_cache: Optional[bool] = True,
+            self,
+            hidden_states: mindspore.Tensor,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            encoder_hidden_states: Optional[mindspore.Tensor] = None,
+            encoder_attention_mask: Optional[mindspore.Tensor] = None,
+            layer_head_mask: Optional[mindspore.Tensor] = None,
+            cross_attn_layer_head_mask: Optional[mindspore.Tensor] = None,
+            past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
+            output_attentions: Optional[bool] = False,
+            use_cache: Optional[bool] = True,
     ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
         """
         Args:
@@ -622,8 +622,6 @@ class TimeSeriesTransformerPreTrainedModel(PreTrainedModel):
             if module.padding_idx is not None:
                 module.weight.data[module.padding_idx] = mindspore.common.initializer.initializer(
                     "zeros", module.weight.data[module.padding_idx].shape, module.weight.dtype)
-            
-
 
 TIME_SERIES_TRANSFORMER_START_DOCSTRING = r"""
     This model inherits from [`PreTrainedModel`]. Check the superclass documentation for the generic methods the
@@ -825,13 +823,13 @@ class TimeSeriesTransformerEncoder(TimeSeriesTransformerPreTrainedModel):
         self.post_init()
 
     def construct(
-        self,
-        attention_mask: Optional[mindspore.Tensor] = None,
-        head_mask: Optional[mindspore.Tensor] = None,
-        inputs_embeds: Optional[mindspore.Tensor] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+            self,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            head_mask: Optional[mindspore.Tensor] = None,
+            inputs_embeds: Optional[mindspore.Tensor] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutput]:
         r"""
         Args:
@@ -961,18 +959,18 @@ class TimeSeriesTransformerDecoder(TimeSeriesTransformerPreTrainedModel):
         self.post_init()
 
     def construct(
-        self,
-        attention_mask: Optional[mindspore.Tensor] = None,
-        encoder_hidden_states: Optional[mindspore.Tensor] = None,
-        encoder_attention_mask: Optional[mindspore.Tensor] = None,
-        head_mask: Optional[mindspore.Tensor] = None,
-        cross_attn_head_mask: Optional[mindspore.Tensor] = None,
-        past_key_values: Optional[List[mindspore.Tensor]] = None,
-        inputs_embeds: Optional[mindspore.Tensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+            self,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            encoder_hidden_states: Optional[mindspore.Tensor] = None,
+            encoder_attention_mask: Optional[mindspore.Tensor] = None,
+            head_mask: Optional[mindspore.Tensor] = None,
+            cross_attn_head_mask: Optional[mindspore.Tensor] = None,
+            past_key_values: Optional[List[mindspore.Tensor]] = None,
+            inputs_embeds: Optional[mindspore.Tensor] = None,
+            use_cache: Optional[bool] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]:
         r"""
         Args:
@@ -1178,9 +1176,7 @@ class TimeSeriesTransformerModel(TimeSeriesTransformerPreTrainedModel):
     def _past_length(self) -> int:
         return self.config.context_length + max(self.config.lags_sequence)
 
-    def get_lagged_subsequences(
-        self, sequence: mindspore.Tensor, subsequences_length: int, shift: int = 0
-    ) -> mindspore.Tensor:
+    def get_lagged_subsequences(self, sequence: mindspore.Tensor, subsequences_length: int, shift: int = 0) -> mindspore.Tensor:
         """
         Returns lagged subsequences of a given sequence. Returns a tensor of shape (N, S, C, I),
             where S = subsequences_length and I = len(indices), containing lagged subsequences. Specifically, lagged[i,
@@ -1211,14 +1207,14 @@ class TimeSeriesTransformerModel(TimeSeriesTransformerPreTrainedModel):
         return ops.stack(lagged_values, axis=-1)
 
     def create_network_inputs(
-        self,
-        past_values: mindspore.Tensor,
-        past_time_features: mindspore.Tensor,
-        static_categorical_features: Optional[mindspore.Tensor] = None,
-        static_real_features: Optional[mindspore.Tensor] = None,
-        past_observed_mask: Optional[mindspore.Tensor] = None,
-        future_values: Optional[mindspore.Tensor] = None,
-        future_time_features: Optional[mindspore.Tensor] = None,
+            self,
+            past_values: mindspore.Tensor,
+            past_time_features: mindspore.Tensor,
+            static_categorical_features: Optional[mindspore.Tensor] = None,
+            static_real_features: Optional[mindspore.Tensor] = None,
+            past_observed_mask: Optional[mindspore.Tensor] = None,
+            future_values: Optional[mindspore.Tensor] = None,
+            future_time_features: Optional[mindspore.Tensor] = None,
     ):
         # time feature
         time_feat = (
@@ -1289,24 +1285,24 @@ class TimeSeriesTransformerModel(TimeSeriesTransformerPreTrainedModel):
         return self.decoder
 
     def construct(
-        self,
-        past_values: mindspore.Tensor,
-        past_time_features: mindspore.Tensor,
-        past_observed_mask: mindspore.Tensor,
-        static_categorical_features: Optional[mindspore.Tensor] = None,
-        static_real_features: Optional[mindspore.Tensor] = None,
-        future_values: Optional[mindspore.Tensor] = None,
-        future_time_features: Optional[mindspore.Tensor] = None,
-        decoder_attention_mask: Optional[mindspore.Tensor] = None,
-        head_mask: Optional[mindspore.Tensor] = None,
-        decoder_head_mask: Optional[mindspore.Tensor] = None,
-        cross_attn_head_mask: Optional[mindspore.Tensor] = None,
-        encoder_outputs: Optional[List[mindspore.Tensor]] = None,
-        past_key_values: Optional[List[mindspore.Tensor]] = None,
-        output_hidden_states: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        use_cache: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+            self,
+            past_values: mindspore.Tensor,
+            past_time_features: mindspore.Tensor,
+            past_observed_mask: mindspore.Tensor,
+            static_categorical_features: Optional[mindspore.Tensor] = None,
+            static_real_features: Optional[mindspore.Tensor] = None,
+            future_values: Optional[mindspore.Tensor] = None,
+            future_time_features: Optional[mindspore.Tensor] = None,
+            decoder_attention_mask: Optional[mindspore.Tensor] = None,
+            head_mask: Optional[mindspore.Tensor] = None,
+            decoder_head_mask: Optional[mindspore.Tensor] = None,
+            cross_attn_head_mask: Optional[mindspore.Tensor] = None,
+            encoder_outputs: Optional[List[mindspore.Tensor]] = None,
+            past_key_values: Optional[List[mindspore.Tensor]] = None,
+            output_hidden_states: Optional[bool] = None,
+            output_attentions: Optional[bool] = None,
+            use_cache: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
     ) -> Union[Seq2SeqTSModelOutput, Tuple]:
         r"""
         Returns:
@@ -1443,25 +1439,25 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
         return self.distribution_output.distribution(sliced_params, loc=loc, scale=scale)
 
     def construct(
-        self,
-        past_values: mindspore.Tensor,
-        past_time_features: mindspore.Tensor,
-        past_observed_mask: mindspore.Tensor,
-        static_categorical_features: Optional[mindspore.Tensor] = None,
-        static_real_features: Optional[mindspore.Tensor] = None,
-        future_values: Optional[mindspore.Tensor] = None,
-        future_time_features: Optional[mindspore.Tensor] = None,
-        future_observed_mask: Optional[mindspore.Tensor] = None,
-        decoder_attention_mask: Optional[mindspore.Tensor] = None,
-        head_mask: Optional[mindspore.Tensor] = None,
-        decoder_head_mask: Optional[mindspore.Tensor] = None,
-        cross_attn_head_mask: Optional[mindspore.Tensor] = None,
-        encoder_outputs: Optional[List[mindspore.Tensor]] = None,
-        past_key_values: Optional[List[mindspore.Tensor]] = None,
-        output_hidden_states: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        use_cache: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+            self,
+            past_values: mindspore.Tensor,
+            past_time_features: mindspore.Tensor,
+            past_observed_mask: mindspore.Tensor,
+            static_categorical_features: Optional[mindspore.Tensor] = None,
+            static_real_features: Optional[mindspore.Tensor] = None,
+            future_values: Optional[mindspore.Tensor] = None,
+            future_time_features: Optional[mindspore.Tensor] = None,
+            future_observed_mask: Optional[mindspore.Tensor] = None,
+            decoder_attention_mask: Optional[mindspore.Tensor] = None,
+            head_mask: Optional[mindspore.Tensor] = None,
+            decoder_head_mask: Optional[mindspore.Tensor] = None,
+            cross_attn_head_mask: Optional[mindspore.Tensor] = None,
+            encoder_outputs: Optional[List[mindspore.Tensor]] = None,
+            past_key_values: Optional[List[mindspore.Tensor]] = None,
+            output_hidden_states: Optional[bool] = None,
+            output_attentions: Optional[bool] = None,
+            use_cache: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
     ) -> Union[Seq2SeqTSModelOutput, Tuple]:
         r"""
         Returns:
@@ -1575,15 +1571,15 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
         )
 
     def generate(
-        self,
-        past_values: mindspore.Tensor,
-        past_time_features: mindspore.Tensor,
-        future_time_features: mindspore.Tensor,
-        past_observed_mask: Optional[mindspore.Tensor] = None,
-        static_categorical_features: Optional[mindspore.Tensor] = None,
-        static_real_features: Optional[mindspore.Tensor] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
+            self,
+            past_values: mindspore.Tensor,
+            past_time_features: mindspore.Tensor,
+            future_time_features: mindspore.Tensor,
+            past_observed_mask: Optional[mindspore.Tensor] = None,
+            static_categorical_features: Optional[mindspore.Tensor] = None,
+            static_real_features: Optional[mindspore.Tensor] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
     ) -> SampleTSPredictionOutput:
         r"""
         Greedily generate sequences of sample predictions from a model with a probability distribution head.
@@ -1741,4 +1737,4 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
             )
         )
 
-__all__ = ['TimeSeriesTransformerConfig','TimeSeriesTransformerPreTrainedModel','TimeSeriesTransformerModel','TimeSeriesTransformerForPrediction']
+__all__ = ['TimeSeriesTransformerConfig', 'TimeSeriesTransformerPreTrainedModel', 'TimeSeriesTransformerModel', 'TimeSeriesTransformerForPrediction']
