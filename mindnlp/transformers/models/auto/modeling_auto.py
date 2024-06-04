@@ -96,6 +96,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("rwkv", "RwkvModel"),
         ("sam", "SamModel"),
         ("segformer", "SegformerModel"),
+        ("squeezebert", "SqueezeBertModel"),
         ("starcoder2", "Starcoder2Model"),
         ("t5", "T5Model"),
         ("timesformer", "TimesformerModel"),
@@ -958,18 +959,18 @@ class AutoModelForImageToImage(_BaseAutoModelClass):
 
     """
     Represents an automatic model for image-to-image tasks.
-    
+
     This class inherits from the _BaseAutoModelClass and provides functionality for automatically selecting and using models for image-to-image tasks. It encapsulates the logic for model selection,
 configuration, and inference for image-to-image transformation tasks. Users can leverage this class to streamline the process of selecting and using the most suitable model for their specific image-to-image
 transformation needs.
-    
+
     Attributes:
         _BaseAutoModelClass: The base class providing foundational functionality for automatic model selection and usage.
-    
+
     Note:
         This class is designed to streamline the process of model selection and utilization for image-to-image transformation tasks. It encapsulates the underlying complexities of model selection and
 configuration, enabling users to focus on the specifics of their image transformation requirements.
-    
+
     """
     _model_mapping = MODEL_FOR_IMAGE_TO_IMAGE_MAPPING
 
@@ -978,9 +979,9 @@ class AutoModel(_BaseAutoModelClass):
 
     """
     Represents an automated model for performing various tasks related to vehicle models.
-    
+
     This class inherits from _BaseAutoModelClass and provides functionalities for managing and analyzing vehicle models in an automated manner.
-    It includes methods for data processing, model training, evaluation, and prediction. 
+    It includes methods for data processing, model training, evaluation, and prediction.
     The AutoModel class serves as a foundation for building automated systems that work with vehicle models efficiently.
     """
     _model_mapping = MODEL_MAPPING
@@ -989,8 +990,8 @@ class AutoModel(_BaseAutoModelClass):
 class AutoModelForPreTraining(_BaseAutoModelClass):
 
     """
-    Represents a Python class for an auto model used for pre-training natural language processing (NLP) tasks. 
-    This class inherits functionality from the _BaseAutoModelClass, providing a foundation for pre-training NLP models. 
+    Represents a Python class for an auto model used for pre-training natural language processing (NLP) tasks.
+    This class inherits functionality from the _BaseAutoModelClass, providing a foundation for pre-training NLP models.
     It encapsulates methods and attributes specific to pre-training tasks, allowing for efficient development and training of NLP models.
     """
     _model_mapping = MODEL_FOR_PRETRAINING_MAPPING
@@ -1001,16 +1002,16 @@ class AutoModelForPreTraining(_BaseAutoModelClass):
 class _AutoModelWithLMHead(_BaseAutoModelClass):
 
     """
-    This class represents an automatic model with a language modeling head, implementing the functionality of generating text based on given input. 
-    
+    This class represents an automatic model with a language modeling head, implementing the functionality of generating text based on given input.
+
     It inherits from the '_BaseAutoModelClass' class, which provides the base functionality for automatic models.
-    
+
     Attributes:
         - model_name_or_path (str): The name or path of the pre-trained model to be used.
         - config (PretrainedConfig): The configuration object for the model.
         - tokenizer (PreTrainedTokenizer): The tokenizer used for tokenization and encoding of text inputs.
         - model (PreTrainedModel): The pre-trained model used for generating text.
-    
+
     Methods:
         - generate: Generates text based on the given input using the language modeling head of the model.
         - forward: Performs a forward pass through the model to generate text.
@@ -1018,11 +1019,11 @@ class _AutoModelWithLMHead(_BaseAutoModelClass):
         - save_pretrained: Saves the model and its configuration to the specified directory.
         - from_pretrained: Creates a new instance of the class from a pre-trained model.
         - __call__: Invokes the model to generate text based on the given input.
-    
+
     Note:
         This class serves as a convenient interface to easily generate text using a pre-trained language model with a language modeling head. It provides methods for generating text as well as saving and
 loading the model.
-    
+
     Example usage:
         >>> model = _AutoModelWithLMHead.from_pretrained('bert-base-uncased')
         >>> inputs = "Once upon a time"
@@ -1034,9 +1035,9 @@ loading the model.
 class AutoModelForCausalLM(_BaseAutoModelClass):
 
     """
-    Represents a Python class for an automatic model tailored for Causal Language Modeling tasks. 
-    This class inherits from the _BaseAutoModelClass and provides functionality for training, fine-tuning, and utilizing models for causal language modeling tasks. 
-    It includes methods for loading pre-trained models, generating text sequences, and evaluating model performance. 
+    Represents a Python class for an automatic model tailored for Causal Language Modeling tasks.
+    This class inherits from the _BaseAutoModelClass and provides functionality for training, fine-tuning, and utilizing models for causal language modeling tasks.
+    It includes methods for loading pre-trained models, generating text sequences, and evaluating model performance.
     """
     _model_mapping = MODEL_FOR_CAUSAL_LM_MAPPING
 
@@ -1044,10 +1045,10 @@ class AutoModelForCausalLM(_BaseAutoModelClass):
 class AutoModelForMaskedLM(_BaseAutoModelClass):
 
     """
-    Represents a class for automatically generating masked language model outputs based on a pre-trained model. 
-    
+    Represents a class for automatically generating masked language model outputs based on a pre-trained model.
+
     This class serves as a specialized extension of the _BaseAutoModelClass, inheriting its core functionality and adding specific methods and attributes tailored for masked language model tasks. It provides a
-convenient interface for utilizing pre-trained language models to predict masked tokens within a given input sequence. 
+convenient interface for utilizing pre-trained language models to predict masked tokens within a given input sequence.
     """
     _model_mapping = MODEL_FOR_MASKED_LM_MAPPING
 
@@ -1055,9 +1056,9 @@ convenient interface for utilizing pre-trained language models to predict masked
 class AutoModelForSeq2SeqLM(_BaseAutoModelClass):
 
     """
-    Represents a class for automatic generation of models for sequence-to-sequence language modeling tasks. 
-    This class inherits functionality from the _BaseAutoModelClass, providing a base for creating and customizing 
-    sequence-to-sequence language models for various natural language processing applications. 
+    Represents a class for automatic generation of models for sequence-to-sequence language modeling tasks.
+    This class inherits functionality from the _BaseAutoModelClass, providing a base for creating and customizing
+    sequence-to-sequence language models for various natural language processing applications.
     """
     _model_mapping = MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING
 
@@ -1065,7 +1066,7 @@ class AutoModelForSeq2SeqLM(_BaseAutoModelClass):
 class AutoModelForSequenceClassification(_BaseAutoModelClass):
 
     """
-    The 'AutoModelForSequenceClassification' class represents an automatic model for sequence classification tasks in Python. 
+    The 'AutoModelForSequenceClassification' class represents an automatic model for sequence classification tasks in Python.
     This class inherits functionality from the '_BaseAutoModelClass' class and provides a high-level interface for creating and utilizing pre-trained models for sequence classification tasks.
     """
     _model_mapping = MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING
@@ -1075,16 +1076,16 @@ class AutoModelForQuestionAnswering(_BaseAutoModelClass):
 
     """
     This class represents an automatic model for question answering in Python. It is a subclass of the _BaseAutoModelClass, which provides a base implementation for automatic models.
-    
+
     The AutoModelForQuestionAnswering class is designed to handle the task of question answering, where given a question and a context, it predicts the answer within the given context. It leverages pre-trained
 models and fine-tuning techniques to achieve high accuracy and performance.
-    
+
     Attributes:
         - model_name_or_path (str): The name or path of the pre-trained model to be used for question answering.
         - config (AutoConfig): The configuration object that holds the model's configuration settings.
         - tokenizer (PreTrainedTokenizer): The tokenizer used to preprocess input data for the model.
         - model (PreTrainedModel): The pre-trained model for question answering.
-    
+
     Methods:
         - from_pretrained(cls, model_name_or_path, *args, **kwargs): Class method that loads a pre-trained model and returns an instance of the AutoModelForQuestionAnswering class.
         - forward(self, input_ids, attention_mask=None, token_type_ids=None, position_ids=None, head_mask=None): Performs forward pass through the model given input IDs and other optional arguments, and
@@ -1092,24 +1093,24 @@ returns the predicted answer.
         - save_pretrained(self, save_directory): Saves the model and its configuration to the specified directory for future use.
         - from_config(cls, config): Class method that creates an instance of the AutoModelForQuestionAnswering class from a provided configuration object.
         - resize_token_embeddings(self, new_num_tokens): Resizes the token embeddings of the model to match the new number of tokens.
-    
+
     Usage:
-    
+
     # Instantiate the AutoModelForQuestionAnswering class
     model = AutoModelForQuestionAnswering.from_pretrained('bert-base-uncased')
-    
+
     # Perform question answering
     question = "What is the capital of France?"
     context = "Paris is the capital of France."
     input_ids = tokenizer.encode(question, context)
     answer = model.forward(input_ids)
-    
+
     # Save the model
     model.save_pretrained('models/qa_model')
-    
+
     # Load the saved model
     loaded_model = AutoModelForQuestionAnswering.from_pretrained('models/qa_model')
-    
+
     Note: The AutoModelForQuestionAnswering class is built on top of the transformers library, which provides a wide range of pre-trained models for various NLP tasks. It is recommended to refer to the
 transformers documentation for more details on using this class and customizing its behavior.
     """
@@ -1121,13 +1122,13 @@ class AutoModelForTableQuestionAnswering(_BaseAutoModelClass):
     """
     AutoModelForTableQuestionAnswering is a Python class that represents a model for table-based question answering tasks. This class inherits from the _BaseAutoModelClass, providing functionality for
 processing and generating answers for questions related to tables.
-    
+
     This class encapsulates the necessary methods and attributes for initializing, loading, and utilizing a pre-trained model for table question answering. It provides an interface for encoding table data and
 questions, and generating answers based on the learned patterns and representations.
-    
+
     The AutoModelForTableQuestionAnswering class is designed to be flexible and customizable, allowing users to fine-tune and adapt the model to specific table question answering tasks. It serves as a
 high-level abstraction for working with table-based question answering models, enabling seamless integration into various applications and workflows.
-    
+
     Users can leverage the capabilities of this class to efficiently handle table question answering tasks, benefiting from the underlying mechanisms for processing and interpreting tabular data in the context
 of natural language questions. The class facilitates the integration of table question answering functionality into larger projects, providing a powerful and efficient solution for handling such tasks within a
 Python environment.
@@ -1139,27 +1140,27 @@ class AutoModelForVisualQuestionAnswering(_BaseAutoModelClass):
 
     """
     Represents a specialized model class for visual question answering (VQA) tasks.
-    
+
     This class serves as an extension of the _BaseAutoModelClass and provides functionality tailored specifically for visual question answering applications. It encapsulates the necessary components and
 methods for processing both visual and textual inputs to generate accurate answers to questions related to images. Users can leverage the capabilities of this class to build, train, and deploy VQA models with
 ease.
-    
+
     Attributes:
         Inherits from _BaseAutoModelClass: A base class that defines essential attributes and methods for auto-generated model classes.
         Additional attributes specific to visual question answering tasks may be present within this class.
-    
+
     Methods:
         - Specific methods for processing visual data, textual data, and combining them to produce answers to given questions.
         - Utility functions for preprocessing input data, handling model inference, and post-processing the output for interpretation.
         - Customizable parameters and settings to fine-tune the model's behavior for different VQA scenarios.
-    
+
     Usage:
         Instantiate an object of AutoModelForVisualQuestionAnswering to access its VQA-specific functionalities and utilize them in developing VQA solutions. Users can extend and customize the class to adapt
 to different datasets and requirements, enhancing the model's performance on varying VQA tasks.
-    
+
     Note:
         It is recommended to refer to the documentation of _BaseAutoModelClass for general information on inherited attributes and methods.
-    
+
     For detailed information on the implementation and usage of AutoModelForVisualQuestionAnswering, please refer to the official documentation or codebase.
     """
     _model_mapping = MODEL_FOR_VISUAL_QUESTION_ANSWERING_MAPPING
@@ -1168,7 +1169,7 @@ to different datasets and requirements, enhancing the model's performance on var
 class AutoModelForDocumentQuestionAnswering(_BaseAutoModelClass):
 
     """
-    This class represents an auto model for document question answering tasks. 
+    This class represents an auto model for document question answering tasks.
     It inherits from the _BaseAutoModelClass, providing functionalities for processing text input
     and generating answers to questions based on the provided document context.
     """
@@ -1179,7 +1180,7 @@ class AutoModelForTokenClassification(_BaseAutoModelClass):
 
     """
     AutoModelForTokenClassification is a class that represents an automatic model for token classification in Python. It inherits from _BaseAutoModelClass and provides functionality for token classification
-tasks. This class is designed to be used with pre-trained models and offers methods for token classification tasks, such as named entity recognition and part-of-speech tagging. 
+tasks. This class is designed to be used with pre-trained models and offers methods for token classification tasks, such as named entity recognition and part-of-speech tagging.
     """
     _model_mapping = MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING
 
@@ -1188,13 +1189,13 @@ class AutoModelForMultipleChoice(_BaseAutoModelClass):
 
     """
     Represents a class for automatically generating a model for multiple choice tasks.
-    
+
     This class inherits from the _BaseAutoModelClass and provides functionality for creating a model specifically designed for handling multiple choice questions. It encapsulates the logic and operations
 required for training and inference on multiple choice datasets.
-    
+
     The AutoModelForMultipleChoice class offers a set of methods and attributes for fine-tuning, evaluating, and utilizing the model for multiple choice tasks. It leverages the underlying architecture and
 components inherited from the _BaseAutoModelClass while adding specific functionality tailored to the requirements of multiple choice scenarios.
-    
+
     Users can instantiate objects of this class to create, customize, and deploy models for multiple choice tasks, enabling seamless integration of machine learning capabilities into applications and workflows
 dealing with multiple choice question answering.
     """
@@ -1205,14 +1206,14 @@ class AutoModelForNextSentencePrediction(_BaseAutoModelClass):
 
     """
     A class representing an autoencoder model for next sentence prediction.
-    
+
     This class inherits from _BaseAutoModelClass and provides a pre-trained model for next sentence prediction tasks. It can be used to generate predictions for whether a given pair of sentences are likely to
 be consecutive in a text sequence.
-    
+
     Attributes:
         config (AutoConfig): The configuration class used to instantiate the model.
         base_model_prefix (str): The prefix for the base model.
-        
+
     """
     _model_mapping = MODEL_FOR_NEXT_SENTENCE_PREDICTION_MAPPING
 
@@ -1220,28 +1221,28 @@ be consecutive in a text sequence.
 class AutoModelForZeroShotImageClassification(_BaseAutoModelClass):
 
     """
-    This class represents an automatic model for zero-shot image classification in Python. 
-    
+    This class represents an automatic model for zero-shot image classification in Python.
+
     The 'AutoModelForZeroShotImageClassification' class is a subclass of the '_BaseAutoModelClass' class, which provides a base implementation for automatic models. It is designed specifically for zero-shot
 image classification tasks, where images are classified into predefined classes based on their visual content.
-    
+
     The class encapsulates the necessary functionality to automatically train, evaluate, and use a model for zero-shot image classification. It includes methods for data preprocessing, model training,
 hyperparameter tuning, model evaluation, and inference. Additionally, it provides convenient interfaces to load and save trained models, as well as to fine-tune pre-trained models for specific tasks.
-    
+
     One of the key features of this class is its ability to handle zero-shot learning, where the model can classify images into classes that were not seen during training. This is achieved through the use of
 semantic embeddings or textual descriptions associated with each class. By leveraging the semantic information, the model can make predictions for unseen classes based on their similarity to the seen classes.
-    
+
     To use this class, you can instantiate an object of the 'AutoModelForZeroShotImageClassification' class and provide the necessary parameters, such as the training data, class labels, and hyperparameters.
 Once the model is trained, you can use it to classify new images by calling the appropriate methods.
-    
+
     Note that this class assumes the input images are in a suitable format and the class labels or semantic embeddings are provided for zero-shot learning. It is recommended to preprocess the data and ensure
 the proper format before using this class.
-    
+
     For more details on how to use this class, please refer to the documentation and examples provided with the package.
-    
+
     Attributes:
         - None
-    
+
     Methods:
         - __init__(self, *args, **kwargs): Initializes the 'AutoModelForZeroShotImageClassification' object with the given parameters.
         - preprocess_data(self, data): Preprocesses the input data, such as resizing images, normalizing pixel values, etc.
@@ -1252,7 +1253,7 @@ the proper format before using this class.
         - save_model(self, filepath): Saves the trained model to the specified filepath.
         - load_model(self, filepath): Loads a pre-trained model from the specified filepath.
         - fine_tune(self, new_data, new_labels): Fine-tunes the pre-trained model on new data and labels for transfer learning.
-    
+
     """
     _model_mapping = MODEL_FOR_ZERO_SHOT_IMAGE_CLASSIFICATION_MAPPING
 
@@ -1261,17 +1262,17 @@ class AutoModelForUniversalSegmentation(_BaseAutoModelClass):
 
     """
     This class represents an automatic model for universal segmentation in Python. It is a subclass of the _BaseAutoModelClass, which provides a base implementation for automatic models.
-    
+
     Universal segmentation is the task of dividing an input sequence into meaningful segments or units. The AutoModelForUniversalSegmentation class encapsulates the functionality required to automatically
 train and evaluate models for this task.
-    
+
     Attributes:
         - model_name_or_path (str): The pre-trained model name or path.
         - tokenizer (AutoTokenizer): The tokenizer used for tokenizing the input sequences.
         - model (AutoModel): The underlying pre-trained model for universal segmentation.
         - device (str): The device (e.g., 'cpu', 'cuda') on which the model is loaded.
         - config (AutoConfig): The configuration for the pre-trained model.
-    
+
     Methods:
         - __init__(self, model_name_or_path: str): Initializes a new instance of AutoModelForUniversalSegmentation.
         - train(self, train_dataset: Dataset, eval_dataset: Optional[Dataset] = None, **kwargs): Trains the model using the provided training dataset and evaluates it on the evaluation dataset. Additional
@@ -1279,26 +1280,26 @@ keyword arguments can be passed to customize the training process.
         - predict(self, input_sequence: str) -> List[Segment]: Predicts the segments for the given input sequence using the trained model.
         - save_model(self, output_dir: str): Saves the trained model to the specified output directory.
         - load_model(self, model_path: str): Loads a pre-trained model from the specified path.
-    
+
     Inherited Attributes:
         - base_attribute_1 (type): Description of the attribute inherited from _BaseAutoModelClass.
         - base_attribute_2 (type): Description of another attribute inherited from _BaseAutoModelClass.
-    
+
     Inherited Methods:
         - base_method_1(self, arg1: type, arg2: type) -> ReturnType: Description of the method inherited from _BaseAutoModelClass.
         - base_method_2(self, arg1: type) -> ReturnType: Description of another method inherited from _BaseAutoModelClass.
-        
+
     Note:
         This class assumes that the input sequences are already tokenized and encoded using the tokenizer. The predict method returns a list of Segment objects, where each Segment represents a segment of the
 input sequence.
-    
+
     Example usage:
         model = AutoModelForUniversalSegmentation(model_name_or_path='bert-base-uncased')
         model.train(train_dataset, eval_dataset)
         segments = model.predict('This is an example sentence.')
         model.save_model('output/model')
         model.load_model('output/model')
-    
+
     For more details on the usage and available models, refer to the documentation and examples provided with this class.
     """
     _model_mapping = MODEL_FOR_UNIVERSAL_SEGMENTATION_MAPPING
@@ -1308,16 +1309,16 @@ class AutoModelForInstanceSegmentation(_BaseAutoModelClass):
 
     """
     Represents a class for automatic model generation for instance segmentation tasks.
-    
+
     This class provides functionality for automatically generating models tailored for instance segmentation, which is the task of identifying and delineating individual objects within an image. The class
 inherits from _BaseAutoModelClass, providing a base for creating specialized instance segmentation models.
-    
+
     Attributes:
         _BaseAutoModelClass: The base class for automatic model generation, providing foundational functionality for creating custom models.
-    
+
     Methods:
         (Include any specific methods and their functionality here)
-    
+
     Usage:
         (Include any usage examples or guidelines here)
     """
@@ -1328,9 +1329,9 @@ class AutoModelForObjectDetection(_BaseAutoModelClass):
 
     """
     Represents a class for automatic model selection and configuration for object detection tasks.
-    
+
     This class inherits from _BaseAutoModelClass and provides methods for automatically selecting and configuring a model for object detection tasks based on input data and performance metrics.
-    
+
     The AutoModelForObjectDetection class encapsulates functionality for model selection, hyperparameter optimization, and model evaluation, making it a convenient and efficient tool for automating the process
 of model selection and configuration for object detection applications.
     """
@@ -1340,7 +1341,7 @@ of model selection and configuration for object detection applications.
 class AutoModelForZeroShotObjectDetection(_BaseAutoModelClass):
 
     """
-    The AutoModelForZeroShotObjectDetection class represents an automatic model for zero-shot object detection. 
+    The AutoModelForZeroShotObjectDetection class represents an automatic model for zero-shot object detection.
     It inherits from the _BaseAutoModelClass and provides functionality for detecting objects in images without the need for training on specific object classes.
     """
     _model_mapping = MODEL_FOR_ZERO_SHOT_OBJECT_DETECTION_MAPPING
@@ -1359,9 +1360,9 @@ class AutoModelForVideoClassification(_BaseAutoModelClass):
 
     """
     Represents a class for automatic model selection for video classification tasks.
-    
-    This class serves as a specialized implementation for selecting the optimal model for video classification based on specified criteria. 
-    It inherits functionality from the _BaseAutoModelClass, providing a foundation for automatic model selection with a focus on video classification tasks. 
+
+    This class serves as a specialized implementation for selecting the optimal model for video classification based on specified criteria.
+    It inherits functionality from the _BaseAutoModelClass, providing a foundation for automatic model selection with a focus on video classification tasks.
     """
     _model_mapping = MODEL_FOR_VIDEO_CLASSIFICATION_MAPPING
 
@@ -1369,9 +1370,9 @@ class AutoModelForVideoClassification(_BaseAutoModelClass):
 class AutoModelForVision2Seq(_BaseAutoModelClass):
 
     """
-    AutoModelForVision2Seq is a Python class that represents an automatic model for vision-to-sequence tasks. 
+    AutoModelForVision2Seq is a Python class that represents an automatic model for vision-to-sequence tasks.
     This class inherits from the _BaseAutoModelClass, providing additional functionalities specific to vision-to-sequence tasks.
-    
+
     Attributes:
         - model_name_or_path (str): The pre-trained model name or path.
         - config (AutoConfig): The configuration class for the model.
@@ -1382,7 +1383,7 @@ class AutoModelForVision2Seq(_BaseAutoModelClass):
         - vision_embedding (nn.Module): The module responsible for embedding the visual features.
         - sequence_embedding (nn.Module): The module responsible for embedding the sequence input.
         - classifier (nn.Module): The classifier module for the model.
-    
+
     Methods:
         - forward: Performs a forward pass through the model, taking visual features and sequence input as input.
         - encode_visual_features: Encodes the visual features using the vision_embedding module.
@@ -1391,18 +1392,18 @@ class AutoModelForVision2Seq(_BaseAutoModelClass):
         - save_pretrained: Saves the model and its configuration to the specified path.
         - from_pretrained: Loads a pre-trained model and its configuration from the specified path.
         - resize_token_embeddings: Resizes the token embeddings of the tokenizer.
-    
+
     Note:
         AutoModelForVision2Seq is designed to be used for vision-to-sequence tasks, where the model takes in visual features
         and sequence input, and generates a sequence output. It provides an interface for loading pre-trained models,
         performing inference, and fine-tuning on custom datasets. The class inherits from _BaseAutoModelClass to leverage
         the shared functionalities across different automatic models.
-    
+
     Example usage:
-        
+
         model = AutoModelForVision2Seq.from_pretrained('model_name')
         outputs = model.forward(visual_features, sequence_input)
-        
+
     """
     _model_mapping = MODEL_FOR_VISION_2_SEQ_MAPPING
 
@@ -1411,7 +1412,7 @@ class AutoModelForAudioClassification(_BaseAutoModelClass):
 
     """
     This class represents an automatic model for audio classification tasks. It inherits from the _BaseAutoModelClass,
-    providing functionalities for processing audio data and making predictions for classification. 
+    providing functionalities for processing audio data and making predictions for classification.
     The class provides methods and attributes for training, evaluating, and using the model for audio classification tasks.
     """
     _model_mapping = MODEL_FOR_AUDIO_CLASSIFICATION_MAPPING
@@ -1421,21 +1422,21 @@ class AutoModelForCTC(_BaseAutoModelClass):
 
     """
     This class represents an automatic model for Connectionist Temporal Classification (CTC) tasks in Python.
-    
+
     The 'AutoModelForCTC' class inherits from the '_BaseAutoModelClass' class and provides a high-level interface for training, evaluating, and using CTC models. CTC is a type of sequence transduction problem
 where the input and output sequences have different lengths. It is commonly used in speech recognition and handwriting recognition tasks.
-    
+
     The 'AutoModelForCTC' class encapsulates all the necessary components for building, training, and using CTC models. It provides methods for loading data, preprocessing, model architecture selection,
 hyperparameter tuning, training, evaluation, and inference. It also supports various options for customization and fine-tuning.
-    
+
     To use this class, instantiate an object of the 'AutoModelForCTC' class and specify the desired configuration. Then, call the appropriate methods to perform the desired operations. The class takes care of
 handling the complexities of CTC model training and usage, allowing users to focus on their specific tasks.
-    
+
     Note that this class assumes a basic understanding of CTC and neural networks. It is recommended to have prior knowledge of deep learning concepts before using this class. Detailed information about CTC
 and neural networks can be found in relevant literature and online resources.
-    
+
     For more details on the available methods and functionalities of the 'AutoModelForCTC' class, refer to the documentation and code comments.
-    
+
     """
     _model_mapping = MODEL_FOR_CTC_MAPPING
 
@@ -1444,26 +1445,26 @@ class AutoModelForSpeechSeq2Seq(_BaseAutoModelClass):
 
     """
     This class represents an automatic model for speech sequence-to-sequence (Seq2Seq) tasks in Python.
-    
+
     The 'AutoModelForSpeechSeq2Seq' class is a subclass of the '_BaseAutoModelClass' and provides a pre-trained model for speech-to-text conversion tasks. It is designed to simplify the process of building and
 training speech Seq2Seq models by providing a high-level interface for developers.
-    
+
     The class inherits all the properties and methods from the '_BaseAutoModelClass', which includes functionalities for model configuration, training, and inference. It also contains additional methods
 specific to speech Seq2Seq tasks, such as audio preprocessing, text tokenization, and attention mechanisms.
-    
+
     To use this class, instantiate an object of the 'AutoModelForSpeechSeq2Seq' class and provide the necessary parameters for model initialization. Once the model is initialized, you can use the provided
 methods to train the model on your speech dataset or perform inference on new speech inputs.
-    
+
     Note that this class assumes the availability of a pre-trained model for speech Seq2Seq tasks. If you don't have a pre-trained model, you can refer to the documentation for the '_BaseAutoModelClass' on how
 to train a model from scratch.
-    
+
     Example usage:
-    
+
     model = AutoModelForSpeechSeq2Seq(model_name='speech_model', num_layers=3)
     model.train(dataset)
     transcriptions = model.transcribe(audio_inputs)
-    
-    
+
+
     Please refer to the documentation of the '_BaseAutoModelClass' for more details on general model functionalities and best practices for training and fine-tuning models.
     """
     _model_mapping = MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING
@@ -1473,17 +1474,17 @@ class AutoModelForAudioFrameClassification(_BaseAutoModelClass):
 
     """
     Represents an auto model for audio frame classification tasks.
-    
-    This class serves as a template for creating neural network models specifically designed for audio frame classification. 
-    It inherits functionality from the _BaseAutoModelClass, providing a foundation for implementing automatic model selection and configuration. 
-    
+
+    This class serves as a template for creating neural network models specifically designed for audio frame classification.
+    It inherits functionality from the _BaseAutoModelClass, providing a foundation for implementing automatic model selection and configuration.
+
     Attributes:
         - Inherited attributes from _BaseAutoModelClass
-    
+
     Methods:
         - Inherited methods from _BaseAutoModelClass
         - Additional methods for audio frame classification tasks
-    
+
     This class is intended to be extended and customized for specific audio classification projects, allowing for efficient development and experimentation in the audio signal processing domain.
     """
     _model_mapping = MODEL_FOR_AUDIO_FRAME_CLASSIFICATION_MAPPING
@@ -1494,16 +1495,16 @@ class AutoModelForAudioXVector(_BaseAutoModelClass):
     """
     The 'AutoModelForAudioXVector' class is a specialized class for automatic audio feature extraction using x-vectors. It is designed to provide a convenient interface for extracting audio features and
 performing various machine learning tasks using the x-vector representation.
-    
+
     This class inherits from the '_BaseAutoModelClass', which provides the basic functionality for automatic feature extraction. By inheriting from this base class, the 'AutoModelForAudioXVector' class gains
 access to common methods and attributes required for audio feature extraction and machine learning.
-    
+
     The 'AutoModelForAudioXVector' class encapsulates the logic and algorithms necessary for extracting x-vector features from audio data. It provides methods for loading audio files, preprocessing the audio
 data, and extracting x-vectors using a pre-trained model.
-    
+
     One of the key features of the 'AutoModelForAudioXVector' class is its ability to perform various machine learning tasks using the extracted x-vectors. It includes methods for tasks such as speaker
 identification, speaker verification, and speech recognition. These methods leverage the power of the x-vector representation to achieve accurate results.
-    
+
     Overall, the 'AutoModelForAudioXVector' class is a powerful tool for automatic audio feature extraction using x-vectors. It simplifies the process of extracting and working with x-vector features, enabling
 users to focus on their specific machine learning tasks without having to worry about the underlying implementation details.
     """
@@ -1515,14 +1516,14 @@ class AutoModelForTextToSpectrogram(_BaseAutoModelClass):
     """
     Represents a Python class for generating spectrograms from text using an auto model for text-to-spectrogram conversion. This class inherits from the _BaseAutoModelClass, providing additional functionality
 and customization options for text-to-spectrogram processing.
-    
+
     The AutoModelForTextToSpectrogram class encapsulates the necessary methods and attributes for processing text inputs and generating corresponding spectrograms. It leverages the functionalities inherited
 from the _BaseAutoModelClass and extends them with specific capabilities tailored for the text-to-spectrogram transformation.
-    
+
     This class serves as a powerful tool for converting textual data into visual representations in the form of spectrograms, enabling advanced analysis and visualization of linguistic patterns and acoustic
 features. By utilizing the AutoModelForTextToSpectrogram, users can efficiently process text inputs and obtain corresponding spectrogram outputs, facilitating a wide range of applications in fields such as
 natural language processing, speech recognition, and audio processing.
-    
+
     Note: Please refer to the _BaseAutoModelClass documentation for inherited methods and attributes.
     """
     _model_mapping = MODEL_FOR_TEXT_TO_SPECTROGRAM_MAPPING
@@ -1533,30 +1534,30 @@ class AutoModelForTextToWaveform(_BaseAutoModelClass):
     """
     AutoModelForTextToWaveform is a Python class that represents an automatic model for converting text to waveform data.
     This class inherits from the _BaseAutoModelClass, which provides a base implementation for automatic models.
-    
+
     The AutoModelForTextToWaveform class is specifically designed for processing text and generating corresponding waveform data. It leverages various natural language processing techniques and audio
 generation algorithms to achieve this functionality.
-    
+
     Attributes:
         - model_name_or_path (str): The name or path of the pre-trained model to be used for text-to-waveform conversion.
         - tokenizer (Tokenizer): An instance of the Tokenizer class used for tokenizing text input.
         - audio_generator (AudioGenerator): An instance of the AudioGenerator class used for generating waveform data from tokenized text.
-    
+
     Methods:
         - __init__(self, model_name_or_path: str): Initializes a new instance of the AutoModelForTextToWaveform class with the specified pre-trained model.
         - preprocess_text(self, text: str) -> List[str]: Preprocesses the input text by tokenizing and applying any necessary transformations.
         - generate_waveform(self, text: str) -> np.ndarray: Generates waveform data for the given input text using the pre-trained model and audio generation techniques.
         - save_model(self, save_directory: str): Saves the current model and associated resources to the specified directory.
         - load_model(self, load_directory: str): Loads a pre-trained model and associated resources from the specified directory.
-    
+
     Examples:
         # Initialize an AutoModelForTextToWaveform instance with a pre-trained model
         model = AutoModelForTextToWaveform('model_name')
-    
+
         # Preprocess text and generate waveform data
         preprocessed_text = model.preprocess_text('Hello, how are you?')
         waveform_data = model.generate_waveform(preprocessed_text)
-    
+
         # Save and load the model
         model.save_model('saved_model')
         model.load_model('saved_model')
@@ -1568,27 +1569,27 @@ class AutoBackbone(_BaseAutoModelClass):
 
     """
     Represents an AutoBackbone Python class that inherits from _BaseAutoModelClass.
-    
+
     The AutoBackbone class is a specialized class that provides functionality for generating automatic backbones in Python. It is designed to be used as a base class for creating custom backbone models. The
 class inherits from the _BaseAutoModelClass, which provides common functionality for all auto models.
-    
+
     Attributes:
         None
-    
+
     Methods:
         None
-    
+
     Usage:
         To use the AutoBackbone class, simply create a new instance and customize it as needed. As a base class, it does not provide any specific attributes or methods. Its purpose is to serve as a starting
 point for creating custom backbone models.
-    
+
     Inheritance:
         The AutoBackbone class inherits from the _BaseAutoModelClass, which is a base class for all auto models. This allows the AutoBackbone class to leverage common functionality and adhere to a consistent
 interface across different auto models.
-    
+
     Note:
         It is recommended to review the documentation of the _BaseAutoModelClass for a better understanding of the common functionality and attributes available in the AutoBackbone class.
-    
+
     """
     _model_mapping = MODEL_FOR_BACKBONE_MAPPING
 
@@ -1598,11 +1599,11 @@ class AutoModelWithLMHead(_AutoModelWithLMHead):
     """
     This class represents a deprecated version of `AutoModelWithLMHead` and will be removed in a future version. It is recommended to use `AutoModelForCausalLM` for causal language models,
 `AutoModelForMaskedLM` for masked language models, and `AutoModelForSeq2SeqLM` for encoder-decoder models instead.
-    
+
     Class: AutoModelWithLMHead
-    
+
     Inherits from: _AutoModelWithLMHead
-    
+
     Class Methods:
     1. from_config(cls, config)
        - This method is used to create an instance of the class from a configuration object.
@@ -1610,7 +1611,7 @@ class AutoModelWithLMHead(_AutoModelWithLMHead):
          - config: The configuration object used to initialize the class instance.
        - Returns:
          - An instance of the class.
-    
+
     2. from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs)
        - This method is used to create an instance of the class from a pretrained model.
        - Parameters:
@@ -1619,21 +1620,21 @@ class AutoModelWithLMHead(_AutoModelWithLMHead):
          - **kwargs: Additional keyword arguments.
        - Returns:
          - An instance of the class.
-    
+
     Note: This class is deprecated and should not be used in new implementations. Please refer to the appropriate classes mentioned above based on your specific use case.
     """
     @classmethod
     def from_config(cls, config):
         """
         This method creates an instance of the 'AutoModelWithLMHead' class based on the provided 'config' parameter.
-        
+
         Args:
             cls (class): The class method is called from.
             config (object): The configuration object used to create the instance. It contains the necessary information to initialize the model.
-        
+
         Returns:
             None: This method does not return any value explicitly as it initializes an instance of the class.
-        
+
         Raises:
             FutureWarning: If the 'AutoModelWithLMHead' class is used, a warning is issued to inform the user that it is deprecated and will be removed in a future version. Users are advised to use
 'AutoModelForCausalLM' for causal language models, 'AutoModelForMaskedLM' for masked language models, and 'AutoModelForSeq2SeqLM' for encoder-decoder models instead.
@@ -1650,15 +1651,15 @@ class AutoModelWithLMHead(_AutoModelWithLMHead):
     def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
         """
         Loads a pretrained model from a given model name or path.
-        
+
         Args:
             cls (class): The class itself.
             pretrained_model_name_or_path (str): The name or path of the pretrained model.
                 This can be a local path or a URL to a pretrained model repository.
-        
+
         Returns:
             None
-        
+
         Raises:
             FutureWarning: If using the deprecated class `AutoModelWithLMHead`.
                 Please use `AutoModelForCausalLM` for causal language models,
