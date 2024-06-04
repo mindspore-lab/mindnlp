@@ -39,16 +39,7 @@ from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indi
 
 from .configuration_visual_bert import VisualBertConfig
 
-__all__ = [
-    "VisualBertForMultipleChoice",
-    "VisualBertForPreTraining",
-    "VisualBertForQuestionAnswering",
-    "VisualBertForRegionToPhraseAlignment",
-    "VisualBertForVisualReasoning",
-    "VisualBertLayer",
-    "VisualBertModel",
-    "VisualBertPreTrainedModel",
-]
+
 logger = logging.get_logger(__name__)
 
 _CONFIG_FOR_DOC = "VisualBertConfig"
@@ -1441,3 +1432,14 @@ class VisualBertForRegionToPhraseAlignment(VisualBertPreTrainedModel):
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
+
+__all__ = [
+    "VisualBertForMultipleChoice",
+    "VisualBertForPreTraining",
+    "VisualBertForQuestionAnswering",
+    "VisualBertForRegionToPhraseAlignment",
+    "VisualBertForVisualReasoning",
+    "VisualBertLayer",
+    "VisualBertModel",
+    "VisualBertPreTrainedModel",
+]

@@ -17,9 +17,7 @@
 from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
 
-__all__ = [
-    "VisualBertConfig",
-]
+
 
 logger = logging.get_logger(__name__)
 
@@ -133,3 +131,5 @@ class VisualBertConfig(PretrainedConfig):
         self.layer_norm_eps = layer_norm_eps
         self.bypass_transformer = bypass_transformer
         self.special_visual_initialize = special_visual_initialize
+
+__all__ = ["VisualBertConfig"]
