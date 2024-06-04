@@ -18,9 +18,8 @@ import os
 from shutil import copyfile
 from typing import Optional, Tuple
 
-from ...tokenization_utils_fast import PreTrainedTokenizerFast
 from mindnlp.utils import logging,is_sentencepiece_available
-
+from ...tokenization_utils_fast import PreTrainedTokenizerFast
 
 if is_sentencepiece_available():
     from .tokenization_deberta_v2 import DebertaV2Tokenizer

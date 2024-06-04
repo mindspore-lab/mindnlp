@@ -17,11 +17,10 @@
 import os
 import unicodedata
 from typing import Any, Dict, List, Optional, Tuple
-
 import sentencepiece as sp
-
-from ...tokenization_utils import AddedToken, PreTrainedTokenizer
 from mindnlp.utils import logging
+from ...tokenization_utils import AddedToken, PreTrainedTokenizer
+
 
 
 logger = logging.get_logger(__name__)
@@ -476,7 +475,7 @@ def _is_whitespace(char):
     """Checks whether `chars` is a whitespace character."""
     # \t, \n, and \r are technically control characters but we treat them
     # as whitespace since they are generally considered as such.
-    if char == " " or char == "\t" or char == "\n" or char == "\r":
+    if char in {" ", "\t", "\n", "\r"}:
         return True
     cat = unicodedata.category(char)
     if cat == "Zs":
@@ -488,7 +487,7 @@ def _is_control(char):
     """Checks whether `chars` is a control character."""
     # These are technically control characters but we count them as whitespace
     # characters.
-    if char == "\t" or char == "\n" or char == "\r":
+    if char in  {"\t", "\n", "\r"}:
         return False
     cat = unicodedata.category(char)
     if cat.startswith("C"):

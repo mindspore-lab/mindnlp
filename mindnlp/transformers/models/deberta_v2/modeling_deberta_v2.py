@@ -1189,7 +1189,6 @@ class DisentangledSelfAttention(nn.Cell):
 
         if rel_att is not None:
             attention_scores = attention_scores + rel_att
-        attention_scores = attention_scores
         attention_scores = attention_scores.view(
             -1, self.num_attention_heads, attention_scores.shape[-2], attention_scores.shape[-1]
         )
