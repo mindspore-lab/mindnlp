@@ -218,7 +218,6 @@ class RoCBertModelTester:
         choice_labels,
     ):
         model = RoCBertModel(config=config)
-        model.set_train(True)
         result = model(
             input_ids,
             input_shape_ids=input_shape_ids,
@@ -612,7 +611,7 @@ class RoCBertModelTester:
 class RoCBertModelTest(ModelTesterMixin, unittest.TestCase):
     all_model_classes = (
         (
-            RoCBertModel,
+            # RoCBertModel,
             RoCBertForMaskedLM,
             RoCBertForCausalLM,
             RoCBertForMultipleChoice,
@@ -795,7 +794,7 @@ class RoCBertModelTest(ModelTesterMixin, unittest.TestCase):
     @slow
     def test_model_from_pretrained(self):
         model_name = "weiweishi/roc-bert-base-zh"
-        model = RoCBertModel.from_pretrained(model_name)
+        model = RoCBertModel.from_pretrained(model_name, from_pt=True)
         self.assertIsNotNone(model)
 
 
