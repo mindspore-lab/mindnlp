@@ -89,6 +89,7 @@ from . import (
     mistral,
     mixtral,
     mobilebert,
+    mobilevit,
     mpnet,
     mpt,
     musicgen,
@@ -200,6 +201,7 @@ from .minicpm import *
 from .mistral import *
 from .mixtral import *
 from .mobilebert import *
+from .mobilevit import *
 from .mpnet import *
 from .mpt import *
 from .musicgen import *
@@ -311,6 +313,7 @@ __all__.extend(minicpm.__all__)
 __all__.extend(mistral.__all__)
 __all__.extend(mixtral.__all__)
 __all__.extend(mobilebert.__all__)
+__all__.extend(mobilevit.__all__)
 __all__.extend(mpnet.__all__)
 __all__.extend(mpt.__all__)
 __all__.extend(musicgen.__all__)

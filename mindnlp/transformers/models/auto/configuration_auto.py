@@ -81,6 +81,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("minicpm", "MiniCPMConfig"),
         ("mistral", "MistralConfig"),
         ("mixtral", "MixtralConfig"),
+        ("mobilevit", "MobileViTConfig"),
         ("musicgen", "MusicgenConfig"),
         ("musicgen_melody", "MusicgenMelodyConfig"),
         ("mt5", "MT5Config"),
