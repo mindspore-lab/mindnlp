@@ -111,6 +111,7 @@ from . import (
     rembert,
     resnet,
     roberta,
+    roc_bert,
     rwkv,
     sam,
     seamless_m4t,
@@ -228,6 +229,7 @@ from .reformer import *
 from .rembert import *
 from .resnet import *
 from .roberta import *
+from .roc_bert import *
 from .rwkv import *
 from .sam import *
 from .seamless_m4t import *
@@ -345,6 +347,7 @@ __all__.extend(reformer.__all__)
 __all__.extend(rembert.__all__)
 __all__.extend(resnet.__all__)
 __all__.extend(roberta.__all__)
+__all__.extend(roc_bert.__all__)
 __all__.extend(rwkv.__all__)
 __all__.extend(sam.__all__)
 __all__.extend(seamless_m4t.__all__)
