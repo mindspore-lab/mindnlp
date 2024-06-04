@@ -197,14 +197,13 @@ class SwiftFormerModelTest(ModelTesterMixin, unittest.TestCase):
             # with the width and height being successively divided by 2, after every 2 blocks
             for i in range(len(hidden_states)):
                 self.assertEqual(
-                    hidden_states[i].shape,(
-                        [
+                    hidden_states[i].shape,
+                        (
                             self.model_tester.batch_size,
                             self.model_tester.embed_dims[i // 2],
                             (self.model_tester.image_size // 4) // 2 ** (i // 2),
                             (self.model_tester.image_size // 4) // 2 ** (i // 2),
-                        ]
-                    ),
+                ),
                 )
 
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
@@ -235,7 +234,7 @@ class SwiftFormerModelTest(ModelTesterMixin, unittest.TestCase):
         configs_no_init = _config_zero_init(config)
         for model_class in self.all_model_classes:
             model = model_class(config=configs_no_init)
-            for name, param in model.named_parameters():
+            for name, param in model.parameters_and_names():
                 if param.requires_grad:
                     self.assertIn(
                         ((param.data.mean() * 1e9) / 1e9).round().item(),
