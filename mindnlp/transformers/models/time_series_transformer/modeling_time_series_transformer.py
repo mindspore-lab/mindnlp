@@ -102,11 +102,11 @@ class TimeSeriesStdScaler(nn.Cell):
                 (`(batch_size, sequence_length, num_input_channels)`,`(batch_size, 1, num_input_channels)`,
                 `(batch_size, 1, num_input_channels)`)
         """
-        denominator = observed_indicator.sum(self.dim, keepdim=self.keepdim)
-        denominator = denominator.clamp_min(1.0)
-        loc = (data * observed_indicator).sum(self.dim, keepdim=self.keepdim) / denominator
+        denominator = observed_indicator.sum(self.dim, keepdims=self.keepdim)
+        denominator = denominator.clamp(min=1.0)
+        loc = (data * observed_indicator).sum(self.dim, keepdims=self.keepdim) / denominator
 
-        variance = (((data - loc) * observed_indicator) ** 2).sum(self.dim, keepdim=self.keepdim) / denominator
+        variance = (((data - loc) * observed_indicator) ** 2).sum(self.dim, keepdims=self.keepdim) / denominator
         scale = ops.sqrt(variance + self.minimum_scale)
         return (data - loc) / scale, loc, scale
 
@@ -138,8 +138,8 @@ class TimeSeriesMeanScaler(nn.Cell):
                 (`(batch_size, sequence_length, num_input_channels)`,`(batch_size, 1, num_input_channels)`,
                 `(batch_size, 1, num_input_channels)`)
         """
-        ts_sum = (data * observed_indicator).abs().sum(self.dim, keepdim=True)
-        num_observed = observed_indicator.sum(self.dim, keepdim=True)
+        ts_sum = (data * observed_indicator).abs().sum(self.dim, keepdims=True)
+        num_observed = observed_indicator.sum(self.dim, keepdims=True)
 
         scale = ts_sum / ops.clamp(num_observed, min=1)
 
@@ -187,8 +187,8 @@ class TimeSeriesNOPScaler(nn.Cell):
                 (`(batch_size, sequence_length, num_input_channels)`,`(batch_size, 1, num_input_channels)`,
                 `(batch_size, 1, num_input_channels)`)
         """
-        scale = ops.ones_like(data, requires_grad=False).mean(axis=self.dim, keep_dims=self.keepdim)
-        loc = ops.zeros_like(data, requires_grad=False).mean(axis=self.dim, keep_dims=self.keepdim)
+        scale = ops.ones_like(data).mean(axis=self.dim, keep_dims=self.keepdim)
+        loc = ops.zeros_like(data).mean(axis=self.dim, keep_dims=self.keepdim)
         return data, loc, scale
 
 
@@ -245,7 +245,6 @@ class TimeSeriesSinusoidalPositionalEmbedding(nn.Embedding):
         sentinel = dim // 2 if dim % 2 == 0 else (dim // 2) + 1
         out[:, 0:sentinel] = mindspore.Tensor(np.sin(position_enc[:, 0::2]), mindspore.float32)
         out[:, sentinel:] = mindspore.Tensor(np.cos(position_enc[:, 1::2]), mindspore.float32)
-        out.detach_()
         return out
 
     def construct(self, input_ids_shape, past_key_values_length: int = 0) -> mindspore.Tensor:
@@ -302,7 +301,7 @@ class TimeSeriesTransformerAttention(nn.Cell):
         self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2).contiguous()
+        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2).contiguous()
 
     def construct(
         self,
@@ -366,7 +365,7 @@ class TimeSeriesTransformerAttention(nn.Cell):
         value_states = value_states.reshape(*proj_shape)
 
         src_len = key_states.size(1)
-        attn_weights = ops.bmm(query_states, key_states.transpose(1, 2))
+        attn_weights = ops.bmm(query_states, key_states.swapaxes(1, 2))
 
         if attn_weights.size() != (bsz * self.num_heads, tgt_len, src_len):
             raise ValueError(
@@ -414,7 +413,7 @@ class TimeSeriesTransformerAttention(nn.Cell):
             )
 
         attn_output = attn_output.view(bsz, self.num_heads, tgt_len, self.head_dim)
-        attn_output = attn_output.transpose(1, 2)
+        attn_output = attn_output.swapaxes(1, 2)
 
         # Use the `embed_dim` from the config (stored in the class) rather than `hidden_state` because `attn_output` can be
         # partitioned across GPUs when using tensor-parallelism.
@@ -632,15 +631,20 @@ class TimeSeriesTransformerPreTrainedModel(PreTrainedModel):
     def _init_weights(self, module):
         std = self.config.init_std
         if isinstance(module, nn.Dense):
-            module.weight.data.normal_(mean=0.0, std=std)
+            module.weight.set_data(mindspore.Tensor(np.random.normal(
+                0.0, std, module.weight.shape), dtype=module.weight.dtype))
             if module.bias is not None:
-                module.bias.data.zero_()
+                module.bias.set_data(mindspore.common.initializer.initializer(
+                    "zeros", module.bias.shape, module.bias.dtype))
         elif isinstance(module, TimeSeriesSinusoidalPositionalEmbedding):
             pass
         elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=std)
+            module.weight.set_data(mindspore.Tensor(np.random.normal(
+                0.0, std, module.weight.shape), dtype=module.weight.dtype))
             if module.padding_idx is not None:
-                module.weight.data[module.padding_idx].zero_()
+                module.weight.data[module.padding_idx] = mindspore.common.initializer.initializer(
+                    "zeros", module.weight.data[module.padding_idx].shape, module.weight.dtype)
+            
 
 
 TIME_SERIES_TRANSFORMER_START_DOCSTRING = r"""
@@ -886,7 +890,7 @@ class TimeSeriesTransformerEncoder(TimeSeriesTransformerPreTrainedModel):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         hidden_states = self.value_embedding(inputs_embeds)
-        embed_pos = self.embed_positions(inputs_embeds.size())
+        embed_pos = self.embed_positions(inputs_embeds.shape)
 
         hidden_states = self.layernorm_embedding(hidden_states + embed_pos)
         hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
@@ -901,10 +905,10 @@ class TimeSeriesTransformerEncoder(TimeSeriesTransformerPreTrainedModel):
 
         # check if head_mask has a correct number of layers specified if desired
         if head_mask is not None:
-            if head_mask.size()[0] != (len(self.layers)):
+            if head_mask.shape[0] != (len(self.layers)):
                 raise ValueError(
                     f"The head_mask should be specified for {len(self.layers)} layers, but it is for"
-                    f" {head_mask.size()[0]}."
+                    f" {head_mask.shape[0]}."
                 )
 
         for idx, encoder_layer in enumerate(self.layers):
@@ -1056,7 +1060,7 @@ class TimeSeriesTransformerDecoder(TimeSeriesTransformerPreTrainedModel):
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        input_shape = inputs_embeds.size()[:-1]
+        input_shape = inputs_embeds.shape[:-1]
 
         # past_key_values_length
         past_key_values_length = past_key_values[0][0].shape[2] if past_key_values is not None else 0
@@ -1073,7 +1077,7 @@ class TimeSeriesTransformerDecoder(TimeSeriesTransformerPreTrainedModel):
             )
 
         hidden_states = self.value_embedding(inputs_embeds)
-        embed_pos = self.embed_positions(inputs_embeds.size(), past_key_values_length=self.config.context_length)
+        embed_pos = self.embed_positions(inputs_embeds.shape, past_key_values_length=self.config.context_length)
         hidden_states = self.layernorm_embedding(hidden_states + embed_pos)
         hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
 
@@ -1093,10 +1097,10 @@ class TimeSeriesTransformerDecoder(TimeSeriesTransformerPreTrainedModel):
         # check if head_mask/cross_attn_head_mask has a correct number of layers specified if desired
         for attn_mask, mask_name in zip([head_mask, cross_attn_head_mask], ["head_mask", "cross_attn_head_mask"]):
             if attn_mask is not None:
-                if attn_mask.size()[0] != (len(self.layers)):
+                if attn_mask.shape[0] != (len(self.layers)):
                     raise ValueError(
                         f"The `{mask_name}` should be specified for {len(self.layers)} layers, but it is for"
-                        f" {head_mask.size()[0]}."
+                        f" {head_mask.shape[0]}."
                     )
 
         for idx, decoder_layer in enumerate(self.layers):
@@ -1437,10 +1441,10 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
         self.parameter_projection = self.distribution_output.get_parameter_projection(self.model.config.d_model)
         self.target_shape = self.distribution_output.event_shape
 
-        if config.loss == "nll":
-            self.loss = nll
-        else:
-            raise ValueError(f"Unknown loss function {config.loss}")
+        # if config.loss == "nll":
+        #     self.loss = nll
+        # else:
+        #     raise ValueError(f"Unknown loss function {config.loss}")
 
         # Initialize weights of distribution_output and apply final processing
         self.post_init()
