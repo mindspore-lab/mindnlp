@@ -45,6 +45,7 @@ from . import (
     bridgetower,
     bros,
     byt5,
+    camembert,
     clip,
     codegen,
     cogvlm,
@@ -157,6 +158,7 @@ from .bloom import *
 from .bridgetower import *
 from .bros import *
 from .byt5 import *
+from .camembert import *
 from .clip import *
 from .codegen import *
 from .cogvlm import *
@@ -269,6 +271,7 @@ __all__.extend(bloom.__all__)
 __all__.extend(bridgetower.__all__)
 __all__.extend(bros.__all__)
 __all__.extend(byt5.__all__)
+__all__.extend(camembert.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(codegen.__all__)
 __all__.extend(cogvlm.__all__)
