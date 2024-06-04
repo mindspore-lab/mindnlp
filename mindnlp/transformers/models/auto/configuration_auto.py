@@ -72,6 +72,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("gpt_bigcode", "GPTBigCodeConfig"),
         ("gpt_neox", "GPTNeoXConfig"),
         ("gpt_pangu", "GPTPanguConfig"),
+        ("groupvit", "GroupViTConfig"),
         ("hubert", "HubertConfig"),
         ("jetmoe", "JetMoEConfig"),
         ("llama", "LlamaConfig"),

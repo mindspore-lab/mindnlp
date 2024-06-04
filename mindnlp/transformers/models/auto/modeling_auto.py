@@ -74,6 +74,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("gpt", "GPTModel"),
         ("gpt2", "GPT2Model"),
         ("gpt_pangu", "GPTPanguModel"),
+        ("groupvit", "GroupViTModel"),
         ("layoutlmv2", "LayoutLMv2Model"),
         ("longformer", "LongformerModel"),
         ("jetmoe", "JetMoEModel"),
