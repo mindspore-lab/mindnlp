@@ -55,6 +55,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("chatglm", "ChatGLMConfig"),
         ("clip", "CLIPConfig"),
         ("clip_vision_model", "CLIPVisionConfig"),
+        ('ctrl', 'CtrlConfig'),
         ("codegen", "CodeGenConfig"),
         ("cogvlm","CogVLMConfig"),
         ("convbert", "ConvBertConfig"),
