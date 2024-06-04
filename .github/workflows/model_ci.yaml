@@ -26,7 +26,7 @@ jobs:
 
       - name: Analysing the mindnlp code with pylint
         run: |
-          pylint mindnlp --rcfile=.github/pylint.conf
+          pylint mindnlp/transformers/models/swiftformer --rcfile=.github/pylint.conf
 
       - name: Parse comment
         id: parse_comment
