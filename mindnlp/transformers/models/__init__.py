@@ -45,6 +45,7 @@ from . import (
     bridgetower,
     bros,
     byt5,
+    camembert,
     clip,
     codegen,
     cogvlm,
@@ -89,6 +90,7 @@ from . import (
     mistral,
     mixtral,
     mobilebert,
+    mobilevit,
     mpnet,
     mpt,
     musicgen,
@@ -112,6 +114,7 @@ from . import (
     seamless_m4t_v2,
     segformer,
     stablelm,
+    squeezebert,
     starcoder2,
     t5,
     timesformer,
@@ -121,9 +124,10 @@ from . import (
     wav2vec2,
     wav2vec2_with_lm,
     whisper,
+    x_clip,
     xlm,
     xlm_roberta,
-    xlnet
+    xlnet,
 )
 
 from .albert import *
@@ -155,6 +159,7 @@ from .bloom import *
 from .bridgetower import *
 from .bros import *
 from .byt5 import *
+from .camembert import *
 from .clip import *
 from .codegen import *
 from .cogvlm import *
@@ -199,6 +204,7 @@ from .minicpm import *
 from .mistral import *
 from .mixtral import *
 from .mobilebert import *
+from .mobilevit import *
 from .mpnet import *
 from .mpt import *
 from .musicgen import *
@@ -222,6 +228,7 @@ from .seamless_m4t import *
 from .seamless_m4t_v2 import *
 from .segformer import *
 from .stablelm import *
+from .squeezebert import *
 from .starcoder2 import *
 from .tinybert import *
 from .t5 import *
@@ -231,6 +238,7 @@ from .vit import *
 from .whisper import *
 from .wav2vec2 import *
 from .wav2vec2_with_lm import *
+from .x_clip import *
 from .xlm import *
 from .xlm_roberta import *
 from .xlnet import *
@@ -265,6 +273,7 @@ __all__.extend(bloom.__all__)
 __all__.extend(bridgetower.__all__)
 __all__.extend(bros.__all__)
 __all__.extend(byt5.__all__)
+__all__.extend(camembert.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(codegen.__all__)
 __all__.extend(cogvlm.__all__)
@@ -309,6 +318,7 @@ __all__.extend(minicpm.__all__)
 __all__.extend(mistral.__all__)
 __all__.extend(mixtral.__all__)
 __all__.extend(mobilebert.__all__)
+__all__.extend(mobilevit.__all__)
 __all__.extend(mpnet.__all__)
 __all__.extend(mpt.__all__)
 __all__.extend(musicgen.__all__)
@@ -332,6 +342,7 @@ __all__.extend(seamless_m4t.__all__)
 __all__.extend(seamless_m4t_v2.__all__)
 __all__.extend(segformer.__all__)
 __all__.extend(stablelm.__all__)
+__all__.extend(squeezebert.__all__)
 __all__.extend(starcoder2.__all__)
 __all__.extend(t5.__all__)
 __all__.extend(timesformer.__all__)
@@ -341,6 +352,7 @@ __all__.extend(vit.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)
 __all__.extend(wav2vec2_with_lm.__all__)
+__all__.extend(x_clip.__all__)
 __all__.extend(xlm.__all__)
 __all__.extend(xlm_roberta.__all__)
 __all__.extend(xlnet.__all__)

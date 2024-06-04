@@ -1,0 +1,10 @@
+:::mindnlp.transformers.models.bridgetower.configuration_bridgetower.BridgeTowerConfig
+:::mindnlp.transformers.models.bridgetower.configuration_bridgetower.BridgeTowerTextConfig
+:::mindnlp.transformers.models.bridgetower.configuration_bridgetower.BridgeTowerVisionConfig
+:::mindnlp.transformers.models.bridgetower.modeling_bridgetower.BridgeTowerForContrastiveLearning
+:::mindnlp.transformers.models.bridgetower.modeling_bridgetower.BridgeTowerForImageAndTextRetrieval
+:::mindnlp.transformers.models.bridgetower.modeling_bridgetower.BridgeTowerForMaskedLM
+:::mindnlp.transformers.models.bridgetower.modeling_bridgetower.BridgeTowerModel
+:::mindnlp.transformers.models.bridgetower.modeling_bridgetower.BridgeTowerPreTrainedModel
+:::mindnlp.transformers.models.bridgetower.image_processing_bridgetower.BridgeTowerImageProcessor
+:::mindnlp.transformers.models.bridgetower.processing_bridgetower.BridgeTowerProcessor

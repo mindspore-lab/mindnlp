@@ -1,0 +1,16 @@
+:::mindnlp.transformers.models.clip.configuration_clip.CLIP_PRETRAINED_CONFIG_ARCHIVE_MAP
+:::mindnlp.transformers.models.clip.configuration_clip.CLIPConfig
+:::mindnlp.transformers.models.clip.configuration_clip.CLIPTextConfig
+:::mindnlp.transformers.models.clip.configuration_clip.CLIPVisionConfig
+:::mindnlp.transformers.models.clip.image_processing_clip.CLIPImageProcessor
+:::mindnlp.transformers.models.clip.modeling_clip.CLIP_PRETRAINED_MODEL_ARCHIVE_LIST
+:::mindnlp.transformers.models.clip.modeling_clip.CLIPModel
+:::mindnlp.transformers.models.clip.modeling_clip.CLIPPreTrainedModel
+:::mindnlp.transformers.models.clip.modeling_clip.CLIPTextModel
+:::mindnlp.transformers.models.clip.modeling_clip.CLIPTextModelWithProjection
+:::mindnlp.transformers.models.clip.modeling_clip.CLIPVisionModel
+:::mindnlp.transformers.models.clip.modeling_clip.CLIPVisionModelWithProjection
+:::mindnlp.transformers.models.clip.modeling_clip.CLIPForImageClassification
+:::mindnlp.transformers.models.clip.processing_clip.CLIPProcessor
+:::mindnlp.transformers.models.clip.tokenization_clip.CLIPTokenizer
+:::mindnlp.transformers.models.clip.tokenization_clip_fast.CLIPTokenizerFast

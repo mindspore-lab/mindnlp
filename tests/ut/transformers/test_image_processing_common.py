@@ -170,7 +170,7 @@ class ImageProcessingTestMixin:
             # create random PyTorch tensors
             image_inputs = self.image_processor_tester.prepare_image_inputs(equal_resolution=False, torchify=True)
 
-            encoding = image_processor(image_inputs, return_tensors="pt")
+            encoding = image_processor(image_inputs, return_tensors="ms")
             # for layoutLM compatiblity
             self.assertEqual(encoding.pixel_values.dtype, ms.float32)
 
@@ -178,7 +178,7 @@ class ImageProcessingTestMixin:
             self.assertEqual(encoding.pixel_values.dtype, ms.float16)
 
             # Try with text + image feature
-            encoding = image_processor(image_inputs, return_tensors="pt")
+            encoding = image_processor(image_inputs, return_tensors="ms")
             encoding.update({"input_ids": ms.Tensor([[1, 2, 3], [4, 5, 6]])})
             encoding = encoding.astype(ms.float16)
 
@@ -194,12 +194,12 @@ class ImageProcessingTestMixin:
             self.assertIsInstance(image, Image.Image)
 
         # Test not batched input
-        encoded_images = image_processing(image_inputs[0], return_tensors="pt").pixel_values
+        encoded_images = image_processing(image_inputs[0], return_tensors="ms").pixel_values
         expected_output_image_shape = self.image_processor_tester.expected_output_image_shape([image_inputs[0]])
         self.assertEqual(tuple(encoded_images.shape), (1, *expected_output_image_shape))
 
         # Test batched
-        encoded_images = image_processing(image_inputs, return_tensors="pt").pixel_values
+        encoded_images = image_processing(image_inputs, return_tensors="ms").pixel_values
         expected_output_image_shape = self.image_processor_tester.expected_output_image_shape(image_inputs)
         self.assertEqual(
             tuple(encoded_images.shape), (self.image_processor_tester.batch_size, *expected_output_image_shape)
@@ -214,12 +214,12 @@ class ImageProcessingTestMixin:
             self.assertIsInstance(image, np.ndarray)
 
         # Test not batched input
-        encoded_images = image_processing(image_inputs[0], return_tensors="pt").pixel_values
+        encoded_images = image_processing(image_inputs[0], return_tensors="ms").pixel_values
         expected_output_image_shape = self.image_processor_tester.expected_output_image_shape([image_inputs[0]])
         self.assertEqual(tuple(encoded_images.shape), (1, *expected_output_image_shape))
 
         # Test batched
-        encoded_images = image_processing(image_inputs, return_tensors="pt").pixel_values
+        encoded_images = image_processing(image_inputs, return_tensors="ms").pixel_values
         expected_output_image_shape = self.image_processor_tester.expected_output_image_shape(image_inputs)
         self.assertEqual(
             tuple(encoded_images.shape), (self.image_processor_tester.batch_size, *expected_output_image_shape)
@@ -235,13 +235,13 @@ class ImageProcessingTestMixin:
             self.assertIsInstance(image, ms.Tensor)
 
         # Test not batched input
-        encoded_images = image_processing(image_inputs[0], return_tensors="pt").pixel_values
+        encoded_images = image_processing(image_inputs[0], return_tensors="ms").pixel_values
         expected_output_image_shape = self.image_processor_tester.expected_output_image_shape([image_inputs[0]])
         self.assertEqual(tuple(encoded_images.shape), (1, *expected_output_image_shape))
 
         # Test batched
         expected_output_image_shape = self.image_processor_tester.expected_output_image_shape(image_inputs)
-        encoded_images = image_processing(image_inputs, return_tensors="pt").pixel_values
+        encoded_images = image_processing(image_inputs, return_tensors="ms").pixel_values
         self.assertEqual(
             tuple(encoded_images.shape),
             (self.image_processor_tester.batch_size, *expected_output_image_shape),
@@ -259,7 +259,7 @@ class ImageProcessingTestMixin:
         # Test not batched input
         encoded_images = image_processor(
             image_inputs[0],
-            return_tensors="pt",
+            return_tensors="ms",
             input_data_format="channels_first",
             image_mean=0,
             image_std=1,
@@ -270,7 +270,7 @@ class ImageProcessingTestMixin:
         # Test batched
         encoded_images = image_processor(
             image_inputs,
-            return_tensors="pt",
+            return_tensors="ms",
             input_data_format="channels_first",
             image_mean=0,
             image_std=1,
@@ -308,7 +308,7 @@ class AnnotationFormatTestMixin:
         detection_params = {
             "images": Image.open(fixtures_path / "000000039769.png"),
             "annotations": detection_annotations,
-            "return_tensors": "pt",
+            "return_tensors": "ms",
         }
 
         with open(fixtures_path / "coco_panoptic_annotations.txt", "r") as f:
@@ -321,7 +321,7 @@ class AnnotationFormatTestMixin:
         panoptic_params = {
             "images": Image.open(fixtures_path / "000000039769.png"),
             "annotations": panoptic_annotations,
-            "return_tensors": "pt",
+            "return_tensors": "ms",
             "masks_path": masks_path,
         }
 
