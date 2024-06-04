@@ -24,8 +24,8 @@ from mindnlp.utils.testing_utils import (
     slow,
 )
 from mindnlp.utils.import_utils import is_vision_available
+from mindnlp.utils import is_mindspore_available
 import mindspore
-
 from mindspore import nn 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
@@ -35,7 +35,10 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 if is_vision_available():
     from PIL import Image
 
-    from transformers import ViTImageProcessor
+    from mindnlp.transformers import ViTImageProcessor
+
+if is_mindspore_available():
+    import mindspore
 
 
 class SwiftFormerModelTester:
@@ -117,6 +120,13 @@ class SwiftFormerModelTester:
         (config, pixel_values, labels) = self.prepare_config_and_inputs()
         inputs_dict = {"pixel_values": pixel_values}
         return config, inputs_dict
+    
+    @slow
+    def test_model_from_pretrained(self):
+        model_name = "MBZUAI/swiftformer-xs"
+        model = SwiftFormerModel.from_pretrained(model_name, from_pt = True)
+        # model.set_train(True)
+        self.assertIsNotNone(model)
 
 
 @require_mindspore
@@ -171,11 +181,6 @@ class SwiftFormerModelTest(ModelTesterMixin, unittest.TestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_for_image_classification(*config_and_inputs)
 
-    @slow
-    def test_model_from_pretrained(self):
-        model_name = "MBZUAI/swiftformer-xs"
-        model = SwiftFormerModel.from_pretrained(model_name)
-        self.assertIsNotNone(model)
 
     @unittest.skip(reason="SwiftFormer does not output attentions")
     def test_attention_outputs(self):
@@ -256,7 +261,6 @@ class SwiftFormerModelIntegrationTest(unittest.TestCase):
     @slow
     def test_inference_image_classification_head(self):
         model = SwiftFormerForImageClassification.from_pretrained("MBZUAI/swiftformer-xs")
-
         image_processor = self.default_image_processor
         image = prepare_img()
         inputs = image_processor(images=image, return_tensors="ms")
