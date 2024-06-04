@@ -415,6 +415,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         #         "T5TokenizerFast" if is_tokenizers_available() else None,
         #     ),
         # ),
+        ("stablelm", (None, "GPTNeoXTokenizerFast" if is_tokenizers_available() else None)),
         ("starcoder2", ("GPT2Tokenizer", "GPT2TokenizerFast" if is_tokenizers_available() else None)),
         (
             "t5",
