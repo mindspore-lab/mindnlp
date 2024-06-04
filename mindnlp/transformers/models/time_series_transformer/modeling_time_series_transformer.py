@@ -88,12 +88,10 @@ class TimeSeriesStdScaler(nn.Cell):
         self.keepdim = config.keepdim if hasattr(config, "keepdim") else True
         self.minimum_scale = config.minimum_scale if hasattr(config, "minimum_scale") else 1e-5
 
-    def construct(
-        self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor
-    ) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
+    def construct(self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
         """
         Parameters:
-            data (`torch.Tensor` of shape `(batch_size, sequence_length, num_input_channels)`):
+        data (`torch.Tensor` of shape `(batch_size, sequence_length, num_input_channels)`):
                 input for Batch norm calculation
             observed_indicator (`torch.BoolTensor` of shape `(batch_size, sequence_length, num_input_channels)`):
                 Calculating the scale on the observed indicator.
@@ -124,12 +122,10 @@ class TimeSeriesMeanScaler(nn.Cell):
         self.minimum_scale = config.minimum_scale if hasattr(config, "minimum_scale") else 1e-10
         self.default_scale = config.default_scale if hasattr(config, "default_scale") else None
 
-    def construct(
-        self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor
-    ) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
+    def construct(self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
         """
         Parameters:
-            data (`torch.Tensor` of shape `(batch_size, sequence_length, num_input_channels)`):
+        data (`torch.Tensor` of shape `(batch_size, sequence_length, num_input_channels)`):
                 input for Batch norm calculation
             observed_indicator (`torch.BoolTensor` of shape `(batch_size, sequence_length, num_input_channels)`):
                 Calculating the scale on the observed indicator.
@@ -175,9 +171,7 @@ class TimeSeriesNOPScaler(nn.Cell):
         self.dim = config.scaling_dim if hasattr(config, "scaling_dim") else 1
         self.keepdim = config.keepdim if hasattr(config, "keepdim") else True
 
-    def construct(
-        self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor = None
-    ) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
+    def construct(self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor = None) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
         """
         Parameters:
             data (`torch.Tensor` of shape `(batch_size, sequence_length, num_input_channels)`):
@@ -192,11 +186,11 @@ class TimeSeriesNOPScaler(nn.Cell):
         return data, loc, scale
 
 
-# def nll(input: mindspore.distributions.Distribution, target: mindspore.Tensor) -> mindspore.Tensor:
-#     """
-#     Computes the negative log likelihood loss from input distribution with respect to target.
-#     """
-#     return -input.log_prob(target)
+def nll(input, target: mindspore.Tensor) -> mindspore.Tensor:
+    """
+    Computes the negative log likelihood loss from input distribution with respect to target.
+    """
+    return -input.log_prob(target)
 
 
 def weighted_average(input_tensor: mindspore.Tensor, weights: Optional[mindspore.Tensor] = None, dim=None) -> mindspore.Tensor:
@@ -253,7 +247,7 @@ class TimeSeriesSinusoidalPositionalEmbedding(nn.Embedding):
         positions = ops.arange(
             past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
         )
-        return super().forward(positions)
+        return super().construct(positions)
 
 
 class TimeSeriesValueEmbedding(nn.Cell):
@@ -269,16 +263,8 @@ class TimeSeriesValueEmbedding(nn.Cell):
 class TimeSeriesTransformerAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
-    def __init__(
-        self,
-        embed_dim: int,
-        num_heads: int,
-        dropout: float = 0.0,
-        is_decoder: bool = False,
-        bias: bool = True,
-        is_causal: bool = False,
-        config: Optional[TimeSeriesTransformerConfig] = None,
-    ):
+    def __init__(self, embed_dim: int, num_heads: int, dropout: float = 0.0, is_decoder: bool = False, bias: bool = True, is_causal: bool = False, config: Optional[TimeSeriesTransformerConfig] = None):
+
         super().__init__()
         self.embed_dim = embed_dim
         self.num_heads = num_heads
@@ -301,24 +287,16 @@ class TimeSeriesTransformerAttention(nn.Cell):
         self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2).contiguous()
+        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
-        self,
-        hidden_states: mindspore.Tensor,
-        key_value_states: Optional[mindspore.Tensor] = None,
-        past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
-        attention_mask: Optional[mindspore.Tensor] = None,
-        layer_head_mask: Optional[mindspore.Tensor] = None,
-        output_attentions: bool = False,
-    ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
+    def construct(self, hidden_states: mindspore.Tensor, key_value_states: Optional[mindspore.Tensor] = None, past_key_value: Optional[Tuple[mindspore.Tensor]] = None, attention_mask: Optional[mindspore.Tensor] = None, layer_head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
 
         # if key_value_states are provided this layer is used as a cross-attention layer
         # for the decoder
         is_cross_attention = key_value_states is not None
 
-        bsz, tgt_len, _ = hidden_states.size()
+        bsz, tgt_len, _ = hidden_states.shape
 
         # get query proj
         query_states = self.q_proj(hidden_states) * self.scaling
@@ -327,9 +305,9 @@ class TimeSeriesTransformerAttention(nn.Cell):
         # is checking that the `sequence_length` of the `past_key_value` is the same as
         # the provided `key_value_states` to support prefix tuning
         if (
-            is_cross_attention
-            and past_key_value is not None
-            and past_key_value[0].shape[2] == key_value_states.shape[1]
+        is_cross_attention
+        and past_key_value is not None
+        and past_key_value[0].shape[2] == key_value_states.shape[1]
         ):
             # reuse k,v, cross_attentions
             key_states = past_key_value[0]
@@ -364,19 +342,19 @@ class TimeSeriesTransformerAttention(nn.Cell):
         key_states = key_states.reshape(*proj_shape)
         value_states = value_states.reshape(*proj_shape)
 
-        src_len = key_states.size(1)
+        src_len = key_states.shape[1]
         attn_weights = ops.bmm(query_states, key_states.swapaxes(1, 2))
 
-        if attn_weights.size() != (bsz * self.num_heads, tgt_len, src_len):
+        if attn_weights.shape != (bsz * self.num_heads, tgt_len, src_len):
             raise ValueError(
                 f"Attention weights should be of size {(bsz * self.num_heads, tgt_len, src_len)}, but is"
-                f" {attn_weights.size()}"
+                f" {attn_weights.shape}"
             )
 
         if attention_mask is not None:
-            if attention_mask.size() != (bsz, 1, tgt_len, src_len):
+            if attention_mask.shape != (bsz, 1, tgt_len, src_len):
                 raise ValueError(
-                    f"Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is {attention_mask.size()}"
+                    f"Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is {attention_mask.shape}"
                 )
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
@@ -384,10 +362,10 @@ class TimeSeriesTransformerAttention(nn.Cell):
         attn_weights = ops.softmax(attn_weights, axis=-1)
 
         if layer_head_mask is not None:
-            if layer_head_mask.size() != (self.num_heads,):
+            if layer_head_mask.shape != (self.num_heads,):
                 raise ValueError(
                     f"Head mask for a single layer should be of size {(self.num_heads,)}, but is"
-                    f" {layer_head_mask.size()}"
+                    f" {layer_head_mask.shape}"
                 )
             attn_weights = layer_head_mask.view(1, -1, 1, 1) * attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
@@ -406,10 +384,10 @@ class TimeSeriesTransformerAttention(nn.Cell):
 
         attn_output = ops.bmm(attn_probs, value_states)
 
-        if attn_output.size() != (bsz * self.num_heads, tgt_len, self.head_dim):
+        if attn_output.shape != (bsz * self.num_heads, tgt_len, self.head_dim):
             raise ValueError(
                 f"`attn_output` should be of size {(bsz * self.num_heads, tgt_len, self.head_dim)}, but is"
-                f" {attn_output.size()}"
+                f" {attn_output.shape}"
             )
 
         attn_output = attn_output.view(bsz, self.num_heads, tgt_len, self.head_dim)
@@ -1441,10 +1419,10 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
         self.parameter_projection = self.distribution_output.get_parameter_projection(self.model.config.d_model)
         self.target_shape = self.distribution_output.event_shape
 
-        # if config.loss == "nll":
-        #     self.loss = nll
-        # else:
-        #     raise ValueError(f"Unknown loss function {config.loss}")
+        if config.loss == "nll":
+            self.loss = nll
+        else:
+            raise ValueError(f"Unknown loss function {config.loss}")
 
         # Initialize weights of distribution_output and apply final processing
         self.post_init()
@@ -1458,11 +1436,11 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
     def get_decoder(self):
         return self.model.get_decoder()
 
-    # def output_distribution(self, params, loc=None, scale=None, trailing_n=None) -> torch.distributions.Distribution:
-    #     sliced_params = params
-    #     if trailing_n is not None:
-    #         sliced_params = [p[:, -trailing_n:] for p in params]
-    #     return self.distribution_output.distribution(sliced_params, loc=loc, scale=scale)
+    def output_distribution(self, params, loc=None, scale=None, trailing_n=None):
+        sliced_params = params
+        if trailing_n is not None:
+            sliced_params = [p[:, -trailing_n:] for p in params]
+        return self.distribution_output.distribution(sliced_params, loc=loc, scale=scale)
 
     def construct(
         self,

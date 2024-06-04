@@ -22,7 +22,6 @@ import numpy
 from huggingface_hub import hf_hub_download
 from parameterized import parameterized
 from mindnlp.utils.testing_utils import (
-    is_flaky,
     require_mindspore,
     slow,
     is_mindspore_available
@@ -39,12 +38,12 @@ if is_mindspore_available():
     import mindspore
     from mindspore import ops
 
-    from transformers import (
+    from mindnlp.transformers import (
         TimeSeriesTransformerConfig,
         TimeSeriesTransformerForPrediction,
         TimeSeriesTransformerModel,
     )
-    from transformers.models.time_series_transformer.modeling_time_series_transformer import (
+    from mindnlp.transformers.models.time_series_transformer.modeling_time_series_transformer import (
         TimeSeriesTransformerDecoder,
         TimeSeriesTransformerEncoder,
     )
@@ -157,7 +156,7 @@ class TimeSeriesTransformerModelTester:
         with tempfile.TemporaryDirectory() as tmpdirname:
             encoder = model.get_encoder()
             encoder.save_pretrained(tmpdirname)
-            encoder = TimeSeriesTransformerEncoder.from_pretrained(tmpdirname)
+            encoder = TimeSeriesTransformerEncoder.from_pretrained(tmpdirname, from_pt = True)
 
         transformer_inputs, _, _, _ = model.create_network_inputs(**inputs_dict)
         enc_input = transformer_inputs[:, : config.context_length, ...]
@@ -170,7 +169,7 @@ class TimeSeriesTransformerModelTester:
         with tempfile.TemporaryDirectory() as tmpdirname:
             decoder = model.get_decoder()
             decoder.save_pretrained(tmpdirname)
-            decoder = TimeSeriesTransformerDecoder.from_pretrained(tmpdirname)
+            decoder = TimeSeriesTransformerDecoder.from_pretrained(tmpdirname, from_pt = True)
 
         last_hidden_state_2 = decoder(
             inputs_embeds=dec_input,
@@ -227,7 +226,7 @@ class TimeSeriesTransformerModelTest(ModelTesterMixin, unittest.TestCase):
 
     # # Input is 'static_categorical_features' not 'input_ids'
     def test_model_main_input_name(self):
-        model_signature = inspect.signature(getattr(TimeSeriesTransformerModel, "forward"))
+        model_signature = inspect.signature(getattr(TimeSeriesTransformerModel, "construct"))
         # The main input is the name of the argument after `self`
         observed_main_input_name = list(model_signature.parameters.keys())[1]
         self.assertEqual(TimeSeriesTransformerModel.main_input_name, observed_main_input_name)
@@ -237,7 +236,7 @@ class TimeSeriesTransformerModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.forward)
+            signature = inspect.signature(model.construct)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -472,10 +471,6 @@ class TimeSeriesTransformerModelTest(ModelTesterMixin, unittest.TestCase):
         # assert that the first element of the future_values is offset by lag after the decoders input
         assert lagged_sequence[0, ..., 0][-1] + lags_sequence[0] == future_values[0, ..., 0]
 
-    @is_flaky()
-    def test_retain_grad_hidden_states_attentions(self):
-        super().test_retain_grad_hidden_states_attentions()
-
 
 def prepare_batch(filename="train-batch.pt"):
     file = hf_hub_download(repo_id="hf-internal-testing/tourism-monthly-batch", filename=filename, repo_type="dataset")
@@ -487,7 +482,7 @@ def prepare_batch(filename="train-batch.pt"):
 @slow
 class TimeSeriesTransformerModelIntegrationTests(unittest.TestCase):
     def test_inference_no_head(self):
-        model = TimeSeriesTransformerModel.from_pretrained("huggingface/time-series-transformer-tourism-monthly")
+        model = TimeSeriesTransformerModel.from_pretrained("huggingface/time-series-transformer-tourism-monthly", from_pt = True)
         batch = prepare_batch()
 
 
@@ -511,7 +506,7 @@ class TimeSeriesTransformerModelIntegrationTests(unittest.TestCase):
 
     def test_inference_head(self):
         model = TimeSeriesTransformerForPrediction.from_pretrained(
-            "huggingface/time-series-transformer-tourism-monthly"
+            "huggingface/time-series-transformer-tourism-monthly", from_pt = True
         )
         batch = prepare_batch("val-batch.pt")
         output = model(
@@ -532,7 +527,7 @@ class TimeSeriesTransformerModelIntegrationTests(unittest.TestCase):
 
     def test_seq_to_seq_generation(self):
         model = TimeSeriesTransformerForPrediction.from_pretrained(
-            "huggingface/time-series-transformer-tourism-monthly"
+            "huggingface/time-series-transformer-tourism-monthly" , from_pt = True
         )
         batch = prepare_batch("val-batch.pt")
         outputs = model.generate(
