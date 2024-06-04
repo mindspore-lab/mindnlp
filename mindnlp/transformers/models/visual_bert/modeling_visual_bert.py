@@ -54,7 +54,6 @@ logger = logging.get_logger(__name__)
 _CONFIG_FOR_DOC = "VisualBertConfig"
 _CHECKPOINT_FOR_DOC = "uclanlp/visualbert-vqa-coco-pre"
 
-
 class VisualBertEmbeddings(nn.Cell):
     """Construct the embeddings from word, position and token_type embeddings and visual embeddings."""
 
@@ -287,7 +286,7 @@ class VisualBertAttention(nn.Cell):
         self.self.query = prune_linear_layer(self.self.query, index)
         self.self.key = prune_linear_layer(self.self.key, index)
         self.self.value = prune_linear_layer(self.self.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
@@ -332,7 +331,7 @@ class VisualBertIntermediate(nn.Cell):
 class VisualBertOutput(nn.Cell):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
+        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
@@ -868,9 +867,8 @@ class VisualBertForPreTraining(VisualBertPreTrainedModel):
                     f"Found labels with sequence length {labels.shape[-1]}, expected {total_size}."
                 )
 
-            loss_fct = ops.cross_entropy()
-            masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
-            sentence_image_loss = loss_fct(seq_relationship_score.view(-1, 2), sentence_image_labels.view(-1))
+            masked_lm_loss = ops.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            sentence_image_loss = ops.cross_entropy(seq_relationship_score.view(-1, 2), sentence_image_labels.view(-1))
             total_loss = masked_lm_loss + sentence_image_loss
 
         if labels is not None and sentence_image_labels is None:
@@ -881,8 +879,7 @@ class VisualBertForPreTraining(VisualBertPreTrainedModel):
                     f"Found labels with sequence length {labels.shape[-1]}, expected {total_size}."
                 )
 
-            loss_fct = ops.cross_entropy()
-            total_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            total_loss = ops.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (prediction_scores, seq_relationship_score) + outputs[2:]
@@ -1023,8 +1020,7 @@ class VisualBertForMultipleChoice(VisualBertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss_fct = ops.cross_entropy()
-            loss = loss_fct(reshaped_logits, labels)
+            loss = ops.cross_entropy(reshaped_logits, labels)
 
         if not return_dict:
             output = (reshaped_logits,) + outputs[2:]
@@ -1130,9 +1126,9 @@ class VisualBertForQuestionAnswering(VisualBertPreTrainedModel):
 
         # TO-CHECK: From the original code
         index_to_gather = (
-            index_to_gather.unsqueeze(-1).unsqueeze(-1).broadcast_to((index_to_gather.size(0), 1, sequence_output.size(-1)))
+            index_to_gather.unsqueeze(-1).unsqueeze(-1).broadcast_to((index_to_gather.shape[0], 1, sequence_output.shape[-1]))
         )
-        pooled_output = ops.gather(sequence_output, index_to_gather, 1 )
+        pooled_output = ops.gather_elements(sequence_output,1 , index_to_gather)
 
         pooled_output = self.dropout(pooled_output)
         logits = self.cls(pooled_output)
@@ -1246,8 +1242,7 @@ class VisualBertForVisualReasoning(VisualBertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss_fct = ops.cross_entropy()
-            loss = loss_fct(reshaped_logits, labels.view(-1))
+            loss = ops.cross_entropy(reshaped_logits, labels.view(-1).astype(mindspore.int32))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1357,7 +1352,7 @@ class VisualBertForRegionToPhraseAlignment(VisualBertPreTrainedModel):
         model = VisualBertForRegionToPhraseAlignment.from_pretrained("uclanlp/visualbert-vqa-coco-pre")
 
         text = "Who is eating the apple?"
-        inputs = tokenizer(text, return_tensors="pt")
+        inputs = tokenizer(text, return_tensors="ms")
         visual_embeds = get_visual_embeddings(image).unsqueeze(0)
         visual_token_type_ids = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.int64)
         visual_attention_mask = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.float32)
@@ -1402,7 +1397,6 @@ class VisualBertForRegionToPhraseAlignment(VisualBertPreTrainedModel):
         )
 
         sequence_output = outputs[0]
-
         region_to_phrase_position_mask = (region_to_phrase_position != -1).long()
 
         # Make the -1 become 0
@@ -1412,7 +1406,7 @@ class VisualBertForRegionToPhraseAlignment(VisualBertPreTrainedModel):
         expanded_region_to_phrase_positions = region_to_phrase_position.unsqueeze(2).broadcast_to((
             region_to_phrase_position.shape[0], region_to_phrase_position.shape[1], sequence_output.shape[2]
         ))
-        selected_positions = sequence_output.gather(expanded_region_to_phrase_positions,1)
+        selected_positions = sequence_output.gather_elements(1,expanded_region_to_phrase_positions)
 
         # Visual Features = batch x visual_feature_length x dim
         # This will need separate image and visual masks.

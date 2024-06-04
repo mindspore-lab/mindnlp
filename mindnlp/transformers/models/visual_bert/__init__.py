@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""VisualBERT model."""
 from . import configuration_visual_bert, modeling_visual_bert
 
 from .configuration_visual_bert import *

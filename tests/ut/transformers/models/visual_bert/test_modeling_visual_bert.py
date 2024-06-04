@@ -12,14 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the PyTorch MindSpore model."""
+"""Testing suite for the  MindSpore model."""
 
 import copy
 import unittest
 import numpy as np
 
 from mindnlp.transformers import VisualBertConfig
-from mindnlp.utils.testing_utils import require_mindspore, slow, is_mindspore_available, is_vision_available
+from mindnlp.utils.testing_utils import require_mindspore, slow, is_mindspore_available
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
@@ -29,7 +29,6 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 if is_mindspore_available():
     import mindspore
     from mindspore import ops
-    
     from mindnlp.transformers import (
         VisualBertForMultipleChoice,
         VisualBertForPreTraining,
@@ -564,8 +563,8 @@ class VisualBertModelIntegrationTest(unittest.TestCase):
 
         input_ids = mindspore.Tensor([1, 2, 3, 4, 5, 6], dtype=mindspore.int64).reshape(1, -1)
         token_type_ids = mindspore.Tensor([0, 0, 0, 1, 1, 1], dtype=mindspore.int64).reshape(1, -1)
-        visual_embeds = ops.ones(size=(1, 10, 2048), dtype=mindspore.float32) * 0.5
-        visual_token_type_ids = ops.ones(size=(1, 10), dtype=mindspore.int64)
+        visual_embeds = ops.ones((1, 10, 2048), dtype=mindspore.float32) * 0.5
+        visual_token_type_ids = ops.ones((1, 10), dtype=mindspore.int64)
         attention_mask = mindspore.Tensor([1] * 6).reshape(1, -1)
         visual_attention_mask = mindspore.Tensor([1] * 10).reshape(1, -1)
 
@@ -602,8 +601,8 @@ class VisualBertModelIntegrationTest(unittest.TestCase):
 
         input_ids = mindspore.Tensor([1, 2, 3, 4, 5, 6], dtype=mindspore.int64).reshape(1, -1)
         token_type_ids = mindspore.Tensor([0, 0, 0, 1, 1, 1], dtype=mindspore.int64).reshape(1, -1)
-        visual_embeds = ops.ones(size=(1, 10, 2048), dtype=mindspore.float32) * 0.5
-        visual_token_type_ids = ops.ones(size=(1, 10), dtype=mindspore.int64)
+        visual_embeds = ops.ones((1, 10, 2048), dtype=mindspore.float32) * 0.5
+        visual_token_type_ids = ops.ones((1, 10), dtype=mindspore.int64)
         attention_mask = mindspore.Tensor([1] * 6).reshape(1, -1)
         visual_attention_mask = mindspore.Tensor([1] * 10).reshape(1, -1)
 
@@ -633,8 +632,8 @@ class VisualBertModelIntegrationTest(unittest.TestCase):
 
         input_ids = mindspore.Tensor([1, 2, 3, 4, 5, 6], dtype=mindspore.int64).reshape(1, -1)
         token_type_ids = mindspore.Tensor([0, 0, 0, 1, 1, 1], dtype=mindspore.int64).reshape(1, -1)
-        visual_embeds = ops.ones(size=(1, 10, 1024), dtype=mindspore.float32) * 0.5
-        visual_token_type_ids = ops.ones(size=(1, 10), dtype=mindspore.int64)
+        visual_embeds = ops.ones((1, 10, 1024), dtype=mindspore.float32) * 0.5
+        visual_token_type_ids = ops.ones((1, 10), dtype=mindspore.int64)
         attention_mask = mindspore.Tensor([1] * 6).reshape(1, -1)
         visual_attention_mask = mindspore.Tensor([1] * 10).reshape(1, -1)
 
@@ -660,12 +659,12 @@ class VisualBertModelIntegrationTest(unittest.TestCase):
     def test_inference_vcr(self):
         model = VisualBertForMultipleChoice.from_pretrained("uclanlp/visualbert-vcr")
 
-        input_ids = mindspore.Tensor([[[1, 2, 3, 4, 5, 6] for i in range(4)]], dtype=torch.long)
+        input_ids = mindspore.Tensor([[[1, 2, 3, 4, 5, 6] for i in range(4)]], dtype=mindspore.int64)
         attention_mask = ops.ones_like(input_ids)
         token_type_ids = ops.ones_like(input_ids)
 
-        visual_embeds = ops.ones(size=(1, 4, 10, 512), dtype=mindspore.float32) * 0.5
-        visual_token_type_ids = ops.ones(size=(1, 4, 10), dtype=mindspore.int64)
+        visual_embeds = ops.ones((1, 4, 10, 512), dtype=mindspore.float32) * 0.5
+        visual_token_type_ids = ops.ones((1, 4, 10), dtype=mindspore.int64)
         visual_attention_mask = ops.ones_like(visual_token_type_ids)
 
         output = model(
