@@ -1,0 +1,2 @@
+:::mindnlp.transformers.tokenization_utils_base.PreTrainedTokenizerBase
+:::mindnlp.transformers.tokenization_utils_base.SpecialTokensMixin

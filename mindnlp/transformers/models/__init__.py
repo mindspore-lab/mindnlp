@@ -45,6 +45,7 @@ from . import (
     bridgetower,
     bros,
     byt5,
+    camembert,
     clip,
     codegen,
     cogvlm,
@@ -74,6 +75,7 @@ from . import (
     gpt_neox_japanese,
     gpt_pangu,
     graphormer,
+    groupvit,
     hubert,
     jetmoe,
     layoutlm,
@@ -90,6 +92,7 @@ from . import (
     mistral,
     mixtral,
     mobilebert,
+    mobilevit,
     mpnet,
     mpt,
     musicgen,
@@ -98,6 +101,7 @@ from . import (
     olmo,
     openelm,
     opt,
+    owlvit,
     pegasus,
     phi,
     phi3,
@@ -105,6 +109,7 @@ from . import (
     qwen2,
     qwen2_moe,
     reformer,
+    rembert,
     resnet,
     roberta,
     rwkv,
@@ -112,6 +117,8 @@ from . import (
     seamless_m4t,
     seamless_m4t_v2,
     segformer,
+    stablelm,
+    squeezebert,
     starcoder2,
     t5,
     timesformer,
@@ -121,6 +128,7 @@ from . import (
     wav2vec2,
     wav2vec2_with_lm,
     whisper,
+    x_clip,
     xlm,
     xlm_roberta,
     xlnet,
@@ -155,6 +163,7 @@ from .bloom import *
 from .bridgetower import *
 from .bros import *
 from .byt5 import *
+from .camembert import *
 from .clip import *
 from .codegen import *
 from .cogvlm import *
@@ -184,6 +193,7 @@ from .gpt_bigcode import *
 from .gpt_pangu import *
 from .gpt2 import *
 from .graphormer import *
+from .groupvit import *
 from .hubert import *
 from .jetmoe import *
 from .layoutlm import *
@@ -200,6 +210,7 @@ from .minicpm import *
 from .mistral import *
 from .mixtral import *
 from .mobilebert import *
+from .mobilevit import *
 from .mpnet import *
 from .mpt import *
 from .musicgen import *
@@ -208,6 +219,7 @@ from .nezha import *
 from .olmo import *
 from .openelm import *
 from .opt import *
+from .owlvit import *
 from .pegasus import *
 from .phi import *
 from .phi3 import *
@@ -215,6 +227,7 @@ from .pop2piano import *
 from .qwen2 import *
 from .qwen2_moe import *
 from .reformer import *
+from .rembert import *
 from .resnet import *
 from .roberta import *
 from .rwkv import *
@@ -222,6 +235,8 @@ from .sam import *
 from .seamless_m4t import *
 from .seamless_m4t_v2 import *
 from .segformer import *
+from .stablelm import *
+from .squeezebert import *
 from .starcoder2 import *
 from .tinybert import *
 from .t5 import *
@@ -231,6 +246,7 @@ from .vit import *
 from .whisper import *
 from .wav2vec2 import *
 from .wav2vec2_with_lm import *
+from .x_clip import *
 from .xlm import *
 from .xlm_roberta import *
 from .xlnet import *
@@ -265,6 +281,7 @@ __all__.extend(bloom.__all__)
 __all__.extend(bridgetower.__all__)
 __all__.extend(bros.__all__)
 __all__.extend(byt5.__all__)
+__all__.extend(camembert.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(codegen.__all__)
 __all__.extend(cogvlm.__all__)
@@ -294,6 +311,7 @@ __all__.extend(gpt_pangu.__all__)
 __all__.extend(gpt_bigcode.__all__)
 __all__.extend(gpt2.__all__)
 __all__.extend(graphormer.__all__)
+__all__.extend(groupvit.__all__)
 __all__.extend(hubert.__all__)
 __all__.extend(jetmoe.__all__)
 __all__.extend(layoutlm.__all__)
@@ -310,6 +328,7 @@ __all__.extend(minicpm.__all__)
 __all__.extend(mistral.__all__)
 __all__.extend(mixtral.__all__)
 __all__.extend(mobilebert.__all__)
+__all__.extend(mobilevit.__all__)
 __all__.extend(mpnet.__all__)
 __all__.extend(mpt.__all__)
 __all__.extend(musicgen.__all__)
@@ -318,6 +337,7 @@ __all__.extend(nezha.__all__)
 __all__.extend(olmo.__all__)
 __all__.extend(openelm.__all__)
 __all__.extend(opt.__all__)
+__all__.extend(owlvit.__all__)
 __all__.extend(pegasus.__all__)
 __all__.extend(phi.__all__)
 __all__.extend(phi3.__all__)
@@ -325,6 +345,7 @@ __all__.extend(pop2piano.__all__)
 __all__.extend(qwen2.__all__)
 __all__.extend(qwen2_moe.__all__)
 __all__.extend(reformer.__all__)
+__all__.extend(rembert.__all__)
 __all__.extend(resnet.__all__)
 __all__.extend(roberta.__all__)
 __all__.extend(rwkv.__all__)
@@ -332,6 +353,8 @@ __all__.extend(sam.__all__)
 __all__.extend(seamless_m4t.__all__)
 __all__.extend(seamless_m4t_v2.__all__)
 __all__.extend(segformer.__all__)
+__all__.extend(stablelm.__all__)
+__all__.extend(squeezebert.__all__)
 __all__.extend(starcoder2.__all__)
 __all__.extend(t5.__all__)
 __all__.extend(timesformer.__all__)
@@ -341,6 +364,7 @@ __all__.extend(vit.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)
 __all__.extend(wav2vec2_with_lm.__all__)
+__all__.extend(x_clip.__all__)
 __all__.extend(xlm.__all__)
 __all__.extend(xlm_roberta.__all__)
 __all__.extend(xlnet.__all__)
