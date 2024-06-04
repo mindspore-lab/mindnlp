@@ -20,12 +20,15 @@ from typing import Optional, Tuple, Union
 import numpy as np
 import mindspore
 from mindspore import ops
-import mindspore.nn as nn
+from mindspore import nn
 import mindspore.common.dtype as mstype
 from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
-from mindspore.ops import operations as P
-from mindspore.ops import functional as F
+# from mindspore.ops import operations as P
+# from mindspore.ops import functional as F
+from mindnlp.utils import logging
+
+from .configuration_nystromformer import NystromformerConfig
 
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -38,8 +41,7 @@ from ...modeling_outputs import (
 )
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
-from mindnlp.utils import logging
-from .configuration_nystromformer import NystromformerConfig
+
 
 
 logger = logging.get_logger(__name__)
@@ -153,10 +155,10 @@ class NystromformerSelfAttention(nn.Cell):
         # The entries of key are positive and ||key||_{\infty} = 1 due to softmax
         if self.init_option == "original":
             # This original implementation is more conservative to compute coefficient of Z_0.
-            value = 1 / ops.max(ops.sum(key, axis=-2)) * key.transpose(-1, -2)
+            value = 1 / ops.max(ops.sum(key, dim=-2)) * key.transpose(-1, -2)
         else:
             # This is the exact coefficient computation, 1 / ||key||_1, of initialization of Z_0, leading to faster convergence.
-            value = 1 / ops.max(ops.sum(key, axis=-2), axis=-1).values[:, :, None, None] * key.transpose(-1, -2)
+            value = 1 / ops.max(ops.sum(key, dim=-2), axis=-1).values[:, :, None, None] * key.transpose(-1, -2)
 
         for _ in range(n_iter):
             key_value = ops.matmul(key, value)
@@ -780,7 +782,7 @@ class NystromformerForSequenceClassification(NystromformerPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mstype.int64 or labels.dtype == mstype.int32):
+                elif self.num_labels > 1 and (labels.dtype in (mstype.int64, mstype.int32)):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
