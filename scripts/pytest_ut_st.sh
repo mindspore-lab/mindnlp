@@ -1,4 +1,2 @@
-export RUN_SLOW=True
-#pylint mindnlp --rcfile=.github/pylint.conf
-pytest -v -s -c pytest.ini /data/wjk/mindnlp/tests/ut/transformers/models/nystromformer
-#pytest tests/st
+pytest -v -s -c pytest.ini -m 'not download and not gpu_only' tests/ut
+pytest tests/st
