@@ -91,6 +91,7 @@ from . import (
     mistral,
     mixtral,
     mobilebert,
+    mobilenet_v1,
     mobilevit,
     mpnet,
     mpt,
@@ -208,6 +209,7 @@ from .minicpm import *
 from .mistral import *
 from .mixtral import *
 from .mobilebert import *
+from .mobilenet_v1 import *
 from .mobilevit import *
 from .mpnet import *
 from .mpt import *
@@ -325,6 +327,7 @@ __all__.extend(minicpm.__all__)
 __all__.extend(mistral.__all__)
 __all__.extend(mixtral.__all__)
 __all__.extend(mobilebert.__all__)
+__all__.extend(mobilenet_v1.__all__)
 __all__.extend(mobilevit.__all__)
 __all__.extend(mpnet.__all__)
 __all__.extend(mpt.__all__)
