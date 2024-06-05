@@ -15,6 +15,7 @@
 """
 Models init
 """
+
 from . import (
     albert,
     align,
@@ -25,6 +26,7 @@ from . import (
     baichuan,
     bark,
     bart,
+    ctrl,
     barthez,
     bartpho,
     beit,
@@ -135,6 +137,7 @@ from . import (
 )
 
 from .albert import *
+from .ctrl import *
 from .align import *
 from .altclip import *
 from .audio_spectrogram_transformer import *
@@ -341,6 +344,7 @@ __all__.extend(owlvit.__all__)
 __all__.extend(pegasus.__all__)
 __all__.extend(phi.__all__)
 __all__.extend(phi3.__all__)
+__all__.extend(ctrl.__all__)
 __all__.extend(pop2piano.__all__)
 __all__.extend(qwen2.__all__)
 __all__.extend(qwen2_moe.__all__)
