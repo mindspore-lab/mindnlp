@@ -108,6 +108,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("t5", "T5Config"),
         ("timesformer", "TimesformerConfig"),
         ("vipllava", "VipLlavaConfig"),
+        ("visual_bert", "VisualBertConfig"),
         ("wav2vec2", "Wav2Vec2Config"),
         ("whisper", "WhisperConfig"),
         ("xclip", "XCLIPConfig"),

@@ -74,10 +74,12 @@ from . import (
     gpt_bigcode,
     gpt_neo,
     gpt_neox,
+    gpt_neox_japanese,
     gpt_pangu,
     graphormer,
     groupvit,
     hubert,
+    imagegpt,
     jetmoe,
     layoutlm,
     layoutlmv2,
@@ -106,6 +108,7 @@ from . import (
     pegasus,
     phi,
     phi3,
+    poolformer,
     pop2piano,
     qwen2,
     qwen2_moe,
@@ -113,6 +116,7 @@ from . import (
     rembert,
     resnet,
     roberta,
+    roc_bert,
     rwkv,
     sam,
     seamless_m4t,
@@ -125,6 +129,7 @@ from . import (
     timesformer,
     tinybert,
     vipllava,
+    visual_bert,
     vit,
     wav2vec2,
     wav2vec2_with_lm,
@@ -191,12 +196,14 @@ from .gemma import *
 from .gpt import *
 from .gpt_neo import *
 from .gpt_neox import *
+from .gpt_neox_japanese import *
 from .gpt_bigcode import *
 from .gpt_pangu import *
 from .gpt2 import *
 from .graphormer import *
 from .groupvit import *
 from .hubert import *
+from .imagegpt import *
 from .jetmoe import *
 from .layoutlm import *
 from .layoutlmv2 import *
@@ -225,6 +232,7 @@ from .owlvit import *
 from .pegasus import *
 from .phi import *
 from .phi3 import *
+from .poolformer import *
 from .pop2piano import *
 from .qwen2 import *
 from .qwen2_moe import *
@@ -232,6 +240,7 @@ from .reformer import *
 from .rembert import *
 from .resnet import *
 from .roberta import *
+from .roc_bert import *
 from .rwkv import *
 from .sam import *
 from .seamless_m4t import *
@@ -244,6 +253,7 @@ from .tinybert import *
 from .t5 import *
 from .timesformer import *
 from .vipllava import *
+from .visual_bert import *
 from .vit import *
 from .whisper import *
 from .wav2vec2 import *
@@ -310,12 +320,14 @@ __all__.extend(gpt.__all__)
 __all__.extend(gemma.__all__)
 __all__.extend(gpt_neo.__all__)
 __all__.extend(gpt_neox.__all__)
+__all__.extend(gpt_neox_japanese.__all__)
 __all__.extend(gpt_pangu.__all__)
 __all__.extend(gpt_bigcode.__all__)
 __all__.extend(gpt2.__all__)
 __all__.extend(graphormer.__all__)
 __all__.extend(groupvit.__all__)
 __all__.extend(hubert.__all__)
+__all__.extend(imagegpt.__all__)
 __all__.extend(jetmoe.__all__)
 __all__.extend(layoutlm.__all__)
 __all__.extend(layoutlmv2.__all__)
@@ -344,6 +356,7 @@ __all__.extend(owlvit.__all__)
 __all__.extend(pegasus.__all__)
 __all__.extend(phi.__all__)
 __all__.extend(phi3.__all__)
+__all__.extend(poolformer.__all__)
 __all__.extend(pop2piano.__all__)
 __all__.extend(qwen2.__all__)
 __all__.extend(qwen2_moe.__all__)
@@ -351,6 +364,7 @@ __all__.extend(reformer.__all__)
 __all__.extend(rembert.__all__)
 __all__.extend(resnet.__all__)
 __all__.extend(roberta.__all__)
+__all__.extend(roc_bert.__all__)
 __all__.extend(rwkv.__all__)
 __all__.extend(sam.__all__)
 __all__.extend(seamless_m4t.__all__)
@@ -363,6 +377,7 @@ __all__.extend(t5.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
 __all__.extend(vipllava.__all__)
+__all__.extend(visual_bert.__all__)
 __all__.extend(vit.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)
