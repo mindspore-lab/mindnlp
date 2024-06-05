@@ -141,7 +141,7 @@ class TimeSeriesMeanScaler(nn.Cell):
         # If `default_scale` is provided, we use it, otherwise we use the scale
         # of the batch.
         if self.default_scale is None:
-            batch_sum = ts_sum.sum(dim=0)
+            batch_sum = ops.sum(ts_sum, dim=0)
             batch_observations = ops.clamp(num_observed.sum(0), min=1)
             default_scale = ops.squeeze(batch_sum / batch_observations)
         else:

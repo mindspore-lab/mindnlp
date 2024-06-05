@@ -18,7 +18,7 @@ import inspect
 import tempfile
 import unittest
 import numpy
-import mindnlp
+from mindnlp.utils.serialization import load
 from huggingface_hub import hf_hub_download
 from parameterized import parameterized
 from mindnlp.utils.testing_utils import (
@@ -474,12 +474,12 @@ class TimeSeriesTransformerModelTest(ModelTesterMixin, unittest.TestCase):
 
 def prepare_batch(filename="train-batch.pt"):
     file = hf_hub_download(repo_id="hf-internal-testing/tourism-monthly-batch", filename=filename, repo_type="dataset")
-    batch = mindnlp.load(file)
+    batch = load(file)
     return batch
 
 
 @require_mindspore
-@slow
+
 class TimeSeriesTransformerModelIntegrationTests(unittest.TestCase):
     def test_inference_no_head(self):
         model = TimeSeriesTransformerModel.from_pretrained("huggingface/time-series-transformer-tourism-monthly", from_pt = True)
@@ -502,7 +502,7 @@ class TimeSeriesTransformerModelIntegrationTests(unittest.TestCase):
         expected_slice = mindspore.tensor(
             [[0.8196, -1.5131, 1.4620], [1.1268, -1.3238, 1.5997], [1.5098, -1.0715, 1.7359]]
         )
-        self.assertTrue(numpy.allclose(output[0, :3, :3], expected_slice, atol=TOLERANCE))
+        self.assertTrue(numpy.allclose(output[0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=TOLERANCE))
 
     def test_inference_head(self):
         model = TimeSeriesTransformerForPrediction.from_pretrained(
