@@ -14,7 +14,7 @@
 
 import unittest
 
-from mindnlp.transformers.pipelines.table_question_answering import TableQuestionAnsweringArguementHandler
+from mindnlp.transformers.pipelines.table_question_answering import TableQuestionAnsweringArgumentHandler
 
 from mindnlp.utils.testing_utils import is_pipeline_test, require_mindspore
 
@@ -33,7 +33,7 @@ class TQAPipelineTests(unittest.TestCase):
             "query": "how many movies has george clooney played in?",
         }
 
-        handler = TableQuestionAnsweringArguementHandler()
+        handler = TableQuestionAnsweringArgumentHandler()
         tqa_inputs = handler(example["table"], example["query"])
         print("############")
         print(tqa_inputs)
