@@ -275,4 +275,5 @@ class SwiftFormerModelIntegrationTest(unittest.TestCase):
         self.assertEqual(outputs.logits.shape, expected_shape)
 
         expected_slice = mindspore.tensor([[-2.1703e00, 2.1107e00, -2.0811e00]])
-        self.assertTrue(np.allclose(outputs.logits[0, :3], expected_slice, atol=1e-4))
+
+        self.assertTrue(np.allclose(outputs.logits[0, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
