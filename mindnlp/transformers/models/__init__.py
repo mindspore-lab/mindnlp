@@ -72,6 +72,7 @@ from . import (
     gpt_bigcode,
     gpt_neo,
     gpt_neox,
+    gpt_neox_japanese,
     gpt_pangu,
     graphormer,
     groupvit,
@@ -187,6 +188,7 @@ from .gemma import *
 from .gpt import *
 from .gpt_neo import *
 from .gpt_neox import *
+from .gpt_neox_japanese import *
 from .gpt_bigcode import *
 from .gpt_pangu import *
 from .gpt2 import *
@@ -304,6 +306,7 @@ __all__.extend(gpt.__all__)
 __all__.extend(gemma.__all__)
 __all__.extend(gpt_neo.__all__)
 __all__.extend(gpt_neox.__all__)
+__all__.extend(gpt_neox_japanese.__all__)
 __all__.extend(gpt_pangu.__all__)
 __all__.extend(gpt_bigcode.__all__)
 __all__.extend(gpt2.__all__)
