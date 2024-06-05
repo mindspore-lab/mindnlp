@@ -2,7 +2,10 @@
 configuration
 """
 
-from typing import Literal
+try:
+    from typing import Literal
+except:
+    from typing_extensions import Literal
 from ...configuration_utils import PretrainedConfig
 
 

@@ -13,8 +13,11 @@
 # limitations under the License.
 """poly config"""
 from dataclasses import dataclass, field
-from typing import List, Literal, Optional, Union
-
+from typing import List, Optional, Union
+try:
+    from typing import Literal
+except:
+    from typing_extensions import Literal
 from mindnlp.peft.config import PeftConfig
 from mindnlp.peft.utils import PeftType
 

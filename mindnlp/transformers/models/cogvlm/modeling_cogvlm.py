@@ -1,7 +1,10 @@
 """largely copy from llama and adapt for cogvlm"""
 import warnings
-from typing import TYPE_CHECKING, Optional, Tuple, List, Union, Literal, Dict, Any
-
+from typing import TYPE_CHECKING, Optional, Tuple, List, Union, Dict, Any
+try:
+    from typing import Literal
+except:
+    from typing_extensions import Literal
 import math
 import numpy as np
 import mindspore
