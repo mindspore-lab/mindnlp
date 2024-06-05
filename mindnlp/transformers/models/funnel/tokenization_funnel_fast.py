@@ -19,10 +19,10 @@ from typing import List, Optional, Tuple
 
 from tokenizers import normalizers
 
-from ...tokenization_utils_fast import PreTrainedTokenizerFast
 from mindnlp.utils import logging
-from .tokenization_funnel import FunnelTokenizer
+from ...tokenization_utils_fast import PreTrainedTokenizerFast
 
+from .tokenization_funnel import FunnelTokenizer
 
 logger = logging.get_logger(__name__)
 

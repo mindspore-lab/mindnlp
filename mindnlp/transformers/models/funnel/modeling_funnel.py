@@ -14,14 +14,18 @@
 # limitations under the License.
 """PyTorch Funnel Transformer model."""
 
-import os
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Parameter, Tensor
+from mindspore import nn, ops, Tensor
 from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.utils import (
+    ModelOutput,
+    logging,
+)
 
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -33,10 +37,7 @@ from ...modeling_outputs import (
     TokenClassifierOutput,
 )
 from ...modeling_utils import PreTrainedModel
-from mindnlp.utils import (
-    ModelOutput,
-    logging,
-)
+
 from .configuration_funnel import FunnelConfig
 
 
@@ -365,11 +366,11 @@ class FunnelRelMultiheadAttention(nn.Cell):
 
         self.hidden_dropout = nn.Dropout(p=config.hidden_dropout)
         self.attention_dropout = nn.Dropout(p=config.attention_dropout)
-        
+
         self.q_head = nn.Dense(d_model, n_head * d_head, has_bias=False)
         self.k_head = nn.Dense(d_model, n_head * d_head)
         self.v_head = nn.Dense(d_model, n_head * d_head)
-        
+
         self.r_w_bias = mindspore.Parameter(ops.zeros([n_head, d_head]))
         self.r_r_bias = mindspore.Parameter(ops.zeros([n_head, d_head]))
         self.r_kernel = mindspore.Parameter(ops.zeros([d_model, n_head, d_head]))
@@ -707,11 +708,9 @@ class FunnelPreTrainedModel(PreTrainedModel):
                     std = np.sqrt(1.0 / float(fan_in + fan_out))
                 else:
                     std = self.config.initializer_std
-                # nn.init.normal_(cell.weight, std=std)
                 cell.weight.set_data(initializer(Normal(std),
                                                     cell.weight.shape, cell.weight.dtype))
             if getattr(cell, "bias", None) is not None:
-                # nn.init.constant_(cell.bias, 0.0)
                 cell.bias[:] = 0.0;
         elif classname == "FunnelRelMultiheadAttention":
             minval = Tensor(0.0, mindspore.float32)
@@ -1109,7 +1108,7 @@ class FunnelForSequenceClassification(FunnelPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and (labels.dtype in (mindspore.int64, mindspore.int32)):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
