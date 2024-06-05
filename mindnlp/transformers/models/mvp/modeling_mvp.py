@@ -481,12 +481,12 @@ class MvpPreTrainedModel(PreTrainedModel):
                 module.bias.set_data(initializer('zeros',module.bias.shape,module.bias.dtype))
                 
         elif isinstance(module, nn.Embedding):
-            weight = initializer(Normal(std,mean=0.0),
-                                                 module.weight.shape,
-                                                module.weight.dtype)
-            if module.padding_idx is not None:
+            weight = np.random.normal(
+                0.0, std, module.weight.shape
+            )
+            if module.padding_idx:
                 weight[module.padding_idx] = 0
-            module.weight.set_data(weight)
+            module.weight.set_data(mindspore.Tensor(weight, module.weight.dtype))
 
     @property
     def dummy_inputs(self):
@@ -854,8 +854,10 @@ class MvpDecoder(MvpPreTrainedModel):
 
         # past_key_values_length
         past_key_values_length = past_key_values[0][0].shape[2] if past_key_values is not None else 0
-
+        
         if inputs_embeds is None:
+            # print(self.embed_tokens)
+            # print(input_ids.shape)
             inputs_embeds = self.embed_tokens(input_ids) * self.embed_scale
 
         attention_mask = _prepare_4d_causal_attention_mask(
@@ -1328,6 +1330,7 @@ class MvpForSequenceClassification(MvpPreTrainedModel):
             config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+       
         if labels is not None:
             use_cache = False
 
@@ -1352,17 +1355,16 @@ class MvpForSequenceClassification(MvpPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-        # print(output[0])
+        
         hidden_states = outputs[0]  # last hidden state
-        print(hidden_states.shape)
+        
         eos_mask = input_ids.eq(self.config.eos_token_id)
-
+      
         if len(ops.unique_consecutive(eos_mask.sum(1))) > 1:
             raise ValueError("All examples must have the same number of <eos> tokens.")
         
-        print(hidden_states[eos_mask, :].reshape(hidden_states.shape[0], -1, hidden_states.shape[-1]).shape)
-        # print( hidden_states[eos_mask, :].view(hidden_states.shape[0], -1, hidden_states.shape[-1])[:, -1, :])
-        sentence_representation = hidden_states[eos_mask, :].view(hidden_states.shape[0], -1, hidden_states.shape[-1])[:, -1, :]
+     
+        sentence_representation = hidden_states[eos_mask, ].view(hidden_states.shape[0], -1, hidden_states.shape[-1])[:,-1,:]
         logits = self.classification_head(sentence_representation)
 
         loss = None
@@ -1588,89 +1590,6 @@ class MvpForCausalLM(MvpPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, CausalLMOutputWithCrossAttentions]:
-        r"""
-        Args:
-            input_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
-                Indices of input sequence tokens in the vocabulary. Padding will be ignored by default should you
-                provide it.
-
-                Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
-                [`PreTrainedTokenizer.__call__`] for details.
-
-                [What are input IDs?](../glossary#input-ids)
-            attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
-
-                [What are attention masks?](../glossary#attention-mask)
-            encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
-                Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention
-                if the model is configured as a decoder.
-            encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used
-                in the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
-            head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-                Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
-
-            cross_attn_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-                Mask to nullify selected heads of the cross-attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
-
-            past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
-                Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
-                shape `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of
-                shape `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`. The two additional
-                tensors are only required when the model is used as a decoder in a Sequence to Sequence model.
-
-                Contains pre-computed hidden-states (key and values in the self-attention blocks and in the
-                cross-attention blocks) that can be used (see `past_key_values` input) to speed up sequential decoding.
-
-                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those
-                that don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of
-                all `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
-                config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
-                (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
-            use_cache (`bool`, *optional*):
-                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding
-                (see `past_key_values`).
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
-            output_attentions (`bool`, *optional*):
-                Whether or not to return the attentions tensors of all attention layers. See `attentions` under
-                returned tensors for more detail.
-            output_hidden_states (`bool`, *optional*):
-                Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors
-                for more detail.
-            return_dict (`bool`, *optional*):
-                Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-
-        Returns:
-
-        Example:
-
-        ```python
-        >>> from transformers import AutoTokenizer, MvpForCausalLM
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("RUCAIBox/mvp")
-        >>> model = MvpForCausalLM.from_pretrained("RUCAIBox/mvp", add_cross_attention=False)
-
-        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
-        >>> outputs = model(**inputs)
-
-        >>> logits = outputs.logits
-        >>> list(logits.shape)
-        [1, 8, 50267]
-        ```"""
 
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (

@@ -161,6 +161,7 @@ class MvpModelTester:
 
     def create_and_check_decoder_model_past_large_inputs(self, config, inputs_dict):
         model = MvpModel(config=config).get_decoder().set_train(False)
+        print("yes")
         input_ids = inputs_dict["input_ids"]
         attention_mask = inputs_dict["attention_mask"]
         head_mask = inputs_dict["head_mask"]
@@ -173,11 +174,10 @@ class MvpModelTester:
         # create hypothetical multiple next token and extent to next_input_ids
         next_tokens = ids_tensor((self.batch_size, 3), config.vocab_size)
         next_attn_mask = ids_tensor((self.batch_size, 3), 2)
-
+        
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_attention_mask = ops.cat([attention_mask, next_attn_mask], axis=-1)
-
+        next_input_ids = ops.cat([input_ids, next_tokens], axis=1)
+        next_attention_mask = ops.cat([attention_mask, next_attn_mask==1], axis=1)
         output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask)["last_hidden_state"]
         output_from_past = model(next_tokens, attention_mask=next_attention_mask, past_key_values=past_key_values)[
             "last_hidden_state"
@@ -271,14 +271,8 @@ class MvpHeadTests(unittest.TestCase):
         config, input_ids, batch_size = self._get_config_and_data()
         labels = _long_tensor([2] * batch_size)
         config.num_labels = 3
-       
         model = MvpForSequenceClassification(config)
-        # print(input_ids)
-        # print(labels)
         outputs = model(input_ids=input_ids, decoder_input_ids=input_ids, labels=labels)
-        # expected_shape = torch.Size((batch_size, config.num_labels))
-        # print(outputs["logits"].shape)
-        # print(outputs["logits"])
         self.assertEqual(outputs["logits"].shape,(batch_size, config.num_labels))
         self.assertIsInstance(outputs["loss"].item(), float)
 
@@ -286,7 +280,7 @@ class MvpHeadTests(unittest.TestCase):
         config, input_ids, batch_size = self._get_config_and_data()
         sequence_labels = ids_tensor([batch_size], 2)
         model = MvpForQuestionAnswering(config)
-        model
+      
         outputs = model(
             input_ids=input_ids,
             start_positions=sequence_labels,
@@ -302,7 +296,6 @@ class MvpHeadTests(unittest.TestCase):
         config, input_ids, batch_size = self._get_config_and_data()
         lm_labels = ids_tensor([batch_size, input_ids.shape[1]], self.vocab_size)
         lm_model = MvpForConditionalGeneration(config)
-        lm_model
         outputs = lm_model(input_ids=input_ids, labels=lm_labels)
         expected_shape = (batch_size, input_ids.shape[1], config.vocab_size)
         self.assertEqual(outputs["logits"].shape, expected_shape)
@@ -415,6 +408,7 @@ class MvpHeadTests(unittest.TestCase):
 class MvpModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     all_model_classes = (
         (
+            # MvpModel,
             MvpForConditionalGeneration,
             MvpForSequenceClassification,
             MvpForQuestionAnswering)
@@ -422,22 +416,22 @@ class MvpModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         else ()
     )
     all_generative_model_classes = (MvpForConditionalGeneration,) if is_mindspore_available() else ()
-    # pipeline_model_mapping = (
-    #     {
-    #         "conversational": MvpForConditionalGeneration,
-    #         "feature-extraction": MvpModel,
-    #         "fill-mask": MvpForConditionalGeneration,
-    #         "question-answering": MvpForQuestionAnswering,
-    #         "summarization": MvpForConditionalGeneration,
-    #         "text-classification": MvpForSequenceClassification,
-    #         "text-generation": MvpForCausalLM,
-    #         "text2text-generation": MvpForConditionalGeneration,
-    #         "translation": MvpForConditionalGeneration,
-    #         "zero-shot": MvpForSequenceClassification,
-    #     }
-    #     if is_mindspore_available()
-    #     else {}
-    # )
+    pipeline_model_mapping = (
+        {
+            "conversational": MvpForConditionalGeneration,
+            "feature-extraction": MvpModel,
+            "fill-mask": MvpForConditionalGeneration,
+            "question-answering": MvpForQuestionAnswering,
+            "summarization": MvpForConditionalGeneration,
+            "text-classification": MvpForSequenceClassification,
+            "text-generation": MvpForCausalLM,
+            "text2text-generation": MvpForConditionalGeneration,
+            "translation": MvpForConditionalGeneration,
+            "zero-shot": MvpForSequenceClassification,
+        }
+        if is_mindspore_available()
+        else {}
+    )
     is_encoder_decoder = True
     fx_compatible = False
     test_pruning = False
