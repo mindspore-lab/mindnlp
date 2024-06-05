@@ -2316,13 +2316,11 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
         static_feat = outputs.static_features
 
         num_parallel_samples = self.config.num_parallel_samples
-        repeated_loc = loc.repeat_interleave(repeats=num_parallel_samples, axis=0)
-        repeated_scale = scale.repeat_interleave(
-            repeats=num_parallel_samples, axis=0)
+        repeated_loc =  ops.repeat_elementse(loc, rep=num_parallel_samples, axis=0)
+        repeated_scale = ops.repeat_elementse(scale, rep=num_parallel_samples, axis=0)
 
         repeated_past_values = (
-            past_values.repeat_interleave(
-                repeats=num_parallel_samples, axis=0) - repeated_loc
+            ops.repeat_elementse(past_values,rep=num_parallel_samples, axis=0) - repeated_loc
         ) / repeated_scale
 
         time_features = ops.cat((past_time_features, future_time_features), axis=1)
@@ -2330,17 +2328,16 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
         expanded_static_feat = static_feat.unsqueeze(
             1).broadcast_to((-1, time_features.shape[1], -1))
         features = ops.cat((expanded_static_feat, time_features), axis=-1)
-        repeated_features = features.repeat_interleave(
-            repeats=num_parallel_samples, axis=0)
+        repeated_features = ops.repeat_elementse(features, rep=num_parallel_samples, axis=0)
 
-        repeated_enc_last_hidden = enc_last_hidden.repeat_interleave(
+        repeated_enc_last_hidden = ops.repeat_elementse(enc_last_hidden,
             repeats=num_parallel_samples, axis=0)
 
         lagged_sequence = self.model.get_lagged_subsequences(
             sequence=repeated_past_values, subsequences_length=self.config.context_length
         )
         lags_shape = lagged_sequence.shape
-        reshaped_lagged_sequence = lagged_sequence.reshape(lags_shape[0], lags_shape[1], -1)
+        reshaped_lagged_sequence = lagged_sequence.view(lags_shape[0], lags_shape[1], -1)
         seasonal_input, trend_input = self.model.decomposition_layer(reshaped_lagged_sequence)
 
         mean = ops.mean(reshaped_lagged_sequence, axis=1).unsqueeze(

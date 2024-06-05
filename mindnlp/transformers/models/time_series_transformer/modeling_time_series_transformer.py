@@ -499,7 +499,7 @@ class TimeSeriesTransformerDecoderLayer(nn.Cell):
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
 
-        self.self_attn_layer_norm = nn.LayerNorm([self.embed_dim])
+        self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim)
         self.encoder_attn = TIME_SERIES_TRANSFORMER_ATTENTION_CLASSES[config._attn_implementation](
             self.embed_dim,
             config.decoder_attention_heads,
@@ -1733,7 +1733,7 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
         concat_future_samples = ops.cat(future_samples, axis=1)
 
         return SampleTSPredictionOutput(
-            sequences=concat_future_samples.reshape(
+            sequences=concat_future_samples.view(
                 (-1, num_parallel_samples, self.config.prediction_length) + self.target_shape,
             )
         )
