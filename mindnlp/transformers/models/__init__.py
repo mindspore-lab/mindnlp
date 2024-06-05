@@ -100,6 +100,7 @@ from . import (
     musicgen,
     musicgen_melody,
     nezha,
+    nystromformer,
     olmo,
     openelm,
     opt,
@@ -223,6 +224,7 @@ from .mpt import *
 from .musicgen import *
 from .musicgen_melody import *
 from .nezha import *
+from .nystromformer import *
 from .olmo import *
 from .openelm import *
 from .opt import *
@@ -346,6 +348,7 @@ __all__.extend(mpt.__all__)
 __all__.extend(musicgen.__all__)
 __all__.extend(musicgen_melody.__all__)
 __all__.extend(nezha.__all__)
+__all__.extend(nystromformer.__all__)
 __all__.extend(olmo.__all__)
 __all__.extend(openelm.__all__)
 __all__.extend(opt.__all__)
