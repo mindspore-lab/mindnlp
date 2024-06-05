@@ -510,7 +510,7 @@ class FunnelModelIntegrationTest(unittest.TestCase):
     def test_inference_model(self):
         tokenizer = FunnelTokenizer.from_pretrained("huggingface/funnel-small")
         model = FunnelModel.from_pretrained("huggingface/funnel-small")
-        inputs = tokenizer("Hello! I am the Funnel Transformer model.", return_tensors="pt")
+        inputs = tokenizer("Hello! I am the Funnel Transformer model.", return_tensors="ms")
         output = model(**inputs)[0]
 
         expected_output_sum = mindspore.tensor(235.7246)
