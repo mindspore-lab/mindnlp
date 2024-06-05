@@ -49,6 +49,7 @@ from . import (
     clip,
     codegen,
     cogvlm,
+    cohere,
     convbert,
     convnext,
     cpm,
@@ -172,6 +173,7 @@ from .camembert import *
 from .clip import *
 from .codegen import *
 from .cogvlm import *
+from .cohere import *
 from .convbert import *
 from .convnext import *
 from .cpm import *
@@ -295,6 +297,7 @@ __all__.extend(camembert.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(codegen.__all__)
 __all__.extend(cogvlm.__all__)
+__all__.extend(cohere.__all__)
 __all__.extend(convbert.__all__)
 __all__.extend(convnext.__all__)
 __all__.extend(cpm.__all__)
