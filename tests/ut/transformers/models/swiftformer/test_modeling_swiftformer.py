@@ -257,6 +257,8 @@ def prepare_img():
 @require_mindspore
 @require_vision
 class SwiftFormerModelIntegrationTest(unittest.TestCase):
+    def default_image_processor(self):
+        return ViTImageProcessor.from_pretrained("MBZUAI/swiftformer-xs") if is_vision_available() else None
 
     @slow
     def test_inference_image_classification_head(self):
