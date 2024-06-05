@@ -156,7 +156,7 @@ class TimeSeriesMeanScaler(nn.Cell):
         scaled_data = data / scale
 
         if not self.keepdim:
-            scale = ops.squeeze(scale,axis=self.dim)
+            scale = ops.squeeze(scale, axis=self.dim)
 
         return scaled_data, ops.zeros_like(scale), scale
 
@@ -611,22 +611,17 @@ class TimeSeriesTransformerPreTrainedModel(PreTrainedModel):
     def _init_weights(self, module):
         std = self.config.init_std
         if isinstance(module, nn.Dense):
-            module.weight.set_data(initializer(Normal(std),
-                                             module.weight.shape,
-                                             module.weight.dtype))
+            module.weight.set_data(initializer(Normal(std), module.weight.shape, module.weight.dtype))
             if module.bias is not None:
                 module.bias.set_data(initializer(
                     'zeros', module.bias.shape, module.bias.dtype))
         elif isinstance(module, TimeSeriesSinusoidalPositionalEmbedding):
             pass
         elif isinstance(module, nn.Embedding):
-            module.weight.set_data(initializer(Normal(std),
-                                                      module.weight.shape,
-                                                      module.weight.dtype))
+            module.weight.set_data(initializer(Normal(std), module.weight.shape, module.weight.dtype))
 
             if module.padding_idx is not None:
-                module.weight.data[module.padding_idx] = initializer(
-                    "zeros", module.weight.data[module.padding_idx].shape, module.weight.dtype)
+                module.weight.data[module.padding_idx] = initializer("zeros", module.weight.data[module.padding_idx].shape, module.weight.dtype)
 
 TIME_SERIES_TRANSFORMER_START_DOCSTRING = r"""
     This model inherits from [`PreTrainedModel`]. Check the superclass documentation for the generic methods the
