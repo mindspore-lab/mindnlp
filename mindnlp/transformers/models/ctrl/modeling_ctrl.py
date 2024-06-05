@@ -17,24 +17,21 @@
 
 from typing import Optional, Tuple, Union
 
-import numpy as np
 import mindspore
+import numpy as np
 from mindspore import nn, ops
-from mindspore.common.initializer import initializer, Normal
+from mindspore.common.initializer import Normal, initializer
+
+from mindnlp.utils import logging
+
 from ...modeling_outputs import (
     BaseModelOutputWithPast,
     CausalLMOutputWithPast,
     SequenceClassifierOutput,
 )
 from ...modeling_utils import PreTrainedModel
-from ...ms_utils import (
-    Conv1D,
-    find_pruneable_heads_and_indices,
-    prune_linear_layer,
-)
-from mindnlp.utils import logging
+from ...ms_utils import Conv1D, find_pruneable_heads_and_indices, prune_linear_layer
 from .configuration_ctrl import CTRLConfig
-
 
 logger = logging.get_logger(__name__)
 
