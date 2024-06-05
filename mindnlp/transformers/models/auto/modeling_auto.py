@@ -102,6 +102,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("stablelm", "StableLmModel"),
         ("squeezebert", "SqueezeBertModel"),
         ("starcoder2", "Starcoder2Model"),
+        ("swiftformer","SwiftFormerModel"),
         ("t5", "T5Model"),
         ("timesformer", "TimesformerModel"),
         ("whisper", "WhisperModel"),
