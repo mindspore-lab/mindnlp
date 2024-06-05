@@ -18,7 +18,7 @@ import copy
 import unittest
 import tempfile
 import numpy as np
-from mindnlp.transformers.models.mvp import MvpConfig
+from mindnlp.transformers import MvpConfig
 
 from mindnlp.utils.testing_utils import (
     require_sentencepiece,
@@ -546,7 +546,7 @@ def _long_tensor(tok_lst):
 class MvpModelIntegrationTests(unittest.TestCase):
     @cached_property
     def default_tokenizer(self):
-        return MvpTokenizer.from_pretrained("RUCAIBox/mvp",from_pt=True)
+        return MvpTokenizer.from_pretrained("RUCAIBox/mvp")
 
     @slow
     def test_inference_no_head(self):
@@ -560,7 +560,7 @@ class MvpModelIntegrationTests(unittest.TestCase):
         expected_slice = mindspore.tensor(
             [[0.3461, 0.3624, 0.2689], [0.3461, 0.3624, 0.2689], [-0.1562, 1.1637, -0.3784]]
         )
-        self.assertTrue(np.allclose(output[:, :3, :3], expected_slice, atol=1e-3))
+        self.assertTrue(np.allclose(output[:, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-3))
 
     @slow
     def test_summarization_inference(self):
@@ -570,7 +570,7 @@ class MvpModelIntegrationTests(unittest.TestCase):
         EXPECTED_SUMMARY = "Listen to the radio.\nUse the Internet."
         dct = tok.batch_encode_plus(
             [PGE_ARTICLE],
-            return_tensors="pt",
+            return_tensors="ms",
         )
 
         hypotheses_batch = model.generate(**dct)
