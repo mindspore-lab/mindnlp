@@ -134,6 +134,7 @@ from . import (
     t5,
     timesformer,
     tinybert,
+    videomae,
     vipllava,
     visual_bert,
     vit,
@@ -264,6 +265,7 @@ from .swiftformer import *
 from .tinybert import *
 from .t5 import *
 from .timesformer import *
+from .videomae import *
 from .vipllava import *
 from .visual_bert import *
 from .vit import *
@@ -394,6 +396,7 @@ __all__.extend(swiftformer.__all__)
 __all__.extend(t5.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
+__all__.extend(videomae.__all__)
 __all__.extend(vipllava.__all__)
 __all__.extend(visual_bert.__all__)
 __all__.extend(vit.__all__)
