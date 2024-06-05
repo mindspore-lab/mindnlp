@@ -12,9 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""MindSpore Decision Transformer model"""
 
 import math
-import os
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 import numpy as np
@@ -376,9 +376,6 @@ class DecisionTransformerGPT2PreTrainedModel(PreTrainedModel):
     config_class = DecisionTransformerConfig
     base_model_prefix = "transformer"
     is_parallelizable = True
-
-    def __init__(self, *inputs, **kwargs):
-        super().__init__(*inputs, **kwargs)
 
     def _init_weights(self, cell):
         """Initialize the weights"""
