@@ -102,6 +102,7 @@ from . import (
     mpt,
     musicgen,
     musicgen_melody,
+    mvp,
     nezha,
     nystromformer,
     olmo,
@@ -230,6 +231,7 @@ from .mpnet import *
 from .mpt import *
 from .musicgen import *
 from .musicgen_melody import *
+from .mvp import *
 from .nezha import *
 from .nystromformer import *
 from .olmo import *
@@ -358,6 +360,7 @@ __all__.extend(mpnet.__all__)
 __all__.extend(mpt.__all__)
 __all__.extend(musicgen.__all__)
 __all__.extend(musicgen_melody.__all__)
+__all__.extend(mvp.__all__)
 __all__.extend(nezha.__all__)
 __all__.extend(nystromformer.__all__)
 __all__.extend(olmo.__all__)
