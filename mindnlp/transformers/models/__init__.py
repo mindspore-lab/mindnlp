@@ -125,6 +125,7 @@ from . import (
     stablelm,
     squeezebert,
     starcoder2,
+    swiftformer,
     t5,
     timesformer,
     tinybert,
@@ -249,6 +250,7 @@ from .segformer import *
 from .stablelm import *
 from .squeezebert import *
 from .starcoder2 import *
+from .swiftformer import *
 from .tinybert import *
 from .t5 import *
 from .timesformer import *
@@ -373,6 +375,7 @@ __all__.extend(segformer.__all__)
 __all__.extend(stablelm.__all__)
 __all__.extend(squeezebert.__all__)
 __all__.extend(starcoder2.__all__)
+__all__.extend(swiftformer.__all__)
 __all__.extend(t5.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)

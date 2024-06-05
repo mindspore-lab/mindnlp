@@ -106,6 +106,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("stablelm", "StableLmConfig"),
         ("squeezebert", "SqueezeBertConfig"),
         ("starcoder2", "Starcoder2Config"),
+        ("swiftformer", "SwiftFormer"),
         ("t5", "T5Config"),
         ("timesformer", "TimesformerConfig"),
         ("vipllava", "VipLlavaConfig"),
