@@ -126,6 +126,7 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
         ("mamba", "MambaForCausalLM"),
         ('minicpm', 'MiniCPMForCausalLM'),
         ("rwkv", "RwkvForCausalLM"),
+        ("roc_bert", "RoCBertForPreTraining"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
 	("xlnet", "XLNetLMHeadModel"),
     ]
@@ -202,6 +203,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("reformer", "ReformerModelWithLMHead"),
         ("rembert", "RemBertForCausalLM"),
         ("roberta", "RobertaLMHeadModel"),
+        ("roc_bert", "RoCBertForCausalLM"),
         ("rwkv", "RwkvForCausalLM"),
         ("stablelm", "StableLmForCausalLM"),
         ("starcoder2", "Starcoder2ForCausalLM"),
@@ -320,6 +322,7 @@ MODEL_FOR_MASKED_LM_MAPPING_NAMES = OrderedDict(
         ("esm", "EsmForMaskedLM"),
         ("rembert", "RemBertForMaskedLM"),
         ("reformer", "ReformerForMaskedLM"),
+        ("roc_bert", "RoCBertForMaskedLM"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
     ]
 )
