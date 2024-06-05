@@ -34,12 +34,7 @@ from ...modeling_utils import PreTrainedModel
 
 from .configuration_groupvit import GroupViTConfig, GroupViTTextConfig, GroupViTVisionConfig
 
-__all__ = [
-    "GroupViTModel",
-    "GroupViTPreTrainedModel",
-    "GroupViTTextModel",
-    "GroupViTVisionModel",
-]
+
 logger = logging.get_logger(__name__)
 
 _CHECKPOINT_FOR_DOC = "nvidia/groupvit-gcc-yfcc"
@@ -1480,3 +1475,10 @@ class GroupViTModel(GroupViTPreTrainedModel):
             text_model_output=text_outputs,
             vision_model_output=vision_outputs,
         )
+
+__all__ = [
+    "GroupViTModel",
+    "GroupViTPreTrainedModel",
+    "GroupViTTextModel",
+    "GroupViTVisionModel",
+]
