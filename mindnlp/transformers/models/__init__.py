@@ -107,6 +107,7 @@ from . import (
     pegasus,
     phi,
     phi3,
+    poolformer,
     pop2piano,
     qwen2,
     qwen2_moe,
@@ -228,6 +229,7 @@ from .owlvit import *
 from .pegasus import *
 from .phi import *
 from .phi3 import *
+from .poolformer import *
 from .pop2piano import *
 from .qwen2 import *
 from .qwen2_moe import *
@@ -349,6 +351,7 @@ __all__.extend(owlvit.__all__)
 __all__.extend(pegasus.__all__)
 __all__.extend(phi.__all__)
 __all__.extend(phi3.__all__)
+__all__.extend(poolformer.__all__)
 __all__.extend(pop2piano.__all__)
 __all__.extend(qwen2.__all__)
 __all__.extend(qwen2_moe.__all__)
