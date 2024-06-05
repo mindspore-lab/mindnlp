@@ -161,7 +161,6 @@ class MvpModelTester:
 
     def create_and_check_decoder_model_past_large_inputs(self, config, inputs_dict):
         model = MvpModel(config=config).get_decoder().set_train(False)
-        print("yes")
         input_ids = inputs_dict["input_ids"]
         attention_mask = inputs_dict["attention_mask"]
         head_mask = inputs_dict["head_mask"]
