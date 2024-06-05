@@ -856,8 +856,7 @@ class MvpDecoder(MvpPreTrainedModel):
         past_key_values_length = past_key_values[0][0].shape[2] if past_key_values is not None else 0
         
         if inputs_embeds is None:
-            # print(self.embed_tokens)
-            # print(input_ids.shape)
+           
             inputs_embeds = self.embed_tokens(input_ids) * self.embed_scale
 
         attention_mask = _prepare_4d_causal_attention_mask(
@@ -1338,7 +1337,7 @@ class MvpForSequenceClassification(MvpPreTrainedModel):
             raise NotImplementedError(
                 f"Passing input embeddings is currently not supported for {self.__class__.__name__}"
             )
-        # print('before model')
+        
         outputs = self.model(
             input_ids,
             attention_mask=attention_mask,
