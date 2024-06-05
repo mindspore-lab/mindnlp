@@ -5,7 +5,7 @@ name: CI Pipe
 
 on:
   pull_request:
-    branches: [ "*" ]
+    branches: [ "master" ]
     paths:
       - 'mindnlp/**'
       - 'tests/ut/**'
@@ -14,7 +14,7 @@ on:
       - '!docs/**'
       - '.github/workflows/**'
   push:
-    branches: [ "*" ]
+    branches: [ "master" ]
     paths:
       - 'mindnlp/**'
       - '!mindnlp/dataset/**'
