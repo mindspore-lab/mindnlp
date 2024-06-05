@@ -19,10 +19,10 @@ from typing import List, Optional, Tuple, Union
 
 import mindspore
 from mindspore import nn, ops, Tensor, Parameter
-from mindnlp.utils import logging
 from mindspore.common.initializer import initializer, Normal
 import numpy as np
-from ...activations import ACT2FN, gelu
+from mindnlp.utils import logging
+from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutputWithPastAndCrossAttentions,
     BaseModelOutputWithPoolingAndCrossAttentions,
@@ -313,7 +313,7 @@ class XLMRobertaXLSelfAttention(nn.Cell):
         # Mask heads if we want to
         if head_mask is not None:
             attention_probs = attention_probs * head_mask
-        
+
         context_layer = ops.matmul(attention_probs, value_layer)
         context_layer = context_layer.permute(0, 2, 1, 3)
         new_context_layer_shape = context_layer.shape[:-2] + (self.all_head_size,)
@@ -725,7 +725,6 @@ class XLMRobertaXLModel(XLMRobertaXLPreTrainedModel):
             raise ValueError("You have to specify either input_ids or inputs_embeds")
 
         batch_size, seq_length = input_shape
-        from mindnlp.transformers import GenerationMixin
         # past_key_values_length
         past_key_values_length = past_key_values[0][0].shape[2] if past_key_values is not None else 0
 
