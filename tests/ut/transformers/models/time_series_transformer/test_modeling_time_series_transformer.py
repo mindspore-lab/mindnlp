@@ -523,7 +523,7 @@ class TimeSeriesTransformerModelIntegrationTests(unittest.TestCase):
         expected_slice = mindspore.tensor(
             [[-1.2957, -1.0280, -0.6045], [-0.7017, -0.8193, -0.3717], [-1.0449, -0.8149, 0.1405]]
         )
-        self.assertTrue(numpy.allclose(output[0, :3, :3], expected_slice, atol=TOLERANCE))
+        self.assertTrue(numpy.allclose(output[0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=TOLERANCE))
 
     def test_seq_to_seq_generation(self):
         model = TimeSeriesTransformerForPrediction.from_pretrained(
@@ -543,4 +543,4 @@ class TimeSeriesTransformerModelIntegrationTests(unittest.TestCase):
 
         expected_slice = mindspore.tensor([2825.2749, 3584.9207, 6763.9951])
         mean_prediction = outputs.sequences.mean(dim=1)
-        self.assertTrue(numpy.allclose(mean_prediction[0, -3:], expected_slice, rtol=1e-1))
+        self.assertTrue(numpy.allclose(mean_prediction[0, -3:].asnumpy(), expected_slice.asnumpy(), atol=1e-1))
