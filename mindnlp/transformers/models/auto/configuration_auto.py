@@ -92,6 +92,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("mistral", "MistralConfig"),
         ("mixtral", "MixtralConfig"),
         ("mobilevit", "MobileViTConfig"),
+        ("mobilenet_v1","MobileNetV1Config"),
         ("musicgen", "MusicgenConfig"),
         ("musicgen_melody", "MusicgenMelodyConfig"),
         ("mt5", "MT5Config"),
