@@ -50,9 +50,9 @@ class DecisionTransformerGPT2Attention(nn.Cell):
         self.config = config
         max_positions = config.max_position_embeddings
 
-        self.bias = Parameter(Tensor(ops.tril(ops.ones(max_positions, max_positions)).reshape(
-                (1, 1, max_positions, max_positions)
-            ), mindspore.bool_))
+        self.bias = ops.tril(ops.ones((max_positions, max_positions), dtype=mindspore.bool_)).view(
+                1, 1, max_positions, max_positions
+            )
         self.masked_bias = Tensor(-1e4)
 
         self.embed_dim = config.hidden_size
@@ -82,7 +82,7 @@ class DecisionTransformerGPT2Attention(nn.Cell):
 
         self.attn_dropout = nn.Dropout(p=config.attn_pdrop)
         self.resid_dropout = nn.Dropout(p=config.resid_pdrop)
-        self.is_causal = True
+        #self.is_causal = True
 
         self.pruned_heads = set()
 
@@ -118,9 +118,9 @@ class DecisionTransformerGPT2Attention(nn.Cell):
             query_length, key_length = query.shape[-2], key.shape[-2]
             causal_mask = self.bias[:, :, key_length - query_length : key_length, :key_length]
             #mask_value = torch.finfo(attn_weights.dtype).min
-            mask_value =  mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min)
+            mask_value =  float(np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min)
 
-            mask_value = mindspore.ops.full([], mask_value, dtype=attn_weights.dtype)
+            mask_value = ops.full([], mask_value, dtype=attn_weights.dtype)
             attn_weights = ops.where(causal_mask, attn_weights.to(attn_weights.dtype), mask_value)
 
         if attention_mask is not None:
@@ -131,7 +131,7 @@ class DecisionTransformerGPT2Attention(nn.Cell):
 
         # Downcast (if necessary) back to V's dtype (if in mixed-precision) -- No-Op otherwise
         #print(attn_weights,value.dtype)
-        attn_weights = attn_weights.type(value.dtype)
+        attn_weights = attn_weights.astype(value.dtype)
         #attn_weights = ops.cast(attn_weights,value.dtype)
         attn_weights = self.attn_dropout(attn_weights)
 
@@ -139,7 +139,7 @@ class DecisionTransformerGPT2Attention(nn.Cell):
         if head_mask is not None:
             attn_weights = attn_weights * head_mask
 
-        attn_output = mindspore.ops.matmul(attn_weights, value)
+        attn_output = ops.matmul(attn_weights, value)
 
         return attn_output, attn_weights
 
@@ -160,7 +160,7 @@ class DecisionTransformerGPT2Attention(nn.Cell):
             scale_factor /= float(self.layer_idx + 1)
 
         q, k = query.reshape(-1, q_seq_len, dk), key.swapaxes(-1, -2).reshape(-1, dk, k_seq_len)
-        attn_weights = mindspore.ops.baddbmm(attn_weights, q.float(), k.float(), beta=0, alpha=scale_factor)
+        attn_weights = ops.baddbmm(attn_weights, q.float(), k.float(), beta=0, alpha=scale_factor)
         attn_weights = attn_weights.reshape(bsz, num_heads, q_seq_len, k_seq_len)
 
         if not self.is_cross_attention:
@@ -169,7 +169,7 @@ class DecisionTransformerGPT2Attention(nn.Cell):
             causal_mask = self.bias[:, :, key_length - query_length : key_length, :key_length]
             #mask_value = torch.finfo(attn_weights.dtype).min
             #mindspore.Tensor(np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min))
-            mask_value = Tensor(np.finfo(dtype_to_nptype(attn_weights.dtype)).min, dtype=attn_weights.dtype)
+            mask_value = float(np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min)
             # Need to be a tensor, otherwise we get error: `RuntimeError: expected scalar type float but found double`.
             # Need to be on the same device, otherwise `RuntimeError: ..., x and y to be on the same device`
             mask_value = mindspore.Tensor(mask_value, dtype=attn_weights.dtype)
@@ -550,11 +550,6 @@ class DecisionTransformerGPT2Model(DecisionTransformerGPT2PreTrainedModel):
 
         hidden_states = self.drop(hidden_states)
         print("******")
-        #print(hidden_states)
-        # print((-1,)) #(-1,)
-        # print(input_shape[1:]) #(21,)
-        # print(mindspore.Tensor(hidden_states.shape[-1],))
-        # print((hidden_states.shape[-1],))
         #output_shape = input_shape + (hidden_states.shape[-1],)
         output_shape = (-1,) + input_shape[1:] + (hidden_states.shape[-1],)
         #output_shape = (-1,) + input_shape[1:] + (mindspore.Tensor((hidden_states.shape[-1])),)
@@ -579,29 +574,29 @@ class DecisionTransformerGPT2Model(DecisionTransformerGPT2PreTrainedModel):
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
 
-            if self.gradient_checkpointing and self.training:
-                outputs = self._gradient_checkpointing_func(
-                    block.__call__,
-                    hidden_states,
-                    None,
-                    attention_mask,
-                    head_mask[i],
-                    encoder_hidden_states,
-                    encoder_attention_mask,
-                    use_cache,
-                    output_attentions,
-                )
-            else:
-                outputs = block(
-                    hidden_states,
-                    layer_past=layer_past,
-                    attention_mask=attention_mask,
-                    head_mask=head_mask[i],
-                    encoder_hidden_states=encoder_hidden_states,
-                    encoder_attention_mask=encoder_attention_mask,
-                    use_cache=use_cache,
-                    output_attentions=output_attentions,
-                )
+            # if self.gradient_checkpointing and self.training:
+            #     outputs = self._gradient_checkpointing_func(
+            #         block.__call__,
+            #         hidden_states,
+            #         None,
+            #         attention_mask,
+            #         head_mask[i],
+            #         encoder_hidden_states,
+            #         encoder_attention_mask,
+            #         use_cache,
+            #         output_attentions,
+            #     )
+            # else:
+            outputs = block(
+                hidden_states,
+                layer_past=layer_past,
+                attention_mask=attention_mask,
+                head_mask=head_mask[i],
+                encoder_hidden_states=encoder_hidden_states,
+                encoder_attention_mask=encoder_attention_mask,
+                use_cache=use_cache,
+                output_attentions=output_attentions,
+            )
 
             hidden_states = outputs[0]
             if use_cache is True:
