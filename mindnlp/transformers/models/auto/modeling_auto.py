@@ -54,7 +54,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("bros", "BrosModel"),
         ("camembert", "CamembertModel"),
         ("codegen", "CodeGenModel"),
-        ("cogvlm","CogVLMModel"),
+        ("cogvlm", "CogVLMModel"),
         ("cpmant", "CpmAntModel"),
         ("cpmbee", "CpmBeeModel"),
         ("chatglm", "ChatGLMModel"),
@@ -64,7 +64,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("convnext", "ConvNextModel"),
         ("cvt", "CvtModel"),
         ("deberta", "DebertaModel"),
-        ('encodec', 'EncodecModel'),
+        ("encodec", "EncodecModel"),
         ("esm", "EsmModel"),
         ("ernie", "ErnieModel"),
         ("ernie_m", "ErnieMModel"),
@@ -73,6 +73,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("gpt_bigcode", "GPTBigCodeModel"),
         ("gpt", "GPTModel"),
         ("gpt2", "GPT2Model"),
+        ("gpt_neox_japanese", "GPTNeoXJapaneseModel"),
         ("gpt_pangu", "GPTPanguModel"),
         ("groupvit", "GroupViTModel"),
         ("layoutlmv2", "LayoutLMv2Model"),
@@ -80,8 +81,8 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("jetmoe", "JetMoEModel"),
         ("llama", "LlamaModel"),
         ("mamba", "MambaModel"),
-        ('mbart', 'MBartModel'),
-        ('minicpm', 'MiniCPMModel'),
+        ("mbart", "MBartModel"),
+        ("minicpm", "MiniCPMModel"),
         ("mistral", "MistralModel"),
         ("mixtral", "MixtralModel"),
         ("mobilenet_v1","MobileNetV1Model"),
@@ -105,10 +106,11 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("starcoder2", "Starcoder2Model"),
         ("t5", "T5Model"),
         ("timesformer", "TimesformerModel"),
+        ("visual_bert", "VisualBertModel"),
         ("whisper", "WhisperModel"),
         ("xclip", "XCLIPModel"),
         ("xlm-roberta", "XLMRobertaModel"),
-	("xlnet", "XLNetModel"),
+        ("xlnet", "XLNetModel"),
     ]
 )
 
@@ -125,6 +127,7 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
         ("mamba", "MambaForCausalLM"),
         ('minicpm', 'MiniCPMForCausalLM'),
         ("rwkv", "RwkvForCausalLM"),
+        ("roc_bert", "RoCBertForPreTraining"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
 	("xlnet", "XLNetLMHeadModel"),
     ]
@@ -145,16 +148,17 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         ("cpmbee", "CpmBeeForCausalLM"),
         ("deberta", "DebertaForMaskedLM"),
         ("esm", "EsmForMaskedLM"),
+        ("gpt_neox_japanese", "GPTNeoXJapaneseForCausalLM"),
         ("gpt_pangu", "GPTPanguForCausalLM"),
         ("mamba", "MambaForCausalLM"),
-        ('minicpm', 'MiniCPMForCausalLM'),
+        ("minicpm", "MiniCPMForCausalLM"),
         ("reformer", "ReformerModelWithLMHead"),
         ("rembert", "RemBertForMaskedLM"),
         ("roberta", "RobertaForMaskedLM"),
         ("rwkv", "RwkvForCausalLM"),
         ("whisper", "WhisperForConditionalGeneration"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
-	("xlnet", "XLNetLMHeadModel"),
+        ("xlnet", "XLNetLMHeadModel"),
     ]
 )
 
@@ -172,7 +176,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("bloom", "BloomForCausalLM"),
         ("camembert", "CamembertForCausalLM"),
         ("codegen", "CodeGenForCausalLM"),
-        ("cogvlm","CogVLMForCausalLM"),
+        ("cogvlm", "CogVLMForCausalLM"),
         ("cpmant", "CpmAntForCausalLM"),
         ("cpmbee", "CpmBeeForCausalLM"),
         ("falcon", "FalconForCausalLM"),
@@ -180,10 +184,11 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("gpt2", "GPT2LMHeadModel"),
         ("gpt_pangu", "GPTPanguForCausalLM"),
         ("gpt_bigcode", "GPTBigCodeForCausalLM"),
+        ("gpt_neox_japanese", "GPTNeoXJapaneseForCausalLM"),
         ("jetmoe", "JetMoEForCausalLM"),
         ("llama", "LlamaForCausalLM"),
         ("mamba", "MambaForCausalLM"),
-        ('minicpm', 'MiniCPMForCausalLM'),
+        ("minicpm", "MiniCPMForCausalLM"),
         ("mistral", "MistralForCausalLM"),
         ("mixtral", "MixtralForCausalLM"),
         ("musicgen", "MusicgenForCausalLM"),
@@ -199,12 +204,13 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("reformer", "ReformerModelWithLMHead"),
         ("rembert", "RemBertForCausalLM"),
         ("roberta", "RobertaLMHeadModel"),
+        ("roc_bert", "RoCBertForCausalLM"),
         ("rwkv", "RwkvForCausalLM"),
         ("stablelm", "StableLmForCausalLM"),
         ("starcoder2", "Starcoder2ForCausalLM"),
         ("whisper", "WhisperForCausalLM"),
         ("xlm-roberta", "XLMRobertaForCausalLM"),
-	("xlnet", "XLNetLMHeadModel"),
+        ("xlnet", "XLNetLMHeadModel"),
     ]
 )
 
@@ -317,6 +323,7 @@ MODEL_FOR_MASKED_LM_MAPPING_NAMES = OrderedDict(
         ("esm", "EsmForMaskedLM"),
         ("rembert", "RemBertForMaskedLM"),
         ("reformer", "ReformerForMaskedLM"),
+        ("roc_bert", "RoCBertForMaskedLM"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
     ]
 )
@@ -1453,7 +1460,6 @@ handling the complexities of CTC model training and usage, allowing users to foc
 and neural networks can be found in relevant literature and online resources.
 
     For more details on the available methods and functionalities of the 'AutoModelForCTC' class, refer to the documentation and code comments.
-
     """
     _model_mapping = MODEL_FOR_CTC_MAPPING
 
