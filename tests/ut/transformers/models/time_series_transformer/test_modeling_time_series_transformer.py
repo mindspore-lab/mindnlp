@@ -474,8 +474,8 @@ class TimeSeriesTransformerModelTest(ModelTesterMixin, unittest.TestCase):
 
 def prepare_batch(filename="train-batch.pt"):
     file = hf_hub_download(repo_id="hf-internal-testing/tourism-monthly-batch", filename=filename, repo_type="dataset")
-    batch = mindspore.load(file)
-    return batch
+    batch = numpy.load(file)
+    return list(batch)
 
 
 @require_mindspore
