@@ -64,6 +64,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("cvt", "CvtConfig"),
         ("deberta", "DebertaConfig"),
         ("distilbert", "DistilBertConfig"),
+        ("efficientformer", "EfficientFormerConfig"),
         ("encodec", "EncodecConfig"),
         ("esm", "EsmConfig"),
         ("falcon", "FalconConfig"),

@@ -59,6 +59,7 @@ from . import (
     deberta_v2,
     distilbert,
     efficientnet,
+    efficientformer,
     electra,
     encodec,
     esm,
@@ -182,6 +183,7 @@ from .deberta import *
 from .deberta_v2 import *
 from .distilbert import *
 from .efficientnet import *
+from .efficientformer import *
 from .electra import *
 from .encodec import *
 from .esm import *
@@ -305,6 +307,7 @@ __all__.extend(deberta.__all__)
 __all__.extend(deberta_v2.__all__)
 __all__.extend(distilbert.__all__)
 __all__.extend(efficientnet.__all__)
+__all__.extend(efficientformer.__all__)
 __all__.extend(electra.__all__)
 __all__.extend(encodec.__all__)
 __all__.extend(ernie.__all__)
