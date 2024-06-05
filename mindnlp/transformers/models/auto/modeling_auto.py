@@ -66,6 +66,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("convnext", "ConvNextModel"),
         ("cvt", "CvtModel"),
         ("deberta", "DebertaModel"),
+        ("efficientformer", "EfficientFormerModel"),
         ("encodec", "EncodecModel"),
         ("esm", "EsmModel"),
         ("ernie", "ErnieModel"),
