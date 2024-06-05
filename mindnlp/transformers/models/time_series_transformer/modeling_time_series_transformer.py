@@ -399,7 +399,7 @@ class TimeSeriesTransformerAttention(nn.Cell):
 
         # Use the `embed_dim` from the config (stored in the class) rather than `hidden_state` because `attn_output` can be
         # partitioned across GPUs when using tensor-parallelism.
-        attn_output = attn_output.reshape(bsz, tgt_len, self.embed_dim)
+        attn_output = attn_output.view(bsz, tgt_len, self.embed_dim)
 
         attn_output = self.out_proj(attn_output)
 
@@ -1266,7 +1266,7 @@ class TimeSeriesTransformerModel(TimeSeriesTransformerPreTrainedModel):
         )
         lagged_sequence = self.get_lagged_subsequences(sequence=inputs, subsequences_length=subsequences_length)
         lags_shape = lagged_sequence.shape
-        reshaped_lagged_sequence = lagged_sequence.reshape(lags_shape[0], lags_shape[1], -1)
+        reshaped_lagged_sequence = lagged_sequence.view(lags_shape[0], lags_shape[1], -1)
 
         if reshaped_lagged_sequence.shape[1] != time_feat.shape[1]:
             raise ValueError(
@@ -1714,7 +1714,7 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
             )
 
             lags_shape = lagged_sequence.shape
-            reshaped_lagged_sequence = lagged_sequence.reshape(lags_shape[0], lags_shape[1], -1)
+            reshaped_lagged_sequence = lagged_sequence.view(lags_shape[0], lags_shape[1], -1)
 
             decoder_input = ops.cat((reshaped_lagged_sequence, repeated_features[:, : k + 1]), axis=-1)
 
@@ -1733,7 +1733,7 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
         concat_future_samples = ops.cat(future_samples, axis=1)
 
         return SampleTSPredictionOutput(
-            sequences=concat_future_samples.reshape(
+            sequences=concat_future_samples.view(
                 (-1, num_parallel_samples, self.config.prediction_length) + self.target_shape,
             )
         )
