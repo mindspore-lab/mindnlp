@@ -56,6 +56,7 @@ from . import (
     cpmbee,
     cvt,
     deberta,
+    deberta_v2,
     distilbert,
     efficientnet,
     electra,
@@ -176,6 +177,7 @@ from .cpmant import *
 from .cpmbee import *
 from .cvt import *
 from .deberta import *
+from .deberta_v2 import *
 from .distilbert import *
 from .efficientnet import *
 from .electra import *
@@ -296,6 +298,7 @@ __all__.extend(cpmant.__all__)
 __all__.extend(cpmbee.__all__)
 __all__.extend(cvt.__all__)
 __all__.extend(deberta.__all__)
+__all__.extend(deberta_v2.__all__)
 __all__.extend(distilbert.__all__)
 __all__.extend(efficientnet.__all__)
 __all__.extend(electra.__all__)
