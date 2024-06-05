@@ -522,7 +522,7 @@ def assert_tensors_close(a, b, atol=1e-12, prefix=""):
     if a is None and b is None:
         return True
     try:
-        if np.allclose(a, b, atol=atol):
+        if np.allclose(a.asnumpy(), b.asnumpy(), atol=atol):
             return True
         raise
     except Exception:
