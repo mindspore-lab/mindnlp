@@ -22,9 +22,7 @@ import numpy as np
 import mindspore
 from mindspore import nn,ops
 from mindspore.common.initializer import initializer,Normal
-from mindnlp.utils import (
-    logging, 
-)
+from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
 from ...modeling_outputs import (
@@ -355,9 +353,7 @@ class MvpDecoderLayer(nn.Cell):
         output_attentions: Optional[bool] = False,
         use_cache: Optional[bool] = True,
     ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
-       
         residual = hidden_states
-
         # Self Attention
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
         self_attn_past_key_value = past_key_value[:2] if past_key_value is not None else None
@@ -479,7 +475,6 @@ class MvpPreTrainedModel(PreTrainedModel):
             module.weight.set_data(initializer(Normal(std,mean=0.0),module.weight.shape,module.weight.dtype))
             if module.bias is not None:
                 module.bias.set_data(initializer('zeros',module.bias.shape,module.bias.dtype))
-                
         elif isinstance(module, nn.Embedding):
             weight = np.random.normal(
                 0.0, std, module.weight.shape
@@ -854,11 +849,8 @@ class MvpDecoder(MvpPreTrainedModel):
 
         # past_key_values_length
         past_key_values_length = past_key_values[0][0].shape[2] if past_key_values is not None else 0
-        
         if inputs_embeds is None:
-           
             inputs_embeds = self.embed_tokens(input_ids) * self.embed_scale
-
         attention_mask = _prepare_4d_causal_attention_mask(
             attention_mask, input_shape, inputs_embeds, past_key_values_length
         )
@@ -1019,7 +1011,6 @@ class MvpModel(MvpPreTrainedModel):
         self.decoder.self_attn_prompt.requires_grad(True)
         self.decoder.cross_attn_prompt.requires_grad(True)
 
-    
     def construct(
         self,
         input_ids: mindspore.Tensor = None,
@@ -1051,14 +1042,10 @@ class MvpModel(MvpPreTrainedModel):
             decoder_input_ids = shift_tokens_right(
                 input_ids, self.config.pad_token_id, self.config.decoder_start_token_id
             )
-       
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
-        )
+        output_hidden_states = (output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states)
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-
         if encoder_outputs is None:
             encoder_outputs = self.encoder(
                 input_ids=input_ids,
@@ -1095,7 +1082,6 @@ class MvpModel(MvpPreTrainedModel):
 
         if not return_dict:
             return decoder_outputs + encoder_outputs
-        
         return Seq2SeqModelOutput(
             last_hidden_state=decoder_outputs.last_hidden_state,
             past_key_values=decoder_outputs.past_key_values,
@@ -1151,7 +1137,6 @@ class MvpForConditionalGeneration(MvpPreTrainedModel):
         self.model.set_lightweight_tuning()
         self.lm_head.requires_grad(False)
 
-    
     def construct(
         self,
         input_ids: mindspore.Tensor = None,
@@ -1213,7 +1198,6 @@ class MvpForConditionalGeneration(MvpPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            
             masked_lm_loss = ops.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
@@ -1329,7 +1313,6 @@ class MvpForSequenceClassification(MvpPreTrainedModel):
             config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-       
         if labels is not None:
             use_cache = False
 
@@ -1337,7 +1320,6 @@ class MvpForSequenceClassification(MvpPreTrainedModel):
             raise NotImplementedError(
                 f"Passing input embeddings is currently not supported for {self.__class__.__name__}"
             )
-        
         outputs = self.model(
             input_ids,
             attention_mask=attention_mask,
@@ -1354,44 +1336,33 @@ class MvpForSequenceClassification(MvpPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-        
         hidden_states = outputs[0]  # last hidden state
-        
         eos_mask = input_ids.eq(self.config.eos_token_id)
-      
         if len(ops.unique_consecutive(eos_mask.sum(1))) > 1:
             raise ValueError("All examples must have the same number of <eos> tokens.")
-        
-     
         sentence_representation = hidden_states[eos_mask, ].view(hidden_states.shape[0], -1, hidden_states.shape[-1])[:,-1,:]
         logits = self.classification_head(sentence_representation)
-
         loss = None
         if labels is not None:
             if self.config.problem_type is None:
                 if self.config.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.config.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.config.num_labels > 1 and (labels.dtype in (mindspore.int64,mindspore.int32)):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
-
             if self.config.problem_type == "regression":
-               
                 if self.config.num_labels == 1:
                     loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
                     loss = ops.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-               
                 loss = ops.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-               
                 loss = ops.binary_cross_entropy_with_logits(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[1:]
             return ((loss,) + output) if loss is not None else output
-
         return Seq2SeqSequenceClassifierOutput(
             loss=loss,
             logits=logits,
@@ -1401,23 +1372,17 @@ class MvpForSequenceClassification(MvpPreTrainedModel):
             cross_attentions=outputs.cross_attentions,
             encoder_last_hidden_state=outputs.encoder_last_hidden_state,
             encoder_hidden_states=outputs.encoder_hidden_states,
-            encoder_attentions=outputs.encoder_attentions,
-        )
-
-
+            encoder_attentions=outputs.encoder_attentions)
 
 class MvpForQuestionAnswering(MvpPreTrainedModel):
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
     def __init__(self, config):
         super().__init__(config)
-
         config.num_labels = 2
         self.num_labels = config.num_labels
-
         self.model = MvpModel(config)
         self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
-
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -1425,7 +1390,6 @@ class MvpForQuestionAnswering(MvpPreTrainedModel):
         self.model.set_lightweight_tuning()
         self.qa_outputs.requires_grad(False)
 
-    
     def construct(
         self,
         input_ids: mindspore.Tensor = None,
@@ -1458,7 +1422,6 @@ class MvpForQuestionAnswering(MvpPreTrainedModel):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if start_positions is not None and end_positions is not None:
             use_cache = False
-
         outputs = self.model(
             input_ids,
             attention_mask=attention_mask,
@@ -1475,14 +1438,11 @@ class MvpForQuestionAnswering(MvpPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-
         sequence_output = outputs[0]
-
         logits = self.qa_outputs(sequence_output)
         start_logits, end_logits = logits.split(1, axis=-1)
         start_logits = start_logits.squeeze(-1)
         end_logits = end_logits.squeeze(-1)
-
         total_loss = None
         if start_positions is not None and end_positions is not None:
             # If we are on multi-GPU, split add a dimension
@@ -1494,19 +1454,15 @@ class MvpForQuestionAnswering(MvpPreTrainedModel):
             ignored_index = start_logits.shape[1]
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
-
-            
             start_loss = ops.cross_entropy(start_logits, start_positions,ignore_index=ignored_index)
             end_loss =ops.cross_entropy(end_logits, end_positions,ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
-
         if not return_dict:
             output = (
                 start_logits,
                 end_logits,
             ) + outputs[1:]
             return ((total_loss,) + output) if total_loss is not None else output
-
         return Seq2SeqQuestionAnsweringModelOutput(
             loss=total_loss,
             start_logits=start_logits,
@@ -1520,14 +1476,12 @@ class MvpForQuestionAnswering(MvpPreTrainedModel):
             encoder_attentions=outputs.encoder_attentions,
         )
 
-
 # Copied from transformers.models.bart.modeling_bart.BartDecoderWrapper with Bart->Mvp
 class MvpDecoderWrapper(MvpPreTrainedModel):
     """
     This wrapper class is a helper class to correctly load pretrained checkpoints when the causal language model is
     used in combination with the [`EncoderDecoderModel`] framework.
     """
-
     def __init__(self, config):
         super().__init__(config)
         self.decoder = MvpDecoder(config)
@@ -1545,9 +1499,7 @@ class MvpForCausalLM(MvpPreTrainedModel):
         config.is_encoder_decoder = False
         super().__init__(config)
         self.model = MvpDecoderWrapper(config)
-
         self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
-
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -1595,7 +1547,6 @@ class MvpForCausalLM(MvpPreTrainedModel):
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-
         # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
         outputs = self.model.decoder(
             input_ids=input_ids,
@@ -1611,18 +1562,14 @@ class MvpForCausalLM(MvpPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-
         logits = self.lm_head(outputs[0])
-
         loss = None
         if labels is not None:
-           
             loss = ops.cross_entropy(logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[1:]
             return (loss,) + output if loss is not None else output
-
         return CausalLMOutputWithCrossAttentions(
             loss=loss,
             logits=logits,
@@ -1669,9 +1616,8 @@ class MvpForCausalLM(MvpPreTrainedModel):
 
 __all__=[
     "MvpForCausalLM",
-        "MvpForConditionalGeneration",
-        "MvpForQuestionAnswering",
-        "MvpForSequenceClassification",
-        "MvpModel",
-        "MvpPreTrainedModel",
-]
+    "MvpForConditionalGeneration",
+    "MvpForQuestionAnswering",
+    "MvpForSequenceClassification",
+    "MvpModel",
+    "MvpPreTrainedModel"]

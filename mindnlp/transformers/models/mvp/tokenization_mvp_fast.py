@@ -1,3 +1,4 @@
+"""
 # coding=utf-8
 # Copyright 2022 The Facebook AI Research Team Authors and The HuggingFace Inc. team.
 #
@@ -12,6 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+
 
 import json
 from typing import List, Optional, Tuple
@@ -277,5 +280,4 @@ class MvpTokenizerFast(PreTrainedTokenizerFast):
         if token_ids_1 is None:
             return len(cls + token_ids_0 + sep) * [0]
         return len(cls + token_ids_0 + sep + sep + token_ids_1 + sep) * [0]
-    
 __all__=["MvpTokenizerFast"]
