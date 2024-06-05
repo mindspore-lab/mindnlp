@@ -13,19 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """MindSpore EfficientFormer model."""
-
+# pylint: disable=consider-using-in
 import itertools
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
-import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor, Parameter
+from mindspore import nn, ops, Parameter
 from mindspore.common.initializer import Normal, initializer
 
 from mindnlp.utils import logging, ModelOutput
 from ...activations import ACT2FN
-from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithPooling, ImageClassifierOutput
+from ...modeling_outputs import BaseModelOutput, ImageClassifierOutput
 from ...modeling_utils import PreTrainedModel
 
 from .configuration_efficientformer import EfficientFormerConfig
@@ -44,6 +43,10 @@ _EXPECTED_OUTPUT_SHAPE = [1, 49, 448]
 _IMAGE_CLASS_CHECKPOINT = "snap-research/efficientformer-l1-300"
 _IMAGE_CLASS_EXPECTED_OUTPUT = "Egyptian cat"
 
+EFFICIENTFORMER_PRETRAINED_MODEL_ARCHIVE_LIST = [
+    "snap-research/efficientformer-l1-300",
+    # See all EfficientFormer models at https://huggingface.co/models?filter=efficientformer
+]
 
 class EfficientFormerPatchEmbeddings(nn.Cell):
     """
@@ -61,7 +64,8 @@ class EfficientFormerPatchEmbeddings(nn.Cell):
             kernel_size=config.downsample_patch_size,
             stride=config.downsample_stride,
             padding=config.downsample_pad,
-            has_bias=True
+            has_bias=True,
+            pad_mode="pad"
         )
         self.norm = nn.BatchNorm2d(embed_dim, eps=config.batch_norm_eps) if apply_norm else nn.Identity()
 
@@ -103,14 +107,7 @@ class EfficientFormerSelfAttention(nn.Cell):
                     attention_offsets[offset] = len(attention_offsets)
                 idxs.append(attention_offsets[offset])
         self.attention_biases = Parameter(ops.zeros(num_heads, len(attention_offsets)))
-        self.register_buffer("attention_bias_idxs", mindspore.Tensor(idxs).view(num_points, num_points))
-
-    def train(self, mode=True):
-        super().train(mode)
-        if mode and hasattr(self, "ab"):
-            del self.ab
-        else:
-            self.ab = self.attention_biases[:, self.attention_bias_idxs]
+        self.attention_bias_idxs = mindspore.Tensor(idxs).view(num_points, num_points)
 
     def construct(self, hidden_states: mindspore.Tensor, output_attentions: bool = False) -> Tuple[mindspore.Tensor]:
         batch_size, sequence_length, num_channels = hidden_states.shape
@@ -124,13 +121,11 @@ class EfficientFormerSelfAttention(nn.Cell):
 
         # set `model.to(torch_device)` won't change `self.ab.device`, if there is no follow-up `train` or `eval` call.
         # Let's do it manually here, so users won't have to do this everytime.
-        if not self.training:
-            self.ab = self.ab
         attention_probs = (ops.matmul(query_layer, key_layer.swapaxes(-2, -1))) * self.scale + (
-            self.attention_biases[:, self.attention_bias_idxs] if self.training else self.ab
+            self.attention_biases[:, self.attention_bias_idxs]
         )
 
-        attention_probs = attention_probs.softmax(axis=-1)
+        attention_probs = ops.softmax(attention_probs,axis=-1)
 
         context_layer = ops.matmul(attention_probs, value_layer).swapaxes(1, 2)
         context_layer = context_layer.reshape(batch_size, sequence_length, self.total_expanded_key_dim)
@@ -145,10 +140,10 @@ class EfficientFormerConvStem(nn.Cell):
     def __init__(self, config: EfficientFormerConfig, out_channels: int):
         super().__init__()
 
-        self.convolution1 = nn.Conv2d(config.num_channels, out_channels // 2, kernel_size=3, stride=2, padding=1,has_bias=True)
+        self.convolution1 = nn.Conv2d(config.num_channels, out_channels // 2, kernel_size=3, stride=2, padding=1,has_bias=True,pad_mode="pad")
         self.batchnorm_before = nn.BatchNorm2d(out_channels // 2, eps=config.batch_norm_eps)
 
-        self.convolution2 = nn.Conv2d(out_channels // 2, out_channels, kernel_size=3, stride=2, padding=1,has_bias=True)
+        self.convolution2 = nn.Conv2d(out_channels // 2, out_channels, kernel_size=3, stride=2, padding=1,has_bias=True,pad_mode="pad")
         self.batchnorm_after = nn.BatchNorm2d(out_channels, eps=config.batch_norm_eps)
 
         self.activation = nn.ReLU()
@@ -165,7 +160,7 @@ class EfficientFormerConvStem(nn.Cell):
 class EfficientFormerPooling(nn.Cell):
     def __init__(self, pool_size: int):
         super().__init__()
-        self.pool = nn.AvgPool2d(pool_size, stride=1, padding=pool_size // 2, count_include_pad=False)
+        self.pool = nn.AvgPool2d(pool_size, stride=1, pad_mode="pad", padding=pool_size // 2, count_include_pad=False)
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         output = self.pool(hidden_states) - hidden_states
@@ -273,7 +268,7 @@ class EfficientFormerFlat(nn.Cell):
         super().__init__()
 
     def construct(self, hidden_states: mindspore.Tensor) -> Tuple[mindspore.Tensor]:
-        hidden_states = hidden_states.flatten(2).transpose(1, 2)
+        hidden_states = hidden_states.flatten(start_dim=2).swapaxes(1, 2)
         return hidden_states
 
 

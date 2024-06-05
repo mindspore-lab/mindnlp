@@ -14,10 +14,11 @@
 # limitations under the License.
 """EfficientFormer model configuration"""
 
+from typing import List
+
 from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
 
-from typing import List
 
 
 
