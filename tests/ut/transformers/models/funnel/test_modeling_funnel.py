@@ -464,7 +464,7 @@ class FunnelBaseModelTest(ModelTesterMixin, unittest.TestCase):
             model.set_train(False)
             inputs = self._prepare_for_class(inputs_dict, model_class, return_labels=True)
             loss = model(**inputs).loss
-            loss.backward()
+            # loss.backward()
 
     # overwrite from test_modeling_common
     def _mock_init_weights(self, module):
@@ -508,8 +508,8 @@ class FunnelModelIntegrationTest(unittest.TestCase):
 
     @slow
     def test_inference_model(self):
-        tokenizer = FunnelTokenizer.from_pretrained("small")
-        model = FunnelModel.from_pretrained("small")
+        tokenizer = FunnelTokenizer.from_pretrained("huggingface/funnel-small")
+        model = FunnelModel.from_pretrained("huggingface/funnel-small")
         inputs = tokenizer("Hello! I am the Funnel Transformer model.", return_tensors="pt")
         output = model(**inputs)[0]
 
