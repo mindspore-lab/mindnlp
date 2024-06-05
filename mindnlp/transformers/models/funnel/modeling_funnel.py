@@ -711,7 +711,7 @@ class FunnelPreTrainedModel(PreTrainedModel):
                 cell.weight.set_data(initializer(Normal(std),
                                                     cell.weight.shape, cell.weight.dtype))
             if getattr(cell, "bias", None) is not None:
-                cell.bias[:] = 0.0;
+                cell.bias[:] = 0.0
         elif classname == "FunnelRelMultiheadAttention":
             minval = Tensor(0.0, mindspore.float32)
             maxval = Tensor(self.config.initializer_range, mindspore.float32)
