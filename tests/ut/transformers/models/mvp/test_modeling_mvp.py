@@ -369,7 +369,7 @@ class MvpHeadTests(unittest.TestCase):
             mindspore.tensor([0, 11349, 495, 4040, 571, 2]),
         ]
         for ex, desired_result in zip(examples, fairseq_results):
-            mvp_toks = tokenizer.encode(ex, return_tensors="pt").squeeze()
+            mvp_toks = tokenizer.encode(ex, return_tensors="ms").squeeze()
             assert_tensors_close(desired_result.long(), mvp_toks, prefix=ex)
 
     # @require_mindspore
