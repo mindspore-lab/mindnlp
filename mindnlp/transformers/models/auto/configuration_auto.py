@@ -555,7 +555,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("table-transformer", "Table Transformer"),
         ("tapas", "TAPAS"),
         ("tapex", "TAPEX"),
-        ("time_series_transformer", "Time Series Transformer"),
+        ("time_series_transformer", "TimeSeriesTransformer"),
         ("timesformer", "TimeSformer"),
         ("timm_backbone", "TimmBackbone"),
         ("trajectory_transformer", "Trajectory Transformer"),

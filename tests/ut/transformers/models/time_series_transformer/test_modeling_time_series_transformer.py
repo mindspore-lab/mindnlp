@@ -510,7 +510,7 @@ class TimeSeriesTransformerModelIntegrationTests(unittest.TestCase):
         )
         self.assertTrue(numpy.allclose(output[0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=TOLERANCE))
 
-    @unittest.skip('Mindspore cannot load torch .pt file.')
+    # @unittest.skip('Mindspore cannot load torch .pt file.')
     def test_inference_head(self):
         model = TimeSeriesTransformerForPrediction.from_pretrained(
             "huggingface/time-series-transformer-tourism-monthly", from_pt = True
