@@ -18,7 +18,7 @@ import inspect
 import tempfile
 import unittest
 import numpy
-
+import mindnlp
 from huggingface_hub import hf_hub_download
 from parameterized import parameterized
 from mindnlp.utils.testing_utils import (
@@ -474,8 +474,8 @@ class TimeSeriesTransformerModelTest(ModelTesterMixin, unittest.TestCase):
 
 def prepare_batch(filename="train-batch.pt"):
     file = hf_hub_download(repo_id="hf-internal-testing/tourism-monthly-batch", filename=filename, repo_type="dataset")
-    batch = numpy.load(file)
-    return list(batch)
+    batch = mindnlp.load(file)
+    return batch
 
 
 @require_mindspore
