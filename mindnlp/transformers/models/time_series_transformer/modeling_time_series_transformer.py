@@ -22,6 +22,7 @@ import numpy as np
 import mindspore
 from mindspore import nn, ops
 from mindnlp.utils import logging
+from mindspore.common.initializer import initializer, Normal
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
 from ...modeling_outputs import (
@@ -141,7 +142,7 @@ class TimeSeriesMeanScaler(nn.Cell):
         # If `default_scale` is provided, we use it, otherwise we use the scale
         # of the batch.
         if self.default_scale is None:
-            batch_sum = ops.sum(ts_sum, dim=0)
+            batch_sum = ts_sum.sum(axis=0)
             batch_observations = ops.clamp(num_observed.sum(0), min=1)
             default_scale = ops.squeeze(batch_sum / batch_observations)
         else:
@@ -155,7 +156,7 @@ class TimeSeriesMeanScaler(nn.Cell):
         scaled_data = data / scale
 
         if not self.keepdim:
-            scale = scale.squeeze(dim=self.dim)
+            scale = ops.squeeze(scale,axis=self.dim)
 
         return scaled_data, ops.zeros_like(scale), scale
 
@@ -185,7 +186,7 @@ class TimeSeriesNOPScaler(nn.Cell):
         return data, loc, scale
 
 
-def nll(input, target: mindspore.Tensor) -> mindspore.Tensor:
+def nll(input: nn.probability.distribution.distribution, target: mindspore.Tensor) -> mindspore.Tensor:
     """
     Computes the negative log likelihood loss from input distribution with respect to target.
     """
@@ -210,10 +211,10 @@ def weighted_average(input_tensor: mindspore.Tensor, weights: Optional[mindspore
     """
     if weights is not None:
         weighted_tensor = ops.where(weights != 0, input_tensor * weights, ops.zeros_like(input_tensor))
-        sum_weights = ops.clamp(weights.sum(dim=dim) if dim else weights.sum(), min=1.0)
-        return (weighted_tensor.sum(dim=dim) if dim else weighted_tensor.sum()) / sum_weights
+        sum_weights = ops.clamp(weights.sum(axis=dim) if dim else weights.sum(), min=1.0)
+        return (weighted_tensor.sum(axis=dim) if dim else weighted_tensor.sum()) / sum_weights
     else:
-        return input_tensor.mean(dim=dim)
+        return input_tensor.mean(axis=dim)
 
 
 # Copied from transformers.models.marian.modeling_marian.MarianSinusoidalPositionalEmbedding with Marian->TimeSeries
@@ -236,13 +237,14 @@ class TimeSeriesSinusoidalPositionalEmbedding(nn.Embedding):
         )
         out.requires_grad = False  # set early to avoid an error in pytorch-1.8+
         sentinel = dim // 2 if dim % 2 == 0 else (dim // 2) + 1
-        out[:, 0:sentinel] = mindspore.Tensor(np.sin(position_enc[:, 0::2]), mindspore.float32)
-        out[:, sentinel:] = mindspore.Tensor(np.cos(position_enc[:, 1::2]), mindspore.float32)
+        out[:, 0:sentinel] = mindspore.Tensor(np.sin(position_enc[:, 0::2]))
+        out[:, sentinel:] = mindspore.Tensor(np.cos(position_enc[:, 1::2]))
         return out
 
     def construct(self, input_ids_shape, past_key_values_length: int = 0) -> mindspore.Tensor:
         """`input_ids_shape` is expected to be [bsz x seqlen]."""
-        bsz, seq_len = input_ids_shape[:2]
+        # bsz, seq_len = input_ids_shape[:2]
+        seq_len = input_ids_shape[1]
         positions = ops.arange(
             past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
         )
@@ -341,8 +343,8 @@ class TimeSeriesTransformerAttention(nn.Cell):
 
         proj_shape = (bsz * self.num_heads, -1, self.head_dim)
         query_states = self._shape(query_states, tgt_len, bsz).view(*proj_shape)
-        key_states = key_states.reshape(*proj_shape)
-        value_states = value_states.reshape(*proj_shape)
+        key_states = key_states.view(*proj_shape)
+        value_states = value_states.view(*proj_shape)
 
         src_len = key_states.shape[1]
         attn_weights = ops.bmm(query_states, key_states.swapaxes(1, 2))
@@ -416,13 +418,13 @@ class TimeSeriesTransformerEncoderLayer(nn.Cell):
             dropout=config.attention_dropout,
             config=config,
         )
-        self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim)
+        self.self_attn_layer_norm = nn.LayerNorm([self.embed_dim])
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
         self.fc1 = nn.Dense(self.embed_dim, config.encoder_ffn_dim)
         self.fc2 = nn.Dense(config.encoder_ffn_dim, self.embed_dim)
-        self.final_layer_norm = nn.LayerNorm(self.embed_dim)
+        self.final_layer_norm = nn.LayerNorm([self.embed_dim])
 
     def construct(
             self,
@@ -462,7 +464,7 @@ class TimeSeriesTransformerEncoderLayer(nn.Cell):
         hidden_states = self.final_layer_norm(hidden_states)
 
         if hidden_states.dtype == mindspore.float16 and (ops.isinf(hidden_states).any() or ops.isnan(hidden_states).any()):
-            clamp_value = np.finfo(hidden_states.dtype).max - 1000
+            clamp_value = np.finfo(mindspore.dtype_to_nptype(hidden_states.dtype)).max - 1000
             hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         outputs = (hidden_states,)
@@ -497,7 +499,7 @@ class TimeSeriesTransformerDecoderLayer(nn.Cell):
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
 
-        self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim)
+        self.self_attn_layer_norm = nn.LayerNorm([self.embed_dim])
         self.encoder_attn = TIME_SERIES_TRANSFORMER_ATTENTION_CLASSES[config._attn_implementation](
             self.embed_dim,
             config.decoder_attention_heads,
@@ -505,10 +507,10 @@ class TimeSeriesTransformerDecoderLayer(nn.Cell):
             is_decoder=True,
             config=config,
         )
-        self.encoder_attn_layer_norm = nn.LayerNorm(self.embed_dim)
+        self.encoder_attn_layer_norm = nn.LayerNorm([self.embed_dim])
         self.fc1 = nn.Dense(self.embed_dim, config.decoder_ffn_dim)
         self.fc2 = nn.Dense(config.decoder_ffn_dim, self.embed_dim)
-        self.final_layer_norm = nn.LayerNorm(self.embed_dim)
+        self.final_layer_norm = nn.LayerNorm([self.embed_dim])
 
     def construct(
             self,
@@ -609,18 +611,21 @@ class TimeSeriesTransformerPreTrainedModel(PreTrainedModel):
     def _init_weights(self, module):
         std = self.config.init_std
         if isinstance(module, nn.Dense):
-            module.weight.set_data(mindspore.Tensor(np.random.normal(
-                0.0, std, module.weight.shape), dtype=module.weight.dtype))
+            module.weight.set_data(initializer(Normal(std),
+                                             module.weight.shape,
+                                             module.weight.dtype))
             if module.bias is not None:
-                module.bias.set_data(mindspore.common.initializer.initializer(
-                    "zeros", module.bias.shape, module.bias.dtype))
+                module.bias.set_data(initializer(
+                    'zeros', module.bias.shape, module.bias.dtype))
         elif isinstance(module, TimeSeriesSinusoidalPositionalEmbedding):
             pass
         elif isinstance(module, nn.Embedding):
-            module.weight.set_data(mindspore.Tensor(np.random.normal(
-                0.0, std, module.weight.shape), dtype=module.weight.dtype))
+            module.weight.set_data(initializer(Normal(std),
+                                                      module.weight.shape,
+                                                      module.weight.dtype))
+
             if module.padding_idx is not None:
-                module.weight.data[module.padding_idx] = mindspore.common.initializer.initializer(
+                module.weight.data[module.padding_idx] = initializer(
                     "zeros", module.weight.data[module.padding_idx].shape, module.weight.dtype)
 
 TIME_SERIES_TRANSFORMER_START_DOCSTRING = r"""
@@ -816,7 +821,7 @@ class TimeSeriesTransformerEncoder(TimeSeriesTransformerPreTrainedModel):
             config.context_length + config.prediction_length, config.d_model
         )
         self.layers = nn.CellList([TimeSeriesTransformerEncoderLayer(config) for _ in range(config.encoder_layers)])
-        self.layernorm_embedding = nn.LayerNorm(config.d_model)
+        self.layernorm_embedding = nn.LayerNorm([config.d_model])
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
@@ -952,7 +957,7 @@ class TimeSeriesTransformerDecoder(TimeSeriesTransformerPreTrainedModel):
             config.context_length + config.prediction_length, config.d_model
         )
         self.layers = nn.CellList([TimeSeriesTransformerDecoderLayer(config) for _ in range(config.decoder_layers)])
-        self.layernorm_embedding = nn.LayerNorm(config.d_model)
+        self.layernorm_embedding = nn.LayerNorm([config.d_model])
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
@@ -1253,8 +1258,8 @@ class TimeSeriesTransformerModel(TimeSeriesTransformerPreTrainedModel):
         if static_categorical_features is not None:
             embedded_cat = self.embedder(static_categorical_features)
             static_feat = ops.cat((embedded_cat, static_feat), axis=1)
-        expanded_static_feat = static_feat.unsqueeze(1).expand(-1, time_feat.shape[1], -1)
-
+        expanded_static_feat = static_feat.unsqueeze(
+            1).broadcast_to((-1, time_feat.shape[1], -1))
         # all features
         features = ops.cat((expanded_static_feat, time_feat), axis=-1)
 
@@ -1547,7 +1552,7 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
             if len(self.target_shape) == 0:
                 loss_weights = future_observed_mask
             else:
-                loss_weights, _ = future_observed_mask.min(dim=-1, keepdim=False)
+                loss_weights, _ = future_observed_mask.min(axis=-1, keepdims=False)
 
             prediction_loss = weighted_average(loss, weights=loss_weights)
 
@@ -1689,18 +1694,19 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
         static_feat = outputs.static_features
 
         num_parallel_samples = self.config.num_parallel_samples
-        repeated_loc = loc.repeat_interleave(repeats=num_parallel_samples, dim=0)
-        repeated_scale = scale.repeat_interleave(repeats=num_parallel_samples, dim=0)
+        repeated_loc = loc.repeat_interleave(repeats=num_parallel_samples, axis=0)
+        repeated_scale = scale.repeat_interleave(repeats=num_parallel_samples, axis=0)
 
         repeated_past_values = (
             past_values.repeat_interleave(repeats=num_parallel_samples, dim=0) - repeated_loc
         ) / repeated_scale
 
-        expanded_static_feat = static_feat.unsqueeze(1).expand(-1, future_time_features.shape[1], -1)
+        expanded_static_feat = static_feat.unsqueeze(
+            1).broadcast_to((-1, future_time_features.shape[1], -1))
         features = ops.cat((expanded_static_feat, future_time_features), axis=-1)
-        repeated_features = features.repeat_interleave(repeats=num_parallel_samples, dim=0)
+        repeated_features = features.repeat_interleave(repeats=num_parallel_samples, axis=0)
 
-        repeated_enc_last_hidden = enc_last_hidden.repeat_interleave(repeats=num_parallel_samples, dim=0)
+        repeated_enc_last_hidden = enc_last_hidden.repeat_interleave(repeats=num_parallel_samples, axis=0)
 
         future_samples = []
 

@@ -542,5 +542,5 @@ class TimeSeriesTransformerModelIntegrationTests(unittest.TestCase):
         self.assertEqual(outputs.sequences.shape, expected_shape)
 
         expected_slice = mindspore.tensor([2825.2749, 3584.9207, 6763.9951])
-        mean_prediction = outputs.sequences.mean(dim=1)
+        mean_prediction = outputs.sequences.mean(axis=1)
         self.assertTrue(numpy.allclose(mean_prediction[0, -3:].asnumpy(), expected_slice.asnumpy(), atol=1e-1))
