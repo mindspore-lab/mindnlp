@@ -53,6 +53,7 @@ from . import (
     convnext,
     cpm,
     cpmant,
+    ctrl,
     cpmbee,
     cvt,
     deberta,
@@ -175,6 +176,7 @@ from .cogvlm import *
 from .convbert import *
 from .convnext import *
 from .cpm import *
+from .ctrl import *
 from .cpmant import *
 from .cpmbee import *
 from .cvt import *
@@ -298,6 +300,7 @@ __all__.extend(cogvlm.__all__)
 __all__.extend(convbert.__all__)
 __all__.extend(convnext.__all__)
 __all__.extend(cpm.__all__)
+__all__.extend(ctrl.__all__)
 __all__.extend(cpmant.__all__)
 __all__.extend(cpmbee.__all__)
 __all__.extend(cvt.__all__)
