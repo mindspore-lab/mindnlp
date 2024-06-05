@@ -125,6 +125,7 @@ from . import (
     timesformer,
     tinybert,
     vipllava,
+    visual_bert,
     vit,
     wav2vec2,
     wav2vec2_with_lm,
@@ -244,6 +245,7 @@ from .tinybert import *
 from .t5 import *
 from .timesformer import *
 from .vipllava import *
+from .visual_bert import *
 from .vit import *
 from .whisper import *
 from .wav2vec2 import *
@@ -363,6 +365,7 @@ __all__.extend(t5.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
 __all__.extend(vipllava.__all__)
+__all__.extend(visual_bert.__all__)
 __all__.extend(vit.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)

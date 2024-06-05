@@ -105,6 +105,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("starcoder2", "Starcoder2Model"),
         ("t5", "T5Model"),
         ("timesformer", "TimesformerModel"),
+        ("visual_bert", "VisualBertModel"),
         ("whisper", "WhisperModel"),
         ("xclip", "XCLIPModel"),
         ("xlm-roberta", "XLMRobertaModel"),
