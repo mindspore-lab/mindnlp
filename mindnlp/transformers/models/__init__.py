@@ -18,6 +18,7 @@ Models init
 from . import (
     albert,
     align,
+    canine,
     altclip,
     audio_spectrogram_transformer,
     auto,
@@ -149,7 +150,7 @@ from . import (
     xlm_roberta,
     xlnet,
 )
-
+from .canine import *
 from .albert import *
 from .align import *
 from .altclip import *
@@ -371,6 +372,7 @@ __all__.extend(mobilevit.__all__)
 __all__.extend(mpnet.__all__)
 __all__.extend(mpt.__all__)
 __all__.extend(musicgen.__all__)
+__all__.extend(canine.__all__)
 __all__.extend(musicgen_melody.__all__)
 __all__.extend(mvp.__all__)
 __all__.extend(nezha.__all__)
