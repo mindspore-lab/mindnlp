@@ -21,7 +21,7 @@ from typing import List, Optional, Tuple, Union
 
 import mindspore
 from mindspore import nn ,ops,Parameter
-from mindspore.common.initializer import initializer, Normal,Zero
+from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import (
     ModelOutput,
@@ -1206,7 +1206,7 @@ class GitForCausalLM(GitPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], CausalLMOutputWithPast]:
-        
+
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if labels is not None:
             use_cache = False
