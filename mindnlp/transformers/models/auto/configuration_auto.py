@@ -111,6 +111,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("starcoder2", "Starcoder2Config"),
         ("swiftformer", "SwiftFormerConfig"),
         ("t5", "T5Config"),
+        ("time_series_transformer", "TimeSeriesTransformerConfig"),
         ("timesformer", "TimesformerConfig"),
         ("vipllava", "VipLlavaConfig"),
         ("visual_bert", "VisualBertConfig"),

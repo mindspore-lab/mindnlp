@@ -132,6 +132,7 @@ from . import (
     starcoder2,
     swiftformer,
     t5,
+    time_series_transformer,
     timesformer,
     tinybert,
     vipllava,
@@ -263,6 +264,7 @@ from .starcoder2 import *
 from .swiftformer import *
 from .tinybert import *
 from .t5 import *
+from .time_series_transformer import *
 from .timesformer import *
 from .vipllava import *
 from .visual_bert import *
@@ -392,6 +394,7 @@ __all__.extend(squeezebert.__all__)
 __all__.extend(starcoder2.__all__)
 __all__.extend(swiftformer.__all__)
 __all__.extend(t5.__all__)
+__all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
 __all__.extend(vipllava.__all__)

@@ -108,6 +108,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("starcoder2", "Starcoder2Model"),
         ("swiftformer","SwiftFormerModel"),
         ("t5", "T5Model"),
+        ("time_series_transformer", "TimeSeriesTransformerModel"),
         ("timesformer", "TimesformerModel"),
         ("visual_bert", "VisualBertModel"),
         ("whisper", "WhisperModel"),
