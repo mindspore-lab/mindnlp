@@ -24,6 +24,11 @@ from mindspore import nn, ops, Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.modules.functional import finfo
+from mindnlp.utils import (
+    DUMMY_INPUTS,
+    DUMMY_MASK,
+    logging,
+)
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     MoEModelOutput,
@@ -33,11 +38,6 @@ from ...modeling_outputs import (
 )
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import ALL_LAYERNORM_LAYERS, find_pruneable_heads_and_indices, prune_linear_layer
-from mindnlp.utils import (
-    DUMMY_INPUTS,
-    DUMMY_MASK,
-    logging,
-)
 from .configuration_switch_transformers import SwitchTransformersConfig
 
 
