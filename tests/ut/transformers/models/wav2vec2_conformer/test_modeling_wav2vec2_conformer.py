@@ -963,7 +963,7 @@ class Wav2Vec2ConformerModelIntegrationTest(unittest.TestCase):
             model.config.mask_time_length,
             min_masks=2,
         )
-        mask_time_indices = ops.from_numpy(mask_time_indices)
+        mask_time_indices = Tensor.from_numpy(mask_time_indices)
 
         outputs = model(
             inputs_dict.input_values,
