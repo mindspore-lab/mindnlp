@@ -900,7 +900,7 @@ class Wav2Vec2ConformerModelIntegrationTest(unittest.TestCase):
 
         input_speech = self._load_datasamples(2)
 
-        inputs = processor(input_speech, return_tensors="pt", padding=True)
+        inputs = processor(input_speech, return_tensors="ms", padding=True)
 
         input_values = inputs.input_values
 
@@ -925,7 +925,7 @@ class Wav2Vec2ConformerModelIntegrationTest(unittest.TestCase):
 
         input_speech = self._load_datasamples(2)
 
-        inputs = processor(input_speech, return_tensors="pt", padding=True)
+        inputs = processor(input_speech, return_tensors="ms", padding=True)
 
         input_values = inputs.input_values
 
@@ -949,7 +949,7 @@ class Wav2Vec2ConformerModelIntegrationTest(unittest.TestCase):
         )
         input_speech = self._load_datasamples(2)
 
-        inputs_dict = feature_extractor(input_speech, return_tensors="pt", padding=True)
+        inputs_dict = feature_extractor(input_speech, return_tensors="ms", padding=True)
 
         batch_size = inputs_dict["input_values"].shape[0]
         feature_seq_length = int(model._get_feat_extract_output_lengths(inputs_dict["input_values"].shape[1]))
