@@ -113,6 +113,8 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         # ("upernet", "SegformerImageProcessor"),
         ("van", "ConvNextImageProcessor"),
         ("videomae", "VideoMAEImageProcessor"),
+        ("vilt", "ViltImageProcessor"),
+        ("videomae", "VideoMAEImageProcessor"),
         # ("vilt", "ViltImageProcessor"),
         ("vipllava", "CLIPImageProcessor"),
         ("vit", "ViTImageProcessor"),
