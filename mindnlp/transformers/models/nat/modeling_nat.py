@@ -21,12 +21,12 @@ from typing import Optional, Tuple, Union
 import mindspore
 from mindspore import nn, ops
 
-from ....ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
+from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
 from mindnlp.utils import (
     ModelOutput,
     logging,
 )
-from ....utils.backbone_utils import BackboneMixin
+from ...backbone_utils import BackboneMixin
 from .configuration_nat import NatConfig
 
 
