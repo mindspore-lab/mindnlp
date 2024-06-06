@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops
+from mindspore import nn, ops, Parameter
 
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
 from mindnlp.utils import (
