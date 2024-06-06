@@ -23,9 +23,6 @@ import mindspore
 from mindspore import nn ,ops,Parameter, Tensor
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.utils import logging
-from mindnlp.utils import ModelOutput
-
 from mindnlp.utils import (
     ModelOutput,
     logging
@@ -521,7 +518,7 @@ class GitPreTrainedModel(PreTrainedModel):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
             if cell.padding_idx:
                 weight[cell.padding_idx] = 0
-            
+
             cell.weight.set_data(Tensor(weight, cell.weight.dtype))
         elif isinstance(cell, nn.LayerNorm):
             cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
