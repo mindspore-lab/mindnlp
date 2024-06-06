@@ -1160,7 +1160,7 @@ class Wav2Vec2ConformerPreTrainedModel(PreTrainedModel):
         def _conv_out_length(input_length, kernel_size, stride):
             # 1D convolutional layer output length formula taken
             # from https://pyops.org/docs/stable/generated/ops.nn.Conv1d.html
-            return ops.div(input_length - kernel_size, stride, rounding_mode="floor") + 1
+            return (input_length - kernel_size) // stride + 1
 
         for kernel_size, stride in zip(self.config.conv_kernel, self.config.conv_stride):
             input_lengths = _conv_out_length(input_lengths, kernel_size, stride)
