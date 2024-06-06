@@ -24,5 +24,3 @@ pyctcdecode
 pytesseract
 gensim
 evaluate
-natten
-torch
