@@ -541,8 +541,8 @@ class GitPreTrainedModel(PreTrainedModel):
                 weight[cell.padding_idx] = 0
             cell.weight.set_data(weight)
         elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer(One(), cell.weight.shape, cell.weight.dtype))
-            cell.beta.set_data(initializer(Zero(), cell.beta.shape, cell.beta.dtype))
+            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPVisionEmbeddings with CLIP->Git
