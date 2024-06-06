@@ -71,6 +71,7 @@ from . import (
     chatglm,
     chatglm2,
     chatglm3,
+    funnel,
     gemma,
     git,
     gpt,
@@ -128,10 +129,12 @@ from . import (
     seamless_m4t,
     seamless_m4t_v2,
     segformer,
+    speech_encoder_decoder,
     stablelm,
     squeezebert,
     starcoder2,
     swiftformer,
+    switch_transformers,
     t5,
     timesformer,
     tinybert,
@@ -203,6 +206,7 @@ from .ernie_m import *
 from .chatglm import *
 from .chatglm2 import *
 from .chatglm3 import *
+from .funnel import *
 from .gemma import *
 from .git import *
 from .gpt import *
@@ -260,10 +264,12 @@ from .sam import *
 from .seamless_m4t import *
 from .seamless_m4t_v2 import *
 from .segformer import *
+from .speech_encoder_decoder import *
 from .stablelm import *
 from .squeezebert import *
 from .starcoder2 import *
 from .swiftformer import *
+from .switch_transformers import *
 from .tinybert import *
 from .t5 import *
 from .timesformer import *
@@ -333,6 +339,7 @@ __all__.extend(ernie.__all__)
 __all__.extend(ernie_m.__all__)
 __all__.extend(esm.__all__)
 __all__.extend(chatglm.__all__)
+__all__.extend(funnel.__all__)
 __all__.extend(chatglm2.__all__)
 __all__.extend(chatglm3.__all__)
 __all__.extend(gpt.__all__)
@@ -392,10 +399,12 @@ __all__.extend(sam.__all__)
 __all__.extend(seamless_m4t.__all__)
 __all__.extend(seamless_m4t_v2.__all__)
 __all__.extend(segformer.__all__)
+__all__.extend(speech_encoder_decoder.__all__)
 __all__.extend(stablelm.__all__)
 __all__.extend(squeezebert.__all__)
 __all__.extend(starcoder2.__all__)
 __all__.extend(swiftformer.__all__)
+__all__.extend(switch_transformers.__all__)
 __all__.extend(t5.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
