@@ -957,7 +957,6 @@ class Wav2Vec2ConformerModelIntegrationTest(unittest.TestCase):
 
         features_shape = (batch_size, feature_seq_length)
 
-        ops.manual_seed(0)
         mask_time_indices = _compute_mask_indices(
             features_shape,
             model.config.mask_time_prob,
