@@ -109,6 +109,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("swiftformer","SwiftFormerModel"),
         ("t5", "T5Model"),
         ("timesformer", "TimesformerModel"),
+        ("videomae", "VideoMAEModel"),
         ("visual_bert", "VisualBertModel"),
         ("whisper", "WhisperModel"),
         ("xclip", "XCLIPModel"),
@@ -132,6 +133,7 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
         ("minicpm", "MiniCPMForCausalLM"),
         ("rwkv", "RwkvForCausalLM"),
         ("roc_bert", "RoCBertForPreTraining"),
+        ("videomae", "VideoMAEForPreTraining"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
         ("xlnet", "XLNetLMHeadModel"),
     ]

@@ -112,6 +112,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("swiftformer", "SwiftFormer"),
         ("t5", "T5Config"),
         ("timesformer", "TimesformerConfig"),
+        ("videomae", "VideoMAEConfig"),
         ("vipllava", "VipLlavaConfig"),
         ("visual_bert", "VisualBertConfig"),
         ("wav2vec2", "Wav2Vec2Config"),
