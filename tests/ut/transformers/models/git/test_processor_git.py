@@ -19,13 +19,13 @@ import numpy as np
 import pytest
 
 from mindnlp.utils.testing_utils import require_vision
-from mindnlp.utils import is_vision_available 
+from mindnlp.utils import is_vision_available
 
 
 if is_vision_available():
     from PIL import Image
 
-    from mindnlp.transformers import AutoProcessor, BertTokenizer, CLIPImageProcessor, PreTrainedTokenizerFast
+    from mindnlp.transformers import AutoProcessor, BertTokenizer, CLIPImageProcessor, GitProcessor, PreTrainedTokenizerFast
 
 
 @require_vision

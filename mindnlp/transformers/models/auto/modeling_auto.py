@@ -74,6 +74,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("falcon", "FalconModel"),
         ("funnel", ("FunnelModel", "FunnelBaseModel")),
         ("gemma", "GemmaModel"),
+        ("git", "GitModel"),
         ("gpt_bigcode", "GPTBigCodeModel"),
         ("gpt", "GPTModel"),
         ("gpt2", "GPT2Model"),
