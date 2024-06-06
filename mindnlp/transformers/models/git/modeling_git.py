@@ -554,7 +554,7 @@ class GitVisionEmbeddings(nn.Cell):
         self.image_size = config.image_size
         self.patch_size = config.patch_size
 
-        self.class_embedding = Parameter(initializer(Normal(0.02), [self.embed_dim]),'class_embedding') 
+        self.class_embedding = Parameter(initializer(Normal(0.02), [self.embed_dim]),'class_embedding')
 
         self.patch_embedding = nn.Conv2d(
             in_channels=config.num_channels,
