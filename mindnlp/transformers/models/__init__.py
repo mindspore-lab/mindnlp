@@ -48,11 +48,13 @@ from . import (
     camembert,
     clip,
     codegen,
+    cohere,
     cogvlm,
     convbert,
     convnext,
     cpm,
     cpmant,
+    ctrl,
     cpmbee,
     cvt,
     deberta,
@@ -60,6 +62,7 @@ from . import (
     decision_transformer,
     distilbert,
     efficientnet,
+    efficientformer,
     electra,
     encodec,
     esm,
@@ -100,7 +103,9 @@ from . import (
     mpt,
     musicgen,
     musicgen_melody,
+    mvp,
     nezha,
+    nystromformer,
     olmo,
     openelm,
     opt,
@@ -125,10 +130,12 @@ from . import (
     stablelm,
     squeezebert,
     starcoder2,
+    swiftformer,
     t5,
     timesformer,
     tinybert,
     vipllava,
+    vision_text_dual_encoder,
     visual_bert,
     vit,
     wav2vec2,
@@ -172,10 +179,12 @@ from .byt5 import *
 from .camembert import *
 from .clip import *
 from .codegen import *
+from .cohere import *
 from .cogvlm import *
 from .convbert import *
 from .convnext import *
 from .cpm import *
+from .ctrl import *
 from .cpmant import *
 from .cpmbee import *
 from .cvt import *
@@ -184,6 +193,7 @@ from .deberta_v2 import *
 from .decision_transformer import *
 from .distilbert import *
 from .efficientnet import *
+from .efficientformer import *
 from .electra import *
 from .encodec import *
 from .esm import *
@@ -224,7 +234,9 @@ from .mpnet import *
 from .mpt import *
 from .musicgen import *
 from .musicgen_melody import *
+from .mvp import *
 from .nezha import *
+from .nystromformer import *
 from .olmo import *
 from .openelm import *
 from .opt import *
@@ -249,10 +261,12 @@ from .segformer import *
 from .stablelm import *
 from .squeezebert import *
 from .starcoder2 import *
+from .swiftformer import *
 from .tinybert import *
 from .t5 import *
 from .timesformer import *
 from .vipllava import *
+from .vision_text_dual_encoder import *
 from .visual_bert import *
 from .vit import *
 from .whisper import *
@@ -296,10 +310,12 @@ __all__.extend(byt5.__all__)
 __all__.extend(camembert.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(codegen.__all__)
+__all__.extend(cohere.__all__)
 __all__.extend(cogvlm.__all__)
 __all__.extend(convbert.__all__)
 __all__.extend(convnext.__all__)
 __all__.extend(cpm.__all__)
+__all__.extend(ctrl.__all__)
 __all__.extend(cpmant.__all__)
 __all__.extend(cpmbee.__all__)
 __all__.extend(cvt.__all__)
@@ -308,6 +324,7 @@ __all__.extend(deberta_v2.__all__)
 __all__.extend(decision_transformer.__all__)
 __all__.extend(distilbert.__all__)
 __all__.extend(efficientnet.__all__)
+__all__.extend(efficientformer.__all__)
 __all__.extend(electra.__all__)
 __all__.extend(encodec.__all__)
 __all__.extend(ernie.__all__)
@@ -348,7 +365,9 @@ __all__.extend(mpnet.__all__)
 __all__.extend(mpt.__all__)
 __all__.extend(musicgen.__all__)
 __all__.extend(musicgen_melody.__all__)
+__all__.extend(mvp.__all__)
 __all__.extend(nezha.__all__)
+__all__.extend(nystromformer.__all__)
 __all__.extend(olmo.__all__)
 __all__.extend(openelm.__all__)
 __all__.extend(opt.__all__)
@@ -373,10 +392,12 @@ __all__.extend(segformer.__all__)
 __all__.extend(stablelm.__all__)
 __all__.extend(squeezebert.__all__)
 __all__.extend(starcoder2.__all__)
+__all__.extend(swiftformer.__all__)
 __all__.extend(t5.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
 __all__.extend(vipllava.__all__)
+__all__.extend(vision_text_dual_encoder.__all__)
 __all__.extend(visual_bert.__all__)
 __all__.extend(vit.__all__)
 __all__.extend(whisper.__all__)
