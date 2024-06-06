@@ -273,7 +273,7 @@ class GitModelTester:
 
     def prepare_config_and_inputs(self):
         image_attention_mask = mindspore.ops.ones((self.batch_size, self.seq_length - self.text_seq_length), dtype=mindspore.int64)
-        attention_mask = mindspore.cat([input_mask, image_attention_mask], axis=1)
+        attention_mask = mindspore.ops.concat([input_mask, image_attention_mask], axis=1)
         return config, input_ids, attention_mask, pixel_values
 
     def get_config(self):
@@ -501,11 +501,14 @@ class GitModelIntegrationTest(unittest.TestCase):
         )
         generated_caption = processor.batch_decode(outputs.sequences, skip_special_tokens=True)[0]
 
-        expected_shape = mindspore.ops.Size((1, 9))
+        expected_shape = (1, 9) 
         self.assertEqual(outputs.sequences.shape, expected_shape)
+        
         self.assertEqual(generated_caption, "two cats laying on a pink blanket")
-        self.assertTrue(outputs.scores[-1].shape, expected_shape)
-        expected_slice = mindspore.tensor([[-0.8805, -0.8803, -0.8799]])
+
+        self.assertEqual(outputs.scores[-1].shape, expected_shape)
+
+        expected_slice = mindspore.Tensor([[-0.8805, -0.8803, -0.8799]], dtype=mindspore.float32)
         self.assertTrue(np.allclose(outputs.scores[-1][0, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
 
     def test_visual_question_answering(self):
