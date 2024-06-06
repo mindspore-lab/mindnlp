@@ -15,11 +15,13 @@
 
 import inspect
 import unittest
+import mindspore.ops
 import numpy as np
+from huggingface_hub import hf_hub_download
 
 import mindspore
-from mindspore import nn,ops,Parameter, Tensor
-from mindspore.common.initializer import initializer, Normal
+from mindspore import nn,ops, Tensor
+from mindspore.common.initializer import initializer
 
 from mindnlp.transformers import GitConfig, GitVisionConfig,GitProcessor
 from mindnlp.transformers.models.auto import get_values
@@ -113,9 +115,11 @@ class GitVisionModelTester:
     def create_and_check_model(self, config, pixel_values):
         model = GitVisionModel(config=config)
         model.set_train(False)
-        with mindspore.no_grad():
-            result = model(pixel_values)
-        # expected sequence length = num_patches + 1 (we add 1 for the [CLS] token)
+
+        mindspore.context.set_context(mode=mindspore.context.PYNATIVE_MODE, pynative_synchronize=True)
+
+        result = model.construct(pixel_values)
+
         image_size = (self.image_size, self.image_size)
         patch_size = (self.patch_size, self.patch_size)
         num_patches = (image_size[1] // patch_size[1]) * (image_size[0] // patch_size[0])
@@ -166,7 +170,7 @@ class GitVisionModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.forward)
+            signature = inspect.signature(model.construct)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -268,7 +272,7 @@ class GitModelTester:
         self.seq_length = self.text_seq_length + int((self.image_size / self.patch_size) ** 2) + 1
 
     def prepare_config_and_inputs(self):
-        image_attention_mask = mindspore.ones((self.batch_size, self.seq_length - self.text_seq_length), dtype=mindspore.int64)
+        image_attention_mask = mindspore.ops.ones((self.batch_size, self.seq_length - self.text_seq_length), dtype=mindspore.int64)
         attention_mask = mindspore.cat([input_mask, image_attention_mask], axis=1)
         return config, input_ids, attention_mask, pixel_values
 
@@ -469,16 +473,17 @@ class GitModelIntegrationTest(unittest.TestCase):
         processor = GitProcessor.from_pretrained("microsoft/git-base")
         model = GitForCausalLM.from_pretrained("microsoft/git-base")
 
-
         image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
         inputs = processor(images=image, text="hello world", return_tensors="ms")
 
-        with mindspore.no_grad():
-            outputs = model(**inputs)
+        context.set_context(mode=context.PYNATIVE_MODE, pynative_synchronize=True) 
 
-        expected_shape = mindspore.Size((1, 201, 30522))
+        outputs = model.construct(**inputs)
+
+        expected_shape = (1, 201, 30522)
         self.assertEqual(outputs.logits.shape, expected_shape)
-        expected_slice = mindspore.tensor(
+
+        expected_slice = Tensor(
             [[-0.9514, -0.9512, -0.9507], [-0.5454, -0.5453, -0.5453], [-0.8862, -0.8857, -0.8848]],
         )
         self.assertTrue(np.allclose(outputs.logits[0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
@@ -496,7 +501,7 @@ class GitModelIntegrationTest(unittest.TestCase):
         )
         generated_caption = processor.batch_decode(outputs.sequences, skip_special_tokens=True)[0]
 
-        expected_shape = mindspore.Size((1, 9))
+        expected_shape = mindspore.ops.Size((1, 9))
         self.assertEqual(outputs.sequences.shape, expected_shape)
         self.assertEqual(generated_caption, "two cats laying on a pink blanket")
         self.assertTrue(outputs.scores[-1].shape, expected_shape)
