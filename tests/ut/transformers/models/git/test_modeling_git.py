@@ -26,6 +26,7 @@ from mindnlp.transformers.models.auto import get_values
 from mindnlp.utils.testing_utils import  slow, require_mindspore ,is_mindspore_available
 from mindnlp.utils import is_mindspore_available, is_vision_available
 
+
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor, random_attention_mask

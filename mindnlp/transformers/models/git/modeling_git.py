@@ -894,93 +894,48 @@ class GitVisionTransformer(nn.Cell):
         )
 
 
-class GitVisionModelTest(GitModelTester):
-    def setUp(self):
-        self.config_tester = MindnlpModelTestConfiguration(
-            skip_model_card_test=True,
-            skip_out_of_order_test=True,
+class GitVisionModel(GitPreTrainedModel):
+    config_class = GitVisionConfig
+    main_input_name = "pixel_values"
+
+    def construct(
+        self,
+        pixel_values: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Union[Tuple, BaseModelOutput]:
+        r"""
+        Returns:
+        Examples:
+        ```python
+        >>> from PIL import Image
+        >>> import requests
+        >>> from transformers import AutoProcessor, GitVisionModel
+        >>> processor = AutoProcessor.from_pretrained("microsoft/git-base")
+        >>> model = GitVisionModel.from_pretrained("microsoft/git-base")
+        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+        >>> image = Image.open(requests.get(url, stream=True).raw)
+        >>> inputs = processor(images=image, return_tensors="ms")
+        >>> outputs = model(**inputs)
+        >>> last_hidden_state = outputs.last_hidden_state
+        ```"""
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        return self.vision_model(
+            pixel_values=pixel_values,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
         )
-        self.model_tester = GitModelTester(self)
-        self.all_model_classes = (GitVisionModel,)
+    def __init__(self, config: GitVisionConfig):
+        super().__init__(config)
+        self.vision_model = GitVisionTransformer(config)
+        # Initialize weights and apply final processing
+        self.post_init()
 
-    def test_forward_signature(self):
-        config, _ = self.model_tester.prepare_config_and_inputs_for_common()
-        for model_class in self.all_model_classes:
-            model = model_class(config)
-            inputs = model.get_inputs()
-            self.assertEqual(len(inputs), 1)
-            self.assertEqual(inputs[0].name, "pixel_values")
-
-    def test_model(self):
-        config_and_inputs = self.model_tester.prepare_config_and_inputs_for_common()
-        config, pixel_values, _ = config_and_inputs
-
-        for model_class in self.all_model_classes:
-            model = model_class(config)
-            model.set_train(False)
-            outputs = model(pixel_values)
-            hidden_states = outputs[0]
-
-            self.assertTrue(isinstance(hidden_states, tuple))
-            self.assertEqual(len(hidden_states), 1)
-            self.assertTrue(isinstance(hidden_states[0], mindspore.Tensor))
-
-            expected_shape = (
-                self.model_tester.batch_size,
-                self.model_tester.image_size // config.patch_size,
-                self.model_tester.image_size // config.patch_size,
-                self.model_tester.hidden_size,
-            )
-            self.assertEqual(hidden_states[0].shape, expected_shape)
-
-    def test_training(self):
-        pass
-
-    def test_inputs_embeds(self):
-        pass
-
-    def test_model_common_attributes(self):
-        config, _ = self.model_tester.prepare_config_and_inputs_for_common()
-
-        for model_class in self.all_model_classes:
-            model = model_class(config)
-            self.assertIsInstance(model.get_input_embeddings(), (nn.Cell))
-            x = model.get_output_embeddings()
-            self.assertTrue(x is None)
-
-    def test_forward_with_norm_rule(self):
-        config, input_dict = self.model_tester.prepare_config_and_inputs_for_common()
-
-        for model_class in self.all_model_classes:
-            model = model_class(config).set_train()
-            model.set_grad()
-
-            # call model
-            from mindspore import ms_function
-
-            @ms_function
-            def forward_fn(pixel_values):
-                return model(pixel_values=pixel_values)
-
-            # get forward output
-            grad_fn = ops.GradOperation(get_by_list=True, sens_param=True)
-
-            def func(grad):
-                return grad_fn(forward_fn)(input_dict["pixel_values"], grad)
-
-            inputs = input_dict["pixel_values"]
-            if isinstance(inputs, tuple):
-                inputs = list(inputs)
-                inputs = tuple(
-                    [
-                        floats_tensor(input.asnumpy() * 0.1, dtype=mindspore.float32)
-                        for input in inputs
-                    ]
-                )
-            else:
-                inputs = floats_tensor(inputs.asnumpy() * 0.1, dtype=mindspore.float32)
-            output = func(inputs)
-            self.assertIsNotNone(output)
+    def get_input_embeddings(self) -> nn.Cell:
+        return self.vision_model.embeddings.patch_embedding
 
 
 
