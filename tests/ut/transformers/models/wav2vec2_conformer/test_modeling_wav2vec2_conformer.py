@@ -953,10 +953,7 @@ class Wav2Vec2ConformerModelIntegrationTest(unittest.TestCase):
 
         batch_size = inputs_dict["input_values"].shape[0]
         input_lengths = inputs_dict["input_values"].shape[1]
-        if isinstance(input_lengths, mindspore.Tensor):
-            input_lengths = input_lengths.asnumpy() 
-        
-        feature_seq_length = int(model._get_feat_extract_output_lengths(input_lengths))
+        feature_seq_length = int(model._get_feat_extract_output_lengths(inputs_dict["input_values"].shape[1]))
 
         features_shape = (batch_size, feature_seq_length)
 
