@@ -112,6 +112,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("switch_transformers", "SwitchTransformersModel"),
         ("t5", "T5Model"),
         ("timesformer", "TimesformerModel"),
+        ("videomae", "VideoMAEModel"),
         ("vision_text_dual_encoder", "VisionTextDualEncoderModel"),
         ("visual_bert", "VisualBertModel"),
         ("vit", "ViTModel"),
@@ -139,6 +140,7 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
         ("minicpm", "MiniCPMForCausalLM"),
         ("rwkv", "RwkvForCausalLM"),
         ("roc_bert", "RoCBertForPreTraining"),
+        ("videomae", "VideoMAEForPreTraining"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
         ("xlnet", "XLNetLMHeadModel"),
     ]
@@ -806,6 +808,7 @@ MODEL_FOR_TEXT_ENCODING_MAPPING_NAMES = OrderedDict(
 MODEL_FOR_IMAGE_TO_IMAGE_MAPPING_NAMES = OrderedDict(
     [
         ("swin2sr", "Swin2SRForImageSuperResolution"),
+        ("videomae", "VideoMAEModel"),
     ]
 )
 
