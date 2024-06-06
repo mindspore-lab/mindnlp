@@ -514,7 +514,7 @@ output projection and returns the attention output along with optional attention
             keys,
             values,
             attn_mask=causal_mask,
-            dropout_p=0,
+            dropout_p=0.,
             is_causal=False,
             is_training=self.training,
             dtype=queries.dtype
