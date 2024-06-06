@@ -153,7 +153,7 @@ class GitSelfAttention(nn.Cell):
         self.position_embedding_type = position_embedding_type or getattr(
             config, "position_embedding_type", "absolute"
         )
-        if self.position_embedding_type == "relative_key" or self.position_embedding_type == "relative_key_query":
+        if self.position_embedding_type in ("relative_key", "relative_key_query"):
             self.max_position_embeddings = config.max_position_embeddings
             self.distance_embedding = nn.Embedding(2 * config.max_position_embeddings - 1, self.attention_head_size)
 
@@ -204,7 +204,7 @@ class GitSelfAttention(nn.Cell):
         # Take the dot product between "query" and "key" to get the raw attention scores.
         attention_scores = ops.matmul(query_layer, key_layer.transpose(-1, -2))
 
-        if self.position_embedding_type == "relative_key" or self.position_embedding_type == "relative_key_query":
+        if self.position_embedding_type in ("relative_key", "relative_key_query"):
             query_length, key_length = query_layer.shape[2], key_layer.shape[2]
             if use_cache:
                 position_ids_l = mindspore.tensor(key_length - 1, dtype=mindspore.int64).view(
@@ -541,7 +541,6 @@ class GitVisionEmbeddings(nn.Cell):
             out_channels=self.embed_dim,
             kernel_size=self.patch_size,
             stride=self.patch_size,
-            bias=False,
         )
 
         self.num_patches = (self.image_size // self.patch_size) ** 2
@@ -1414,7 +1413,7 @@ class GitForCausalLM(GitPreTrainedModel):
             num_image_tokens = self.git.encoder.layer[0].attention.self.image_patch_tokens
             shifted_logits = logits[:, num_image_tokens:-1, :]
             labels = labels[:, 1:]
-            loss_fct = ops.cross_entropy()
+            loss_fct = nn.SoftmaxCrossEntropyWithLogits(sparse=True)
             loss = loss_fct(shifted_logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
