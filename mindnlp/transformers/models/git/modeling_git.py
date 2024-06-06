@@ -21,7 +21,7 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 import mindspore
 from mindspore import nn ,ops,Parameter, Tensor
-from mindspore.common.initializer import initializer, Normal
+from mindspore.common.initializer import initializer, Normal,Zero,One
 
 from mindnlp.utils import (
     ModelOutput,
@@ -521,25 +521,28 @@ class GitPreTrainedModel(PreTrainedModel):
     def _init_weights(self, cell):
         """Initialize the weights"""
         if isinstance(cell, GitVisionEmbeddings):
-            nn.init.normal_(cell.class_embedding, mean=0.0, std=self.config.initializer_range)
-            nn.init.normal_(cell.patch_embedding.weight, std=self.config.initializer_range)
-            nn.init.normal_(cell.position_embedding.weight, std=self.config.initializer_range)
-        if isinstance(cell, nn.Dense):
-            # Slightly different from the TF version which uses truncated_normal for initialization
-            # cf https://github.com/pytorch/pytorch/pull/5617
+            cell.class_embedding = Parameter(initializer(Normal(self.config.initializer_range), 
+                                                        cell.class_embedding.shape), 
+                                            name='class_embedding')
+            cell.patch_embedding.weight.set_data(initializer(Normal(self.config.initializer_range),
+                                                            cell.patch_embedding.weight.shape, 
+                                                            cell.patch_embedding.weight.dtype))
+            cell.position_embedding.weight.set_data(initializer(Normal(self.config.initializer_range),
+                                                                cell.position_embedding.weight.shape, 
+                                                                cell.position_embedding.weight.dtype))
+        elif isinstance(cell, nn.Dense):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
-                                                    cell.weight.shape, cell.weight.dtype))
+                                                cell.weight.shape, cell.weight.dtype))
             if cell.has_bias:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.set_data(initializer(Zero(), cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
+            weight = initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype)
             if cell.padding_idx:
                 weight[cell.padding_idx] = 0
-
-            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
+            cell.weight.set_data(weight)
         elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            cell.gamma.set_data(initializer(One(), cell.gamma.shape, cell.gamma.dtype))
+            cell.beta.set_data(initializer(Zero(), cell.beta.shape, cell.beta.dtype))
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPVisionEmbeddings with CLIP->Git
@@ -551,7 +554,7 @@ class GitVisionEmbeddings(nn.Cell):
         self.image_size = config.image_size
         self.patch_size = config.patch_size
 
-        self.class_embedding = Parameter(ops.randn(self.embed_dim),'class_embedding')
+        self.class_embedding = Parameter(initializer(Normal(0.02), [self.embed_dim]),'class_embedding') 
 
         self.patch_embedding = nn.Conv2d(
             in_channels=config.num_channels,
@@ -583,8 +586,10 @@ class GitVisionMLP(nn.Cell):
         super().__init__()
         self.config = config
         self.activation_fn = ACT2FN[config.hidden_act]
-        self.fc1 = nn.Dense(config.hidden_size, config.intermediate_size)
-        self.fc2 = nn.Dense(config.intermediate_size, config.hidden_size)
+
+        # 使用 Normal 初始化权重，标准差为 0.02
+        self.fc1 = nn.Dense(config.hidden_size, config.intermediate_size, weight_init=initializer(Normal(0.02), [config.intermediate_size, config.hidden_size]))
+        self.fc2 = nn.Dense(config.intermediate_size, config.hidden_size, weight_init=initializer(Normal(0.02), [config.hidden_size, config.intermediate_size]))
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.fc1(hidden_states)
@@ -611,10 +616,10 @@ class GitVisionAttention(nn.Cell):
         self.scale = self.head_dim**-0.5
         self.dropout = config.attention_dropout
 
-        self.k_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.v_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.q_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.out_proj = nn.Dense(self.embed_dim, self.embed_dim)
+        self.k_proj = nn.Dense(self.embed_dim, self.embed_dim, weight_init=initializer(Normal(0.02), [self.embed_dim, self.embed_dim]))
+        self.v_proj = nn.Dense(self.embed_dim, self.embed_dim, weight_init=initializer(Normal(0.02), [self.embed_dim, self.embed_dim]))
+        self.q_proj = nn.Dense(self.embed_dim, self.embed_dim, weight_init=initializer(Normal(0.02), [self.embed_dim, self.embed_dim]))
+        self.out_proj = nn.Dense(self.embed_dim, self.embed_dim, weight_init=initializer(Normal(0.02), [self.embed_dim, self.embed_dim]))
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2)

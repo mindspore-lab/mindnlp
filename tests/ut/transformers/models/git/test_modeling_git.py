@@ -18,7 +18,7 @@ import unittest
 import numpy as np
 
 import mindspore
-from mindspore import nn ,ops,Parameter, Tensor
+from mindspore import nn,ops,Parameter, Tensor
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.transformers import GitConfig, GitVisionConfig,GitProcessor
