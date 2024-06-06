@@ -1195,8 +1195,6 @@ class MarianMTModel(MarianPreTrainedModel):
             self._tie_or_clone_weights(output_embeddings, word_embeddings)
 
         if getattr(self.config, "is_encoder_decoder", False) and getattr(self.config, "tie_encoder_decoder", False):
-            if hasattr(self, self.base_model_prefix):
-                self = getattr(self, self.base_model_prefix)
             tied_weights = self._tie_encoder_decoder_weights(
                 self.encoder, self.decoder, self.base_model_prefix, "encoder"
             )
