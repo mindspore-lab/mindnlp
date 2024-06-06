@@ -900,14 +900,13 @@ class Wav2Vec2ConformerModelIntegrationTest(unittest.TestCase):
 
         input_speech = self._load_datasamples(2)
 
-        inputs = processor(input_speech, return_tensors="ms", padding=True)
+        inputs = processor(input_speech, return_tensors="", padding=True)
 
         input_values = inputs.input_values
 
-        with ops.no_grad():
-            logits = model(input_values).logits
+        logits = model(input_values).logits
 
-        predicted_ids = ops.argmax(logits, dim=-1)
+        predicted_ids = ops.argmax(logits, axis=-1)
         predicted_trans = processor.batch_decode(predicted_ids)
 
         EXPECTED_TRANSCRIPTIONS = [
@@ -925,14 +924,13 @@ class Wav2Vec2ConformerModelIntegrationTest(unittest.TestCase):
 
         input_speech = self._load_datasamples(2)
 
-        inputs = processor(input_speech, return_tensors="ms", padding=True)
+        inputs = processor(input_speech, return_tensors="pt", padding=True)
 
         input_values = inputs.input_values
 
-        with ops.no_grad():
-            logits = model(input_values).logits
+        logits = model(input_values).logits
 
-        predicted_ids = ops.argmax(logits, dim=-1)
+        predicted_ids = ops.argmax(logits, axis=-1)
         predicted_trans = processor.batch_decode(predicted_ids)
 
         EXPECTED_TRANSCRIPTIONS = [
@@ -949,7 +947,7 @@ class Wav2Vec2ConformerModelIntegrationTest(unittest.TestCase):
         )
         input_speech = self._load_datasamples(2)
 
-        inputs_dict = feature_extractor(input_speech, return_tensors="ms", padding=True)
+        inputs_dict = feature_extractor(input_speech, return_tensors="pt", padding=True)
 
         batch_size = inputs_dict["input_values"].shape[0]
         feature_seq_length = int(model._get_feat_extract_output_lengths(inputs_dict["input_values"].shape[1]))
@@ -965,12 +963,11 @@ class Wav2Vec2ConformerModelIntegrationTest(unittest.TestCase):
         )
         mask_time_indices = ops.from_numpy(mask_time_indices)
 
-        with ops.no_grad():
-            outputs = model(
-                inputs_dict.input_values,
-                attention_mask=inputs_dict.attention_mask,
-                mask_time_indices=mask_time_indices,
-            )
+        outputs = model(
+            inputs_dict.input_values,
+            attention_mask=inputs_dict.attention_mask,
+            mask_time_indices=mask_time_indices,
+        )
 
         # compute cosine similarity
         cosine_sim = ops.cosine_similarity(outputs.projected_states, outputs.projected_quantized_states, dim=-1)
@@ -983,12 +980,11 @@ class Wav2Vec2ConformerModelIntegrationTest(unittest.TestCase):
         config = Wav2Vec2ConformerConfig.from_pretrained("facebook/wav2vec2-conformer-rel-pos-large")
         model_rand = Wav2Vec2ConformerForPreTraining(config).set_train(False)
 
-        with ops.no_grad():
-            outputs_rand = model_rand(
-                inputs_dict.input_values,
-                attention_mask=inputs_dict.attention_mask,
-                mask_time_indices=mask_time_indices,
-            )
+        outputs_rand = model_rand(
+            inputs_dict.input_values,
+            attention_mask=inputs_dict.attention_mask,
+            mask_time_indices=mask_time_indices,
+        )
 
         # compute cosine similarity
         cosine_sim_rand = ops.cosine_similarity(
