@@ -74,7 +74,6 @@ _CONFIG_FOR_DOC = "GitConfig"
 class GitVisionModelOutput(ModelOutput):
     """
     Base class for vision model's outputs that also contains image embeddings of the pooling of the last hidden states.
-
     Args:
         image_embeds (`mindspore.Tensor` of shape `(batch_size, output_dim)` *optional* returned when model is initialized with `with_projection=True`):
             The image embeddings obtained by applying the projection layer to the pooler_output.
@@ -83,12 +82,10 @@ class GitVisionModelOutput(ModelOutput):
         hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings, if the model has an embedding layer, +
             one for the output of each layer) of shape `(batch_size, sequence_length, hidden_size)`.
-
             Hidden-states of the model at the output of each layer plus the optional initial embedding outputs.
         attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
-
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
@@ -113,8 +110,7 @@ class GitEmbeddings(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
-        self.position_ids = ops.arange(config.max_position_embeddings).expand_dims(0)
-
+        self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
 
     def construct(
         self,
@@ -170,7 +166,7 @@ class GitSelfAttention(nn.Cell):
         self.position_embedding_type = position_embedding_type or getattr(
             config, "position_embedding_type", "absolute"
         )
-        if self.position_embedding_type in ("relative_key", "relative_key_query"):
+        if self.position_embedding_type in ["relative_key", "relative_key_query"]:
             self.max_position_embeddings = config.max_position_embeddings
             self.distance_embedding = nn.Embedding(2 * config.max_position_embeddings - 1, self.attention_head_size)
 
@@ -219,12 +215,12 @@ class GitSelfAttention(nn.Cell):
         )
 
         # Take the dot product between "query" and "key" to get the raw attention scores.
-        attention_scores = ops.matmul(query_layer, key_layer.transpose(-1, -2))
+        attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
 
-        if self.position_embedding_type in ("relative_key", "relative_key_query"):
+        if self.position_embedding_type in ["relative_key", "relative_key_query"]:
             query_length, key_length = query_layer.shape[2], key_layer.shape[2]
             if use_cache:
-                position_ids_l = mindspore.tensor(key_length - 1, dtype=mindspore.int64).view(
+                position_ids_l = mindspore.Tensor(key_length - 1, dtype=mindspore.int64).view(
                     -1, 1
                 )
             else:
@@ -233,7 +229,7 @@ class GitSelfAttention(nn.Cell):
             distance = position_ids_l - position_ids_r
 
             positional_embedding = self.distance_embedding(distance + self.max_position_embeddings - 1)
-            positional_embedding = positional_embedding.to(dtype=query_layer.dtype)  # fp16 compatibility
+            positional_embedding = positional_embedding.astype(dtype=query_layer.dtype)  # fp16 compatibility
 
             if self.position_embedding_type == "relative_key":
                 relative_position_scores = ops.einsum("bhld,lrd->bhlr", query_layer, positional_embedding)
@@ -521,28 +517,25 @@ class GitPreTrainedModel(PreTrainedModel):
     def _init_weights(self, cell):
         """Initialize the weights"""
         if isinstance(cell, GitVisionEmbeddings):
-            cell.class_embedding = Parameter(initializer(Normal(self.config.initializer_range),
-                                                        cell.class_embedding.shape),
-                                            name='class_embedding')
+            cell.class_embedding.set_data(initializer(Normal(self.config.initializer_range),
+                                                        cell.class_embedding.shape, cell.class_embedding.dtype))
             cell.patch_embedding.weight.set_data(initializer(Normal(self.config.initializer_range),
-                                                            cell.patch_embedding.weight.shape,
-                                                            cell.patch_embedding.weight.dtype))
+                                                                cell.patch_embedding.weight.shape, cell.patch_embedding.weight.dtype))
             cell.position_embedding.weight.set_data(initializer(Normal(self.config.initializer_range),
-                                                                cell.position_embedding.weight.shape,
-                                                                cell.position_embedding.weight.dtype))
-        elif isinstance(cell, nn.Dense):
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
-                                                cell.weight.shape, cell.weight.dtype))
+                                                                cell.position_embedding.weight.shape, cell.position_embedding.weight.dtype))
+        if isinstance(cell, nn.Dense):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            cell.weight.set_data(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
             if cell.has_bias:
-                cell.bias.set_data(initializer(Zero(), cell.bias.shape, cell.bias.dtype))
+                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
-            weight = initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype)
+            cell.weight.set_data(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
             if cell.padding_idx:
-                weight[cell.padding_idx] = 0
-            cell.weight.set_data(weight)
+                cell.weight.data[cell.padding_idx] = 0
         elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
             cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPVisionEmbeddings with CLIP->Git
@@ -554,27 +547,28 @@ class GitVisionEmbeddings(nn.Cell):
         self.image_size = config.image_size
         self.patch_size = config.patch_size
 
-        self.class_embedding = Parameter(initializer(Normal(0.02), [self.embed_dim]),'class_embedding')
+        self.class_embedding = Parameter(ops.randn(self.embed_dim), 'class_embedding')
 
         self.patch_embedding = nn.Conv2d(
             in_channels=config.num_channels,
             out_channels=self.embed_dim,
             kernel_size=self.patch_size,
             stride=self.patch_size,
+            has_bias=False,
         )
 
         self.num_patches = (self.image_size // self.patch_size) ** 2
         self.num_positions = self.num_patches + 1
         self.position_embedding = nn.Embedding(self.num_positions, self.embed_dim)
-        self.position_ids=ops.arange(self.num_positions).expand((1, -1))
+        self.position_ids = ops.arange(self.num_positions).broadcast_to((1, -1))
 
     def construct(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
         batch_size = pixel_values.shape[0]
         target_dtype = self.patch_embedding.weight.dtype
-        patch_embeds = self.patch_embedding(pixel_values.to(dtype=target_dtype))  # shape = [*, width, grid, grid]
-        patch_embeds = patch_embeds.flatten(2).transpose(1, 2)
+        patch_embeds = self.patch_embedding(pixel_values.astype(dtype=target_dtype))  # shape = [*, width, grid, grid]
+        patch_embeds = patch_embeds.flatten(start_dim=2).swapaxes(1, 2)
 
-        class_embeds = self.class_embedding.expand(batch_size, 1, -1)
+        class_embeds = self.class_embedding.broadcast_to((batch_size, 1, -1))
         embeddings = ops.cat([class_embeds, patch_embeds], axis=1)
         embeddings = embeddings + self.position_embedding(self.position_ids)
         return embeddings
@@ -586,7 +580,6 @@ class GitVisionMLP(nn.Cell):
         super().__init__()
         self.config = config
         self.activation_fn = ACT2FN[config.hidden_act]
-
         self.fc1 = nn.Dense(config.hidden_size, config.intermediate_size)
         self.fc2 = nn.Dense(config.intermediate_size, config.hidden_size)
 
@@ -615,27 +608,13 @@ class GitVisionAttention(nn.Cell):
         self.scale = self.head_dim**-0.5
         self.dropout = config.attention_dropout
 
-        # 初始化 Dense 层
         self.k_proj = nn.Dense(self.embed_dim, self.embed_dim)
         self.v_proj = nn.Dense(self.embed_dim, self.embed_dim)
         self.q_proj = nn.Dense(self.embed_dim, self.embed_dim)
         self.out_proj = nn.Dense(self.embed_dim, self.embed_dim)
 
-        # 初始化参数并设置初始化方式
-        self.k_proj.init_parameters_data()
-        self.k_proj.weight.set_data(initializer(Normal(0.02), self.k_proj.weight.shape))
-
-        self.v_proj.init_parameters_data()
-        self.v_proj.weight.set_data(initializer(Normal(0.02), self.v_proj.weight.shape))
-
-        self.q_proj.init_parameters_data()
-        self.q_proj.weight.set_data(initializer(Normal(0.02), self.q_proj.weight.shape))
-
-        self.out_proj.init_parameters_data()
-        self.out_proj.weight.set_data(initializer(Normal(0.02), self.out_proj.weight.shape))
-
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
     def construct(
         self,
@@ -659,7 +638,7 @@ class GitVisionAttention(nn.Cell):
         value_states = value_states.view(*proj_shape)
 
         src_len = key_states.shape[1]
-        attn_weights = ops.bmm(query_states, key_states.transpose(1, 2))
+        attn_weights = ops.bmm(query_states, key_states.swapaxes(1, 2))
 
         if attn_weights.shape != (bsz * self.num_heads, tgt_len, src_len):
             raise ValueError(
@@ -685,7 +664,7 @@ class GitVisionAttention(nn.Cell):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights,axis=-1)
+        attn_weights = ops.softmax(attn_weights, axis=-1)
 
         if output_attentions:
             # this operation is a bit akward, but it's required to
@@ -708,7 +687,7 @@ class GitVisionAttention(nn.Cell):
             )
 
         attn_output = attn_output.view(bsz, self.num_heads, tgt_len, self.head_dim)
-        attn_output = attn_output.transpose(1, 2)
+        attn_output = attn_output.swapaxes(1, 2)
         attn_output = attn_output.reshape(bsz, tgt_len, embed_dim)
 
         attn_output = self.out_proj(attn_output)
@@ -722,9 +701,9 @@ class GitVisionEncoderLayer(nn.Cell):
         super().__init__()
         self.embed_dim = config.hidden_size
         self.self_attn = GitVisionAttention(config)
-        self.layer_norm1 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm1 = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_eps)
         self.mlp = GitVisionMLP(config)
-        self.layer_norm2 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm2 = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_eps)
 
     def construct(
         self,
@@ -772,7 +751,6 @@ class GitVisionEncoder(nn.Cell):
     """
     Transformer encoder consisting of `config.num_hidden_layers` self attention layers. Each layer is a
     [`GitVisionEncoderLayer`].
-
     Args:
         config: GitVisionConfig
     """
@@ -800,17 +778,13 @@ class GitVisionEncoder(nn.Cell):
                 than the model's internal embedding lookup matrix.
             attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
                 - 1 for tokens that are **not masked**,
                 - 0 for tokens that are **masked**.
-
                 [What are attention masks?](../glossary#attention-mask)
             causal_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Causal mask for the text model. Mask values selected in `[0, 1]`:
-
                 - 1 for tokens that are **not masked**,
                 - 0 for tokens that are **masked**.
-
                 [What are attention masks?](../glossary#attention-mask)
             output_attentions (`bool`, *optional*):
                 Whether or not to return the attentions tensors of all attention layers. See `attentions` under
@@ -865,8 +839,6 @@ class GitVisionEncoder(nn.Cell):
         )
 
 
-
-
 class GitVisionTransformer(nn.Cell):
     # Copied from transformers.models.clip.modeling_clip.CLIPVisionTransformer.__init__ with CLIPEncoder->GitVisionEncoder, CLIP->Git
     def __init__(self, config: GitVisionConfig):
@@ -875,9 +847,9 @@ class GitVisionTransformer(nn.Cell):
         embed_dim = config.hidden_size
 
         self.embeddings = GitVisionEmbeddings(config)
-        self.pre_layrnorm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
+        self.pre_layrnorm = nn.LayerNorm([embed_dim], epsilon=config.layer_norm_eps)
         self.encoder = GitVisionEncoder(config)
-        self.post_layernorm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
+        self.post_layernorm = nn.LayerNorm([embed_dim], epsilon=config.layer_norm_eps)
 
     def construct(
         self,
@@ -888,7 +860,6 @@ class GitVisionTransformer(nn.Cell):
     ) -> Union[Tuple, BaseModelOutput]:
         r"""
         Returns:
-
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -923,7 +894,6 @@ class GitVisionTransformer(nn.Cell):
         )
 
 
-
 class GitVisionModel(GitPreTrainedModel):
     config_class = GitVisionConfig
     main_input_name = "pixel_values"
@@ -938,7 +908,6 @@ class GitVisionModel(GitPreTrainedModel):
     def get_input_embeddings(self) -> nn.Cell:
         return self.vision_model.embeddings.patch_embedding
 
-
     def construct(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
@@ -948,22 +917,16 @@ class GitVisionModel(GitPreTrainedModel):
     ) -> Union[Tuple, BaseModelOutput]:
         r"""
         Returns:
-
         Examples:
-
         ```python
         >>> from PIL import Image
         >>> import requests
         >>> from transformers import AutoProcessor, GitVisionModel
-
         >>> processor = AutoProcessor.from_pretrained("microsoft/git-base")
         >>> model = GitVisionModel.from_pretrained("microsoft/git-base")
-
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
-
         >>> inputs = processor(images=image, return_tensors="pt")
-
         >>> outputs = model(**inputs)
         >>> last_hidden_state = outputs.last_hidden_state
         ```"""
@@ -981,14 +944,13 @@ class GitProjection(nn.Cell):
     def __init__(self, config: GitConfig):
         super().__init__()
         self.config = config
-        self.visual_projection = nn.Sequential(
+        self.visual_projection = nn.SequentialCell(
             nn.Dense(config.vision_config.hidden_size, config.hidden_size),
             nn.LayerNorm([config.hidden_size], epsilon=config.vision_config.layer_norm_eps),
         )
 
     def construct(self, embeddings: mindspore.Tensor) -> mindspore.Tensor:
         return self.visual_projection(embeddings)
-
 
 
 class GitModel(GitPreTrainedModel):
@@ -1003,8 +965,8 @@ class GitModel(GitPreTrainedModel):
         self.visual_projection = GitProjection(config)
 
         if config.num_image_with_embedding is not None:
-            self.img_temperal_embedding = nn.ParameterList(
-                Parameter(ops.zeros(1, 1, config.vision_config.hidden_size),'img_temperal_embedding')
+            self.img_temperal_embedding = (
+                Parameter(ops.zeros(1, 1, config.vision_config.hidden_size), 'img_temperal_embedding_' + str(_))
                 for _ in range(config.num_image_with_embedding)
             )
 
@@ -1025,9 +987,9 @@ class GitModel(GitPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def _generate_future_mask(self, size: int, dtype: ops.dtype) -> mindspore.Tensor:
+    def _generate_future_mask(self, size: int, dtype: mindspore.dtype) -> mindspore.Tensor:
         # Default mask is for forward direction. Flip for backward direction.
-        mask = mindspore.triu(ops.ones(size, size,  dtype=dtype), diagonal=1)
+        mask = ops.triu(ops.ones(size, size, dtype=dtype), diagonal=1)
         mask = mask.masked_fill(mask == 1, float("-inf"))
         return mask
 
@@ -1053,21 +1015,21 @@ class GitModel(GitPreTrainedModel):
             )
 
         left = ops.cat((top_left, bottom_left), axis=0)
-        right = ops.cat((top_right, tgt_mask.to(dtype)), axis=0)
+        right = ops.cat((top_right, tgt_mask.astype(dtype)), axis=0)
 
         full_attention_mask = ops.cat((left, right), axis=1)[None, :]
 
         if memory_key_padding_mask is None:
-            memory_key_padding_mask = ops.full((memory.shape[0], memory.shape[1]), fill_value=False)
+            memory_key_padding_mask = ops.full((memory.shape[0], memory.shape[1]), fill_value=False, dtype=mindspore.bool_)
         # if it is False, it means valid. That is, it is not a padding
-        if memory_key_padding_mask.dtype != ops.bool:
+        if memory_key_padding_mask.dtype != mindspore.bool_:
             raise ValueError("Memory key padding mask must be a boolean tensor.")
         zero_negative_infinity = ops.zeros_like(memory_key_padding_mask, dtype=tgt.dtype)
         zero_negative_infinity[memory_key_padding_mask] = float("-inf")
-        full_attention_mask = full_attention_mask.expand(
+        full_attention_mask = full_attention_mask.broadcast_to(
             (memory_key_padding_mask.shape[0], num_memory + num_tgt, num_memory + past_key_values_length + num_tgt)
         )
-        full_attention_mask = full_attention_mask.clone()
+        full_attention_mask = full_attention_mask.copy()
         origin_left = full_attention_mask[:, :, :num_memory]
         update = zero_negative_infinity[:, None, :]
         full_attention_mask[:, :, :num_memory] = origin_left + update
@@ -1076,7 +1038,6 @@ class GitModel(GitPreTrainedModel):
         full_attention_mask = full_attention_mask[:, None, :, :]
 
         return full_attention_mask
-
 
     def construct(
         self,
@@ -1092,39 +1053,7 @@ class GitModel(GitPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPooling]:
-        r"""
-        past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
-            Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
 
-            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-        use_cache (`bool`, *optional*):
-            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-            `past_key_values`).
-
-        Returns:
-
-        Examples:
-
-        ```python
-        >>> from transformers import AutoProcessor, AutoModel
-        >>> import requests
-        >>> from PIL import Image
-
-        >>> processor = AutoProcessor.from_pretrained("microsoft/git-base")
-        >>> model = AutoModel.from_pretrained("microsoft/git-base")
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> text = "this is an image of two cats"
-
-        >>> inputs = processor(text, images=image, return_tensors="pt")
-
-        >>> outputs = model(**inputs)
-        >>> last_hidden_state = outputs.last_hidden_state
-        ```"""
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1244,7 +1173,6 @@ class GitModel(GitPreTrainedModel):
         )
 
 
-
 class GitForCausalLM(GitPreTrainedModel):
     _tied_weights_keys = ["output.weight"]
 
@@ -1263,7 +1191,6 @@ class GitForCausalLM(GitPreTrainedModel):
     def set_output_embeddings(self, new_embeddings):
         self.output = new_embeddings
 
-
     def construct(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
@@ -1279,148 +1206,7 @@ class GitForCausalLM(GitPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], CausalLMOutputWithPast]:
-        r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the left-to-right language modeling loss (next word prediction). Indices should be in
-            `[-100, 0, ..., config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are
-            ignored (masked), the loss is only computed for the tokens with labels n `[0, ..., config.vocab_size]`
-        past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
-            Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
-
-            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-        use_cache (`bool`, *optional*):
-            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-            `past_key_values`).
-
-        Returns:
-
-        Examples:
-
-        Image captioning example:
-
-        ```python
-        >>> from transformers import AutoProcessor, AutoModelForCausalLM
-        >>> import requests
-        >>> from PIL import Image
-
-        >>> processor = AutoProcessor.from_pretrained("microsoft/git-base-coco")
-        >>> model = AutoModelForCausalLM.from_pretrained("microsoft/git-base-coco")
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> pixel_values = processor(images=image, return_tensors="pt").pixel_values
-
-        >>> generated_ids = model.generate(pixel_values=pixel_values, max_length=50)
-        >>> generated_caption = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-        >>> print(generated_caption)
-        two cats sleeping on a pink blanket next to remotes.
-        ```
-
-        Visual question answering (VQA) example:
-
-        ```python
-        >>> from transformers import AutoProcessor, AutoModelForCausalLM
-        >>> from huggingface_hub import hf_hub_download
-        >>> from PIL import Image
-
-        >>> processor = AutoProcessor.from_pretrained("microsoft/git-base-textvqa")
-        >>> model = AutoModelForCausalLM.from_pretrained("microsoft/git-base-textvqa")
-
-        >>> file_path = hf_hub_download(repo_id="nielsr/textvqa-sample", filename="bus.png", repo_type="dataset")
-        >>> image = Image.open(file_path).convert("RGB")
-
-        >>> pixel_values = processor(images=image, return_tensors="pt").pixel_values
-
-        >>> question = "what does the front of the bus say at the top?"
-
-        >>> input_ids = processor(text=question, add_special_tokens=False).input_ids
-        >>> input_ids = [processor.tokenizer.cls_token_id] + input_ids
-        >>> input_ids = mindspore.tensor(input_ids).unsqueeze(0)
-
-        >>> generated_ids = model.generate(pixel_values=pixel_values, input_ids=input_ids, max_length=50)
-        >>> print(processor.batch_decode(generated_ids, skip_special_tokens=True))
-        ['what does the front of the bus say at the top? special']
-        ```
-
-        Video captioning example:
-
-        ```python
-        >>> import av
-        >>> import numpy as np
-        >>> from PIL import Image
-        >>> from huggingface_hub import hf_hub_download
-        >>> from transformers import AutoProcessor, AutoModelForCausalLM
-
-        >>> processor = AutoProcessor.from_pretrained("microsoft/git-base-vatex")
-        >>> model = AutoModelForCausalLM.from_pretrained("microsoft/git-base-vatex")
-
-        >>> # set seed for reproducability
-        >>> np.random.seed(45)
-
-
-        >>> def read_video_pyav(container, indices):
-        ...     '''
-        ...     Decode the video with PyAV decoder.
-        ...     Args:
-        ...         container (`av.container.input.InputContainer`): PyAV container.
-        ...         indices (`List[int]`): List of frame indices to decode.
-        ...     Returns:
-        ...         result (np.ndarray): np array of decoded frames of shape (num_frames, height, width, 3).
-        ...     '''
-        ...     frames = []
-        ...     container.seek(0)
-        ...     start_index = indices[0]
-        ...     end_index = indices[-1]
-        ...     for i, frame in enumerate(container.decode(video=0)):
-        ...         if i > end_index:
-        ...             break
-        ...         if i >= start_index and i in indices:
-        ...             frames.append(frame)
-        ...     return np.stack([x.to_ndarray(format="rgb24") for x in frames])
-
-
-        >>> def sample_frame_indices(clip_len, frame_sample_rate, seg_len):
-        ...     '''
-        ...     Sample a given number of frame indices from the video.
-        ...     Args:
-        ...         clip_len (`int`): Total number of frames to sample.
-        ...         frame_sample_rate (`int`): Sample every n-th frame.
-        ...         seg_len (`int`): Maximum allowed index of sample's last frame.
-        ...     Returns:
-        ...         indices (`List[int]`): List of sampled frame indices
-        ...     '''
-        ...     converted_len = int(clip_len * frame_sample_rate)
-        ...     end_idx = np.random.randint(converted_len, seg_len)
-        ...     start_idx = end_idx - converted_len
-        ...     indices = np.linspace(start_idx, end_idx, num=clip_len)
-        ...     indices = np.clip(indices, start_idx, end_idx - 1).astype(np.int64)
-        ...     return indices
-
-
-        >>> # load video
-        >>> file_path = hf_hub_download(
-        ...     repo_id="nielsr/video-demo", filename="eating_spaghetti.mp4", repo_type="dataset"
-        ... )
-        >>> container = av.open(file_path)
-
-        >>> # sample frames
-        >>> num_frames = model.config.num_image_with_embedding
-        >>> indices = sample_frame_indices(
-        ...     clip_len=num_frames, frame_sample_rate=4, seg_len=container.streams.video[0].frames
-        ... )
-        >>> frames = read_video_pyav(container, indices)
-
-        >>> pixel_values = processor(images=list(frames), return_tensors="pt").pixel_values
-
-        >>> generated_ids = model.generate(pixel_values=pixel_values, max_length=50)
-
-        >>> print("Generated caption:", processor.batch_decode(generated_ids, skip_special_tokens=True))
-        Generated caption: ['a woman is sitting at a table and she is talking about the food she is holding.']
-        ```
-        """
+        
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if labels is not None:
             use_cache = False
@@ -1448,8 +1234,7 @@ class GitForCausalLM(GitPreTrainedModel):
             num_image_tokens = self.git.encoder.layer[0].attention.self.image_patch_tokens
             shifted_logits = logits[:, num_image_tokens:-1, :]
             labels = labels[:, 1:]
-            loss_fct = nn.SoftmaxCrossEntropyWithLogits(sparse=True)
-            loss = loss_fct(shifted_logits.view(-1, self.config.vocab_size), labels.view(-1))
+            loss = ops.cross_entropy(shifted_logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[1:]
