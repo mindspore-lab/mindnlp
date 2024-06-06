@@ -13,15 +13,13 @@
 # limitations under the License.
 # ============================================
 """
-Vision Text Dual Encoder Model init
+Vision Encoder Decoder Model init
 """
-from .import configuration_vision_text_dual_encoder, processing_vision_text_dual_encoder, modeling_vision_text_dual_encoder
+from .import configuration_vision_encoder_decoder, modeling_vision_encoder_decoder
 
-from .configuration_vision_text_dual_encoder import *
-from .processing_vision_text_dual_encoder import *
-from .modeling_vision_text_dual_encoder import *
+from .configuration_vision_encoder_decoder import *
+from .modeling_vision_encoder_decoder import *
 
 __all__ = []
-__all__.extend(configuration_vision_text_dual_encoder.__all__)
-__all__.extend(processing_vision_text_dual_encoder.__all__)
-__all__.extend(modeling_vision_text_dual_encoder.__all__)
+__all__.extend(configuration_vision_encoder_decoder.__all__)
+__all__.extend(modeling_vision_encoder_decoder.__all__)
