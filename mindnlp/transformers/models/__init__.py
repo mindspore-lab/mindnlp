@@ -71,6 +71,7 @@ from . import (
     chatglm,
     chatglm2,
     chatglm3,
+    funnel,
     gemma,
     gpt,
     gpt2,
@@ -131,6 +132,7 @@ from . import (
     squeezebert,
     starcoder2,
     swiftformer,
+    switch_transformers,
     t5,
     timesformer,
     tinybert,
@@ -202,6 +204,7 @@ from .ernie_m import *
 from .chatglm import *
 from .chatglm2 import *
 from .chatglm3 import *
+from .funnel import *
 from .gemma import *
 from .gpt import *
 from .gpt_neo import *
@@ -262,6 +265,7 @@ from .stablelm import *
 from .squeezebert import *
 from .starcoder2 import *
 from .swiftformer import *
+from .switch_transformers import *
 from .tinybert import *
 from .t5 import *
 from .timesformer import *
@@ -331,6 +335,7 @@ __all__.extend(ernie.__all__)
 __all__.extend(ernie_m.__all__)
 __all__.extend(esm.__all__)
 __all__.extend(chatglm.__all__)
+__all__.extend(funnel.__all__)
 __all__.extend(chatglm2.__all__)
 __all__.extend(chatglm3.__all__)
 __all__.extend(gpt.__all__)
@@ -393,6 +398,7 @@ __all__.extend(stablelm.__all__)
 __all__.extend(squeezebert.__all__)
 __all__.extend(starcoder2.__all__)
 __all__.extend(swiftformer.__all__)
+__all__.extend(switch_transformers.__all__)
 __all__.extend(t5.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
