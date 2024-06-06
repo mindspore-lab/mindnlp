@@ -318,7 +318,7 @@ class VisionTextDualEncoderIntegrationTest(unittest.TestCase):
 
         image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
         inputs = processor(
-            text=["una foto di un gatto", "una foto di un cane"], images=image, padding=True, return_tensors="pt"
+            text=["una foto di un gatto", "una foto di un cane"], images=image, padding=True, return_tensors="ms"
         )
 
         outputs = model(**inputs)
