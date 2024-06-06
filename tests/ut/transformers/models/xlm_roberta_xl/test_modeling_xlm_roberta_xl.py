@@ -510,7 +510,7 @@ class XLMRobertaXLModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.Te
 
 @require_mindspore
 class XLMRobertaModelXLIntegrationTest(unittest.TestCase):
-    @unittest.skip(reason="Model is too large to be tested on the CI")
+    @slow
     def test_xlm_roberta_xl(self):
         model = XLMRobertaXLModel.from_pretrained("facebook/xlm-roberta-xl",from_pt=True)
         input_ids = mindspore.tensor(
