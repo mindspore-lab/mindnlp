@@ -70,6 +70,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("encodec", "EncodecConfig"),
         ("esm", "EsmConfig"),
         ("falcon", "FalconConfig"),
+        ("funnel", "FunnelConfig"),
         ("gemma", "GemmaConfig"),
         ("gpt2", "GPT2Config"),
         ("gpt_bigcode", "GPTBigCodeConfig"),
