@@ -18,9 +18,9 @@
 import math
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
-import numpy as np
+
 import mindspore
-from mindspore import nn ,ops,Parameter, Tensor
+from mindspore import nn ,ops,Parameter
 from mindspore.common.initializer import initializer, Normal,Zero,One
 
 from mindnlp.utils import (
@@ -521,14 +521,14 @@ class GitPreTrainedModel(PreTrainedModel):
     def _init_weights(self, cell):
         """Initialize the weights"""
         if isinstance(cell, GitVisionEmbeddings):
-            cell.class_embedding = Parameter(initializer(Normal(self.config.initializer_range), 
-                                                        cell.class_embedding.shape), 
+            cell.class_embedding = Parameter(initializer(Normal(self.config.initializer_range),
+                                                        cell.class_embedding.shape),
                                             name='class_embedding')
             cell.patch_embedding.weight.set_data(initializer(Normal(self.config.initializer_range),
-                                                            cell.patch_embedding.weight.shape, 
+                                                            cell.patch_embedding.weight.shape,
                                                             cell.patch_embedding.weight.dtype))
             cell.position_embedding.weight.set_data(initializer(Normal(self.config.initializer_range),
-                                                                cell.position_embedding.weight.shape, 
+                                                                cell.position_embedding.weight.shape,
                                                                 cell.position_embedding.weight.dtype))
         elif isinstance(cell, nn.Dense):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
