@@ -831,7 +831,7 @@ class VideoMAEForVideoClassification(VideoMAEPreTrainedModel):
                     loss = ops.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
                 loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
-            elif self.config.problem_type == "multi_label_classification":            
+            elif self.config.problem_type == "multi_label_classification":
                 loss = ops.binary_cross_entropy_with_logits(logits, labels)
 
         if not return_dict:
