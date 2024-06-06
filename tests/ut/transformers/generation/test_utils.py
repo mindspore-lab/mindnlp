@@ -477,7 +477,6 @@ class GenerationTesterMixin:
         # prevent flaky generation test failures
         logits_processor = LogitsProcessorList()
         logits_processor.append(InfNanRemoveLogitsProcessor())
-
         model_kwargs = {"attention_mask": attention_mask} if attention_mask is not None else {}
         output_beam_sample = model.beam_sample(
             input_ids.repeat_interleave(beam_scorer.num_beams, dim=0),
@@ -1042,7 +1041,6 @@ class GenerationTesterMixin:
     def test_beam_sample_generate_dict_output(self):
         for model_class in self.all_generative_model_classes:
             config, input_ids, attention_mask, max_length = self._get_input_ids_and_config()
-
             # disable cache
             config.use_cache = False
 

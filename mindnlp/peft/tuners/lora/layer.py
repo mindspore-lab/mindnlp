@@ -240,7 +240,7 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
             elif init_lora_weights.lower() == "gaussian":
                 self.lora_A[adapter_name].weight.initialize(Normal(1 / self.r[adapter_name]))
             else:
-                raise ValueError(f"Unknown initialization {init_lora_weights=}")
+                raise ValueError(f"Unknown initialization {init_lora_weights}")
             self.lora_B[adapter_name].weight.initialize('zeros')
         if adapter_name in self.lora_embedding_A.keys():
             # initialize a the same way as the default for nn.Dense and b to zero

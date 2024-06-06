@@ -354,7 +354,7 @@ add_prefix_space=True for use with pretokenized inputs.
 
         return offsets
 
-    @lru_cache
+    @lru_cache(128)
     # Copied from transformers.models.whisper.tokenization_whisper.WhisperTokenizer.timestamp_ids
     def timestamp_ids(self, time_precision=0.02):
         """
