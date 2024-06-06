@@ -846,7 +846,9 @@ class Wav2Vec2ConformerUtilsTest(unittest.TestCase):
         mask[-1, sequence_length // 2 :] = 0
 
         sequence = ops.div(
-            ops.arange(sequence_length * hidden_size), hidden_size, rounding_mode="floor"
+            ops.arange(sequence_length * hidden_size),
+            mindspore.Tensor(hidden_size, mindspore.int64),  # 将 hidden_size 转换为 Tensor
+            rounding_mode="floor"
         )
         features = sequence.view(sequence_length, hidden_size)  # each value in vector consits of same value
         features = features[None, :].expand(batch_size, sequence_length, hidden_size)
