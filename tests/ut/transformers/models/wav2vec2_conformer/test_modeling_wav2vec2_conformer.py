@@ -906,7 +906,7 @@ class Wav2Vec2ConformerModelIntegrationTest(unittest.TestCase):
 
         logits = model(input_values).logits
 
-        predicted_ids = ops.argmax(logits, axis=-1)
+        predicted_ids = ops.argmax(logits, dim=-1)
         predicted_trans = processor.batch_decode(predicted_ids)
 
         EXPECTED_TRANSCRIPTIONS = [
@@ -930,7 +930,7 @@ class Wav2Vec2ConformerModelIntegrationTest(unittest.TestCase):
 
         logits = model(input_values).logits
 
-        predicted_ids = ops.argmax(logits, axis=-1)
+        predicted_ids = ops.argmax(logits, dim=-1)
         predicted_trans = processor.batch_decode(predicted_ids)
 
         EXPECTED_TRANSCRIPTIONS = [
