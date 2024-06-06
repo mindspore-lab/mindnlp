@@ -1045,6 +1045,7 @@ class FunnelForMaskedLM(FunnelPreTrainedModel):
         masked_lm_loss = None
         if labels is not None:
             loss_fct = nn.CrossEntropyLoss()  # -100 index = padding token
+            labels = labels.astype(mindspore.int32)
             masked_lm_loss = loss_fct(prediction_logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
@@ -1121,6 +1122,7 @@ class FunnelForSequenceClassification(FunnelPreTrainedModel):
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
                 loss_fct = nn.CrossEntropyLoss()
+                labels = labels.astype(mindspore.int32)
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = ops.BCEWithLogitsLoss()
@@ -1194,6 +1196,7 @@ class FunnelForMultipleChoice(FunnelPreTrainedModel):
         loss = None
         if labels is not None:
             loss_fct = nn.CrossEntropyLoss()
+            labels = labels.astype(mindspore.int32)
             loss = loss_fct(reshaped_logits, labels)
 
         if not return_dict:
@@ -1254,6 +1257,7 @@ class FunnelForTokenClassification(FunnelPreTrainedModel):
         loss = None
         if labels is not None:
             loss_fct = nn.CrossEntropyLoss()
+            labels = labels.astype(mindspore.int32)
             loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
@@ -1333,7 +1337,9 @@ class FunnelForQuestionAnswering(FunnelPreTrainedModel):
             end_positions = end_positions.clamp(0, ignored_index)
 
             loss_fct = nn.CrossEntropyLoss(ignore_index=ignored_index)
+            start_positions = start_positions.astype(mindspore.int32)
             start_loss = loss_fct(start_logits, start_positions)
+            end_positions = end_positions.astype(mindspore.int32)
             end_loss = loss_fct(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
 

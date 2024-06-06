@@ -74,7 +74,6 @@ class FunnelModelTester:
         scope=None,
         base=False,
     ):
-        mindspore.set_context(pynative_synchronize=True)
         self.parent = parent
         self.batch_size = batch_size
         self.seq_length = seq_length

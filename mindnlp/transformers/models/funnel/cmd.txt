@@ -1,7 +1,0 @@
-pip install -e .[testing]
-pip install nose-parameterized
-pytest -s -x -v tests/ut/transformers/models/funnel
-export ASCEND_SLOG_PRINT_TO_STDOUT=1
-export ASCEND_GLOBAL_LOG_LEVEL=1
-pip install --upgrade mindspore==2.3.0-rc2
-pip3 install torch torchvision torchaudio -i https://pypi.tuna.tsinghua.edu.cn/simple

@@ -149,16 +149,16 @@ class ModelTesterMixin:
 
         if return_labels:
             if model_class.__name__ in get_values(MODEL_FOR_MULTIPLE_CHOICE_MAPPING_NAMES):
-                inputs_dict["labels"] = ops.ones(self.model_tester.batch_size, dtype=mindspore.int32)
+                inputs_dict["labels"] = ops.ones(self.model_tester.batch_size, dtype=mindspore.int64)
             elif model_class.__name__ in [
                 *get_values(MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES),
                 *get_values(MODEL_FOR_DOCUMENT_QUESTION_ANSWERING_MAPPING_NAMES),
             ]:
                 inputs_dict["start_positions"] = ops.ones(
-                    self.model_tester.batch_size, dtype=mindspore.int32
+                    self.model_tester.batch_size, dtype=mindspore.int64
                 )
                 inputs_dict["end_positions"] = ops.ones(
-                    self.model_tester.batch_size, dtype=mindspore.int32
+                    self.model_tester.batch_size, dtype=mindspore.int64
                 )
             elif model_class.__name__ in [
                 *get_values(MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES),
@@ -167,7 +167,7 @@ class ModelTesterMixin:
                 *get_values(MODEL_FOR_AUDIO_CLASSIFICATION_MAPPING_NAMES),
             ]:
                 inputs_dict["labels"] = ops.ones(
-                    self.model_tester.batch_size, dtype=mindspore.int32
+                    self.model_tester.batch_size, dtype=mindspore.int64
                 )
             elif model_class.__name__ in [
                 *get_values(MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING_NAMES),
@@ -176,7 +176,7 @@ class ModelTesterMixin:
                 *get_values(MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING_NAMES),
             ]:
                 inputs_dict["labels"] = ops.ones(
-                    (self.model_tester.batch_size, self.model_tester.seq_length), dtype=mindspore.int32
+                    (self.model_tester.batch_size, self.model_tester.seq_length), dtype=mindspore.int64
                 )
 
 
