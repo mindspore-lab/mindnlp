@@ -21,7 +21,7 @@ from typing import List, Optional, Tuple, Union
 
 import mindspore
 from mindspore import nn ,ops,Parameter
-from mindspore.common.initializer import initializer, Normal,Zero,One
+from mindspore.common.initializer import initializer, Normal,Zero
 
 from mindnlp.utils import (
     ModelOutput,
