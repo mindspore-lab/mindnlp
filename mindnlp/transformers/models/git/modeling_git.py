@@ -541,7 +541,7 @@ class GitPreTrainedModel(PreTrainedModel):
                 weight[cell.padding_idx] = 0
             cell.weight.set_data(weight)
         elif isinstance(cell, nn.LayerNorm):
-            cell.gamma.set_data(initializer(One(), cell.gamma.shape, cell.gamma.dtype))
+            cell.weight.set_data(initializer(One(), cell.weight.shape, cell.weight.dtype))
             cell.beta.set_data(initializer(Zero(), cell.beta.shape, cell.beta.dtype))
 
 
