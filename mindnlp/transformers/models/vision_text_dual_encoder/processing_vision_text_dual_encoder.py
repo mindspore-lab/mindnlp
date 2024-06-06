@@ -111,7 +111,7 @@ class VisionTextDualEncoderProcessor(ProcessorMixin):
         elif text is not None:
             return encoding
         else:
-            return BatchEncoding(data=dict(**image_features), tensor_type=return_tensors)
+            return BatchEncoding(data={**image_features}, tensor_type=return_tensors)
 
     def batch_decode(self, *args, **kwargs):
         """
