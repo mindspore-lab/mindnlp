@@ -325,7 +325,8 @@ class EncoderDecoderMixin:
 class ViT2BertModelTest(EncoderDecoderMixin, unittest.TestCase):
     def get_pretrained_model_and_inputs(self):
         model = VisionEncoderDecoderModel.from_encoder_decoder_pretrained(
-            "hf-internal-testing/tiny-random-vit", "hf-internal-testing/tiny-bert"
+            encoder_pretrained_model_name_or_path="hf-internal-testing/tiny-random-vit",
+            decoder_pretrained_model_name_or_path="hf-internal-testing/tiny-bert"
         )
         batch_size = 13
         pixel_values = floats_tensor(
