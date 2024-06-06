@@ -15,8 +15,9 @@
 """Image processor class for VideoMAE."""
 
 from typing import Dict, List, Optional, Union
-
 import numpy as np
+from mindnlp.utils import TensorType, is_vision_available, logging
+from mindnlp.configs import IMAGENET_STANDARD_MEAN, IMAGENET_STANDARD_STD
 
 from ...image_processing_utils import BaseImageProcessor, BatchFeature, get_size_dict
 from ...image_transforms import (
@@ -36,9 +37,6 @@ from ...image_utils import (
     validate_kwargs,
     validate_preprocess_arguments,
 )
-from mindnlp.utils import TensorType, is_vision_available, logging
-from mindnlp.configs import IMAGENET_STANDARD_MEAN, IMAGENET_STANDARD_STD
-
 
 if is_vision_available():
     import PIL

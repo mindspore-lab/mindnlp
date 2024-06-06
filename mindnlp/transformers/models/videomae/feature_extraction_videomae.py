@@ -1,13 +1,3 @@
-'''
-Author: skyous 1019364238@qq.com
-Date: 2024-06-05 19:01:20
-LastEditors: skyous 1019364238@qq.com
-LastEditTime: 2024-06-05 19:05:41
-FilePath: /huawei2024/mindnlp/mindnlp/transformers/models/videomae/feature_extraction_videomae.py
-Description: 
-
-Copyright (c) 2024 by 1019364238@qq.com, All Rights Reserved. 
-'''
 # coding=utf-8
 # Copyright 2022 The HuggingFace Inc. team. All rights reserved.
 #
@@ -41,5 +31,5 @@ class VideoMAEFeatureExtractor(VideoMAEImageProcessor):
             FutureWarning,
         )
         super().__init__(*args, **kwargs)
-        
+
 __all__ = ["VideoMAEFeatureExtractor"]

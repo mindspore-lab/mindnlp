@@ -25,16 +25,16 @@ import mindspore
 
 from mindspore import nn, ops, Parameter
 from mindspore.common.initializer import initializer, Normal
+from mindnlp.modules.functional import finfo
+from mindnlp.utils import (
+    ModelOutput,
+    logging,
+)
 
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, ImageClassifierOutput
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
-from mindnlp.utils import (
-    ModelOutput,
-    logging,
-)
-from mindnlp.modules.functional import finfo
 from ....configs import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from .configuration_videomae import VideoMAEConfig
 
@@ -1086,7 +1086,7 @@ class VideoMAEForVideoClassification(VideoMAEPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
