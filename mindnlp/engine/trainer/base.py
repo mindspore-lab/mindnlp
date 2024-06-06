@@ -613,7 +613,7 @@ class Trainer:
 
         return model
 
-    @lru_cache
+    @lru_cache(128)
     def get_train_dataset(self) -> Dataset:
         """
         Returns the training [`~mindspore.dataset.GeneratorDataset`].
@@ -645,7 +645,7 @@ class Trainer:
         train_dataset = train_dataset.batch(self._train_batch_size, self.args.dataset_drop_last, self.args.dataset_num_workers)
         return train_dataset
 
-    @lru_cache
+    @lru_cache(128)
     def get_test_dataset(self, test_dataset: Dataset) -> Dataset:
         """
         Returns the test [`~mindspore.dataset.GeneratorDataset`].
@@ -666,7 +666,7 @@ class Trainer:
         # We use the same batch_size as for eval.
         return test_dataset
 
-    @lru_cache
+    @lru_cache(128)
     def get_eval_dataset(self, eval_dataset: Dataset = None) -> Dataset:
         """
         Returns the test [`~mindspore.dataset.GeneratorDataset`].
