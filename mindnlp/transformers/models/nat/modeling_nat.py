@@ -15,7 +15,6 @@
 """PyTorch Neighborhood Attention Transformer model."""
 
 import math
-import natten
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
@@ -31,6 +30,11 @@ from ...modeling_utils import PreTrainedModel
 from mindnlp.utils.import_utils import *
 from ...backbone_utils import BackboneMixin
 from .configuration_nat import NatConfig
+from ...activations import ACT2FN
+from mindspore.common.initializer import initializer, Normal
+from ...modeling_outputs import (
+    BackboneOutput,
+)
 
 
 if is_natten_available():
@@ -251,7 +255,7 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
         return input
     keep_prob = 1 - drop_prob
     shape = (input.shape[0],) + (1,) * (input.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
-    random_tensor = keep_prob + ops.rand(shape, dtype=input.dtype, device=input.device)
+    random_tensor = keep_prob + ops.rand(shape, dtype=input.dtype)
     random_tensor.floor_()  # binarize
     output = input.div(keep_prob) * random_tensor
     return output
@@ -287,9 +291,9 @@ class NeighborhoodAttention(nn.Cell):
         # rpb is learnable relative positional biases; same concept is used Swin.
         self.rpb = Parameter(ops.zeros(num_heads, (2 * self.kernel_size - 1), (2 * self.kernel_size - 1)), 'rpb')
 
-        self.query = nn.Dense(self.all_head_size, self.all_head_size, bias=config.qkv_bias)
-        self.key = nn.Dense(self.all_head_size, self.all_head_size, bias=config.qkv_bias)
-        self.value = nn.Dense(self.all_head_size, self.all_head_size, bias=config.qkv_bias)
+        self.query = nn.Dense(self.all_head_size, self.all_head_size, has_bias=config.qkv_bias)
+        self.key = nn.Dense(self.all_head_size, self.all_head_size, has_bias=config.qkv_bias)
+        self.value = nn.Dense(self.all_head_size, self.all_head_size, has_bias=config.qkv_bias)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
@@ -605,10 +609,10 @@ class NatPreTrainedModel(PreTrainedModel):
         if isinstance(cell, (nn.Dense, nn.Conv2d)):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
             if cell.has_bias:
-                cell.bias.set_data(initializer(Zero(), cell.bias.shape, cell.bias.dtype))
+                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.LayerNorm):
-            cell.beta.set_data(initializer(Zero(), cell.beta.shape, cell.beta.dtype))
-            cell.gamma.set_data(initializer(One(), cell.gamma.shape, cell.gamma.dtype))
+            cell.beta.set_data(initializer('zeros', cell.beta.shape, cell.beta.dtype))
+            cell.gamma.set_data(initializer('ones', cell.gamma.shape, cell.gamma.dtype))
 
 
 
@@ -747,16 +751,16 @@ class NatForImageClassification(NatPreTrainedModel):
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
-                loss_fct = MSELoss()
+                loss_fct = nn.MSELoss()
                 if self.num_labels == 1:
                     loss = loss_fct(logits.squeeze(), labels.squeeze())
                 else:
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss_fct = CrossEntropyLoss()
+                loss_fct = nn.CrossEntropyLoss()
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss_fct = BCEWithLogitsLoss()
+                loss_fct = nn.BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
 
         if not return_dict:
