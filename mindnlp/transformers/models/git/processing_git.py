@@ -19,6 +19,7 @@ Image/Text processor class for GIT
 from ...processing_utils import ProcessorMixin
 from ...tokenization_utils_base import BatchEncoding
 
+__all__ = ["GitProcessor"] 
 
 class GitProcessor(ProcessorMixin):
     r"""
