@@ -587,9 +587,8 @@ class GitVisionMLP(nn.Cell):
         self.config = config
         self.activation_fn = ACT2FN[config.hidden_act]
 
-        # 使用 Normal 初始化权重，标准差为 0.02
-        self.fc1 = nn.Dense(config.hidden_size, config.intermediate_size, weight_init=Normal(0.02))
-        self.fc2 = nn.Dense(config.intermediate_size, config.hidden_size, weight_init=Normal(0.02))
+        self.fc1 = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.fc2 = nn.Dense(config.intermediate_size, config.hidden_size)
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.fc1(hidden_states)
