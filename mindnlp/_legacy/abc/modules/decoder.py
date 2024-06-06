@@ -24,8 +24,20 @@ class DecoderBase(nn.Cell):
     Args:
         embedding (Cell): The embedding layer.
     """
-
     def __init__(self, embedding):
+        r"""
+        Initializes a DecoderBase object.
+        
+        Args:
+            self: The DecoderBase object.
+            embedding: The embedding to be used for decoding. It should be a tensor representing the embedding for the input data.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            - TypeError: If the provided embedding is not a valid tensor.
+        """
         super().__init__()
         self.embedding = embedding
         self.softmax = nn.Softmax()

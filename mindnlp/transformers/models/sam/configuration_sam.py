@@ -46,7 +46,6 @@ class SamPromptEncoderConfig(PretrainedConfig):
         hidden_act (`str`, *optional*, defaults to `"gelu"`):
             The non-linear activation function in the encoder and pooler.
     """
-
     def __init__(
         self,
         hidden_size=256,
@@ -58,6 +57,25 @@ class SamPromptEncoderConfig(PretrainedConfig):
         layer_norm_eps=1e-6,
         **kwargs,
     ):
+        """
+        Initializes an instance of the SamPromptEncoderConfig class.
+        
+        Args:
+            self (SamPromptEncoderConfig): The instance of the class itself.
+            hidden_size (int, optional): The size of the hidden state. Defaults to 256.
+            image_size (int, optional): The size of the input image. Defaults to 1024.
+            patch_size (int, optional): The size of each image patch. Defaults to 16.
+            mask_input_channels (int, optional): The number of input channels for masking. Defaults to 16.
+            num_point_embeddings (int, optional): The number of point embeddings. Defaults to 4.
+            hidden_act (str, optional): The activation function for the hidden layers. Defaults to 'gelu'.
+            layer_norm_eps (float, optional): The epsilon value for layer normalization. Defaults to 1e-06.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         super().__init__(**kwargs)
         self.hidden_size = hidden_size
         self.image_size = image_size
@@ -102,7 +120,6 @@ class SamMaskDecoderConfig(PretrainedConfig):
             The epsilon used by the layer normalization layers.
 
     """
-
     def __init__(
         self,
         hidden_size=256,
@@ -117,6 +134,28 @@ class SamMaskDecoderConfig(PretrainedConfig):
         layer_norm_eps=1e-6,
         **kwargs,
     ):
+        """
+        Initializes a new instance of the SamMaskDecoderConfig class.
+        
+        Args:
+            self: The object itself.
+            hidden_size (int, optional): The size of the hidden layer. Default is 256.
+            hidden_act (str, optional): The activation function to be used in the hidden layer. Default is 'relu'.
+            mlp_dim (int, optional): The dimension of the Multi-Layer Perceptron (MLP). Default is 2048.
+            num_hidden_layers (int, optional): The number of hidden layers. Default is 2.
+            num_attention_heads (int, optional): The number of attention heads. Default is 8.
+            attention_downsample_rate (int, optional): The downsample rate for attention. Default is 2.
+            num_multimask_outputs (int, optional): The number of outputs for multimask. Default is 3.
+            iou_head_depth (int, optional): The depth of the Intersection over Union (IoU) head. Default is 3.
+            iou_head_hidden_dim (int, optional): The hidden dimension of the IoU head. Default is 256.
+            layer_norm_eps (float, optional): The epsilon value for layer normalization. Default is 1e-06.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         super().__init__(**kwargs)
         self.hidden_size = hidden_size
         self.hidden_act = hidden_act
@@ -181,7 +220,6 @@ class SamVisionConfig(PretrainedConfig):
             The dimensionality of the MLP layer in the Transformer encoder. If `None`, defaults to `mlp_ratio *
             hidden_size`.
     """
-
     def __init__(
         self,
         hidden_size=768,
@@ -205,6 +243,37 @@ class SamVisionConfig(PretrainedConfig):
         mlp_dim=None,
         **kwargs,
     ):
+        """
+        Initializes an instance of the SamVisionConfig class.
+        
+        Args:
+            self: The object instance.
+            hidden_size (int, optional): The size of the hidden state. Defaults to 768.
+            output_channels (int, optional): The number of output channels. Defaults to 256.
+            num_hidden_layers (int, optional): The number of hidden layers. Defaults to 12.
+            num_attention_heads (int, optional): The number of attention heads. Defaults to 12.
+            num_channels (int, optional): The number of input channels. Defaults to 3.
+            image_size (int, optional): The size of the input image. Defaults to 1024.
+            patch_size (int, optional): The size of each patch in the image. Defaults to 16.
+            hidden_act (str, optional): The activation function for the hidden layers. Defaults to 'gelu'.
+            layer_norm_eps (float, optional): The epsilon value for layer normalization. Defaults to 1e-06.
+            attention_dropout (float, optional): The dropout rate for the attention mechanism. Defaults to 0.0.
+            initializer_range (float, optional): The range for parameter initialization. Defaults to 1e-10.
+            qkv_bias (bool, optional): Whether to include bias in the query, key, and value projections. Defaults to True.
+            mlp_ratio (float, optional): The ratio of the hidden size to the feed-forward network size. Defaults to 4.0.
+            use_abs_pos (bool, optional): Whether to use absolute position embeddings. Defaults to True.
+            use_rel_pos (bool, optional): Whether to use relative position embeddings. Defaults to True.
+            window_size (int, optional): The size of the attention window. Defaults to 14.
+            global_attn_indexes (list[int], optional): The list of indexes for global attention. Defaults to [2, 5, 8, 11].
+            num_pos_feats (int, optional): The number of positional features. Defaults to 128.
+            mlp_dim (int, optional): The size of the hidden layer in the feed-forward network. If not provided, it is calculated as int(hidden_size * mlp_ratio).
+        
+        Returns:
+            None.
+        
+        Raises:
+            None.
+        """
         super().__init__(**kwargs)
 
         self.hidden_size = hidden_size
@@ -277,7 +346,6 @@ class SamConfig(PretrainedConfig):
 
     >>> config = SamConfig(vision_config, prompt_encoder_config, mask_decoder_config)
     ```"""
-
     model_type = "sam"
 
     def __init__(
@@ -288,6 +356,22 @@ class SamConfig(PretrainedConfig):
         initializer_range=0.02,
         **kwargs,
     ):
+        """
+        Initializes a new instance of the SamConfig class.
+        
+        Args:
+            self: The current instance of the SamConfig class.
+            vision_config (SamVisionConfig or None): The configuration for vision. If provided, it should be an instance of SamVisionConfig. Defaults to None.
+            prompt_encoder_config (SamPromptEncoderConfig or None): The configuration for prompt encoder. If provided, it should be an instance of SamPromptEncoderConfig. Defaults to None.
+            mask_decoder_config (SamMaskDecoderConfig or None): The configuration for mask decoder. If provided, it should be an instance of SamMaskDecoderConfig. Defaults to None.
+            initializer_range (float): The range for weight initialization. Defaults to 0.02.
+        
+        Returns:
+            None. This method initializes the instance with the provided configurations and initializer range.
+        
+        Raises:
+            N/A
+        """
         super().__init__(**kwargs)
         vision_config = vision_config if vision_config is not None else {}
         prompt_encoder_config = prompt_encoder_config if prompt_encoder_config is not None else {}

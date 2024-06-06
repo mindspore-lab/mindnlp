@@ -47,7 +47,6 @@ class SentimentAnalysisWork(Work):
     """
     Sentiment Analysis Work.
     """
-
     resource_files_names = {
         "model_state": "mbert_for_senta_model_state.ckpt",
         "vocab": "bert_for_senta_vocab.txt",
@@ -66,6 +65,23 @@ class SentimentAnalysisWork(Work):
     }
 
     def __init__(self, work, model, **kwargs):
+        """
+        Initializes a new instance of the SentimentAnalysisWork class.
+        
+        Args:
+            self: The instance of the class.
+            work (str): The type of work for the sentiment analysis (e.g., 'text', 'speech').
+            model (str): The model to be used for sentiment analysis.
+            
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            TypeError: If the provided work or model parameters are not of type str.
+            ValueError: If the work parameter is not a valid type for sentiment analysis.
+            FileNotFoundError: If the required work files are not found.
+            RuntimeError: If there is an issue while constructing the tokenizer or model.
+        """
         super().__init__(model, work, **kwargs)
         self._label_map = {0: "negative", 1: "neutral", 2: "positive"}
         self._check_work_files()
@@ -135,6 +151,21 @@ class SentimentAnalysisWork(Work):
         return outputs
 
     def _batchify_fn(self, samples):
+        """
+        Batchify the samples for sentiment analysis.
+        
+        This method takes in a list of samples and batchifies them for sentiment analysis. It pads the sequences in the samples to the maximum length using a specified pad value.
+        
+        Args:
+            self (SentimentAnalysisWork): An instance of the SentimentAnalysisWork class.
+            samples (list): A list of samples, where each sample is a tuple containing two elements - the input sequence (sample[0]) and the sequence length (sample[1]).
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         seq_list = [sample[1] for sample in samples]
         max_length = max(seq_list)
         outputs = []

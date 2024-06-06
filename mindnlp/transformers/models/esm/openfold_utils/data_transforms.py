@@ -87,6 +87,18 @@ def make_atom14_masks(protein: Dict[str, mindspore.Tensor]) -> Dict[str, mindspo
 
 
 def make_atom14_masks_np(batch: Dict[str, mindspore.Tensor]) -> Dict[str, np.ndarray]:
+    """
+    Converts a batch of MindSpore tensors to NumPy arrays and applies a function to create atom14 masks.
+    
+    Args:
+        batch (Dict[str, mindspore.Tensor]): A dictionary containing MindSpore tensors representing the batch data.
+    
+    Returns:
+        Dict[str, np.ndarray]: A dictionary where the keys are strings and the values are NumPy arrays representing the atom14 masks.
+    
+    Raises:
+        None
+    """
     batch = tree_map(lambda n: mindspore.tensor(n), batch, np.ndarray)
     out = tensor_tree_map(lambda t: np.array(t), make_atom14_masks(batch))
     return out

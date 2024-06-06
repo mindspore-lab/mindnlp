@@ -28,7 +28,18 @@ class Metric(metaclass=ABCMeta):
 
     """
     def __init__(self):
-        pass
+        r"""
+        Initializes an instance of the Metric class.
+        
+        Args:
+            self: The instance of the Metric class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
 
     @abstractmethod
     def clear(self):

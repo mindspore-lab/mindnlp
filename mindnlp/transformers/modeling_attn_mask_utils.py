@@ -34,8 +34,20 @@ class AttentionMaskConverter:
         sliding_window (`int`, *optional*):
             Optionally, the sliding window masks can be created if `sliding_window` is defined to a positive integer.
     """
-
     def __init__(self, is_causal: bool, sliding_window: Optional[int] = None):
+        """
+        This method initializes an instance of the AttentionMaskConverter class.
+        
+        Args:
+            is_causal (bool): A boolean value indicating whether the attention mask is causal or not.
+            sliding_window (Optional[int], optional): An optional integer representing the sliding window size. Defaults to None. If provided, it must be a strictly positive integer. 
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If the sliding_window parameter is provided and its value is not a strictly positive integer.
+        """
         self.is_causal = is_causal
         self.sliding_window = sliding_window
 
@@ -119,7 +131,6 @@ class AttentionMaskConverter:
 
         return expanded_4d_mask
 
-
     @staticmethod
     def _make_causal_mask(
         input_ids_shape,
@@ -162,6 +173,56 @@ class AttentionMaskConverter:
         inverted_mask = 1.0 - expanded_mask
 
         return inverted_mask.masked_fill(inverted_mask.to(mindspore.bool_), mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min))
+
+    @staticmethod
+    def _unmask_unattended(
+        expanded_mask: mindspore.Tensor,
+        min_dtype: float,
+    ):
+        # fmt: off
+        """
+        Attend to all tokens in masked rows from the expanded attention mask, for example the relevant first rows when
+        using left padding. This is required by F.scaled_dot_product_attention memory-efficient attention path.
+        Details: https://github.com/pytorch/pytorch/issues/110213
+
+        `expanded_mask` is [bsz, num_masks, tgt_seq_len, src_seq_len] or [bsz, tgt_seq_len, src_seq_len].
+        `attention_mask` is [bsz, src_seq_len].
+
+        The dimension num_masks of `expanded_mask` is most often 1, but it can also be the number of heads in the case of alibi attention bias.
+
+        For example, if `expanded_mask` is (e.g. here left-padding case)
+        ```
+        [[[[0, 0, 0],
+           [0, 0, 0],
+           [0, 0, 1]]],
+         [[[1, 0, 0],
+           [1, 1, 0],
+           [1, 1, 1]]],
+         [[[0, 0, 0],
+           [0, 1, 0],
+           [0, 1, 1]]]]
+        ```
+        then the modified `expanded_mask` will be
+        ```
+        [[[[1, 1, 1],   <-- modified
+           [1, 1, 1],   <-- modified
+           [0, 0, 1]]],
+         [[[1, 0, 0],
+           [1, 1, 0],
+           [1, 1, 1]]],
+         [[[1, 1, 1],   <-- modified
+           [0, 1, 0],
+           [0, 1, 1]]]]
+        ```
+        """
+        # fmt: on
+        if expanded_mask.dtype == mindspore.bool_:
+            raise ValueError(
+                "AttentionMaskConverter._unmask_unattended expects a float `expanded_mask`, got a BoolTensor."
+            )
+
+        return expanded_mask.mul(~ops.all(expanded_mask == min_dtype, axis=-1, keep_dims=True))
+
 
 
 def _prepare_4d_causal_attention_mask(

@@ -58,7 +58,6 @@ class Wav2Vec2DecoderWithLMOutput(ModelOutput):
             Offsets of the decoded words. In combination with sampling rate and model downsampling rate word offsets
             can be used to compute time stamps for each word.
     """
-
     text: Union[List[List[str]], List[str], str]
     logit_score: Union[List[List[float]], List[float], float] = None
     lm_score: Union[List[List[float]], List[float], float] = None
@@ -78,7 +77,6 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
         decoder (`pyctcdecode.BeamSearchDecoderCTC`):
             An instance of [`pyctcdecode.BeamSearchDecoderCTC`]. The decoder is a required input.
     """
-
     feature_extractor_class = "Wav2Vec2FeatureExtractor"
     tokenizer_class = "Wav2Vec2CTCTokenizer"
 
@@ -88,6 +86,22 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
         tokenizer: "PreTrainedTokenizerBase",
         decoder: "BeamSearchDecoderCTC",
     ):
+        """
+        Initializes a Wav2Vec2ProcessorWithLM object.
+        
+        Args:
+            self: The object instance.
+            feature_extractor (FeatureExtractionMixin): The feature extractor used for processing input audio data.
+            tokenizer (PreTrainedTokenizerBase): The tokenizer used for tokenizing input text data.
+            decoder (BeamSearchDecoderCTC): The decoder used for decoding the model's output.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If the provided 'decoder' parameter is not an instance of BeamSearchDecoderCTC.
+            ValueError: If there are missing tokens in the decoder's alphabet that are present in the tokenizer's vocabulary.
+        """
         from pyctcdecode import BeamSearchDecoderCTC
 
         super().__init__(feature_extractor, tokenizer)
@@ -108,6 +122,21 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
         self._in_target_context_manager = False
 
     def save_pretrained(self, save_directory):
+        """
+        Save the Wav2Vec2ProcessorWithLM instance and the associated language model to the specified directory.
+        
+        Args:
+            self (Wav2Vec2ProcessorWithLM): The instance of the Wav2Vec2ProcessorWithLM class.
+            save_directory (str): The directory path where the processor and language model will be saved. 
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            - OSError: If the save_directory cannot be accessed or does not exist.
+            - ValueError: If the save_directory is not a valid directory path.
+            - TypeError: If the save_directory parameter is not a string.
+        """
         super().save_pretrained(save_directory)
         self.decoder.save_to_dir(save_directory)
 
@@ -183,14 +212,55 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
 
     @staticmethod
     def _set_language_model_attribute(decoder: "BeamSearchDecoderCTC", attribute: str, value: float):
+        """
+        Sets the specified attribute of the language model within the Wav2Vec2ProcessorWithLM using the given decoder.
+        
+        Args:
+            decoder (BeamSearchDecoderCTC): The decoder object used to access the language model.
+            attribute (str): The name of the attribute to be set.
+            value (float): The value to be assigned to the specified attribute.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         setattr(decoder.model_container[decoder._model_key], attribute, value)
 
     @property
     def language_model(self):
+        """
+        This method returns the language model associated with the Wav2Vec2ProcessorWithLM instance.
+        
+        Args:
+            self: The Wav2Vec2ProcessorWithLM instance.
+            
+        Returns:
+            None: This method does not return any value.
+            
+        Raises:
+            N/A
+        """
         return self.decoder.model_container[self.decoder._model_key]
 
     @staticmethod
     def get_missing_alphabet_tokens(decoder, tokenizer):
+        """
+        This method 'get_missing_alphabet_tokens' is defined in the class 'Wav2Vec2ProcessorWithLM' and is responsible for identifying missing alphabet tokens by comparing the tokenizer's vocabulary with the
+decoder's alphabet labels.
+        
+        Args:
+            decoder (object): The decoder object used for decoding tokens. It should be of type 'Decoder' and is required as an input parameter for the method.
+            tokenizer (object): The tokenizer object used for tokenizing input data. It should be of type 'Tokenizer' and is required as an input parameter for the method.
+        
+        Returns:
+            set: This method returns a set of missing tokens from the tokenizer's vocabulary that are not present in the decoder's alphabet labels. If no missing tokens are found, it returns an empty set.
+        
+        Raises:
+            No specific exceptions are documented to be raised by this method. However, potential exceptions may include AttributeError if the attributes accessed from the decoder or tokenizer objects do not
+exist, or TypeError if the input parameters are not of the expected types.
+        """
         from pyctcdecode.alphabet import BLANK_TOKEN_PTN, UNK_TOKEN, UNK_TOKEN_PTN
 
         # we need to make sure that all of the tokenizer's except the special tokens
@@ -370,7 +440,6 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
         Example:
             See [Decoding multiple audios](#decoding-multiple-audios).
         """
-
         from pyctcdecode.constants import (
             DEFAULT_BEAM_WIDTH,
             DEFAULT_HOTWORD_WEIGHT,
@@ -567,7 +636,6 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
          {'word': 'APPEARS', 'start_time': 1.18, 'end_time': 1.66},
          {'word': 'ON', 'start_time': 1.86, 'end_time': 1.92}]
         ```"""
-
         from pyctcdecode.constants import (
             DEFAULT_BEAM_WIDTH,
             DEFAULT_HOTWORD_WEIGHT,

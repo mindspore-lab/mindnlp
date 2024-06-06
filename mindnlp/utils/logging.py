@@ -72,14 +72,39 @@ def _get_default_logging_level():
 
 
 def _get_library_name() -> str:
+    """
+    Returns the name of the library based on the module name.
+    
+    Returns:
+        str: The name of the library extracted from the module name.
+    
+    """
     return __name__.split(".")[0] # pylint: disable=use-maxsplit-arg
 
 
 def _get_library_root_logger() -> logging.Logger:
+    """
+    Retrieves the root logger for the library.
+    
+    Returns:
+        A logging.Logger object representing the root logger for the library.
+    
+    Raises:
+        None.
+    """
     return logging.getLogger(_get_library_name())
 
 
 def _configure_library_root_logger() -> None:
+    """
+    This function configures the root logger for the library.
+    
+    Returns:
+        None: This function does not return any value.
+    
+    Raises:
+        None
+    """
     global _default_handler
 
     with _lock:
@@ -106,6 +131,18 @@ def _configure_library_root_logger() -> None:
 
 
 def _reset_library_root_logger() -> None:
+    """
+    Resets the root logger of the library to its default state.
+    
+    Args:
+        None
+    
+    Returns:
+        None. The function does not return any value.
+    
+    Raises:
+        None
+    """
     global _default_handler
 
     with _lock:
@@ -119,6 +156,12 @@ def _reset_library_root_logger() -> None:
 
 
 def get_log_levels_dict():
+    """
+    Returns a dictionary of log levels.
+    
+    Returns:
+        dict: A dictionary containing log levels and their corresponding values.
+    """
     return log_levels
 
 
@@ -151,7 +194,6 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
 
     This function is not supposed to be directly accessed unless you are writing a custom transformers module.
     """
-
     if name is None:
         name = _get_library_name()
 
@@ -177,7 +219,6 @@ def get_verbosity() -> int:
     - 10: `transformers.logging.DEBUG`
 
     </Tip>"""
-
     _configure_library_root_logger()
     return _get_library_root_logger().getEffectiveLevel()
 
@@ -196,7 +237,6 @@ def set_verbosity(verbosity: int) -> None:
             - `transformers.logging.INFO`
             - `transformers.logging.DEBUG`
     """
-
     _configure_library_root_logger()
     _get_library_root_logger().setLevel(verbosity)
 
@@ -223,7 +263,6 @@ def set_verbosity_error():
 
 def disable_default_handler() -> None:
     """Disable the default handler of the HuggingFace Transformers's root logger."""
-
     _configure_library_root_logger()
 
     assert _default_handler is not None
@@ -232,7 +271,6 @@ def disable_default_handler() -> None:
 
 def enable_default_handler() -> None:
     """Enable the default handler of the HuggingFace Transformers's root logger."""
-
     _configure_library_root_logger()
 
     assert _default_handler is not None
@@ -241,7 +279,6 @@ def enable_default_handler() -> None:
 
 def add_handler(handler: logging.Handler) -> None:
     """adds a handler to the HuggingFace Transformers's root logger."""
-
     _configure_library_root_logger()
 
     assert handler is not None
@@ -250,7 +287,6 @@ def add_handler(handler: logging.Handler) -> None:
 
 def remove_handler(handler: logging.Handler) -> None:
     """removes given handler from the HuggingFace Transformers's root logger."""
-
     _configure_library_root_logger()
 
     assert handler is not None and handler not in _get_library_root_logger().handlers
@@ -261,7 +297,6 @@ def disable_propagation() -> None:
     """
     Disable propagation of the library log outputs. Note that log propagation is disabled by default.
     """
-
     _configure_library_root_logger()
     _get_library_root_logger().propagate = False
 
@@ -271,7 +306,6 @@ def enable_propagation() -> None:
     Enable propagation of the library log outputs. Please disable the HuggingFace Transformers's default handler to
     prevent double logging if the root logger has been configured.
     """
-
     _configure_library_root_logger()
     _get_library_root_logger().propagate = True
 
@@ -334,39 +368,140 @@ logging.Logger.warning_once = warning_once
 
 class EmptyTqdm:
     """Dummy tqdm which doesn't do anything."""
-
     def __init__(self, *args, **kwargs):
+        """
+        Initializes an instance of the EmptyTqdm class.
+        
+        Args:
+            self: The instance of the EmptyTqdm class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         self._iterator = args[0] if args else None
 
     def __iter__(self):
+        """
+        This method implements the iterator protocol for the EmptyTqdm class.
+        
+        Args:
+            self: EmptyTqdm object. The instance of the EmptyTqdm class for which the iterator is being created.
+        
+        Returns:
+            None. This method returns an iterator object that iterates over the _iterator attribute of the EmptyTqdm instance.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         return iter(self._iterator)
 
     def __getattr__(self, _):
         """Return empty function."""
-
         def empty_fn(*args, **kwargs):
             return
         return empty_fn
 
     def __enter__(self):
+        """
+        __enter__
+        
+        Args:
+            self: EmptyTqdm
+                The self parameter refers to the current instance of the EmptyTqdm class.
+        
+        Returns:
+            None
+                This method returns None.
+        
+        Raises:
+            No exceptions are raised by this method.
+        """
         return self
 
     def __exit__(self, type_, value, traceback):
+        """
+        __exit__ method in the EmptyTqdm class.
+        
+        Args:
+            self: EmptyTqdm object
+                The instance of the EmptyTqdm class.
+            type_: type
+                The type of the exception. It represents the type of the exception being handled.
+            value: exception
+                The exception that was raised. It represents the actual exception object.
+            traceback: traceback
+                The traceback object. It represents the traceback information associated with the exception.
+        
+        Returns:
+            None
+            This method does not return any value.
+        
+        Raises:
+            This method does not raise any exceptions explicitly.
+        """
         return
 
 
 class _tqdm_cls:
+
+    """_tqdm_cls is a Python class that provides functionality for managing the progress of tasks. It includes methods for calling the class, setting a lock, and getting a lock. This class is designed to work
+in conjunction with the tqdm_lib module for displaying progress bars during iterative processes. When _tqdm_active is True, the class uses methods from the tqdm_lib.tqdm module to handle progress tracking.
+Otherwise, it falls back to using an EmptyTqdm instance for progress tracking. The set_lock method allows users to specify a lock for thread safety, and the get_lock method retrieves the current lock if one
+has been set."""
     def __call__(self, *args, **kwargs):
+        """
+        This method __call__ in the class _tqdm_cls is used to conditionally return either a tqdm object or an EmptyTqdm object based on the _tqdm_active flag.
+        
+        Args:
+            self (object): The instance of the _tqdm_cls class. It is used to access the attributes and methods of the class.
+        
+        Returns:
+            None: This method does not explicitly return any value. It returns either a tqdm object or an EmptyTqdm object based on the _tqdm_active flag.
+        
+        Raises:
+            No specific exceptions are raised by this method under normal circumstances. However, if there are issues related to the instantiation of tqdm objects or EmptyTqdm objects, standard Python
+exceptions may be raised.
+        """
         if _tqdm_active:
             return tqdm_lib.tqdm(*args, **kwargs)
         return EmptyTqdm(*args, **kwargs)
 
     def set_lock(self, *args, **kwargs):
+        """
+        Method to set the lock for the _tqdm_cls instance.
+        
+        Args:
+            self (_tqdm_cls): The instance of the _tqdm_cls class.
+                This parameter is required to access the instance and set the lock.
+                It is of type _tqdm_cls and represents the instance on which the lock is being set.
+        
+        Returns:
+            None: This method does not return any value. The lock is set within the instance itself.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+            However, if _tqdm_active is False, the method will not set the lock and will return without any further action.
+        """
         self._lock = None
         if _tqdm_active:
             return tqdm_lib.tqdm.set_lock(*args, **kwargs)
 
     def get_lock(self):
+        """
+        This method is used to retrieve the lock used by the _tqdm_cls class.
+        
+        Args:
+            self (object): The instance of the _tqdm_cls class.
+            
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         if _tqdm_active:
             return tqdm_lib.tqdm.get_lock()
 

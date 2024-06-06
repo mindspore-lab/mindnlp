@@ -39,8 +39,26 @@ class Evaluator:
             while training. Default: None.
         jit (bool): Whether use Just-In-Time compile.
     """
-
     def __init__(self, network, eval_dataset=None, metrics=None, callbacks=None, jit=False):
+        r"""
+        Initializes an instance of the Evaluator class.
+        
+        Args:
+            self (Evaluator): The instance of the Evaluator class.
+            network (object): The neural network model to be evaluated.
+            eval_dataset (object, optional): The dataset used for evaluation. Default is None.
+            metrics (list, optional): List of evaluation metrics to be used.
+            callbacks (list, optional): List of callback functions to be executed during evaluation.
+            jit (bool): Flag indicating whether just-in-time (JIT) compilation should be used.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            TypeError: If the metrics provided are not in the correct format.
+            ValueError: If the evaluation dataset size is not valid.
+            Exception: If any other unexpected error occurs during initialization.
+        """
         self.network = network
         self.callbacks = callbacks
         self.earlystop = False
@@ -53,6 +71,37 @@ class Evaluator:
         self.eval_func = self._prepare_eval_func(network, jit)
 
     def _prepare_eval_func(self, network, jit):
+        r"""
+        Prepares the evaluation function for the Evaluator class.
+        
+        Args:
+            self (Evaluator): The instance of the Evaluator class.
+            network: The network object used for evaluation.
+            jit (bool): A flag indicating whether to use just-in-time (JIT) compilation.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        
+        This method prepares the evaluation function for the Evaluator class. It creates a core process function named '_run_step' 
+        that takes any number of positional and keyword arguments. The function calls the 'network' object with the provided 
+        arguments and stores the result in 'outputs'. If the 'outputs' is an instance of the 'ModelOutput' class, the method 
+        returns the 'logits' attribute of the 'outputs'. Otherwise, it returns the 'outputs'. 
+        
+        If the 'jit' flag is set to True, the '_run_step' function is compiled using just-in-time (JIT) compilation by calling 
+        'ms_jit' with the '_run_step' function as an argument. The compiled function is then returned. If the 'jit' flag is 
+        False, the uncompiled '_run_step' function is returned.
+        
+        Note: The '_run_step' function is an internal function and is not intended to be called directly by external code.
+        
+        Example usage:
+            evaluator = Evaluator()
+            network = MyNetwork()
+            jit = True
+            evaluator._prepare_eval_func(network, jit)
+        """
         def _run_step(*args, **kwargs):
             """Core process of each step."""
             outputs = network(*args, **kwargs)

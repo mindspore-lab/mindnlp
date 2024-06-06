@@ -103,6 +103,19 @@ PROCESSOR_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, PROCESSOR_MAPPING_NAM
 
 
 def processor_class_from_name(class_name: str):
+    """
+    This function retrieves a processor class based on the provided class name.
+    
+    Args:
+        class_name (str): The name of the processor class to retrieve.
+    
+    Returns:
+        None: If the processor class is not found.
+    
+    Raises:
+        AttributeError: If an attribute error occurs while trying to retrieve the class.
+        ImportError: If an import error occurs while importing the module.
+    """
     for module_name, processors in PROCESSOR_MAPPING_NAMES.items():
         if class_name in processors:
             module_name = model_type_to_module_name(module_name)
@@ -133,8 +146,23 @@ class AutoProcessor:
 
     This class cannot be instantiated directly using `__init__()` (throws an error).
     """
-
     def __init__(self):
+        """
+        Class: AutoProcessor
+        
+        __init__(self)
+            Initializes a new instance of the AutoProcessor class.
+        
+        Args:
+            self (object): The instance of the AutoProcessor class.
+        
+        Returns:
+            None. This method does not return a value.
+        
+        Raises:
+            EnvironmentError: This method raises an EnvironmentError with the message 'AutoProcessor is designed to be instantiated using the `AutoProcessor.from_pretrained(pretrained_model_name_or_path)`
+method.'
+        """
         raise EnvironmentError(
             "AutoProcessor is designed to be instantiated "
             "using the `AutoProcessor.from_pretrained(pretrained_model_name_or_path)` method."

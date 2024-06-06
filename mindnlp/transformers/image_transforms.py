@@ -44,7 +44,6 @@ if is_mindspore_available():
     from mindspore import ops
 
 
-
 def to_channel_dimension_format(
     image: np.ndarray,
     channel_dim: Union[ChannelDimension, str],
@@ -497,6 +496,20 @@ def center_crop(
 
 
 def _center_to_corners_format(bboxes_center: "mindspore.Tensor") -> "mindspore.Tensor":
+    """
+    Converts bounding boxes from center format to corners format.
+    
+    Args:
+        bboxes_center (mindspore.Tensor): A tensor containing bounding boxes in center format with shape (N, 4) where N is the number of boxes.
+            The four values represent center_x, center_y, width, and height of each bounding box.
+    
+    Returns:
+        mindspore.Tensor: A tensor containing bounding boxes in corners format with shape (N, 4) where N is the number of boxes.
+            The four values represent the coordinates of the top-left and bottom-right corners of each bounding box.
+    
+    Raises:
+        None
+    """
     center_x, center_y, width, height = bboxes_center.unbind(-1)
     bbox_corners = ops.stack(
         # top left x, top left y, bottom right x, bottom right y
@@ -507,6 +520,20 @@ def _center_to_corners_format(bboxes_center: "mindspore.Tensor") -> "mindspore.T
 
 
 def _center_to_corners_format_numpy(bboxes_center: np.ndarray) -> np.ndarray:
+    """
+    Converts bounding boxes from center format to corners format using NumPy operations.
+    
+    Args:
+        bboxes_center (np.ndarray): A NumPy array representing bounding boxes in center format. The array should have shape (N, 4) where N is the number of bounding boxes. Each row should contain the
+coordinates of the center (center_x, center_y) and the dimensions (width, height) of a bounding box.
+    
+    Returns:
+        np.ndarray: A NumPy array representing bounding boxes in corners format. The returned array has the same shape as bboxes_center and contains the coordinates of the corners (top-left and bottom-right)
+of each bounding box.
+    
+    Raises:
+        None
+    """
     center_x, center_y, width, height = bboxes_center.T
     bboxes_corners = np.stack(
         # top left x, top left y, bottom right x, bottom right y
@@ -537,6 +564,22 @@ def center_to_corners_format(bboxes_center: TensorType) -> TensorType:
 
 
 def _corners_to_center_format(bboxes_corners: "mindspore.Tensor") -> "mindspore.Tensor":
+    """
+    Converts bounding box coordinates from the corners format to the center format.
+    
+    Args:
+        bboxes_corners (mindspore.Tensor): A tensor containing the bounding box coordinates in the corners format. 
+            The tensor shape should be (N, 4), where N is the number of bounding boxes. 
+            The four coordinates represent the top-left and bottom-right corners of each bounding box in the image. 
+    
+    Returns:
+        mindspore.Tensor: A tensor containing the bounding box coordinates in the center format. 
+            The tensor shape is (N, 4), where N is the number of bounding boxes. 
+            The four coordinates represent the center coordinates (x, y) and the width and height of each bounding box.
+    
+    Raises:
+        None.
+    """
     top_left_x, top_left_y, bottom_right_x, bottom_right_y = bboxes_corners.unbind(-1)
     b = [
         (top_left_x + bottom_right_x) / 2,  # center x
@@ -548,6 +591,18 @@ def _corners_to_center_format(bboxes_corners: "mindspore.Tensor") -> "mindspore.
 
 
 def _corners_to_center_format_numpy(bboxes_corners: np.ndarray) -> np.ndarray:
+    """
+    Converts bounding box corners format to center format using numpy.
+    
+    Args:
+        bboxes_corners (np.ndarray): Array of bounding box corners in the format (top_left_x, top_left_y, bottom_right_x, bottom_right_y).
+    
+    Returns:
+        np.ndarray: Array of bounding box centers in the format (center_x, center_y, width, height).
+    
+    Raises:
+        None.
+    """
     top_left_x, top_left_y, bottom_right_x, bottom_right_y = bboxes_corners.T
     bboxes_center = np.stack(
         [
@@ -616,7 +671,6 @@ class PaddingMode(ExplicitEnum):
     """
     Enum class for the different padding modes to use when padding images.
     """
-
     CONSTANT = "constant"
     REFLECT = "reflect"
     REPLICATE = "replicate"

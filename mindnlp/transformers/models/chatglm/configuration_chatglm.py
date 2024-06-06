@@ -91,6 +91,35 @@ class ChatGLMConfig(PretrainedConfig):
             prefix_projection=False,
             **kwargs
     ):
+        """
+        Initializes a ChatGLMConfig object with the specified configuration parameters.
+        
+        Args:
+        - self (object): The instance of the ChatGLMConfig class.
+        - vocab_size (int, optional): The size of the vocabulary. Default is 150528.
+        - hidden_size (int, optional): The size of the hidden layers. Default is 4096.
+        - num_layers (int, optional): The number of layers in the model. Default is 28.
+        - num_attention_heads (int, optional): The number of attention heads. Default is 32.
+        - layernorm_epsilon (float, optional): The epsilon value for layer normalization. Default is 1e-05.
+        - use_cache (bool, optional): Whether to use cache during inference. Default is False.
+        - bos_token_id (int, optional): The ID of the beginning of sequence token. Default is 150004.
+        - eos_token_id (int, optional): The ID of the end of sequence token. Default is 150005.
+        - mask_token_id (int, optional): The ID of the mask token. Default is 150000.
+        - gmask_token_id (int, optional): The ID of the global mask token. Default is 150001.
+        - pad_token_id (int, optional): The ID of the padding token. Default is 0.
+        - max_sequence_length (int, optional): The maximum sequence length allowed. Default is 2048.
+        - inner_hidden_size (int, optional): The size of inner hidden layers. Default is 16384.
+        - position_encoding_2d (bool, optional): Whether to use 2D position encoding. Default is True.
+        - quantization_bit (int, optional): The number of bits for quantization. Default is 0.
+        - pre_seq_len (int, optional): The length of the preceding sequence. Default is None.
+        - prefix_projection (bool, optional): Whether to use prefix projection. Default is False.
+        
+        Returns:
+        - None. This method does not return any value.
+        
+        Raises:
+        - None.
+        """
         self.num_layers = num_layers
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size

@@ -91,7 +91,6 @@ class BlenderbotConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "blenderbot"
     keys_to_ignore_at_inference = ["past_key_values"]
     attribute_map = {"num_attention_heads": "encoder_attention_heads", "hidden_size": "d_model"}
@@ -125,6 +124,41 @@ class BlenderbotConfig(PretrainedConfig):
         forced_eos_token_id=2,
         **kwargs,
     ):
+        """Initialize a BlenderbotConfig instance.
+        
+        Args:
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 8008.
+            max_position_embeddings (int, optional): The maximum number of positional embeddings. Defaults to 128.
+            encoder_layers (int, optional): The number of encoder layers. Defaults to 2.
+            encoder_ffn_dim (int, optional): The dimension of the encoder's feedforward network. Defaults to 10240.
+            encoder_attention_heads (int, optional): The number of attention heads in the encoder. Defaults to 32.
+            decoder_layers (int, optional): The number of decoder layers. Defaults to 24.
+            decoder_ffn_dim (int, optional): The dimension of the decoder's feedforward network. Defaults to 10240.
+            decoder_attention_heads (int, optional): The number of attention heads in the decoder. Defaults to 32.
+            encoder_layerdrop (float, optional): The probability of dropping a layer in the encoder. Defaults to 0.0.
+            decoder_layerdrop (float, optional): The probability of dropping a layer in the decoder. Defaults to 0.0.
+            use_cache (bool, optional): Whether to use cache during decoding. Defaults to True.
+            is_encoder_decoder (bool, optional): Whether the model is an encoder-decoder architecture. Defaults to True.
+            activation_function (str, optional): The activation function to use. Defaults to 'gelu'.
+            d_model (int, optional): The dimension of the model. Defaults to 2560.
+            dropout (float, optional): The dropout probability. Defaults to 0.1.
+            attention_dropout (float, optional): The dropout probability for attention layers. Defaults to 0.0.
+            activation_dropout (float, optional): The dropout probability for activation layers. Defaults to 0.0.
+            init_std (float, optional): The standard deviation for weight initialization. Defaults to 0.02.
+            decoder_start_token_id (int, optional): The token id for the start of the decoder sequence. Defaults to 1.
+            scale_embedding (bool, optional): Whether to scale the embeddings. Defaults to False.
+            pad_token_id (int, optional): The token id for padding. Defaults to 0.
+            bos_token_id (int, optional): The token id for the beginning of sequence. Defaults to 1.
+            eos_token_id (int, optional): The token id for the end of sequence. Defaults to 2.
+            encoder_no_repeat_ngram_size (int, optional): The size of the no repeat n-gram in the encoder. Defaults to 3.
+            forced_eos_token_id (int, optional): The token id for the forced end of sequence. Defaults to 2.
+            
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
         self.d_model = d_model

@@ -106,6 +106,19 @@ class SpearmanCorrelation(Metric):
 
     """
     def __init__(self, name='SpearmanCorrelation'):
+        r"""
+        Initializes a SpearmanCorrelation object.
+        
+        Args:
+            self: The instance of the SpearmanCorrelation class.
+            name (str): The name of the SpearmanCorrelation object. Default is 'SpearmanCorrelation'.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         super().__init__()
         self._name = name
         self.preds = []

@@ -31,11 +31,24 @@ class MSHTTPError(HTTPError):
     - Server error message from the header "X-Error-Message".
     - Server error message if we can found one in the response body.
     """
-
     request_id: Optional[str] = None
     server_message: Optional[str] = None
 
     def __init__(self, message: str, response: Optional[Response] = None):
+        """
+        Initializes an instance of MSHTTPError.
+        
+        Args:
+            self: The instance of the MSHTTPError class.
+            message (str): The error message associated with the HTTP error.
+            response (Optional[Response]): The optional response object received during the HTTP request. Defaults to None.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            JSONDecodeError: If an error occurs while decoding the JSON response.
+        """
         # Parse server information if any.
         if response is not None:
             self.request_id = response.headers.get("X-Request-Id")
@@ -88,13 +101,11 @@ class ModelNotFoundError(MSHTTPError):
     Raised when trying to access a hf.co URL with an invalid repository name, or
     with a private repo name the user does not have access to.
     """
-
 class RepositoryNotFoundError(MSHTTPError):
     """
     Raised when trying to access a hf.co URL with an invalid repository name, or
     with a private repo name the user does not have access to.
     """
-
 class GatedRepoError(RepositoryNotFoundError):
     """
     Raised when trying to access a gated repository for which the user is not on the
@@ -115,7 +126,6 @@ class GatedRepoError(RepositoryNotFoundError):
     Visit https://hf-mirror.com/ardent-figment/gated-model to ask for access.
     ```
     """
-
 class EntryNotFoundError(MSHTTPError):
     """
     Raised when trying to access a hf.co URL with a valid repository and revision
@@ -132,8 +142,6 @@ class EntryNotFoundError(MSHTTPError):
     Entry Not Found for url: https://hf-mirror.com/bert-base-cased/resolve/main/%3Cnon-existent-file%3E.
     ```
     """
-
-
 class LocalEntryNotFoundError(EntryNotFoundError, FileNotFoundError, ValueError):
     """
     Raised when trying to access a file that is not on the disk when network is
@@ -143,8 +151,19 @@ class LocalEntryNotFoundError(EntryNotFoundError, FileNotFoundError, ValueError)
     Note: `LocalEntryNotFoundError` derives from `HTTPError` because of `EntryNotFoundError`
           even when it is not a network issue.
     """
-
     def __init__(self, message: str):
+        """Initialize a LocalEntryNotFoundError object.
+        
+        Args:
+            self (LocalEntryNotFoundError): The instance of the LocalEntryNotFoundError class.
+            message (str): The error message associated with the exception.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         super().__init__(message, response=None)
 
 
@@ -160,8 +179,6 @@ class BadRequestError(MSHTTPError, ValueError):
     huggingface_hub.utils._errors.BadRequestError: Bad request for check endpoint: {details} (Request ID: XXX)
     ```
     """
-
-
 def hf_raise_for_status(response: Response, endpoint_name: Optional[str] = None) -> None:
     """
     Internal version of `response.raise_for_status()` that will refine a

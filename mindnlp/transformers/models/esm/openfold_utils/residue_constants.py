@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=deprecated-method
 """Constants used in AlphaFold."""
 
 import collections
@@ -385,6 +386,19 @@ BondAngle = collections.namedtuple(
 
 
 def map_structure_with_atom_order(in_list: list, first_call: bool = True) -> list:
+    """
+    Maps the structure of a nested list based on atom order.
+    
+    Args:
+        in_list (list): The input nested list to be mapped. It can contain nested lists and strings.
+        first_call (bool, optional): Indicates if it is the first call to the function. Defaults to True.
+    
+    Returns:
+        list: The mapped nested list where strings are replaced with corresponding values from the 'atom_order' dictionary.
+    
+    Raises:
+        ValueError: Raised when an unexpected type is encountered while mapping nested lists.
+    """
     # Maps strings in a nested list structure to their corresponding index in atom_order
     if first_call:
         in_list = copy.deepcopy(in_list)
@@ -960,6 +974,18 @@ restype_atom14_ambiguous_atoms_swap_idx: np.ndarray = np.tile(np.arange(14, dtyp
 
 
 def _make_atom14_ambiguity_feats() -> None:
+    """
+    Updates a data structure to indicate ambiguity between specific atom pairs for each residue type.
+    
+    Args:
+        None
+    
+    Returns:
+        None: This function does not return any value.
+    
+    Raises:
+        None
+    """
     for res, pairs in residue_atom_renaming_swaps.items():
         res_idx = restype_order[restype_3to1[res]]
         for atom1, atom2 in pairs.items():
@@ -975,4 +1001,17 @@ _make_atom14_ambiguity_feats()
 
 
 def aatype_to_str_sequence(aatype: Sequence[int]) -> str:
+    """
+    Converts a list of integer amino acid types to a string sequence.
+    
+    Args:
+        aatype (Sequence[int]): A list of integer amino acid types.
+    
+    Returns:
+        str: The resulting string sequence where each amino acid type is represented by its corresponding character according to the 'restypes_with_x' mapping.
+    
+    Raises:
+        None.
+    
+    """
     return "".join([restypes_with_x[aatype[i]] for i in range(len(aatype))])

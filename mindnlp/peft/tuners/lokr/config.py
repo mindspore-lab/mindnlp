@@ -27,10 +27,10 @@ class LoKrConfig(PeftConfig):
 
     Args:
         r (`int`): lokr attention dimension.
-        target_modules (`Union[List[str],str]`): The names of the modules to apply Lora to.
+        target_cells (`Union[List[str],str]`): The names of the cells to apply Lora to.
         lora_alpha (`float`): The alpha parameter for Lokr scaling.
         rank_dropout (`float`):The dropout probability for rank dimension during training.
-        module_dropout (`float`): The dropout probability for LoKR layers.
+        cell_dropout (`float`): The dropout probability for LoKR layers.
         use_effective_conv2d (`bool`):
             Use parameter effective decomposition for
             Conv2d with ksize > 1 ("Proposition 3" from FedPara paper).
@@ -38,8 +38,8 @@ class LoKrConfig(PeftConfig):
         decompose_factor (`int`):Kronecker product decomposition factor.
 
         bias (`str`): Bias type for Lora. Can be 'none', 'all' or 'lora_only'
-        modules_to_save (`List[str]`):
-            List of modules apart from LoRA layers to be set as trainable
+        cells_to_save (`List[str]`):
+            List of cells apart from LoRA layers to be set as trainable
             and saved in the final checkpoint.
         init_weights (`bool`):
             Whether to perform initialization of adapter weights. This defaults to `True`, 
@@ -58,12 +58,11 @@ class LoKrConfig(PeftConfig):
             The mapping from layer names or regexp expression to alphas which are different from the default alpha
             specified by `alpha`.
     """
-
     r: int = field(default=8, metadata={"help": "lokr attention dimension"})
-    target_modules: Optional[Union[List[str], str]] = field(
+    target_cells: Optional[Union[List[str], str]] = field(
         default=None,
         metadata={
-            "help": "List of module names or regex expression of the module names to replace with Lora."
+            "help": "List of cell names or regex expression of the cell names to replace with Lora."
             "For example, ['q', 'v'] or '.*decoder.*(SelfAttention|EncDecAttention).*(q|v)$' "
         },
     )
@@ -72,7 +71,7 @@ class LoKrConfig(PeftConfig):
         default=0.0,
         metadata={"help": "The dropout probability for rank dimension during training"},
     )
-    module_dropout: float = field(default=0.0, metadata={"help": "lokr dropout"})
+    cell_dropout: float = field(default=0.0, metadata={"help": "lokr dropout"})
     use_effective_conv2d: bool = field(
         default=False,
         metadata={
@@ -93,10 +92,10 @@ class LoKrConfig(PeftConfig):
         default="none",
         metadata={"help": "Bias type for Lora. Can be 'none', 'all' or 'lora_only'"},
     )
-    modules_to_save: Optional[List[str]] = field(
+    cells_to_save: Optional[List[str]] = field(
         default=None,
         metadata={
-            "help": "List of modules apart from LoRA layers to be set as trainable and saved in the final checkpoint. "
+            "help": "List of cells apart from LoRA layers to be set as trainable and saved in the final checkpoint. "
             "For example, in Sequence Classification or Token Classification tasks, "
             "the final layer `classifier/score` are randomly initialized and as such need to be trainable and saved."
         },
@@ -140,6 +139,18 @@ class LoKrConfig(PeftConfig):
     )
 
     def __post_init__(self):
+        r"""
+        Method to initialize the attributes of the LoKrConfig class after object creation.
+        
+        Args:
+            self: Instance of the LoKrConfig class.
+        
+        Returns:
+            None. This method performs attribute initialization within the class.
+        
+        Raises:
+            No specific exceptions are raised within this method.
+        """
         self.peft_type = PeftType.LOKR
 
     @property

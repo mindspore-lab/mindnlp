@@ -70,7 +70,6 @@ class BertGenerationTokenizer(PreTrainedTokenizer):
             - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
               BPE-dropout.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     prefix_tokens: List[int] = []
     model_input_names = ["input_ids", "attention_mask"]
@@ -86,6 +85,26 @@ class BertGenerationTokenizer(PreTrainedTokenizer):
         sp_model_kwargs: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> None:
+        """
+        Initializes a BertGenerationTokenizer object.
+        
+        Args:
+        - vocab_file (str): The path to the vocabulary file containing the token mappings.
+        - bos_token (str, optional): The Beginning of Sentence token. Default is '<s>'.
+        - eos_token (str, optional): The End of Sentence token. Default is '</s>'.
+        - unk_token (str, optional): The token representing unknown words. Default is '<unk>'.
+        - pad_token (str, optional): The token used for padding sequences. Default is '<pad>'.
+        - sep_token (str, optional): The token used for separating different segments. Default is '<::::>'.
+        - sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional keyword arguments for SentencePieceProcessor. Default is None.
+        
+        Returns:
+        None. This method initializes the BertGenerationTokenizer object.
+        
+        Raises:
+        - TypeError: If the vocab_file is not a valid string path or if sp_model_kwargs is not a valid dictionary.
+        - OSError: If the vocab_file cannot be loaded or accessed.
+        - ValueError: If any of the default tokens are not valid strings.
+        """
         self.sp_model_kwargs = {} if sp_model_kwargs is None else sp_model_kwargs
 
         self.vocab_file = vocab_file
@@ -106,19 +125,82 @@ class BertGenerationTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
+        """
+        Returns the size of the vocabulary used by the BertGenerationTokenizer instance.
+        
+        Args:
+            self (BertGenerationTokenizer): The current instance of the BertGenerationTokenizer class.
+        
+        Returns:
+            None: This method does not return a value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         return self.sp_model.get_piece_size()
 
     def get_vocab(self):
+        """
+        Returns the vocabulary of the BertGenerationTokenizer.
+        
+        Args:
+            self (BertGenerationTokenizer): An instance of the BertGenerationTokenizer class.
+        
+        Returns:
+            dict: A dictionary representing the vocabulary. The keys are tokens (words, subwords, or special tokens) 
+            and the values are their corresponding token IDs.
+        
+        Raises:
+            None.
+        
+        Note:
+            - The vocabulary includes both the original vocabulary from the pre-trained model and any additional tokens added 
+              using the 'add_tokens' method.
+            - The token IDs range from 0 to vocab_size - 1, where vocab_size is the total number of tokens in the vocabulary.
+        
+        Example:
+            >>> tokenizer = BertGenerationTokenizer()
+            >>> vocab = tokenizer.get_vocab()
+            >>> print(vocab)
+            {'[PAD]': 0, '[UNK]': 1, '[CLS]': 2, '[SEP]': 3, '[MASK]': 4, 'hello': 5, 'world': 6}
+        """
         vocab = {self.convert_ids_to_tokens(i): i for i in range(self.vocab_size)}
         vocab.update(self.added_tokens_encoder)
         return vocab
 
     def __getstate__(self):
+        """
+        Method __getstate__ in the class BertGenerationTokenizer.
+        
+        This method returns the state of the object which is a dictionary containing the object's attributes. The 'sp_model' attribute is set to None before returning the state.
+        
+        Args:
+            self: Instance of the BertGenerationTokenizer class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         state = self.__dict__.copy()
         state["sp_model"] = None
         return state
 
     def __setstate__(self, d):
+        """
+        Set the state of the BertGenerationTokenizer object.
+        
+        Args:
+            self (BertGenerationTokenizer): The instance of the BertGenerationTokenizer class.
+            d (dict): A dictionary containing the state information to be set for the object.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         self.__dict__ = d
 
         # for backward compatibility
@@ -156,6 +238,21 @@ class BertGenerationTokenizer(PreTrainedTokenizer):
         return out_string.strip()
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """
+        Save the vocabulary files to the specified directory.
+        
+        Args:
+            self: The instance of the BertGenerationTokenizer class.
+            save_directory (str): The directory where the vocabulary files will be saved.
+            filename_prefix (Optional[str]): An optional prefix to be added to the vocabulary file name. Defaults to None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the path of the saved vocabulary file.
+        
+        Raises:
+            OSError: If the save_directory does not exist or is not a directory.
+            IOError: If there is an issue with file operations such as copying or writing the vocabulary file.
+        """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return

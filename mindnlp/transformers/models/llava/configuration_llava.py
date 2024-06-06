@@ -71,7 +71,6 @@ class LlavaConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "llava"
     is_composition = False
 
@@ -86,6 +85,34 @@ class LlavaConfig(PretrainedConfig):
         vision_feature_layer=-2,
         **kwargs,
     ):
+        """
+        Initializes an instance of the LlavaConfig class.
+        
+        Args:
+            self: The instance of the class.
+            vision_config (dict or None): Configuration options for the vision model. If provided as a dictionary, must include the 'model_type' key. Default is None.
+            text_config (dict or None): Configuration options for the text model. If provided as a dictionary, must include the 'model_type' key. Default is None.
+            ignore_index (int): The index to ignore during computations. Default is -100.
+            image_token_index (int): The index assigned to image tokens. Default is 32000.
+            projector_hidden_act (str): The activation function for the projector. Default is 'gelu'.
+            vision_feature_select_strategy (str): The strategy to select vision features. Valid values are 'default' and 'full'. Default is 'default'.
+            vision_feature_layer (int): The layer to extract vision features from. Default is -2.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None
+        
+        Raises:
+            ValueError: If the provided vision_feature_select_strategy is not 'default' or 'full'.
+            FutureWarning: If the 'vocab_size' argument is deprecated and no longer has any effect.
+        
+        Note:
+            - The 'vision_config' parameter can be provided as a dictionary or None. If a dictionary is provided, it must include the 'model_type' key.
+            - If 'vision_config' is None, a default configuration is used.
+            - The 'text_config' parameter can be provided as a dictionary or None. If a dictionary is provided, it must include the 'model_type' key.
+            - If 'text_config' is None, a default configuration is used.
+            - The '_vocab_size' attribute is set based on the 'text_config' vocabulary size.
+        """
         self.ignore_index = ignore_index
         self.image_token_index = image_token_index
         self.projector_hidden_act = projector_hidden_act
@@ -139,6 +166,21 @@ class LlavaConfig(PretrainedConfig):
 
     @property
     def vocab_size(self):
+        """
+        Method to retrieve the vocabulary size.
+        
+        Args:
+            self (LlavaConfig): The instance of the LlavaConfig class.
+                This parameter refers to the current instance of the LlavaConfig class.
+                It is used to access the internal attributes and configurations of the class.
+        
+        Returns:
+            None. The method does not return any value.
+        
+        Raises:
+            FutureWarning: This method raises a FutureWarning when accessed, indicating that the 'vocab_size' attribute is deprecated.
+                Users are advised to use 'text_config.vocab_size' instead.
+        """
         warnings.warn(
             "The `vocab_size` attribute is deprecated and will be removed in v4.42, Please use `text_config.vocab_size` instead.",
             FutureWarning,
@@ -147,9 +189,44 @@ class LlavaConfig(PretrainedConfig):
 
     @vocab_size.setter
     def vocab_size(self, value):
+        """
+        Sets the vocabulary size for the LlavaConfig class.
+        
+        Args:
+            self (LlavaConfig): The instance of the LlavaConfig class.
+            value (int): The new vocabulary size to be set. It should be a positive integer.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        
+        This method is used to set the vocabulary size for the LlavaConfig class. The vocabulary size determines the number of unique words that can be stored in the vocabulary. It is important to set an
+appropriate vocabulary size based on the application and the amount of available memory. The vocabulary size can only be set to a positive integer value, otherwise an error will be raised.
+        
+        Example:
+            config = LlavaConfig()
+            config.vocab_size = 10000
+        """
         self._vocab_size = value
 
     def to_dict(self):
+        """
+        Converts the LlavaConfig object into a dictionary representation.
+        
+        Args:
+            self (LlavaConfig): The LlavaConfig object itself.
+        
+        Returns:
+            dict: A dictionary representation of the LlavaConfig object, excluding the '_vocab_size' attribute.
+        
+        Raises:
+            None
+        
+        Note:
+            This method is inherited from the parent class and modified to exclude the '_vocab_size' attribute from the output dictionary.
+        """
         output = super().to_dict()
         output.pop("_vocab_size", None)
         return output

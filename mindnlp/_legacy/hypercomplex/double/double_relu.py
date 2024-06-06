@@ -60,8 +60,23 @@ class J1J2ReLU(nn.Cell):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def construct(self, u: Tensor) -> Tensor:
+        r"""
+        Constructs a new tensor based on the input tensor 'u' using a specific calculation.
+        
+        Args:
+            self (J1J2ReLU): The instance of the J1J2ReLU class.
+            u (Tensor): The input tensor on which the construction is based. Should be a valid Tensor object.
+        
+        Returns:
+            Tensor: A new tensor resulting from the construction process.
+        
+        Raises:
+            ValueError: If the input 'u' is not a valid Tensor object.
+            TypeError: If the input 'u' is not of type Tensor.
+            ZeroDivisionError: If division by 2 results in a zero division error.
+            RuntimeError: If any runtime error occurs during the calculation process.
+        """
         u = u / 2
         u1, u2 = get_u1_and_u2(u)
         x = P.relu(u1 + u2)

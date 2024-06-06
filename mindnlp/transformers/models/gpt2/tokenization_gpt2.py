@@ -152,7 +152,6 @@ class GPT2Tokenizer(PreTrainedTokenizer):
             Whether or not to add an initial beginning of sentence token to the input. This allows to treat the leading
             word just as any other word.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -171,6 +170,27 @@ class GPT2Tokenizer(PreTrainedTokenizer):
         add_bos_token=False,
         **kwargs,
     ):
+        """Initializes a GPT2Tokenizer object.
+        
+        Args:
+            self: The instance of the GPT2Tokenizer class.
+            vocab_file (str): The path to the vocabulary file.
+            merges_file (str): The path to the merges file.
+            errors (str, optional): Specifies how to handle errors during tokenization. Defaults to 'replace'.
+            unk_token (str, optional): The unknown token to be used during tokenization. Defaults to 'endoftext'.
+            bos_token (str, optional): The beginning of sentence token. Defaults to 'endoftext'.
+            eos_token (str, optional): The end of sentence token. Defaults to 'endoftext'.
+            pad_token (str, optional): The padding token. Defaults to None.
+            add_prefix_space (bool, optional): Specifies whether to add a prefix space to the input. Defaults to False.
+            add_bos_token (bool, optional): Specifies whether to add the beginning of sentence token to the input. Defaults to False.
+        
+        Returns:
+            None
+        
+        Raises:
+            FileNotFoundError: If the vocab_file or merges_file is not found.
+            UnicodeDecodeError: If there is an error decoding the vocab_file or merges_file.
+        """
         bos_token = AddedToken(bos_token, lstrip=False, rstrip=False) if isinstance(bos_token, str) else bos_token
         eos_token = AddedToken(eos_token, lstrip=False, rstrip=False) if isinstance(eos_token, str) else eos_token
         unk_token = AddedToken(unk_token, lstrip=False, rstrip=False) if isinstance(unk_token, str) else unk_token
@@ -207,12 +227,52 @@ class GPT2Tokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
+        """
+        This method retrieves the vocabulary size of the GPT2Tokenizer.
+        
+        Args:
+            self (GPT2Tokenizer): The instance of the GPT2Tokenizer class.
+            
+        Returns:
+            int: The number of unique tokens in the tokenizer's vocabulary.
+        
+        Raises:
+            None.
+        """
         return len(self.encoder)
 
     def get_vocab(self):
+        """
+        Method to retrieve the vocabulary of the GPT2Tokenizer.
+        
+        Args:
+            self: GPT2Tokenizer object. The instance of the GPT2Tokenizer class.
+            
+        Returns:
+            dict or None. A merged dictionary containing the encoder and added tokens encoder.
+            
+        Raises:
+            None.
+        """
         return dict(self.encoder, **self.added_tokens_encoder)
 
     def bpe(self, token):
+        """
+        This method 'bpe' in the class 'GPT2Tokenizer' implements byte pair encoding (BPE) algorithm for tokenization.
+        
+        Args:
+            self (object): The instance of the GPT2Tokenizer class.
+            token (str): The input token to be processed by the BPE algorithm. It should be a string representing a single token.
+        
+        Returns:
+            str: The processed token after applying the BPE algorithm, which may involve merging characters based on predefined pairs.
+        
+        Raises:
+            ValueError: If the input token 'token' is not a valid string or is empty.
+            KeyError: If an error occurs while accessing or updating the cache dictionary within the method.
+            IndexError: If an index error occurs during the processing of the token.
+            Exception: Any other unforeseen exceptions that may occur during the execution of the BPE algorithm.
+        """
         if token in self.cache:
             return self.cache[token]
         word = tuple(token)
@@ -254,6 +314,20 @@ class GPT2Tokenizer(PreTrainedTokenizer):
         return word
 
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
+        """
+        Method to build inputs with special tokens in the GPT2Tokenizer class.
+        
+        Args:
+            self: The instance of the GPT2Tokenizer class.
+            token_ids_0 (list): List of token IDs for the first input.
+            token_ids_1 (list, optional): List of token IDs for the second input. Default is None.
+        
+        Returns:
+            None. This method does not return a value, but it modifies the input lists by adding special tokens.
+        
+        Raises:
+            None.
+        """
         if self.add_bos_token:
             bos_token_ids = [self.bos_token_id]
         else:
@@ -323,6 +397,29 @@ class GPT2Tokenizer(PreTrainedTokenizer):
         return text
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """
+        Save the vocabulary to the specified directory.
+        
+        Args:
+            self (GPT2Tokenizer): The instance of the GPT2Tokenizer class.
+            save_directory (str): The directory where the vocabulary files will be saved.
+            filename_prefix (Optional[str], optional): The prefix to be added to the filename of the vocabulary files. Defaults to None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the paths of the saved vocabulary files.
+        
+        Raises:
+            OSError: If the save_directory is not a valid directory.
+        
+        This method saves the vocabulary of the GPT2Tokenizer instance to the specified save_directory. The vocabulary is saved in two files: a vocabulary file and a merge file. The vocabulary file contains
+the encoder dictionary in JSON format, and the merge file contains the BPE merge indices.
+        
+        If the save_directory does not exist or is not a directory, an OSError is raised. The filename_prefix parameter is optional and can be used to add a prefix to the filename of the saved vocabulary
+files. If filename_prefix is not provided, no prefix will be added to the filenames.
+        
+        The method returns a tuple containing the paths of the saved vocabulary files, i.e., (vocab_file, merge_file). The vocab_file path points to the saved vocabulary file, and the merge_file path points to
+the saved merge file.
+        """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return
@@ -352,6 +449,20 @@ class GPT2Tokenizer(PreTrainedTokenizer):
         return vocab_file, merge_file
 
     def prepare_for_tokenization(self, text, is_split_into_words=False, **kwargs):
+        """
+        Prepare for tokenization method in the GPT2Tokenizer class.
+        
+        Args:
+            self (GPT2Tokenizer): The instance of the GPT2Tokenizer class.
+            text (str): The input text to be prepared for tokenization.
+            is_split_into_words (bool): A flag indicating whether the input text is already split into words. If True, the text will not be modified.
+        
+        Returns:
+            tuple: A tuple containing the prepared text and any remaining keyword arguments after processing.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         add_prefix_space = kwargs.pop("add_prefix_space", self.add_prefix_space)
         if is_split_into_words or add_prefix_space:
             text = " " + text

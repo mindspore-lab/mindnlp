@@ -131,6 +131,36 @@ class ErnieConfig(PretrainedConfig):
         classifier_dropout=None,
         **kwargs,
     ):
+        """
+        Initialize the ErnieConfig class.
+        
+        Args:
+            self (object): The instance of the class.
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 30522.
+            hidden_size (int, optional): The size of the hidden layers. Defaults to 768.
+            num_hidden_layers (int, optional): The number of hidden layers. Defaults to 12.
+            num_attention_heads (int, optional): The number of attention heads. Defaults to 12.
+            intermediate_size (int, optional): The size of the intermediate layer in the transformer encoder. Defaults to 3072.
+            hidden_act (str, optional): The activation function for the hidden layers. Defaults to 'gelu'.
+            hidden_dropout_prob (float, optional): The dropout probability for the hidden layers. Defaults to 0.1.
+            attention_probs_dropout_prob (float, optional): The dropout probability for the attention layers. Defaults to 0.1.
+            max_position_embeddings (int, optional): The maximum position embeddings. Defaults to 512.
+            type_vocab_size (int, optional): The size of the type vocabulary. Defaults to 2.
+            task_type_vocab_size (int, optional): The size of the task type vocabulary. Defaults to 3.
+            use_task_id (bool, optional): Whether to use task IDs. Defaults to False.
+            initializer_range (float, optional): The range for weight initialization. Defaults to 0.02.
+            layer_norm_eps (float, optional): The epsilon value for layer normalization. Defaults to 1e-12.
+            pad_token_id (int, optional): The ID for padding tokens. Defaults to 0.
+            position_embedding_type (str, optional): The type of position embedding. Defaults to 'absolute'.
+            use_cache (bool, optional): Whether to use caching. Defaults to True.
+            classifier_dropout (float, optional): The dropout probability for the classifier. Defaults to None.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         super().__init__(pad_token_id=pad_token_id, **kwargs)
 
         self.vocab_size = vocab_size

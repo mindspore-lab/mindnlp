@@ -192,7 +192,6 @@ class LongformerTokenizer(PreTrainedTokenizer):
             Whether or not to add an initial space to the input. This allows to treat the leading word just as any
             other word. (Longformer tokenizer detect beginning of words by the preceding space).
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -213,6 +212,32 @@ class LongformerTokenizer(PreTrainedTokenizer):
         add_prefix_space=False,
         **kwargs,
     ):
+        """
+        Initializes a LongformerTokenizer object.
+        
+        Args:
+            self (LongformerTokenizer): The instance of the LongformerTokenizer class.
+            vocab_file (str): The file path to the vocabulary file.
+            merges_file (str): The file path to the merges file.
+            errors (str, optional): Specifies how to handle decoding errors. Default is 'replace'.
+            bos_token (str, optional): The beginning of sentence token. Default is '<s>'.
+            eos_token (str, optional): The end of sentence token. Default is '</s>'.
+            sep_token (str, optional): The separator token. Default is '</s>'.
+            cls_token (str, optional): The classification token. Default is '<s>'.
+            unk_token (str, optional): The unknown token. Default is '<unk>'.
+            pad_token (str, optional): The padding token. Default is '<pad>'.
+            mask_token (str, optional): The mask token. Default is '<mask>'.
+            add_prefix_space (bool, optional): Indicates whether to add a space before each token. Default is False.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            FileNotFoundError: If the 'vocab_file' or 'merges_file' cannot be found.
+            UnicodeDecodeError: If there is an error while decoding the files.
+            ValueError: If the 'bpe_merges' list is not in the correct format.
+        """
         bos_token = AddedToken(bos_token, lstrip=False, rstrip=False) if isinstance(bos_token, str) else bos_token
         pad_token = AddedToken(pad_token, lstrip=False, rstrip=False) if isinstance(pad_token, str) else pad_token
         eos_token = AddedToken(eos_token, lstrip=False, rstrip=False) if isinstance(eos_token, str) else eos_token
@@ -260,14 +285,103 @@ class LongformerTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
+        """
+        Get the vocabulary size of the LongformerTokenizer.
+        
+        Args:
+            self (LongformerTokenizer): An instance of the LongformerTokenizer class.
+        
+        Returns:
+            int: The number of unique tokens in the tokenizer's encoder.
+        
+        Raises:
+            None.
+        
+        This method calculates and returns the vocabulary size of the LongformerTokenizer. The vocabulary size represents the number of unique tokens in the tokenizer's encoder. The encoder is a component of
+the LongformerTokenizer that is responsible for encoding input text into numerical representations.
+        
+        Example:
+            >>> tokenizer = LongformerTokenizer()
+            >>> tokenizer.vocab_size()
+            50000
+        
+        In the above example, the vocab_size() method is called on an instance of the LongformerTokenizer class, resulting in the return value of 50000, which represents the number of unique tokens in the
+tokenizer's encoder.
+        """
         return len(self.encoder)
 
     def get_vocab(self):
+        """
+        Method: get_vocab
+        
+        Description:
+        This method retrieves the vocabulary (vocab) from the LongformerTokenizer instance.
+        
+        Args:
+        - self: The instance of the LongformerTokenizer class.
+        
+        Returns:
+        - vocab (dict): A dictionary containing the vocabulary. It is a combination of the encoder and added_tokens_encoder. The encoder is copied into the vocab dictionary, and then the added_tokens_encoder
+is updated into the vocab dictionary.
+        
+        Raises:
+        This method does not raise any exceptions.
+        """
         vocab = dict(self.encoder).copy()
         vocab.update(self.added_tokens_encoder)
         return vocab
 
     def bpe(self, token):
+        """
+        The 'bpe' method in the class 'LongformerTokenizer' is used to apply Byte Pair Encoding (BPE) on a given token.
+        
+        Args:
+            self: A reference to the current instance of the class.
+            token (str): The token to be encoded using BPE.
+        
+        Returns:
+            str: The BPE-encoded representation of the input token.
+        
+        Raises:
+            None.
+        
+        Note:
+            The BPE algorithm is a data compression technique that aims to replace frequently occurring pairs of characters 
+            with a single character. This method implements the BPE algorithm to encode the given token. The encoding process
+            involves identifying pairs of characters in the token and replacing them with a special character. The resulting
+            token is then returned as the BPE-encoded representation.
+        
+            This method maintains a cache to store previously encoded tokens. If the given token is found in the cache, the 
+            previously encoded version is returned directly instead of recomputing it. This caching mechanism improves the 
+            efficiency of the encoding process for tokens that have been encountered before.
+        
+            It is important to note that this method modifies the input token in place during the encoding process. Therefore,
+            it is recommended to make a copy of the token before passing it to this method if the original token needs to be 
+            preserved.
+        
+            If the token does not require any encoding, i.e., it does not contain any pairs of characters that can be replaced, 
+            the original token is returned as is.
+        
+            The 'get_pairs' function is used internally to identify the pairs of characters in the token. This function returns 
+            a list of all possible pairs of adjacent characters in the token. The 'bpe_ranks' attribute is a dictionary that 
+            holds the frequency ranks of the pairs of characters. The 'min' function is used to find the pair with the lowest 
+            frequency rank, and it serves as the basis for replacement during the encoding process.
+        
+            To encode the token, the method iteratively replaces the pair with the lowest frequency rank until no more 
+            replacements can be made. This process continues until the token is reduced to a single character or no further 
+            replacements are possible.
+        
+            Finally, the method converts the encoded token back to a string representation by joining the characters with a 
+            space delimiter. The resulting encoded token is then stored in the cache for future use.
+        
+        Example usage:
+            tokenizer = LongformerTokenizer()
+            encoded_token = tokenizer.bpe('hello')
+            print(encoded_token)  # Output: 'h e l lo'
+        
+            encoded_token = tokenizer.bpe('world')
+            print(encoded_token)  # Output: 'w or ld'
+        """
         if token in self.cache:
             return self.cache[token]
         word = tuple(token)
@@ -333,6 +447,21 @@ class LongformerTokenizer(PreTrainedTokenizer):
         return text
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """
+        Save the vocabulary to the specified directory.
+        
+        Args:
+            self (LongformerTokenizer): The instance of the LongformerTokenizer class.
+            save_directory (str): The directory where the vocabulary files will be saved.
+            filename_prefix (Optional[str]): The optional prefix to be appended to the filenames. Default is None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the paths of the saved vocabulary and merge files.
+        
+        Raises:
+            OSError: If the specified save_directory is not a valid directory.
+            IOError: If there is an issue with writing the vocabulary or merge files.
+        """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return
@@ -437,6 +566,22 @@ class LongformerTokenizer(PreTrainedTokenizer):
         return len(cls + token_ids_0 + sep + sep + token_ids_1 + sep) * [0]
 
     def prepare_for_tokenization(self, text, is_split_into_words=False, **kwargs):
+        """
+        Prepare the input text for tokenization by the LongformerTokenizer.
+        
+        Args:
+            self: An instance of the LongformerTokenizer class.
+            text (str): The input text to be prepared for tokenization.
+            is_split_into_words (bool, optional): If True, indicates that the input text is already split into words. 
+                Defaults to False.
+            **kwargs: Additional keyword arguments.
+            
+        Returns:
+            str: The prepared text for tokenization.
+            
+        Raises:
+            None.
+        """
         add_prefix_space = kwargs.pop("add_prefix_space", self.add_prefix_space)
         if (is_split_into_words or add_prefix_space) and (len(text) > 0 and not text[0].isspace()):
             text = " " + text

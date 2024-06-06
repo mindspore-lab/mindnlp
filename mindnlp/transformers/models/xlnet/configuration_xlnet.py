@@ -31,7 +31,6 @@ class XLNetConfig(PretrainedConfig):
     """
     Configuration for XLNet
     """
-
     model_type = "xlnet"
     keys_to_ignore_at_inference = ["mems"]
     attribute_map = {
@@ -125,11 +124,40 @@ class XLNetConfig(PretrainedConfig):
 
     @property
     def max_position_embeddings(self):
+        """
+        This method returns the maximum position embeddings for the XLNet model.
+        
+        Args:
+            self (XLNetConfig): The instance of the XLNetConfig class.
+            
+        Returns:
+            None: This method does not return any specific value, as it only logs a message and returns -1.
+        
+        Raises:
+            None
+        """
         logger.info(f"The model {self.model_type} is one of the few models that has no sequence length limit.")
         return -1
 
     @max_position_embeddings.setter
     def max_position_embeddings(self, value):
+        """
+        Sets the maximum position embeddings for the XLNetConfig class.
+        
+        Args:
+            self (XLNetConfig): An instance of the XLNetConfig class.
+            value: The desired value for the maximum position embeddings. It should be an integer.
+            
+        Returns:
+            None. This method does not return any value.
+            
+        Raises:
+            NotImplementedError: This exception is raised when trying to set the maximum position embeddings for the XLNetConfig class. Since the model type is one of the few models that has no sequence length
+limit, setting the maximum position embeddings is not allowed.
+        
+        Note:
+            The model type should be specified before using this method.
+        """
         # Message copied from Transformer-XL documentation
         raise NotImplementedError(
             f"The model {self.model_type} is one of the few models that has no sequence length limit."

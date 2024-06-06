@@ -169,7 +169,6 @@ class LongformerTokenizerFast(PreTrainedTokenizerFast):
         trim_offsets (`bool`, *optional*, defaults to `True`):
             Whether the post processing step should trim offsets to avoid including whitespaces.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -193,6 +192,34 @@ class LongformerTokenizerFast(PreTrainedTokenizerFast):
         trim_offsets=True,
         **kwargs,
     ):
+        """
+        This method initializes an instance of the LongformerTokenizerFast class.
+        
+        Args:
+        - self: The instance of the class.
+        - vocab_file (str, optional): Path to the vocabulary file. Default is None.
+        - merges_file (str, optional): Path to the merges file. Default is None.
+        - tokenizer_file (str, optional): Path to the tokenizer file. Default is None.
+        - errors (str, optional): Specifies how to handle errors in decoding. Default is 'replace'.
+        - bos_token (str, optional): Beginning of sequence token. Default is '<s>'.
+        - eos_token (str, optional): End of sequence token. Default is '</s>'.
+        - sep_token (str, optional): Separator token. Default is '</s>'.
+        - cls_token (str, optional): Classification token. Default is '<s>'.
+        - unk_token (str, optional): Token for unknown words. Default is '<unk>'.
+        - pad_token (str, optional): Token for padding. Default is '<pad>'.
+        - mask_token (str, optional): Mask token. Default is '<mask>'.
+        - add_prefix_space (bool, optional): Whether to add prefix space. Default is False.
+        - trim_offsets (bool, optional): Whether to trim offsets. Default is True.
+        
+        Returns:
+        None
+        
+        Raises:
+        - TypeError: If the provided parameters are of incorrect types.
+        - ValueError: If the values of parameters are invalid.
+        - KeyError: If a required key is missing in the input data.
+        - Exception: For any other unexpected errors.
+        """
         mask_token = (
             AddedToken(mask_token, lstrip=True, rstrip=False, normalized=False)
             if isinstance(mask_token, str)
@@ -277,6 +304,19 @@ class LongformerTokenizerFast(PreTrainedTokenizerFast):
         self._mask_token = value
 
     def _batch_encode_plus(self, *args, **kwargs) -> BatchEncoding:
+        """
+        This method is a private function within the class LongformerTokenizerFast that batch encodes input sequences and returns the encoded representations.
+        
+        Args:
+            self: An instance of the LongformerTokenizerFast class.
+            
+        Returns:
+            A BatchEncoding object containing the batch encoded representations of the input sequences.
+            
+        Raises:
+            AssertionError: Raised if the 'add_prefix_space' attribute is False and the 'is_split_into_words' argument is True. In this case, the method requires the LongformerTokenizerFast instance to be
+instantiated with 'add_prefix_space=True'.
+        """
         is_split_into_words = kwargs.get("is_split_into_words", False)
         assert self.add_prefix_space or not is_split_into_words, (
             f"You need to instantiate {self.__class__.__name__} with add_prefix_space=True "
@@ -286,6 +326,24 @@ class LongformerTokenizerFast(PreTrainedTokenizerFast):
         return super()._batch_encode_plus(*args, **kwargs)
 
     def _encode_plus(self, *args, **kwargs) -> BatchEncoding:
+        """
+        This method encodes input sequences into a BatchEncoding object. It is intended for use within the LongformerTokenizerFast class.
+        
+        Args:
+            self: An instance of the LongformerTokenizerFast class. It is used to access the properties and methods of the class.
+            
+            *args: Variable positional arguments that may be passed to the method.
+            
+            **kwargs: Variable keyword arguments that may be passed to the method. The following kwargs are supported:
+                - is_split_into_words (bool, optional): Specifies whether the input is already split into words. Default is False.
+        
+        Returns:
+            BatchEncoding: A BatchEncoding object containing the encoded input sequences. The encoding includes tokenization and optional additional processing based on input arguments.
+        
+        Raises:
+            AssertionError: Raised when the 'add_prefix_space' property is False and 'is_split_into_words' is True. In this case, it is required to instantiate the LongformerTokenizerFast class with
+add_prefix_space=True to use pretokenized inputs.
+        """
         is_split_into_words = kwargs.get("is_split_into_words", False)
 
         assert self.add_prefix_space or not is_split_into_words, (
@@ -296,10 +354,45 @@ class LongformerTokenizerFast(PreTrainedTokenizerFast):
         return super()._encode_plus(*args, **kwargs)
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """
+        Save the vocabulary.
+        
+        Args:
+            self (LongformerTokenizerFast): An instance of the LongformerTokenizerFast class.
+            save_directory (str): The directory where the vocabulary files will be saved.
+            filename_prefix (Optional[str], optional): The prefix to use for the filename of the saved vocabulary files. Defaults to None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the file paths of the saved vocabulary files.
+        
+        Raises:
+            None.
+        
+        This method saves the vocabulary of the tokenizer to the specified directory. The vocabulary files are saved with the given filename prefix, if provided. The saved vocabulary files can later be loaded
+using the 'load_vocabulary' method.
+        """
         files = self._tokenizer.model.save(save_directory, name=filename_prefix)
         return tuple(files)
 
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
+        """
+        Builds a list of token IDs with special tokens for the LongformerTokenizerFast class.
+        
+        Args:
+            self (LongformerTokenizerFast): An instance of the LongformerTokenizerFast class.
+            token_ids_0 (list[int]): A list of token IDs representing the first sequence.
+            token_ids_1 (list[int], optional): A list of token IDs representing the second sequence. 
+                Defaults to None.
+        
+        Returns:
+            list[int] or None: The list of token IDs with special tokens. If token_ids_1 is None, 
+                the output list will be [bos_token_id] + token_ids_0 + [eos_token_id]. 
+                If token_ids_1 is provided, the output list will be [bos_token_id] + token_ids_0 + [eos_token_id]
+                + [eos_token_id] + token_ids_1 + [eos_token_id].
+        
+        Raises:
+            None.
+        """
         output = [self.bos_token_id] + token_ids_0 + [self.eos_token_id]
         if token_ids_1 is None:
             return output

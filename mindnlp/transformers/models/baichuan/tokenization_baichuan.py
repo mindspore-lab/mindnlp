@@ -47,7 +47,6 @@ class BaiChuanTokenizer(PreTrainedTokenizer):
         vocab_file (`str`):
             Path to the vocabulary file.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -66,6 +65,38 @@ class BaiChuanTokenizer(PreTrainedTokenizer):
         clean_up_tokenization_spaces=False,
         **kwargs,
     ):
+        """
+        __init__
+        
+        Initializes a new instance of the BaiChuanTokenizer class.
+        
+        Args:
+            self: The instance of the class.
+            vocab_file (str): The path to the vocabulary file.
+            unk_token (str, optional): The unknown token. Defaults to '<unk>'.
+            bos_token (str, optional): The beginning of sentence token. Defaults to '<s>'.
+            eos_token (str, optional): The end of sentence token. Defaults to '</s>'.
+            pad_token (str, optional): The padding token. Defaults to None.
+            sp_model_kwargs (Optional[Dict[str, Any]], optional): Optional arguments for SentencePieceProcessor. Defaults to None.
+            add_bos_token (bool, optional): Whether to add the beginning of sentence token. Defaults to True.
+            add_eos_token (bool, optional): Whether to add the end of sentence token. Defaults to False.
+            clean_up_tokenization_spaces (bool, optional): Whether to clean up tokenization spaces. Defaults to False.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            TypeError: If vocab_file is not a string.
+            TypeError: If unk_token is not a string.
+            TypeError: If bos_token is not a string.
+            TypeError: If eos_token is not a string.
+            TypeError: If pad_token is not a string.
+            TypeError: If sp_model_kwargs is not a dictionary or None.
+            TypeError: If add_bos_token is not a boolean.
+            TypeError: If add_eos_token is not a boolean.
+            TypeError: If clean_up_tokenization_spaces is not a boolean.
+        """
         self.sp_model_kwargs = {} if sp_model_kwargs is None else sp_model_kwargs
         self.sp_model = spm.SentencePieceProcessor(**self.sp_model_kwargs)
         self.sp_model.Load(vocab_file)
@@ -90,11 +121,42 @@ class BaiChuanTokenizer(PreTrainedTokenizer):
         self.add_eos_token = add_eos_token
 
     def __getstate__(self):
+        """Return a dictionary representing the state of the BaiChuanTokenizer instance.
+        
+        This method takes no additional parameters.
+        
+        Args:
+            self: The instance of the BaiChuanTokenizer class.
+        
+        Returns:
+            None: This method does not return any value. It modifies the state of the instance in-place.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         state = self.__dict__.copy()
         state["sp_model"] = None
         return state
 
     def __setstate__(self, d):
+        """
+        __setstate__ method in the BaiChuanTokenizer class.
+        
+        Args:
+            self (BaiChuanTokenizer): An instance of the BaiChuanTokenizer class.
+                Represents the current object that the method is called on.
+            d (dict): A dictionary containing the state information to be set.
+                This dictionary is used to update the internal state of the object.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            - TypeError: If the input parameters are not of the expected types.
+            - ValueError: If there is an issue with the values passed as parameters.
+            - AttributeError: If there are issues related to attribute access or assignment.
+            - RuntimeError: If there is a runtime issue during the method execution.
+        """
         self.__dict__ = d
         self.sp_model = spm.SentencePieceProcessor(**self.sp_model_kwargs)
         self.sp_model.Load(self.vocab_file)
@@ -170,6 +232,28 @@ class BaiChuanTokenizer(PreTrainedTokenizer):
         return (out_vocab_file,)
 
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
+        """
+        Builds input sequences with special tokens for the BaiChuanTokenizer class.
+        
+        Args:
+            self (BaiChuanTokenizer): An instance of the BaiChuanTokenizer class.
+            token_ids_0 (List[int]): A list of token IDs representing the first input sequence.
+            token_ids_1 (List[int], optional): A list of token IDs representing the second input sequence. Defaults to None.
+        
+        Returns:
+            List[int]: A list of token IDs representing the input sequences with special tokens added.
+        
+        Raises:
+            None.
+        
+        This method takes in two input sequences token_ids_0 and token_ids_1 (optional) and builds input sequences with special tokens. If the add_bos_token parameter is True, the method adds the beginning of
+sequence token (bos_token) at the beginning of the sequences. If the add_eos_token parameter is True, the method adds the end of sequence token (eos_token) at the end of the sequences. The method then
+concatenates the special tokens with the input sequences and returns the result.
+        
+        If a second input sequence (token_ids_1) is provided, the method also adds special tokens to it and concatenates it with the first input sequence.
+        
+        Note: The bos_token_id and eos_token_id are specific token IDs for the beginning and end of sequence tokens, respectively, as defined in the BaiChuanTokenizer class.
+        """
         bos_token_id = [self.bos_token_id] if self.add_bos_token else []
         eos_token_id = [self.eos_token_id] if self.add_eos_token else []
 

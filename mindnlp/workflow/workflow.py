@@ -122,10 +122,29 @@ class Workflow:
         the defalut value is 0.
         kwargs (dict, optional): Additional keyword arguments passed along to the specific work.
     """
-
     def __init__(
         self, work, model=None, mode=None, device_id=0, from_hf_hub=False, **kwargs
     ):
+        """
+        Initialize a new instance of Workflow.
+        
+        Args:
+            self: The instance of the class.
+            work (str): The name of the work to be performed. It should be a valid work name from the WORKS list.
+            model (str): The specific model to be used for the work, default is None. It should be a valid model name from the corresponding WORKS list.
+            mode (str): The mode to be used, default is None.
+            device_id (int): The ID of the device to be used, default is 0. If set to -1 or device_target is 'CPU', PYNATIVE_MODE is used, else GRAPH_MODE is used.
+            from_hf_hub (bool): Indicates if the model is loaded from the Hugging Face Hub, default is False.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method initializes the Workflow instance.
+        
+        Raises:
+            AssertionError: Raised if the work name provided is not in the WORKS list or if the model name is not in the corresponding WORKS list.
+            KeyError: Raised if the specified 'tag' or 'ind_tag' is not found in the WORKS dictionary.
+            KeyError: Raised if the 'work_class' key is not found in the configuration dictionary.
+        """
         assert (
             work in WORKS
         ), f"The work name:{work} is not in Workflow list, \

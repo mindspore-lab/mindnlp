@@ -2,7 +2,7 @@ from mindspore import ops
 
 from mindnlp.transformers import BloomTokenizerFast, BloomForCausalLM
 from mindnlp.engine import TrainingArguments, Trainer
-from mindnlp.dataset import load_dataset, BaseMapFuction
+from mindnlp.dataset import load_dataset, BaseMapFunction
 from mindnlp.amp import autocast
 
 class ModifiedTrainer(Trainer):
@@ -20,7 +20,7 @@ tokenizer = BloomTokenizerFast.from_pretrained(f"bigscience/{model_name}", add_p
 dataset = load_dataset('tatsu-lab/alpaca')
 print(dataset.get_col_names())
 
-class ModifiedMapFunction(BaseMapFuction):
+class ModifiedMapFunction(BaseMapFunction):
     def __call__(self, text):
         tokenized = tokenizer(text, max_length=512, padding="max_length", truncation=True)
         return tokenized['input_ids']

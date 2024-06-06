@@ -37,7 +37,6 @@ class PeftType(str, enum.Enum):
     - POLY 
     - LN_TUNING 
     """
-
     PROMPT_TUNING = "PROMPT_TUNING"
     MULTITASK_PROMPT_TUNING = "MULTITASK_PROMPT_TUNING"
     P_TUNING = "P_TUNING"

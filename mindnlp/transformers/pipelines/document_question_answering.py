@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pylint: disable=import-error
 """
 document-question-answering
 """
@@ -43,6 +44,20 @@ logger = logging.get_logger(__name__)
 # However, because the pipeline may evolve from what layoutlmv3 currently does, it's copied (vs. imported) to avoid creating an
 # unnecessary dependency.
 def normalize_box(box, width, height):
+    """
+    This function normalizes the coordinates of a bounding box relative to a given width and height.
+    
+    Args:
+    - box (list): A list containing the coordinates of the bounding box in the format [x_min, y_min, x_max, y_max].
+    - width (int): The width of the image or area to which the bounding box coordinates are relative.
+    - height (int): The height of the image or area to which the bounding box coordinates are relative.
+    
+    Returns:
+    - list: A normalized bounding box coordinates in the format [x_min_norm, y_min_norm, x_max_norm, y_max_norm]. The values are scaled by 1000 and rounded to integers.
+    
+    Raises:
+    - None
+    """
     return [
         int(1000 * (box[0] / width)),
         int(1000 * (box[1] / height)),
@@ -85,6 +100,12 @@ def apply_tesseract(image: "Image.Image", lang: Optional[str], tesseract_config:
 
 
 class ModelType(ExplicitEnum):
+
+    """
+    Represents a custom model type that inherits from ExplicitEnum.
+    
+    This class provides a custom model type implementation by inheriting from ExplicitEnum. It defines various properties and methods for working with model types. 
+    """
     LayoutLM = "layoutlm"
     LayoutLMv2andv3 = "layoutlmv2andv3"
     VisionEncoderDecoder = "vision_encoder_decoder"
@@ -201,7 +222,7 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
     >>> from transformers import pipeline
     >>> document_qa = pipeline(model="impira/layoutlm-document-qa")
     >>> document_qa(
-    ...     image="https://hf-mirror.com/spaces/impira/docquery/resolve/2359223c1837a7587402bda0f2643382a6eefeab/invoice.png",
+    ...     image="https://hf.co/spaces/impira/docquery/resolve/2359223c1837a7587402bda0f2643382a6eefeab/invoice.png",
     ...     question="What is the invoice number?",
     ... )
     [{'score': 0.425, 'answer': 'us-001', 'start': 16, 'end': 16}]
@@ -213,8 +234,22 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
     See the up-to-date list of available models on
     [hf-mirror.com/models](https://hf-mirror.com/models?filter=document-question-answering).
     """
-
     def __init__(self, *args, **kwargs):
+        """
+        Initializes a new instance of the DocumentQuestionAnsweringPipeline class.
+        
+        Args:
+            self: The current instance of the class.
+        
+        Returns:
+            None.
+        
+        Raises:
+            ValueError: Raised if a slow tokenizer is provided instead of a fast tokenizer.
+            ValueError: Raised if a VisionEncoderDecoder model other than Donut is provided.
+            ValueError: Raised if an unsupported VisionEncoderDecoder model is provided.
+            
+        """
         super().__init__(*args, **kwargs)
         if self.tokenizer is not None and not self.tokenizer.__class__.__name__.endswith("Fast"):
             raise ValueError(
@@ -247,6 +282,31 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
             timeout=None,
             **kwargs,
     ):
+        """
+        This method '_sanitize_parameters' is a part of the 'DocumentQuestionAnsweringPipeline' class and is used to sanitize and validate the input parameters for the document question answering pipeline.
+        
+        Args:
+        - self: The instance of the class.
+        - padding (int): The padding value to be used during preprocessing. Default is None.
+        - doc_stride (int): The document stride value to be used during preprocessing. Default is None.
+        - max_question_len (int): The maximum length allowed for the question input. Default is None.
+        - lang (Optional[str]): The language of the input text. Default is None.
+        - tesseract_config (Optional[str]): The Tesseract OCR configuration to be used. Default is None.
+        - max_answer_len (int): The maximum length allowed for the answer output. Default is None.
+        - max_seq_len (int): The maximum sequence length for input text processing. Default is None.
+        - top_k (int): The top-k value for post-processing. Must be >= 1.
+        - handle_impossible_answer: The flag to handle impossible answers. Default is None.
+        - timeout: The timeout value for processing. Default is None.
+        
+        Returns:
+        - preprocess_params (dict): Dictionary containing sanitized preprocessing parameters.
+        - postprocess_params (dict): Dictionary containing sanitized postprocessing parameters.
+        - postprocess_params may include 'top_k', 'max_answer_len', and 'handle_impossible_answer' based on input values.
+        
+        Raises:
+        - ValueError: If 'top_k' is less than 1.
+        - ValueError: If 'max_answer_len' is less than 1.
+        """
         preprocess_params, postprocess_params = {}, {}
         if padding is not None:
             preprocess_params["padding"] = padding
@@ -359,6 +419,31 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
             tesseract_config="",
             timeout=None,
     ):
+        """
+        Preprocesses inputs for document question answering.
+        
+        Args:
+            self (DocumentQuestionAnsweringPipeline): The current instance of the DocumentQuestionAnsweringPipeline class.
+            inputs (Dict[str, Any]): The inputs for preprocessing.
+            padding (str, optional): The padding strategy to use. Defaults to 'do_not_pad'.
+            doc_stride (int, optional): The stride for splitting the document into chunks. Defaults to None.
+            max_seq_len (int, optional): The maximum sequence length. Defaults to None.
+            word_boxes (Tuple[str, List[float]], optional): The word boxes for the document. Defaults to None.
+            lang (str, optional): The language for OCR. Defaults to None.
+            tesseract_config (str, optional): The configuration for Tesseract OCR. Defaults to ''.
+            timeout (int, optional): The timeout for loading images. Defaults to None.
+        
+        Returns:
+            None
+        
+        Raises:
+            ValueError: If max_seq_len is not provided and the tokenizer's model_max_length is also not set.
+            ValueError: If doc_stride is not provided and the default value cannot be determined.
+            ValueError: If using a VisionEncoderDecoderModel without a feature extractor.
+            ValueError: If word_boxes are not provided and OCR is used but pytesseract is not available.
+            ValueError: If neither an image nor word_boxes are provided.
+        
+        """
         # NOTE: This code mirrors the code in question answering and will be implemented in a follow up PR
         # to support documents with enough tokens that overflow the model's window
         if max_seq_len is None:
@@ -408,7 +493,7 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
 
         if self.model_type == ModelType.VisionEncoderDecoder:
             task_prompt = f'<s_docvqa><s_question>{inputs["question"]}</s_question><s_answer>'
-            # Adapted from https://hf-mirror.com/spaces/nielsr/donut-docvqa/blob/main/app.py
+            # Adapted from https://hf.co/spaces/nielsr/donut-docvqa/blob/main/app.py
             encoding = {
                 "inputs": image_features["pixel_values"],
                 "decoder_input_ids": self.tokenizer(
@@ -491,6 +576,29 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
                 }
 
     def _forward(self, model_inputs):
+        """
+        This method '_forward' in the class 'DocumentQuestionAnsweringPipeline' processes the model inputs and generates the model outputs.
+        
+        Args:
+            self: An instance of the 'DocumentQuestionAnsweringPipeline' class.
+            model_inputs (dict): A dictionary containing the model inputs with the following possible keys:
+                - 'p_mask' (array, optional): A mask to indicate which tokens should be attended to.
+                - 'word_ids' (array, optional): The word IDs for input tokens.
+                - 'words' (array, optional): The input words.
+                - 'is_last' (bool, optional): A flag indicating if it is the last input.
+                - 'attention_mask' (array, optional): A mask to indicate which tokens should be attended to.
+        
+        Returns:
+            dict or None: Returns a dictionary containing the model outputs with the following possible keys:
+                - 'p_mask' (array): The input mask.
+                - 'word_ids' (array): The word IDs for output tokens.
+                - 'words' (array): The generated words.
+                - 'attention_mask' (array, optional): The attention mask for the outputs.
+                - 'is_last' (bool): A flag indicating if it is the last output.
+        
+        Raises:
+            None
+        """
         p_mask = model_inputs.pop("p_mask", None)
         word_ids = model_inputs.pop("word_ids", None)
         words = model_inputs.pop("words", None)
@@ -510,6 +618,21 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
         return model_outputs
 
     def postprocess(self, model_outputs, top_k=1, **kwargs):
+        """
+        This method 'postprocess' is defined in the class 'DocumentQuestionAnsweringPipeline' and is used to process the model outputs and return the top-k answers.
+        
+        Args:
+            self: The instance of the 'DocumentQuestionAnsweringPipeline' class.
+            model_outputs (list): The list of model outputs to be processed.
+            top_k (int): The number of top answers to be returned. Default value is 1.
+        
+        Returns:
+            list: A list of top-k answers containing dictionaries with information about the answers.
+        
+        Raises:
+            TypeError: If the model_type attribute is not of type ModelType.VisionEncoderDecoder.
+            ValueError: If the top_k parameter is not a positive integer.
+        """
         if self.model_type == ModelType.VisionEncoderDecoder:
             answers = [self.postprocess_encoder_decoder_single(o) for o in model_outputs]
         else:
@@ -519,6 +642,21 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
         return answers
 
     def postprocess_encoder_decoder_single(self, model_outputs, **kwargs):
+        """
+        This method postprocesses the output from the encoder-decoder model to extract the answer.
+        
+        Args:
+            self (DocumentQuestionAnsweringPipeline): An instance of the DocumentQuestionAnsweringPipeline class.
+            model_outputs (dict): A dictionary containing the model outputs with the key 'sequences'.
+            
+        Returns:
+            dict: A dictionary containing the processed answer under the key 'answer'. 
+            If the answer is found in the processed sequence, it is extracted and stored in the 'answer' key. 
+            If no answer is found, the 'answer' key remains None.
+        
+        Raises:
+            N/A
+        """
         sequence = self.tokenizer.batch_decode(model_outputs["sequences"])[0]
 
         # TODO: A lot of this logic is specific to Donut and should probably be handled in the tokenizer
@@ -537,6 +675,22 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
     def postprocess_extractive_qa(
             self, model_outputs, top_k=1, handle_impossible_answer=False, max_answer_len=15, **kwargs
     ):
+        """
+        This method postprocess_extractive_qa is defined within the class DocumentQuestionAnsweringPipeline. It post-processes the model outputs for extractive question answering.
+        
+        Args:
+            self: (object) The instance of the class.
+            model_outputs: (list) The list of model outputs containing information such as words, start_logits, end_logits, p_mask, attention_mask, and word_ids.
+            top_k: (int) The maximum number of answers to consider for each model output. Default is 1.
+            handle_impossible_answer: (bool) A flag indicating whether to handle impossible answers. Default is False.
+            max_answer_len: (int) The maximum length of the answer. Default is 15.
+        
+        Returns:
+            list of dictionaries: The post-processed answers containing the score, answer text, start position, and end position for each answer.
+        
+        Raises:
+            No specific exceptions are documented to be raised by this method.
+        """
         min_null_score = 1000000  # large and positive
         answers = []
         for output in model_outputs:

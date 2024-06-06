@@ -22,7 +22,6 @@ from mindnlp.utils import logging
 from ..tokenization_utils_base import TruncationStrategy
 from .base import ArgumentHandler, ChunkPipeline
 
-
 logger = logging.get_logger(__name__)
 
 
@@ -34,11 +33,46 @@ class ZeroShotClassificationArgumentHandler(ArgumentHandler):
     """
 
     def _parse_labels(self, labels):
+        """
+        This method '_parse_labels' is a part of the class 'ZeroShotClassificationArgumentHandler' and is responsible for parsing and processing the input labels.
+        
+        Args:
+            self (object): The instance of the class.
+            labels (str or list): The input labels to be parsed. If a string is provided, it will be split by comma and whitespace, and any empty or whitespace-only labels will be removed.
+        
+        Returns:
+            None: This method does not explicitly return any value, as it directly modifies the 'labels' parameter in place.
+        
+        Raises:
+            N/A: This method does not raise any specific exceptions.
+        """
         if isinstance(labels, str):
             labels = [label.strip() for label in labels.split(",") if label.strip()]
         return labels
 
     def __call__(self, sequences, labels, hypothesis_template):
+        """
+        Class: ZeroShotClassificationArgumentHandler
+        
+        Method: __call__
+        
+        Description:
+        This method processes the input sequences, labels, and hypothesis template to generate sequence pairs for zero-shot classification.
+        
+        Args:
+        - self (object): The instance of the class.
+        - sequences (str or list): The input sequences to be classified. If a string is provided, it will be converted to a list with the string as the only element.
+        - labels (list): The list of target labels for classification.
+        - hypothesis_template (str): The template string used to format the hypothesis for each label.
+        
+        Returns:
+        None: This method does not return any value. It updates the instance with the generated sequence pairs.
+        
+        Raises:
+        - ValueError: Raised if either the 'labels' or 'sequences' parameter is empty.
+        - ValueError: Raised if the 'hypothesis_template' cannot be formatted with the target labels.
+        - TypeError: Raised if the 'sequences' parameter is not a string or a list.
+        """
         if len(labels) == 0 or len(sequences) == 0:
             raise ValueError("You must include at least one label and at least one sequence.")
         if hypothesis_template.format(labels[0]) == hypothesis_template:
@@ -57,7 +91,6 @@ class ZeroShotClassificationArgumentHandler(ArgumentHandler):
             sequence_pairs.extend([[sequence, hypothesis_template.format(label)] for label in labels])
 
         return sequence_pairs, sequences
-
 
 
 class ZeroShotClassificationPipeline(ChunkPipeline):
@@ -102,6 +135,21 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
     """
 
     def __init__(self, *args, args_parser=ZeroShotClassificationArgumentHandler(), **kwargs):
+        """
+        Initializes a new instance of the ZeroShotClassificationPipeline class.
+        
+        Args:
+            self: The instance of the ZeroShotClassificationPipeline class.
+            *args: Variable length argument list.
+            args_parser: An instance of the ZeroShotClassificationArgumentHandler class that handles the arguments for zero-shot classification. Defaults to ZeroShotClassificationArgumentHandler().
+            **kwargs: Keyword arguments.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         self._args_parser = args_parser
         super().__init__(*args, **kwargs)
         if self.entailment_id == -1:
@@ -112,13 +160,26 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
 
     @property
     def entailment_id(self):
+        """
+        Returns the index of the 'entailment' label in the label-to-identifier mapping of the ZeroShotClassificationPipeline's model configuration.
+        
+        Args:
+            self (ZeroShotClassificationPipeline): The current instance of the ZeroShotClassificationPipeline class.
+        
+        Returns:
+            int: The index of the 'entailment' label in the label-to-identifier mapping. If the 'entailment' label is not found, -1 is returned.
+        
+        Raises:
+            None.
+        
+        """
         for label, ind in self.model.config.label2id.items():
             if label.lower().startswith("entail"):
                 return ind
         return -1
 
     def _parse_and_tokenize(
-        self, sequence_pairs, padding=True, add_special_tokens=True, truncation=TruncationStrategy.ONLY_FIRST
+            self, sequence_pairs, padding=True, add_special_tokens=True, truncation=TruncationStrategy.ONLY_FIRST
     ):
         """
         Parse arguments and tokenize only_first so that hypothesis (label) is not truncated
@@ -160,6 +221,36 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
         return inputs
 
     def _sanitize_parameters(self, **kwargs):
+        """
+        Sanitizes the parameters for the ZeroShotClassificationPipeline.
+        
+        Args:
+            self: An instance of the ZeroShotClassificationPipeline class.
+        
+        Returns:
+            This method does not return any value.
+        
+        Raises:
+            None.
+        
+        This method performs the following tasks:
+        - Renames the deprecated 'multi_class' argument to 'multi_label' if provided and logs a warning.
+        - Parses and sanitizes the 'candidate_labels' parameter if provided.
+        - Retrieves the 'hypothesis_template' parameter if provided.
+        - Collects the 'multi_label' parameter if provided.
+        
+        Note:
+        - The 'multi_class' argument has been deprecated and renamed to 'multi_label'. 'multi_class' will be removed in a future version of Transformers.
+        - The 'candidate_labels' parameter should be a list of strings representing the labels.
+        - The 'hypothesis_template' parameter should be a string representing the template for the hypothesis.
+        - The 'multi_label' parameter should be a boolean indicating whether multi-label classification should be used.
+        
+        Example Usage:
+        
+        pipeline = ZeroShotClassificationPipeline()
+        pipeline._sanitize_parameters(multi_class=True, candidate_labels=['label1', 'label2'], hypothesis_template='This text is about {}.')
+        
+        """
         if kwargs.get("multi_class", None) is not None:
             kwargs["multi_label"] = kwargs["multi_class"]
             logger.warning(
@@ -178,10 +269,10 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
         return preprocess_params, {}, postprocess_params
 
     def __call__(
-        self,
-        sequences: Union[str, List[str]],
-        *args,
-        **kwargs,
+            self,
+            sequences: Union[str, List[str]],
+            *args,
+            **kwargs,
     ):
         """
         Classify the sequence(s) given as inputs. See the [`ZeroShotClassificationPipeline`] documentation 
@@ -225,6 +316,21 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
         return super().__call__(sequences, **kwargs)
 
     def preprocess(self, inputs, candidate_labels=None, hypothesis_template="This example is {}."):
+        """
+        This method preprocesses inputs for zero-shot classification and generates model inputs for each candidate label.
+        
+        Args:
+        - self: The instance of the ZeroShotClassificationPipeline class.
+        - inputs: The input sequences to be classified.
+        - candidate_labels: The list of candidate labels for classification. Defaults to None.
+        - hypothesis_template: The template string for the hypothesis. Defaults to 'This example is {}'.
+        
+        Returns:
+        None. This method yields dictionaries with model inputs for each candidate label.
+        
+        Raises:
+        None.
+        """
         sequence_pairs, sequences = self._args_parser(inputs, candidate_labels, hypothesis_template)
         for i, (candidate_label, sequence_pair) in enumerate(zip(candidate_labels, sequence_pairs)):
             model_input = self._parse_and_tokenize([sequence_pair])
@@ -236,6 +342,21 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
             }
 
     def _forward(self, inputs):
+        """
+        Executes the forward pass for the ZeroShotClassificationPipeline.
+        
+        Args:
+            self (ZeroShotClassificationPipeline): The instance of the ZeroShotClassificationPipeline class.
+            inputs (dict): A dictionary containing the input data for the forward pass.
+                - candidate_label (str): The candidate label for classification.
+                - sequence (str): The sequence to classify.
+            
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         candidate_label = inputs["candidate_label"]
         sequence = inputs["sequence"]
         model_inputs = {k: inputs[k] for k in self.tokenizer.model_input_names}
@@ -254,6 +375,23 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
         return model_outputs
 
     def postprocess(self, model_outputs, multi_label=False):
+        """
+        This method postprocesses the model outputs for a ZeroShotClassificationPipeline.
+        
+        Args:
+            self (object): The instance of the ZeroShotClassificationPipeline class.
+            model_outputs (list): A list of dictionaries containing the model outputs. Each dictionary must have the keys 'candidate_label', 'sequence', and 'logits'. The 'candidate_label' key represents the
+candidate label, 'sequence' key represents the sequence, and 'logits' key holds the logits values.
+            multi_label (bool): A flag indicating whether the classification is multi-label or not. If set to True, the method processes the outputs accordingly.
+        
+        Returns:
+            dict: A dictionary containing the processed information of the model outputs. It includes the 'sequence' key with the sequence value, 'labels' key with the list of candidate labels in descending
+order of their scores, and 'scores' key with the corresponding scores of the candidate labels.
+        
+        Raises:
+            IndexError: If the indices accessed during processing are out of bounds.
+            ValueError: If there are issues with the input data or calculations within the method.
+        """
         candidate_labels = [outputs["candidate_label"] for outputs in model_outputs]
         sequences = [outputs["sequence"] for outputs in model_outputs]
         logits = np.concatenate([output["logits"].numpy() for output in model_outputs])
@@ -278,6 +416,4 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
         return {
             "sequence": sequences[0],
             "labels": [candidate_labels[i] for i in top_inds],
-            "scores": scores[0, top_inds].tolist(),
-        }
-        
+            "scores": scores[0, top_inds].tolist()}

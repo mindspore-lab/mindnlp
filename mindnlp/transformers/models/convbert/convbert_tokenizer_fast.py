@@ -22,7 +22,6 @@ from ...tokenization_utils_fast import PreTrainedTokenizerFast
 from .convbert_tokenizer import ConvBertTokenizer
 
 
-
 VOCAB_FILES_NAMES = {"vocab_file": "vocab.txt"}
 
 PRETRAINED_VOCAB_FILES_MAP = {
@@ -89,7 +88,6 @@ class ConvBertTokenizerFast(PreTrainedTokenizerFast):
         wordpieces_prefix (`str`, *optional*, defaults to `"##"`):
             The prefix for subwords.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     pretrained_init_configuration = PRETRAINED_INIT_CONFIGURATION
@@ -110,6 +108,31 @@ class ConvBertTokenizerFast(PreTrainedTokenizerFast):
         strip_accents=None,
         **kwargs,
     ):
+        """
+        This method initializes an instance of the ConvBertTokenizerFast class.
+        
+        Args:
+            self: The instance of the ConvBertTokenizerFast class.
+            vocab_file (str): The path to the vocabulary file. Default is None.
+            tokenizer_file (str): The path to the tokenizer file. Default is None.
+            do_lower_case (bool): A flag indicating whether the text should be lowercased. Default is True.
+            unk_token (str): The unknown token to be used. Default is '[UNK]'.
+            sep_token (str): The separator token to be used. Default is '[SEP]'.
+            pad_token (str): The padding token to be used. Default is '[PAD]'.
+            cls_token (str): The classification token to be used. Default is '[CLS]'.
+            mask_token (str): The mask token to be used. Default is '[MASK]'.
+            tokenize_chinese_chars (bool): A flag indicating whether to tokenize Chinese characters. Default is True.
+            strip_accents (str): A flag indicating whether to strip accents. Default is None.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If the normalizer state does not match the specified parameters.
+            TypeError: If the normalizer class is not found or if an invalid argument type is provided.
+            json.JSONDecodeError: If there is an error decoding the normalizer state from JSON format.
+        """
         super().__init__(
             vocab_file,
             tokenizer_file=tokenizer_file,
@@ -192,6 +215,20 @@ class ConvBertTokenizerFast(PreTrainedTokenizerFast):
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """
+        Save the vocabulary files for the ConvBertTokenizerFast model.
+        
+        Args:
+            self (ConvBertTokenizerFast): The instance of the ConvBertTokenizerFast class.
+            save_directory (str): The directory where the vocabulary files will be saved.
+            filename_prefix (Optional[str]): The prefix to be added to the vocabulary file names. Defaults to None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the file paths of the saved vocabulary files.
+        
+        Raises:
+            (Exception): If an error occurs while saving the vocabulary files.
+        """
         files = self._tokenizer.model.save(save_directory, name=filename_prefix)
         return tuple(files)
 

@@ -38,8 +38,6 @@ if TYPE_CHECKING:
 logger = logging.get_logger(__name__)
 
 
-
-
 def rescale_stride(stride, ratio):
     """
     Rescales the stride values from audio space to tokens/logits space.
@@ -61,6 +59,24 @@ def rescale_stride(stride, ratio):
 
 
 def chunk_iter(inputs, feature_extractor, chunk_len, stride_left, stride_right, dtype=None):
+    """
+    Chunks the input data and processes each chunk using a specified feature extractor.
+    
+    Args:
+        inputs (ndarray): The input data to be chunked and processed.
+        feature_extractor (callable): The function used to extract features from each chunk.
+        chunk_len (int): The length of each chunk to be extracted.
+        stride_left (int): The amount of overlap on the left side of each chunk.
+        stride_right (int): The amount of overlap on the right side of each chunk.
+        dtype (dtype, optional): The data type to convert the processed data to.
+    
+    Returns:
+        None
+    
+    Raises:
+        ValueError: If the input data is not in the expected format or if there are issues with processing the chunks.
+        AttributeError: If the feature extractor does not have the required attributes or methods.
+    """
     inputs_len = inputs.shape[0]
     step = chunk_len - stride_left - stride_right
     for chunk_start_idx in range(0, inputs_len, step):
@@ -83,6 +99,21 @@ def chunk_iter(inputs, feature_extractor, chunk_len, stride_left, stride_right, 
 
 
 def _fast_find_longest_common_sequence(sequence_left, sequence_right):
+    """
+    Finds the longest common sequence between two given sequences.
+    
+    Args:
+        sequence_left (list): The first sequence to compare.
+        sequence_right (list): The second sequence to compare.
+    
+    Returns:
+        tuple: A tuple containing the index of the starting element of the longest common sequence in 'sequence_left',
+               the index of the starting element of the longest common sequence in 'sequence_right', and the length of the longest common sequence.
+    
+    Raises:
+        None.
+    
+    """
     seq_len_left = len(sequence_left)
     seq_len_right = len(sequence_right)
     counter = [[0] * (seq_len_right + 1) for _ in range(seq_len_left + 1)]
@@ -92,8 +123,7 @@ def _fast_find_longest_common_sequence(sequence_left, sequence_right):
             if sequence_left[i] == sequence_right[j]:
                 previous_counter = counter[i][j] + 1
                 counter[i + 1][j + 1] = previous_counter
-                if previous_counter > longest:
-                    longest = previous_counter
+                longest = max(longest, previous_counter)
 
     counter = np.array(counter)
     # we return the idx of the first element of the longest common sequence in the left sequence
@@ -103,6 +133,25 @@ def _fast_find_longest_common_sequence(sequence_left, sequence_right):
 
 
 def _find_longest_common_sequence(sequences, tokenizer):
+    """
+    Finds the longest common sequence among multiple sequences of tokens.
+    
+    Args:
+        sequences (List[Tuple[np.ndarray, Any]]): A list of tuples, where each tuple contains a sequence of tokens as a numpy array and any additional information associated with the sequence. The sequences
+are expected to be preprocessed and tokenized.
+        tokenizer (Any): The tokenizer object used for tokenization. It should have an attribute 'all_special_ids' which contains a list of special token IDs to be excluded from the sequences.
+    
+    Returns:
+        np.ndarray: A numpy array representing the longest common sequence found among the input sequences. The array contains the token IDs of the common sequence.
+    
+    Raises:
+        None
+    
+    Note:
+        The function uses a sliding window approach to find the longest common sequence. The sequences are compared token by token, excluding any special tokens defined by the tokenizer. The function returns
+the longest common sequence found among all input sequences.
+    
+    """
     # TODO  Use a faster algorithm this can probably be done in O(n)
     # using suffix array.
     # It might be tedious to do because of fault tolerance.
@@ -194,7 +243,6 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
             `torch.float16` or `torch.bfloat16` to use half-precision in the respective dtypes.
 
     """
-
     def __init__(
         self,
         model: "PreTrainedModel",
@@ -204,6 +252,23 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
         ms_dtype: Optional[str] = None,
         **kwargs,
     ):
+        """
+        This method initializes an instance of AutomaticSpeechRecognitionPipeline.
+        
+        Args:
+        - self: The instance of the class.
+        - model (PreTrainedModel): The pre-trained model used for speech recognition.
+        - feature_extractor (Union[SequenceFeatureExtractor, str]): The feature extractor used for processing input data. It can be an instance of SequenceFeatureExtractor class or a string.
+        - tokenizer (Optional[PreTrainedTokenizer]): The tokenizer used for tokenizing input data.
+        - decoder (Optional[Union[BeamSearchDecoderCTC, str]]): The decoder used for decoding the model predictions. It can be an instance of BeamSearchDecoderCTC class or a string.
+        - ms_dtype (Optional[str]): The data type used for processing input data.
+        
+        Returns:
+        - None: This method does not return any value.
+        
+        Raises:
+        - None
+        """
         # set the model type so we can check we have the right pre- and post-processing parameters
         if model.config.model_type == "whisper":
             self.type = "seq2seq_whisper"
@@ -297,6 +362,29 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
         generate_kwargs=None,
         max_new_tokens=None,
     ):
+        """
+        This method '_sanitize_parameters' in the class 'AutomaticSpeechRecognitionPipeline' is responsible for sanitizing and validating input parameters for the Automatic Speech Recognition pipeline.
+        
+        Args:
+        - self (object): The instance of the class.
+        - chunk_length_s (float, optional): The length of each audio chunk in seconds. If provided, it is stored in the preprocess_params dictionary. Note: Experimental with 'seq2seq' models.
+        - stride_length_s (float, optional): The stride length between consecutive audio chunks in seconds. Stored in preprocess_params.
+        - ignore_warning (bool, optional): If True, ignores experimental warning when using 'chunk_length_s' with 'seq2seq' models.
+        - decoder_kwargs (dict, optional): Additional keyword arguments for the decoder. Stored in postprocess_params.
+        - return_timestamps (str or bool, optional): Specifies the type of timestamps to return. Restrictions based on the model type.
+        - return_language (str, optional): Specifies whether to return language information. Only available for 'seq2seq_whisper' models.
+        - generate_kwargs (dict, optional): Additional keyword arguments for model generation. If 'max_new_tokens' is defined here, it should not be repeated in the argument list.
+        - max_new_tokens (int, optional): Maximum number of new tokens to generate. Stored in forward_params.
+        
+        Returns:
+        - tuple: A tuple containing three dictionaries - preprocess_params, forward_params, and postprocess_params. These dictionaries hold sanitized parameters for different stages of the ASR pipeline.
+        
+        Raises:
+        - ValueError: If 'max_new_tokens' is defined both as an argument and inside 'generate_kwargs'.
+        - ValueError: If attempting to return timestamps not supported by the model type.
+        - ValueError: If language information is requested for a model other than 'seq2seq_whisper'.
+        - Warning: Experimental warning message when using 'chunk_length_s' with 'seq2seq' models.
+        """
         # No parameters on this pipeline right now
         preprocess_params = {}
         if chunk_length_s is not None:
@@ -351,6 +439,24 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
         return preprocess_params, forward_params, postprocess_params
 
     def preprocess(self, inputs, chunk_length_s=0, stride_length_s=None):
+        """
+        This method preprocesses the input data for the AutomaticSpeechRecognitionPipeline.
+        
+        Args:
+            self (object): The instance of the AutomaticSpeechRecognitionPipeline class.
+            inputs (str, bytes, dict, or np.ndarray): The input data, which can be in the form of a file path (str), binary data (bytes), a dictionary containing audio data and its properties, or a numpy array
+representing the audio.
+            chunk_length_s (float): The length of chunks into which the audio data should be divided for processing, in seconds. Defaults to 0.
+            stride_length_s (float or list): The length of stride for chunking the audio data, in seconds. If a single value is provided, it is applied to both the left and right strides. If a list is
+provided, the first value represents the left stride and the second value represents the right stride. If not provided, it defaults to chunk_length_s / 6.
+        
+        Returns:
+            None. This method yields processed chunks of the input audio data and does not return a single value.
+        
+        Raises:
+            - ValueError: If the input data does not meet the expected format or requirements, such as missing keys in the dictionary input, incorrect stride length, or invalid chunk length.
+            - TypeError: If the type of the input does not match the expected type.
+        """
         if isinstance(inputs, str):
             if inputs.startswith("http://") or inputs.startswith("https://"):
                 # We need to actually check for a real protocol, otherwise it's impossible to use a local file
@@ -422,10 +528,9 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
             if chunk_len < stride_left + stride_right:
                 raise ValueError("Chunk length must be superior to stride length")
 
-            for item in chunk_iter(
+            yield from chunk_iter(
                 inputs, self.feature_extractor, chunk_len, stride_left, stride_right, self.ms_dtype
-            ):
-                yield item
+            )
         else:
             if self.type == "seq2seq_whisper" and inputs.shape[0] > self.feature_extractor.n_samples:
                 processed = self.feature_extractor(
@@ -450,6 +555,23 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
             yield {"is_last": True, **processed, **extra}
 
     def _forward(self, model_inputs, return_timestamps=False, **generate_kwargs):
+        """
+        Performs the forward pass for Automatic Speech Recognition (ASR) in the AutomaticSpeechRecognitionPipeline class.
+        
+        Args:
+            self (AutomaticSpeechRecognitionPipeline): The instance of the AutomaticSpeechRecognitionPipeline class.
+            model_inputs (dict): A dictionary containing the model inputs.
+            return_timestamps (bool, optional): Indicates whether to return token timestamps. Defaults to False.
+        
+        Returns:
+            dict: A dictionary containing the output of the forward pass. The structure of the dictionary depends on the ASR model type.
+            
+        Raises:
+            ValueError: If the model_inputs dictionary does not contain either 'input_features' or 'input_values' key, when using a seq2seq or seq2seq_whisper model.
+            
+            Note: Other exceptions may be raised depending on the underlying ASR model used.
+        
+        """
         attention_mask = model_inputs.pop("attention_mask", None)
         stride = model_inputs.pop("stride", None)
         is_last = model_inputs.pop("is_last")
@@ -534,6 +656,25 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
     def postprocess(
         self, model_outputs, decoder_kwargs: Optional[Dict] = None, return_timestamps=None, return_language=None
     ):
+        """
+        Method postprocess in the class AutomaticSpeechRecognitionPipeline.
+        
+        Args:
+        - self: Object instance of the class AutomaticSpeechRecognitionPipeline.
+        - model_outputs: List of dictionaries representing the outputs from the model. Each dictionary contains 'logits' or 'tokens' key with corresponding values.
+        - decoder_kwargs: Optional dictionary containing keyword arguments for the decoder. Defaults to None.
+        - return_timestamps: Optional parameter indicating whether to return timestamps. Can be None, 'word', or 'char'.
+        - return_language: Optional parameter specifying the language to return. Can be None or a specific language identifier.
+        
+        Returns:
+        None. The method modifies the model_outputs and decoder_kwargs in place.
+        
+        Raises:
+        - ValueError: If the provided 'model_outputs' format is incorrect.
+        - AttributeError: If the 'stride' key is missing or improperly defined in the model_outputs dictionary.
+        - KeyError: If required keys are missing in the model_outputs dictionary.
+        - TypeError: If the input parameters are of incorrect types or incompatible values.
+        """
         # Optional return types
         optional = {}
 

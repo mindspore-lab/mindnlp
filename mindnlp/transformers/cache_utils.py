@@ -25,7 +25,6 @@ class Cache:
     """
     Base, abstract class for all caches. The actual data structure is specific to each subclass.
     """
-
     def update(
         self,
         key_states: mindspore.Tensor,
@@ -79,8 +78,33 @@ class DynamicCache(Cache):
     It stores the Key and Value states as a list of tensors, one for each layer. The expected shape for each tensor is
     `[batch_size, num_heads, seq_len, head_dim]`.
     """
-
     def __init__(self) -> None:
+        r"""
+        Initializes an instance of the 'DynamicCache' class.
+        
+        Args:
+            self: The instance of the 'DynamicCache' class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        
+        Description:
+        This method initializes the 'DynamicCache' instance by setting up the key and value caches, as well as initializing the number of seen tokens.
+        
+        - The 'key_cache' is a list of mindspore.Tensor objects that stores the keys.
+        - The 'value_cache' is a list of mindspore.Tensor objects that stores the corresponding values.
+        - The 'seen_tokens' is an integer that represents the number of tokens that have been seen.
+        
+        The 'key_cache' and 'value_cache' lists are initially empty, while the 'seen_tokens' is set to 0.
+        
+        Example:
+            cache = DynamicCache()
+            # Initializes a new instance of 'DynamicCache' with empty key and value caches,
+            # and the number of seen tokens set to 0.
+        """
         self.key_cache: List[mindspore.Tensor] = []
         self.value_cache: List[mindspore.Tensor] = []
         self.seen_tokens = 0  # Used in `generate` to keep tally of how many tokens the cache has seen
@@ -195,8 +219,35 @@ class SinkCache(Cache):
         num_sink_tokens (`int`):
             The number of sink tokens. See the original paper for more information.
     """
-
     def __init__(self, window_length: int, num_sink_tokens: int) -> None:
+        r"""
+        Initializes an instance of the SinkCache class.
+        
+        Args:
+            self (SinkCache): The SinkCache instance.
+            window_length (int): The length of the window used for caching.
+            num_sink_tokens (int): The number of sink tokens.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        '''
+        
+        The `__init__` method is used to initialize a new instance of the `SinkCache` class. It takes three parameters: `self`, `window_length`, and `num_sink_tokens`. 
+        
+        - `self` (SinkCache): The `self` parameter refers to the instance of the `SinkCache` class that is being initialized.
+        
+        - `window_length` (int): The `window_length` parameter specifies the length of the window used for caching. This value determines the size of the cache and affects the number of tokens that can be
+stored.
+        
+        - `num_sink_tokens` (int): The `num_sink_tokens` parameter represents the number of sink tokens. Sink tokens are special tokens used in the caching mechanism.
+        
+        The method does not return any value (`None`).
+        
+        This method does not raise any exceptions.
+        """
         self.key_cache: List[mindspore.Tensor] = []
         self.value_cache: List[mindspore.Tensor] = []
         self.window_length = window_length
@@ -206,6 +257,19 @@ class SinkCache(Cache):
 
     @staticmethod
     def _rotate_half(x):
+        r"""
+        Rotate the input tensor 'x' by half of its length along the last dimension.
+        
+        Args:
+            x (tensor): The input tensor to be rotated. It should have at least one dimension.
+            
+        Returns:
+            None. The method modifies the input tensor in place.
+        
+        Raises:
+            ValueError: If the input tensor 'x' does not have at least one dimension.
+            IndexError: If the input tensor 'x' does not have a valid shape for rotation.
+        """
         x1 = x[..., : x.shape[-1] // 2]
         x2 = x[..., x.shape[-1] // 2 :]
         return ops.cat((-x2, x1), axis=-1)
@@ -213,12 +277,46 @@ class SinkCache(Cache):
     def _apply_key_rotary_pos_emb(
         self, key_states: mindspore.Tensor, cos: mindspore.Tensor, sin: mindspore.Tensor
     ) -> mindspore.Tensor:
+        r"""
+        Applies key rotary positional embedding to the given key states.
+        
+        Args:
+            self (SinkCache): The instance of the SinkCache class.
+            key_states (mindspore.Tensor): The key states to which the rotational embedding is applied.
+            cos (mindspore.Tensor): The cosine values used for rotational embedding.
+            sin (mindspore.Tensor): The sine values used for rotational embedding.
+        
+        Returns:
+            mindspore.Tensor: The key states after applying the rotary positional embedding.
+        
+        Raises:
+            None
+        
+        This method applies the rotary positional embedding to the key states using the provided cosine and sine values. The embedding is applied by element-wise multiplication of the key states with the
+cosine values, and element-wise multiplication of the half-rotated key states with the sine values. The resulting rotated key states are then returned.
+        """
         rotated_key_states = (key_states * cos) + (self._rotate_half(key_states) * sin)
         return rotated_key_states
 
     def _get_rerotation_cos_sin(
         self, key_states: mindspore.Tensor, cos: mindspore.Tensor, sin: mindspore.Tensor
     ) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
+        r"""
+        This method calculates the rerotation cosine and sine values based on the provided key states, cosine, and sine tensors.
+        
+        Args:
+            self: The instance of the SinkCache class.
+            key_states (mindspore.Tensor): The key states tensor representing the current state of the keys.
+            cos (mindspore.Tensor): The cosine tensor.
+            sin (mindspore.Tensor): The sine tensor.
+            
+        Returns:
+            Tuple[mindspore.Tensor, mindspore.Tensor]: A tuple containing the rerotation cosine and sine tensors of type mindspore.Tensor. 
+            The rerotation cosine and sine values are calculated based on the input key_states, cos, and sin tensors.
+        
+        Raises:
+            N/A
+        """
         if key_states.shape[-2] not in self.cos_sin_cache:
             # Upcast to float32 temporarily for better accuracy
             cos = cos.to(mindspore.float32)
@@ -351,8 +449,25 @@ class StaticCache(Cache):
         dtype (*optional*, defaults to `torch.float32`):
             The default `dtype` to use when initializing the layer.
     """
-
     def __init__(self, config: PretrainedConfig, max_batch_size: int, max_cache_len: int, dtype=None) -> None:
+        r"""
+        Initializes a StaticCache object.
+        
+        Args:
+            self (StaticCache): The instance of the StaticCache class.
+            config (PretrainedConfig): The pre-trained configuration object containing model parameters.
+            max_batch_size (int): The maximum batch size for caching.
+            max_cache_len (int): The maximum length of the cache. Defaults to the maximum position embeddings in the config.
+            dtype (optional): The data type of the cache. Defaults to mindspore.float32.
+        
+        Returns:
+            None. This method initializes the StaticCache object with the provided parameters.
+        
+        Raises:
+            TypeError: If the provided config is not of type PretrainedConfig.
+            ValueError: If max_batch_size or max_cache_len is less than or equal to zero.
+            AttributeError: If the provided config does not contain necessary attributes.
+        """
         super().__init__()
         self.max_batch_size = max_batch_size
         self.max_cache_len = config.max_position_embeddings if max_cache_len is None else max_cache_len
@@ -412,6 +527,31 @@ class StaticCache(Cache):
         )
 
     def get_usable_length(self, new_sequence_length=None, layer_idx: Optional[int] = 0) -> int:
+        r"""
+        Returns the usable length of a sequence in the StaticCache layer.
+        
+        Args:
+            self (StaticCache): An instance of the StaticCache class.
+            new_sequence_length (Optional[int]): The new length of the sequence. Defaults to None.
+            layer_idx (int): Index of the layer. Defaults to 0.
+        
+        Returns:
+            int: The usable length of the sequence.
+        
+        Raises:
+            ValueError: If the method 'get_seq_length' is not implemented for the StaticCache layer.
+        
+        Note:
+            This method calculates the usable length of a sequence in the StaticCache layer. It takes into account any changes in the sequence length and the layer index. If 'new_sequence_length' is not
+provided, the method assumes the sequence length remains unchanged. If 'layer_idx' is not provided, the method defaults to the first layer (index 0).
+        
+        Example:
+            >>> cache = StaticCache()
+            >>> cache.get_usable_length(new_sequence_length=100, layer_idx=2)
+            100
+        
+            For more information, please refer to https://github.com/huggingface/transformers/pull/29114.
+        """
         raise ValueError(
             "get_seq_length is not implemented for StaticCache. Please refer to https://github.com/huggingface/transformers/pull/29114."
         )

@@ -91,7 +91,6 @@ class Qwen2Config(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "qwen2"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -116,6 +115,37 @@ class Qwen2Config(PretrainedConfig):
         attention_dropout=0.0,
         **kwargs,
     ):
+        """
+        __init__
+        
+        Initializes a Qwen2Config object.
+        
+        Args:
+            self: The instance of the class.
+            vocab_size (int): The size of the vocabulary. Default is 151936.
+            hidden_size (int): The size of the hidden layers. Default is 4096.
+            intermediate_size (int): The size of the intermediate layer. Default is 22016.
+            num_hidden_layers (int): The number of hidden layers. Default is 32.
+            num_attention_heads (int): The number of attention heads. Default is 32.
+            num_key_value_heads (int): The number of key-value attention heads. Default is 32.
+            hidden_act (str): The activation function for the hidden layers. Default is 'silu'.
+            max_position_embeddings (int): The maximum position embeddings. Default is 32768.
+            initializer_range (float): The range for random weight initialization. Default is 0.02.
+            rms_norm_eps (float): The epsilon value for RMS normalization. Default is 1e-06.
+            use_cache (bool): Indicates whether to use caching. Default is True.
+            tie_word_embeddings (bool): Indicates whether to tie word embeddings. Default is False.
+            rope_theta (float): The theta value for rope. Default is 10000.0.
+            use_sliding_window (bool): Indicates whether to use sliding window. Default is False.
+            sliding_window (int): The size of the sliding window. Default is 4096.
+            max_window_layers (int): The maximum number of window layers. Default is 28.
+            attention_dropout (float): The dropout rate for attention. Default is 0.0.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
         self.hidden_size = hidden_size

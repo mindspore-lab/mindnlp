@@ -100,6 +100,20 @@ class ConfusionMatrix(Metric):
 
     """
     def __init__(self, class_num=2, name='ConfusionMatrix'):
+        r"""
+        Initializes a ConfusionMatrix object.
+        
+        Args:
+            self: The instance of the ConfusionMatrix class.
+            class_num (int, optional): The number of classes. Defaults to 2.
+            name (str, optional): The name of the confusion matrix. Defaults to 'ConfusionMatrix'.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            TypeError: If the class_num parameter is not an integer.
+        """
         super().__init__()
         self._name = name
         self.class_num = _check_value_type("class_num", class_num, [int])

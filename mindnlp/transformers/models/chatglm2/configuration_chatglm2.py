@@ -47,6 +47,42 @@ class ChatGLM2Config(PretrainedConfig):
         prefix_projection=False,
         **kwargs
     ):
+        """Initialize a ChatGLM2Config object.
+        
+        Args:
+            self (ChatGLM2Config): An instance of the ChatGLM2Config class.
+            num_layers (int, optional): The number of layers in the model. Defaults to 28.
+            padded_vocab_size (int, optional): The size of the padded vocabulary. Defaults to 65024.
+            hidden_size (int, optional): The size of the hidden layers. Defaults to 4096.
+            ffn_hidden_size (int, optional): The size of the feed-forward network hidden layers. Defaults to 13696.
+            kv_channels (int, optional): The number of channels in the key-value attention. Defaults to 128.
+            num_attention_heads (int, optional): The number of attention heads. Defaults to 32.
+            seq_length (int, optional): The maximum sequence length. Defaults to 2048.
+            hidden_dropout (float, optional): The dropout probability for the hidden layers. Defaults to 0.0.
+            classifier_dropout (float, optional): The dropout probability for the classifier layer. Defaults to None.
+            attention_dropout (float, optional): The dropout probability for the attention layers. Defaults to 0.0.
+            layernorm_epsilon (float, optional): The epsilon value for layer normalization. Defaults to 1e-05.
+            rmsnorm (bool, optional): Whether to use RMSNorm for normalization. Defaults to True.
+            apply_residual_connection_post_layernorm (bool, optional): Whether to apply residual connection after layer normalization. Defaults to False.
+            post_layer_norm (bool, optional): Whether to apply layer normalization after each sublayer. Defaults to True.
+            add_bias_linear (bool, optional): Whether to add bias to the linear layer. Defaults to False.
+            add_qkv_bias (bool, optional): Whether to add bias to the query, key, and value layers. Defaults to False.
+            bias_dropout_fusion (bool, optional): Whether to fuse bias dropout with linear layer. Defaults to True.
+            multi_query_attention (bool, optional): Whether to use multi-query attention. Defaults to False.
+            multi_query_group_num (int, optional): The number of groups for multi-query attention. Defaults to 1.
+            apply_query_key_layer_scaling (bool, optional): Whether to apply scaling on query-key layer. Defaults to True.
+            attention_softmax_in_fp32 (bool, optional): Whether to use FP32 for attention softmax. Defaults to True.
+            fp32_residual_connection (bool, optional): Whether to use FP32 for residual connection. Defaults to False.
+            quantization_bit (int, optional): The number of bits for quantization. Defaults to 0.
+            pre_seq_len (int, optional): The length of the prefix sequence. Defaults to None.
+            prefix_projection (bool, optional): Whether to use prefix projection. Defaults to False.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         self.num_layers = num_layers
         self.vocab_size = padded_vocab_size
         self.padded_vocab_size = padded_vocab_size

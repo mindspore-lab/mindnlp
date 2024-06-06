@@ -38,6 +38,28 @@ logger = logging.get_logger(__name__)
 
 
 class LlamaRMSNorm(nn.Cell):
+
+    """LlamaRMSNorm is a class that represents a normalization layer, equivalent to T5LayerNorm, used in deep learning models. It inherits from the nn.Cell class.
+    
+    This class provides methods to initialize and apply RMS normalization to the input hidden states. The RMS normalization is calculated based on the variance of the hidden states and a weight parameter. The
+normalized hidden states are then multiplied by the weight parameter to obtain the final output.
+    
+    Attributes:
+        - weight (mindspore.Parameter): The weight parameter used in the RMS normalization.
+        - variance_epsilon (float): The epsilon value added to the variance to avoid division by zero.
+    
+    Methods:
+        - __init__(self, hidden_size, eps=1e-06): Initializes a new instance of the LlamaRMSNorm class.
+        - construct(self, hidden_states): Applies RMS normalization to the input hidden states.
+    
+    Example usage:
+        # Create an instance of LlamaRMSNorm
+        norm = LlamaRMSNorm(hidden_size=256)
+    
+        # Apply RMS normalization to hidden states
+        output = norm.construct(hidden_states)
+    
+    Please note that the LlamaRMSNorm class is designed to be used as part of a neural network model and requires the MindSpore library for execution."""
     def __init__(self, hidden_size, eps=1e-6):
         """
         LlamaRMSNorm is equivalent to T5LayerNorm
@@ -47,6 +69,20 @@ class LlamaRMSNorm(nn.Cell):
         self.variance_epsilon = eps
 
     def construct(self, hidden_states):
+        """Constructs the RMS normalization of the hidden states.
+        
+        Args:
+            self (LlamaRMSNorm): The instance of the LlamaRMSNorm class.
+            hidden_states (Union[Tensor, ndarray]): The input hidden states to be normalized.
+                Should be a tensor or numpy array of any shape.
+        
+        Returns:
+            None: This method does not return any value. The normalization is applied in place.
+        
+        Raises:
+            ValueError: If the input hidden_states is not a valid tensor or numpy array.
+            RuntimeError: If an error occurs during the normalization process.
+        """
         input_dtype = hidden_states.dtype
         hidden_states = hidden_states.to(mindspore.float32)
         variance = hidden_states.pow(2).mean(-1, keep_dims=True)
@@ -58,7 +94,45 @@ ALL_LAYERNORM_LAYERS.append(LlamaRMSNorm)
 
 
 class LlamaRotaryEmbedding(nn.Cell):
+
+    """
+    The `LlamaRotaryEmbedding` class represents a rotary positional embedding layer that can be used in neural network models. It inherits from the `nn.Cell` class.
+    
+    Attributes:
+        dim (int): The dimension of the embedding.
+        max_position_embeddings (int): The maximum number of position embeddings.
+        base (int): The base value used for calculating inverse frequencies.
+        inv_freq (Tensor): The tensor containing the inverse frequencies calculated based on the `dim` and `base` values.
+        max_seq_len_cached (int): The maximum sequence length for which cosine and sine values are cached.
+        cos_cached (Tensor): The cached cosine values for the positional embeddings.
+        sin_cached (Tensor): The cached sine values for the positional embeddings.
+    
+    Methods:
+        __init__(self, dim, max_position_embeddings=2048, base=10000):
+            Initializes a new instance of the `LlamaRotaryEmbedding` class.
+        
+        _set_cos_sin_cache(self, seq_len, dtype):
+            Sets up the cosine and sine cache for a given sequence length and data type.
+        
+        construct(self, x, seq_len=None):
+            Constructs the positional embedding for the input tensor `x`.
+    """
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
+        """
+        Initializes a new instance of the LlamaRotaryEmbedding class.
+        
+        Args:
+            self: The LlamaRotaryEmbedding object itself.
+            dim (int): The dimension of the embedding.
+            max_position_embeddings (int, optional): The maximum number of position embeddings. Defaults to 2048.
+            base (int, optional): The base value for calculating the inverse frequency. Defaults to 10000.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         super().__init__()
 
         self.dim = dim
@@ -72,6 +146,37 @@ class LlamaRotaryEmbedding(nn.Cell):
         )
 
     def _set_cos_sin_cache(self, seq_len, dtype):
+        """
+        Sets the cosine and sine caches for LlamaRotaryEmbedding.
+        
+        Args:
+            self (LlamaRotaryEmbedding): An instance of the LlamaRotaryEmbedding class.
+            seq_len (int): The length of the sequence.
+            dtype: The data type of the cache.
+        
+        Returns:
+            None. The method updates the 'cos_cached' and 'sin_cached' attributes of the LlamaRotaryEmbedding instance.
+        
+        Raises:
+            None.
+        
+        Description:
+        This method sets the cosine and sine caches for LlamaRotaryEmbedding. The caches are used in the forward pass of the neural network for efficient calculation of rotary position embeddings.
+        
+        The method first sets the maximum sequence length cached to the given sequence length. It then creates a tensor 't' using the 'arange' operation from the 'ops' module, with the same data type as
+'inv_freq'.
+        
+        Next, it calculates the element-wise product of 't' and 'inv_freq' using 'einsum' operation from the 'ops' module. The result is a tensor 'freqs' which represents the frequencies for each position in
+the sequence.
+        
+        To create the cache tensor, 'freqs' is concatenated with itself along the last axis using the 'cat' operation from the 'ops' module. The resulting tensor 'emb' has shape (seq_len, 2 * frequency_dim),
+where frequency_dim is the dimension of the 'inv_freq' tensor.
+        
+        Finally, the 'cos_cached' and 'sin_cached' attributes are updated by calculating the cosine and sine of each element in 'emb', respectively. The resulting tensors are converted to the given data type
+'dtype' using the 'to' method.
+        
+        Note: It is assumed that the 'inv_freq' attribute of the LlamaRotaryEmbedding instance has been initialized prior to calling this method.
+        """
         self.max_seq_len_cached = seq_len
         t = ops.arange(self.max_seq_len_cached, dtype=self.inv_freq.dtype)
 
@@ -82,6 +187,27 @@ class LlamaRotaryEmbedding(nn.Cell):
         self.sin_cached = emb.sin().to(dtype)
 
     def construct(self, x, seq_len=None):
+        """
+        Constructs a subset of the cached cosine and sine values based on the given sequence length.
+        
+        Args:
+            self (LlamaRotaryEmbedding): An instance of the LlamaRotaryEmbedding class.
+            x: The input tensor.
+            seq_len (int, optional): The length of the desired subset. Defaults to None.
+        
+        Returns:
+            tuple: A tuple containing two tensors. The first tensor represents the subset of cached cosine values, 
+                   and the second tensor represents the subset of cached sine values. Both tensors are of the same dtype as x.
+        
+        Raises:
+            TypeError: If seq_len is not an integer or None.
+            ValueError: If seq_len is less than or equal to 0.
+            AttributeError: If seq_len exceeds the maximum sequence length that has been cached.
+        
+        Note:
+            The returned subset will include elements up to the index 'seq_len - 1' from the cached cosine and sine values. 
+            If seq_len is None or not provided, the entire cached cosine and sine values will be returned.
+        """
         # x: [bs, num_attention_heads, seq_len, head_size]
         if seq_len > self.max_seq_len_cached:
             self._set_cos_sin_cache(seq_len=seq_len, dtype=x.dtype)
@@ -94,12 +220,41 @@ class LlamaRotaryEmbedding(nn.Cell):
 
 class LlamaLinearScalingRotaryEmbedding(LlamaRotaryEmbedding):
     """LlamaRotaryEmbedding extended with linear scaling. Credits to the Reddit user /u/kaiokendev"""
-
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
+        """
+        Initializes a new instance of the LlamaLinearScalingRotaryEmbedding class.
+        
+        Args:
+            self (LlamaLinearScalingRotaryEmbedding): The current instance of the class.
+            dim (int): The dimensionality of the embedding.
+            max_position_embeddings (int, optional): The maximum number of position embeddings. Default is 2048.
+            base (int, optional): The base value used for scaling. Default is 10000.
+            scaling_factor (float, optional): The scaling factor applied to the embeddings. Default is 1.0.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         self.scaling_factor = scaling_factor
         super().__init__(dim, max_position_embeddings, base)
 
     def _set_cos_sin_cache(self, seq_len, dtype):
+        """
+        Sets the cosine and sine caches for the LlamaLinearScalingRotaryEmbedding class.
+        
+        Args:
+            self (LlamaLinearScalingRotaryEmbedding): The instance of the LlamaLinearScalingRotaryEmbedding class.
+            seq_len (int): The length of the sequence.
+            dtype: The desired data type for the cache.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         self.max_seq_len_cached = seq_len
         t = ops.arange(self.max_seq_len_cached, dtype=self.inv_freq.dtype)
         t = t / self.scaling_factor
@@ -113,12 +268,43 @@ class LlamaLinearScalingRotaryEmbedding(LlamaRotaryEmbedding):
 
 class LlamaDynamicNTKScalingRotaryEmbedding(LlamaRotaryEmbedding):
     """LlamaRotaryEmbedding extended with Dynamic NTK scaling. Credits to the Reddit users /u/bloc97 and /u/emozilla"""
-
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
+        """
+        Initializes an instance of the LlamaDynamicNTKScalingRotaryEmbedding class.
+        
+        Args:
+            self: The instance of the class.
+            dim (int): The dimension of the embedding.
+            max_position_embeddings (int): The maximum number of position embeddings to be considered. Default is 2048.
+            base (int): The base value used in calculations. Default is 10000.
+            scaling_factor (float): The scaling factor applied to the embeddings.
+        
+        Returns:
+            None. This method initializes the instance with the provided parameters.
+        
+        Raises:
+            None.
+        """
         self.scaling_factor = scaling_factor
         super().__init__(dim, max_position_embeddings, base)
 
     def _set_cos_sin_cache(self, seq_len, dtype):
+        """
+        Method to set the cosine and sine cache for dynamic NTK scaling rotary embedding in the LlamaDynamicNTKScalingRotaryEmbedding class.
+        
+        Args:
+            self: Instance of the LlamaDynamicNTKScalingRotaryEmbedding class.
+            seq_len: Integer representing the length of the sequence for which the cosine and sine cache is being set.
+            dtype: Data type of the elements in the cache.
+        
+        Returns:
+            None. This method updates the cosine and sine cache attributes of the instance.
+        
+        Raises:
+            - ValueError: If the input sequence length 'seq_len' is not a positive integer.
+            - ValueError: If the input data type 'dtype' is not a valid data type.
+            - RuntimeError: If an error occurs during the calculation of the cosine and sine cache.
+        """
         self.max_seq_len_cached = seq_len
 
         if seq_len > self.max_position_embeddings:
@@ -174,7 +360,52 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
 
 
 class LlamaMLP(nn.Cell):
+
+    """
+    This class represents a multi-layer perceptron (MLP) model called LlamaMLP. 
+    
+    LlamaMLP inherits from the nn.Cell class and is designed for deep learning tasks. It consists of multiple layers, including gate projection, up projection, and down projection layers, which are used to
+transform the input data and produce the final output.
+    
+    Attributes:
+        config (object): The configuration object that stores the hyperparameters of the LlamaMLP model.
+        hidden_size (int): The size of the hidden layer in the LlamaMLP model.
+        intermediate_size (int): The size of the intermediate layer in the LlamaMLP model.
+        gate_proj (object): The dense layer responsible for the gate projection in the LlamaMLP model.
+        up_proj (object): The dense layer responsible for the up projection in the LlamaMLP model.
+        down_proj (object): The dense layer responsible for the down projection in the LlamaMLP model.
+        act_fn (function): The activation function used in the LlamaMLP model.
+    
+    Methods:
+        __init__(self, config):
+            Initializes a new instance of the LlamaMLP class.
+            
+        construct(self, x):
+            Constructs the LlamaMLP model by applying the necessary transformations on the input data.
+            This method returns the final output of the LlamaMLP model.
+            
+    Note:
+        The LlamaMLP model supports pretraining when the 'pretraining_tp' hyperparameter is greater than 1. In this case, the input data is split into slices to perform parallel computations. Otherwise, the
+computations are performed in a single path.
+    """
     def __init__(self, config):
+        """
+        Initializes an instance of the LlamaMLP class.
+        
+        Args:
+            self: The instance of the class.
+            config: An object of type 'Config' containing the configuration settings for the MLP.
+                The 'Config' object should have the following properties:
+                - hidden_size (int): The size of the hidden layer.
+                - intermediate_size (int): The size of the intermediate layer.
+                - hidden_act (str): The activation function for the hidden layer.
+            
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         super().__init__()
         self.config = config
         self.hidden_size = config.hidden_size
@@ -185,6 +416,21 @@ class LlamaMLP(nn.Cell):
         self.act_fn = ACT2FN[config.hidden_act]
 
     def construct(self, x):
+        """
+        Constructs the output of the LlamaMLP model based on the input and configuration settings.
+        
+        Args:
+            self (LlamaMLP): The instance of the LlamaMLP class.
+            x (tensor): The input tensor to be processed by the model.
+        
+        Returns:
+            None: This method does not return any value explicitly.
+        
+        Raises:
+            ValueError: If the value of 'pretraining_tp' in the configuration is less than or equal to 1.
+            TypeError: If any of the operations cannot be performed due to data type mismatch or other reasons.
+            IndexError: If any index used for slicing or accessing tensors is out of bounds.
+        """
         if self.config.pretraining_tp > 1:
             slices = self.intermediate_size // self.config.pretraining_tp
             gate_proj_slices = self.gate_proj.weight.split(slices, axis=0)
@@ -221,8 +467,33 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
 
 class LlamaAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(self, config: LlamaConfig):
+        """
+        Initializes an instance of the LlamaAttention class.
+        
+        Args:
+            self: The instance of the LlamaAttention class.
+            config (LlamaConfig): The configuration object that holds various parameters for the attention mechanism.
+                - config.attention_dropout (float): The dropout rate for attention weights.
+                - config.hidden_size (int): The size of the hidden state.
+                - config.num_attention_heads (int): The number of attention heads.
+                - config.num_key_value_heads (int): The number of key-value attention heads.
+                - config.max_position_embeddings (int): The maximum number of position embeddings.
+                - config.rope_theta (float): The rope theta value.
+                - config.attention_bias (bool): Specifies whether to use bias in attention projections.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If the hidden_size is not divisible by num_heads.
+        
+        Note:
+            This method initializes various attributes of the LlamaAttention object, such as attention_dropout, hidden_size,
+            num_heads, head_dim, num_key_value_heads, num_key_value_groups, max_position_embeddings, rope_theta, and is_causal.
+            It also initializes the projection layers q_proj, k_proj, v_proj, and o_proj.
+            Additionally, it initializes the rope (a positional encoding used in the attention mechanism) using _init_rope method.
+        """
         super().__init__()
         self.config = config
         self.attention_dropout = config.attention_dropout
@@ -248,6 +519,18 @@ class LlamaAttention(nn.Cell):
         self._init_rope()
 
     def _init_rope(self):
+        """
+        Initializes the Rotary Positional Encoding (RoPE) based on the provided configuration.
+        
+        Args:
+            self (LlamaAttention): The instance of the LlamaAttention class.
+            
+        Returns:
+            None. This method initializes the RoPE based on the configuration provided.
+        
+        Raises:
+            ValueError: If the 'type' of RoPE scaling provided in the configuration is not recognized or supported.
+        """
         if self.config.rope_scaling is None:
             self.rotary_emb = LlamaRotaryEmbedding(
                 self.head_dim,
@@ -275,6 +558,21 @@ class LlamaAttention(nn.Cell):
                 raise ValueError(f"Unknown RoPE scaling type {scaling_type}")
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
+        """
+        Reshapes the input tensor according to the specified dimensions for the LlamaAttention class.
+        
+        Args:
+            self (LlamaAttention): The instance of the LlamaAttention class.
+            tensor (mindspore.Tensor): The input tensor to be reshaped.
+            seq_len (int): The length of the sequence.
+            bsz (int): The batch size of the tensor.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
     def construct(
@@ -287,7 +585,25 @@ class LlamaAttention(nn.Cell):
         use_cache: bool = False,
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
-
+        """
+        This method constructs the LlamaAttention layer.
+        
+        Args:
+            self: The instance of the LlamaAttention class.
+            hidden_states (mindspore.Tensor): The input hidden states of shape (batch_size, sequence_length, hidden_size).
+            attention_mask (Optional[mindspore.Tensor]): An optional tensor of shape (batch_size, 1, sequence_length, sequence_length) representing the attention mask.
+            position_ids (Optional[mindspore.Tensor]): An optional tensor of shape (batch_size, sequence_length) representing the position ids.
+            past_key_value (Optional[Tuple[mindspore.Tensor]]): An optional tuple containing the past key and value states.
+            output_attentions (bool): A flag indicating whether to output attention weights.
+            use_cache (bool): A flag indicating whether to use cache for past key-value states.
+        
+        Returns:
+            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing the attention output tensor of shape (batch_size, sequence_length, hidden_size),
+            optional attention weights tensor, and optional updated past key-value states tuple.
+        
+        Raises:
+            ValueError: If the shape of attention weights or attention mask is not as expected.
+        """
         bsz, q_len, _ = hidden_states.shape
 
         if self.config.pretraining_tp > 1:
@@ -375,7 +691,66 @@ class LlamaAttention(nn.Cell):
         return attn_output, attn_weights, past_key_value
 
 class LlamaDecoderLayer(nn.Cell):
+
+    """
+    The `LlamaDecoderLayer` class represents a layer of the Llama decoder in the Llama model. It inherits from the `nn.Cell` class.
+    
+    Attributes:
+        hidden_size (int): The size of the hidden layer.
+        self_attn (`LlamaAttention`): The attention mechanism used in the layer.
+        mlp (`LlamaMLP`): The multi-layer perceptron used in the layer.
+        input_layernorm (`LlamaRMSNorm`): The input layer normalization module.
+        post_attention_layernorm (`LlamaRMSNorm`): The layer normalization module applied after the attention mechanism.
+    
+    Methods:
+        construct(hidden_states, attention_mask=None, position_ids=None, past_key_value=None, output_attentions=False, use_cache=False, **kwargs)
+            Applies the Llama decoder layer to the input hidden states.
+    
+            Args:
+                hidden_states (mindspore.Tensor): The input to the layer of shape `(batch, seq_len, embed_dim)`.
+                attention_mask (mindspore.Tensor, optional): The attention mask. Its shape depends on the attention mechanism used. For flash attention, it has a shape of `(batch_size, sequence_length)`, and
+for default attention, it has a shape of `(batch_size, 1, query_sequence_length, key_sequence_length)`.
+                position_ids (mindspore.Tensor, optional): The position ids tensor.
+                past_key_value (Tuple[mindspore.Tensor], optional): The cached past key and value projection states.
+                output_attentions (bool, optional): Whether or not to return the attention tensors of all attention layers. See the `attentions` under the returned tensors for more detail.
+                use_cache (bool, optional): If set to True, the `past_key_values` key value states are returned and can be used to speed up decoding. See `past_key_values` for more information.
+                kwargs: Additional keyword arguments.
+    
+            Returns:
+                Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: The output tensor of shape `(batch, seq_len, embed_dim)`. If `output_attentions` is True, the tuple also includes
+the attention weights tensor. If `use_cache` is True, the tuple also includes the present key and value projection states.
+    
+    Note:
+        The `LlamaDecoderLayer` class assumes that the `LlamaConfig` instance is already defined and passed as an argument to the constructor.
+    
+    Example:
+        # Create a LlamaDecoderLayer instance
+        config = LlamaConfig(hidden_size=512)
+        decoder_layer = LlamaDecoderLayer(config)
+    
+        # Apply the Llama decoder layer to the hidden states
+        hidden_states = ...
+        attention_mask = ...
+        output = decoder_layer.construct(hidden_states, attention_mask)
+    """
     def __init__(self, config: LlamaConfig):
+        """
+        Initializes a LlamaDecoderLayer instance.
+        
+        Args:
+            self (LlamaDecoderLayer): The current instance of the LlamaDecoderLayer class.
+            config (LlamaConfig): An object of type LlamaConfig containing configuration parameters for the decoder layer.
+                The config object must have the following attributes:
+                    - hidden_size (int): The size of the hidden layers.
+                    - rms_norm_eps (float): The epsilon value for RMS normalization.
+                
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            - TypeError: If config is not an instance of LlamaConfig.
+            - ValueError: If config is missing any required attribute.
+        """
         super().__init__()
         self.hidden_size = config.hidden_size
         self.self_attn = LlamaAttention(config=config)
@@ -442,6 +817,19 @@ class LlamaDecoderLayer(nn.Cell):
 
 
 class LlamaPreTrainedModel(PreTrainedModel):
+
+    """
+    LlamaPreTrainedModel is a Python class representing a pre-trained model for llama-based machine learning tasks. This class inherits from PreTrainedModel and provides methods for initializing weights.
+    
+    The _init_weights method initializes the weights for the given cell. If the cell is of type nn.Dense, the weight is initialized using the Normal initializer within the specified range. If the cell has
+bias, it is initialized with zeros. If the cell is of type nn.Embedding, the weight is initialized with random normal values within the specified range, and the padding index is set to 0 if provided.
+    
+    Parameters:
+    - cell: The cell for which the weights need to be initialized.
+    
+    Returns:
+    None
+    """
     config_class = LlamaConfig
     base_model_prefix = "model"
     supports_gradient_checkpointing = True
@@ -472,8 +860,22 @@ class LlamaModel(LlamaPreTrainedModel):
     Args:
         config: LlamaConfig
     """
-
     def __init__(self, config: LlamaConfig):
+        """
+        Initializes a new instance of the LlamaModel class.
+        
+        Args:
+            self: The object instance.
+            config (LlamaConfig): The configuration object for the LlamaModel.
+                This parameter specifies the configuration settings for the model.
+                It should be an instance of the LlamaConfig class.
+        
+        Returns:
+            None.
+        
+        Raises:
+            None.
+        """
         super().__init__(config)
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
@@ -486,9 +888,39 @@ class LlamaModel(LlamaPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
+        """
+        Method: get_input_embeddings
+        
+        Description:
+            This method retrieves the input embeddings from the LlamaModel instance.
+        
+        Args:
+            self (LlamaModel): The LlamaModel instance that this method is called on.
+        
+        Returns:
+            None: This method returns the embed_tokens attribute of the LlamaModel instance,
+                  which represents the input embeddings. The return value is of type None.
+        
+        Raises:
+            No specific exceptions are documented to be raised by this method.
+        """
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
+        """
+            Sets the input embeddings for the LlamaModel instance.
+        
+            Args:
+                self (LlamaModel): The LlamaModel instance.
+                value (torch.Tensor): The input embeddings to be set. It should be a tensor of shape (num_embeddings, embedding_dim).
+        
+            Returns:
+                None
+        
+            Raises:
+                TypeError: If the input value is not a tensor.
+                ValueError: If the input tensor shape is invalid.
+            """
         self.embed_tokens = value
 
     def construct(
@@ -503,6 +935,29 @@ class LlamaModel(LlamaPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
+        """
+        Constructs the LlamaModel.
+        
+        Args:
+            self (LlamaModel): The instance of the LlamaModel class.
+            input_ids (mindspore.Tensor, optional): The input IDs tensor. Default is None.
+            attention_mask (mindspore.Tensor, optional): The attention mask tensor. Default is None.
+            position_ids (mindspore.Tensor, optional): The position IDs tensor. Default is None.
+            past_key_values (List[mindspore.Tensor], optional): The list of past key values. Default is None.
+            inputs_embeds (mindspore.Tensor, optional): The input embeddings tensor. Default is None.
+            use_cache (bool, optional): Whether to use cache. Default is None.
+            output_attentions (bool, optional): Whether to output attentions. Default is None.
+            output_hidden_states (bool, optional): Whether to output hidden states. Default is None.
+            return_dict (bool, optional): Whether to return a dictionary. Default is None.
+        
+        Returns:
+            Union[Tuple, BaseModelOutputWithPast]: The output of the LlamaModel. It can be a tuple containing hidden states, next cache, all hidden states, and all self attentions; or an instance of
+BaseModelOutputWithPast.
+        
+        Raises:
+            ValueError: If both input_ids and inputs_embeds are specified.
+            ValueError: If neither input_ids nor inputs_embeds are specified.
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -588,9 +1043,62 @@ class LlamaModel(LlamaPreTrainedModel):
 
 
 class LlamaForCausalLM(LlamaPreTrainedModel):
+
+    """
+    This class represents a Llama model for Causal Language Modeling (LM) tasks. It includes methods for setting and getting input and output embeddings, setting and getting the decoder, as well as methods for
+model construction and preparing inputs for generation. The class inherits from LlamaPreTrainedModel and implements the necessary functionalities for generating text based on a given prompt.
+    
+    Attributes:
+        - model: Instance of LlamaModel used for the LM task.
+        - vocab_size: Size of the vocabulary used in the LM task.
+        - lm_head: Neural network layer for LM head.
+    
+    Methods:
+        - get_input_embeddings(): Retrieve the input embeddings from the model.
+        - set_input_embeddings(value): Set new input embeddings for the model.
+        - get_output_embeddings(): Get the output embeddings for the LM task.
+        - set_output_embeddings(new_embeddings): Set new output embeddings.
+        - set_decoder(decoder): Set a new decoder for the model.
+        - get_decoder(): Get the current decoder used in the model.
+        - construct(): Construct the model for the LM task with specified inputs and return the outputs.
+        - prepare_inputs_for_generation(): Prepare input data for text generation based on past key values and attention mask.
+        - _reorder_cache(past_key_values, beam_idx): Reorder cache elements based on beam index for efficient generation.
+    
+    Example Usage:
+        >>> from transformers import AutoTokenizer, LlamaForCausalLM
+    
+        >>> model = LlamaForCausalLM.from_pretrained(PATH_TO_CONVERTED_WEIGHTS)
+        >>> tokenizer = AutoTokenizer.from_pretrained(PATH_TO_CONVERTED_TOKENIZER)
+    
+        >>> prompt = "Hey, are you conscious? Can you talk to me?"
+        >>> inputs = tokenizer(prompt, return_tensors="pt")
+    
+        >>> # Generate
+        >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
+        >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
+    """
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
+        """
+        Initializes an instance of the LlamaForCausalLM class.
+        
+        Args:
+            self (LlamaForCausalLM): The instance of the LlamaForCausalLM class.
+            config (dict): The configuration dictionary containing parameters for model initialization.
+                Must include the following keys:
+                    - vocab_size (int): The size of the vocabulary.
+                    - hidden_size (int): The size of the hidden layers in the model.
+        
+        Returns:
+            None. This method initializes the LlamaForCausalLM instance with the specified configuration.
+        
+        Raises:
+            ValueError: If the 'config' dictionary is missing required keys or if the values are of incorrect types.
+            TypeError: If 'config' is not a dictionary or if any of the values in the 'config' dictionary are of incorrect types.
+            RuntimeError: If an error occurs during model initialization.
+        """
         super().__init__(config)
         self.model = LlamaModel(config)
         self.vocab_size = config.vocab_size
@@ -600,21 +1108,115 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
+        """
+        Method to retrieve input embeddings from the 'LlamaForCausalLM' class model.
+        
+        Args:
+            self (LlamaForCausalLM): The instance of the 'LlamaForCausalLM' class.
+                This parameter is used to access the model's embed tokens for input embeddings.
+        
+        Returns:
+            None: This method returns None as it directly retrieves and returns the input embeddings from the model.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
+        """
+        Method: set_input_embeddings
+        
+        Description: Sets the input embeddings of the LlamaForCausalLM model.
+        
+        Args:
+            self (LlamaForCausalLM): The instance of the LlamaForCausalLM class.
+                - Type: LlamaForCausalLM
+                - Purpose: Represents the current instance of the LlamaForCausalLM class.
+                - Restrictions: Must be an instance of the LlamaForCausalLM class.
+        
+            value: The input embeddings to be set for the model.
+                - Type: Any
+                - Purpose: Represents the new input embeddings to be assigned to the model.
+                - Restrictions: None
+        
+        Returns:
+            None: This method does not return any value explicitly.
+                - Type: None
+                - Purpose: Indicates that the input embeddings have been successfully set for the model.
+        
+        Raises:
+            None
+        """
         self.model.embed_tokens = value
 
     def get_output_embeddings(self):
+        """
+        Retrieve the output embeddings from the LlamaForCausalLM model.
+        
+        Args:
+            self: An instance of the LlamaForCausalLM class.
+        
+        Returns:
+            None. This method returns the output embeddings from the lm_head layer of the LlamaForCausalLM model.
+        
+        Raises:
+            None.
+        """
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
+        """
+        Sets the output embeddings for the LlamaForCausalLM model.
+        
+        Args:
+            self (LlamaForCausalLM): The instance of the LlamaForCausalLM class.
+            new_embeddings (Tensor): The new embeddings to be set for the model's lm_head. 
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        
+        This method allows the user to update the output embeddings of the LlamaForCausalLM model by replacing the current embeddings with the provided new_embeddings. The new_embeddings should be a tensor of
+the same shape and size as the current embeddings. This method is useful in fine-tuning the model with custom embeddings or when transferring the model to a different task that requires different output
+embeddings.
+        """
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
+        """
+        Sets the decoder for the LlamaForCausalLM model.
+        
+        Args:
+            self (LlamaForCausalLM): The instance of the LlamaForCausalLM class.
+            decoder: The decoder object to be set for the model.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        
+        This method sets the decoder object provided as an argument to the 'model' attribute of the LlamaForCausalLM instance.
+        The 'model' attribute represents the decoder used for the causal language modeling task.
+        """
         self.model = decoder
 
     def get_decoder(self):
+        """
+        This method returns the decoder model used for the LlamaForCausalLM class.
+        
+        Args:
+            self: The instance of the LlamaForCausalLM class.
+        
+        Returns:
+            None: This method returns the decoder model associated with the LlamaForCausalLM instance.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         return self.model
 
     def construct(
@@ -655,7 +1257,6 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
         ```"""
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -710,6 +1311,25 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
+        """
+        Method to prepare inputs for generation in the LlamaForCausalLM class.
+        
+        Args:
+            self (object): The instance of the class.
+            input_ids (torch.Tensor): The input tensor representing tokenized input sequence.
+            past_key_values (tuple, optional): Tuple containing past key values for autoregressive generation. Default is None.
+            attention_mask (torch.Tensor, optional): Mask tensor indicating attention areas. Default is None.
+            inputs_embeds (torch.Tensor, optional): Embedding tensor for the input tokens. Default is None.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            dict: A dictionary containing the prepared model inputs including 'input_ids', 'position_ids', 'past_key_values', 'use_cache', and 'attention_mask'.
+        
+        Raises:
+            ValueError: If the input_ids shape is incorrect or if attention_mask is not provided.
+            TypeError: If the position_ids are not of type torch.Tensor.
+            RuntimeError: If an unexpected error occurs during position_ids calculation.
+        """
         if past_key_values is not None:
             past_length = past_key_values[0][0].shape[2]
 
@@ -748,6 +1368,23 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
+        """
+        Reorders the cache of past key values for a given beam index in the LlamaForCausalLM class.
+        
+        Args:
+            past_key_values (tuple): A tuple containing the cache of past key values.
+                Each element in the tuple represents the cache for a particular layer.
+            beam_idx (int): The index of the beam for which the cache is to be reordered.
+        
+        Returns:
+            None. This method modifies the existing cache in-place.
+        
+        Raises:
+            None.
+        
+        This static method reorders the cache of past key values for a specific beam index in the LlamaForCausalLM class. The method iterates over each layer's cache and reorders the past states based on the
+provided beam index. The reordered cache is then returned as a tuple of past key values. The original cache is modified in-place and no new objects are created.
+        """
         reordered_past = ()
         for layer_past in past_key_values:
             reordered_past += (
@@ -757,7 +1394,62 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
 
 
 class LlamaForSequenceClassification(LlamaPreTrainedModel):
+
+    """
+    LlamaForSequenceClassification
+    
+    This class is a sequence classification model based on the Llama architecture. It inherits from the LlamaPreTrainedModel class.
+    
+    Attributes:
+        num_labels (int): The number of labels for the sequence classification task.
+        model (LlamaModel): The LlamaModel instance used for the sequence classification.
+        score (nn.Dense): The final layer that computes the logits for the classification.
+        
+    Methods:
+        __init__(self, config)
+            Initializes a new instance of the LlamaForSequenceClassification class.
+            
+        get_input_embeddings(self)
+            Retrieves the input embeddings from the LlamaModel.
+            
+        set_input_embeddings(self, value)
+            Sets the input embeddings in the LlamaModel.
+            
+        construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict)
+            Constructs the sequence classification model.
+            
+            Parameters:
+                input_ids (mindspore.Tensor): The input tensor of shape `(batch_size, sequence_length)`.
+                attention_mask (Optional[mindspore.Tensor]): The attention mask tensor of shape `(batch_size, sequence_length)`.
+                position_ids (Optional[mindspore.Tensor]): The position IDs tensor of shape `(batch_size, sequence_length)`.
+                past_key_values (Optional[List[mindspore.Tensor]]): The list of past key-value tensors.
+                inputs_embeds (Optional[mindspore.Tensor]): The input embeddings tensor of shape `(batch_size, sequence_length, hidden_size)`.
+                labels (Optional[mindspore.Tensor]): The labels tensor of shape `(batch_size,)`.
+                use_cache (Optional[bool]): Whether to use cache for the model.
+                output_attentions (Optional[bool]): Whether to output attention tensors.
+                output_hidden_states (Optional[bool]): Whether to output hidden state tensors.
+                return_dict (Optional[bool]): Whether to return a SequenceClassifierOutputWithPast object.
+                
+            Returns:
+                Union[Tuple, SequenceClassifierOutputWithPast]: The output tuple or a SequenceClassifierOutputWithPast object.
+    """
     def __init__(self, config):
+        """
+        Initializes an instance of the LlamaForSequenceClassification class.
+        
+        Args:
+            self: The instance of the class.
+            config: An object of type 'Config', containing the configuration parameters for the model.
+                - Type: 'Config' object
+                - Purpose: The configuration parameters for the model
+                - Restrictions: None
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = LlamaModel(config)
@@ -767,9 +1459,43 @@ class LlamaForSequenceClassification(LlamaPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
+        """
+        Returns the input embeddings of the given sequence for the LlamaForSequenceClassification model.
+        
+        Args:
+            self: An instance of the LlamaForSequenceClassification class.
+        
+        Returns:
+            None. The method returns a value of type 'None'.
+        
+        Raises:
+            None.
+        
+        This method retrieves the input embeddings for the given sequence from the LlamaForSequenceClassification model. Input embeddings are the vector representations of the input tokens in the sequence that
+the model uses for further processing. These embeddings capture the contextual information of the tokens and are essential for downstream tasks such as sequence classification.
+        
+        Note:
+            The input embeddings are obtained by calling the 'embed_tokens' method of the model instance.
+        
+        Example usage:
+            llama_classifier = LlamaForSequenceClassification()
+            embeddings = llama_classifier.get_input_embeddings()
+        """
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
+        """Set the embedding layer of the LlamaForSequenceClassification model with a specified value.
+        
+        Args:
+            self (LlamaForSequenceClassification): An instance of the LlamaForSequenceClassification class.
+            value (torch.nn.Embedding): The embedding layer to be set in the model. 
+        
+        Returns:
+            None. The function only sets the input embedding layer of the model.
+        
+        Raises:
+            TypeError: If the value parameter is not an instance of torch.nn.Embedding.
+        """
         self.model.embed_tokens = value
 
     def construct(

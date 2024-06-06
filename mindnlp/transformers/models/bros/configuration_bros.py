@@ -85,7 +85,6 @@ class BrosConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "bros"
 
     def __init__(
@@ -109,6 +108,36 @@ class BrosConfig(PretrainedConfig):
         classifier_dropout_prob=0.1,
         **kwargs,
     ):
+        """
+        Initializes an instance of the BrosConfig class.
+        
+        Args:
+            self: The instance of the class.
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 30522.
+            hidden_size (int, optional): The size of the hidden layer. Defaults to 768.
+            num_hidden_layers (int, optional): The number of hidden layers. Defaults to 12.
+            num_attention_heads (int, optional): The number of attention heads. Defaults to 12.
+            intermediate_size (int, optional): The size of the intermediate layer. Defaults to 3072.
+            hidden_act (str, optional): The activation function for the hidden layers. Defaults to 'gelu'.
+            hidden_dropout_prob (float, optional): The dropout probability for the hidden layers. Defaults to 0.1.
+            attention_probs_dropout_prob (float, optional): The dropout probability for the attention probabilities. Defaults to 0.1.
+            max_position_embeddings (int, optional): The maximum number of position embeddings. Defaults to 512.
+            type_vocab_size (int, optional): The size of the type vocabulary. Defaults to 2.
+            initializer_range (float, optional): The range for weight initialization. Defaults to 0.02.
+            layer_norm_eps (float, optional): The epsilon value for layer normalization. Defaults to 1e-12.
+            pad_token_id (int, optional): The ID for padding token. Defaults to 0.
+            dim_bbox (int, optional): The dimension of the bounding box. Defaults to 8.
+            bbox_scale (float, optional): The scale factor for the bounding box. Defaults to 100.0.
+            n_relations (int, optional): The number of relations. Defaults to 1.
+            classifier_dropout_prob (float, optional): The dropout probability for the classifier. Defaults to 0.1.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(
             vocab_size=vocab_size,
             hidden_size=hidden_size,

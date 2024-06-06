@@ -130,7 +130,6 @@ class AlbertTokenizer(PreTrainedTokenizer):
         sp_model (`SentencePieceProcessor`):
             The *SentencePiece* processor that is used for every conversion (string, tokens and IDs).
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -151,6 +150,31 @@ class AlbertTokenizer(PreTrainedTokenizer):
         sp_model_kwargs: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> None:
+        """
+        Initializes an instance of the AlbertTokenizer class.
+        
+        Args:
+            self: The object instance.
+            vocab_file (str): The path to the vocabulary file.
+            do_lower_case (bool, optional): Whether to convert all characters to lowercase. Default is True.
+            remove_space (bool, optional): Whether to remove spaces. Default is True.
+            keep_accents (bool, optional): Whether to keep accents. Default is False.
+            bos_token (str, optional): The beginning of sentence token. Default is '[CLS]'.
+            eos_token (str, optional): The end of sentence token. Default is '[SEP]'.
+            unk_token (str, optional): The unknown token. Default is '<unk>'.
+            sep_token (str, optional): The separator token. Default is '[SEP]'.
+            pad_token (str, optional): The padding token. Default is '<pad>'.
+            cls_token (str, optional): The classification token. Default is '[CLS]'.
+            mask_token (str, optional): The masking token. Default is '[MASK]'.
+            sp_model_kwargs (dict, optional): Additional keyword arguments for SentencePieceProcessor. Default is None.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         # Mask token behave like a normal word, i.e. include the space before it and
         # is included in the raw text, there should be a match in a non-normalized sentence.
         mask_token = (
@@ -186,19 +210,94 @@ class AlbertTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self) -> int:
+        """
+        This method returns the size of the vocabulary used in the AlbertTokenizer.
+        
+        Args:
+            self (AlbertTokenizer): The instance of the AlbertTokenizer class.
+        
+        Returns:
+            int: The size of the vocabulary used in the AlbertTokenizer.
+        
+        Raises:
+            None
+        """
         return len(self.sp_model)
 
     def get_vocab(self) -> Dict[str, int]:
+        """
+        Get the vocabulary of the AlbertTokenizer.
+        
+        Args:
+            self: The instance of the AlbertTokenizer class.
+                This parameter is required to access the tokenizer's vocabulary.
+                
+        Returns:
+            Dict[str, int]: A dictionary containing the vocabulary of the AlbertTokenizer where
+                the keys are strings representing tokens and the values are integers representing token IDs.
+                
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         vocab = {self.convert_ids_to_tokens(i): i for i in range(self.vocab_size)}
         vocab.update(self.added_tokens_encoder)
         return vocab
 
     def __getstate__(self):
+        """
+        Method: __getstate__
+        
+        Description:
+        This method is implemented in the 'AlbertTokenizer' class to retrieve the state of the object for pickling.
+        
+        Args:
+            self: An instance of the 'AlbertTokenizer' class.
+        
+        Returns:
+            None: This method does not explicitly return a value. However, it modifies the state of the object by setting the 'sp_model' attribute to None.
+        
+        Raises:
+            N/A: This method does not raise any exceptions.
+        """
         state = self.__dict__.copy()
         state["sp_model"] = None
         return state
 
     def __setstate__(self, d):
+        """
+        Sets the internal state of the AlbertTokenizer instance.
+        
+        Args:
+            self (AlbertTokenizer): The instance of the AlbertTokenizer class.
+            d (dict): The dictionary containing the state of the instance.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        
+        Description:
+        This method is called during unpickling or deserialization of an AlbertTokenizer instance. It sets the internal state of the instance by assigning the provided dictionary 'd' to the '__dict__'
+attribute. 
+        
+        If the instance does not have an attribute named 'sp_model_kwargs', it is initialized as an empty dictionary. 
+        
+        Then, a SentencePieceProcessor object is created using the 'sp_model_kwargs' and assigned to the 'sp_model' attribute of the instance. The SentencePieceProcessor object is instantiated with the keyword
+arguments provided through 'self.sp_model_kwargs'.
+        
+        Finally, the SentencePieceProcessor object loads the vocabulary file specified by 'self.vocab_file'.
+        
+        Note:
+        - This method is automatically called by the pickle module when unpickling an AlbertTokenizer object.
+        - The '__setstate__' method is used in conjunction with the '__getstate__' method to enable pickling and unpickling of the AlbertTokenizer instances.
+        
+        Example:
+            tokenizer = AlbertTokenizer()
+            state = {'sp_model_kwargs': {'model_type': 'unigram', 'vocab_size': 30000}, 'vocab_file': 'vocab.txt'}
+            tokenizer.__setstate__(state)
+        
+        """
         self.__dict__ = d
 
         # for backward compatibility
@@ -209,6 +308,19 @@ class AlbertTokenizer(PreTrainedTokenizer):
         self.sp_model.Load(self.vocab_file)
 
     def preprocess_text(self, inputs):
+        """
+        Preprocesses the input text by removing spaces, replacing quotation marks, normalizing accents, and converting to lowercase.
+        
+        Args:
+            self (AlbertTokenizer): An instance of the AlbertTokenizer class.
+            inputs (str): The input text to be preprocessed.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         if self.remove_space:
             outputs = " ".join(inputs.strip().split())
         else:
@@ -315,7 +427,6 @@ class AlbertTokenizer(PreTrainedTokenizer):
         Returns:
             `List[int]`: A list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
         """
-
         if already_has_special_tokens:
             return super().get_special_tokens_mask(
                 token_ids_0=token_ids_0, token_ids_1=token_ids_1, already_has_special_tokens=True
@@ -356,6 +467,21 @@ class AlbertTokenizer(PreTrainedTokenizer):
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """
+        Save the vocabulary of the AlbertTokenizer to a specified directory with an optional filename prefix.
+        
+        Args:
+            self: Instance of the AlbertTokenizer class.
+            save_directory (str): The directory path where the vocabulary files will be saved.
+            filename_prefix (Optional[str]): An optional prefix to be added to the vocabulary filename. Default is None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the path to the saved vocabulary file.
+        
+        Raises:
+            OSError: If the specified save_directory is not a valid directory path.
+            IOError: If an error occurs during file operations like copying or writing the vocabulary file.
+        """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return

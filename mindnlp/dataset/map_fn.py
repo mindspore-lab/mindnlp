@@ -15,10 +15,48 @@
 """
 Map fuction init
 """
-class BaseMapFuction:
+class BaseMapFunction:
+
+    r"""
+    The BaseMapFunction class represents a base mapping function for processing input columns into output columns.
+    
+    Attributes:
+        input_columns (list): A list of input columns to be processed.
+        output_columns (list): A list of output columns to store the processed data.
+    
+    Methods:
+        __call__(*args): Processes the input arguments and returns the result.
+    
+    """
     def __init__(self, input_colums, output_columns):
+        r"""
+        Initializes an instance of the BaseMapFunction class.
+        
+        Args:
+            self: Reference to the current instance of the class.
+            input_columns (list): List of input columns for the mapping function.
+            output_columns (list): List of output columns for the mapping function.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         self.input_columns = input_colums
         self.output_columns = output_columns
 
     def __call__(self, *args):
+        r"""
+        The '__call__' method in the 'BaseMapFunction' class takes '1' parameter, which is 'self'.
+        
+        Args:
+            - self: (object) The instance of the 'BaseMapFunction' class.
+        
+        Returns:
+            - None: This method does not return any value.
+        
+        Raises:
+            - None: This method does not raise any exceptions.
+        """
         return args

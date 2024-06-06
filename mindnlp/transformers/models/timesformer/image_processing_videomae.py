@@ -48,6 +48,16 @@ logger = logging.get_logger(__name__)
 
 
 def make_batched(videos) -> List[List[ImageInput]]:
+    """
+    Args:
+        videos (Union[List[ImageInput], Tuple[ImageInput]]): A list or tuple of image inputs or a single image input.
+    
+    Returns:
+        List[List[ImageInput]]: A batched list of image inputs.
+    
+    Raises:
+        ValueError: If the input videos cannot be batched into a valid format.
+    """
     if isinstance(videos, (list, tuple)) and isinstance(videos[0], (list, tuple)) and is_valid_image(videos[0][0]):
         return videos
 
@@ -97,7 +107,6 @@ class VideoMAEImageProcessor(BaseImageProcessor):
             Standard deviation to use if normalizing the image. This is a float or list of floats the length of the
             number of channels in the image. Can be overridden by the `image_std` parameter in the `preprocess` method.
     """
-
     model_input_names = ["pixel_values"]
 
     def __init__(
@@ -114,6 +123,28 @@ class VideoMAEImageProcessor(BaseImageProcessor):
         image_std: Optional[Union[float, List[float]]] = None,
         **kwargs,
     ) -> None:
+        """Initializes an instance of the VideoMAEImageProcessor class.
+        
+        Args:
+            self: The instance of the class.
+            do_resize (bool, optional): Indicates whether resizing should be performed on the input image. Defaults to True.
+            size (Dict[str, int], optional): Specifies the desired size of the image after resizing. Defaults to None.
+            resample (PILImageResampling, optional): The resampling method to be used during resizing. Defaults to PILImageResampling.BILINEAR.
+            do_center_crop (bool, optional): Indicates whether center cropping should be performed on the resized image. Defaults to True.
+            crop_size (Dict[str, int], optional): Specifies the size of the cropped image. Defaults to None.
+            do_rescale (bool, optional): Indicates whether rescaling should be performed on the image. Defaults to True.
+            rescale_factor (Union[int, float], optional): The factor by which the image should be rescaled. Defaults to 1/255.
+            do_normalize (bool, optional): Indicates whether normalization should be performed on the image. Defaults to True.
+            image_mean (Optional[Union[float, List[float]]], optional): The mean values used for normalization. Defaults to None.
+            image_std (Optional[Union[float, List[float]]], optional): The standard deviation values used for normalization. Defaults to None.
+            **kwargs: Additional keyword arguments that can be passed to the super class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(**kwargs)
         size = size if size is not None else {"shortest_edge": 224}
         size = get_size_dict(size, default_to_square=False)

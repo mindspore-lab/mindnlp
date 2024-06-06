@@ -4,7 +4,6 @@ Fine-Tune SantaCoder on code/text dataset
 import argparse
 import os
 from mindnlp.peft import LoraConfig, get_peft_model
-from mindnlp.peft.tuners.lora import LoraLayer
 from mindnlp.transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
@@ -63,7 +62,6 @@ def get_args():
     parser.add_argument("--lora_r", type=int, default=0)
     parser.add_argument("--lora_alpha", type=int, default=0)
     parser.add_argument("--lora_dropout", type=float, default=0)
-    parser.add_argument("--lora_target_modules", type=str, default=None)
 
     parser.add_argument("--use_4bit_qunatization", action="store_true")
     parser.add_argument("--use_nested_quant", action="store_true")
@@ -166,7 +164,6 @@ def main(args):
             r=args.lora_r,
             bias="none",
             task_type="CAUSAL_LM",
-            target_modules=args.lora_target_modules.split(","),
         )
         model = get_peft_model(model, peft_config)
         model.print_trainable_parameters()

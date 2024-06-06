@@ -95,7 +95,6 @@ class DistilBertConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "distilbert"
     attribute_map = {
         "hidden_size": "dim",
@@ -121,6 +120,32 @@ class DistilBertConfig(PretrainedConfig):
         pad_token_id=0,
         **kwargs,
     ):
+        """
+        Initializes a new instance of the DistilBertConfig class.
+        
+        Args:
+            self (DistilBertConfig): The instance that the method is called on.
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 30522.
+            max_position_embeddings (int, optional): The maximum number of tokens in a sequence. Defaults to 512.
+            sinusoidal_pos_embds (bool, optional): Whether to use sinusoidal positional embeddings. Defaults to False.
+            n_layers (int, optional): The number of layers in the transformer encoder. Defaults to 6.
+            n_heads (int, optional): The number of attention heads in each layer. Defaults to 12.
+            dim (int, optional): The dimensionality of the encoder layers. Defaults to 768.
+            hidden_dim (int, optional): The dimensionality of the hidden layers in the feed-forward network. Defaults to 4 * 768.
+            dropout (float, optional): The dropout probability for all fully connected layers. Defaults to 0.1.
+            attention_dropout (float, optional): The dropout probability for the attention layers. Defaults to 0.1.
+            activation (str, optional): The activation function used in the feed-forward network. Defaults to 'gelu'.
+            initializer_range (float, optional): The range of the initializer. Defaults to 0.02.
+            qa_dropout (float, optional): The dropout probability for the question answering head. Defaults to 0.1.
+            seq_classif_dropout (float, optional): The dropout probability for the sequence classification head. Defaults to 0.2.
+            pad_token_id (int, optional): The id of the padding token. Defaults to 0.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
         self.sinusoidal_pos_embds = sinusoidal_pos_embds

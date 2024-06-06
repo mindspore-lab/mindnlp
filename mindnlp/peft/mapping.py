@@ -38,6 +38,14 @@ from .tuners import (
     LoKrConfig,
     LoKrModel,
     PromptTuningConfig,
+    LoHaConfig,
+    LoHaModel,
+    PolyConfig,
+    PolyModel,
+    LNTuningConfig,
+    LNTuningModel,
+    PrefixTuningConfig,
+    PromptEncoderConfig,
 )
 
 MODEL_TYPE_TO_PEFT_MODEL_MAPPING = {
@@ -53,20 +61,26 @@ MODEL_TYPE_TO_PEFT_MODEL_MAPPING = {
 PEFT_TYPE_TO_CONFIG_MAPPING = {
     # "ADAPTION_PROMPT": AdaptionPromptConfig,
     "PROMPT_TUNING": PromptTuningConfig,
-    # "PREFIX_TUNING": PrefixTuningConfig,
-    # "P_TUNING": PromptEncoderConfig,
+    "PREFIX_TUNING": PrefixTuningConfig,
+    "P_TUNING": PromptEncoderConfig,
     "ADAPTION_PROMPT": AdaptionPromptConfig,
     "LORA": LoraConfig,
     "ADALORA": AdaLoraConfig,
     "IA3": IA3Config,
-    "LOKR":LoKrConfig,
+    "LOKR": LoKrConfig,
+    "LOHA": LoHaConfig,
+    "POLY": PolyConfig,
+    "LN_TUNING": LNTuningConfig,
 }
 
 PEFT_TYPE_TO_TUNER_MAPPING = {
     "LORA": LoraModel,
     "ADALORA": AdaLoraModel,
     "IA3": IA3Model,
-    "LOKR":LoKrModel,
+    "LOKR": LoKrModel,
+    "LOHA": LoHaModel,
+    "POLY": PolyModel,
+    "LN_TUNING": LNTuningModel,
 }
 
 
@@ -77,7 +91,6 @@ def get_peft_config(config_dict: Dict[str, Any]):
     Args:
         config_dict (`Dict[str, Any]`): Dictionary containing the configuration parameters.
     """
-
     return PEFT_TYPE_TO_CONFIG_MAPPING[config_dict["peft_type"]](**config_dict)
 
 
@@ -129,7 +142,7 @@ def inject_adapter_in_model(
 
     tuner_cls = PEFT_TYPE_TO_TUNER_MAPPING[peft_config.peft_type]
 
-    # By instantiating a peft model we are injecting randomly initialized LoRA layers into the model's modules.
+    # By instantiating a peft model we are injecting randomly initialized LoRA layers into the model's cells.
     peft_model = tuner_cls(model, peft_config, adapter_name=adapter_name)
 
     return peft_model.model

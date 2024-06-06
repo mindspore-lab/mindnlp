@@ -38,7 +38,6 @@ PRETRAINED_VOCAB_FILES_MAP = {
 
 class CpmTokenizer(PreTrainedTokenizer):
     """Runs pre-tokenization with Jieba segmentation tool. It is used in CPM models."""
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
 
@@ -164,22 +163,82 @@ class CpmTokenizer(PreTrainedTokenizer):
     @property
     # Copied from transformers.models.xlnet.tokenization_xlnet.XLNetTokenizer.vocab_size
     def vocab_size(self):
+        """
+        Method to retrieve the vocabulary size of the CpmTokenizer instance.
+        
+        Args:
+            self (CpmTokenizer): The instance of the CpmTokenizer class.
+                This parameter is required to access the vocabulary model.
+                
+        Returns:
+            int: The size of the vocabulary model.
+                The return value indicates the number of tokens in the vocabulary model.
+        
+        Raises:
+            None.
+        """
         return len(self.sp_model)
 
     # Copied from transformers.models.xlnet.tokenization_xlnet.XLNetTokenizer.get_vocab
     def get_vocab(self):
+        """
+        Retrieves the vocabulary of the CpmTokenizer instance.
+        
+        Args:
+            self (CpmTokenizer): The instance of the CpmTokenizer class.
+        
+        Returns:
+            dict: A dictionary containing the vocabulary of the CpmTokenizer instance. The keys are the tokens in the vocabulary,
+            and the values are the corresponding token IDs. The vocabulary includes both the default vocabulary and any
+            additional tokens that have been added.
+        
+        Raises:
+            None.
+        """
         vocab = {self.convert_ids_to_tokens(i): i for i in range(self.vocab_size)}
         vocab.update(self.added_tokens_encoder)
         return vocab
 
     # Copied from transformers.models.xlnet.tokenization_xlnet.XLNetTokenizer.__getstate__
     def __getstate__(self):
+        """
+        Method '__getstate__' in the class 'CpmTokenizer'.
+        
+        Args:
+            self: CpmTokenizer
+                The instance of the CpmTokenizer class.
+                Parameter to access the internal state of the object.
+        
+        Returns:
+            None
+                Returns the state of the object with 'sp_model' set to None.
+        
+        Raises:
+            No exceptions are raised by this method.
+        """
         state = self.__dict__.copy()
         state["sp_model"] = None
         return state
 
     # Copied from transformers.models.xlnet.tokenization_xlnet.XLNetTokenizer.__setstate__
     def __setstate__(self, d):
+        """
+        Method '__setstate__' in the class 'CpmTokenizer' updates the state of the object by restoring its attributes from a serialized state dictionary.
+        
+        Args:
+            self (CpmTokenizer): The instance of the CpmTokenizer class.
+            d (dict): The serialized state dictionary containing the attributes to be restored.
+        
+        Returns:
+            None. This method doesn't return any value.
+        
+        Raises:
+            None.
+        
+        This method updates the '__dict__' attribute of the 'self' object with the attributes from the serialized state dictionary 'd'. If the 'sp_model_kwargs' attribute doesn't exist in the object, it is
+initialized as an empty dictionary. Then, a SentencePieceProcessor object 'sp_model' is created with the keyword arguments provided in 'self.sp_model_kwargs'. Finally, the 'vocab_file' is loaded into the
+'sp_model'.
+        """
         self.__dict__ = d
 
         # for backward compatibility
@@ -191,6 +250,20 @@ class CpmTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.xlnet.tokenization_xlnet.XLNetTokenizer.preprocess_text
     def preprocess_text(self, inputs):
+        """
+        This method preprocesses text input based on the specified settings in the CpmTokenizer class.
+        
+        Args:
+            self (CpmTokenizer): An instance of the CpmTokenizer class.
+            inputs (str): The text input to be preprocessed.
+        
+        Returns:
+            None: This method does not return any value directly. The preprocessed text is stored internally within the method.
+        
+        Raises:
+            None: This method does not raise any exceptions explicitly. However, potential exceptions may arise from the use of external functions within the method such as unicodedata.normalize() and
+unicodedata.combining().
+        """
         if self.remove_space:
             outputs = " ".join(inputs.strip().split())
         else:
@@ -287,7 +360,6 @@ class CpmTokenizer(PreTrainedTokenizer):
         Returns:
             `List[int]`: A list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
         """
-
         if already_has_special_tokens:
             return super().get_special_tokens_mask(
                 token_ids_0=token_ids_0, token_ids_1=token_ids_1, already_has_special_tokens=True
@@ -330,6 +402,22 @@ class CpmTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.xlnet.tokenization_xlnet.XLNetTokenizer.save_vocabulary
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """
+        Save the vocabulary file to the specified directory with an optional filename prefix.
+        
+        Args:
+            self: Instance of CpmTokenizer.
+            save_directory (str): The directory where the vocabulary file will be saved.
+            filename_prefix (Optional[str], optional): An optional prefix to be added to the filename. Defaults to None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the path to the saved vocabulary file.
+        
+        Raises:
+            IOError: If the save_directory is not a valid directory.
+            FileNotFoundError: If the self.vocab_file does not exist.
+            Exception: If any other unexpected error occurs during the file operations.
+        """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return
@@ -347,6 +435,18 @@ class CpmTokenizer(PreTrainedTokenizer):
         return (out_vocab_file,)
 
     def _decode(self, *args, **kwargs):
+        """
+        Method _decode in the class CpmTokenizer.
+        
+        Args:
+            self: The instance of the CpmTokenizer class.
+        
+        Returns:
+            None. The method modifies the text content and returns None.
+        
+        Raises:
+            No specific exceptions are raised within the method. However, potential exceptions from the super()._decode() method may be propagated.
+        """
         text = super()._decode(*args, **kwargs)
         text = text.replace(" ", "").replace("\u2582", " ").replace("\u2583", "\n")
         return text

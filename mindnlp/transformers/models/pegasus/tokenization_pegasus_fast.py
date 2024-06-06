@@ -81,7 +81,6 @@ class PegasusTokenizerFast(PreTrainedTokenizerFast):
             tokenizer](https://github.com/google-research/pegasus/blob/939830367bcf411193d2b5eca2f2f90f3f9260ca/pegasus/ops/pretrain_parsing_ops.cc#L66)
             that uses the tokens 2 - 104 only for pretraining
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     slow_tokenizer_class = PegasusTokenizer
     model_input_names = ["input_ids", "attention_mask"]
@@ -99,6 +98,28 @@ class PegasusTokenizerFast(PreTrainedTokenizerFast):
         offset=103,  # entries 2 - 104 are only used for pretraining
         **kwargs,
     ):
+        """
+        This method initializes an instance of the PegasusTokenizerFast class.
+        
+        Args:
+            self: The instance of the class.
+            vocab_file (str): Path to the vocabulary file. Defaults to None.
+            tokenizer_file (str): Path to the tokenizer file. Defaults to None.
+            pad_token (str): Special token representing padding. Defaults to '<pad>'.
+            eos_token (str): Special token representing end of sequence. Defaults to '</s>'.
+            unk_token (str): Special token representing unknown tokens. Defaults to '<unk>'.
+            mask_token (str): Special token for masking tokens. Defaults to '<mask_2>'.
+            mask_token_sent (str): Special token for masking sentences. Defaults to '<mask_1>'.
+            additional_special_tokens (list): List of additional special tokens. Defaults to None.
+            offset (int): Offset value for special tokens. Defaults to 103.
+        
+        Returns:
+            None. This method initializes the PegasusTokenizerFast instance.
+        
+        Raises:
+            TypeError: If additional_special_tokens is not a list.
+            ValueError: If the provided additional_special_tokens contain an incorrectly shifted list of unknown tokens.
+        """
         self.offset = offset
 
         if additional_special_tokens is not None:
@@ -152,9 +173,36 @@ class PegasusTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def can_save_slow_tokenizer(self) -> bool:
+        """
+        Check whether the slow tokenizer can be saved.
+        
+        Args:
+            self (PegasusTokenizerFast): The instance of the PegasusTokenizerFast class.
+            
+        Returns:
+            bool: Returns True if the vocab_file exists and is a valid file path, False otherwise.
+        
+        Raises:
+            None
+        """
         return os.path.isfile(self.vocab_file) if self.vocab_file else False
 
     def _special_token_mask(self, seq):
+        """
+        Special Token Mask method in the PegasusTokenizerFast class.
+        
+        This method creates a special token mask for a sequence.
+        
+        Args:
+            self (PegasusTokenizerFast): The instance of the PegasusTokenizerFast class.
+            seq (List[int]): The input sequence for which the special token mask is to be created.
+        
+        Returns:
+            List[int]: A list of integers representing the special token mask for the input sequence. The value 1 indicates that the token is a special token, while 0 indicates a regular token.
+        
+        Raises:
+            ValueError: If the number or types of special tokens do not match the expected configuration, a ValueError is raised.
+        """
         all_special_ids = set(self.all_special_ids)  # call it once instead of inside list comp
         all_special_ids.remove(self.unk_token_id)  # <unk> is only sometimes special
 
@@ -199,6 +247,21 @@ class PegasusTokenizerFast(PreTrainedTokenizerFast):
         return token_ids_0 + token_ids_1 + [self.eos_token_id]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """
+        Save the vocabulary to the specified directory with an optional filename prefix.
+        
+        Args:
+            self (PegasusTokenizerFast): The instance of the PegasusTokenizerFast class.
+            save_directory (str): The directory path where the vocabulary will be saved.
+            filename_prefix (Optional[str]): An optional prefix to be added to the vocabulary filename. Default is None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the path to the saved vocabulary file.
+        
+        Raises:
+            ValueError: If the fast tokenizer does not have the necessary information to save the vocabulary for a slow tokenizer.
+            OSError: If the save_directory provided is not a valid directory path.
+        """
         if not self.can_save_slow_tokenizer:
             raise ValueError(
                 "Your fast tokenizer does not have the necessary information to save the vocabulary for a slow "

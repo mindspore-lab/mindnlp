@@ -97,7 +97,6 @@ class MistralConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "mistral"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -123,6 +122,35 @@ class MistralConfig(PretrainedConfig):
         attention_dropout=0.0,
         **kwargs,
     ):
+        """Initializes a MistralConfig object.
+        
+        Args:
+            vocab_size (int): The size of the vocabulary. Defaults to 32000.
+            hidden_size (int): The size of the hidden states. Defaults to 4096.
+            intermediate_size (int): The size of the intermediate layers. Defaults to 14336.
+            num_hidden_layers (int): The number of hidden layers. Defaults to 32.
+            num_attention_heads (int): The number of attention heads. Defaults to 32.
+            num_key_value_heads (int): The number of key-value heads. Defaults to `num_attention_heads`.
+            hidden_act (str): The activation function for the hidden layers. Defaults to 'silu'.
+            max_position_embeddings (int): The maximum number of position embeddings. Defaults to `4096 * 32`.
+            initializer_range (float): The range of the initializer. Defaults to 0.02.
+            rms_norm_eps (float): The epsilon value for RMS normalization. Defaults to 1e-06.
+            use_cache (bool): Whether to use caching. Defaults to True.
+            pad_token_id (int): The token ID for padding. Defaults to None.
+            bos_token_id (int): The token ID for the beginning of sentence. Defaults to 1.
+            eos_token_id (int): The token ID for the end of sentence. Defaults to 2.
+            tie_word_embeddings (bool): Whether to tie word embeddings. Defaults to False.
+            rope_theta (float): The theta value for rope normalization. Defaults to 10000.0.
+            sliding_window (int): The size of the sliding window. Defaults to 4096.
+            attention_dropout (float): The dropout rate for attention layers. Defaults to 0.0.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
         self.hidden_size = hidden_size

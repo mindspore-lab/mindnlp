@@ -13,8 +13,11 @@
 # limitations under the License.
 """merge utils"""
 import warnings
-from typing import List, Literal
-
+from typing import List
+try:
+    from typing import Literal
+except:
+    from typing_extensions import Literal
 import mindspore
 from mindspore import ops
 
@@ -114,7 +117,6 @@ def calculate_majority_sign_mask(
     Returns:
         `mindspore.Tensor`: The majority sign mask.
     """
-
     sign = tensor.sign()
     if method == "total":
         sign_magnitude = tensor.sum(dim=0)

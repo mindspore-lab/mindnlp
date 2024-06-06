@@ -92,7 +92,6 @@ class TimesformerConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "timesformer"
 
     def __init__(
@@ -115,6 +114,34 @@ class TimesformerConfig(PretrainedConfig):
         drop_path_rate=0,
         **kwargs,
     ):
+        """
+        Initializes an instance of the TimesformerConfig class.
+        
+        Args:
+            self (object): The TimesformerConfig object itself.
+            image_size (int, optional): The size of the input image. Defaults to 224.
+            patch_size (int, optional): The size of each patch in the input image. Defaults to 16.
+            num_channels (int, optional): The number of channels in the input image. Defaults to 3.
+            num_frames (int, optional): The number of frames in a video sequence. Defaults to 8.
+            hidden_size (int, optional): The size of the hidden state in the transformer layers. Defaults to 768.
+            num_hidden_layers (int, optional): The number of hidden layers in the transformer. Defaults to 12.
+            num_attention_heads (int, optional): The number of attention heads in the transformer. Defaults to 12.
+            intermediate_size (int, optional): The size of the intermediate layer in the transformer. Defaults to 3072.
+            hidden_act (str, optional): The activation function for the hidden layers. Defaults to 'gelu'.
+            hidden_dropout_prob (float, optional): The dropout probability for the hidden layers. Defaults to 0.0.
+            attention_probs_dropout_prob (float, optional): The dropout probability for the attention layer. Defaults to 0.0.
+            initializer_range (float, optional): The range for the initializer. Defaults to 0.02.
+            layer_norm_eps (float, optional): The epsilon value for layer normalization. Defaults to 1e-06.
+            qkv_bias (bool, optional): Whether to include bias terms in the qkv layers. Defaults to True.
+            attention_type (str, optional): The type of attention used in the transformer. Defaults to 'divided_space_time'.
+            drop_path_rate (float, optional): The drop path rate for stochastic depth. Defaults to 0.
+            
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(**kwargs)
 
         self.image_size = image_size

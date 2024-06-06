@@ -24,8 +24,21 @@ class Seq2seqModel(BaseModel):
         encoder (EncoderBase): The encoder.
         decoder (DecoderBase): The decoder.
     """
-
     def __init__(self, encoder, decoder):
+        r"""
+        Initializes a new Seq2seqModel.
+        
+        Args:
+            self (object): The instance of the Seq2seqModel.
+            encoder (object): The encoder object used for encoding input data.
+            decoder (object): The decoder object used for decoding output data.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         super().__init__()
         self.encoder = encoder
         self.decoder = decoder

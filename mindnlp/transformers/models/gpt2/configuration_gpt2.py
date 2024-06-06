@@ -126,7 +126,6 @@ class GPT2Config(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "gpt2"
     keys_to_ignore_at_inference = ["past_key_values"]
     attribute_map = {
@@ -163,6 +162,42 @@ class GPT2Config(PretrainedConfig):
         reorder_and_upcast_attn=False,
         **kwargs,
     ):
+        """
+        Initializes a new instance of the GPT2Config class.
+        
+        Args:
+            self: The object instance.
+            vocab_size (int, optional): The size of the vocabulary. Default is 50257.
+            n_positions (int, optional): The maximum number of positions for the input sequence. Default is 1024.
+            n_embd (int, optional): The dimensionality of the embeddings and hidden states. Default is 768.
+            n_layer (int, optional): The number of layers in the model. Default is 12.
+            n_head (int, optional): The number of attention heads. Default is 12.
+            n_inner (int, optional): The inner dimensionality in the feed-forward layers. Default is None.
+            activation_function (str, optional): The activation function used in the model. Default is 'gelu_new'.
+            resid_pdrop (float, optional): The dropout probability for the residual connections. Default is 0.1.
+            embd_pdrop (float, optional): The dropout probability for the embeddings. Default is 0.1.
+            attn_pdrop (float, optional): The dropout probability for the attention layers. Default is 0.1.
+            layer_norm_epsilon (float, optional): The epsilon value for layer normalization. Default is 1e-05.
+            initializer_range (float, optional): The range of the initializer. Default is 0.02.
+            summary_type (str, optional): The type of summary representation. Default is 'cls_index'.
+            summary_use_proj (bool, optional): Whether to use projection for the summary representation. Default is True.
+            summary_activation (str, optional): The activation function used for the summary projection. Default is None.
+            summary_proj_to_labels (bool, optional): Whether to project the summary representation to labels. Default is True.
+            summary_first_dropout (float, optional): The dropout probability for the first summary layer. Default is 0.1.
+            scale_attn_weights (bool, optional): Whether to scale attention weights. Default is True.
+            use_cache (bool, optional): Whether to use cache for the model. Default is True.
+            bos_token_id (int, optional): The token ID for the beginning of sentence. Default is 50256.
+            eos_token_id (int, optional): The token ID for the end of sentence. Default is 50256.
+            scale_attn_by_inverse_layer_idx (bool, optional): Whether to scale attention weights by inverse layer index. Default is False.
+            reorder_and_upcast_attn (bool, optional): Whether to reorder and upcast attention. Default is False.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
         self.vocab_size = vocab_size
         self.n_positions = n_positions
         self.n_embd = n_embd

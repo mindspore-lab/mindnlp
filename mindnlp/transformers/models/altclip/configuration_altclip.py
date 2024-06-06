@@ -100,7 +100,6 @@ class AltCLIPTextConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "altclip_text_model"
 
     def __init__(
@@ -126,6 +125,36 @@ class AltCLIPTextConfig(PretrainedConfig):
         project_dim=768,
         **kwargs,
     ):
+        """
+        Initializes an instance of the AltCLIPTextConfig class.
+        
+        Args:
+            vocab_size (int): The size of the vocabulary. Default is 250002.
+            hidden_size (int): The size of the hidden layers. Default is 1024.
+            num_hidden_layers (int): The number of hidden layers. Default is 24.
+            num_attention_heads (int): The number of attention heads. Default is 16.
+            intermediate_size (int): The size of the intermediate layer. Default is 4096.
+            hidden_act (str): The activation function for the hidden layers. Default is 'gelu'.
+            hidden_dropout_prob (float): The dropout probability for the hidden layers. Default is 0.1.
+            attention_probs_dropout_prob (float): The dropout probability for the attention probabilities. Default is 0.1.
+            max_position_embeddings (int): The maximum position embeddings. Default is 514.
+            type_vocab_size (int): The size of the type vocabulary. Default is 1.
+            initializer_range (float): The range for weight initialization. Default is 0.02.
+            initializer_factor (float): The factor for weight initialization. Default is 0.02.
+            layer_norm_eps (float): The epsilon value for layer normalization. Default is 1e-05.
+            pad_token_id (int): The token ID for padding. Default is 1.
+            bos_token_id (int): The token ID for the beginning of sentence. Default is 0.
+            eos_token_id (int): The token ID for the end of sentence. Default is 2.
+            position_embedding_type (str): The type of position embedding. Default is 'absolute'.
+            use_cache (bool): Whether to use cache. Default is True.
+            project_dim (int): The dimension for project. Default is 768.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(pad_token_id=pad_token_id, bos_token_id=bos_token_id, eos_token_id=eos_token_id, **kwargs)
 
         self.vocab_size = vocab_size
@@ -201,7 +230,6 @@ class AltCLIPVisionConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "altclip_vision_model"
 
     def __init__(
@@ -221,6 +249,31 @@ class AltCLIPVisionConfig(PretrainedConfig):
         initializer_factor=1.0,
         **kwargs,
     ):
+        """
+        Initializes an instance of the AltCLIPVisionConfig class.
+        
+        Args:
+            self (AltCLIPVisionConfig): The instance of the class itself.
+            hidden_size (int, optional): The size of the hidden layer.
+            intermediate_size (int, optional): The size of the intermediate layer.
+            projection_dim (int, optional): The dimension of the projection.
+            num_hidden_layers (int, optional): The number of hidden layers.
+            num_attention_heads (int, optional): The number of attention heads.
+            num_channels (int, optional): The number of channels in the image.
+            image_size (int, optional): The size of the image.
+            patch_size (int, optional): The size of the patch.
+            hidden_act (str, optional): The activation function for the hidden layer.
+            layer_norm_eps (float, optional): The epsilon value for layer normalization.
+            attention_dropout (float, optional): The dropout rate for attention.
+            initializer_range (float, optional): The range for weight initialization.
+            initializer_factor (float, optional): The factor for weight initialization.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(**kwargs)
 
         self.hidden_size = hidden_size
@@ -239,6 +292,19 @@ class AltCLIPVisionConfig(PretrainedConfig):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
+        """
+        This method creates an instance of the AltCLIPVisionConfig class from a pretrained model.
+        
+        Args:
+            cls (object): The class object. It represents the AltCLIPVisionConfig class.
+            pretrained_model_name_or_path (Union[str, os.PathLike]): The name or path of the pretrained model. It can be a string or a valid path.
+        
+        Returns:
+            PretrainedConfig: An instance of the 'PretrainedConfig' class representing the configuration of the pretrained model. It contains the configuration details for the pretrained model.
+        
+        Raises:
+            None
+        """
         config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
 
         # get the vision config dict if we are loading from AltCLIPConfig
@@ -298,12 +364,27 @@ class AltCLIPConfig(PretrainedConfig):
 
     >>> config = AltCLIPConfig.from_text_vision_configs(config_text, config_vision)
     ```"""
-
     model_type = "altclip"
 
     def __init__(
         self, text_config=None, vision_config=None, projection_dim=768, logit_scale_init_value=2.6592, **kwargs
     ):
+        """
+        Initializes an instance of the AltCLIPConfig class.
+        
+        Args:
+            self: The instance of the class.
+            text_config (Optional[Dict]): A dictionary containing configuration parameters for text processing. Defaults to None.
+            vision_config (Optional[Dict]): A dictionary containing configuration parameters for vision processing. Defaults to None.
+            projection_dim (int): The dimension of the projection layer. Defaults to 768.
+            logit_scale_init_value (float): The initial value for the logit scale. Defaults to 2.6592.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         # If `_config_dict` exist, we use them for the backward compatibility.
         # We pop out these 2 attributes before calling `super().__init__` to avoid them being saved (which causes a lot
         # of confusion!).
@@ -398,7 +479,6 @@ class AltCLIPConfig(PretrainedConfig):
         Returns:
             [`AltCLIPConfig`]: An instance of a configuration object
         """
-
         return cls(text_config=text_config.to_dict(), vision_config=vision_config.to_dict(), **kwargs)
 
 __all__ = [

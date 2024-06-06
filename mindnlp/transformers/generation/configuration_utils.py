@@ -37,6 +37,73 @@ class GenerationConfig:
     Class that holds a configuration for a generation task.
     """
     def __init__(self, **kwargs):
+        r"""
+        Initialize the GenerationConfig object with the provided keyword arguments.
+        
+        Args:
+            **kwargs (dict): Keyword arguments to initialize the GenerationConfig object.
+            
+                max_length (int): The maximum length of the generated sequences.
+                max_new_tokens (int or None, optional): The maximum number of new tokens to add to the input prompt tokens. Defaults to None.
+                min_length (int): The minimum length of the generated sequences.
+                min_new_tokens (int or None, optional): The minimum number of new tokens to add to the input prompt tokens. Defaults to None.
+                early_stopping (bool, optional): Whether to stop the generation early if all beam hypotheses are finished. Defaults to False.
+                max_time (float or None, optional): The maximum time in seconds for generation. Defaults to None.
+                do_sample (bool, optional): Whether to sample the next token. Defaults to False.
+                num_beams (int): The number of beams for beam search.
+                num_beam_groups (int): The number of groups for diverse beam search.
+                penalty_alpha (float or None, optional): The alpha for penalty to the length penalty. Defaults to None.
+                use_cache (bool, optional): Whether to use the cache when decoding. Defaults to True.
+                temperature (float): The temperature for sampling. 
+                top_k (int): The number of highest probability vocabulary tokens to keep for top-k sampling.
+                top_p (float): The cumulative probability for top-p sampling.
+                typical_p (float): The typical p value for nucleus sampling.
+                epsilon_cutoff (float): The epsilon cutoff value for nucleus sampling.
+                eta_cutoff (float): The eta cutoff value for nucleus sampling.
+                diversity_penalty (float): The penalty for diversity.
+                repetition_penalty (float): The penalty for repetition.
+                encoder_repetition_penalty (float): The penalty for repetition in the encoder sequence.
+                length_penalty (float): The penalty for the length of the generated sequences.
+                no_repeat_ngram_size (int): The size of n-gram to avoid repetition.
+                bad_words_ids (list of int or None, optional): The list of token IDs to avoid. Defaults to None.
+                force_words_ids (list of int or None, optional): The list of token IDs to force the generation to sample. Defaults to None.
+                renormalize_logits (bool, optional): Whether to renormalize the logits. Defaults to False.
+                constraints (PromptEncoderConstraints or None, optional): The constraints for the prompt encoder. Defaults to None.
+                forced_bos_token_id (int or None, optional): The token ID to force as the beginning of the generated sequence. Defaults to None.
+                forced_eos_token_id (int or None, optional): The token ID to force as the end of the generated sequence. Defaults to None.
+                remove_invalid_values (bool, optional): Whether to remove invalid values. Defaults to False.
+                exponential_decay_length_penalty (ExponentialDecayLengthPenalty or None, optional): The exponential decay length penalty. Defaults to None.
+                suppress_tokens (list of int or None, optional): The list of token IDs to suppress during generation. Defaults to None.
+                begin_suppress_tokens (list of int or None, optional): The list of token IDs to suppress at the beginning of the generated sequence. Defaults to None.
+                forced_decoder_ids (list of int or None, optional): The list of token IDs to force in the decoder sequence. Defaults to None.
+                sequence_bias (int or None, optional): The sequence bias value. Defaults to None.
+                guidance_scale (float or None, optional): The guidance scale value. Defaults to None.
+                low_memory (bool or None, optional): Whether to use low memory. Defaults to None.
+                num_return_sequences (int): The number of sequences to return.
+                output_attentions (bool, optional): Whether to output attentions. Defaults to False.
+                output_hidden_states (bool, optional): Whether to output hidden states. Defaults to False.
+                output_scores (bool, optional): Whether to output scores. Defaults to False.
+                return_dict_in_generate (bool, optional): Whether to return a dict in generation. Defaults to False.
+                pad_token_id (int or None, optional): The token ID for padding. Defaults to None.
+                bos_token_id (int or None, optional): The token ID for the beginning of sequence. Defaults to None.
+                eos_token_id (int or None, optional): The token ID for the end of sequence. Defaults to None.
+                encoder_no_repeat_ngram_size (int): The size of n-gram to avoid repetition in the encoder.
+                decoder_start_token_id (int or None, optional): The token ID for the beginning of the decoder sequence. Defaults to None.
+                num_assistant_tokens (int): The number of assistant tokens.
+                num_assistant_tokens_schedule (str): The schedule for the number of assistant tokens.
+                cache_implementation (str or None, optional): The cache implementation. Defaults to None.
+                prompt_lookup_num_tokens (int or None, optional): The number of tokens to lookup in the prompt. Defaults to None.
+                max_matching_ngram_size (int or None, optional): The maximum matching n-gram size. Defaults to None.
+                generation_kwargs (dict): Additional generation keyword arguments.
+                _from_model_config (bool, optional): Whether the configuration is from a model config. Defaults to False.
+                _commit_hash (str or None, optional): The commit hash. Defaults to None.
+        
+        Returns:
+            None. This method does not return a value.
+        
+        Raises:
+            AttributeError: If an attribute cannot be set for the GenerationConfig object.
+        """
         # Parameters that control the length of the output
         # if the default `max_length` is updated here, make sure to update the `generate` tests following https://github.com/huggingface/transformers/pull/25030
         self.max_length = kwargs.pop("max_length", 20)
@@ -218,7 +285,6 @@ class GenerationConfig:
         Note that some parameters are best validated at generate runtime, as they may depend on other inputs and/or the
         model, such as parameters related to the generation length.
         """
-
         # Validation of individual attributes
         if self.early_stopping not in {True, False, "never"}:
             raise ValueError(f"`early_stopping` must be a boolean or 'never', but is {self.early_stopping}.")
@@ -512,7 +578,6 @@ class GenerationConfig:
         config = cls.from_dict(config_dict, **kwargs)
         return config
 
-
     def save_pretrained(
         self,
         save_directory: Union[str, os.PathLike],
@@ -535,7 +600,6 @@ class GenerationConfig:
             kwargs (`Dict[str, Any]`, *optional*):
                 Additional key word arguments passed along to the [`~utils.PushToHubMixin.push_to_hub`] method.
         """
-
         # At save time, validate the instance -- if any warning/exception is thrown, we refuse to save the instance
         try:
             with warnings.catch_warnings(record=True) as caught_warnings:
@@ -602,7 +666,6 @@ class GenerationConfig:
 
         return json.dumps(config_dict, indent=2, sort_keys=True) + "\n"
 
-
     def to_diff_dict(self) -> Dict[str, Any]:
         """
         Removes all attributes from config which correspond to the default config attributes for better readability and
@@ -658,6 +721,22 @@ class GenerationConfig:
 
     @classmethod
     def _dict_from_json_file(cls, json_file: Union[str, os.PathLike]):
+        r"""
+        Method to load and parse JSON data from a specified file into a Python dictionary.
+        
+        Args:
+            cls (class): The class itself.
+            json_file (Union[str, os.PathLike]): A string representing the path to the JSON file or an os.PathLike object.
+                The JSON file should exist and be readable. The file's content must be in UTF-8 encoding.
+        
+        Returns:
+            None: This method returns None after successfully loading and parsing the JSON data from the file into a dictionary.
+        
+        Raises:
+            FileNotFoundError: If the specified JSON file does not exist.
+            PermissionError: If the specified JSON file is not readable.
+            JSONDecodeError: If the content of the JSON file is not valid JSON format.
+        """
         with open(json_file, "r", encoding="utf-8") as reader:
             text = reader.read()
         return json.loads(text)

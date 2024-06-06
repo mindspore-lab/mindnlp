@@ -67,9 +67,27 @@ class RNNDecoder(DecoderBase):
         (8, 16, 1000)
         (8, 16, 16)
     """
-
     def __init__(self, embedding, rnns, dropout_in=0, dropout_out=0, attention=True,
                  encoder_output_units=512, mode="RNN"):
+        r"""
+        Initialize the RNNDecoder class.
+        
+        Args:
+            self: The RNNDecoder instance.
+            embedding: The embedding used for input data.
+            rnns: List of RNN modules to be used in the decoder.
+            dropout_in: The dropout probability for input data (default is 0).
+            dropout_out: The dropout probability for output data (default is 0).
+            attention: Boolean flag indicating whether to use attention mechanism.
+            encoder_output_units: The number of units in the encoder output (default is 512).
+            mode: The mode of the RNN (either 'RNN' or 'LSTM').
+        
+        Returns:
+            None. This method initializes the RNNDecoder object.
+        
+        Raises:
+            None.
+        """
         super().__init__(embedding)
         self.dropout_in_module = Dropout(p=dropout_in)
         self.dropout_out_module = Dropout(p=dropout_out)

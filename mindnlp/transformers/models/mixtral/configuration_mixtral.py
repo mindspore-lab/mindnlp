@@ -107,7 +107,6 @@ class MixtralConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "mixtral"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -137,6 +136,41 @@ class MixtralConfig(PretrainedConfig):
         router_aux_loss_coef=0.001,
         **kwargs,
     ):
+        """
+        Initializes a new MixtralConfig object.
+        
+        Args:
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 32000.
+            hidden_size (int, optional): The size of the hidden layers. Defaults to 4096.
+            intermediate_size (int, optional): The size of the intermediate layers. Defaults to 14336.
+            num_hidden_layers (int, optional): The number of hidden layers. Defaults to 32.
+            num_attention_heads (int, optional): The number of attention heads. Defaults to 32.
+            num_key_value_heads (int, optional): The number of key and value heads. Defaults to 8.
+            hidden_act (str, optional): The activation function for the hidden layers. Defaults to 'silu'.
+            max_position_embeddings (int, optional): The maximum position embeddings. Defaults to 4096 * 32.
+            initializer_range (float, optional): The range for weight initialization. Defaults to 0.02.
+            rms_norm_eps (float, optional): The epsilon value for RMS normalization. Defaults to 1e-05.
+            use_cache (bool, optional): Indicates whether to use cache. Defaults to True.
+            pad_token_id (int, optional): The ID of the padding token. Defaults to None.
+            bos_token_id (int, optional): The ID of the beginning-of-sequence token. Defaults to 1.
+            eos_token_id (int, optional): The ID of the end-of-sequence token. Defaults to 2.
+            tie_word_embeddings (bool, optional): Indicates whether to tie word embeddings. Defaults to False.
+            rope_theta (float, optional): The theta value for rope. Defaults to 1000000.0.
+            sliding_window (int, optional): The size of the sliding window. Defaults to None.
+            attention_dropout (float, optional): The dropout rate for attention. Defaults to 0.0.
+            num_experts_per_tok (int, optional): The number of experts per token. Defaults to 2.
+            num_local_experts (int, optional): The number of local experts. Defaults to 8.
+            output_router_logits (bool, optional): Indicates whether to output router logits. Defaults to False.
+            router_aux_loss_coef (float, optional): The coefficient for router auxiliary loss. Defaults to 0.001.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. The method initializes a MixtralConfig object.
+        
+        Raises:
+            ValueError: If any of the provided parameters are invalid or out of range.
+            TypeError: If the input types are incorrect.
+        """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
         self.hidden_size = hidden_size

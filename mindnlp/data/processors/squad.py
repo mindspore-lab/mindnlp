@@ -86,6 +86,15 @@ def _new_check_is_max_context(doc_spans, cur_span_index, position):
 
 
 def _is_whitespace(c):
+    r"""
+    Args:
+        c (str): The character to be checked for whitespace.
+            It can be a space (' '), tab ('\t'), carriage return ('\r'), newline ('\n'), or a specific Unicode character (8239).
+    Returns:
+        None: Indicates whether the input character is a whitespace character or not.
+    Raises:
+        None.
+    """
     if c == " " or c == "\t" or c == "\r" or c == "\n" or ord(c) == 0x202F:
         return True
     return False
@@ -94,6 +103,21 @@ def _is_whitespace(c):
 def squad_convert_example_to_features(
     example, max_seq_length, doc_stride, max_query_length, padding_strategy, is_training
 ):
+    r"""
+    Args:
+    example (Example): An object representing a single training example containing the necessary information for feature conversion.
+    max_seq_length (int): The maximum total input sequence length after tokenization.
+    doc_stride (int): The stride to use when splitting the document into multiple features.
+    max_query_length (int): The maximum length of the question tokens after tokenization.
+    padding_strategy (str): The strategy for padding the input sequences. Can be 'longest', 'do_not_pad', 'max_length', 'pad_to_max_length', 'prefix', or 'x'.
+    is_training (bool): Indicates whether the function is being used during training.
+    
+    Returns:
+    None. The function processes the input example and parameters to generate features for the SQuAD dataset.
+    
+    Raises:
+    None.
+    """
     features = []
     if is_training and not example.is_impossible:
         # Get start and end position
@@ -299,6 +323,18 @@ def squad_convert_example_to_features(
 
 
 def squad_convert_example_to_features_init(tokenizer_for_convert: PreTrainedTokenizerBase):
+    r"""
+    Converts an example into a feature for the Squad dataset.
+    
+    Args:
+        tokenizer_for_convert (PreTrainedTokenizerBase): The tokenizer used for converting the example into features.
+    
+    Returns:
+        None
+    
+    Raises:
+        None
+    """
     global tokenizer # pylint: disable=global-variable-undefined
     tokenizer = tokenizer_for_convert
 
@@ -401,7 +437,6 @@ class SquadExample:
         answers: None by default, this is used during evaluation. Holds answers as well as their start positions.
         is_impossible: False by default, set to True if the example has no possible answer.
     """
-
     def __init__(
         self,
         qas_id,
@@ -413,6 +448,26 @@ class SquadExample:
         answers=[],
         is_impossible=False,
     ):
+        r"""
+        Initialize a SquadExample object with the provided parameters.
+        
+        Args:
+            self (SquadExample): The instance of the SquadExample class.
+            qas_id (str): The unique identifier for the question-answer pair.
+            question_text (str): The text of the question.
+            context_text (str): The text of the context in which the question is asked.
+            answer_text (str): The text of the answer to the question.
+            start_position_character (int): The starting character position of the answer in the context.
+            title (str): The title of the context.
+            answers (list, optional): A list of additional answers related to the question. Default is an empty list.
+            is_impossible (bool): Indicates if the question is impossible to answer. Default is False.
+        
+        Returns:
+            None. This method initializes the SquadExample object with the provided parameters.
+        
+        Raises:
+            None.
+        """
         self.qas_id = qas_id
         self.question_text = question_text
         self.context_text = context_text
@@ -476,7 +531,6 @@ class SquadFeatures:
         end_position: end of the answer token index
         encoding: optionally store the BatchEncoding with the fast-tokenizer alignment methods.
     """
-
     def __init__(
         self,
         input_ids,
@@ -496,6 +550,33 @@ class SquadFeatures:
         qas_id: str = None,
         encoding: BatchEncoding = None,
     ):
+        r"""
+        This method initializes an instance of the SquadFeatures class.
+        
+        Args:
+            input_ids (list): List of input IDs representing the tokenized input sequence.
+            attention_mask (list): List of attention mask values to indicate which tokens should be attended to.
+            token_type_ids (list): List of token type IDs to differentiate between question and context tokens.
+            cls_index (int): Index of the [CLS] token in the input sequence.
+            p_mask (list): List of mask values for the paragraph tokens.
+            example_index (int): Index of the example in the dataset.
+            unique_id (int): Unique identifier for the squad feature.
+            paragraph_len (int): Length of the paragraph.
+            token_is_max_context (dict): Dictionary mapping token indices to their maximum context indices.
+            tokens (list): List of tokens in the input sequence.
+            token_to_orig_map (list): List of token-to-original mapping.
+            start_position (int): Start position of the answer span.
+            end_position (int): End position of the answer span.
+            is_impossible (bool): Indicates if the question is unanswerable.
+            qas_id (str, optional): ID of the question-answer pair. Defaults to None.
+            encoding (BatchEncoding, optional): Batch encoding for the input sequence. Defaults to None.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         self.input_ids = input_ids
         self.attention_mask = attention_mask
         self.token_type_ids = token_type_ids

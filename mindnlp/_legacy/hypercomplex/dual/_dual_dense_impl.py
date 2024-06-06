@@ -56,11 +56,23 @@ class _DenseImpl(BaseDenseImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def construct(self,
                   real: Tensor,
                   dual: Tensor) -> Tuple[Tensor, Tensor]:
-
+        r"""
+        This method constructs the output tensors based on the given input tensors.
+        
+        Args:
+            self (object): The instance of the _DenseImpl class.
+            real (Tensor): The input tensor representing the real part.
+            dual (Tensor): The input tensor representing the dual part.
+        
+        Returns:
+            Tuple[Tensor, Tensor]: A tuple of two tensors representing the constructed output for the real part and the dual part respectively.
+        
+        Raises:
+            None.
+        """
         out_r = P.matmul(real, self.weight_x.transpose())
         out_rd = P.matmul(real, self.weight_y.transpose())
         out_dr = P.matmul(dual, self.weight_x.transpose())

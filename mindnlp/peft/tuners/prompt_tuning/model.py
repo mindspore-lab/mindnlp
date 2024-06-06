@@ -56,8 +56,31 @@ class PromptEmbedding(nn.Cell):
 
     Output Shape: (`batch_size`, `total_virtual_tokens`, `token_dim`)
     """
-
     def __init__(self, config, word_embeddings):
+        r"""
+        Initialize the PromptEmbedding class.
+        
+        Args:
+            self: Reference to the current instance of the class.
+            config (object): Configuration object containing various settings.
+                - num_virtual_tokens (int): Number of virtual tokens.
+                - num_transformer_subcells (int): Number of transformer subcells.
+                - token_dim (int): Dimensionality of the token embeddings.
+                - prompt_tuning_init (Enum): Specifies the type of prompt tuning initialization.
+                - inference_mode (bool): Indicates if the model is in inference mode.
+                - tokenizer_kwargs (dict, optional): Additional keyword arguments for the tokenizer.
+                - tokenizer_name_or_path (str): Name or path of the pretrained tokenizer.
+                - prompt_tuning_init_text (str): Text used for prompt tuning initialization.
+            word_embeddings (object): Word embeddings for initializing the embedding layer.
+        
+        Returns:
+            None. The method initializes the embedding layer with the provided word embeddings.
+        
+        Raises:
+            ImportError: If the transformers module cannot be imported.
+            ValueError: If the number of text tokens exceeds the total virtual tokens.
+            TypeError: If the word embedding weights cannot be converted to float32.
+        """
         super().__init__()
 
         total_virtual_tokens = config.num_virtual_tokens * config.num_transformer_submodules
@@ -78,10 +101,24 @@ class PromptEmbedding(nn.Cell):
                 init_token_ids = init_token_ids * num_reps
             init_token_ids = init_token_ids[:total_virtual_tokens]
             init_token_ids = mindspore.tensor(init_token_ids)
+            word_embedding_weights = word_embeddings(init_token_ids).copy()
             word_embedding_weights = word_embedding_weights.to(mindspore.float32)
             self.embedding.weight = Parameter(word_embedding_weights)
 
     def construct(self, indices):
+        r"""
+        Construct the prompt embeddings based on the given indices.
+        
+        Args:
+            self (PromptEmbedding): An instance of the PromptEmbedding class.
+            indices (int): The indices used to retrieve the prompt embeddings.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         # Just get embeddings
         prompt_embeddings = self.embedding(indices)
         return prompt_embeddings

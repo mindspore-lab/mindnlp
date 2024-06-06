@@ -35,7 +35,6 @@ class GPTBigCodeTokenizer(PreTrainedTokenizer):
             return_token (bool): Whether to return token. If True: return tokens. False: return ids. Default: True.
 
         """
-
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
 
     def __init__(
@@ -47,6 +46,25 @@ class GPTBigCodeTokenizer(PreTrainedTokenizer):
         add_prefix_space=False,
         **kwargs
     ):
+        """
+        Initializes a new instance of the GPTBigCodeTokenizer class.
+        
+        Args:
+            self (GPTBigCodeTokenizer): The instance of the class itself.
+            tokenizer_file (str): The file path of the tokenizer file to be used. Only string values are supported.
+            unk_token (str): The token to represent unknown words. Default is 'endoftext'.
+            bos_token (str): The token to represent the beginning of a sentence. Default is 'endoftext'.
+            eos_token (str): The token to represent the end of a sentence. Default is 'endoftext'.
+            add_prefix_space (bool): Whether to add a prefix space before the input text. Default is False.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If the tokenizer_file is not of type string.
+        
+        """
         super().__init__(
             unk_token=unk_token,
             bos_token=bos_token,
@@ -94,6 +112,19 @@ class GPTBigCodeTokenizer(PreTrainedTokenizer):
             f"Unsupported string type: {type(text_input)}, {text_input.dtype}")
 
     def _convert_token_to_id(self, token):
+        """
+        Converts the given token to its corresponding ID using the GPTBigCodeTokenizer.
+        
+        Args:
+            self (GPTBigCodeTokenizer): An instance of the GPTBigCodeTokenizer class.
+            token (str): The token to be converted to ID.
+        
+        Returns:
+            int: The ID corresponding to the given token. Returns self.unk_token_id if the token is not found.
+        
+        Raises:
+            None.
+        """
         index = self._tokenizer.token_to_id(token)
         if index is None:
             return self.unk_token_id

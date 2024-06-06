@@ -28,7 +28,7 @@ from mindnlp.peft.tuners.lora import LoraConfig, LoraModel
 from mindnlp.peft.utils import (
     TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING,
     _freeze_adapter,
-    _get_submodules,
+    _get_subcells,
 )
 
 from ..tuners_utils import BaseTunerLayer
@@ -52,7 +52,7 @@ class AdaLoraModel(LoraModel):
 
         >>> from transformers import AutoModelForSeq2SeqLM, LoraConfig >>> from peft import AdaLoraModel, AdaLoraConfig
         >>> config = AdaLoraConfig(
-                peft_type="ADALORA", task_type="SEQ_2_SEQ_LM", r=8, lora_alpha=32, target_modules=["q", "v"],
+                peft_type="ADALORA", task_type="SEQ_2_SEQ_LM", r=8, lora_alpha=32, target_cells=["q", "v"],
                 lora_dropout=0.01,
             )
         >>> model = AutoModelForSeq2SeqLM.from_pretrained("t5-base") >>> model = AdaLoraModel(model, config, "default")
@@ -63,10 +63,26 @@ class AdaLoraModel(LoraModel):
 
     >   - **peft_config** ([`AdaLoraConfig`]): The configuration of the AdaLora model. 
     """
-
     # Note: don't redefine prefix here, it should be inherited from LoraModel
 
     def __init__(self, model, config, adapter_name):
+        r"""
+        Initializes an instance of the AdaLoraModel class.
+        
+        Args:
+            self (AdaLoraModel): The current instance of the AdaLoraModel.
+            model: The underlying model to be used.
+            config: The configuration object for the AdaLoraModel.
+            adapter_name: The name of the adapter to be used.
+        
+        Returns:
+            None.
+        
+        Raises:
+            ValueError: If more than one trainable adapter is specified.
+            TypeError: If the adapter specified by 'adapter_name' is not in the configuration.
+            AttributeError: If the specified adapter is in inference mode.
+        """
         super().__init__(model, config, adapter_name)
 
         traininable_mode_counter = 0
@@ -107,6 +123,19 @@ class AdaLoraModel(LoraModel):
                 "you want to train."
             )
     def _mark_only_adapters_as_trainable(self, model: nn.Cell) -> None:
+        """
+        Marks only specific adapters in the model as trainable based on the specified bias configuration.
+        
+        Args:
+            self: The instance of the AdaLoraModel class.
+            model (nn.Cell): The neural network model for which adapters should be marked as trainable.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            NotImplementedError: If the requested bias configuration is not implemented.
+        """
         for n, p in model.parameters_and_names():
             if "lora_" not in n:
                 p.requires_grad = False
@@ -136,6 +165,25 @@ class AdaLoraModel(LoraModel):
         current_key,
         **optionnal_kwargs,
     ):
+        r"""
+        This method '_create_and_replace' is defined within the 'AdaLoraModel' class and is responsible for creating and replacing a cell based on the provided parameters.
+        
+        Args:
+            self (object): The instance of the 'AdaLoraModel' class.
+            lora_config (object): An object containing LoRa configuration parameters.
+            adapter_name (str): The name of the adapter.
+            target (object): The target object on which the cell will be created and replaced.
+            target_name (str): The name of the target.
+            parent (object): The parent object where the cell will be replaced.
+            current_key: Additional optional keyword arguments.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            TypeError: If the 'target' parameter is not an instance of the 'AdaLoraLayer' class.
+            Exception: Any other unexpected exceptions may be raised during the execution of this method.
+        """
         kwargs = {
             "r": lora_config.init_r,
             "lora_alpha": lora_config.lora_alpha,
@@ -154,10 +202,10 @@ class AdaLoraModel(LoraModel):
         # if quantization_config is not None:
         #     kwargs["gptq_quantization_config"] = quantization_config
 
-        # If it is not an AdaLoraLayer, create a new module, else update it with new adapters
+        # If it is not an AdaLoraLayer, create a new cell, else update it with new adapters
         if not isinstance(target, AdaLoraLayer):
-            new_module = self._create_new_module(lora_config, adapter_name, target, **kwargs)
-            self._replace_module(parent, target_name, new_module, target)
+            new_cell = self._create_new_cell(lora_config, adapter_name, target, **kwargs)
+            self._replace_cell(parent, target_name, new_cell, target)
         else:
             target.update_layer(
                 adapter_name,
@@ -168,7 +216,22 @@ class AdaLoraModel(LoraModel):
             )
 
     @staticmethod
-    def _create_new_module(lora_config, adapter_name, target, **kwargs):
+    def _create_new_cell(lora_config, adapter_name, target, **kwargs):
+        r"""
+        This method creates a new cell for the AdaLoraModel.
+        
+        Args:
+            lora_config (LoraConfig): The configuration for the LoRa model.
+            adapter_name (str): The name of the adapter.
+            target (Union[BaseTunerLayer, nn.Module]): The target layer for which the new cell is being created.
+        
+        Returns:
+            None. This method returns None.
+        
+        Raises:
+            - ValueError: If the target cell is not supported. Currently, only `torch.nn.Linear` and `Conv1D` are supported.
+            - Warning: If the 'fan_in_fan_out' parameter needs to be adjusted based on the type of the target cell.
+        """
         # avoid eager bnb import
         # if is_bnb_available():
         #     import bitsandbytes as bnb
@@ -197,7 +260,7 @@ class AdaLoraModel(LoraModel):
         #             "index": target_base_layer.index,
         #         }
         #     )
-        #     new_module = SVDLinear8bitLt(target, adapter_name, **kwargs)
+        #     new_cell = SVDLinear8bitLt(target, adapter_name, **kwargs)
         # elif loaded_in_4bit and is_bnb_4bit_available() and isinstance(target_base_layer, bnb.nn.Linear4bit):
         #     fourbit_kwargs = kwargs.copy()
         #     fourbit_kwargs.update(
@@ -207,61 +270,94 @@ class AdaLoraModel(LoraModel):
         #             "quant_type": target_base_layer.weight.quant_type,
         #         }
         #     )
-        #     new_module = SVDLinear4bit(target, adapter_name, **fourbit_kwargs)
+        #     new_cell = SVDLinear4bit(target, adapter_name, **fourbit_kwargs)
         # elif AutoGPTQQuantLinear is not None and isinstance(target, AutoGPTQQuantLinear):
-        #     new_module = SVDQuantLinear(target, adapter_name, **kwargs)
+        #     new_cell = SVDQuantLinear(target, adapter_name, **kwargs)
         if isinstance(target_base_layer, nn.Dense):
             if kwargs["fan_in_fan_out"]:
                 warnings.warn(
-                    "fan_in_fan_out is set to True but the target module is `torch.nn.Linear`. "
+                    "fan_in_fan_out is set to True but the target cell is `torch.nn.Linear`. "
                     "Setting fan_in_fan_out to False."
                 )
                 kwargs["fan_in_fan_out"] = lora_config.fan_in_fan_out = False
         elif isinstance(target_base_layer, Conv1D):
             if not kwargs["fan_in_fan_out"]:
                 warnings.warn(
-                    "fan_in_fan_out is set to False but the target module is `Conv1D`. "
+                    "fan_in_fan_out is set to False but the target cell is `Conv1D`. "
                     "Setting fan_in_fan_out to True."
                 )
                 kwargs["fan_in_fan_out"] = lora_config.fan_in_fan_out = True
         else:
             raise ValueError(
-                f"Target module {target} is not supported. "
+                f"Target cell {target} is not supported. "
                 f"Currently, only `torch.nn.Linear` and `Conv1D` are supported."
             )
-        new_module = SVDLinear(target, adapter_name, **kwargs)
+        new_cell = SVDLinear(target, adapter_name, **kwargs)
 
-        return new_module
-    def _replace_module(self, parent, child_name, new_module, child):
-        setattr(parent, child_name, new_module)
+        return new_cell
+    def _replace_cell(self, parent, child_name, new_cell, child):
+        r"""
+        This method '_replace_cell' is defined within the 'AdaLoraModel' class.
+        It replaces a cell within the model with a new cell, transferring relevant attributes from the original cell to the new cell.
+        
+        Args:
+        - self (object): The instance of the AdaLoraModel class.
+        - parent (object): The parent object where the cell is to be replaced.
+        - child_name (str): The name of the child attribute within the parent object.
+        - new_cell (object): The new cell object that will replace the original cell.
+        - child (object): The original cell object that is being replaced.
+        
+        Returns:
+        None. This method does not return any value.
+        
+        Raises:
+        This method does not explicitly raise any exceptions. However, it may raise AttributeError if the attributes being accessed do not exist in the provided objects.
+        """
+        setattr(parent, child_name, new_cell)
 
-        # child layer wraps the original module, unpack it
+        # child layer wraps the original cell, unpack it
         if hasattr(child, "base_layer"):
             child = child.base_layer
 
         # layers with base_layer don't need the weight to be copied, as they have a reference already
-        if not hasattr(new_module, "base_layer"):
-            new_module.weight = child.weight
+        if not hasattr(new_cell, "base_layer"):
+            new_cell.weight = child.weight
             if hasattr(child, "bias"):
-                new_module.bias = child.bias
+                new_cell.bias = child.bias
 
         if getattr(child, "state", None) is not None:
-            if hasattr(new_module, "base_layer"):
-                new_module.base_layer.state = child.state
+            if hasattr(new_cell, "base_layer"):
+                new_cell.base_layer.state = child.state
             else:
-                new_module.state = child.state
+                new_cell.state = child.state
     @staticmethod
     def _prepare_adapter_config(peft_config, model_config):
-        if peft_config.target_modules is None:
+        r"""
+        This method '_prepare_adapter_config' in the class 'AdaLoraModel' prepares the adapter configuration based on the provided 'peft_config' and 'model_config' parameters.
+        
+        Args:
+        - peft_config (dict): A dictionary containing the configuration details for the adapter. It should include information about the target cells. If 'target_cells' is not specified, it is inferred based
+on the 'model_type' from the 'model_config' parameter.
+        - model_config (dict): A dictionary containing the configuration details specific to the model. It is used to determine the 'model_type' which is then used to infer the 'target_cells' if not explicitly
+provided in 'peft_config'.
+        
+        Returns:
+        None: This method does not return any value but updates the 'peft_config' parameter with the inferred or provided 'target_cells' based on the 'model_type'.
+        
+        Raises:
+        - ValueError: Raised if 'target_cells' is not specified in 'peft_config' and the 'model_type' from 'model_config' does not have a corresponding mapping in
+TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING.
+        """
+        if peft_config.target_cells is None:
             if model_config["model_type"] not in TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING:
-                raise ValueError("Please specify `target_modules` in `peft_config`")
-            peft_config.target_modules = TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING[
+                raise ValueError("Please specify `target_cells` in `peft_config`")
+            peft_config.target_cells = TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING[
                 model_config["model_type"]
             ]
         return peft_config
 
     def __getattr__(self, name: str):
-        """Forward missing attributes to the wrapped module."""
+        """Forward missing attributes to the wrapped cell."""
         try:
             return super().__getattr__(name)  # defer to nn.Module's logic
         except AttributeError:
@@ -294,8 +390,8 @@ class AdaLoraModel(LoraModel):
             outputs.loss += orth_reg_weight * regu_loss
         return outputs
 
-    def resize_modules_by_rank_pattern(self, rank_pattern, adapter_name):
-        "resize the modules by rank pattern"
+    def resize_cells_by_rank_pattern(self, rank_pattern, adapter_name):
+        "resize the cells by rank pattern"
         lora_config = self.peft_config[adapter_name]
         for name, rank_idx in rank_pattern.items():
             if isinstance(rank_idx, list):
@@ -307,7 +403,7 @@ class AdaLoraModel(LoraModel):
             else:
                 raise ValueError("Unexpected type of rank_idx")
             key = ".".join(name.split(".")[0:-2]) if adapter_name in name else ".".join(name.split(".")[0:-1])
-            _, target, _ = _get_submodules(self.model, key)
+            _, target, _ = _get_subcells(self.model, key)
             lora_E_weights = target.lora_E[adapter_name][rank_idx]
             lora_A_weights = target.lora_A[adapter_name][rank_idx]
             lora_B_weights = target.lora_B[adapter_name][:, rank_idx]
@@ -325,7 +421,6 @@ class AdaLoraModel(LoraModel):
                 target.lora_B.update({adapter_name: Parameter(lora_B_weights)})
                 # The scaling is exactly as the previous
                 target.ranknum.update({adapter_name: Parameter(ranknum)})
-
 
     def resize_state_dict_by_rank_pattern(self, rank_pattern, state_dict, adapter_name):
         "resize the state_dict by rank pattern"
@@ -385,7 +480,7 @@ class AdaLoraModel(LoraModel):
         elif global_step == lora_config.total_step - lora_config.tfinal:
             _, rank_pattern = self.rankallocator.update_and_allocate(self.model, global_step, gradient,force_mask=True)
             # for some reason, this freezes the trainable parameters and nothing gets updates
-            # self.resize_modules_by_rank_pattern(rank_pattern, self.trainable_adapter_name)
+            # self.resize_cells_by_rank_pattern(rank_pattern, self.trainable_adapter_name)
             lora_config.rank_pattern = rank_pattern
             self.rankallocator.reset_ipt()
         # Currently using inefficient way to mask the unimportant weights using the rank pattern

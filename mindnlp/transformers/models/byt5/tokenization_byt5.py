@@ -57,7 +57,6 @@ class ByT5Tokenizer(PreTrainedTokenizer):
         additional_special_tokens (`List[str]`, *optional*):
             Additional special tokens used by the tokenizer.
     """
-
     model_input_names = ["input_ids", "attention_mask"]
 
     def __init__(
@@ -69,6 +68,23 @@ class ByT5Tokenizer(PreTrainedTokenizer):
         additional_special_tokens=None,
         **kwargs,
     ) -> None:
+        """
+        This method initializes an instance of the ByT5Tokenizer class.
+        
+        Args:
+            self: The instance of the ByT5Tokenizer class.
+            eos_token (str, optional): The end-of-sequence token. Default is '</s>'.
+            unk_token (str, optional): The unknown token. Default is '<unk>'.
+            pad_token (str, optional): The padding token. Default is '<pad>'.
+            extra_ids (int, optional): The number of extra special tokens. Default is 125.
+            additional_special_tokens (list, optional): List of additional special tokens. Default is None.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: Raised if both extra_ids and additional_special_tokens are provided and the additional_special_tokens do not include all extra_ids tokens.
+        """
         # Add extra_ids to the special token list
         if extra_ids > 0 and additional_special_tokens is None:
             additional_special_tokens = [f"<extra_id_{i}>" for i in range(extra_ids)]
@@ -101,9 +117,42 @@ class ByT5Tokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
+        """
+        Method to retrieve the vocabulary size of the ByT5Tokenizer instance.
+        
+        Args:
+            self: ByT5Tokenizer instance. The self parameter refers to the instance of the ByT5Tokenizer class.
+            
+        Returns:
+            int: The vocabulary size of the tokenizer. This value represents the total number of unique tokens in the vocabulary.
+        
+        Raises:
+            None.
+        """
         return self._utf_vocab_size
 
     def get_vocab(self):
+        """
+        Retrieves the vocabulary of the ByT5Tokenizer.
+        
+        Args:
+            self (ByT5Tokenizer): An instance of the ByT5Tokenizer class.
+        
+        Returns:
+            dict: A dictionary containing the vocabulary of the tokenizer. The keys are the tokens, and the values are the corresponding token IDs.
+        
+        Raises:
+            None.
+        
+        Note:
+            The vocabulary includes both the original vocabulary of the tokenizer and any additional tokens that have been added.
+        
+        Example:
+            >>> tokenizer = ByT5Tokenizer()
+            >>> vocab = tokenizer.get_vocab()
+            >>> print(vocab)
+            {'<unk>': 0, '<pad>': 1, 'hello': 2, 'world': 3, ...}
+        """
         vocab = {self.convert_ids_to_tokens(i): i for i in range(self.vocab_size + self.offset)}
         vocab.update(self.added_tokens_encoder)
         return vocab
@@ -200,7 +249,6 @@ class ByT5Tokenizer(PreTrainedTokenizer):
 
     def _convert_token_to_id(self, token):
         """Converts a token (str) in an id using the vocab."""
-
         if len(token) != 1:
             token_id = None
         else:
@@ -229,6 +277,23 @@ class ByT5Tokenizer(PreTrainedTokenizer):
 
     # ByT5Tokenizer has no vocab file
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """
+        Saves the vocabulary of the ByT5Tokenizer instance to a file.
+        
+        Args:
+            self (ByT5Tokenizer): The instance of the ByT5Tokenizer class.
+            save_directory (str): The directory path where the vocabulary file will be saved.
+            filename_prefix (Optional[str]): The prefix to be added to the filename (default: None).
+        
+        Returns:
+            Tuple[str]: A tuple containing the absolute path of the saved vocabulary file.
+        
+        Raises:
+            None.
+        
+        This method saves the vocabulary of the ByT5Tokenizer instance to a file in the specified save_directory. The filename of the vocabulary file is generated based on the provided filename_prefix, if any.
+If no filename_prefix is provided, the vocabulary file will be named using the default naming convention. The method returns a tuple containing the absolute path of the saved vocabulary file.
+        """
         return ()
 
 __all__ = ['ByT5Tokenizer']

@@ -129,6 +129,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
             ),
         ),
         ("codegen", ("CodeGenTokenizer", "CodeGenTokenizerFast" if is_tokenizers_available() else None)),
+        ("cohere", (None, "CohereTokenizerFast" if is_tokenizers_available() else None)),
         ("convbert", ("ConvBertTokenizer", "ConvBertTokenizerFast" if is_tokenizers_available() else None)),
         (
             "cpm",
@@ -415,6 +416,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         #         "T5TokenizerFast" if is_tokenizers_available() else None,
         #     ),
         # ),
+        ("stablelm", (None, "GPTNeoXTokenizerFast" if is_tokenizers_available() else None)),
         ("starcoder2", ("GPT2Tokenizer", "GPT2TokenizerFast" if is_tokenizers_available() else None)),
         (
             "t5",
@@ -495,6 +497,18 @@ CONFIG_TO_TYPE = {v: k for k, v in CONFIG_MAPPING_NAMES.items()}
 
 
 def tokenizer_class_from_name(class_name: str):
+    """ 
+    Args:
+        class_name (str): The name of the tokenizer class to retrieve. 
+            It can be one of the predefined tokenizer class names or a custom tokenizer class name.
+            
+    Returns:
+        None: If no tokenizer class matching the provided class_name is found, None is returned.
+        
+    Raises:
+        AttributeError: If the tokenizer class is not found in the specified module.
+        ImportError: If there is an issue importing the required modules.
+    """
     if class_name == "PreTrainedTokenizerFast":
         return PreTrainedTokenizerFast
 
@@ -595,7 +609,6 @@ def get_tokenizer_config(
     tokenizer.save_pretrained("tokenizer-test")
     tokenizer_config = get_tokenizer_config("tokenizer-test")
     ```"""
-
     _ = kwargs.get('from_pt', False)
     resolved_config_file = cached_file(
         pretrained_model_name_or_path,
@@ -627,8 +640,20 @@ class AutoTokenizer:
 
     This class cannot be instantiated directly using `__init__()` (throws an error).
     """
-
     def __init__(self):
+        """
+        This method initializes an instance of the AutoTokenizer class.
+        
+        Args:
+            self: The instance of the AutoTokenizer class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            EnvironmentError: If the AutoTokenizer is instantiated directly using the __init__ method, an EnvironmentError is raised with the message 'AutoTokenizer is designed to be instantiated using the
+`AutoTokenizer.from_pretrained(pretrained_model_name_or_path)` method.'
+        """
         raise EnvironmentError(
             "AutoTokenizer is designed to be instantiated "
             "using the `AutoTokenizer.from_pretrained(pretrained_model_name_or_path)` method."

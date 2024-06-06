@@ -19,7 +19,6 @@
 from ...configuration_utils import PretrainedConfig
 
 
-
 class LukeConfig(PretrainedConfig):
     """
     Configurations for Luke

@@ -80,7 +80,6 @@ class GemmaTokenizer(PreTrainedTokenizer):
         spaces_between_special_tokens (`bool`, *optional*, defaults to `False`):
             Whether or not to add spaces between special tokens.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     model_input_names = ["input_ids", "attention_mask"]
 
@@ -99,6 +98,32 @@ class GemmaTokenizer(PreTrainedTokenizer):
         spaces_between_special_tokens=False,
         **kwargs,
     ):
+        """
+        This method initializes an instance of GemmaTokenizer.
+        
+        Args:
+        - self: The instance of the class.
+        - vocab_file (str): The path to the vocabulary file.
+        - unk_token (str): The unknown token. Default is '<unk>'.
+        - bos_token (str): The beginning of sequence token. Default is '<bos>'.
+        - eos_token (str): The end of sequence token. Default is '<eos>'.
+        - pad_token (str): The padding token. Default is '<pad>'.
+        - sp_model_kwargs (Optional[Dict[str, Any]]): Optional keyword arguments for SentencePiece model configuration. Default is None.
+        - add_bos_token (bool): Whether to add the beginning of sequence token. Default is True.
+        - add_eos_token (bool): Whether to add the end of sequence token. Default is False.
+        - clean_up_tokenization_spaces (bool): Whether to clean up tokenization spaces. Default is False.
+        - use_default_system_prompt (bool): Whether to use the default system prompt. Default is False.
+        - spaces_between_special_tokens (bool): Whether to add spaces between special tokens. Default is False.
+        
+        Returns:
+        None. This method does not return any value.
+        
+        Raises:
+        - ValueError: If the provided vocab_file is invalid or does not exist.
+        - OSError: If an I/O or OS error occurs while loading the vocab_file.
+        - TypeError: If the provided sp_model_kwargs is not a dictionary.
+        - RuntimeError: If an error occurs during the initialization process.
+        """
         self.sp_model_kwargs = {} if sp_model_kwargs is None else sp_model_kwargs
         bos_token = AddedToken(bos_token, normalized=False, special=True) if isinstance(bos_token, str) else bos_token
         eos_token = AddedToken(eos_token, normalized=False, special=True) if isinstance(eos_token, str) else eos_token
@@ -129,6 +154,18 @@ class GemmaTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.llama.tokenization_llama.LlamaTokenizer.__getstate__
     def __getstate__(self):
+        """
+        Get the state of the GemmaTokenizer object for serialization.
+        
+        Args:
+            self (GemmaTokenizer): The current instance of the GemmaTokenizer class.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         state = self.__dict__.copy()
         state["sp_model"] = None
         state["sp_model_proto"] = self.sp_model.serialized_model_proto()
@@ -136,6 +173,22 @@ class GemmaTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.llama.tokenization_llama.LlamaTokenizer.__setstate__
     def __setstate__(self, d):
+        """
+        This method '__setstate__' in the class 'GemmaTokenizer' is used to set the internal state of the tokenizer object based on the provided dictionary 'd'.
+        
+        Args:
+            self (GemmaTokenizer): The instance of the GemmaTokenizer class on which this method is called. It represents the tokenizer object itself.
+            d (dict): A dictionary containing the state information to be set on the tokenizer object. This dictionary should include the necessary information for reconstructing the object's state.
+        
+        Returns:
+            None: This method does not return any value explicitly. It updates the state of the GemmaTokenizer object in-place.
+        
+        Raises:
+            - No specific exceptions are explicitly raised by this method. However, potential exceptions could be raised during the execution of the code within the method, such as:
+                - TypeError: If the provided 'd' parameter is not a valid dictionary.
+                - ValueError: If the 'sp_model_kwargs' or 'sp_model_proto' keys are missing in the 'd' dictionary.
+                - Other exceptions related to the initialization or loading of the SentencePieceProcessor object may occur.
+        """
         self.__dict__ = d
         self.sp_model = spm.SentencePieceProcessor(**self.sp_model_kwargs)
         self.sp_model.LoadFromSerializedProto(self.sp_model_proto)
@@ -177,6 +230,34 @@ class GemmaTokenizer(PreTrainedTokenizer):
         spaces_between_special_tokens: bool = False,
         **kwargs,
     ) -> str:
+        """
+        Decodes a list of token IDs into a string representation.
+        
+        Args:
+            self (GemmaTokenizer): An instance of the GemmaTokenizer class.
+            token_ids (List[int]): A list of token IDs to be decoded.
+            skip_special_tokens (bool, optional): Whether to skip special tokens during decoding. Defaults to False.
+            spaces_between_special_tokens (bool, optional): Whether to include spaces between special tokens in the decoded string. Defaults to False.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            str: The decoded string representation of the token IDs.
+        
+        Raises:
+            None.
+        
+        Note:
+            - The method decodes the token IDs by iterating through the list and converting each ID into its corresponding text.
+            - If skip_special_tokens is set to True, special tokens are ignored and not included in the decoded string.
+            - If spaces_between_special_tokens is set to True, spaces are added between special tokens in the decoded string.
+            - The decoding process utilizes the GemmaTokenizer's sp_model and _added_tokens_decoder attributes.
+        
+        Example:
+            >>> tokenizer = GemmaTokenizer()
+            >>> token_ids = [101, 2054, 2003, 1037, 2154, 2008, 1037, 2307, 1012, 102]
+            >>> tokenizer._decode(token_ids)
+            '[CLS] This is a sample text. [SEP]'
+        """
         sub_texts = []
         current_sub_text = []
         for ids in token_ids:
@@ -243,6 +324,22 @@ class GemmaTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.llama.tokenization_llama.LlamaTokenizer.build_inputs_with_special_tokens
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
+        ''' 
+        build_inputs_with_special_tokens method in GemmaTokenizer class.
+        
+        This method takes three parameters:
+        
+        Args:
+            self: GemmaTokenizer object.
+            token_ids_0: list of integers. The token IDs for the first sequence.
+            token_ids_1: (optional) list of integers. The token IDs for the second sequence.
+        
+        Returns:
+            list of integers. The concatenated token IDs with special tokens added at the beginning and end of each sequence.
+        
+        Raises:
+            None.
+        '''
         bos_token_id = [self.bos_token_id] if self.add_bos_token else []
         eos_token_id = [self.eos_token_id] if self.add_eos_token else []
 

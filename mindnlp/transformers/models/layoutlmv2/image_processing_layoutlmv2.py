@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pylint: disable=import-error
 """Image processor class for LayoutLMv2."""
 
 from typing import Dict, Optional, Union
@@ -124,7 +125,6 @@ class LayoutLMv2ImageProcessor(BaseImageProcessor):
             Any additional custom configuration flags that are forwarded to the `config` parameter when calling
             Tesseract. For example: '--psm 6'. Can be overridden by `tesseract_config` in `preprocess`.
     """
-
     model_input_names = ["pixel_values"]
 
     def __init__(
@@ -137,6 +137,25 @@ class LayoutLMv2ImageProcessor(BaseImageProcessor):
             tesseract_config: Optional[str] = "",
             **kwargs,
     ) -> None:
+        """
+        Initializes a LayoutLMv2ImageProcessor object.
+        
+        Args:
+            self: The LayoutLMv2ImageProcessor instance.
+            do_resize (bool): Indicates whether to perform image resizing. Defaults to True.
+            size (Dict[str, int]): A dictionary specifying the height and width for resizing the image. Defaults to {'height': 224, 'width': 224}.
+            resample (PILImageResampling): The resampling filter to use when resizing the image. Defaults to PILImageResampling.BILINEAR.
+            apply_ocr (bool): Indicates whether optical character recognition (OCR) should be applied. Defaults to True.
+            ocr_lang (Optional[str]): The language for OCR. If None, the default language is used. Defaults to None.
+            tesseract_config (Optional[str]): Configuration options for the Tesseract OCR engine. Defaults to an empty string.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(**kwargs)
         size = size if size is not None else {"height": 224, "width": 224}
         size = get_size_dict(size)

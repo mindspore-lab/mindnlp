@@ -20,6 +20,17 @@ from mindnlp._legacy.abc import Metric
 from .utils import _check_value_type
 
 def _compute_exact(y_pred, y_true):
+    r"""
+    Args:
+        y_pred (str): The predicted text to be compared.
+        y_true (str): The true text to be compared against.
+    
+    Returns:
+        None: The function does not return any value.
+    
+    Raises:
+        None.
+    """
     def _normalize_answer(txt):
         """Lowers text and removes punctuation, articles and extra whitespace."""
 
@@ -42,6 +53,20 @@ def _compute_exact(y_pred, y_true):
     return int(_normalize_answer(y_pred) == _normalize_answer(y_true))
 
 def _metric_max_over_ground_truths(metric_fn, pred, example):
+    """
+    Calculates the maximum score obtained by a prediction over multiple ground truth values.
+    
+    Args:
+        metric_fn (function): The scoring function used to evaluate the prediction against each ground truth value.
+        pred (object): The prediction to be evaluated.
+        example (list): A list of ground truth values to compare the prediction against.
+    
+    Returns:
+        float: The maximum score achieved by the prediction over all ground truth values.
+    
+    Raises:
+        None.
+    """
     scores_for_ground_truths = []
     for y_eg in example:
         score = metric_fn(pred, y_eg)
@@ -123,6 +148,19 @@ class EmScore(Metric):
 
     """
     def __init__(self, name='EmScore'):
+        r"""
+        This method initializes an instance of the EmScore class.
+        
+        Args:
+            self: The instance of the EmScore class.
+            name (str, optional): The name to be assigned to the EmScore instance. Defaults to 'EmScore'.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         super().__init__()
         self._name = name
         self.count = 0

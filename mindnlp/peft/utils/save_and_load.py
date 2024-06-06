@@ -21,9 +21,8 @@ import mindspore
 from .peft_types import PeftType
 from .constants import WEIGHTS_NAME
 
-def get_data_list(model: mindspore.nn.Cell):
+def get_data_list(param_dict):
     """Get state dict of the Peft model for saving."""
-    param_dict: OrderedDict = model.parameters_dict()
     data_list = OrderedDict()  # {key: [dims, tensor_type, data]}
 
     for key, value in param_dict.items():
@@ -48,13 +47,11 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
     Get the state dict of the Peft model.
 
     Args:
-        model ([`PeftModel`]): The Peft model. 
+        model ([`PeftModel`]): The Peft model.
     """
-
     config = model.peft_config[adapter_name]
     if state_dict is None:
-        # NOTE: state_dict = model.state_dict()
-        state_dict = get_data_list(model)
+        state_dict = get_data_list(model.parameters_dict())
     if config.peft_type in (PeftType.LORA, PeftType.ADALORA):
         # to_return = lora_state_dict(model, bias=model.peft_config.bias)
         # adapted from `https://github.com/microsoft/LoRA/blob/main/loralib/utils.py`
@@ -87,13 +84,32 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
         to_return = {k: state_dict[k] for k in state_dict if "ia3_" in k}
     elif config.peft_type == PeftType.LOKR:
         to_return = {k: state_dict[k] for k in state_dict if "lokr_" in k}
+    elif config.peft_type == PeftType.POLY:
+        to_return = {k: state_dict[k] for k in state_dict if "poly_" in k}
+    elif config.peft_type == PeftType.LN_TUNING:
+        to_return = {k: state_dict[k] for k in state_dict if "ln_tuning_" in k}
+    elif config.peft_type == PeftType.LOHA:
+        to_return = {k: state_dict[k] for k in state_dict if "hada_" in k}
+    elif config.is_prompt_learning:
+        to_return = {}
+        if config.peft_type == PeftType.MULTITASK_PROMPT_TUNING:
+            to_return["prefix_task_cols"] = model.prompt_encoder[adapter_name].prefix_task_cols
+            to_return["prefix_task_rows"] = model.prompt_encoder[adapter_name].prefix_task_rows
+            prompt_embeddings = model.prompt_encoder[adapter_name].embedding.weight
+        else:
+            if config.inference_mode:
+                prompt_embeddings = model.prompt_encoder[adapter_name].embedding.weight
+            else:
+                prompt_embeddings = model.get_prompt_embedding_to_save(adapter_name)
+        to_return["prompt_embeddings"] = prompt_embeddings
+        to_return = get_data_list(to_return)
     else:
         raise NotImplementedError
 
-    if model.modules_to_save is not None:
+    if model.cells_to_save is not None:
         for key, value in state_dict.items():
-            if any(f"{module_name}.modules_to_save.{adapter_name}" in key for module_name in model.modules_to_save):
-                to_return[key.replace("modules_to_save.", "")] = value
+            if any(f"{cell_name}.cells_to_save.{adapter_name}" in key for cell_name in model.cells_to_save):
+                to_return[key.replace("cells_to_save.", "")] = value
 
     to_return = {k.replace(f".{adapter_name}", ""): v for k, v in to_return.items()}
     return to_return
@@ -110,12 +126,12 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
     config = model.peft_config[adapter_name]
     state_dict = {}
     strict_load = False
-    if model.modules_to_save is not None:
+    if model.cells_to_save is not None:
         for key, value in peft_model_state_dict.items():
-            if any(module_name in key for module_name in model.modules_to_save):
-                for module_name in model.modules_to_save:
-                    if module_name in key:
-                        key = key.replace(module_name, f"{module_name}.modules_to_save.{adapter_name}")
+            if any(cell_name in key for cell_name in model.cells_to_save):
+                for cell_name in model.cells_to_save:
+                    if cell_name in key:
+                        key = key.replace(cell_name, f"{cell_name}.cells_to_save.{adapter_name}")
                         break
             state_dict[key] = value
     else:
@@ -125,14 +141,20 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
         PeftType.LORA,
         PeftType.IA3,
         PeftType.ADALORA,
-        PeftType.LOKR
+        PeftType.LOKR,
+        PeftType.LOHA,
+        PeftType.POLY,
+        PeftType.LN_TUNING,
     ):
         peft_model_state_dict = {}
         parameter_prefix = {
             PeftType.IA3: "ia3_",
             PeftType.LORA: "lora_",
             PeftType.ADALORA: "lora_",
-            PeftType.LOKR:"lokr_"
+            PeftType.LOKR: "lokr_",
+            PeftType.LOHA: "hada_",
+            PeftType.POLY: "poly_",
+            PeftType.LN_TUNING: "ln_tuning_",
         }[config.peft_type]
         for k, v in state_dict.items():
             if parameter_prefix in k:
@@ -149,14 +171,21 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
             strict_load = True
             rank_pattern = config.rank_pattern
             if rank_pattern is not None:
-                model.resize_modules_by_rank_pattern(rank_pattern, adapter_name)
-    elif config.peft_type == PeftType.ADAPTION_PROMPT:
+                model.resize_cells_by_rank_pattern(rank_pattern, adapter_name)
+    elif config.is_prompt_learning or config.peft_type == PeftType.ADAPTION_PROMPT:
         peft_model_state_dict = state_dict
     else:
         raise NotImplementedError
-    param_not_load, ckpt_not_load = mindspore.load_param_into_net(model, peft_model_state_dict, strict_load=strict_load)
 
-    return (param_not_load, ckpt_not_load)
+    load_result = model.load_state_dict(peft_model_state_dict, strict=False)
+    if config.is_prompt_learning:
+        model.prompt_encoder[adapter_name].embedding.load_state_dict(
+            {"weight": peft_model_state_dict["prompt_embeddings"]}, strict=True
+        )
+
+    if config.peft_type == PeftType.MULTITASK_PROMPT_TUNING:
+        model.prompt_encoder[adapter_name].load_state_dict(peft_model_state_dict, strict=False)
+    return load_result
 
 
 def load_peft_weights(model_id: str,) -> dict:
@@ -169,9 +198,8 @@ def load_peft_weights(model_id: str,) -> dict:
     """
     path = model_id
 
-    if os.path.exists(os.path.join(path, WEIGHTS_NAME)):
-        filename = os.path.join(path, WEIGHTS_NAME)
-    else:
+    filename = os.path.join(path, WEIGHTS_NAME)
+    if not os.path.exists(filename):
         # TODO: add download logic later
         raise ValueError(f"load peft model failed, peft model file: {filename} not exists.")
 

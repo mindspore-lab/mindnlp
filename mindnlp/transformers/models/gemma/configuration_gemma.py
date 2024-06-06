@@ -96,7 +96,6 @@ class GemmaConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "gemma"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -123,6 +122,37 @@ class GemmaConfig(PretrainedConfig):
         attention_dropout=0.0,
         **kwargs,
     ):
+        """
+        Initializes a new instance of GemmaConfig.
+        
+        Args:
+            self: The object itself.
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 256000.
+            hidden_size (int, optional): The size of the hidden layers. Defaults to 3072.
+            intermediate_size (int, optional): The size of the intermediate layers. Defaults to 24576.
+            num_hidden_layers (int, optional): The number of hidden layers. Defaults to 28.
+            num_attention_heads (int, optional): The number of attention heads. Defaults to 16.
+            num_key_value_heads (int, optional): The number of key-value attention heads. Defaults to 16.
+            head_dim (int, optional): The dimension of the attention heads. Defaults to 256.
+            hidden_act (str, optional): The activation function for the hidden layers. Defaults to 'gelu'.
+            max_position_embeddings (int, optional): The maximum position embeddings. Defaults to 8192.
+            initializer_range (float, optional): The range for weight initialization. Defaults to 0.02.
+            rms_norm_eps (float, optional): The epsilon value for RMS normalization. Defaults to 1e-06.
+            use_cache (bool, optional): Whether to use caching. Defaults to True.
+            pad_token_id (int, optional): The ID for padding token. Defaults to 0.
+            eos_token_id (int, optional): The ID for end-of-sequence token. Defaults to 1.
+            bos_token_id (int, optional): The ID for beginning-of-sequence token. Defaults to 2.
+            tie_word_embeddings (bool, optional): Whether to tie word embeddings. Defaults to True.
+            rope_theta (float, optional): The theta value for ROPE. Defaults to 10000.0.
+            attention_bias (bool, optional): Whether to use attention bias. Defaults to False.
+            attention_dropout (float, optional): The dropout rate for attention. Defaults to 0.0.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If any of the input parameters is invalid.
+        """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
         self.hidden_size = hidden_size

@@ -109,7 +109,6 @@ class _BatchNorm(nn.Cell):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  bn_impl: Type[TBatchNormImpl],
                  num_features: int,
@@ -269,6 +268,20 @@ class _BatchNorm(nn.Cell):
 
     @abstractmethod
     def _check_input_dim(self, shape: tuple, dtype: Any):
+        r"""
+        This method '_check_input_dim' is responsible for validating the input dimensions and data type.
+        
+        Args:
+            self (object): The instance of the '_BatchNorm' class.
+            shape (tuple): A tuple representing the shape of the input data.
+            dtype (Any): The data type of the input data.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            NotImplementedError: If the method is not implemented in the derived class.
+        """
         raise NotImplementedError
 
 
@@ -347,7 +360,6 @@ class BatchNorm1d(_BatchNorm):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  bn_impl: Type[TBatchNormImpl],
                  num_features: int,
@@ -360,7 +372,6 @@ class BatchNorm1d(_BatchNorm):
                  moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones',
                  use_batch_statistics: bool = None) -> None:
         """Initialize _BatchNorm."""
-
         super().__init__(bn_impl,
                         num_features,
                         eps,
@@ -373,6 +384,22 @@ class BatchNorm1d(_BatchNorm):
                         use_batch_statistics)
 
     def _check_input_dim(self, shape: tuple, dtype: Any):
+        r"""
+        Checks the input dimensions for the BatchNorm1d class.
+        
+        Args:
+            self (BatchNorm1d): The instance of the BatchNorm1d class.
+            shape (tuple): The shape of the input tensor.
+            dtype (Any): The data type of the input tensor.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If the data type is float16 or float32 and the number of dimensions in the shape is not 3 or 4 respectively.
+            ValueError: If the data type is complex64 and the number of dimensions in the shape is not 2 or 3.
+            TypeError: If the data type is not one of float16, float32, or complex64.
+        """
         dim = len(shape)
         if dtype in [mindspore.float16, mindspore.float32]:
             if dim not in (4, 3):
@@ -465,8 +492,24 @@ class BatchNorm2d(_BatchNorm):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def _check_input_dim(self, shape: tuple, dtype: Any):
+        r"""
+        This method '_check_input_dim' in the class 'BatchNorm2d' is used to validate the input dimensions of the shape based on the data type provided.
+        
+        Args:
+        - self: Represents the instance of the 'BatchNorm2d' class.
+        - shape (tuple): A tuple representing the shape of the input data.
+            It is used to determine the number of dimensions of the input data.
+        - dtype (Any): Specifies the data type of the input data.
+            Supported data types include mindspore.float16, mindspore.float32, and mindspore.complex64.
+        
+        Returns:
+        None. This method does not return any value.
+        
+        Raises:
+        - ValueError: Raised when the input shape does not match the expected number of dimensions based on the provided data type.
+        - TypeError: Raised when the provided data type is not one of the supported types (float16, float32, complex64).
+        """
         dim = len(shape)
         if dtype in [mindspore.float16, mindspore.float32]:
             if dim != 5:
@@ -557,7 +600,6 @@ class BatchNorm3d(nn.Cell):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  bn_impl: Type[TBatchNormImpl],
                  num_features: int,

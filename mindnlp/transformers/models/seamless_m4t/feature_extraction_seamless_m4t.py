@@ -51,7 +51,6 @@ class SeamlessM4TFeatureExtractor(SequenceFeatureExtractor):
             Stride used to reshape audios from shape (batch_size,num_frames,num_mel_bins) to
             (batch_size,num_frames//stride,num_mel_bins*stride).
     """
-
     model_input_names = ["input_features", "attention_mask"]
 
     def __init__(
@@ -63,6 +62,23 @@ class SeamlessM4TFeatureExtractor(SequenceFeatureExtractor):
         stride=2,
         **kwargs,
     ):
+        """
+        Initializes an instance of the SeamlessM4TFeatureExtractor class.
+        
+        Args:
+            self (SeamlessM4TFeatureExtractor): The instance of the class.
+            feature_size (int, optional): The size of the extracted feature. Defaults to 80.
+            sampling_rate (int, optional): The sampling rate of the audio. Defaults to 16000.
+            num_mel_bins (int, optional): The number of mel bins for mel-frequency cepstral coefficients (MFCC). Defaults to 80.
+            padding_value (float, optional): The value used for padding. Defaults to 0.0.
+            stride (int, optional): The stride for feature extraction. Defaults to 2.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         self.num_mel_bins = num_mel_bins
         self.return_attention_mask = True
         self.stride = stride

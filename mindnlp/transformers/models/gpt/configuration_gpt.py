@@ -107,7 +107,6 @@ class GPTConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "openai-gpt"
     attribute_map = {
         "max_position_embeddings": "n_positions",
@@ -136,6 +135,34 @@ class GPTConfig(PretrainedConfig):
         summary_first_dropout=0.1,
         **kwargs,
     ):
+        """
+        Initializes a GPTConfig object with the provided parameters.
+        
+        Args:
+        - vocab_size (int): The size of the vocabulary.
+        - n_positions (int): The number of positions.
+        - n_embd (int): The embedding dimension.
+        - n_layer (int): The number of layers.
+        - n_head (int): The number of attention heads.
+        - afn (str): The activation function to be used.
+        - resid_pdrop (float): The dropout probability for residual connections.
+        - embd_pdrop (float): The dropout probability for the embeddings.
+        - attn_pdrop (float): The dropout probability for attention layers.
+        - layer_norm_epsilon (float): The epsilon value for layer normalization.
+        - initializer_range (float): The range of the initializer.
+        - summary_type (str): The type of summary to be used.
+        - summary_use_proj (bool): Whether to use projection in summary.
+        - summary_activation (str): The activation function for the summary.
+        - summary_proj_to_labels (bool): Whether to project the summary to labels.
+        - summary_first_dropout (float): The dropout probability for the first layer of the summary.
+        - **kwargs: Additional keyword arguments.
+        
+        Returns:
+        - None: This method does not return any value.
+        
+        Raises:
+        - None
+        """
         self.vocab_size = vocab_size
         self.n_positions = n_positions
         self.n_embd = n_embd

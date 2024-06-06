@@ -264,6 +264,27 @@ def _in_projection_packed(q, k, v, w, b, k_is_v, q_is_k):
 
 
 def _scaled_dot_product_attention(query, key, value, attn_mask, dropout_p, is_causal, is_training):
+    r"""
+    This function calculates scaled dot product attention given query, key, and value tensors. It applies scaling to the query tensor, and if specified, applies a causal mask to the attention matrix. The
+attention matrix is computed by taking the dot product of the scaled query and key tensors, and then applying a softmax operation along the last dimension. If specified, dropout is applied to the attention
+matrix during training. Finally, the output is computed by multiplying the attention matrix with the value tensor.
+    
+    Args:
+        query (Tensor): The query tensor of shape [batch_size, sequence_length, embedding_size].
+        key (Tensor): The key tensor of shape [batch_size, sequence_length, embedding_size].
+        value (Tensor): The value tensor of shape [batch_size, sequence_length, embedding_size].
+        attn_mask (Tensor, optional): The attention mask tensor of shape [sequence_length, sequence_length]. If specified, it should be a lower triangular matrix to apply causal masking. Defaults to None.
+        dropout_p (float): The dropout probability. If greater than 0.0 and is_training is True, dropout is applied to the attention matrix. Defaults to 0.0.
+        is_causal (bool): Specifies whether to apply causal masking. If True, a lower triangular attention mask is generated based on the query tensor. Defaults to False.
+        is_training (bool): Specifies whether the model is in training mode. If True, dropout is applied. Defaults to False.
+    
+    Returns:
+        output (Tensor): The output tensor of shape [batch_size, sequence_length, embedding_size], which is computed by multiplying the attention matrix with the value tensor.
+        attn (Tensor): The attention matrix of shape [batch_size, sequence_length, sequence_length], which represents the importance scores between the query and key tensors.
+    
+    Raises:
+        None.
+    """
     embed_size = query.shape[-1]
     scaling_factor = sqrt(sqrt(Tensor(embed_size, dtype=query.dtype)))
     query = query / scaling_factor
@@ -284,6 +305,23 @@ def _scaled_dot_product_attention(query, key, value, attn_mask, dropout_p, is_ca
 
 
 def _mha_shape_check(query, key, value, key_padding_mask, attn_mask, num_heads):
+    r"""
+    Args:
+        query (ndarray): The tensor representing the queries. Should be either a 2-D unbatched tensor or a 3-D batched tensor.
+        key (ndarray): The tensor representing the keys. Should be either a 2-D unbatched tensor or a 3-D batched tensor.
+        value (ndarray): The tensor representing the values. Should be either a 2-D unbatched tensor or a 3-D batched tensor.
+        key_padding_mask (ndarray): A mask to exclude certain keys from attention computation. 
+            Should be None for unbatched queries or a 2-D tensor for batched queries.
+        attn_mask (ndarray): A mask to prevent certain positions from being attended. 
+            Should be None for unbatched queries or a 2-D or 3-D tensor for batched queries.
+        num_heads (int): The number of attention heads to use in the multi-head attention mechanism.
+    
+    Returns:
+        None. The function performs shape checks on the input tensors and raises assertions if the shapes do not conform to the expected dimensions.
+    
+    Raises:
+        AssertionError: If the input tensors have incorrect dimensions or if the query tensor is neither a 2-D unbatched tensor nor a 3-D batched tensor.
+    """
     # Verifies the expected shape for `query, `key`, `value`, `key_padding_mask` and `attn_mask`
     # and returns if the input is batched or not.
     # Raises an error if `query` is not 2-D (unbatched) or 3-D (batched) tensor.
@@ -418,7 +456,6 @@ def multi_head_attention_forward(
           :math:`S` is the source sequence length. If ``average_attn_weights=False``, returns attention weights per
           head of shape :math:`(num_heads, L, S)` when input is unbatched or :math:`(N, num_heads, L, S)`.
     """
-
     is_batched = _mha_shape_check(
         query, key, value, key_padding_mask, attn_mask, num_heads)
 
@@ -1334,6 +1371,17 @@ def reverse(x, axis):
 
 
 def einsum_label_to_index(label):
+    """
+    Args:
+        label (str): The label representing a dimension in an Einstein sum. 
+            It should be a single character from the alphabet (upper or lower case) or '.'.
+            
+    Returns:
+        NoneType: This function returns None.
+    
+    Raises:
+        None.
+    """
     if label == '.':
         return 52
     NUM_OF_LETTERS = ord('z') - ord('a') + 1
@@ -1341,6 +1389,23 @@ def einsum_label_to_index(label):
 
 
 def maybe_wrap_dim(dim: int, dim_post_expr: int, wrap_scalar: bool = True):
+    r"""
+    This function takes three parameters: dim, dim_post_expr, and wrap_scalar.
+    
+    Args:
+        - dim (int): Represents the dimension to be wrapped.
+        - dim_post_expr (int): Represents the value used to wrap the dimension.
+        - wrap_scalar (bool, optional): Specifies whether a scalar value should be wrapped. Default is True.
+    
+    Returns:
+        None: This function does not return a value directly.
+    
+    Raises:
+        AssertionError: Raised if the value of dim_post_expr is less than or equal to 0 and wrap_scalar is False.
+        AssertionError: Raised if the value of dim is less than the minimum or greater than the maximum allowed range.
+        AssertionError: Raised if the value of dim is negative and cannot be wrapped due to invalid dim_post_expr.
+    
+    """
     if dim_post_expr <= 0:
         assert wrap_scalar
         dim_post_expr = 1
@@ -1353,6 +1418,19 @@ def maybe_wrap_dim(dim: int, dim_post_expr: int, wrap_scalar: bool = True):
 
 
 def dim_list_to_bitset(opt_dims, ndims):
+    r"""
+    Converts a list of optional dimensions to a bitset representation.
+    
+    Args:
+        opt_dims (List[int]): The list of optional dimensions to be converted to a bitset representation.
+        ndims (int): The total number of dimensions.
+    
+    Returns:
+        List[bool]: A list representing the bitset, where True indicates the presence of the dimension and False indicates its absence.
+    
+    Raises:
+        None
+    """
     if opt_dims:
         seen = [False] * (max(opt_dims)+1)
         for dim in opt_dims:
@@ -1364,6 +1442,22 @@ def dim_list_to_bitset(opt_dims, ndims):
 
 
 def sumproduct_pair(left_, right_, sum_dims_, keep_dim_):
+    """
+    Calculate the sum-product pair of two arrays along specified dimensions.
+    
+    Args:
+        left_ (array): The left input array.
+        right_ (array): The right input array.
+        sum_dims_ (list): A list of dimensions along which to calculate the sum-product pair.
+        keep_dim_ (bool): A flag indicating whether to keep the dimensions in the result.
+    
+    Returns:
+        None. The function performs the sum-product pair calculation and returns None.
+    
+    Raises:
+        AssertionError: If the number of dimensions of the input arrays do not match,
+                       or if non-broadcast dimensions do not match.
+    """
     assert left_.ndim == right_.ndim, "number of dimensions must match"
     if len(sum_dims_) == 0:
         return ops.mul(left_, right_)
@@ -1453,6 +1547,24 @@ def sumproduct_pair(left_, right_, sum_dims_, keep_dim_):
 ELLIPSIS = 52
 
 def einsum(equation, *operands):
+    """
+    Args:
+        equation (str): A string representing the Einstein summation equation to be computed.
+            The equation should follow the Einstein summation convention with subscripts in [a-zA-Z],
+            commas separating operands, and '->' indicating the output structure.
+            It must include at least one operand. An ellipsis '...' can be used to represent multiple dimensions.
+            
+    Returns:
+        None: This function does not return a value.
+    
+    Raises:
+        AssertionError: If the function is called without providing at least one operand.
+        AssertionError: If an invalid subscript is given in the equation string.
+        AssertionError: If the number of subscripts in the equation does not match the number of dimensions for an operand.
+        AssertionError: If fewer operands are provided than specified in the equation.
+        AssertionError: If more operands are provided than specified in the equation.
+        RuntimeError: If operands do not broadcast with remapped shapes [original->remapped].
+    """
     assert operands, "einsum(): must provide at least one operand"
     if isinstance(operands[0], tuple):
         operands = operands[0]

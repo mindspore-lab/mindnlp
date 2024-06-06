@@ -37,6 +37,22 @@ class ChatYuanTokenizer(PreTrainedTokenizer):
     model_input_names = ["input_ids", "attention_mask"]
 
     def __init__(self, vocab_file, **kwargs):
+        """
+        __init__
+        
+        Initializes a new instance of the ChatYuanTokenizer class.
+        
+        Args:
+            vocab_file (str): The file path to the vocabulary file used for tokenization.
+            **kwargs: Additional keyword arguments.
+                return_token (bool, optional): A flag indicating whether to return the token. Defaults to False.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         super().__init__()
 
         return_token = kwargs.pop('return_token', False)
@@ -44,7 +60,6 @@ class ChatYuanTokenizer(PreTrainedTokenizer):
 
         self.vocab_file = vocab_file
         self._tokenizer = self.get_spm_processor()
-
 
     def get_spm_processor(self):
         """Get SentencePieceProcessor Tokenizer."""
@@ -61,6 +76,19 @@ class ChatYuanTokenizer(PreTrainedTokenizer):
         return self._tokenize(text_input)
 
     def tokenize(self, text_input) -> List[str]:
+        """
+        This method tokenizes the input text using the ChatYuanTokenizer.
+        
+        Args:
+            self (ChatYuanTokenizer): An instance of the ChatYuanTokenizer class.
+            text_input (str): The input text to be tokenized.
+        
+        Returns:
+            List[str]: A list of strings representing the tokens extracted from the input text.
+        
+        Raises:
+            This method does not explicitly raise any exceptions.
+        """
         return self._execute_py(text_input)
 
     def _tokenize(self, text_input):

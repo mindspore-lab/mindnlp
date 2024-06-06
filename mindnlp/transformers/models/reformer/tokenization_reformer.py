@@ -88,7 +88,6 @@ class ReformerTokenizer(PreTrainedTokenizer):
             - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
               BPE-dropout.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -103,6 +102,23 @@ class ReformerTokenizer(PreTrainedTokenizer):
         sp_model_kwargs: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> None:
+        """
+        Initializes a new instance of the ReformerTokenizer class.
+        
+        Args:
+            self: The instance of the ReformerTokenizer class.
+            vocab_file (str): Path to the vocabulary file.
+            eos_token (str, optional): The end-of-sentence token. Defaults to '</s>'.
+            unk_token (str, optional): The unknown token. Defaults to '<unk>'.
+            additional_special_tokens (List[str], optional): Additional special tokens to be added to the vocabulary. Defaults to an empty list.
+            sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional arguments to be passed to the SentencePieceProcessor constructor. Defaults to None.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         self.sp_model_kwargs = {} if sp_model_kwargs is None else sp_model_kwargs
 
         self.vocab_file = vocab_file
@@ -119,19 +135,72 @@ class ReformerTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
+        """
+        Returns the size of the vocabulary used by the ReformerTokenizer.
+        
+        Args:
+            self: The instance of the ReformerTokenizer class.
+        
+        Returns:
+            int: The size of the vocabulary used by the ReformerTokenizer.
+        
+        Raises:
+            None.
+        """
         return self.sp_model.get_piece_size()
 
     def get_vocab(self) -> Dict[str, int]:
+        """
+        Get the vocabulary of the ReformerTokenizer.
+        
+        Args:
+            self: An instance of the ReformerTokenizer class.
+        
+        Returns:
+            A dictionary of type Dict[str, int] mapping tokens to their corresponding IDs. The IDs are integers.
+        
+        Raises:
+            None.
+        
+        """
         vocab = {self.convert_ids_to_tokens(i): i for i in range(self.vocab_size)}
         vocab.update(self.added_tokens_encoder)
         return vocab
 
     def __getstate__(self):
+        """
+        Method '__getstate__' in the class 'ReformerTokenizer'.
+        
+        Args:
+            self (object): The instance of the ReformerTokenizer class.
+                Represents the current instance of the ReformerTokenizer class.
+                No restrictions.
+        
+        Returns:
+            None.
+            This method returns a dictionary containing the state of the ReformerTokenizer instance with the 'sp_model' key set to None.
+        
+        Raises:
+            None.
+        """
         state = self.__dict__.copy()
         state["sp_model"] = None
         return state
 
     def __setstate__(self, d):
+        """
+        __setstate__ method in the class ReformerTokenizer.
+        
+        Args:
+            self (object): The instance of the ReformerTokenizer class.
+            d (dict): A dictionary containing the state information to be set.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            N/A: This method does not explicitly raise any exceptions.
+        """
         self.__dict__ = d
 
         # for backward compatibility
@@ -170,6 +239,20 @@ class ReformerTokenizer(PreTrainedTokenizer):
         return out_string.strip()
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """
+        Save the vocabulary to a specified directory.
+        
+        Args:
+            self (ReformerTokenizer): The instance of the ReformerTokenizer class.
+            save_directory (str): The directory where the vocabulary will be saved.
+            filename_prefix (Optional[str], optional): An optional prefix for the filename. Defaults to None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the path to the saved vocabulary file.
+        
+        Raises:
+            OSError: If the save_directory is not a valid directory.
+        """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return

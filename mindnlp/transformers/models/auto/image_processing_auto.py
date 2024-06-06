@@ -45,84 +45,83 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("blip", "BlipImageProcessor"),
         ("blip-2", "BlipImageProcessor"),
         ("bridgetower", "BridgeTowerImageProcessor"),
-        ("chinese_clip", "ChineseCLIPImageProcessor"),
+        # ("chinese_clip", "ChineseCLIPImageProcessor"),
         ("clip", "CLIPImageProcessor"),
-        ("clipseg", "ViTImageProcessor"),
-        ("conditional_detr", "ConditionalDetrImageProcessor"),
+        # ("clipseg", "ViTImageProcessor"),
+        # ("conditional_detr", "ConditionalDetrImageProcessor"),
         ("convnext", "ConvNextImageProcessor"),
-        ("convnextv2", "ConvNextImageProcessor"),
+        # ("convnextv2", "ConvNextImageProcessor"),
         ("cvt", "ConvNextImageProcessor"),
-        ("data2vec-vision", "BeitImageProcessor"),
-        ("deformable_detr", "DeformableDetrImageProcessor"),
-        ("deit", "DeiTImageProcessor"),
-        ("depth_anything", "DPTImageProcessor"),
-        ("deta", "DetaImageProcessor"),
-        ("detr", "DetrImageProcessor"),
-        ("dinat", "ViTImageProcessor"),
-        ("dinov2", "BitImageProcessor"),
-        ("donut-swin", "DonutImageProcessor"),
-        ("dpt", "DPTImageProcessor"),
+        # ("data2vec-vision", "BeitImageProcessor"),
+        # ("deformable_detr", "DeformableDetrImageProcessor"),
+        # ("deit", "DeiTImageProcessor"),
+        # ("depth_anything", "DPTImageProcessor"),
+        # ("deta", "DetaImageProcessor"),
+        # ("detr", "DetrImageProcessor"),
+        # ("dinat", "ViTImageProcessor"),
+        # ("dinov2", "BitImageProcessor"),
+        # ("donut-swin", "DonutImageProcessor"),
+        # ("dpt", "DPTImageProcessor"),
         ("efficientformer", "EfficientFormerImageProcessor"),
         ("efficientnet", "EfficientNetImageProcessor"),
-        ("flava", "FlavaImageProcessor"),
-        ("focalnet", "BitImageProcessor"),
-        ("fuyu", "FuyuImageProcessor"),
-        ("git", "CLIPImageProcessor"),
-        ("glpn", "GLPNImageProcessor"),
+        # ("flava", "FlavaImageProcessor"),
+        # ("focalnet", "BitImageProcessor"),
+        # ("fuyu", "FuyuImageProcessor"),
+        # ("git", "CLIPImageProcessor"),
+        # ("glpn", "GLPNImageProcessor"),
         ("groupvit", "CLIPImageProcessor"),
-        ("idefics", "IdeficsImageProcessor"),
+        # ("idefics", "IdeficsImageProcessor"),
         ("imagegpt", "ImageGPTImageProcessor"),
-        ("instructblip", "BlipImageProcessor"),
-        ("kosmos-2", "CLIPImageProcessor"),
+        # ("instructblip", "BlipImageProcessor"),
+        # ("kosmos-2", "CLIPImageProcessor"),
         ("layoutlmv2", "LayoutLMv2ImageProcessor"),
         ("layoutlmv3", "LayoutLMv3ImageProcessor"),
-        ("levit", "LevitImageProcessor"),
+        # ("levit", "LevitImageProcessor"),
         ("llava", "CLIPImageProcessor"),
-        ("mask2former", "Mask2FormerImageProcessor"),
+        # ("mask2former", "Mask2FormerImageProcessor"),
         ("maskformer", "MaskFormerImageProcessor"),
-        ("mgp-str", "ViTImageProcessor"),
-        ("mobilenet_v1", "MobileNetV1ImageProcessor"),
-        ("mobilenet_v2", "MobileNetV2ImageProcessor"),
+        # ("mgp-str", "ViTImageProcessor"),
+        # ("mobilenet_v1", "MobileNetV1ImageProcessor"),
+        # ("mobilenet_v2", "MobileNetV2ImageProcessor"),
         ("mobilevit", "MobileViTImageProcessor"),
-        ("mobilevit", "MobileViTImageProcessor"),
-        ("mobilevitv2", "MobileViTImageProcessor"),
-        ("nat", "ViTImageProcessor"),
-        ("nougat", "NougatImageProcessor"),
-        ("oneformer", "OneFormerImageProcessor"),
-        ("owlv2", "Owlv2ImageProcessor"),
+        # ("mobilevitv2", "MobileViTImageProcessor"),
+        # ("nat", "ViTImageProcessor"),
+        # ("nougat", "NougatImageProcessor"),
+        # ("oneformer", "OneFormerImageProcessor"),
+        # ("owlv2", "Owlv2ImageProcessor"),
         ("owlvit", "OwlViTImageProcessor"),
-        ("perceiver", "PerceiverImageProcessor"),
-        ("pix2struct", "Pix2StructImageProcessor"),
+        # ("perceiver", "PerceiverImageProcessor"),
+        # ("pix2struct", "Pix2StructImageProcessor"),
         ("poolformer", "PoolFormerImageProcessor"),
-        ("pvt", "PvtImageProcessor"),
-        ("pvt_v2", "PvtImageProcessor"),
+        # ("pvt", "PvtImageProcessor"),
+        # ("pvt_v2", "PvtImageProcessor"),
         ("regnet", "ConvNextImageProcessor"),
         ("resnet", "ConvNextImageProcessor"),
         ("sam", "SamImageProcessor"),
         ("segformer", "SegformerImageProcessor"),
-        ("seggpt", "SegGptImageProcessor"),
-        ("siglip", "SiglipImageProcessor"),
+        # ("seggpt", "SegGptImageProcessor"),
+        # ("siglip", "SiglipImageProcessor"),
         ("swiftformer", "ViTImageProcessor"),
-        ("swin", "ViTImageProcessor"),
-        ("swin2sr", "Swin2SRImageProcessor"),
-        ("swinv2", "ViTImageProcessor"),
+        # ("swin", "ViTImageProcessor"),
+        # ("swin2sr", "Swin2SRImageProcessor"),
+        # ("swinv2", "ViTImageProcessor"),
         ("table-transformer", "DetrImageProcessor"),
         ("timesformer", "VideoMAEImageProcessor"),
-        ("tvlt", "TvltImageProcessor"),
-        ("tvp", "TvpImageProcessor"),
-        ("udop", "LayoutLMv3ImageProcessor"),
-        ("upernet", "SegformerImageProcessor"),
+        # ("tvlt", "TvltImageProcessor"),
+        # ("tvp", "TvpImageProcessor"),
+        # ("udop", "LayoutLMv3ImageProcessor"),
+        # ("upernet", "SegformerImageProcessor"),
         ("van", "ConvNextImageProcessor"),
         ("videomae", "VideoMAEImageProcessor"),
-        ("vilt", "ViltImageProcessor"),
+        # ("vilt", "ViltImageProcessor"),
         ("vipllava", "CLIPImageProcessor"),
         ("vit", "ViTImageProcessor"),
-        ("vit_hybrid", "ViTHybridImageProcessor"),
-        ("vit_mae", "ViTImageProcessor"),
-        ("vit_msn", "ViTImageProcessor"),
-        ("vitmatte", "VitMatteImageProcessor"),
+        # ("vit_hybrid", "ViTHybridImageProcessor"),
+        # ("vit_mae", "ViTImageProcessor"),
+        # ("vit_msn", "ViTImageProcessor"),
+        # ("vitmatte", "VitMatteImageProcessor"),
         ("xclip", "CLIPImageProcessor"),
-        ("yolos", "YolosImageProcessor"),
+        # ("yolos", "YolosImageProcessor"),
     ]
 )
 
@@ -130,6 +129,18 @@ IMAGE_PROCESSOR_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, IMAGE_PROCESSOR
 
 
 def image_processor_class_from_name(class_name: str):
+    """
+    Args:
+        class_name (str): The name of the image processor class to retrieve.
+            It is used to locate and import the corresponding class based on the provided name.
+    
+    Returns:
+        None: If the class with the given name is not found, None is returned.
+    
+    Raises:
+        AttributeError: If an attribute error occurs while attempting to retrieve the class from the imported module.
+        ImportError: If an import error occurs while attempting to import the module.
+    """
     for module_name, extractors in IMAGE_PROCESSOR_MAPPING_NAMES.items():
         if class_name in extractors:
             module_name = model_type_to_module_name(module_name)
@@ -259,8 +270,20 @@ class AutoImageProcessor:
 
     This class cannot be instantiated directly using `__init__()` (throws an error).
     """
-
     def __init__(self):
+        """
+        Initializes an instance of AutoImageProcessor.
+        
+        Args:
+            self: The object itself.
+            
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            EnvironmentError: Raised when attempting to directly instantiate an AutoImageProcessor object. AutoImageProcessor is designed to be instantiated using the
+`AutoImageProcessor.from_pretrained(pretrained_model_name_or_path)` method.
+        """
         raise EnvironmentError(
             "AutoImageProcessor is designed to be instantiated "
             "using the `AutoImageProcessor.from_pretrained(pretrained_model_name_or_path)` method."

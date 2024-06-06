@@ -125,7 +125,6 @@ class BeitConfig(BackboneConfigMixin, PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "beit"
 
     def __init__(
@@ -163,6 +162,50 @@ class BeitConfig(BackboneConfigMixin, PretrainedConfig):
         reshape_hidden_states=True,
         **kwargs,
     ):
+        """
+        __init__
+        
+        Initializes an instance of the BeitConfig class.
+        
+        Args:
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 8192.
+            hidden_size (int, optional): The size of the hidden layers. Defaults to 768.
+            num_hidden_layers (int, optional): The number of hidden layers. Defaults to 12.
+            num_attention_heads (int, optional): The number of attention heads. Defaults to 12.
+            intermediate_size (int, optional): The size of the intermediate layers. Defaults to 3072.
+            hidden_act (str, optional): The activation function for the hidden layers. Defaults to 'gelu'.
+            hidden_dropout_prob (float, optional): The dropout probability for the hidden layers. Defaults to 0.0.
+            attention_probs_dropout_prob (float, optional): The dropout probability for the attention probabilities. Defaults to 0.0.
+            initializer_range (float, optional): The range for weight initialization. Defaults to 0.02.
+            layer_norm_eps (float, optional): The epsilon value for layer normalization. Defaults to 1e-12.
+            image_size (int, optional): The size of the input image. Defaults to 224.
+            patch_size (int, optional): The size of the patches. Defaults to 16.
+            num_channels (int, optional): The number of input channels. Defaults to 3.
+            use_mask_token (bool, optional): Whether to use a mask token. Defaults to False.
+            use_absolute_position_embeddings (bool, optional): Whether to use absolute position embeddings. Defaults to False.
+            use_relative_position_bias (bool, optional): Whether to use relative position bias. Defaults to False.
+            use_shared_relative_position_bias (bool, optional): Whether to use shared relative position bias. Defaults to False.
+            layer_scale_init_value (float, optional): The initial value for layer scale. Defaults to 0.1.
+            drop_path_rate (float, optional): The rate for drop path. Defaults to 0.1.
+            use_mean_pooling (bool, optional): Whether to use mean pooling. Defaults to True.
+            pool_scales (list of int, optional): The scales for pooling. Defaults to [1, 2, 3, 6].
+            use_auxiliary_head (bool, optional): Whether to use an auxiliary head. Defaults to True.
+            auxiliary_loss_weight (float, optional): The weight for the auxiliary loss. Defaults to 0.4.
+            auxiliary_channels (int, optional): The number of channels for the auxiliary head. Defaults to 256.
+            auxiliary_num_convs (int, optional): The number of convolutional layers for the auxiliary head. Defaults to 1.
+            auxiliary_concat_input (bool, optional): Whether to concatenate input for the auxiliary head. Defaults to False.
+            semantic_loss_ignore_index (int, optional): The index to ignore for semantic loss. Defaults to 255.
+            out_features (None, optional): The output features. Defaults to None.
+            out_indices (None, optional): The output indices. Defaults to None.
+            add_fpn (bool, optional): Whether to add feature pyramid network. Defaults to False.
+            reshape_hidden_states (bool, optional): Whether to reshape the hidden states. Defaults to True.
+        
+        Returns:
+            None. The method initializes an instance of the BeitConfig class.
+        
+        Raises:
+            FutureWarning: If the 'segmentation_indices' argument is used, a warning is issued indicating its deprecation and advising to use 'out_indices' instead.
+        """
         super().__init__(**kwargs)
 
         self.vocab_size = vocab_size

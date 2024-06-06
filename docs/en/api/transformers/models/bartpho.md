@@ -1,0 +1,1 @@
+:::mindnlp.transformers.models.bartpho.tokenization_bartpho.BartphoTokenizer

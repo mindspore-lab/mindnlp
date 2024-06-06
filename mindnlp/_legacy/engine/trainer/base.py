@@ -68,7 +68,6 @@ class Trainer:
         jit (bool): Whether use Just-In-Time compile.
 
     """
-
     def __init__(self,
                  network,
                  args=None,
@@ -79,7 +78,31 @@ class Trainer:
                  metrics: Optional[Metric] = None,
                  callbacks: Optional[Union[Callback, List]] = None,
                  **kwargs):
-
+        r"""
+        Initializes an instance of the 'Trainer' class.
+        
+        Args:
+            self: The instance of the 'Trainer' class.
+            network: An object of type 'nn.Cell' representing the neural network model.
+            args: An optional argument of type 'None' or any other type. It is used for additional configuration purposes.
+            loss_fn: An optional argument of type 'nn.Cell' representing the loss function used for training the model.
+            optimizer: An optional argument of type 'nn.Cell' representing the optimizer used for updating the model's parameters.
+            train_dataset: An optional argument of type 'Dataset' representing the training dataset.
+            eval_dataset: An optional argument of type 'Dataset' representing the evaluation dataset.
+            metrics: An optional argument of type 'Metric' representing the evaluation metrics used for monitoring the model's performance.
+            callbacks: An optional argument of type 'Union[Callback, List]' representing the callbacks used during training.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If 'jit' is set to 'True' and the 'network' does not support static graph via jit compile.
+            Warning: If the 'train_dataset' is of type 'TakeDataset', which may slow down the training speed and require recompiling the network.
+        
+        Note:
+            The method initializes various attributes and sets the initial values for training-related parameters.
+            It also prepares the callbacks, evaluation settings, and callback manager for the 'Trainer' instance.
+        """
         self.args = args
         epochs = kwargs.pop('epochs', None)
         jit = kwargs.pop('jit', False)
@@ -127,6 +150,30 @@ class Trainer:
         self.callback_manager = CallbackManager(callbacks)
 
     def _prepare_train_func(self):
+        r"""
+        Prepares the training function for the Trainer class.
+        
+        Args:
+            self (Trainer): An instance of the Trainer class.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        
+        This method initializes the training function for the Trainer class. It sets the forward function and the train function if they are not already set. The forward function is responsible for performing
+the forward pass of the neural network and calculating the loss. The train function is responsible for executing a single training step, which includes the forward pass, backpropagation, and optimizer update.
+        
+        If the forward function is None, it is determined based on whether the Trainer has an objective network or not. If an objective network is present, the default forward function without a loss function
+is used. Otherwise, the default forward function with a loss function and loss scaler is used.
+        
+        If the train function is None, the default train step function is used. The default train step function utilizes the forward function, the optimizer, the loss scaler, and other optional parameters such
+as gradient checking and automatic mixed precision (AMP) level.
+        
+        Note:
+            The forward function, train function, and other parameters are initialized during the Trainer's initialization process.
+        """
         if self.forward_fn is None:
             self.forward_fn = get_default_forward_fn_with_loss_fn(self.network, self.loss_fn, self.loss_scaler) \
                 if not self.obj_network else get_default_forward_fn_without_loss_fn(self.network, self.loss_scaler)
@@ -136,6 +183,21 @@ class Trainer:
                                                       self.check_gradients or self.amp_level != 'O0', self.jit, self.obj_network)
 
     def _prepare_callbacks(self, callbacks):
+        r"""
+        Prepare the list of callbacks for the Trainer.
+        
+        Args:
+            self (Trainer): The instance of the Trainer class.
+            callbacks (Callback or list): The callbacks to be prepared. 
+                Can be a single Callback instance or a list of Callback instances.
+                
+        Returns:
+            None. This method modifies the internal state of the Trainer instance.
+        
+        Raises:
+            TypeError: If the callbacks parameter is not of type Callback or list.
+            TypeError: If the elements in the list of callbacks are not instances of Callback.
+        """
         if isinstance(callbacks, Callback):
             return [callbacks]
         if isinstance(callbacks, list):
@@ -146,6 +208,22 @@ class Trainer:
         raise TypeError(f"Expect callbacks to be list or Callback. Got {type(callbacks)}.")
 
     def _check_callbacks_type(self, callbacks):
+        r"""
+        This method '_check_callbacks_type' in the class 'Trainer' is used to verify the types of callbacks provided.
+        
+        Args:
+            self: The instance of the Trainer class. It is used to access the attributes and methods of the class instance.
+            
+            callbacks: A list of callback objects to be checked for their types. Each callback object in the list is iterated over to ensure it meets specific criteria.
+            
+        Returns:
+            None: This method does not return any value. It performs the type checking of the callbacks and raises exceptions if necessary.
+        
+        Raises:
+            ValueError: This exception is raised if any of the callback objects in the 'callbacks' list is an instance of EarlyStopCallback or BestModelCallback. 
+            If an EarlyStopCallback instance is found, the error message 'EarlyStopCallback is not effective when eval_dataset is None.' is raised.
+            If a BestModelCallback instance is found, the error message 'BestModelCallback is not effective when eval_dataset is None.' is raised.
+        """
         for callback in callbacks:
             if isinstance(callback, EarlyStopCallback):
                 raise ValueError("EarlyStopCallback is not effective when eval_dataset is None.")
@@ -153,6 +231,30 @@ class Trainer:
                 raise ValueError("BestModelCallback is not effective when eval_dataset is None.")
 
     def _prepare_eval(self, eval_dataset, metrics, callbacks, jit):
+        r"""
+        Prepares the evaluation process during training in the 'Trainer' class.
+        
+        Args:
+            self (Trainer): The instance of the 'Trainer' class.
+            eval_dataset (Dataset): The dataset to be used for evaluation during training.
+            metrics (list): The list of metrics to be used for evaluation.
+            callbacks (list): The list of callbacks to be used during evaluation.
+            jit (bool): Flag indicating whether just-in-time (JIT) compilation should be applied.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If both 'eval_dataset' and 'metrics' parameters are None.
+                This exception is raised when both 'eval_dataset' and 'metrics' are None,
+                and the 'callbacks' parameter is not empty.
+        
+        This method prepares the evaluation process during training by creating an 'Evaluator' instance
+        and assigning it to the 'evaluator' attribute of the 'Trainer' class instance. The 'Evaluator' instance
+        is created with the specified 'network', 'eval_dataset', 'metrics', 'callbacks', and 'jit' parameters.
+        If both 'eval_dataset' and 'metrics' parameters are None, the 'callbacks' parameter is checked to ensure
+        it is of the correct type. If 'callbacks' is not empty, the 'Trainer' instance's 'evaluator' attribute is set to None.
+        """
         if eval_dataset is not None and metrics is not None:
             self.evaluator = Evaluator(network=self.network, eval_dataset=eval_dataset, metrics=metrics,
                                        callbacks=callbacks, jit=jit)
@@ -204,7 +306,6 @@ class Trainer:
         """
         Training process for non-data sinking mode. The data would be passed to network directly.
         """
-
         # set mindspore mode to GRAPH_MODE, since jit mode with
         # control flow will slow down the training speed.
         if self.jit:
@@ -342,10 +443,8 @@ class Trainer:
 
     def add_callback(self):
         """add callback"""
-
     def remove_callback(self, name_or_type):
         """remove callback"""
-
     def set_forward_fn(self, forward_fn):
         """set forward function"""
         self.forward_fn = forward_fn
@@ -381,22 +480,16 @@ class Trainer:
 
     def train_loop(self, train_dataset):
         """train loop"""
-
     def evaluate(self):
         """evalute"""
-
     def evaluate_loop(self):
         """evaluate loop"""
-
     def predict(self, test_dataset):
         """predict"""
-
     def predict_step(self, inputs, return_loss_only=False):
         """predict step"""
-
     def predict_loop(self):
         """predict loop"""
-
     def save_model(self, output_dir, model_name=None):
         """save model to specify dir."""
         assert output_dir, "`output_dir` is None, please input a real path."

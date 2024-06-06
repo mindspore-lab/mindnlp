@@ -48,7 +48,6 @@ class PeftAdapterMixin:
     - Activate / deactivate all adapters from the model.
     - Get the `state_dict` of the active adapter.
     """
-
     _hf_peft_config_loaded = False
 
     def load_adapter(
@@ -119,7 +118,6 @@ class PeftAdapterMixin:
                 Additional keyword arguments passed along to the `from_pretrained` method of the adapter config and
                 `find_adapter_config_file` method.
         """
-
         adapter_name = adapter_name if adapter_name is not None else "default"
         if adapter_kwargs is None:
             adapter_kwargs = {}
@@ -360,6 +358,18 @@ class PeftAdapterMixin:
         return active_adapters
 
     def active_adapter(self) -> str:
+        """
+        Retrieve the active adapter.
+        
+        Args:
+            self: An instance of the PeftAdapterMixin class.
+        
+        Returns:
+            A string representing the active adapter.
+        
+        Raises:
+            FutureWarning: If the `active_adapter` method is deprecated and will be removed in a future version.
+        """
         warnings.warn(
             "The `active_adapter` method is deprecated and will be removed in a future version.", FutureWarning
         )

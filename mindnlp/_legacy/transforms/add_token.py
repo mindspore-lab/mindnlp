@@ -32,8 +32,21 @@ class AddToken(PyTensorOperation):
     Examples:
 
     """
-
     def __init__(self, token, begin=True):
+        r"""
+        Initializes an instance of the AddToken class.
+        
+        Args:
+            self (AddToken): The instance of the AddToken class.
+            token (any): The token to be added.
+            begin (bool, optional): Specifies whether the token should be added at the beginning or end of the implementation. Default is True.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         super().__init__()
         self.token = token
         self.begin = begin

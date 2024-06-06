@@ -22,16 +22,19 @@ from .other import (
     shift_tokens_right,
     transpose,
     _get_batch_size,
-    _get_submodules,
+    _get_subcells,
     _set_adapter,
     _freeze_adapter,
     ModulesToSaveWrapper,
     _prepare_prompt_learning_config,
     # _is_valid_match,
-    # infer_device,
 )
 # from .hub_utils import hub_file_exists
-from .save_and_load import get_peft_model_state_dict, set_peft_model_state_dict, load_peft_weights
+from .save_and_load import (
+    get_peft_model_state_dict,
+    set_peft_model_state_dict,
+    load_peft_weights,
+)
 from .constants import (
     bloom_model_postprocess_past_key_value,
     TRANSFORMERS_MODELS_TO_PREFIX_TUNING_POSTPROCESS_MAPPING,
@@ -39,6 +42,7 @@ from .constants import (
     TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING,
     TRANSFORMERS_MODELS_TO_IA3_TARGET_MODULES_MAPPING,
     TRANSFORMERS_MODELS_TO_IA3_FEEDFORWARD_MODULES_MAPPING,
+    TRANSFORMERS_MODELS_TO_LNTUNING_TARGET_MODULES_MAPPING,
     CONFIG_NAME,
     WEIGHTS_NAME,
     SAFETENSORS_WEIGHTS_NAME,

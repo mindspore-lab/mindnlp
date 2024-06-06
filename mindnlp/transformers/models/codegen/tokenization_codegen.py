@@ -141,7 +141,6 @@ class CodeGenTokenizer(PreTrainedTokenizer):
         add_bos_token (`bool`, *optional*, defaults to `False`):
             Whether to add a beginning of sequence token at the start of sequences.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -160,6 +159,37 @@ class CodeGenTokenizer(PreTrainedTokenizer):
         add_bos_token=False,
         **kwargs,
     ):
+        """
+        Initializes an instance of the CodeGenTokenizer class.
+        
+        Args:
+            self (CodeGenTokenizer): The instance of the CodeGenTokenizer class.
+            vocab_file (str): The path to the vocabulary file.
+            merges_file (str): The path to the merges file.
+            errors (str, optional): Specifies the error handling scheme. Defaults to 'replace'.
+            unk_token (str, optional): The special token used to represent unknown tokens. Defaults to 'endoftext'.
+            bos_token (str, optional): The special token used to represent the beginning of a sentence. Defaults to 'endoftext'.
+            eos_token (str, optional): The special token used to represent the end of a sentence. Defaults to 'endoftext'.
+            pad_token (str, optional): The special token used to represent padding. Defaults to None.
+            add_prefix_space (bool, optional): Specifies whether a prefix space should be added. Defaults to False.
+            add_bos_token (bool, optional): Specifies whether the bos_token should be added. Defaults to False.
+        
+        Returns:
+            None
+        
+        Raises:
+            FileNotFoundError: If the vocab_file or merges_file could not be found.
+            UnicodeDecodeError: If there is an error decoding the vocab_file or merges_file.
+            TypeError: If any of the special token parameters (unk_token, bos_token, eos_token, pad_token) are not strings.
+            TypeError: If add_bos_token or add_prefix_space are not boolean values.
+            ValueError: If the merges_file is not formatted correctly.
+        
+        Note:
+            This method initializes the CodeGenTokenizer class by loading the vocabulary and merges files, setting the error handling scheme, and initializing various attributes.
+        
+        Example:
+            >>> tokenizer = CodeGenTokenizer('vocab.txt', 'merges.txt', errors='ignore', unk_token='<unk>', bos_token='<s>')
+        """
         bos_token = AddedToken(bos_token, special=True) if isinstance(bos_token, str) else bos_token
         eos_token = AddedToken(eos_token, special=True) if isinstance(eos_token, str) else eos_token
         unk_token = AddedToken(unk_token, special=True) if isinstance(unk_token, str) else unk_token
@@ -194,12 +224,63 @@ class CodeGenTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
+        """
+        This method returns the size of the vocabulary in the CodeGenTokenizer instance.
+        
+        Args:
+            self (CodeGenTokenizer): The instance of the CodeGenTokenizer class.
+                It is used to access the encoder attribute to calculate the vocabulary size.
+        
+        Returns:
+            int: The size of the vocabulary in the CodeGenTokenizer instance.
+        
+        Raises:
+            This method does not raise any exceptions.
+        """
         return len(self.encoder)
 
     def get_vocab(self):
+        """
+        Returns a dictionary containing the vocabulary of the CodeGenTokenizer instance.
+        
+        Args:
+            self (CodeGenTokenizer): The CodeGenTokenizer instance.
+        
+        Returns:
+            dict: A dictionary containing the vocabulary of the CodeGenTokenizer. The keys are tokens
+            from the encoder and added_tokens_encoder, and the values are their corresponding indices.
+        
+        Raises:
+            None.
+        """
         return dict(self.encoder, **self.added_tokens_encoder)
 
     def bpe(self, token):
+        """
+        This method implements the Byte Pair Encoding (BPE) algorithm to tokenize a given token.
+        
+        Args:
+            self (CodeGenTokenizer): An instance of the CodeGenTokenizer class.
+            token (str): The token to be tokenized using the BPE algorithm.
+        
+        Returns:
+            str: The token after applying the BPE algorithm.
+        
+        Raises:
+            None.
+        
+        This method first checks if the token is already present in the cache and returns the cached value if found.
+        It then converts the token into a tuple of characters and generates a list of all possible pairs of characters in the token.
+        If no pairs are found, the method returns the original token as there is no need for further processing.
+        
+        The method then enters a loop where it iteratively selects the pair with the lowest rank according to the BPE ranks.
+        If the selected pair is not present in the BPE ranks, the loop is terminated.
+        
+        The method then finds the first occurrence of the selected pair in the token and replaces it with the concatenation of the pair.
+        This process is repeated until no more occurrences of the selected pair are found in the token.
+        
+        Finally, the token is converted back to a string and stored in the cache for future use before being returned as the result of the method.
+        """
         if token in self.cache:
             return self.cache[token]
         word = tuple(token)
@@ -241,6 +322,18 @@ class CodeGenTokenizer(PreTrainedTokenizer):
         return word
 
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
+        """
+        Args:
+            self (CodeGenTokenizer): The instance of the CodeGenTokenizer class.
+            token_ids_0 (list): A list of token IDs for the first input sequence.
+            token_ids_1 (list, optional): A list of token IDs for the second input sequence. Defaults to None.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None
+        """
         if self.add_bos_token:
             bos_token_ids = [self.bos_token_id]
         else:
@@ -278,6 +371,22 @@ class CodeGenTokenizer(PreTrainedTokenizer):
         return text
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """
+        Save the generated vocabulary files to the specified directory.
+        
+        Args:
+            self (CodeGenTokenizer): The instance of the CodeGenTokenizer class.
+            save_directory (str): The directory path where the vocabulary files will be saved.
+            filename_prefix (Optional[str]): An optional prefix to be added to the filenames. Default is None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the paths to the saved vocabulary and merge files.
+        
+        Raises:
+            - ValueError: If the provided save_directory is not a valid directory path.
+            - IOError: If there are issues with writing the vocabulary or merge files to the specified directory.
+            - RuntimeError: If the BPE merge indices are not consecutive, indicating potential corruption in the tokenizer.
+        """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return
@@ -307,6 +416,20 @@ class CodeGenTokenizer(PreTrainedTokenizer):
         return vocab_file, merge_file
 
     def prepare_for_tokenization(self, text, is_split_into_words=False, **kwargs):
+        """
+        Prepare the text for tokenization by adding prefix space if required.
+        
+        Args:
+            self (CodeGenTokenizer): The instance of the CodeGenTokenizer class.
+            text (str): The input text to be prepared for tokenization.
+            is_split_into_words (bool): A flag indicating if the text is already split into words. Default is False.
+        
+        Returns:
+            str: The text prepared for tokenization with potential prefix space added.
+        
+        Raises:
+            KeyError: If 'add_prefix_space' is not found in kwargs.
+        """
         add_prefix_space = kwargs.pop("add_prefix_space", self.add_prefix_space)
         if is_split_into_words or add_prefix_space:
             text = " " + text
@@ -357,6 +480,20 @@ class CodeGenTokenizer(PreTrainedTokenizer):
         return decoded_text
 
     def truncate(self, completion, truncate_before_pattern):
+        """
+        This method 'truncate' is defined in the 'CodeGenTokenizer' class and is used to truncate a given completion based on specified patterns.
+        
+        Args:
+        - self: The instance of the class.
+        - completion (str): The completion string to be truncated.
+        - truncate_before_pattern (list of str): A list of patterns to truncate the completion string before.
+        
+        Returns:
+        None: This method does not return any value.
+        
+        Raises:
+        - No specific exceptions are raised within this method.
+        """
         def find_re(string, pattern, start_pos):
             m = pattern.search(string, start_pos)
             return m.start() if m else -1

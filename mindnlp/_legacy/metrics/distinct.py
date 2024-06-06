@@ -77,6 +77,21 @@ class Distinct(Metric):
 
     """
     def __init__(self, n_size=2, name='Distinct'):
+        r"""
+        Initialize the Distinct object with the specified parameters.
+        
+        Args:
+            self (object): The instance of the Distinct class.
+            n_size (int, optional): The size of n-grams to consider for distinct calculation. Default is 2.
+                Must be an integer value.
+            name (str, optional): The name associated with the Distinct object. Default is 'Distinct'.
+        
+        Returns:
+            None. This method initializes the Distinct object with the provided parameters.
+        
+        Raises:
+            TypeError: If n_size is not an integer.
+        """
         super().__init__()
         self._name = name
         self.n_size = _check_value_type("n_size", n_size, [int])

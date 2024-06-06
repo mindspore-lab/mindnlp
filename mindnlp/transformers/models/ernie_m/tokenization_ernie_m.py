@@ -86,7 +86,6 @@ class ErnieMTokenizer(PreTrainedTokenizer):
             A special token representing a masked token. This is the token used in the masked language modeling task
             which the model tries to predict the original unmasked ones.
     """
-
     # Ernie-M model doesn't have token_type embedding.
     model_input_names: List[str] = ["input_ids"]
 
@@ -110,6 +109,27 @@ class ErnieMTokenizer(PreTrainedTokenizer):
         sp_model_kwargs: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> None:
+        """
+        Initialize the ErnieMTokenizer class.
+        
+        Args:
+            sentencepiece_model_ckpt (str): The path to the sentencepiece model checkpoint file.
+            vocab_file (str): The path to the vocabulary file. Defaults to None.
+            do_lower_case (bool): A flag indicating whether to convert tokens to lowercase. Defaults to False.
+            encoding (str): The character encoding to be used. Defaults to 'utf8'.
+            unk_token (str): The token representing unknown words. Defaults to '[UNK]'.
+            sep_token (str): The token representing sentence separation. Defaults to '[SEP]'.
+            pad_token (str): The token representing padding. Defaults to '[PAD]'.
+            cls_token (str): The token representing classification. Defaults to '[CLS]'.
+            mask_token (str): The token representing masking. Defaults to '[MASK]'.
+            sp_model_kwargs (Optional[Dict[str, Any]]): Additional keyword arguments for the SentencePiece model. Defaults to None.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         # Mask token behave like a normal word, i.e. include the space before it and
         # is included in the raw text, there should be a match in a non-normalized sentence.
 
@@ -149,6 +169,19 @@ class ErnieMTokenizer(PreTrainedTokenizer):
             self.SP_CHAR_MAPPING[chr(ch)] = chr(ch - 65248)
 
     def get_offset_mapping(self, text):
+        """
+        This method is part of the ErnieMTokenizer class and is used to obtain the offset mapping for the given text.
+        
+        Args:
+            self: The instance of the ErnieMTokenizer class.
+            text (str): The input text for which the offset mapping is to be generated.
+        
+        Returns:
+            None: This method returns None.
+        
+        Raises:
+            None
+        """
         if text is None:
             return None
 
@@ -182,17 +215,88 @@ class ErnieMTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
+        """
+        Method to retrieve the size of the vocabulary stored in the ErnieMTokenizer instance.
+        
+        Args:
+            self (ErnieMTokenizer): The instance of the ErnieMTokenizer class.
+                It represents the tokenizer object containing the vocabulary.
+                
+        Returns:
+            int: The number of unique tokens in the vocabulary.
+                Returns the length of the vocabulary stored in the tokenizer.
+                
+        Raises:
+            None.
+        """
         return len(self.vocab)
 
     def get_vocab(self):
+        """
+        Get the vocabulary of the tokenizer.
+        
+        Args:
+            self: The instance of the ErnieMTokenizer class.
+        
+        Returns:
+            dict: A dictionary representing the vocabulary of the tokenizer. It contains the original vocabulary 
+            along with any added tokens.
+        
+        Raises:
+            None.
+        """
         return dict(self.vocab, **self.added_tokens_encoder)
 
     def __getstate__(self):
+        """
+        Method: __getstate__
+        
+        Description:
+        This method is used to retrieve the state of an instance of the ErnieMTokenizer class. It returns a dictionary representing the current state of the instance, with the 'sp_model' attribute set to None.
+        
+        Args:
+        - self: An instance of the ErnieMTokenizer class.
+        
+        Returns:
+        - None: This method does not return any value.
+        
+        Raises:
+        - None.
+        
+        """
         state = self.__dict__.copy()
         state["sp_model"] = None
         return state
 
     def __setstate__(self, d):
+        """
+        Sets the state of the ErnieMTokenizer object from a serialized state dictionary.
+        
+        Args:
+            self (ErnieMTokenizer): The instance of the ErnieMTokenizer class.
+            d (dict): The serialized state dictionary containing the attributes to be set.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        
+        Note:
+            This method is automatically called when an ErnieMTokenizer object is loaded from a serialized state.
+            It sets the attributes of the object using the values from the serialized state dictionary.
+        
+            The 'self.__dict__' attribute is updated with the values from the 'd' dictionary.
+        
+            If the 'sp_model_kwargs' attribute is not present in the serialized state, it is initialized as an empty dictionary.
+        
+            The SentencePieceProcessor object 'self.sp_model' is initialized using the 'spm.SentencePieceProcessor' class.
+            The 'self.sp_model_kwargs' dictionary is passed as keyword arguments to the SentencePieceProcessor constructor.
+        
+            Finally, the sentencepiece model is loaded into the SentencePieceProcessor object using 'self.sentencepiece_model_ckpt'.
+        
+            Note that this method assumes the 'spm' module has been imported and is available in the current namespace.
+        """
         self.__dict__ = d
 
         # for backward compatibility
@@ -208,7 +312,6 @@ class ErnieMTokenizer(PreTrainedTokenizer):
 
     def _tokenize(self, text, enable_sampling=False, nbest_size=64, alpha=0.1):
         """Tokenize a string."""
-
         if self.sp_model_kwargs.get("enable_sampling") is True:
             enable_sampling = True
         if self.sp_model_kwargs.get("alpha") is not None:
@@ -263,6 +366,19 @@ class ErnieMTokenizer(PreTrainedTokenizer):
 
     # to mimic paddlenlp.transformers.ernie_m.tokenizer.ErnieMTokenizer functioning
     def _convert_token_to_id(self, token):
+        """
+        Converts a token to its corresponding ID using the provided vocabulary in the ErnieMTokenizer class.
+        
+        Args:
+            self (ErnieMTokenizer): The instance of the ErnieMTokenizer class.
+            token (str): The token to be converted to an ID.
+            
+        Returns:
+            None: This method returns None. The token ID can be obtained via the 'vocab' attribute in the ErnieMTokenizer class.
+        
+        Raises:
+            KeyError: If the token is not found in the vocabulary and the unknown token (self.unk_token) is also not present in the vocabulary.
+        """
         return self.vocab.get(token, self.vocab.get(self.unk_token))
 
     # to mimic paddlenlp.transformers.ernie_m.tokenizer.ErnieMTokenizer functioning
@@ -329,7 +445,6 @@ class ErnieMTokenizer(PreTrainedTokenizer):
             `List[int]`:
                 The list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
         """
-
         if already_has_special_tokens:
             if token_ids_1 is not None:
                 raise ValueError(
@@ -403,6 +518,20 @@ class ErnieMTokenizer(PreTrainedTokenizer):
         return False
 
     def load_vocab(self, filepath):
+        """
+        This method loads a vocabulary from a specified file path into a token-to-index mapping within the ErnieMTokenizer class.
+        
+        Args:
+            self (ErnieMTokenizer): The instance of the ErnieMTokenizer class.
+            filepath (str): The path to the file containing the vocabulary. The file should be encoded in UTF-8 format.
+        
+        Returns:
+            dict: A dictionary mapping tokens to their corresponding indices in the loaded vocabulary.
+        
+        Raises:
+            IOError: If the specified file path is invalid or inaccessible.
+            ValueError: If the index conversion to integer fails during token-to-index mapping.
+        """
         token_to_idx = {}
         with io.open(filepath, "r", encoding="utf-8") as f:
             for index, line in enumerate(f):
@@ -412,6 +541,22 @@ class ErnieMTokenizer(PreTrainedTokenizer):
         return token_to_idx
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """
+        Save the vocabulary and tokenizer model.
+        
+        Args:
+            self: The instance of the ErnieMTokenizer class.
+            save_directory (str): The directory where the vocabulary and tokenizer model will be saved.
+            filename_prefix (Optional[str]): The prefix to be added to the filename. Defaults to None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the file path of the saved vocabulary.
+        
+        Raises:
+            OSError: If the save_directory does not exist or is not a valid directory.
+            IOError: If there is an issue with writing the vocabulary or tokenizer model files.
+            Warning: If the vocabulary indices are not consecutive, indicating a potential corruption in the vocabulary.
+        """
         index = 0
         if os.path.isdir(save_directory):
             vocab_file = os.path.join(

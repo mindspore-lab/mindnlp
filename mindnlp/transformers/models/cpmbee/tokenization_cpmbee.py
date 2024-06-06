@@ -49,6 +49,41 @@ PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
 
 
 class _PrevExtTableStates(TypedDict):
+
+    """
+    Represents the state of a previous external table.
+    
+    This class inherits from TypedDict and provides a structured way to store the state information of a previous external table. The class '_PrevExtTableStates' can be used to store and retrieve various
+attributes related to the state of the table.
+    
+    Attributes:
+        <attribute1>: <description of attribute1>
+        <attribute2>: <description of attribute2>
+        ...
+        <attributeN>: <description of attributeN>
+    
+    Note:
+        The '_PrevExtTableStates' class is intended to be used in conjunction with external tables and provides a convenient way to manage and retrieve the state information associated with them.
+    
+    Example:
+        
+        # Create an instance of '_PrevExtTableStates'
+        table_state = _PrevExtTableStates()
+    
+        # Set the attributes of the table state
+        table_state['name'] = 'my_table'
+        table_state['last_modified'] = '2022-01-01 12:00:00'
+        table_state['column_count'] = 5
+    
+        # Retrieve the attributes of the table state
+        table_name = table_state['name']
+        last_modified = table_state['last_modified']
+        column_count = table_state['column_count']
+        
+    
+    Inheritance:
+        TypedDict
+    """
     ext_table: Dict[int, str]
     token_id_table: Dict[str, Dict[int, int]]
 
@@ -57,6 +92,21 @@ CPMBeeInputType = Union[str, Dict[str, "CPMBeeInputType"]]
 
 
 def rel_to_bucket(n_up: int, n_down: int, max_depth: int = 8):
+    """
+    Calculates the relative position of an item in a bucket based on the number of items above and below it.
+    
+    Args:
+        n_up (int): The number of items above the item.
+        n_down (int): The number of items below the item.
+        max_depth (int, optional): The maximum depth of the bucket. Defaults to 8.
+    
+    Returns:
+        int: The relative position of the item in the bucket.
+    
+    Raises:
+        None.
+    
+    """
     ret = n_up * max_depth + n_down
     if ret == 0:
         return ret
@@ -66,6 +116,49 @@ def rel_to_bucket(n_up: int, n_down: int, max_depth: int = 8):
 
 
 class _DictTree(TypedDict):
+
+    """A Python class representing a dictionary-like tree structure.
+    
+    The _DictTree class is a subclass of TypedDict, which allows for the creation of dictionary-like objects that have a fixed set of keys and specific value types for each key. The _DictTree class provides
+additional functionality to represent a hierarchical tree structure.
+    
+    Attributes:
+        None
+    
+    Methods:
+        None
+    
+    Inheritance:
+        TypedDict: A built-in class in the typing module that provides a way to specify the expected structure of a dictionary-like object.
+    
+    Note:
+        The _DictTree class is not meant to be instantiated directly, but rather serves as a base class for creating custom tree structures.
+    
+    Usage:
+        To create a custom tree structure using the _DictTree class, simply inherit from it and define the desired tree structure by specifying the keys and value types using the TypedDict syntax.
+    
+    Example:
+        class MyTree(_DictTree):
+            name: str
+            children: List[MyTree]
+    
+            def __init__(self, name: str, children: List[MyTree]) -> None:
+                self.name = name
+                self.children = children
+    
+            def add_child(self, child: MyTree) -> None:
+                self.children.append(child)
+    
+            def remove_child(self, child: MyTree) -> None:
+                self.children.remove(child)
+    
+            def get_children(self) -> List[MyTree]:
+                return self.children
+    
+    In the above example, a custom tree structure is defined with two keys: 'name' of type str and 'children' of type List[MyTree]. The class provides methods to add and remove children, as well as retrieve
+the list of children.
+    
+    """
     value: str
     children: List["_DictTree"]
     depth: int
@@ -97,7 +190,6 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
         padding_side (`str`, *optional*, defaults to `"left"`):
             The padding side. CPM-Bee will use left padding by default.
     """
-
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -128,6 +220,28 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
         padding_side="left",
         **kwargs,
     ):
+        """
+            Initialize a CpmBeeTokenizer object.
+        
+            Args:
+                vocab_file (str): The path to the file containing the vocabulary.
+                bos_token (str, optional): The beginning of sentence token. Defaults to '<s>'.
+                eos_token (str, optional): The end of sentence token. Defaults to '</s>'.
+                line_token (str, optional): The token used to represent a new line. Defaults to '\n'.
+                space_token (str, optional): The token used to represent a space. Defaults to ' '.
+                unk_token (str, optional): The token used to represent unknown words. Defaults to '<unk>'.
+                mask_token (str, optional): The token used for masking. Defaults to '<mask>'.
+                pad_token (str, optional): The token used for padding. Defaults to '<pad>'.
+                padding_side (str, optional): The side to apply padding. Defaults to 'left'.
+                **kwargs: Additional keyword arguments.
+        
+            Returns:
+                None
+        
+            Raises:
+                FileNotFoundError: If the vocab_file does not exist.
+                TypeError: If any of the arguments are of incorrect type.
+            """
         self.encoder: Dict[str, int] = {}
         super().__init__(
             bos_token=bos_token,
@@ -140,7 +254,6 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
             padding_side=padding_side,
             **kwargs,
         )
-
 
         with open(vocab_file, "r", encoding="utf-8") as reader:
             for token in reader.readlines():
@@ -182,18 +295,74 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
 
     @property
     def bod_token_id(self):
+        """
+        Returns the token ID for the beginning of document (BOD) token.
+        
+        Args:
+            self: An instance of the CpmBeeTokenizer class.
+        
+        Returns:
+            None. This method returns the token ID corresponding to the BOD token in the encoder dictionary.
+        
+        Raises:
+            None.
+        """
         return self.encoder[self.bod_token]
 
     @property
     def eod_token_id(self):
+        """
+        Method to retrieve the token ID corresponding to the end-of-document token in the CpmBeeTokenizer class.
+        
+        Args:
+            self: An instance of the CpmBeeTokenizer class.
+        
+        Returns:
+            None: The method returns the token ID of the end-of-document token in the tokenizer's encoder.
+        
+        Raises:
+            N/A
+        """
         return self.encoder[self.eod_token]
 
     @property
     def newline_id(self):
+        """
+        Returns the ID of the newline token in the CpmBeeTokenizer.
+        
+        Args:
+            self (CpmBeeTokenizer): An instance of the CpmBeeTokenizer class.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         return self.encoder[self.line_token]
 
     @property
     def vocab_size(self) -> int:
+        """
+        Returns the size of the vocabulary used by the CpmBeeTokenizer instance.
+        
+        Args:
+            self: The CpmBeeTokenizer instance.
+                - This parameter is of type 'CpmBeeTokenizer'.
+                - It represents the instance of the CpmBeeTokenizer class on which the method is called.
+        
+        Returns:
+            An integer representing the size of the vocabulary.
+                - The returned value represents the total number of unique tokens in the vocabulary.
+        
+        Raises:
+            None.
+        
+        Example:
+            >>> tokenizer = CpmBeeTokenizer()
+            >>> tokenizer.vocab_size()
+            5000
+        """
         return len(self.encoder)
 
     def __len__(self):
@@ -203,6 +372,20 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
         return self.vocab_size + len(self.added_tokens_encoder)
 
     def get_vocab(self):
+        """
+        Get the vocabulary of the CpmBeeTokenizer instance.
+        
+        Args:
+            self (CpmBeeTokenizer): The instance of the CpmBeeTokenizer class.
+                This parameter represents the current instance of the tokenizer.
+        
+        Returns:
+            dict: A dictionary containing the combined encoder and added tokens encoder.
+                The keys represent tokens, and the values represent their corresponding IDs.
+        
+        Raises:
+            None.
+        """
         return dict(self.encoder, **self.added_tokens_encoder)
 
     def get_piece(self, text: str) -> str:
@@ -336,9 +519,42 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
         return output_tokens
 
     def check(self, token):
+        """
+        Checks if a token is present in the encoder.
+        
+        Args:
+            self (CpmBeeTokenizer): An instance of the CpmBeeTokenizer class.
+            token (Any): The token to be checked in the encoder.
+            
+        Returns:
+            None: There is no specific return value for this method.
+            
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         return token in self.encoder
 
     def convert_tokens_to_string(self, tokens: List[str]) -> str:
+        """
+        Converts a list of tokens into a single string.
+        
+        Args:
+            self (CpmBeeTokenizer): An instance of the CpmBeeTokenizer class.
+            tokens (List[str]): A list of tokens to be converted into a string.
+        
+        Returns:
+            str: A string representation of the tokens.
+        
+        Raises:
+            None.
+        
+        This method takes in two parameters, self and tokens. The self parameter is an instance of the CpmBeeTokenizer class and is used to access the class's attributes and methods. The tokens parameter is a
+list of strings representing individual tokens.
+        
+        The function returns a string that is obtained by concatenating all the tokens together using the ''.join() method. This method does not modify the original list of tokens.
+        
+        No exceptions are raised by this method.
+        """
         return "".join(tokens)
 
     def _convert_token_to_id(self, token: str):
@@ -363,6 +579,22 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
                 return self.decoder[index]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """
+        Save the vocabulary to a file.
+        
+        Args:
+            self (CpmBeeTokenizer): The instance of the CpmBeeTokenizer class.
+            save_directory (str): The directory where the vocabulary file will be saved.
+            filename_prefix (Optional[str]): An optional prefix to prepend to the filename. Default is None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the path to the saved vocabulary file.
+        
+        Raises:
+            IOError: If there is an issue with reading or writing the vocabulary file.
+            ValueError: If the provided save_directory is not a valid directory.
+            KeyError: If any of the keys used for encoding tokens are not found in the encoder dictionary.
+        """
         if os.path.isdir(save_directory):
             vocab_file = os.path.join(
                 save_directory, (filename_prefix + "-" if filename_prefix else "") + VOCAB_FILES_NAMES["vocab_file"]
@@ -761,7 +993,6 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
                 Tokenized input ids of the second sequence. Can be obtained from a string by chaining the `tokenize`
                 and `convert_tokens_to_ids` methods.
         """
-
         # Backward compatibility for 'truncation_strategy', 'pad_to_max_length'
         padding_strategy, truncation_strategy, max_length, kwargs = self._get_padding_truncation_strategies(
             padding=padding,
@@ -871,6 +1102,20 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
         data_list: List[Dict],
         max_length: int = 2048
     ):
+        """
+        Prepares the input data for fine-tuning.
+        
+        Args:
+            self (CpmBeeTokenizer): The instance of the CpmBeeTokenizer class.
+            data_list (List[Dict]): A list of dictionaries containing the input data.
+            max_length (int, optional): The maximum length of the input data. Defaults to 2048.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         _inputs: List[NDArray[np.int32]] = []
         _inputs_sub: List[NDArray[np.int32]] = []
         _context: List[NDArray[np.int8]] = []

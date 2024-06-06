@@ -104,7 +104,6 @@ class BartConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "bart"
     keys_to_ignore_at_inference = ["past_key_values"]
     attribute_map = {"num_attention_heads": "encoder_attention_heads", "hidden_size": "d_model"}
@@ -139,6 +138,43 @@ class BartConfig(PretrainedConfig):
         forced_eos_token_id=2,
         **kwargs,
     ):
+        """
+        Initializes a new instance of BartConfig.
+        
+        Args:
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 50265.
+            max_position_embeddings (int, optional): The maximum position index. Defaults to 1024.
+            encoder_layers (int, optional): The number of encoder layers. Defaults to 12.
+            encoder_ffn_dim (int, optional): The dimension of the encoder's feedforward network. Defaults to 4096.
+            encoder_attention_heads (int, optional): The number of encoder attention heads. Defaults to 16.
+            decoder_layers (int, optional): The number of decoder layers. Defaults to 12.
+            decoder_ffn_dim (int, optional): The dimension of the decoder's feedforward network. Defaults to 4096.
+            decoder_attention_heads (int, optional): The number of decoder attention heads. Defaults to 16.
+            encoder_layerdrop (float, optional): The probability of dropping an encoder layer. Defaults to 0.0.
+            decoder_layerdrop (float, optional): The probability of dropping a decoder layer. Defaults to 0.0.
+            activation_function (str, optional): The activation function. Defaults to 'gelu'.
+            d_model (int, optional): The model dimension. Defaults to 1024.
+            dropout (float, optional): The dropout probability. Defaults to 0.1.
+            attention_dropout (float, optional): The attention dropout probability. Defaults to 0.0.
+            activation_dropout (float, optional): The activation dropout probability. Defaults to 0.0.
+            init_std (float, optional): The standard deviation for weight initialization. Defaults to 0.02.
+            classifier_dropout (float, optional): The classifier dropout probability. Defaults to 0.0.
+            scale_embedding (bool, optional): Whether to scale embeddings. Defaults to False.
+            use_cache (bool, optional): Whether to use cache. Defaults to True.
+            num_labels (int, optional): The number of labels. Defaults to 3.
+            pad_token_id (int, optional): The id of the padding token. Defaults to 1.
+            bos_token_id (int, optional): The id of the beginning-of-sequence token. Defaults to 0.
+            eos_token_id (int, optional): The id of the end-of-sequence token. Defaults to 2.
+            is_encoder_decoder (bool, optional): Whether the model is an encoder-decoder. Defaults to True.
+            decoder_start_token_id (int, optional): The id of the decoder start token. Defaults to 2.
+            forced_eos_token_id (int, optional): The id of the forced end-of-sequence token. Defaults to 2.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            Warning: If the config does not include forced_bos_token_id in future versions.
+        """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
         self.d_model = d_model

@@ -114,6 +114,19 @@ class Accuracy(Metric):
 
     """
     def __init__(self, name='Accuracy'):
+        r"""
+        Initializes an instance of the 'Accuracy' class.
+        
+        Args:
+            self: The instance of the 'Accuracy' class.
+            name (str): The name of the accuracy metric. Default is 'Accuracy'.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         super().__init__()
         self._name = name
         self._correct_num = 0

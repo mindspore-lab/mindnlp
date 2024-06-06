@@ -61,7 +61,6 @@ class _ConvImpl(nn.Cell):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def construct(self,
                   conv_fn: Callable,
                   x: Tensor,
@@ -72,8 +71,6 @@ class _ConvImpl(nn.Cell):
                   dilation: Tuple[int, ...],
                   group: int) -> Tuple[Tensor, Tensor]:
         """pass"""
-
-
 class _BaseConvImpl(_ConvImpl):
     r"""
     The base implementor part of the convolution layer for all the hypercomplex numbers of the second order.
@@ -105,11 +102,25 @@ class _BaseConvImpl(_ConvImpl):
     Supported Platforms:
         ``Ascend`` ``GPU`` ``CPU``
     """
-
     def __init__(self,
                  weight_init: Union[Tensor, str, Initializer, numbers.Number],
                  weight_shape: tuple,
                  **factory_kwargs) -> None:
+        """
+        Initializes a _BaseConvImpl instance with the specified weight initialization and shape.
+        
+        Args:
+            self: The _BaseConvImpl instance.
+            weight_init (Union[Tensor, str, Initializer, numbers.Number]): The weight initialization value or object.
+                If a Tensor is provided, the weight_init will be split into weight_init_x and weight_init_y using the get_x_and_y function.
+            weight_shape (tuple): The shape of the weight.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         super().__init__(weight_init, weight_shape, **factory_kwargs)
 
         if isinstance(weight_init, Tensor):

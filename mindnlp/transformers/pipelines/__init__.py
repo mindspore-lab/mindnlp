@@ -53,6 +53,7 @@ from .question_answering import QuestionAnsweringPipeline
 from .automatic_speech_recognition import AutomaticSpeechRecognitionPipeline
 from .zero_shot_classification import ZeroShotClassificationArgumentHandler, ZeroShotClassificationPipeline
 from .document_question_answering import DocumentQuestionAnsweringPipeline
+from .fill_mask import FillMaskPipeline
 
 from ..models.auto.modeling_auto import (
     # AutoModel,
@@ -60,7 +61,7 @@ from ..models.auto.modeling_auto import (
     AutoModelForCausalLM,
     AutoModelForCTC,
     AutoModelForDocumentQuestionAnswering,
-    # AutoModelForMaskedLM,
+    AutoModelForMaskedLM,
     # AutoModelForMaskGeneration,
     # AutoModelForObjectDetection,
     AutoModelForQuestionAnswering,
@@ -162,7 +163,16 @@ SUPPORTED_TASKS = {
         },
         "type": "multimodal",
     },
-
+    "fill-mask": {
+        "impl": FillMaskPipeline,
+        "ms": (AutoModelForMaskedLM,),
+        "default": {
+            "model": {
+                "ms": ("distilbert/distilroberta-base", "ec58a5b"),
+            }
+        },
+        "type": "text",
+    },
 }
 
 NO_FEATURE_EXTRACTOR_TASKS = set()
@@ -202,6 +212,25 @@ def model_info(
     securityStatus: Optional[bool] = None,
     files_metadata: bool = False,
 ):
+    """
+    This function retrieves information about a model from the specified repository.
+    
+    Args:
+        repo_id (str): The identifier of the repository containing the model.
+    
+        timeout (Optional[float], optional): The maximum time (in seconds) to wait for the server to respond. Defaults to None.
+        
+        securityStatus (Optional[bool], optional): If True, includes security status information in the response. Defaults to None.
+        
+        files_metadata (bool, optional): If True, includes metadata about the model's files in the response. Defaults to False.
+    
+    Returns:
+        None: This function does not return a value directly, but rather instantiates an ADDict object with the retrieved data.
+    
+    Raises:
+        (requests.exceptions.RequestException): If a request error occurs.
+        (json.JSONDecodeError): If the response is not valid JSON.
+    """
     path = f"{HF_ENDPOINT}/api/models/{repo_id}"
 
     params = {}
@@ -214,6 +243,21 @@ def model_info(
     return ADDict(**data)
 
 def get_task(model: str) -> str:
+    """
+    This function retrieves the task associated with the input model.
+    
+    Args:
+        model (str): The model for which the task needs to be retrieved.
+    
+    Returns:
+        str: The task associated with the input model.
+    
+    Raises:
+        RuntimeError: When attempting to infer task in offline mode.
+        RuntimeError: When instantiating a pipeline without a task set raises an error.
+        RuntimeError: When the model does not have a correct `pipeline_tag` set to infer the task automatically.
+        RuntimeError: When the model is not meant to be used with transformers library.
+    """
     if is_offline_mode():
         raise RuntimeError("You cannot infer task automatically within `pipeline` when using offline mode")
     try:
@@ -278,6 +322,26 @@ def check_task(task: str) -> Tuple[str, Dict, Any]:
 
 
 def clean_custom_task(task_info):
+    """
+    This function cleans a custom task by performing the following steps:
+    - Checks if the 'impl' key is present in the 'task_info' dictionary. If not, it raises a RuntimeError indicating that the model introduces a custom pipeline without specifying its implementation.
+    - Retrieves the 'ms' key from the 'task_info' dictionary and converts it to a tuple if it is a string.
+    - Retrieves the class names specified in the 'ms' key and fetches the corresponding classes from the 'transformers' module.
+    - Updates the 'task_info' dictionary with the tuple of classes obtained from the 'ms' key.
+    - Returns the updated 'task_info' dictionary and None.
+    
+    Args:
+        task_info (dict): A dictionary containing information about the custom task.
+            - The 'impl' key specifies the implementation of the custom pipeline.
+            - The 'ms' key specifies the class names to be fetched from the 'transformers' module.
+    
+    Returns:
+        tuple: A tuple containing the updated 'task_info' dictionary and None.
+    
+    Raises:
+        RuntimeError: If the 'impl' key is not present in the 'task_info' dictionary.
+    
+    """
     from mindnlp import transformers
 
     if "impl" not in task_info:
@@ -300,7 +364,6 @@ def pipeline(
     ms_dtype=None,
     model_kwargs: Dict[str, Any] = None,
     pipeline_class: Optional[Any] = None,
-    mirror: str = "huggingface",
     **kwargs,
 ) -> Pipeline:
     """
@@ -445,7 +508,7 @@ def pipeline(
     # Instantiate config if needed
     if isinstance(config, str):
         config = AutoConfig.from_pretrained(
-            config, _from_pipeline=task, mirror=mirror, **model_kwargs
+            config, _from_pipeline=task, **model_kwargs
         )
     elif config is None and isinstance(model, str):
         # Check for an adapter file in the model path if PEFT is available
@@ -458,7 +521,7 @@ def pipeline(
                 model = adapter_config["base_model_name_or_path"]
 
         config = AutoConfig.from_pretrained(
-            model, _from_pipeline=task, mirror=mirror, **model_kwargs
+            model, _from_pipeline=task, **model_kwargs
         )
         # hub_kwargs["_commit_hash"] = config._commit_hash
 
@@ -492,7 +555,7 @@ def pipeline(
         model, _ = get_default_model_and_revision(targeted_task, task_options)
 
         if config is None and isinstance(model, str):
-            config = AutoConfig.from_pretrained(model, _from_pipeline=task, mirror=mirror, **model_kwargs)
+            config = AutoConfig.from_pretrained(model, _from_pipeline=task, **model_kwargs)
 
     if ms_dtype is not None:
         if "ms_dtype" in model_kwargs:
@@ -511,7 +574,6 @@ def pipeline(
             model,
             model_classes=model_classes,
             config=config,
-            mirror=mirror,
             **model_kwargs,
         )
 
@@ -570,7 +632,7 @@ def pipeline(
                 tokenizer_kwargs.pop("ms_dtype", None)
 
             tokenizer = AutoTokenizer.from_pretrained(
-                tokenizer_identifier, use_fast=use_fast, _from_pipeline=task, mirror=mirror, **tokenizer_kwargs
+                tokenizer_identifier, use_fast=use_fast, _from_pipeline=task, **tokenizer_kwargs
             )
 
     if task == "translation" and model.config.task_specific_params:
@@ -599,6 +661,7 @@ def pipeline(
 
 __all__ = [
     'CsvPipelineDataFormat',
+    'FillMaskPipeline',
     'JsonPipelineDataFormat',
     'PipedPipelineDataFormat',
     'Pipeline',

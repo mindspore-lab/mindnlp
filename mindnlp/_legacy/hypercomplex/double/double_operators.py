@@ -225,7 +225,6 @@ class Conv2d(_UniformOperator):
         >>> print(out.shape)
         (2, 16, 128, 112, 112)
     """
-
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
@@ -240,6 +239,31 @@ class Conv2d(_UniformOperator):
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  data_format: str = 'NCHW',
                  has_diagonal_form: bool = False) -> None:
+        r"""
+        Initializes a Conv2d object.
+        
+        Args:
+            self (Conv2d): The current instance of the Conv2d class.
+            in_channels (int): The number of input channels.
+            out_channels (int): The number of output channels.
+            kernel_size (_size_2_t): The size of the convolutional kernel.
+            stride (_size_2_t, optional): The stride of the convolution. Defaults to 1.
+            pad_mode (str, optional): The padding mode. Defaults to 'same'.
+            padding (_size_2_t, optional): The amount of padding. Defaults to 0.
+            dilation (_size_2_t, optional): The dilation rate. Defaults to 1.
+            group (int, optional): The number of groups for grouped convolution. Defaults to 1.
+            has_bias (bool, optional): Whether the convolution has bias. Defaults to False.
+            weight_init (Union[Tensor, str, Initializer, numbers.Number], optional): The weight initialization. Defaults to 'normal'.
+            bias_init (Union[Tensor, str, Initializer, numbers.Number], optional): The bias initialization. Defaults to 'zeros'.
+            data_format (str, optional): The data format. Defaults to 'NCHW'.
+            has_diagonal_form (bool, optional): Whether the convolution has a diagonal form. Defaults to False.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         if has_diagonal_form:
             super(Conv2d, self).__init__(HConv2d,
                                          J1J2ConvImpl,
@@ -421,7 +445,6 @@ class Conv1d(_UniformOperator):
         >>> print(out.shape)
         (2, 8, 16, 2048)
     """
-
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
@@ -435,6 +458,30 @@ class Conv1d(_UniformOperator):
                  weight_init: Union[Tensor, str, Initializer, numbers.Number] = 'normal',
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  has_diagonal_form: bool = False) -> None:
+        r"""
+        Initializes an instance of the Conv1d class.
+        
+        Args:
+            self (object): The instance of the class itself.
+            in_channels (int): The number of input channels.
+            out_channels (int): The number of output channels.
+            kernel_size (_size_1_t): The size of the convolutional kernel.
+            stride (_size_1_t, optional): The stride of the convolution. Defaults to 1.
+            pad_mode (str, optional): The padding mode. Defaults to 'same'.
+            padding (_size_1_t, optional): The amount of padding. Defaults to 0.
+            dilation (_size_1_t, optional): The dilation rate. Defaults to 1.
+            group (int, optional): The number of groups to split the input into. Defaults to 1.
+            has_bias (bool, optional): Specifies if the layer has bias. Defaults to False.
+            weight_init (Union[Tensor, str, Initializer, numbers.Number], optional): The weight initialization method. Defaults to 'normal'.
+            bias_init (Union[Tensor, str, Initializer, numbers.Number], optional): The bias initialization method. Defaults to 'zeros'.
+            has_diagonal_form (bool, optional): Specifies if the convolutional layer has a diagonal form. Defaults to False.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         if has_diagonal_form:
             super(Conv1d, self).__init__(HConv1d,
                                          J1J2ConvImpl,
@@ -654,7 +701,6 @@ class Conv3d(_UniformOperator):
         >>> print(out.shape)
         (2, 64, 128, 32, 32, 32)
     """
-
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
@@ -669,6 +715,31 @@ class Conv3d(_UniformOperator):
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  data_format: str = 'NCDHW',
                  has_diagonal_form: bool = False) -> None:
+        """
+        Initializes a 3D convolution layer.
+        
+        Args:
+            self: The instance of the class.
+            in_channels (int): Number of channels in the input image.
+            out_channels (int): Number of channels produced by the convolution.
+            kernel_size (_size_3_t): Size of the convolution kernel.
+            stride (_size_3_t, optional): Stride of the convolution. Defaults to 1.
+            pad_mode (str, optional): Padding mode. Defaults to 'same'.
+            padding (_size_3_t, optional): Padding size. Defaults to 0.
+            dilation (_size_3_t, optional): Dilation rate. Defaults to 1.
+            group (int, optional): Number of blocked connections from input channels to output channels. Defaults to 1.
+            has_bias (bool, optional): Indicates whether the layer uses a bias vector. Defaults to False.
+            weight_init (Union[Tensor, str, Initializer, numbers.Number], optional): Method to initialize the weight. Defaults to 'normal'.
+            bias_init (Union[Tensor, str, Initializer, numbers.Number], optional): Method to initialize the bias. Defaults to 'zeros'.
+            data_format (str, optional): Format of input data. Defaults to 'NCDHW'.
+            has_diagonal_form (bool, optional): Indicates whether the convolution has a diagonal form. Defaults to False.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         if has_diagonal_form:
             super(Conv3d, self).__init__(HConv3d,
                                          J1J2ConvImpl,
@@ -808,7 +879,6 @@ class BatchNorm1d(_UniformOperator):
         >>> print(y.shape)
         (2, 8, 64, 32)
     """
-
     def __init__(self,
                  num_features: int,
                  eps: float = 1e-5,
@@ -820,6 +890,29 @@ class BatchNorm1d(_UniformOperator):
                  moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones',
                  use_batch_statistics: bool = True,
                  has_diagonal_form: bool = False) -> None:
+        r"""
+        Initialize a BatchNorm1d layer.
+        
+        Args:
+        - num_features (int): Number of features in the input tensor.
+        - eps (float, optional): Small value added to the denominator for numerical stability. Default is 1e-05.
+        - momentum (float, optional): Momentum factor. Default is 0.9.
+        - affine (bool, optional): If True, learnable parameters gamma and beta are applied. Default is True.
+        - gamma_init (Union[Tensor, str, Initializer, numbers.Number]): Initialization for the gamma parameter. Default is 'ones'.
+        - beta_init (Union[Tensor, str, Initializer, numbers.Number]): Initialization for the beta parameter. Default is 'zeros'.
+        - moving_mean_init (Union[Tensor, str, Initializer, numbers.Number]): Initialization for the moving mean. Default is 'zeros'.
+        - moving_var_init (Union[Tensor, str, Initializer, numbers.Number]): Initialization for the moving variance. Default is 'ones'.
+        - use_batch_statistics (bool, optional): If True, batch statistics are used during training. Default is True.
+        - has_diagonal_form (bool, optional): If True, use diagonal form for BatchNorm calculation. Default is False.
+        
+        Returns:
+        None
+        
+        Raises:
+        - ValueError: If num_features is not an integer or if any of the initialization parameters are invalid.
+        - TypeError: If any of the parameters are of incorrect type.
+        - RuntimeError: If an error occurs during initialization of the BatchNorm1d layer.
+        """
         if has_diagonal_form:
             super(BatchNorm1d, self).__init__(HBatchNorm1d,
                                               J1J2BatchNormImpl,
@@ -956,7 +1049,6 @@ class BatchNorm2d(_UniformOperator):
         >>> print(y.shape)
         (2, 8, 64, 32, 32)
     """
-
     def __init__(self,
                  num_features: int,
                  eps: float = 1e-5,
@@ -969,6 +1061,60 @@ class BatchNorm2d(_UniformOperator):
                  use_batch_statistics: bool = True,
                  has_diagonal_form: bool = False,
                  data_format='NCHW') -> None:
+        r"""
+        Initializes a BatchNorm2d object.
+        
+        Args:
+            self: The instance of the class.
+            num_features (int): The number of input features.
+            eps (float, optional): A small value added to the denominator for numerical stability. Default is 1e-05.
+            momentum (float, optional): The value used for the running mean and variance computation. Default is 0.9.
+            affine (bool, optional): If True, the module has learnable affine parameters (gamma and beta). Default is True.
+            gamma_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value or method for the gamma parameter. Default is 'ones'.
+            beta_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value or method for the beta parameter. Default is 'zeros'.
+            moving_mean_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value or method for the moving mean buffer. Default is 'zeros'.
+            moving_var_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value or method for the moving variance buffer. Default is 'ones'.
+            use_batch_statistics (bool, optional): If True, the module uses batch statistics during training. Default is True.
+            has_diagonal_form (bool, optional): If True, the module has a diagonal form. Default is False.
+            data_format (str, optional): The format of the input data. Default is 'NCHW'.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
+        def __init__(self, num_features: int, eps: float = 1e-05, momentum: float = 0.9, affine: bool = True, gamma_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones', beta_init: Union[Tensor, str,
+Initializer, numbers.Number] = 'zeros', moving_mean_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros', moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones',
+use_batch_statistics: bool = True, has_diagonal_form: bool = False, data_format='NCHW') -> None:
+            """
+            Initializes a BatchNorm2d object.
+        
+            Args:
+                num_features (int): The number of input features.
+                eps (float, optional): A small value added to the denominator for numerical stability. Default is 1e-05.
+                momentum (float, optional): The value used for the running mean and variance computation. Default is 0.9.
+                affine (bool, optional): If True, the module has learnable affine parameters (gamma and beta). Default is True.
+                gamma_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value or method for the gamma parameter. Default is 'ones'.
+                beta_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value or method for the beta parameter. Default is 'zeros'.
+                moving_mean_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value or method for the moving mean buffer. Default is 'zeros'.
+                moving_var_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value or method for the moving variance buffer. Default is 'ones'.
+                use_batch_statistics (bool, optional): If True, the module uses batch statistics during training. Default is True.
+                has_diagonal_form (bool, optional): If True, the module has a diagonal form. Default is False.
+                data_format (str, optional): The format of the input data. Default is 'NCHW'.
+        
+            Returns:
+                None
+        
+            Raises:
+                None
+            """
+            if has_diagonal_form:
+                super(BatchNorm2d, self).__init__(HBatchNorm2d, J1J2BatchNormImpl, num_features=num_features, eps=eps, momentum=momentum, affine=affine, gamma_init=gamma_init, beta_init=beta_init,
+moving_mean_init=moving_mean_init, moving_var_init=moving_var_init, use_batch_statistics=use_batch_statistics, data_format=data_format)
+            else:
+                super(BatchNorm2d, self).__init__(HBatchNorm2d, BatchNormImpl, num_features=num_features, eps=eps, momentum=momentum, affine=affine, gamma_init=gamma_init, beta_init=beta_init,
+moving_mean_init=moving_mean_init, moving_var_init=moving_var_init, use_batch_statistics=use_batch_statistics, data_format=data_format)
         if has_diagonal_form:
             super(BatchNorm2d, self).__init__(HBatchNorm2d,
                                               J1J2BatchNormImpl,
@@ -1106,7 +1252,6 @@ class BatchNorm3d(_UniformOperator):
         >>> print(y.shape)
         (2, 8, 64, 32, 32, 32)
     """
-
     def __init__(self,
                  num_features: int,
                  eps: float = 1e-5,
@@ -1119,6 +1264,33 @@ class BatchNorm3d(_UniformOperator):
                  use_batch_statistics: bool = True,
                  has_diagonal_form: bool = False,
                  data_format='NCDHW') -> None:
+        r"""
+        Initializes an instance of the BatchNorm3d class.
+        
+        Args:
+            self: The object instance.
+            num_features (int): The number of input features.
+            eps (float, optional): A small value added to the denominator for numerical stability. Defaults to 1e-05.
+            momentum (float, optional): The value used for the running mean and variance computation. Defaults to 0.9.
+            affine (bool, optional): If True, learnable affine parameters are added. Defaults to True.
+            gamma_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initializer for the gamma parameter. 
+                Can be a Tensor, a string representing an initializer, or a number. Defaults to 'ones'.
+            beta_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initializer for the beta parameter. 
+                Can be a Tensor, a string representing an initializer, or a number. Defaults to 'zeros'.
+            moving_mean_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initializer for the moving mean. 
+                Can be a Tensor, a string representing an initializer, or a number. Defaults to 'zeros'.
+            moving_var_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initializer for the moving variance. 
+                Can be a Tensor, a string representing an initializer, or a number. Defaults to 'ones'.
+            use_batch_statistics (bool, optional): If True, use batch statistics during training. Defaults to True.
+            has_diagonal_form (bool, optional): If True, use diagonal form of BatchNorm. Defaults to False.
+            data_format (str, optional): The format of the input data. Defaults to 'NCDHW'.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
         if has_diagonal_form:
             super(BatchNorm3d, self).__init__(HBatchNorm3d,
                                               J1J2BatchNormImpl,
@@ -1235,7 +1407,6 @@ class Dense(_UniformOperator):
         >>> print(out.shape)
         (2, 34, 1, 7)
     """
-
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
@@ -1243,6 +1414,24 @@ class Dense(_UniformOperator):
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  has_bias: bool = True,
                  has_diagonal_form: bool = False) -> None:
+        r"""
+        Initializes a new instance of the Dense class.
+        
+        Args:
+            self: The object itself.
+            in_channels (int): The number of input channels.
+            out_channels (int): The number of output channels.
+            weight_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization method for the weight tensor. Defaults to 'normal'.
+            bias_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization method for the bias tensor. Defaults to 'zeros'.
+            has_bias (bool, optional): Indicates whether or not the layer has a bias term. Defaults to True.
+            has_diagonal_form (bool, optional): Indicates whether or not the layer has a diagonal form. Defaults to False.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         if has_diagonal_form:
             super(Dense, self).__init__(HDense,
                                         J1J2DenseImpl,
@@ -1319,8 +1508,20 @@ class ReLU(nn.Cell):
         [[0. 2. 0]
          [0. 0. 1.]]
     """
-
     def __init__(self, has_diagonal_form: bool = False) -> None:
+        r"""
+        Initializes an instance of the ReLU class.
+        
+        Args:
+            self: The instance of the ReLU class.
+            has_diagonal_form (bool): A boolean indicating whether the ReLU activation function should be in diagonal form. Defaults to False.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised within this method.
+        """
         super(ReLU, self).__init__()
         if has_diagonal_form:
             self.relu = J1J2ReLU()
@@ -1328,4 +1529,20 @@ class ReLU(nn.Cell):
             self.relu = nn.ReLU()
 
     def construct(self, u: Tensor) -> Tensor:
+        r"""
+        Constructs and applies the rectified linear unit (ReLU) function on the input tensor.
+        
+        Args:
+            self (ReLU): An instance of the ReLU class.
+            u (Tensor): The input tensor to be processed by the ReLU function. It must have a shape compatible with the ReLU operation.
+        
+        Returns:
+            Tensor: The tensor resulting from applying the ReLU function on the input tensor. The shape of the output tensor is the same as the input tensor.
+        
+        Raises:
+            None.
+        
+        Note:
+            The ReLU function computes the element-wise maximum between 0 and each element of the input tensor.
+        """
         return self.relu(u)

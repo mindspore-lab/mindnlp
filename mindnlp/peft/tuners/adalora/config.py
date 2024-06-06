@@ -40,7 +40,6 @@ class AdaLoraConfig(LoraConfig):
         total_step (`int`): The total training steps that should be specified before training.
         rank_pattern (`list`): The allocated rank for each weight matrix by RankAllocator.
     """
-
     target_r: int = field(default=8, metadata={"help": "Target Lora matrix dimension."})
     init_r: int = field(default=12, metadata={"help": "Initial Lora matrix dimension."})
     tinit: int = field(default=0, metadata={"help": "The steps of initial warmup."})
@@ -53,4 +52,16 @@ class AdaLoraConfig(LoraConfig):
     rank_pattern: Optional[dict] = field(default=None, metadata={"help": "The saved rank pattern."})
 
     def __post_init__(self):
+        r"""
+        Performs post-initialization actions for the AdaLoraConfig class.
+        
+        Args:
+            self (AdaLoraConfig): The instance of the AdaLoraConfig class.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         self.peft_type = PeftType.ADALORA

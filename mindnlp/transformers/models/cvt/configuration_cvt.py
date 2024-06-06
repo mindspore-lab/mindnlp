@@ -21,7 +21,6 @@ from ....utils import logging
 logger = logging.get_logger(__name__)
 
 
-
 class CvtConfig(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`CvtModel`]. It is used to instantiate a CvT model
@@ -92,7 +91,6 @@ class CvtConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "cvt"
 
     def __init__(
@@ -120,6 +118,40 @@ class CvtConfig(PretrainedConfig):
         layer_norm_eps=1e-12,
         **kwargs,
     ):
+        '''
+        This method initializes an instance of the CvtConfig class with the provided parameters.
+        
+        Args:
+            self: The instance of the class.
+            num_channels (int, optional): Number of input channels. Defaults to 3.
+            patch_sizes (List[int], optional): List of patch sizes for each layer. Defaults to [7, 3, 3].
+            patch_stride (List[int], optional): List of patch strides for each layer. Defaults to [4, 2, 2].
+            patch_padding (List[int], optional): List of patch paddings for each layer. Defaults to [2, 1, 1].
+            embed_dim (List[int], optional): List of embedding dimensions for each layer. Defaults to [64, 192, 384].
+            num_heads (List[int], optional): List of the number of attention heads for each layer. Defaults to [1, 3, 6].
+            depth (List[int], optional): List of the depths for each layer. Defaults to [1, 2, 10].
+            mlp_ratio (List[float], optional): List of the MLP ratio for each layer. Defaults to [4.0, 4.0, 4.0].
+            attention_drop_rate (List[float], optional): List of attention dropout rates for each layer. Defaults to [0.0, 0.0, 0.0].
+            drop_rate (List[float], optional): List of dropout rates for each layer. Defaults to [0.0, 0.0, 0.0].
+            drop_path_rate (List[float], optional): List of drop path rates for each layer. Defaults to [0.0, 0.0, 0.1].
+            qkv_bias (List[bool], optional): List of booleans indicating whether to include bias for query, key, and value projections for each layer. Defaults to [True, True, True].
+            cls_token (List[bool], optional): List of booleans indicating whether to include a class token for each layer. Defaults to [False, False, True].
+            qkv_projection_method (List[str], optional): List of methods for query, key, and value projections for each layer. Defaults to ['dw_bn', 'dw_bn', 'dw_bn'].
+            kernel_qkv (List[int], optional): List of kernel sizes for query, key, and value projections for each layer. Defaults to [3, 3, 3].
+            padding_kv (List[int], optional): List of paddings for key and value projections for each layer. Defaults to [1, 1, 1].
+            stride_kv (List[int], optional): List of strides for key and value projections for each layer. Defaults to [2, 2, 2].
+            padding_q (List[int], optional): List of paddings for query projection for each layer. Defaults to [1, 1, 1].
+            stride_q (List[int], optional): List of strides for query projection for each layer. Defaults to [1, 1, 1].
+            initializer_range (float, optional): The range of the initializer. Defaults to 0.02.
+            layer_norm_eps (float, optional): Epsilon value for layer normalization. Defaults to 1e-12.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        '''
         super().__init__(**kwargs)
         self.num_channels = num_channels
         self.patch_sizes = patch_sizes
