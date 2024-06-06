@@ -23,7 +23,10 @@ from ...configuration_utils import PretrainedConfig
 
 
 logger = logging.get_logger(__name__)
-
+__all__=[
+    "GitConfig",
+    "GitVisionConfig"
+]
 
 class GitVisionConfig(PretrainedConfig):
     r"""
@@ -237,7 +240,3 @@ class GitConfig(PretrainedConfig):
 
         self.bos_token_id = bos_token_id
         self.eos_token_id = eos_token_id
-_all_=[
-    "GitConfig",
-    "GitVisionConfig"
-]
