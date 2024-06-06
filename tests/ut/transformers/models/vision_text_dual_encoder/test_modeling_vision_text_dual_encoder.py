@@ -314,7 +314,7 @@ class VisionTextDualEncoderIntegrationTest(unittest.TestCase):
     @slow
     def test_inference(self):
         model = VisionTextDualEncoderModel.from_pretrained("clip-italian/clip-italian", logit_scale_init_value=1.0, ignore_mismatched_sizes=True)
-        processor = VisionTextDualEncoderProcessor.from_pretrained("clip-italian/clip-italian")
+        processor = VisionTextDualEncoderProcessor.from_pretrained("clip-italian/clip-italian", ignore_mismatched_sizes=True)
 
         image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
         inputs = processor(
