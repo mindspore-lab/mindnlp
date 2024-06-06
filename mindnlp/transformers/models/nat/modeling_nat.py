@@ -324,7 +324,7 @@ class NeighborhoodAttention(nn.Cell):
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
-        attention_probs = self.dropout(attention_probs)
+        attention_probs = self.dropout(attention_probs, axis=-1)
 
         context_layer = natten2dav(attention_probs, value_layer, self.kernel_size, 1)
         context_layer = context_layer.permute(0, 2, 3, 1, 4).contiguous()
