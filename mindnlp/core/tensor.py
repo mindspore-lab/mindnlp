@@ -14,12 +14,13 @@
 # ============================================================================
 """mindnlp tensor"""
 from mindspore import Tensor as MSTensor
+from mindspore.common._stub_tensor import StubTensor
 from mindspore._c_expression import TensorNode # pylint: disable=no-name-in-module
 
-class Tensor:
+class Tensor(StubTensor):
     tensor = None
     stub = None
-    def __init__(self, input, dtype=None):
+    def __init__(self, input, dtype=None): # pylint: disable=super-init-not-called
         if isinstance(input, TensorNode):
             self.stub = input
         elif isinstance(input, Tensor):
