@@ -1560,11 +1560,13 @@ class Wav2Vec2ConformerForPreTraining(Wav2Vec2ConformerPreTrainedModel):
             neg_is_pos = (quantized_features == negative_quantized_features).all(-1)
 
             if neg_is_pos.any():
-                logits[1:][neg_is_pos] = float("-inf")
+                # NOTE: avoid loss NaN
+                # float("-inf") => finfo(logits.dtype, 'min') := -3.40282e+38
+                logits[1:][neg_is_pos] = -3.40282e+35
 
             # 6. compute contrastive loss \mathbf{L}_m = cross_entropy(logs) =
             # -log(exp(sim(c_t, q_t)/\kappa) / \sum_{\sim{q}} exp(sim(c_t, \sim{q})/\kappa))
-            logits = logits.swapaxes(0, 2).reshape(-1, logits.shape[1])
+            logits = logits.swapaxes(0, 2).reshape(-1, logits.shape[0])
             target = ((1 - mask_time_indices.long()) * -100).swapaxes(0, 1).flatten()
 
             contrastive_loss = ops.cross_entropy(logits.float(), target, reduction="sum")
