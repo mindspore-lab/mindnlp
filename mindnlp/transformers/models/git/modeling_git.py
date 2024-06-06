@@ -25,13 +25,15 @@ from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import logging
 from mindnlp.utils import ModelOutput
+
+from mindnlp.utils import (
+    ModelOutput,
+    logging
+)
 from .configuration_git import GitConfig, GitVisionConfig
 from ...modeling_utils import PreTrainedModel
 from ...activations import ACT2FN
-from mindnlp.utils import (
-    ModelOutput,
-    logging,
-)
+
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -41,19 +43,7 @@ from ...modeling_outputs import (
 )
 
 from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
-from mindnlp.utils import (
-    ModelOutput,
-    logging
-)
 
-try:
-    from mindspore.hypercomplex.dual.dual_operators import Dense
-    from mindspore.hypercomplex.utils import to_2channel, get_x_and_y
-    from mindspore.hypercomplex.dual.dual_functions import matmul
-except:
-    from mindnlp._legacy.hypercomplex.dual import Dense
-    from mindnlp._legacy.hypercomplex.utils import to_2channel, get_x_and_y
-    from mindnlp._legacy.hypercomplex.dual.dual_functions import matmul
 
 
 
@@ -536,9 +526,6 @@ class GitPreTrainedModel(PreTrainedModel):
         elif isinstance(cell, nn.LayerNorm):
             cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
             cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-
-
-
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPVisionEmbeddings with CLIP->Git

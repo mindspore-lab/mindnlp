@@ -12,7 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""
+This module defines the configuration class for GIT.
+"""
 import os
 from typing import Union
 
@@ -239,4 +241,3 @@ _all_=[
     "GitConfig",
     "GitVisionConfig"
 ]
-
