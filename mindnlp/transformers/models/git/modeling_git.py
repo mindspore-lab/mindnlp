@@ -40,9 +40,6 @@ from .configuration_git import GitConfig, GitVisionConfig
 
 logger = logging.get_logger(__name__)
 
-_CHECKPOINT_FOR_DOC = "microsoft/git-base"
-_CONFIG_FOR_DOC = "GitConfig"
-
 
 @dataclass
 # Copied from transformers.models.clip.modeling_clip.CLIPVisionModelOutput with CLIP->Git

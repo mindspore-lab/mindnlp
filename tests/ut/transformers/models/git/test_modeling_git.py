@@ -408,7 +408,7 @@ class GitModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
             if model_class in get_values(MODEL_FOR_CAUSAL_LM_MAPPING):
                 inputs_dict["labels"] = ops.zeros(
                     (self.model_tester.batch_size, self.model_tester.text_seq_length),
-                    dtype=mindspore.long,
+                    dtype=mindspore.int64,
                 )
         return inputs_dict
 
