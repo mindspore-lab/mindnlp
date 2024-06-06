@@ -15,6 +15,7 @@
 """PyTorch Neighborhood Attention Transformer model."""
 
 import math
+import natten
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
@@ -26,6 +27,7 @@ from mindnlp.utils import (
     ModelOutput,
     logging,
 )
+from ...modeling_utils import PreTrainedModel
 from mindnlp.utils.import_utils import *
 from ...backbone_utils import BackboneMixin
 from .configuration_nat import NatConfig
