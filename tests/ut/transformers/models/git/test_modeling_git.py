@@ -216,7 +216,7 @@ class GitModelTester:
         num_channels=3,
         image_size=32,
         patch_size=16,
-        batch_size=13,
+        batch_size=10,
         text_seq_length=7,
         is_training=True,
         use_input_mask=True,
@@ -267,17 +267,9 @@ class GitModelTester:
         self.seq_length = self.text_seq_length + int((self.image_size / self.patch_size) ** 2) + 1
 
     def prepare_config_and_inputs(self):
-        input_ids = ids_tensor([self.batch_size, self.text_seq_length], self.vocab_size)
-
-        input_mask = None
-        if self.use_input_mask:
-            input_mask = random_attention_mask([self.batch_size, self.text_seq_length])
-
-        pixel_values = floats_tensor([self.batch_size, self.num_channels, self.image_size, self.image_size])
-
-        config = self.get_config()
-
-        return config, input_ids, input_mask, pixel_values
+        image_attention_mask = mindspore.ones((self.batch_size, self.seq_length - self.text_seq_length), dtype=mindspore.int64)
+        attention_mask = mindspore.cat([input_mask, image_attention_mask], axis=1)
+        return config, input_ids, attention_mask, pixel_values
 
     def get_config(self):
         """
@@ -478,7 +470,7 @@ class GitModelIntegrationTest(unittest.TestCase):
 
 
         image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
-        inputs = processor(images=image, text="hello world", return_tensors="pt")
+        inputs = processor(images=image, text="hello world", return_tensors="ms")
 
         with mindspore.no_grad():
             outputs = model(**inputs)
@@ -495,7 +487,7 @@ class GitModelIntegrationTest(unittest.TestCase):
         model = GitForCausalLM.from_pretrained("microsoft/git-base")
 
         image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
-        inputs = processor(images=image, return_tensors="pt")
+        inputs = processor(images=image, return_tensors="ms")
         pixel_values = inputs.pixel_values
 
         outputs = model.generate(
@@ -517,7 +509,7 @@ class GitModelIntegrationTest(unittest.TestCase):
         # prepare image
         file_path = hf_hub_download(repo_id="nielsr/textvqa-sample", filename="bus.png", repo_type="dataset")
         image = Image.open(file_path).convert("RGB")
-        inputs = processor(images=image, return_tensors="pt")
+        inputs = processor(images=image, return_tensors="ms")
         pixel_values = inputs.pixel_values
 
         # prepare question
@@ -540,7 +532,7 @@ class GitModelIntegrationTest(unittest.TestCase):
 
         # create batch of size 2
         image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
-        inputs = processor(images=[image, image], return_tensors="pt")
+        inputs = processor(images=[image, image], return_tensors="ms")
         pixel_values = inputs.pixel_values
 
         # we have to prepare `input_ids` with the same batch size as `pixel_values`

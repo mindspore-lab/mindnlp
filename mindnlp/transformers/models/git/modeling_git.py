@@ -898,16 +898,6 @@ class GitVisionModel(GitPreTrainedModel):
     config_class = GitVisionConfig
     main_input_name = "pixel_values"
 
-    # Copied from transformers.models.clip.modeling_clip.CLIPVisionModel.__init__ with CLIP->Git
-    def __init__(self, config: GitVisionConfig):
-        super().__init__(config)
-        self.vision_model = GitVisionTransformer(config)
-        # Initialize weights and apply final processing
-        self.post_init()
-
-    def get_input_embeddings(self) -> nn.Cell:
-        return self.vision_model.embeddings.patch_embedding
-
     def construct(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
@@ -926,7 +916,7 @@ class GitVisionModel(GitPreTrainedModel):
         >>> model = GitVisionModel.from_pretrained("microsoft/git-base")
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
-        >>> inputs = processor(images=image, return_tensors="pt")
+        >>> inputs = processor(images=image, return_tensors="ms")
         >>> outputs = model(**inputs)
         >>> last_hidden_state = outputs.last_hidden_state
         ```"""
@@ -938,6 +928,16 @@ class GitVisionModel(GitPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
+    
+    def __init__(self, config: GitVisionConfig):
+        super().__init__(config)
+        self.vision_model = GitVisionTransformer(config)
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def get_input_embeddings(self) -> nn.Cell:
+        return self.vision_model.embeddings.patch_embedding
+
 
 
 class GitProjection(nn.Cell):
