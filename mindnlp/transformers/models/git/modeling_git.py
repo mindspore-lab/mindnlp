@@ -113,7 +113,7 @@ class GitEmbeddings(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
-        self.position_ids=ops.arrange(config.max_position_embeddings).expand((1,-1))
+        self.position_ids = ops.arange(config.max_position_embeddings).expand_dims(0)
 
 
     def construct(
@@ -616,10 +616,24 @@ class GitVisionAttention(nn.Cell):
         self.scale = self.head_dim**-0.5
         self.dropout = config.attention_dropout
 
-        self.k_proj = nn.Dense(self.embed_dim, self.embed_dim, weight_init=initializer(Normal(0.02), [self.embed_dim, self.embed_dim]))
-        self.v_proj = nn.Dense(self.embed_dim, self.embed_dim, weight_init=initializer(Normal(0.02), [self.embed_dim, self.embed_dim]))
-        self.q_proj = nn.Dense(self.embed_dim, self.embed_dim, weight_init=initializer(Normal(0.02), [self.embed_dim, self.embed_dim]))
-        self.out_proj = nn.Dense(self.embed_dim, self.embed_dim, weight_init=initializer(Normal(0.02), [self.embed_dim, self.embed_dim]))
+        # 初始化 Dense 层
+        self.k_proj = nn.Dense(self.embed_dim, self.embed_dim)
+        self.v_proj = nn.Dense(self.embed_dim, self.embed_dim)
+        self.q_proj = nn.Dense(self.embed_dim, self.embed_dim)
+        self.out_proj = nn.Dense(self.embed_dim, self.embed_dim)
+
+        # 初始化参数并设置初始化方式
+        self.k_proj.init_parameters_data()
+        self.k_proj.weight.set_data(initializer(Normal(0.02), self.k_proj.weight.shape))
+
+        self.v_proj.init_parameters_data()
+        self.v_proj.weight.set_data(initializer(Normal(0.02), self.v_proj.weight.shape))
+
+        self.q_proj.init_parameters_data()
+        self.q_proj.weight.set_data(initializer(Normal(0.02), self.q_proj.weight.shape))
+
+        self.out_proj.init_parameters_data()
+        self.out_proj.weight.set_data(initializer(Normal(0.02), self.out_proj.weight.shape))
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
