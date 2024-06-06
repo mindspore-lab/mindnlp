@@ -196,7 +196,8 @@ class VisionTextDualEncoderMixin:
 class ViTBertModelTest(VisionTextDualEncoderMixin, unittest.TestCase):
     def get_pretrained_model_and_inputs(self):
         model = VisionTextDualEncoderModel.from_vision_text_pretrained(
-            "hf-internal-testing/tiny-random-vit", "hf-internal-testing/tiny-bert"
+            vision_model_name_or_path="hf-internal-testing/tiny-random-vit",
+            text_model_name_or_path="hf-internal-testing/tiny-bert"
         )
         batch_size = 13
         pixel_values = floats_tensor(
@@ -253,7 +254,8 @@ class ViTBertModelTest(VisionTextDualEncoderMixin, unittest.TestCase):
 class CLIPVisionBertModelTest(VisionTextDualEncoderMixin, unittest.TestCase):
     def get_pretrained_model_and_inputs(self):
         model = VisionTextDualEncoderModel.from_vision_text_pretrained(
-            "hf-internal-testing/tiny-random-clip", "hf-internal-testing/tiny-bert"
+            vision_model_name_or_path="hf-internal-testing/tiny-random-clip",
+            text_model_name_or_path="hf-internal-testing/tiny-bert"
         )
         batch_size = 13
         pixel_values = floats_tensor(
@@ -311,7 +313,7 @@ class CLIPVisionBertModelTest(VisionTextDualEncoderMixin, unittest.TestCase):
 class VisionTextDualEncoderIntegrationTest(unittest.TestCase):
     @slow
     def test_inference(self):
-        model = VisionTextDualEncoderModel.from_pretrained("clip-italian/clip-italian", logit_scale_init_value=1.0)
+        model = VisionTextDualEncoderModel.from_pretrained("clip-italian/clip-italian", logit_scale_init_value=1.0, ignore_mismatched_sizes=True)
         processor = VisionTextDualEncoderProcessor.from_pretrained("clip-italian/clip-italian")
 
         image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
