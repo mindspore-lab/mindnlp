@@ -20,12 +20,11 @@ from typing import Optional, Tuple, Union
 import numpy as np
 import mindspore
 from mindspore import ops
-import mindspore.nn as nn
+from mindspore import nn
 import mindspore.common.dtype as mstype
 from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
-from mindspore.ops import operations as P
-from mindspore.ops import functional as F
+from mindnlp.utils import logging
 
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
@@ -36,7 +35,6 @@ from ...modeling_outputs import (
     Seq2SeqModelOutput,
 )
 from ...modeling_utils import PreTrainedModel
-from mindnlp.utils import logging
 from .configuration_speech_to_text import Speech2TextConfig
 
 
@@ -91,12 +89,12 @@ class Conv1dSubsampler(nn.Cell):
 
     def construct(self, input_features):
         # hidden_states = input_features.transpose(1, 2) # -> B x (C x D) x T
-        hidden_states = input_features.transpose(0, 2, 1)
+        hidden_states = input_features.swapaxes(1, 2)
         for conv in self.conv_layers:
             hidden_states = conv(hidden_states)
             hidden_states = mindspore.ops.glu(hidden_states, axis=1)
         # hidden_states = hidden_states.transpose(1, 2) # -> T x B x (C x D)
-        hidden_states = hidden_states.transpose(0, 2, 1)
+        hidden_states = hidden_states.swapaxes(1,2)
         return hidden_states
 
 
@@ -108,11 +106,12 @@ class Speech2TextSinusoidalPositionalEmbedding(nn.Cell):
         self.offset = 2
         self.embedding_dim = embedding_dim
         self.padding_idx = padding_idx
+        self.weights = None
         self.make_weights(num_positions + self.offset, embedding_dim, padding_idx)
 
     def make_weights(self, num_embeddings: int, embedding_dim: int, padding_idx: Optional[int] = None):
         emb_weights = self.get_embedding(num_embeddings, embedding_dim, padding_idx)
-        if hasattr(self, "weights"):
+        if self.weights is not None:
             # in forward put the weights on the correct dtype and device of the param
             emb_weights = emb_weights.to(dtype=self.weights.dtype)
 
@@ -204,7 +203,7 @@ class Speech2TextAttention(nn.Cell):
         self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(0, 2, 1, 3)
+        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
     def construct(
         self,
@@ -268,7 +267,7 @@ class Speech2TextAttention(nn.Cell):
         value_states = value_states.reshape(*proj_shape)
 
         src_len = key_states.shape[1]
-        attn_weights = ops.bmm(query_states, key_states.transpose(0, 2, 1))
+        attn_weights = ops.bmm(query_states, key_states.swapaxes(1, 2))
 
         if attn_weights.shape != (bsz * self.num_heads, tgt_len, src_len):
             raise ValueError(
@@ -316,7 +315,7 @@ class Speech2TextAttention(nn.Cell):
             )
 
         attn_output = attn_output.view(bsz, self.num_heads, tgt_len, self.head_dim)
-        attn_output = attn_output.transpose(0, 2, 1, 3)
+        attn_output = attn_output.swapaxes(1, 2)
 
         # Use the `embed_dim` from the config (stored in the class) rather than `hidden_state` because `attn_output` can be
         # partitioned across GPUs when using tensor-parallelism.
@@ -1359,4 +1358,13 @@ class Speech2TextForConditionalGeneration(Speech2TextPreTrainedModel):
             )
         return reordered_past
 
-__all__=["Speech2TextPreTrainedModel","Speech2TextEncoder","Speech2TextDecoder","Speech2TextModel","Speech2TextForConditionalGeneration","Speech2TextDecoderLayer","Conv1dSubsampler","Speech2TextSinusoidalPositionalEmbedding","Speech2TextAttention","Speech2TextEncoderLayer"]
+__all__=["Speech2TextPreTrainedModel",
+         "Speech2TextEncoder",
+         "Speech2TextDecoder",
+         "Speech2TextModel",
+         "Speech2TextForConditionalGeneration",
+         "Speech2TextDecoderLayer",
+         "Conv1dSubsampler",
+         "Speech2TextSinusoidalPositionalEmbedding",
+         "Speech2TextAttention",
+         "Speech2TextEncoderLayer"]

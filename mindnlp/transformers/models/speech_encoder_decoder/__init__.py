@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""SpeechEncoderDecoder model init"""
 from typing import TYPE_CHECKING
 
 from . import configuration_speech_encoder_decoder, modeling_speech_encoder_decoder
@@ -22,5 +22,3 @@ __all__.extend(configuration_speech_encoder_decoder.__all__)
 __all__.extend(modeling_speech_encoder_decoder.__all__)
 _import_structure = {"configuration_speech_encoder_decoder": ["SpeechEncoderDecoderConfig"]}
 _import_structure["modeling_speech_encoder_decoder"] = ["SpeechEncoderDecoderModel"]
-
-

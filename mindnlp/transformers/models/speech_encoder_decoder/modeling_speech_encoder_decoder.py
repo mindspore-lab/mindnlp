@@ -19,21 +19,15 @@ from typing import Optional, Tuple, Union
 # import torch
 # from torch import nn
 # from torch.nn import CrossEntropyLoss
-import numpy as np
 import mindspore
 from mindspore import ops
-import mindspore.nn as nn
-import mindspore.common.dtype as mstype
-from mindspore import Tensor
-from mindspore.common.initializer import initializer, Normal
-from mindspore.ops import operations as P
-from mindspore.ops import functional as F
+from mindspore import nn
+from mindnlp.utils import logging
 
 from ...configuration_utils import PretrainedConfig
 from ...modeling_outputs import BaseModelOutput, Seq2SeqLMOutput
 from ...modeling_utils import PreTrainedModel
 # from ...utils import add_start_docstrings, add_start_docstrings_to_model_forward, logging, replace_return_docstrings
-from mindnlp.utils import logging
 from ..auto.configuration_auto import AutoConfig
 from ..auto.modeling_auto import AutoModel, AutoModelForCausalLM
 from .configuration_speech_encoder_decoder import SpeechEncoderDecoderConfig
@@ -292,9 +286,9 @@ class SpeechEncoderDecoderModel(PreTrainedModel):
     @classmethod
     def from_encoder_decoder_pretrained(
         cls,
+        *model_args,
         encoder_pretrained_model_name_or_path: str = None,
         decoder_pretrained_model_name_or_path: str = None,
-        *model_args,
         **kwargs,
     ) -> PreTrainedModel:
         r"""

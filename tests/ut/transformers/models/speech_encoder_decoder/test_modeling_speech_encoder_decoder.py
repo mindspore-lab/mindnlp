@@ -423,14 +423,14 @@ class EncoderDecoderMixin:
         encoder_model, decoder_model = self.get_encoder_decoder_model(config, decoder_config)
         enc_dec_model = SpeechEncoderDecoderModel(encoder=encoder_model, decoder=decoder_model)
         enc_dec_model.set_train(False)
-        # with torch.no_grad():
-        outputs = enc_dec_model(
-            input_values=input_values,
-            input_features=input_features,
-            decoder_input_ids=decoder_input_ids,
-            attention_mask=attention_mask,
-            decoder_attention_mask=decoder_attention_mask,
-        )
+        with mindspore._no_grad():
+            outputs = enc_dec_model(
+                input_values=input_values,
+                input_features=input_features,
+                decoder_input_ids=decoder_input_ids,
+                attention_mask=attention_mask,
+                decoder_attention_mask=decoder_attention_mask,
+            )
         out_2 = outputs[0].numpy()
         out_2[np.isnan(out_2)] = 0
 
@@ -464,14 +464,14 @@ class EncoderDecoderMixin:
         encoder_model, decoder_model = self.get_encoder_decoder_model(config, decoder_config)
         enc_dec_model = SpeechEncoderDecoderModel(encoder=encoder_model, decoder=decoder_model)
         enc_dec_model.set_train(False)
-        # with torch.no_grad():
-        outputs = enc_dec_model(
-            input_values=input_values,
-            input_features=input_features,
-            decoder_input_ids=decoder_input_ids,
-            attention_mask=attention_mask,
-            decoder_attention_mask=decoder_attention_mask,
-        )
+        with mindspore._no_grad():
+            outputs = enc_dec_model(
+                input_values=input_values,
+                input_features=input_features,
+                decoder_input_ids=decoder_input_ids,
+                attention_mask=attention_mask,
+                decoder_attention_mask=decoder_attention_mask,
+            )
         out_2 = outputs[0].numpy()
         out_2[np.isnan(out_2)] = 0
 
@@ -629,16 +629,15 @@ class EncoderDecoderMixin:
         inputs = inputs_dict["input_features"] if "input_features" in inputs_dict else inputs_dict["input_values"]
 
         loss = model(inputs, **model_inputs).loss
-        loss.backward()
 
     @slow
     def test_real_model_save_load_from_pretrained(self):
         model_2, inputs = self.get_pretrained_model_and_inputs()
 
-        # with torch.no_grad():
-        outputs = model_2(**inputs)
-        out_2 = outputs[0].numpy()
-        out_2[np.isnan(out_2)] = 0
+        with mindspore._no_grad():
+            outputs = model_2(**inputs)
+            out_2 = outputs[0].numpy()
+            out_2[np.isnan(out_2)] = 0
 
         with tempfile.TemporaryDirectory() as tmp_dirname:
             model_2.save_pretrained(tmp_dirname)
@@ -654,7 +653,7 @@ class EncoderDecoderMixin:
 class Wav2Vec2BertModelTest(EncoderDecoderMixin, unittest.TestCase):
     def get_pretrained_model_and_inputs(self):
         model = SpeechEncoderDecoderModel.from_encoder_decoder_pretrained(
-            "facebook/wav2vec2-base-960h", "google-bert/bert-base-cased"
+            encoder_pretrained_model_name_or_path="facebook/wav2vec2-base-960h", decoder_pretrained_model_name_or_path="google-bert/bert-base-cased"
         )
         batch_size = 13
         input_values = floats_tensor([batch_size, 512], scale=1.0)
