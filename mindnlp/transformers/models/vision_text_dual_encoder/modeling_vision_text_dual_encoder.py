@@ -298,9 +298,9 @@ class VisionTextDualEncoderModel(PreTrainedModel):
     def from_vision_text_pretrained(
         cls,
         *model_args,
-        **kwargs,
         vision_model_name_or_path: str = None,
         text_model_name_or_path: str = None,
+        **kwargs,
     ) -> PreTrainedModel:
         """
         Params:
