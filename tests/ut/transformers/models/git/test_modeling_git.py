@@ -15,8 +15,10 @@
 
 import inspect
 import unittest
+import numpy as np
 
 from huggingface_hub import hf_hub_download
+from mindspore import ops
 
 from mindnlp.transformers import GitConfig, GitProcessor, GitVisionConfig
 from mindnlp.transformers.models.auto import get_values
@@ -471,7 +473,7 @@ class GitModelIntegrationTest(unittest.TestCase):
         model = GitForCausalLM.from_pretrained("microsoft/git-base")
 
         image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
-        inputs = processor(images=image, text="hello world", return_tensors="pt").to(torch_device)
+        inputs = processor(images=image, text="hello world", return_tensors="ms")
 
         outputs = model(**inputs)
 
@@ -487,7 +489,7 @@ class GitModelIntegrationTest(unittest.TestCase):
         model = GitForCausalLM.from_pretrained("microsoft/git-base")
 
         image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
-        inputs = processor(images=image, return_tensors="pt")
+        inputs = processor(images=image, return_tensors="ms")
         pixel_values = inputs.pixel_values
 
         outputs = model.generate(
@@ -509,14 +511,14 @@ class GitModelIntegrationTest(unittest.TestCase):
         # prepare image
         file_path = hf_hub_download(repo_id="nielsr/textvqa-sample", filename="bus.png", repo_type="dataset")
         image = Image.open(file_path).convert("RGB")
-        inputs = processor(images=image, return_tensors="pt")
+        inputs = processor(images=image, return_tensors="ms")
         pixel_values = inputs.pixel_values
 
         # prepare question
         question = "what does the front of the bus say at the top?"
         input_ids = processor(text=question, add_special_tokens=False).input_ids
         input_ids = [processor.tokenizer.cls_token_id] + input_ids
-        input_ids = min.tensor(input_ids).unsqueeze(0)
+        input_ids = mindspore.tensor(input_ids).unsqueeze(0)
 
         generated_ids = model.generate(pixel_values=pixel_values, input_ids=input_ids, max_length=20)
         generated_caption = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
@@ -531,7 +533,7 @@ class GitModelIntegrationTest(unittest.TestCase):
 
         # create batch of size 2
         image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
-        inputs = processor(images=[image, image], return_tensors="pt")
+        inputs = processor(images=[image, image], return_tensors="ms")
         pixel_values = inputs.pixel_values
 
         # we have to prepare `input_ids` with the same batch size as `pixel_values`
