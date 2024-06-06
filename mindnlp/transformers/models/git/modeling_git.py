@@ -905,12 +905,9 @@ class GitVisionModelTest(GitModelTester):
 
     def test_forward_signature(self):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
-    
         for model_class in self.all_model_classes:
             model = model_class(config)
-            
             inputs = model.get_inputs()
-            
             self.assertEqual(len(inputs), 1)
             self.assertEqual(inputs[0].name, "pixel_values")
 
