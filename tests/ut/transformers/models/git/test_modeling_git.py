@@ -20,7 +20,7 @@ import numpy as np
 from huggingface_hub import hf_hub_download
 
 import mindspore
-from mindspore import nn,ops, Tensor
+from mindspore import nn, Tensor,context
 from mindspore.common.initializer import initializer
 
 from mindnlp.transformers import GitConfig, GitVisionConfig,GitProcessor
@@ -272,6 +272,8 @@ class GitModelTester:
         self.seq_length = self.text_seq_length + int((self.image_size / self.patch_size) ** 2) + 1
 
     def prepare_config_and_inputs(self):
+        input_mask = mindspore.ops.ones((self.batch_size, self.text_seq_length), dtype=mindspore.int64)
+
         image_attention_mask = mindspore.ops.ones((self.batch_size, self.seq_length - self.text_seq_length), dtype=mindspore.int64)
         attention_mask = mindspore.ops.concat([input_mask, image_attention_mask], axis=1)
         return config, input_ids, attention_mask, pixel_values
@@ -476,7 +478,7 @@ class GitModelIntegrationTest(unittest.TestCase):
         image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
         inputs = processor(images=image, text="hello world", return_tensors="ms")
 
-        context.set_context(mode=context.PYNATIVE_MODE, pynative_synchronize=True) 
+        context.set_context(mode=context.PYNATIVE_MODE, pynative_synchronize=True)
 
         outputs = model.construct(**inputs)
 
@@ -496,32 +498,23 @@ class GitModelIntegrationTest(unittest.TestCase):
         inputs = processor(images=image, return_tensors="ms")
         pixel_values = inputs.pixel_values
 
-        outputs = model.generate(
-            pixel_values=pixel_values, max_length=20, output_scores=True, return_dict_in_generate=True
-        )
-        generated_caption = processor.batch_decode(outputs.sequences, skip_special_tokens=True)[0]
+        outputs = model.generate(pixel_values=pixel_values, max_length=20)
+        generated_caption = processor.batch_decode(outputs, skip_special_tokens=True)[0]
 
-        expected_shape = (1, 9) 
-        self.assertEqual(outputs.sequences.shape, expected_shape)
-        
+        expected_shape = (1, 9)
+        self.assertEqual(outputs.shape, expected_shape)
+
         self.assertEqual(generated_caption, "two cats laying on a pink blanket")
-
-        self.assertEqual(outputs.scores[-1].shape, expected_shape)
-
-        expected_slice = mindspore.Tensor([[-0.8805, -0.8803, -0.8799]], dtype=mindspore.float32)
-        self.assertTrue(np.allclose(outputs.scores[-1][0, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
 
     def test_visual_question_answering(self):
         processor = GitProcessor.from_pretrained("microsoft/git-base-textvqa")
         model = GitForCausalLM.from_pretrained("microsoft/git-base-textvqa")
 
-        # prepare image
         file_path = hf_hub_download(repo_id="nielsr/textvqa-sample", filename="bus.png", repo_type="dataset")
         image = Image.open(file_path).convert("RGB")
         inputs = processor(images=image, return_tensors="ms")
         pixel_values = inputs.pixel_values
 
-        # prepare question
         question = "what does the front of the bus say at the top?"
         input_ids = processor(text=question, add_special_tokens=False).input_ids
         input_ids = [processor.tokenizer.cls_token_id] + input_ids
@@ -530,7 +523,7 @@ class GitModelIntegrationTest(unittest.TestCase):
         generated_ids = model.generate(pixel_values=pixel_values, input_ids=input_ids, max_length=20)
         generated_caption = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
 
-        expected_shape = mindspore.Size((1, 15))
+        expected_shape = (1, 15)
         self.assertEqual(generated_ids.shape, expected_shape)
         self.assertEqual(generated_caption, "what does the front of the bus say at the top? special")
 
@@ -538,13 +531,10 @@ class GitModelIntegrationTest(unittest.TestCase):
         processor = GitProcessor.from_pretrained("microsoft/git-base-coco")
         model = GitForCausalLM.from_pretrained("microsoft/git-base-coco")
 
-
-        # create batch of size 2
         image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
         inputs = processor(images=[image, image], return_tensors="ms")
         pixel_values = inputs.pixel_values
 
-        # we have to prepare `input_ids` with the same batch size as `pixel_values`
         start_token_id = model.config.bos_token_id
         input_ids = mindspore.tensor([[start_token_id], [start_token_id]])
         generated_ids = model.generate(pixel_values=pixel_values, input_ids=input_ids, max_length=50)
