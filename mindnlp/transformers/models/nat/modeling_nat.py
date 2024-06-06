@@ -232,7 +232,7 @@ class NatDownsampler(nn.Cell):
     def __init__(self, dim: int, norm_layer: nn.Cell = nn.LayerNorm) -> None:
         super().__init__()
         self.dim = dim
-        self.reduction = nn.Conv2d(dim, 2 * dim, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+        self.reduction = nn.Conv2d(dim, 2 * dim, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), has_bias=False)
         self.norm = norm_layer(2 * dim)
 
     def construct(self, input_feature: mindspore.Tensor) -> mindspore.Tensor:
@@ -367,7 +367,7 @@ class NeighborhoodAttentionModule(nn.Cell):
         self.self.query = prune_linear_layer(self.self.query, index)
         self.self.key = prune_linear_layer(self.self.key, index)
         self.self.value = prune_linear_layer(self.self.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
