@@ -107,6 +107,8 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("roberta", "RobertaConfig"),
         ("sam", "SamConfig"),
         ("segformer", "SegformerConfig"),
+        ("speech-encoder-decoder", "SpeechEncoderDecoderConfig"),
+        ("speech_to_text", "Speech2TextConfig"),
         ("stablelm", "StableLmConfig"),
         ("squeezebert", "SqueezeBertConfig"),
         ("starcoder2", "Starcoder2Config"),
