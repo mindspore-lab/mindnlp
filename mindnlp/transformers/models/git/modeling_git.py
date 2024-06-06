@@ -1120,7 +1120,7 @@ class GitModel(GitPreTrainedModel):
                     visual_features.append(visual_features_frame)
 
                 # finally, concatenate all features along sequence dimension
-                visual_features = ops.cat(visual_features, dim=1)
+                visual_features = ops.cat(visual_features, axis=1)
 
             else:
                 raise ValueError("pixel_values must be of rank 4 or 5")
