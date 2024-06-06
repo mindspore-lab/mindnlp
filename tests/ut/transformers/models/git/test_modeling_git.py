@@ -15,7 +15,7 @@
 
 import inspect
 import unittest
-from numpy import np
+import numpy as np
 
 import mindspore
 from mindspore import nn ,ops,Parameter, Tensor
