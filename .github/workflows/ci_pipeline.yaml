@@ -46,7 +46,8 @@ jobs:
         pip install -r download.txt
     - name: Analysing the mindnlp code with pylint
       run: |
-        pylint mindnlp --rcfile=.github/pylint.conf
+        NUM_CORES=$(nproc)
+        pylint --jobs=$NUM_CORES mindnlp --rcfile=.github/pylint.conf
 
 
   ut-test:
