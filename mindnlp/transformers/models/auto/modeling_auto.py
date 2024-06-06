@@ -66,6 +66,8 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("convnext", "ConvNextModel"),
         ("cvt", "CvtModel"),
         ("deberta", "DebertaModel"),
+        ("deberta-v2", "DebertaV2Model"),
+        ("decision_transformer", "DecisionTransformerModel"),
         ("efficientformer", "EfficientFormerModel"),
         ("encodec", "EncodecModel"),
         ("esm", "EsmModel"),
@@ -119,6 +121,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("wav2vec2", "Wav2Vec2Model"),
         ("xclip", "XCLIPModel"),
         ("xlm-roberta", "XLMRobertaModel"),
+        ("xlm-roberta-xl", "XLMRobertaXLModel"),
         ("xlnet", "XLNetModel"),
     ]
 )
@@ -133,6 +136,7 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
         ("camembert", "CamembertForMaskedLM"),
         ("ctrl", "CTRLLMHeadModel"),
         ("deberta", "DebertaForMaskedLM"),
+        ("deberta-v2", "DebertaV2ForMaskedLM"),
         ("funnel", "FunnelForPreTraining"),
         ("gpt_pangu", "GPTPanguForCausalLM"),
         ("mamba", "MambaForCausalLM"),
@@ -140,6 +144,7 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
         ("rwkv", "RwkvForCausalLM"),
         ("roc_bert", "RoCBertForPreTraining"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
+        ("xlm-roberta-xl", "XLMRobertaXLForMaskedLM"),
         ("xlnet", "XLNetLMHeadModel"),
     ]
 )
@@ -159,6 +164,7 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         ("ctrl", "CTRLLMHeadModel"),
         ("cpmbee", "CpmBeeForCausalLM"),
         ("deberta", "DebertaForMaskedLM"),
+        ("deberta-v2", "DebertaV2ForMaskedLM"),
         ("esm", "EsmForMaskedLM"),
         ("funnel", "FunnelForMaskedLM"),
         ("gpt_neox_japanese", "GPTNeoXJapaneseForCausalLM"),
@@ -171,6 +177,7 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         ("rwkv", "RwkvForCausalLM"),
         ("whisper", "WhisperForConditionalGeneration"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
+        ("xlm-roberta-xl", "XLMRobertaXLForMaskedLM"),
         ("xlnet", "XLNetLMHeadModel"),
     ]
 )
@@ -225,6 +232,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("starcoder2", "Starcoder2ForCausalLM"),
         ("whisper", "WhisperForCausalLM"),
         ("xlm-roberta", "XLMRobertaForCausalLM"),
+        ("xlm-roberta-xl", "XLMRobertaXLForCausalLM"),
         ("xlnet", "XLNetLMHeadModel"),
     ]
 )
@@ -335,12 +343,14 @@ MODEL_FOR_MASKED_LM_MAPPING_NAMES = OrderedDict(
         ("big_bird", "BigBirdForMaskedLM"),
         ("camembert", "CamembertForMaskedLM"),
         ("deberta", "DebertaForMaskedLM"),
+        ("deberta-v2", "DebertaV2ForMaskedLM"),
         ("esm", "EsmForMaskedLM"),
         ("funnel", "FunnelForMaskedLM"),
         ("rembert", "RemBertForMaskedLM"),
         ("reformer", "ReformerForMaskedLM"),
         ("roc_bert", "RoCBertForMaskedLM"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
+        ("xlm-roberta-xl", "XLMRobertaXLForMaskedLM"),
     ]
 )
 
@@ -426,6 +436,7 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("camembert", "CamembertForSequenceClassification"),
         ("ctrl", "CTRLForSequenceClassification"),
         ("deberta", "DebertaForSequenceClassification"),
+        ("deberta-v2", "DebertaV2ForSequenceClassification"),
         ("distilbert", "DistilBertForSequenceClassification"),
         ("esm", "EsmForSequenceClassification"),
         ("falcon", "FalconForSequenceClassification"),
@@ -446,6 +457,7 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("stablelm", "StableLmForSequenceClassification"),
         ("starcoder2", "Starcoder2ForSequenceClassification"),
         ("xlm-roberta", "XLMRobertaForSequenceClassification"),
+        ("xlm-roberta-xl", "XLMRobertaXLForSequenceClassification"),
         ("xlnet", "XLNetForSequenceClassification"),
     ]
 )
