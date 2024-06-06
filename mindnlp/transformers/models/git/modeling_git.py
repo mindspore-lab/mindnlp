@@ -41,13 +41,30 @@ from ...modeling_outputs import (
 
 from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
 
-
-
-
-
-
 logger = logging.get_logger(__name__)
 
+__all__=[
+    "GitVisionModelOutput",
+    "GitEmbeddings",
+    "GitSelfAttention",
+    "GitSelfOutput",
+    "GitAttention",
+    "GitIntermediate",
+    "GitOutput",
+    "GitLayer",
+    "GitEncoder",
+    "GitPreTrainedModel",
+    "GitVisionEmbeddings",
+    "GitVisionMLP",
+    "GitVisionAttention",
+    "GitVisionEncoderLayer",
+    "GitVisionEncoder",
+    "GitVisionTransformer",
+    "GitVisionModel",
+    "GitProjection",
+    "GitModel",
+    "GitForCausalLM"
+]
 _CHECKPOINT_FOR_DOC = "microsoft/git-base"
 _CONFIG_FOR_DOC = "GitConfig"
 
