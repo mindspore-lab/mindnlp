@@ -24,9 +24,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements/requirements.txt
 
+      - name: Check CI file not changed
+        run: |
+          diff_files=$(git diff --name-only HEAD~1 HEAD)
+          github_files=$(echo "$diff_files" | grep -E '\.github')
+          if [ -n "$github_files" ]; then
+            echo "Error: Changes detected in .github files."
+            exit 1
+          fi
+
       - name: Analysing the mindnlp code with pylint
         run: |
-          pylint mindnlp/transformers/models/swiftformer --rcfile=.github/pylint.conf
+          pylint mindnlp --rcfile=.github/pylint.conf
 
       - name: Parse comment
         id: parse_comment
