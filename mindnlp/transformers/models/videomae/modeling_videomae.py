@@ -130,7 +130,7 @@ class VideoMAEEmbeddings(nn.Cell):
         # add position embeddings
         pos = Tensor(self.position_embeddings.asnumpy(), dtype=embeddings.dtype)
         pos.stop_gradient = True
-        embeddings = embeddings + Tensor(self.position_embeddings,dtype=embeddings.dtype)+pos
+        embeddings = embeddings+pos
         # only keep visible patches
         # ~bool_masked_pos means visible
         if bool_masked_pos is not None:
@@ -176,6 +176,7 @@ class VideoMAEPatchEmbeddings(nn.Cell):
             out_channels=hidden_size,
             kernel_size=(self.tubelet_size, patch_size[0], patch_size[1]),
             stride=(self.tubelet_size, patch_size[0], patch_size[1]),
+            has_bias=True
         )
 
     def construct(self, pixel_values):
@@ -213,8 +214,8 @@ class VideoMAESelfAttention(nn.Cell):
         self.value = nn.Dense(config.hidden_size, self.all_head_size, has_bias=False)
 
         if config.qkv_bias:
-            self.q_bias = mindspore.Parameter(ops.zeros([self.all_head_size]))
-            self.v_bias = mindspore.Parameter(ops.zeros([self.all_head_size]))
+            self.q_bias = mindspore.Parameter(ops.zeros([self.all_head_size]),name="q_bias")
+            self.v_bias = mindspore.Parameter(ops.zeros([self.all_head_size]),name="v_bias")
         else:
             self.q_bias = None
             self.v_bias = None
@@ -237,7 +238,6 @@ class VideoMAESelfAttention(nn.Cell):
         keys = ops.matmul(hidden_states, self.key.weight.T) + k_bias
         values = ops.matmul(hidden_states, self.value.weight.T) + self.v_bias
         queries = ops.matmul(hidden_states, self.query.weight.T) + self.q_bias
-
         key_layer = self.transpose_for_scores(keys)
         value_layer = self.transpose_for_scores(values)
         query_layer = self.transpose_for_scores(queries)
@@ -536,6 +536,7 @@ class VideoMAEModel(VideoMAEPreTrainedModel):
         head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
 
         embedding_output = self.embeddings(pixel_values, bool_masked_pos)
+
         encoder_outputs = self.encoder(
             embedding_output,
             head_mask=head_mask,
@@ -633,7 +634,7 @@ class VideoMAEForPreTraining(VideoMAEPreTrainedModel):
         self.videomae = VideoMAEModel(config)
 
         self.encoder_to_decoder = nn.Dense(config.hidden_size, config.decoder_hidden_size, has_bias=False)
-        self.mask_token = mindspore.Parameter(ops.zeros((1, 1, config.decoder_hidden_size)))
+        self.mask_token = mindspore.Parameter(ops.zeros((1, 1, config.decoder_hidden_size)),name="mask_token")
         self.position_embeddings = get_sinusoid_encoding_table(
             self.videomae.embeddings.num_patches, config.decoder_hidden_size
         )
