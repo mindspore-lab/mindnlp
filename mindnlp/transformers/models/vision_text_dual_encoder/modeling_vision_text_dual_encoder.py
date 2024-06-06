@@ -297,10 +297,10 @@ class VisionTextDualEncoderModel(PreTrainedModel):
     @classmethod
     def from_vision_text_pretrained(
         cls,
-        vision_model_name_or_path: str = None,
-        text_model_name_or_path: str = None,
         *model_args,
         **kwargs,
+        vision_model_name_or_path: str = None,
+        text_model_name_or_path: str = None,
     ) -> PreTrainedModel:
         """
         Params:
