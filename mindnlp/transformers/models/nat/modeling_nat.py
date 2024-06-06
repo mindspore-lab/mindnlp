@@ -26,6 +26,7 @@ from mindnlp.utils import (
     ModelOutput,
     logging,
 )
+from mindnlp.utils.import_utils import *
 from ...backbone_utils import BackboneMixin
 from .configuration_nat import NatConfig
 
