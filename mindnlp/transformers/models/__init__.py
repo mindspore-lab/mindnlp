@@ -128,6 +128,7 @@ from . import (
     seamless_m4t,
     seamless_m4t_v2,
     segformer,
+    speech_encoder_decoder,
     stablelm,
     squeezebert,
     starcoder2,
@@ -261,6 +262,7 @@ from .sam import *
 from .seamless_m4t import *
 from .seamless_m4t_v2 import *
 from .segformer import *
+from .speech_encoder_decoder import *
 from .stablelm import *
 from .squeezebert import *
 from .starcoder2 import *
@@ -394,6 +396,7 @@ __all__.extend(sam.__all__)
 __all__.extend(seamless_m4t.__all__)
 __all__.extend(seamless_m4t_v2.__all__)
 __all__.extend(segformer.__all__)
+__all__.extend(speech_encoder_decoder.__all__)
 __all__.extend(stablelm.__all__)
 __all__.extend(squeezebert.__all__)
 __all__.extend(starcoder2.__all__)
