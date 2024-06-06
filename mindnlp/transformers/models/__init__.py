@@ -135,6 +135,7 @@ from . import (
     timesformer,
     tinybert,
     vipllava,
+    vision_text_dual_encoder,
     visual_bert,
     vit,
     wav2vec2,
@@ -265,6 +266,7 @@ from .tinybert import *
 from .t5 import *
 from .timesformer import *
 from .vipllava import *
+from .vision_text_dual_encoder import *
 from .visual_bert import *
 from .vit import *
 from .whisper import *
@@ -395,6 +397,7 @@ __all__.extend(t5.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
 __all__.extend(vipllava.__all__)
+__all__.extend(vision_text_dual_encoder.__all__)
 __all__.extend(visual_bert.__all__)
 __all__.extend(vit.__all__)
 __all__.extend(whisper.__all__)
