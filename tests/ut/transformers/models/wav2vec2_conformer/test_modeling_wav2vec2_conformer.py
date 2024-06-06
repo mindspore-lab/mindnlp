@@ -686,6 +686,7 @@ class Wav2Vec2ConformerModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @slow
+    @unittest.skip('memory exceeded')
     def test_model_from_pretrained(self):
         model = Wav2Vec2ConformerModel.from_pretrained("facebook/wav2vec2-conformer-rel-pos-large")
         self.assertIsNotNone(model)
