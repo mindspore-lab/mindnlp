@@ -106,7 +106,7 @@ class SwitchTransformersModelTester:
         self.router_jitter_noise = router_jitter_noise
 
     def get_large_model_config(self):
-        return SwitchTransformersConfig.from_pretrained("google/switch-base-8")
+        return SwitchTransformersConfig.from_pretrained("google/switch-base-8", ms_dtype=mindspore.float16)
 
     def prepare_config_and_inputs(self):
         input_ids = ids_tensor([self.batch_size, self.encoder_seq_length], self.vocab_size)
@@ -411,7 +411,7 @@ class SwitchTransformersModelTester:
         This test does not pass for small models due to precision errors. It is therefore only run for slightly larger models.
         """
         model = (
-            SwitchTransformersForConditionalGeneration.from_pretrained("google/switch-base-8").set_train(False)
+            SwitchTransformersForConditionalGeneration.from_pretrained("google/switch-base-8", ms_dtype=mindspore.float16).set_train(False)
         )
         mindspore.dataset.config.set_seed(0)
         output_without_past_cache = model.generate(
@@ -485,7 +485,7 @@ class SwitchTransformersModelTester:
             # check that outputs after saving and loading are equal
             with tempfile.TemporaryDirectory() as tmpdirname:
                 tied_model.save_pretrained(tmpdirname)
-                tied_model = model_class.from_pretrained(tmpdirname)
+                tied_model = model_class.from_pretrained(tmpdirname, ms_dtype=mindspore.float16)
                 tied_model.set_train(False)
 
                 # check that models has less parameters
@@ -665,7 +665,7 @@ class SwitchTransformersModelTest(ModelTesterMixin, GenerationTesterMixin, unitt
     @slow
     def test_model_from_pretrained(self):
         model_name = "google/switch-base-8"
-        model = SwitchTransformersModel.from_pretrained(model_name)
+        model = SwitchTransformersModel.from_pretrained(model_name, ms_dtype=mindspore.float16)
         self.assertIsNotNone(model)
 
     def test_generate_with_head_masking(self):
@@ -745,7 +745,7 @@ class SwitchTransformersEncoderOnlyModelTester:
         self.is_training = is_training
 
     def get_large_model_config(self):
-        return SwitchTransformersConfig.from_pretrained("switch_base_8")
+        return SwitchTransformersConfig.from_pretrained("switch_base_8", ms_dtype=mindspore.float16)
 
     def prepare_config_and_inputs(self):
         input_ids = ids_tensor([self.batch_size, self.encoder_seq_length], self.vocab_size)
@@ -943,7 +943,7 @@ class SwitchTransformerModelIntegrationTests(unittest.TestCase):
         and `transformers` implementation of Switch-C transformers. We only check the logits
         of the first batch.
         """
-        model = SwitchTransformersModel.from_pretrained("google/switch-base-8")
+        model = SwitchTransformersModel.from_pretrained("google/switch-base-8", ms_dtype=mindspore.float16)
         input_ids = ops.ones((32, 64), dtype=mindspore.int64)
         decoder_input_ids = ops.ones((32, 64), dtype=mindspore.int64)
 
@@ -964,19 +964,19 @@ class SwitchTransformerModelIntegrationTests(unittest.TestCase):
 
         np.allclose(hf_logits.asnumpy(), EXPECTED_MEAN_LOGITS.asnumpy(), rtol=6e-3, atol=9e-3)
 
-    @unittest.skip(
-        "Unless we stop stripping left and right by default for all special tokens, the expected ids obtained here will not match the original ones. Wait for https://github.com/huggingface/transformers/pull/23909 to be merged"
-    )
+    # @unittest.skip(
+    #     "Unless we stop stripping left and right by default for all special tokens, the expected ids obtained here will not match the original ones. Wait for https://github.com/huggingface/transformers/pull/23909 to be merged"
+    # )
     def test_small_generate(self):
         # Generate test using the smalled switch-C model.
 
         model = SwitchTransformersForConditionalGeneration.from_pretrained(
-            "google/switch-base-8", torch_dtype=mindspore.bfloat16
+            "google/switch-base-8", ms_dtype=mindspore.float16
         ).set_train(False)
-        tokenizer = AutoTokenizer.from_pretrained("google-t5/t5-small", use_fast=False, legacy=False)
+        tokenizer = AutoTokenizer.from_pretrained("google-t5/t5-small", use_fast=False, legacy=False, ms_dtype=mindspore.float16)
 
         input_ids = tokenizer(
-            "The human walks into a bar and orders a <extra_id_0>", return_tensors="pt"
+            "The human walks into a bar and orders a <extra_id_0>", return_tensors="ms"
         ).input_ids
         sequences = model.generate(input_ids)
         output_str = tokenizer.batch_decode(sequences, skip_special_tokens=True)[0]
@@ -984,7 +984,7 @@ class SwitchTransformerModelIntegrationTests(unittest.TestCase):
 
         input_ids = tokenizer(
             "A <extra_id_0> walks into a bar and orders a <extra_id_1> with <extra_id_2> pinch of <extra_id_3>.",
-            return_tensors="pt",
+            return_tensors="ms",
         ).input_ids
         sequences = model.generate(input_ids)
         output_str = tokenizer.batch_decode(sequences, skip_special_tokens=False)[0]
@@ -992,20 +992,20 @@ class SwitchTransformerModelIntegrationTests(unittest.TestCase):
         EXPECTED_OUTPUT = "<pad><extra_id_0> man<extra_id_1> beer<extra_id_2> a<extra_id_3> whiskey<extra_id_4>.</s>"
         self.assertEqual(output_str, EXPECTED_OUTPUT)
 
-    @unittest.skip(
-        "Unless we stop stripping left and right by default for all special tokens, the expected ids obtained here will not match the original ones. Wait for https://github.com/huggingface/transformers/pull/23909 to be merged"
-    )
+    # @unittest.skip(
+    #     "Unless we stop stripping left and right by default for all special tokens, the expected ids obtained here will not match the original ones. Wait for https://github.com/huggingface/transformers/pull/23909 to be merged"
+    # )
     def test_small_batch_generate(self):
         BATCH_SIZE = 4
         model = SwitchTransformersForConditionalGeneration.from_pretrained(
-            "google/switch-base-8", torch_dtype=mindspore.bfloat16
+            "google/switch-base-8", ms_dtype=mindspore.float16
         ).set_train(False)
-        tokenizer = AutoTokenizer.from_pretrained("google-t5/t5-small", use_fast=False, legacy=False)
+        tokenizer = AutoTokenizer.from_pretrained("google-t5/t5-small", use_fast=False, legacy=False, ms_dtype=mindspore.float16)
 
         inputs = [
             "A <extra_id_0> walks into a bar and orders a <extra_id_1> with <extra_id_2> pinch of <extra_id_3>."
         ] * BATCH_SIZE
-        encoded_input = tokenizer.batch_encode_plus(inputs, return_tensors="pt")
+        encoded_input = tokenizer.batch_encode_plus(inputs, return_tensors="ms")
 
         sequences = model.generate(**encoded_input)
         batch_output = tokenizer.batch_decode(sequences, skip_special_tokens=False)
