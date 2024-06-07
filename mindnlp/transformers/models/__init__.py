@@ -73,6 +73,7 @@ from . import (
     chatglm3,
     funnel,
     gemma,
+    git,
     gpt,
     gpt2,
     gpt_bigcode,
@@ -93,6 +94,7 @@ from . import (
     longformer,
     luke,
     mamba,
+    marian,
     mbart,
     megatron_bert,
     minicpm,
@@ -207,6 +209,7 @@ from .chatglm2 import *
 from .chatglm3 import *
 from .funnel import *
 from .gemma import *
+from .git import *
 from .gpt import *
 from .gpt_neo import *
 from .gpt_neox import *
@@ -227,6 +230,7 @@ from .llava_next import *
 from .longformer import *
 from .luke import *
 from .mamba import *
+from .marian import *
 from .mbart import *
 from .megatron_bert import *
 from .minicpm import *
@@ -342,6 +346,7 @@ __all__.extend(chatglm2.__all__)
 __all__.extend(chatglm3.__all__)
 __all__.extend(gpt.__all__)
 __all__.extend(gemma.__all__)
+__all__.extend(git.__all__)
 __all__.extend(gpt_neo.__all__)
 __all__.extend(gpt_neox.__all__)
 __all__.extend(gpt_neox_japanese.__all__)
@@ -361,6 +366,7 @@ __all__.extend(llava_next.__all__)
 __all__.extend(longformer.__all__)
 __all__.extend(luke.__all__)
 __all__.extend(mamba.__all__)
+__all__.extend(marian.__all__)
 __all__.extend(mbart.__all__)
 __all__.extend(megatron_bert.__all__)
 __all__.extend(minicpm.__all__)
