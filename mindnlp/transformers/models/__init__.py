@@ -61,6 +61,7 @@ from . import (
     deberta,
     deberta_v2,
     decision_transformer,
+    detr,
     distilbert,
     efficientnet,
     efficientformer,
@@ -204,6 +205,7 @@ from .cvt import *
 from .deberta import *
 from .deberta_v2 import *
 from .decision_transformer import *
+from .detr import *
 from .distilbert import *
 from .efficientnet import *
 from .efficientformer import *
@@ -347,6 +349,7 @@ __all__.extend(cvt.__all__)
 __all__.extend(deberta.__all__)
 __all__.extend(deberta_v2.__all__)
 __all__.extend(decision_transformer.__all__)
+__all__.extend(detr.__all__)
 __all__.extend(distilbert.__all__)
 __all__.extend(efficientnet.__all__)
 __all__.extend(efficientformer.__all__)
