@@ -48,17 +48,16 @@ class Qwen2TokenizerFast(PreTrainedTokenizerFast):
 
     Same with GPT2Tokenizer, this tokenizer has been trained to treat spaces like parts of the tokens so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
+        ```python
+        >>> from transformers import Qwen2TokenizerFast
 
-    ```python
-    >>> from transformers import Qwen2TokenizerFast
+        >>> tokenizer = Qwen2TokenizerFast.from_pretrained("Qwen/Qwen-tokenizer")
+        >>> tokenizer("Hello world")["input_ids"]
+        [9707, 1879]
 
-    >>> tokenizer = Qwen2TokenizerFast.from_pretrained("Qwen/Qwen-tokenizer")
-    >>> tokenizer("Hello world")["input_ids"]
-    [9707, 1879]
-
-    >>> tokenizer(" Hello world")["input_ids"]
-    [21927, 1879]
-    ```
+        >>> tokenizer(" Hello world")["input_ids"]
+        [21927, 1879]
+        ```
     This is expected.
 
     This tokenizer inherits from [`PreTrainedTokenizerFast`] which contains most of the main methods. Users should

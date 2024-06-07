@@ -52,13 +52,14 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
 
     This uses notably ByteFallback and no normalization.
 
-    ```python
-    >>> from transformers import CodeLlamaTokenizerFast
+    Example:
+        ```python
+        >>> from transformers import CodeLlamaTokenizerFast
 
-    >>> tokenizer = CodeLlamaTokenizerFast.from_pretrained("hf-internal-testing/llama-tokenizer")
-    >>> tokenizer.encode("Hello this is a test")
-    [1, 15043, 445, 338, 263, 1243]
-    ```
+        >>> tokenizer = CodeLlamaTokenizerFast.from_pretrained("hf-internal-testing/llama-tokenizer")
+        >>> tokenizer.encode("Hello this is a test")
+        [1, 15043, 445, 338, 263, 1243]
+        ```
 
     If you want to change the `bos_token` or the `eos_token`, make sure to specify them when initializing the model, or
     call `tokenizer.update_post_processor()` to make sure that the post-processing is correctly done (otherwise the
@@ -133,7 +134,7 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
     ):
         """
         Initializes an instance of the CodeLlamaTokenizerFast class.
-        
+
         Args:
             self: The instance of the class.
             vocab_file (str, optional): Path to the vocabulary file. Defaults to None.
@@ -152,10 +153,10 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
             add_eos_token (bool, optional): Whether to add the end of sentence token. Defaults to False.
             use_default_system_prompt (bool, optional): Whether to use the default system prompt. Defaults to False.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -199,18 +200,18 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
     def can_save_slow_tokenizer(self) -> bool:
         """
         Checks if the slow tokenizer can be saved.
-        
+
         Args:
             self (CodeLlamaTokenizerFast): An instance of the CodeLlamaTokenizerFast class.
-        
+
         Returns:
             bool: True if the slow tokenizer can be saved, False otherwise.
-        
+
         Raises:
             None.
-        
-        This method checks if the slow tokenizer can be saved by verifying if the vocab_file attribute exists. 
-        If the vocab_file attribute is not None and it corresponds to an existing file, the method returns True. 
+
+        This method checks if the slow tokenizer can be saved by verifying if the vocab_file attribute exists.
+        If the vocab_file attribute is not None and it corresponds to an existing file, the method returns True.
         Otherwise, it returns False.
         """
         return os.path.isfile(self.vocab_file) if self.vocab_file else False
@@ -246,13 +247,13 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
     def prefix_token(self):
         '''
         Returns the prefix token for the CodeLlamaTokenizerFast class.
-        
+
         Args:
             self (CodeLlamaTokenizerFast): The instance of the CodeLlamaTokenizerFast class.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         '''
@@ -262,16 +263,16 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
     def prefix_id(self):
         """
         Returns the prefix token converted to its corresponding ID.
-        
+
         Args:
             self (CodeLlamaTokenizerFast): An instance of the CodeLlamaTokenizerFast class.
-        
+
         Returns:
             None: If the prefix token is None.
-        
+
         Raises:
             None.
-        
+
         """
         if self._prefix_token is None:
             return None
@@ -281,13 +282,13 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
     def middle_token(self):
         """
         This method 'middle_token' is a property method in the class 'CodeLlamaTokenizerFast' that returns the middle token.
-        
+
         Args:
             self: The instance of the class.
-        
+
         Returns:
             None: This method returns the middle token or None if there is no middle token.
-        
+
         Raises:
             This method does not raise any exceptions.
         """
@@ -297,19 +298,19 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
     def middle_id(self):
         """
         Returns the middle token ID of the CodeLlamaTokenizerFast instance.
-        
+
         Args:
             self (CodeLlamaTokenizerFast): The instance of the CodeLlamaTokenizerFast class.
-        
+
         Returns:
             None: If the middle token is not set or is set to None.
             int: The ID of the middle token.
-        
+
         Raises:
             None.
-        
+
         This method retrieves the ID of the middle token in the CodeLlamaTokenizerFast instance. If the middle token is not set or is set to None, None is returned. Otherwise, the method calls the
-'convert_tokens_to_ids' function to convert the middle token into its corresponding ID and returns the ID value.
+        'convert_tokens_to_ids' function to convert the middle token into its corresponding ID and returns the ID value.
         """
         if self._middle_token is None:
             return None
@@ -319,16 +320,16 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
     def suffix_token(self):
         """
         This method, 'suffix_token', is a property method defined in the 'CodeLlamaTokenizerFast' class.
-        
+
         Args:
             self: An instance of the 'CodeLlamaTokenizerFast' class. It is used to access the attributes and methods of the class within this method.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             This method does not raise any exceptions.
-        
+
         """
         return self._suffix_token
 
@@ -336,23 +337,23 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
     def suffix_id(self):
         """
         This method is defined in the `CodeLlamaTokenizerFast` class and is named `suffix_id`. It takes one parameter, `self`, which refers to the instance of the class.
-        
+
         Args:
-            - self: An instance of the `CodeLlamaTokenizerFast` class.
-            
+            self: An instance of the `CodeLlamaTokenizerFast` class.
+
         Returns:
-            - None: If the `_suffix_token` attribute is `None`, the method returns `None`.
-            
+            None: If the `_suffix_token` attribute is `None`, the method returns `None`.
+
         Raises:
-            - None: This method does not raise any exceptions.
-        
+            None: This method does not raise any exceptions.
+
         Description:
-        This method retrieves the suffix ID associated with the `_suffix_token` attribute. If the `_suffix_token` is `None`, indicating the absence of a suffix token, the method returns `None`. Otherwise, it
-calls the `convert_tokens_to_ids` method to convert the `_suffix_token` to its corresponding ID and returns the result.
-        
+            This method retrieves the suffix ID associated with the `_suffix_token` attribute. If the `_suffix_token` is `None`, indicating the absence of a suffix token, the method returns `None`. Otherwise, it
+            calls the `convert_tokens_to_ids` method to convert the `_suffix_token` to its corresponding ID and returns the result.
+
         Note:
-        - The `_suffix_token` attribute should be set before calling this method to ensure accurate results.
-        - The return value is of type `None`.
+            - The `_suffix_token` attribute should be set before calling this method to ensure accurate results.
+            - The return value is of type `None`.
         """
         if self._suffix_token is None:
             return None
@@ -362,19 +363,19 @@ calls the `convert_tokens_to_ids` method to convert the `_suffix_token` to its c
     def eot_id(self):
         """
         Returns the ID representation of the end-of-text (EOT) token in the CodeLlamaTokenizerFast class.
-        
+
         Args:
             self: An instance of the CodeLlamaTokenizerFast class.
-        
+
         Returns:
             None: If the EOT token is not set.
             int: The ID representation of the EOT token.
-        
+
         Raises:
             None.
-        
+
         This method retrieves the ID representation of the EOT token. If the EOT token is not set (None), it returns None. Otherwise, it uses the 'convert_tokens_to_ids' method to convert the EOT token to its
-corresponding ID representation and returns it.
+        corresponding ID representation and returns it.
         """
         if self._eot_token is None:
             return None
@@ -384,13 +385,13 @@ corresponding ID representation and returns it.
     def eot_token(self):
         """
         eot_token method in the CodeLlamaTokenizerFast class.
-        
+
         Args:
             self: The instance of the CodeLlamaTokenizerFast class.
-        
+
         Returns:
             None. The method returns the value of the _eot_token attribute.
-        
+
         Raises:
             This method does not raise any exceptions.
         """
@@ -400,13 +401,13 @@ corresponding ID representation and returns it.
     def add_eos_token(self):
         """
         Adds an end-of-sequence (EOS) token to the tokenizer.
-        
+
         Args:
             self: The instance of the CodeLlamaTokenizerFast class.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             No exceptions are raised by this method.
         """
@@ -416,14 +417,14 @@ corresponding ID representation and returns it.
     def add_bos_token(self):
         """
         Method to add a beginning of sentence (BOS) token to the tokenizer.
-        
+
         Args:
             self: An instance of the CodeLlamaTokenizerFast class.
                 It is used to access the tokenizer object.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             None
         """
@@ -433,14 +434,14 @@ corresponding ID representation and returns it.
     def add_eos_token(self, value):
         """
         This method 'add_eos_token' is a setter method for the 'add_eos_token' property in the 'CodeLlamaTokenizerFast' class.
-        
+
         Args:
             self (CodeLlamaTokenizerFast): The instance of the CodeLlamaTokenizerFast class.
             value (bool): A boolean value indicating whether to add an end-of-sequence token.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             This method does not explicitly raise any exceptions.
         """
@@ -451,17 +452,17 @@ corresponding ID representation and returns it.
     def add_bos_token(self, value):
         """
         Sets the value of the 'add_bos_token' attribute in the CodeLlamaTokenizerFast class.
-        
+
         Args:
             self (CodeLlamaTokenizerFast): An instance of the CodeLlamaTokenizerFast class.
             value: The value to be assigned to the 'add_bos_token' attribute. It can be of any type.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             None.
-        
+
         This method updates the 'add_bos_token' attribute with the provided value and triggers the 'update_post_processor' method.
         """
         self._add_bos_token = value
@@ -470,10 +471,12 @@ corresponding ID representation and returns it.
     def set_infilling_processor(self, reset, suffix_first=False, add_special_tokens=True):
         """
         Updates the normalizer to make sure the prompt format for `infilling` is respected. The infilling format is the
-        following: if suffix_first
-            " <PRE> <SUF>{suf} <MID> {pre}"
-        else:
-            " <PRE> {pre} <SUF>{suf} <MID>"
+        following:
+
+        >- if suffix_first
+        >   - " <PRE> <SUF>{suf} <MID> {pre}"
+        >- else:
+        >   - " <PRE> {pre} <SUF>{suf} <MID>"
 
         If `reset` is set to `True`, the `normalizer` and `post_processor` are reset to their "normal" behaviour, which
         is to add a prefix space for the normalizer, and add a `bos_token` to the input text for the `post_processor`.
@@ -518,19 +521,19 @@ corresponding ID representation and returns it.
     def encode_plus(self, text, text_pair=None, suffix_first=False, add_special_tokens=True, **kwargs):
         """
         Encodes the given text and text pair into tokens using the CodeLlamaTokenizerFast class.
-        
+
         Args:
             self (CodeLlamaTokenizerFast): An instance of the CodeLlamaTokenizerFast class.
             text (str): The input text to be encoded.
             text_pair (str, optional): The optional second input text to be encoded. Defaults to None.
             suffix_first (bool, optional): Specifies whether the suffix should be placed first. Defaults to False.
             add_special_tokens (bool, optional): Specifies whether to add special tokens. Defaults to True.
-        
+
         Returns:
             tokens: The encoded tokens. This is an instance of a class defined in the CodeLlamaTokenizerFast class.
-        
+
         Raises:
-            ValueError: If the input includes a `prefix` and a `suffix` used for the infilling task, 
+            ValueError: If the input includes a `prefix` and a `suffix` used for the infilling task,
                         the `prefix_id, middle_id, suffix_id` must all be initialized.
                         Current values: (self.prefix_id, self.middle_id, self.suffix_id)
         """
@@ -558,20 +561,20 @@ corresponding ID representation and returns it.
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
         """
         Save the vocabulary for a fast tokenizer.
-        
+
         Args:
             self (CodeLlamaTokenizerFast): An instance of the CodeLlamaTokenizerFast class.
             save_directory (str): The directory path where the vocabulary will be saved.
             filename_prefix (Optional[str], optional): A prefix to be added to the filename. Defaults to None.
-        
+
         Returns:
             Tuple[str]: A tuple containing the path to the saved vocabulary file.
-        
+
         Raises:
             ValueError: If the fast tokenizer does not have the necessary information to save the vocabulary for a slow tokenizer.
             FileNotFoundError: If the save_directory does not exist.
             IsADirectoryError: If the save_directory is not a directory.
-        
+
         """
         if not self.can_save_slow_tokenizer:
             raise ValueError(
@@ -661,8 +664,8 @@ corresponding ID representation and returns it.
 
         An NLLB sequence has the following format, where `X` represents the sequence:
 
-        - `input_ids` (for encoder) `X [eos, src_lang_code]`
-        - `decoder_input_ids`: (for decoder) `X [eos, tgt_lang_code]`
+        >   - `input_ids` (for encoder) `X [eos, src_lang_code]`
+        >   - `decoder_input_ids`: (for decoder) `X [eos, tgt_lang_code]`
 
         BOS is never used. Pairs of sequences are not the expected use case, but they will be handled without a
         separator.

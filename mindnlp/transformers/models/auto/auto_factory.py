@@ -68,12 +68,12 @@ class _BaseAutoModelClass:
     The class includes methods for creating instances from configurations, pretrained models, and for registering new models within the class. 
     
     Methods:
-    - from_config(cls, config, **kwargs): Instantiate a model from a configuration object.
-    - from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs): Instantiate a model from a pretrained model or model path.
-    - register(cls, config_class, model_class, exist_ok=False): Register a new model for the class based on a configuration and model class pair.
-    
+        from_config(cls, config, **kwargs): Instantiate a model from a configuration object.
+        from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs): Instantiate a model from a pretrained model or model path.
+        register(cls, config_class, model_class, exist_ok=False): Register a new model for the class based on a configuration and model class pair.
+
     For more details on each method's parameters and usage, refer to the method's specific documentation.
-    
+
     Note: This class is intended to be inherited from and customized for specific auto-model implementations.
     """
     # Base class for auto models.
@@ -82,18 +82,18 @@ class _BaseAutoModelClass:
     def __init__(self, *args, **kwargs):
         """
         Initializes an instance of the _BaseAutoModelClass class.
-        
+
         Args:
             self: The instance of the class.
-                Type: _BaseAutoModelClass
-                Purpose: Represents the current instance of the class.
-        
+                >   - Type: _BaseAutoModelClass
+                >   - Purpose: Represents the current instance of the class.
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
-            EnvironmentError: If the __init__ method is called directly. 
-            The error message will specify that instances of _BaseAutoModelClass should be instantiated using the 
+            EnvironmentError: If the __init__ method is called directly.
+            The error message will specify that instances of _BaseAutoModelClass should be instantiated using the
             'from_pretrained(pretrained_model_name_or_path)' or 'from_config(config)' methods.
         """
         raise EnvironmentError(
@@ -106,27 +106,27 @@ class _BaseAutoModelClass:
     def from_config(cls, config, **kwargs):
         """
         Converts a configuration object into an instance of the current `_BaseAutoModelClass` class.
-        
+
         Args:
             cls (type): The class object for the `_BaseAutoModelClass` class.
             config: The configuration object that needs to be converted.
                 It should be of a type that is recognized by the `_model_mapping` dictionary.
-        
+
         Returns:
             None: This method does not return a value.
-        
+
         Raises:
             ValueError: If the `config` object is not recognized as a valid configuration class for this `AutoModel` class.
                 The error message will indicate the unrecognized configuration class and the expected valid configuration classes,
                 which are determined by the `_model_mapping` dictionary.
-        
+
         Note:
-            1. The `config` parameter should be of a type that is present in the `_model_mapping` dictionary.
-               The `_model_mapping` dictionary maps configuration types to model classes.
-            2. This method is a class method, denoted by the `@classmethod` decorator.
-               It can be called directly on the class object without needing to create an instance of the class.
-            3. The `_from_config` method is called on the appropriate model class, determined by the `_model_mapping` dictionary,
-               to perform the conversion from the configuration object to an instance of the model class.
+            >   1. The `config` parameter should be of a type that is present in the `_model_mapping` dictionary.
+                The `_model_mapping` dictionary maps configuration types to model classes.
+            >   2. This method is a class method, denoted by the `@classmethod` decorator.
+                It can be called directly on the class object without needing to create an instance of the class.
+            >   3. The `_from_config` method is called on the appropriate model class, determined by the `_model_mapping` dictionary,
+                to perform the conversion from the configuration object to an instance of the model class.
         """
         if type(config) in cls._model_mapping.keys():
             model_class = _get_model_class(config, cls._model_mapping)
@@ -141,51 +141,53 @@ class _BaseAutoModelClass:
     def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
         """
         Performs a series of operations to load a pretrained model from either a local file or a remote repository.
-        
+
         Args:
             cls (class): The class object that the method is called on.
             pretrained_model_name_or_path (str): The name or path of the pretrained model. It can be a local file path or a remote repository URL.
-        
+
         Returns:
             None
-        
+
         Raises:
             ValueError: If the configuration class of the pretrained model is not recognized by the AutoModel class.
-        
+
         Note:
             This method is a class method, meaning it can be called on the class object itself without instantiation.
-        
+
         Example:
+            ```python
             >>> _BaseAutoModelClass.from_pretrained("bert-base-uncased")
-        
+            ```
+
         In the provided code snippet, the method `from_pretrained` is a class method of the `_BaseAutoModelClass` class. It is used to load a pretrained model by either specifying its name or providing the
-path to the model file. The method performs various operations to correctly configure and initialize the model.
-        
+        path to the model file. The method performs various operations to correctly configure and initialize the model.
+
         The `cls` parameter is a reference to the class object itself. It is automatically passed when calling the method on the class.
-        
+
         The `pretrained_model_name_or_path` parameter is a string that represents the name or path of the pretrained model. It can be either a local file path or a remote repository URL. This parameter is
-required to specify the pretrained model to load.
-        
+        required to specify the pretrained model to load.
+
         The method does not return any value, as indicated by the `None` return type.
-        
+
         During the execution of the method, the following steps are performed:
-        
-        1. The `config` parameter is obtained from the `kwargs` dictionary. If `config` is not provided, it is set to `None`.
-        2. The values of `from_pt`, `mirror`, `revision`, and `token` are obtained from the `kwargs` dictionary using the `get` method. If any of these parameters is not provided, default values are used.
-        3. If the `config` parameter is not an instance of `PretrainedConfig`, the `kwargs` dictionary is deep copied to `kwargs_orig`.
-        4. If the `ms_dtype` parameter is set to `'auto'` in `kwargs`, it is removed from `kwargs`.
-        5. If the `quantization_config` parameter is not `None` in `kwargs`, it is removed from `kwargs`.
-        6. The `AutoConfig.from_pretrained` method is called with `pretrained_model_name_or_path` and the remaining `kwargs` as arguments. The return values are assigned to `config` and `kwargs`.
-        7. If the `torch_dtype` parameter is set to `'auto'` in `kwargs_orig`, it is added to `kwargs` with the same value.
-        8. If the `quantization_config` parameter is not `None` in `kwargs_orig`, it is added to `kwargs` with the same value.
-        9. The `token`, `mirror`, and `revision` parameters are added to `kwargs` with their respective values obtained earlier.
-        10. If the type of `config` is one of the keys in `_model_mapping` of the class, the corresponding model class is obtained using `_get_model_class` function with `config` and `_model_mapping` as
-arguments.
-        11. The `from_pretrained` method of the obtained `model_class` is called with `pretrained_model_name_or_path`, `model_args`, `config`, and the updated `kwargs` as arguments.
-        12. If the type of `config` is not recognized, a `ValueError` is raised with an informative error message.
-        
+
+        >   1. The `config` parameter is obtained from the `kwargs` dictionary. If `config` is not provided, it is set to `None`.
+        >   2. The values of `from_pt`, `mirror`, `revision`, and `token` are obtained from the `kwargs` dictionary using the `get` method. If any of these parameters is not provided, default values are used.
+        >   3. If the `config` parameter is not an instance of `PretrainedConfig`, the `kwargs` dictionary is deep copied to `kwargs_orig`.
+        >   4. If the `ms_dtype` parameter is set to `'auto'` in `kwargs`, it is removed from `kwargs`.
+        >   5. If the `quantization_config` parameter is not `None` in `kwargs`, it is removed from `kwargs`.
+        >   6. The `AutoConfig.from_pretrained` method is called with `pretrained_model_name_or_path` and the remaining `kwargs` as arguments. The return values are assigned to `config` and `kwargs`.
+        >   7. If the `torch_dtype` parameter is set to `'auto'` in `kwargs_orig`, it is added to `kwargs` with the same value.
+        >   8. If the `quantization_config` parameter is not `None` in `kwargs_orig`, it is added to `kwargs` with the same value.
+        >   9. The `token`, `mirror`, and `revision` parameters are added to `kwargs` with their respective values obtained earlier.
+        >   10. If the type of `config` is one of the keys in `_model_mapping` of the class, the corresponding model class is obtained using `_get_model_class` function with `config` and `_model_mapping` as
+            arguments.
+        >   11. The `from_pretrained` method of the obtained `model_class` is called with `pretrained_model_name_or_path`, `model_args`, `config`, and the updated `kwargs` as arguments.
+        >   12. If the type of `config` is not recognized, a `ValueError` is raised with an informative error message.
+
         Note that this docstring assumes the presence of additional helper functions and variables that are not included in the provided code snippet. It is recommended to refer to the complete implementation
-for a comprehensive understanding.
+        for a comprehensive understanding.
         """
         config = kwargs.pop("config", None)
         _ = kwargs.get('from_pt', True)
@@ -248,14 +250,14 @@ for a comprehensive understanding.
 def insert_head_doc(docstring, head_doc=""):
     """
     Inserts a specified 'head_doc' into the provided 'docstring' to modify the description of a model class in the library.
-    
+
     Args:
         docstring (str): The original docstring that describes a model class in the library.
         head_doc (str): The head type to insert into the docstring. It is used to modify the description of the model class.
-    
+
     Returns:
         None: This function does not return any value.
-    
+
     Raises:
         None: This function does not raise any exceptions.
     """
@@ -271,17 +273,17 @@ def insert_head_doc(docstring, head_doc=""):
 
 def get_values(model_mapping):
     """
-    This function takes a dictionary called 'model_mapping' as a parameter and returns a list of values from the dictionary. 
-    
+    This function takes a dictionary called 'model_mapping' as a parameter and returns a list of values from the dictionary.
+
     Args:
         model_mapping (dict): A dictionary that maps keys to values. The values can be either a single object or a list/tuple of objects.
-    
+
     Returns:
         list: A list containing all the values from the 'model_mapping' dictionary. If a value is a list or tuple, its elements are included in the final list.
-    
+
     Raises:
         None.
-    
+
     """
     result = []
     for model in model_mapping.values():
@@ -296,14 +298,14 @@ def get_values(model_mapping):
 def getattribute_from_module(module, attr):
     """
     This function retrieves an attribute from a given module.
-    
+
     Args:
         module (module): The module from which to retrieve the attribute.
         attr (str or tuple): The name of the attribute to retrieve. If a tuple is provided, the function will recursively retrieve each attribute specified in the tuple.
-    
+
     Returns:
         None: If the attribute is None or cannot be found in the module.
-    
+
     Raises:
         ValueError: If the attribute is not found in the provided module or any of its dependencies.
     """
@@ -328,24 +330,24 @@ def getattribute_from_module(module, attr):
 
 class _LazyAutoMapping(OrderedDict):
     """
-    " A mapping config to object (model or tokenizer for instance) that will load keys and values when it is accessed.
+    A mapping config to object (model or tokenizer for instance) that will load keys and values when it is accessed.
 
     Args:
-        - config_mapping: The map model type to config class
-        - model_mapping: The map model type to model (or tokenizer) class
+        config_mapping: The map model type to config class
+        model_mapping: The map model type to model (or tokenizer) class
     """
     def __init__(self, config_mapping, model_mapping):
         """
         Initializes a new instance of the _LazyAutoMapping class.
-        
+
         Args:
             self: The instance of the _LazyAutoMapping class.
             config_mapping (dict): A dictionary that represents the mapping of configuration values.
             model_mapping (dict): A dictionary that represents the mapping of model values.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             No specific exceptions are raised within this method.
         """
@@ -359,18 +361,18 @@ class _LazyAutoMapping(OrderedDict):
     def __len__(self):
         """
         Returns the length of the _LazyAutoMapping object.
-        
+
         Args:
             self (_LazyAutoMapping): The instance of the _LazyAutoMapping class.
                 The self parameter is automatically passed when calling this method.
-        
+
         Returns:
             int: The total number of common keys between the _config_mapping and _model_mapping dictionaries,
                 plus the number of elements in the _extra_content list.
-        
+
         Raises:
             None.
-        
+
         Note:
             This method does not modify the _LazyAutoMapping object.
         """
@@ -382,10 +384,10 @@ class _LazyAutoMapping(OrderedDict):
         Args:
             self (object): The instance of the '_LazyAutoMapping' class.
             key (object): The key used to retrieve the value from the mapping. It should be a valid key present in the mapping.
-        
+
         Returns:
             None: This method does not explicitly return any value. The retrieved value is returned based on the key provided.
-        
+
         Raises:
             KeyError: If the provided key is not found in the mapping, a KeyError is raised.
         """
@@ -407,15 +409,15 @@ class _LazyAutoMapping(OrderedDict):
     def _load_attr_from_module(self, model_type, attr):
         """
         Load attribute from module based on model type.
-        
+
         Args:
             self (_LazyAutoMapping): The instance of the _LazyAutoMapping class.
             model_type (str): The type of the model for which the attribute needs to be loaded.
             attr (str): The attribute to be loaded from the module.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             ModuleNotFoundError: If the specified module for the model type is not found.
             AttributeError: If the specified attribute is not found in the module for the model type.
@@ -428,13 +430,13 @@ class _LazyAutoMapping(OrderedDict):
     def keys(self):
         """
         This method retrieves the keys from the _LazyAutoMapping instance.
-        
+
         Args:
             self (_LazyAutoMapping): The instance of the _LazyAutoMapping class.
-            
+
         Returns:
             list: A list of keys from the _LazyAutoMapping instance.
-        
+
         Raises:
             None
         """
@@ -448,15 +450,15 @@ class _LazyAutoMapping(OrderedDict):
     def get(self, key, default):
         """
         This method retrieves the value associated with the specified key from the _LazyAutoMapping instance, and returns a default value if the key is not present.
-        
+
         Args:
             self (_LazyAutoMapping): The instance of the _LazyAutoMapping class.
             key (any): The key whose associated value is to be retrieved.
             default (any): The default value to be returned if the key is not present in the mapping.
-        
+
         Returns:
             If the key is present in the mapping, the method returns the value associated with the key. If the key is not present, the method returns the specified default value.
-        
+
         Raises:
             KeyError: If the specified key is not present in the mapping, the method raises a KeyError.
         """
@@ -468,13 +470,13 @@ class _LazyAutoMapping(OrderedDict):
     def __bool__(self):
         """
         This method '__bool__' in the class '_LazyAutoMapping' returns a boolean value indicating whether the mapping object has any keys.
-        
+
         Args:
             self (object): The instance of the '_LazyAutoMapping' class. It represents the mapping object for which the method is being called.
-        
+
         Returns:
             bool: A boolean value indicating whether the mapping object has any keys. Returns True if the mapping object has keys, otherwise False.
-        
+
         Raises:
             No specific exceptions are raised by this method.
         """
@@ -483,13 +485,13 @@ class _LazyAutoMapping(OrderedDict):
     def values(self):
         """
         Method 'values' in the class '_LazyAutoMapping' retrieves values from the mapping and extra content.
-        
+
         Args:
             self: The reference to the current instance of the class '_LazyAutoMapping'.
-            
+
         Returns:
             A list of values retrieved from the mapping and extra content. The values are of type 'None'.
-        
+
         Raises:
             No exceptions are raised by this method.
         """
@@ -504,13 +506,13 @@ class _LazyAutoMapping(OrderedDict):
         """
         items(self)
             This method returns a list of tuples representing the mapping items between the config and model mappings along with any extra content.
-        
+
         Args:
             self (object): The instance of the _LazyAutoMapping class.
-        
+
         Returns:
             list: A list of tuples representing the mapping items between the config and model mappings along with any extra content.
-        
+
         Raises:
             None
         """
@@ -527,32 +529,32 @@ class _LazyAutoMapping(OrderedDict):
     def __iter__(self):
         """
         Method '__iter__' in the class '_LazyAutoMapping'.
-        
+
         Args:
             self (object): The instance of the '_LazyAutoMapping' class.
                 Represents the current instance of the class for which the iterator is being generated.
-        
+
         Returns:
             None. This method returns an iterator over the keys of the instance.
-        
+
         Raises:
             No specific exceptions are raised by this method.
         """
         return iter(self.keys())
 
     def __contains__(self, item):
-        ''' 
-            This method checks if an item is present in the '_extra_content' attribute or if the item's name is present in the '_reverse_config_mapping' attribute of the '_LazyAutoMapping' class instance.
-        
-            Args:
-                self (_LazyAutoMapping): The instance of the '_LazyAutoMapping' class.
-                item (Any): The item to be checked for presence in the '_extra_content' attribute or the item's name in the '_reverse_config_mapping' attribute.
-        
-            Returns:
-                bool: Returns True if the item is found in the '_extra_content' attribute or if the item's name is found in the '_reverse_config_mapping' attribute. Returns False otherwise.
-        
-            Raises:
-                None.
+        '''
+        This method checks if an item is present in the '_extra_content' attribute or if the item's name is present in the '_reverse_config_mapping' attribute of the '_LazyAutoMapping' class instance.
+
+        Args:
+            self (_LazyAutoMapping): The instance of the '_LazyAutoMapping' class.
+            item (Any): The item to be checked for presence in the '_extra_content' attribute or the item's name in the '_reverse_config_mapping' attribute.
+
+        Returns:
+            bool: Returns True if the item is found in the '_extra_content' attribute or if the item's name is found in the '_reverse_config_mapping' attribute. Returns False otherwise.
+
+        Raises:
+            None.
         '''
         if item in self._extra_content:
             return True

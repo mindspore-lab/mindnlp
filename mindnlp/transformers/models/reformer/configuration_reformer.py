@@ -144,20 +144,19 @@ class ReformerConfig(PretrainedConfig):
         classifier_dropout (`float`, *optional*):
             The dropout ratio for the classification head.
 
-    Examples:
+    Example:
+        ```python
+        >>> from transformers import ReformerConfig, ReformerModel
 
-    ```python
-    >>> from transformers import ReformerConfig, ReformerModel
+        >>> # Initializing a Reformer configuration
+        >>> configuration = ReformerConfig()
 
-    >>> # Initializing a Reformer configuration
-    >>> configuration = ReformerConfig()
+        >>> # Initializing a Reformer model (with random weights)
+        >>> model = ReformerModel(configuration)
 
-    >>> # Initializing a Reformer model (with random weights)
-    >>> model = ReformerModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
 """
     model_type = "reformer"
     keys_to_ignore_at_inference = ["past_buckets_states"]

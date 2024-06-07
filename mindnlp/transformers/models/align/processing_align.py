@@ -80,20 +80,18 @@ class AlignProcessor(ProcessorMixin):
 
             return_tensors (`str` or [`~utils.TensorType`], *optional*):
                 If set, will return tensors of a particular framework. Acceptable values are:
-
-                - `'tf'`: Return TensorFlow `tf.constant` objects.
-                - `'pt'`: Return PyTorch `torch.Tensor` objects.
-                - `'np'`: Return NumPy `np.ndarray` objects.
-                - `'jax'`: Return JAX `jnp.ndarray` objects.
+                >   - `'tf'`: Return TensorFlow `tf.constant` objects.
+                >   - `'pt'`: Return PyTorch `torch.Tensor` objects.
+                >   - `'np'`: Return NumPy `np.ndarray` objects.
+                >   - `'jax'`: Return JAX `jnp.ndarray` objects.
 
         Returns:
             [`BatchEncoding`]: A [`BatchEncoding`] with the following fields:
-
-            - **input_ids** -- List of token ids to be fed to a model. Returned when `text` is not `None`.
-            - **attention_mask** -- List of indices specifying which tokens should be attended to by the model (when
+            >   - **input_ids** -- List of token ids to be fed to a model. Returned when `text` is not `None`.
+            >   - **attention_mask** -- List of indices specifying which tokens should be attended to by the model (when
               `return_attention_mask=True` or if *"attention_mask"* is in `self.model_input_names` and if `text` is not
               `None`).
-            - **pixel_values** -- Pixel values to be fed to a model. Returned when `images` is not `None`.
+            >   - **pixel_values** -- Pixel values to be fed to a model. Returned when `images` is not `None`.
         """
         if text is None and images is None:
             raise ValueError("You have to specify either text or images. Both cannot be none.")

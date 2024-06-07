@@ -70,21 +70,20 @@ class BrosConfig(PretrainedConfig):
         classifier_dropout_prob (`float`, *optional*, defaults to 0.1):
             The dropout ratio for the classifier head.
 
+    Example:
+        ```python
+        >>> from transformers import BrosConfig, BrosModel
 
-    Examples:
+        >>> # Initializing a BROS jinho8345/bros-base-uncased style configuration
+        >>> configuration = BrosConfig()
 
-    ```python
-    >>> from transformers import BrosConfig, BrosModel
+        >>> # Initializing a model from the jinho8345/bros-base-uncased style configuration
+        >>> model = BrosModel(configuration)
 
-    >>> # Initializing a BROS jinho8345/bros-base-uncased style configuration
-    >>> configuration = BrosConfig()
-
-    >>> # Initializing a model from the jinho8345/bros-base-uncased style configuration
-    >>> model = BrosModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "bros"
 
     def __init__(

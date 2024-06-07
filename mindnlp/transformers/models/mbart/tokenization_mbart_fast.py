@@ -70,18 +70,18 @@ class MBartTokenizerFast(PreTrainedTokenizerFast):
     The tokenization method is `<tokens> <eos> <language code>` for source language documents, and `<language code>
     <tokens> <eos>` for target language documents.
 
-    Examples:
+    Example:
+        ```python
+        >>> from transformers import MBartTokenizerFast
 
-    ```python
-    >>> from transformers import MBartTokenizerFast
-
-    >>> tokenizer = MBartTokenizerFast.from_pretrained(
-    ...     "facebook/mbart-large-en-ro", src_lang="en_XX", tgt_lang="ro_RO"
-    ... )
-    >>> example_english_phrase = " UN Chief Says There Is No Military Solution in Syria"
-    >>> expected_translation_romanian = "Şeful ONU declară că nu există o soluţie militară în Siria"
-    >>> inputs = tokenizer(example_english_phrase, text_target=expected_translation_romanian, return_tensors="pt")
-    ```"""
+        >>> tokenizer = MBartTokenizerFast.from_pretrained(
+        ...     "facebook/mbart-large-en-ro", src_lang="en_XX", tgt_lang="ro_RO"
+        ... )
+        >>> example_english_phrase = " UN Chief Says There Is No Military Solution in Syria"
+        >>> expected_translation_romanian = "Şeful ONU declară că nu există o soluţie militară în Siria"
+        >>> inputs = tokenizer(example_english_phrase, text_target=expected_translation_romanian, return_tensors="pt")
+        ```
+    """
     vocab_files_names = VOCAB_FILES_NAMES
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
@@ -109,7 +109,7 @@ class MBartTokenizerFast(PreTrainedTokenizerFast):
     ):
         """
         This method initializes an instance of the MBartTokenizerFast class.
-        
+
         Args:
             self: The instance of the class.
             vocab_file (str, optional): The vocabulary file. Defaults to None.
@@ -124,10 +124,10 @@ class MBartTokenizerFast(PreTrainedTokenizerFast):
             src_lang (str, optional): The source language. Defaults to None.
             tgt_lang (str, optional): The target language. Defaults to None.
             additional_special_tokens (list, optional): Additional special tokens. Defaults to None.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             None.
         """
@@ -172,18 +172,18 @@ class MBartTokenizerFast(PreTrainedTokenizerFast):
     def can_save_slow_tokenizer(self) -> bool:
         """
         Check if the slow tokenizer can be saved.
-        
+
         Args:
             self: An instance of the MBartTokenizerFast class.
-        
+
         Returns:
             A boolean value indicating whether the slow tokenizer can be saved or not.
-        
+
         Raises:
             None.
-        
+
         This method checks if the slow tokenizer can be saved by verifying the existence of the vocabulary file specified by the 'vocab_file' attribute of the class. If the 'vocab_file' attribute is set and it
-corresponds to an existing file, the method returns True. Otherwise, it returns False.
+        corresponds to an existing file, the method returns True. Otherwise, it returns False.
         """
         return os.path.isfile(self.vocab_file) if self.vocab_file else False
 
@@ -196,14 +196,14 @@ corresponds to an existing file, the method returns True. Otherwise, it returns 
     def src_lang(self, new_src_lang: str) -> None:
         """
         Sets the source language for the MBartTokenizerFast instance.
-        
+
         Args:
             self (MBartTokenizerFast): The instance of the MBartTokenizerFast class.
             new_src_lang (str): The new source language to be set for the tokenizer. It should be a string representing the language code.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             - TypeError: If the new source language provided is not a string.
         """
@@ -219,8 +219,8 @@ corresponds to an existing file, the method returns True. Otherwise, it returns 
 
         An MBART sequence has the following format, where `X` represents the sequence:
 
-        - `input_ids` (for encoder) `X [eos, src_lang_code]`
-        - `decoder_input_ids`: (for decoder) `X [eos, tgt_lang_code]`
+        >   - `input_ids` (for encoder) `X [eos, src_lang_code]`
+        >   - `decoder_input_ids`: (for decoder) `X [eos, tgt_lang_code]`
 
         BOS is never used. Pairs of sequences are not the expected use case, but they will be handled without a
         separator.
@@ -285,7 +285,7 @@ corresponds to an existing file, the method returns True. Otherwise, it returns 
     ) -> BatchEncoding:
         """
         Prepare a batch for sequence-to-sequence tokenization using the MBartTokenizerFast class.
-        
+
         Args:
             self (MBartTokenizerFast): An instance of the MBartTokenizerFast class.
             src_texts (List[str]): A list of source texts to be tokenized.
@@ -293,21 +293,23 @@ corresponds to an existing file, the method returns True. Otherwise, it returns 
             tgt_texts (List[str], optional): A list of target texts to be tokenized. Defaults to None.
             tgt_lang (str, optional): The language code of the target texts. Defaults to 'ro_RO'.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
             BatchEncoding: A dictionary-like object that contains the tokenized inputs and their corresponding IDs.
-        
+
         Raises:
             None: This method does not raise any exceptions.
-        
+
         Note:
             This method internally calls the prepare_seq2seq_batch method of the base class, passing the necessary parameters.
-        
-        Examples:
+
+        Example:
+            ```python
             >>> tokenizer = MBartTokenizerFast.from_pretrained('facebook/mbart-large-50')
             >>> src_texts = ['Hello world!', 'How are you?']
             >>> tgt_texts = ['Bonjour le monde!', 'Comment ça va?']
             >>> batch_encodings = tokenizer.prepare_seq2seq_batch(src_texts, src_lang='en_XX', tgt_texts=tgt_texts, tgt_lang='fr_FR')
+            ```
         """
         self.src_lang = src_lang
         self.tgt_lang = tgt_lang
@@ -316,14 +318,14 @@ corresponds to an existing file, the method returns True. Otherwise, it returns 
     def _switch_to_input_mode(self):
         """
         Method to switch to input mode for the MBartTokenizerFast class.
-        
+
         Args:
             self (MBartTokenizerFast): The instance of the MBartTokenizerFast class.
                 This parameter is required to access the methods and attributes of the class.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             No specific exceptions are raised within this method.
         """
@@ -332,28 +334,30 @@ corresponds to an existing file, the method returns True. Otherwise, it returns 
     def _switch_to_target_mode(self):
         """
         Switches the tokenizer to the target mode for the MBartTokenizerFast class.
-        
+
         Args:
             self: An instance of the MBartTokenizerFast class.
-        
+
         Returns:
             None. The method does not return any value.
-        
+
         Raises:
             None.
-        
+
         Description:
-        This method switches the tokenizer to the target mode for the MBartTokenizerFast class. In target mode, the tokenizer is configured to tokenize text according to the target language specified during
-initialization.
-        
+            This method switches the tokenizer to the target mode for the MBartTokenizerFast class. In target mode, the tokenizer is configured to tokenize text according to the target language specified during
+            initialization.
+
         The method takes one parameter, 'self', which refers to an instance of the MBartTokenizerFast class. This parameter is required to access the tokenizer instance and perform the necessary operations to
-switch to the target mode.
-        
+        switch to the target mode.
+
         The method does not raise any exceptions.
-        
+
         Example:
+            ```python
             tokenizer = MBartTokenizerFast()
             tokenizer._switch_to_target_mode()
+            ```
         """
         return self.set_tgt_lang_special_tokens(self.tgt_lang)
 

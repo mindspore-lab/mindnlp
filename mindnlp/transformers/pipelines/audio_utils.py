@@ -1,4 +1,4 @@
-# Copyright 2024 The HuggingFace Team. All rights reserved.
+# Copyright 2023 The HuggingFace Team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,251 +11,390 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
-"""audio utils"""
-import datetime
-import platform
-import subprocess
-from typing import Optional, Tuple, Union
+"""peft integration"""
+import warnings
+from typing import Any, Dict, List, Optional, Union
+import mindspore
 
-import numpy as np
+from ...utils import (
+    find_adapter_config_file,
+    logging,
+)
 
 
-def ffmpeg_read(bpayload: bytes, sampling_rate: int) -> np.array:
+logger = logging.get_logger(__name__)
+
+
+class PeftAdapterMixin:
     """
-    Helper function to read an audio file through ffmpeg.
-    """
-    ar = f"{sampling_rate}"
-    ac = "1"
-    format_for_conversion = "f32le"
-    ffmpeg_command = [
-        "ffmpeg",
-        "-i",
-        "pipe:0",
-        "-ac",
-        ac,
-        "-ar",
-        ar,
-        "-f",
-        format_for_conversion,
-        "-hide_banner",
-        "-loglevel",
-        "quiet",
-        "pipe:1",
-    ]
+    A class containing all functions for loading and using adapters weights that are supported in PEFT library. For
+    more details about adapters and injecting them on a transformer-based model, check out the documentation of PEFT
+    library: https://huggingface.co/docs/peft/index
 
-    try:
-        with subprocess.Popen(ffmpeg_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE) as ffmpeg_process:
-            output_stream = ffmpeg_process.communicate(bpayload)
-    except FileNotFoundError as error:
-        raise ValueError("ffmpeg was not found but is required to load audio files from filename") from error
-    out_bytes = output_stream[0]
-    audio = np.frombuffer(out_bytes, np.float32)
-    if audio.shape[0] == 0:
-        raise ValueError(
-            "Soundfile is either not in the correct format or is malformed. Ensure that the soundfile has "
-            "a valid audio file extension (e.g. wav, flac or mp3) and is not corrupted. If reading from a remote "
-            "URL, ensure that the URL is the full address to **download** the audio file."
+    Currently supported PEFT methods are all non-prefix tuning methods. Below is the list of supported PEFT methods
+    that anyone can load, train and run with this mixin class:
+    >- Low Rank Adapters (LoRA): https://huggingface.co/docs/peft/conceptual_guides/lora
+    >- IA3: https://huggingface.co/docs/peft/conceptual_guides/ia3
+    >- AdaLora: https://arxiv.org/abs/2303.10512
+
+    Other PEFT models such as prompt tuning, prompt learning are out of scope as these adapters are not "injectable"
+    into a torch module. For using these methods, please refer to the usage guide of PEFT library.
+
+    With this mixin, if the correct PEFT version is installed, it is possible to:
+
+    >- Load an adapter stored on a local path or in a remote Hub repository, and inject it in the model
+    >- Attach new adapters in the model and train them with Trainer or by your own.
+    >- Attach multiple adapters and iteratively activate / deactivate them
+    >- Activate / deactivate all adapters from the model.
+    >- Get the `state_dict` of the active adapter.
+    """
+    _hf_peft_config_loaded = False
+
+    def load_adapter(
+        self,
+        peft_model_id: Optional[str] = None,
+        adapter_name: Optional[str] = None,
+        revision: Optional[str] = None,
+        token: Optional[str] = None,
+        device_map: Optional[str] = "auto",
+        max_memory: Optional[str] = None,
+        offload_folder: Optional[str] = None,
+        offload_index: Optional[int] = None,
+        peft_config: Dict[str, Any] = None,
+        adapter_state_dict: Optional[Dict[str, "mindspore.Tensor"]] = None,
+        adapter_kwargs: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """
+        Load adapter weights from file or remote Hub folder. If you are not familiar with adapters and PEFT methods, we
+        invite you to read more about them on PEFT official documentation: https://huggingface.co/docs/peft
+
+        Requires peft as a backend to load the adapter weights.
+
+        Args:
+            peft_model_id (`str`, *optional*):
+                The identifier of the model to look for on the Hub, or a local path to the saved adapter config file
+                and adapter weights.
+            adapter_name (`str`, *optional*):
+                The adapter name to use. If not set, will use the default adapter.
+            revision (`str`, *optional*, defaults to `"main"`):
+                The specific model version to use. It can be a branch name, a tag name, or a commit id, since we use a
+                git-based system for storing models and other artifacts on huggingface.co, so `revision` can be any
+                identifier allowed by git.
+
+                <Tip>
+
+                To test a pull request you made on the Hub, you can pass `revision="refs/pr/<pr_number>".
+
+                </Tip>
+
+            token (`str`, `optional`):
+                Whether to use authentication token to load the remote folder. Userful to load private repositories
+                that are on HuggingFace Hub. You might need to call `huggingface-cli login` and paste your tokens to
+                cache it.
+            device_map (`str` or `Dict[str, Union[int, str, torch.device]]` or `int` or `torch.device`, *optional*):
+                A map that specifies where each submodule should go. It doesn't need to be refined to each
+                parameter/buffer name, once a given module name is inside, every submodule of it will be sent to the
+                same device. If we only pass the device (*e.g.*, `"cpu"`, `"cuda:1"`, `"mps"`, or a GPU ordinal rank
+                like `1`) on which the model will be allocated, the device map will map the entire model to this
+                device. Passing `device_map = 0` means put the whole model on GPU 0.
+
+                To have Accelerate compute the most optimized `device_map` automatically, set `device_map="auto"`. For
+                more information about each option see [designing a device
+                map](https://hf.co/docs/accelerate/main/en/usage_guides/big_modeling#designing-a-device-map).
+            max_memory (`Dict`, *optional*):
+                A dictionary device identifier to maximum memory. Will default to the maximum memory available for each
+                GPU and the available CPU RAM if unset.
+            offload_folder (`str` or `os.PathLike`, `optional`):
+                If the `device_map` contains any value `"disk"`, the folder where we will offload weights.
+            offload_index (`int`, `optional`):
+                `offload_index` argument to be passed to `accelerate.dispatch_model` method.
+            peft_config (`Dict[str, Any]`, *optional*):
+                The configuration of the adapter to add, supported adapters are non-prefix tuning and adaption prompts
+                methods. This argument is used in case users directly pass PEFT state dicts
+            adapter_state_dict (`Dict[str, mindspore.Tensor]`, *optional*):
+                The state dict of the adapter to load. This argument is used in case users directly pass PEFT state
+                dicts
+            adapter_kwargs (`Dict[str, Any]`, *optional*):
+                Additional keyword arguments passed along to the `from_pretrained` method of the adapter config and
+                `find_adapter_config_file` method.
+        """
+        adapter_name = adapter_name if adapter_name is not None else "default"
+        if adapter_kwargs is None:
+            adapter_kwargs = {}
+
+        from ...peft import PeftConfig, inject_adapter_in_model, load_peft_weights
+        from ...peft.utils import set_peft_model_state_dict
+
+        if self._hf_peft_config_loaded and adapter_name in self.peft_config:
+            raise ValueError(f"Adapter with name {adapter_name} already exists. Please use a different name.")
+
+        if peft_model_id is None and (adapter_state_dict is None and peft_config is None):
+            raise ValueError(
+                "You should either pass a `peft_model_id` or a `peft_config` and `adapter_state_dict` to load an adapter."
+            )
+
+        # We keep `revision` in the signature for backward compatibility
+        if revision is not None and "revision" not in adapter_kwargs:
+            adapter_kwargs["revision"] = revision
+        elif revision is not None and "revision" in adapter_kwargs and revision != adapter_kwargs["revision"]:
+            logger.error(
+                "You passed a `revision` argument both in `adapter_kwargs` and as a standalone argument. "
+                "The one in `adapter_kwargs` will be used."
+            )
+
+        # Override token with adapter_kwargs' token
+        if "token" in adapter_kwargs:
+            token = adapter_kwargs.pop("token")
+
+        if peft_config is None:
+            adapter_config_file = find_adapter_config_file(
+                peft_model_id,
+                token=token,
+                **adapter_kwargs,
+            )
+
+            if adapter_config_file is None:
+                raise ValueError(
+                    f"adapter model file not found in {peft_model_id}. Make sure you are passing the correct path to the "
+                    "adapter model."
+                )
+
+            peft_config = PeftConfig.from_pretrained(
+                peft_model_id,
+                token=token,
+                **adapter_kwargs,
+            )
+
+        # Create and add fresh new adapters into the model.
+        inject_adapter_in_model(peft_config, self, adapter_name)
+
+        if not self._hf_peft_config_loaded:
+            self._hf_peft_config_loaded = True
+
+        if peft_model_id is not None:
+            adapter_state_dict = load_peft_weights(peft_model_id, token=token, **adapter_kwargs)
+
+        # We need to pre-process the state dict to remove unneeded prefixes - for backward compatibility
+        processed_adapter_state_dict = {}
+        prefix = "base_model.model."
+        for key, value in adapter_state_dict.items():
+            if key.startswith(prefix):
+                new_key = key[len(prefix) :]
+            else:
+                new_key = key
+            processed_adapter_state_dict[new_key] = value
+
+        # Load state dict
+        incompatible_keys = set_peft_model_state_dict(self, processed_adapter_state_dict, adapter_name)
+
+        if incompatible_keys is not None:
+            # check only for unexpected keys
+            if hasattr(incompatible_keys, "unexpected_keys") and len(incompatible_keys.unexpected_keys) > 0:
+                logger.warning(
+                    f"Loading adapter weights from {peft_model_id} led to unexpected keys not found in the model: "
+                    f" {incompatible_keys.unexpected_keys}. "
+                )
+
+        # Re-dispatch model and hooks in case the model is offloaded to CPU / Disk.
+        if (
+            (getattr(self, "hf_device_map", None) is not None)
+            and (len(set(self.hf_device_map.values()).intersection({"cpu", "disk"})) > 0)
+            and len(self.peft_config) == 1
+        ):
+            self._dispatch_accelerate_model(
+                device_map=device_map,
+                max_memory=max_memory,
+                offload_folder=offload_folder,
+                offload_index=offload_index,
+            )
+
+    def add_adapter(self, adapter_config, adapter_name: Optional[str] = None) -> None:
+        r"""
+        If you are not familiar with adapters and PEFT methods, we invite you to read more about them on the PEFT
+        official documentation: https://huggingface.co/docs/peft
+
+        Adds a fresh new adapter to the current model for training purpose. If no adapter name is passed, a default
+        name is assigned to the adapter to follow the convention of PEFT library (in PEFT we use "default" as the
+        default adapter name).
+
+        Args:
+            adapter_config (`~peft.PeftConfig`):
+                The configuration of the adapter to add, supported adapters are non-prefix tuning and adaption prompts
+                methods
+            adapter_name (`str`, *optional*, defaults to `"default"`):
+                The name of the adapter to add. If no name is passed, a default name is assigned to the adapter.
+        """
+        from ...peft import PeftConfig, inject_adapter_in_model
+
+        adapter_name = adapter_name or "default"
+
+        if not self._hf_peft_config_loaded:
+            self._hf_peft_config_loaded = True
+        elif adapter_name in self.peft_config:
+            raise ValueError(f"Adapter with name {adapter_name} already exists. Please use a different name.")
+
+        if not isinstance(adapter_config, PeftConfig):
+            raise ValueError(
+                f"adapter_config should be an instance of PeftConfig. Got {type(adapter_config)} instead."
+            )
+
+        # Retrieve the name or path of the model, one could also use self.config._name_or_path
+        # but to be consistent with what we do in PEFT: https://github.com/huggingface/peft/blob/6e783780ca9df3a623992cc4d1d665001232eae0/src/peft/mapping.py#L100
+        adapter_config.base_model_name_or_path = self.__dict__.get("name_or_path", None)
+        inject_adapter_in_model(adapter_config, self, adapter_name)
+
+        self.set_adapter(adapter_name)
+
+    def set_adapter(self, adapter_name: Union[List[str], str]) -> None:
+        """
+        If you are not familiar with adapters and PEFT methods, we invite you to read more about them on the PEFT
+        official documentation: https://huggingface.co/docs/peft
+
+        Sets a specific adapter by forcing the model to use a that adapter and disable the other adapters.
+
+        Args:
+            adapter_name (`Union[List[str], str]`):
+                The name of the adapter to set. Can be also a list of strings to set multiple adapters.
+        """
+        if not self._hf_peft_config_loaded:
+            raise ValueError("No adapter loaded. Please load an adapter first.")
+        elif isinstance(adapter_name, list):
+            missing = set(adapter_name) - set(self.peft_config)
+            if len(missing) > 0:
+                raise ValueError(
+                    f"Following adapter(s) could not be found: {', '.join(missing)}. Make sure you are passing the correct adapter name(s)."
+                    f" current loaded adapters are: {list(self.peft_config.keys())}"
+                )
+        elif adapter_name not in self.peft_config:
+            raise ValueError(
+                f"Adapter with name {adapter_name} not found. Please pass the correct adapter name among {list(self.peft_config.keys())}"
+            )
+
+        from ...peft.tuners.tuners_utils import BaseTunerLayer
+        from ...peft.utils import ModulesToSaveWrapper
+
+        _adapters_has_been_set = False
+
+        for _, module in self.named_modules():
+            if isinstance(module, (BaseTunerLayer, ModulesToSaveWrapper)):
+                # For backward compatbility with previous PEFT versions
+                if hasattr(module, "set_adapter"):
+                    module.set_adapter(adapter_name)
+                else:
+                    module.active_adapter = adapter_name
+                _adapters_has_been_set = True
+
+        if not _adapters_has_been_set:
+            raise ValueError(
+                "Did not succeeded in setting the adapter. Please make sure you are using a model that supports adapters."
+            )
+
+    def disable_adapters(self) -> None:
+        r"""
+        If you are not familiar with adapters and PEFT methods, we invite you to read more about them on the PEFT
+        official documentation: https://huggingface.co/docs/peft
+
+        Disable all adapters that are attached to the model. This leads to inferring with the base model only.
+        """
+        if not self._hf_peft_config_loaded:
+            raise ValueError("No adapter loaded. Please load an adapter first.")
+
+        from ...peft.tuners.tuners_utils import BaseTunerLayer
+        from ...peft.utils import ModulesToSaveWrapper
+
+        for _, module in self.named_modules():
+            if isinstance(module, (BaseTunerLayer, ModulesToSaveWrapper)):
+                # The recent version of PEFT need to call `enable_adapters` instead
+                if hasattr(module, "enable_adapters"):
+                    module.enable_adapters(enabled=False)
+                else:
+                    module.disable_adapters = True
+
+    def enable_adapters(self) -> None:
+        """
+        If you are not familiar with adapters and PEFT methods, we invite you to read more about them on the PEFT
+        official documentation: https://huggingface.co/docs/peft
+
+        Enable adapters that are attached to the model. The model will use `self.active_adapter()`
+        """
+        if not self._hf_peft_config_loaded:
+            raise ValueError("No adapter loaded. Please load an adapter first.")
+
+        from ...peft.tuners.tuners_utils import BaseTunerLayer
+
+        for _, module in self.named_modules():
+            if isinstance(module, BaseTunerLayer):
+                # The recent version of PEFT need to call `enable_adapters` instead
+                if hasattr(module, "enable_adapters"):
+                    module.enable_adapters(enabled=True)
+                else:
+                    module.disable_adapters = False
+
+    def active_adapters(self) -> List[str]:
+        """
+        If you are not familiar with adapters and PEFT methods, we invite you to read more about them on the PEFT
+        official documentation: https://huggingface.co/docs/peft
+
+        Gets the current active adapters of the model. In case of multi-adapter inference (combining multiple adapters
+        for inference) returns the list of all active adapters so that users can deal with them accordingly.
+
+        For previous PEFT versions (that does not support multi-adapter inference), `module.active_adapter` will return
+        a single string.
+        """
+        if not self._hf_peft_config_loaded:
+            raise ValueError("No adapter loaded. Please load an adapter first.")
+
+        from ...peft.tuners.tuners_utils import BaseTunerLayer
+
+        for _, module in self.named_modules():
+            if isinstance(module, BaseTunerLayer):
+                active_adapters = module.active_adapter
+                break
+
+        # For previous PEFT versions
+        if isinstance(active_adapters, str):
+            active_adapters = [active_adapters]
+
+        return active_adapters
+
+    def active_adapter(self) -> str:
+        """
+        Retrieve the active adapter.
+
+        Args:
+            self: An instance of the PeftAdapterMixin class.
+
+        Returns:
+            A string representing the active adapter.
+
+        Raises:
+            FutureWarning: If the `active_adapter` method is deprecated and will be removed in a future version.
+        """
+        warnings.warn(
+            "The `active_adapter` method is deprecated and will be removed in a future version.", FutureWarning
         )
-    return audio
 
+        return self.active_adapters()[0]
 
-def ffmpeg_microphone(
-    sampling_rate: int,
-    chunk_length_s: float,
-    format_for_conversion: str = "f32le",
-):
-    """
-    Helper function to read raw microphone data.
-    """
-    ar = f"{sampling_rate}"
-    ac = "1"
-    if format_for_conversion == "s16le":
-        size_of_sample = 2
-    elif format_for_conversion == "f32le":
-        size_of_sample = 4
-    else:
-        raise ValueError(f"Unhandled format `{format_for_conversion}`. Please use `s16le` or `f32le`")
+    def get_adapter_state_dict(self, adapter_name: Optional[str] = None) -> dict:
+        """
+        If you are not familiar with adapters and PEFT methods, we invite you to read more about them on the PEFT
+        official documentation: https://huggingface.co/docs/peft
 
-    system = platform.system()
-    if system == "Linux":
-        format_ = "alsa"
-        input_ = "default"
-    elif system == "Darwin":
-        format_ = "avfoundation"
-        input_ = ":0"
-    elif system == "Windows":
-        format_ = "dshow"
-        input_ = _get_microphone_name()
+        Gets the adapter state dict that should only contain the weights tensors of the specified adapter_name adapter.
+        If no adapter_name is passed, the active adapter is used.
 
-    ffmpeg_command = [
-        "ffmpeg",
-        "-f",
-        format_,
-        "-i",
-        input_,
-        "-ac",
-        ac,
-        "-ar",
-        ar,
-        "-f",
-        format_for_conversion,
-        "-fflags",
-        "nobuffer",
-        "-hide_banner",
-        "-loglevel",
-        "quiet",
-        "pipe:1",
-    ]
-    chunk_len = int(round(sampling_rate * chunk_length_s)) * size_of_sample
-    iterator = _ffmpeg_stream(ffmpeg_command, chunk_len)
-    yield from iterator
+        Args:
+            adapter_name (`str`, *optional*):
+                The name of the adapter to get the state dict from. If no name is passed, the active adapter is used.
+        """
+        if not self._hf_peft_config_loaded:
+            raise ValueError("No adapter loaded. Please load an adapter first.")
 
+        from ...peft import get_peft_model_state_dict
 
-def ffmpeg_microphone_live(
-    sampling_rate: int,
-    chunk_length_s: float,
-    stream_chunk_s: Optional[int] = None,
-    stride_length_s: Optional[Union[Tuple[float, float], float]] = None,
-    format_for_conversion: str = "f32le",
-):
-    """
-    Helper function to read audio from the microphone file through ffmpeg. This will output `partial` overlapping
-    chunks starting from `stream_chunk_s` (if it is defined) until `chunk_length_s` is reached. It will make use of
-    striding to avoid errors on the "sides" of the various chunks.
+        if adapter_name is None:
+            adapter_name = self.active_adapter()
 
-    Arguments:
-        sampling_rate (`int`):
-            The sampling_rate to use when reading the data from the microphone. Try using the model's sampling_rate to
-            avoid resampling later.
-        chunk_length_s (`float` or `int`):
-            The length of the maximum chunk of audio to be sent returned. This includes the eventual striding.
-        stream_chunk_s (`float` or `int`)
-            The length of the minimal temporary audio to be returned.
-        stride_length_s (`float` or `int` or `(float, float)`, *optional*, defaults to `None`)
-            The length of the striding to be used. Stride is used to provide context to a model on the (left, right) of
-            an audio sample but without using that part to actually make the prediction. Setting this does not change
-            the length of the chunk.
-        format_for_conversion (`str`, defalts to `f32le`)
-            The name of the format of the audio samples to be returned by ffmpeg. The standard is `f32le`, `s16le`
-            could also be used.
-    Return:
-        A generator yielding dictionaries of the following form
-
-        `{"sampling_rate": int, "raw": np.array(), "partial" bool}` With optionnally a `"stride" (int, int)` key if
-        `stride_length_s` is defined.
-
-        `stride` and `raw` are all expressed in `samples`, and `partial` is a boolean saying if the current yield item
-        is a whole chunk, or a partial temporary result to be later replaced by another larger chunk.
-
-
-    """
-    if stream_chunk_s is not None:
-        chunk_s = stream_chunk_s
-    else:
-        chunk_s = chunk_length_s
-
-    microphone = ffmpeg_microphone(sampling_rate, chunk_s, format_for_conversion=format_for_conversion)
-    if format_for_conversion == "s16le":
-        dtype = np.int16
-        size_of_sample = 2
-    elif format_for_conversion == "f32le":
-        dtype = np.float32
-        size_of_sample = 4
-    else:
-        raise ValueError(f"Unhandled format `{format_for_conversion}`. Please use `s16le` or `f32le`")
-
-    if stride_length_s is None:
-        stride_length_s = chunk_length_s / 6
-    chunk_len = int(round(sampling_rate * chunk_length_s)) * size_of_sample
-    if isinstance(stride_length_s, (int, float)):
-        stride_length_s = [stride_length_s, stride_length_s]
-
-    stride_left = int(round(sampling_rate * stride_length_s[0])) * size_of_sample
-    stride_right = int(round(sampling_rate * stride_length_s[1])) * size_of_sample
-    audio_time = datetime.datetime.now()
-    delta = datetime.timedelta(seconds=chunk_s)
-    for item in chunk_bytes_iter(microphone, chunk_len, stride=(stride_left, stride_right), stream=True):
-        # Put everything back in numpy scale
-        item["raw"] = np.frombuffer(item["raw"], dtype=dtype)
-        item["stride"] = (
-            item["stride"][0] // size_of_sample,
-            item["stride"][1] // size_of_sample,
-        )
-        item["sampling_rate"] = sampling_rate
-        audio_time += delta
-        if datetime.datetime.now() > audio_time + 10 * delta:
-            # We're late !! SKIP
-            continue
-        yield item
-
-
-def chunk_bytes_iter(iterator, chunk_len: int, stride: Tuple[int, int], stream: bool = False):
-    """
-    Reads raw bytes from an iterator and does chunks of length `chunk_len`. Optionally adds `stride` to each chunks to
-    get overlaps. `stream` is used to return partial results even if a full `chunk_len` is not yet available.
-    """
-    acc = b""
-    stride_left, stride_right = stride
-    if stride_left + stride_right >= chunk_len:
-        raise ValueError(
-            f"Stride needs to be strictly smaller than chunk_len: ({stride_left}, {stride_right}) vs {chunk_len}"
-        )
-    _stride_left = 0
-    for raw in iterator:
-        acc += raw
-        if stream and len(acc) < chunk_len:
-            stride = (_stride_left, 0)
-            yield {"raw": acc[:chunk_len], "stride": stride, "partial": True}
-        else:
-            while len(acc) >= chunk_len:
-                # We are flushing the accumulator
-                stride = (_stride_left, stride_right)
-                item = {"raw": acc[:chunk_len], "stride": stride}
-                if stream:
-                    item["partial"] = False
-                yield item
-                _stride_left = stride_left
-                acc = acc[chunk_len - stride_left - stride_right :]
-    # Last chunk
-    if len(acc) > stride_left:
-        item = {"raw": acc, "stride": (_stride_left, 0)}
-        if stream:
-            item["partial"] = False
-        yield item
-
-
-def _ffmpeg_stream(ffmpeg_command, buflen: int):
-    """
-    Internal function to create the generator of data through ffmpeg
-    """
-    bufsize = 2**24  # 16Mo
-    try:
-        with subprocess.Popen(ffmpeg_command, stdout=subprocess.PIPE, bufsize=bufsize) as ffmpeg_process:
-            while True:
-                raw = ffmpeg_process.stdout.read(buflen)
-                if raw == b"":
-                    break
-                yield raw
-    except FileNotFoundError as error:
-        raise ValueError("ffmpeg was not found but is required to stream audio files from filename") from error
-
-
-def _get_microphone_name():
-    """
-    Retrieve the microphone name in Windows .
-    """
-    command = ["ffmpeg", "-list_devices", "true", "-f", "dshow", "-i", ""]
-
-    try:
-        ffmpeg_devices = subprocess.run(command, text=True, stderr=subprocess.PIPE, encoding="utf-8", check=False)
-        microphone_lines = [line for line in ffmpeg_devices.stderr.splitlines() if "(audio)" in line]
-
-        if microphone_lines:
-            microphone_name = microphone_lines[0].split('"')[1]
-            print(f"Using microphone: {microphone_name}")
-            return f"audio={microphone_name}"
-    except FileNotFoundError:
-        print("ffmpeg was not found. Please install it or make sure it is in your system PATH.")
-
-    return "default"
+        adapter_state_dict = get_peft_model_state_dict(self, adapter_name=adapter_name)
+        return adapter_state_dict

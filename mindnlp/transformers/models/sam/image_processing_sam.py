@@ -277,13 +277,13 @@ class SamImageProcessor(BaseImageProcessor):
             data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the output image. If unset, the channel dimension format of the input
                 image is used. Can be one of:
-                - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+                >   - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
+                >   - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
             input_data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the input image. If unset, the channel dimension format is inferred
                 from the input image. Can be one of:
-                - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+                >   - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
+                >   - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
 
         Returns:
             `np.ndarray`: The resized image.
@@ -319,30 +319,30 @@ class SamImageProcessor(BaseImageProcessor):
     ):
         '''
         This method preprocesses the input image according to the specified operations such as resizing, rescaling, normalization, and padding.
-        
+
         Args:
-        - self: The instance of the SamImageProcessor class.
-        - image (ImageInput): The input image to be preprocessed.
-        - do_resize (bool): A flag indicating whether to perform resizing on the input image.
-        - do_rescale (bool): A flag indicating whether to perform rescaling on the input image.
-        - do_normalize (bool): A flag indicating whether to perform normalization on the input image.
-        - size (Optional[Dict[str, int]]): The target size for resizing the image in the format {'width': int, 'height': int}. Default is None.
-        - resample (PILImageResampling): The resampling filter to be used during image resizing. Default is None.
-        - rescale_factor (Optional[float]): The factor by which the image should be rescaled. Default is None.
-        - image_mean (Optional[Union[float, List[float]]]): The mean value to be used for image normalization. It can be a single float value or a list of float values, depending on the input_data_format.
-Default is None.
-        - image_std (Optional[Union[float, List[float]]]): The standard deviation value to be used for image normalization. It can be a single float value or a list of float values, depending on the
-input_data_format. Default is None.
-        - do_pad (Optional[bool]): A flag indicating whether to perform padding on the input image. Default is None.
-        - pad_size (Optional[Dict[str, int]]): The size of the padding to be applied in the format {'top': int, 'bottom': int, 'left': int, 'right': int}. Default is None.
-        - input_data_format (Optional[Union[str, ChannelDimension]]): The data format of the input image, e.g., 'channels_first' or 'channels_last'. Default is None.
-        
+            self: The instance of the SamImageProcessor class.
+            image (ImageInput): The input image to be preprocessed.
+            do_resize (bool): A flag indicating whether to perform resizing on the input image.
+            do_rescale (bool): A flag indicating whether to perform rescaling on the input image.
+            do_normalize (bool): A flag indicating whether to perform normalization on the input image.
+            size (Optional[Dict[str, int]]): The target size for resizing the image in the format {'width': int, 'height': int}. Default is None.
+            resample (PILImageResampling): The resampling filter to be used during image resizing. Default is None.
+            rescale_factor (Optional[float]): The factor by which the image should be rescaled. Default is None.
+            image_mean (Optional[Union[float, List[float]]]): The mean value to be used for image normalization. It can be a single float value or a list of float values, depending on the input_data_format.
+                Default is None.
+            image_std (Optional[Union[float, List[float]]]): The standard deviation value to be used for image normalization. It can be a single float value or a list of float values, depending on the
+                input_data_format. Default is None.
+            do_pad (Optional[bool]): A flag indicating whether to perform padding on the input image. Default is None.
+            pad_size (Optional[Dict[str, int]]): The size of the padding to be applied in the format {'top': int, 'bottom': int, 'left': int, 'right': int}. Default is None.
+            input_data_format (Optional[Union[str, ChannelDimension]]): The data format of the input image, e.g., 'channels_first' or 'channels_last'. Default is None.
+
         Returns:
-        - Tuple[ImageInput, Tuple[int, int, int]]: The preprocessed image and the reshaped input size in the format (image, (height, width, channels)).
-        
+            Tuple[ImageInput, Tuple[int, int, int]]: The preprocessed image and the reshaped input size in the format (image, (height, width, channels)).
+
         Raises:
-        - ValueError: If the input_data_format is invalid or not supported.
-        - TypeError: If the input_data_format is not a string or ChannelDimension.
+            - ValueError: If the input_data_format is invalid or not supported.
+            - TypeError: If the input_data_format is not a string or ChannelDimension.
         '''
         if do_resize:
             image = self.resize(image=image, size=size, resample=resample, input_data_format=input_data_format)
@@ -378,7 +378,7 @@ input_data_format. Default is None.
     ) -> Tuple[np.ndarray, Tuple[int, int], Tuple[int, int]]:
         """
         This method preprocesses the input image with various transformations and returns the processed image, original size, and reshaped input size.
-        
+
         Args:
             self: The instance of the SamImageProcessor class.
             image (ImageInput): The input image to be preprocessed.
@@ -395,10 +395,10 @@ input_data_format. Default is None.
             do_convert_rgb (Optional[bool]): A flag indicating whether to convert the image to RGB format. Defaults to None.
             data_format (Optional[Union[str, ChannelDimension]]): The desired data format for the processed image.
             input_data_format (Optional[Union[str, ChannelDimension]]): The input data format of the image.
-        
+
         Returns:
             Tuple[np.ndarray, Tuple[int, int], Tuple[int, int]]: A tuple containing the processed image as a numpy array, the original size of the input image, and the reshaped input size after preprocessing.
-        
+
         Raises:
             None
         """
@@ -451,9 +451,9 @@ input_data_format. Default is None.
         mask_pad_size: Optional[Dict[str, int]] = None,
         input_data_format: Optional[Union[str, ChannelDimension]] = None,
     ) -> np.ndarray:
-        """ 
+        """
         Method to preprocess a segmentation mask.
-        
+
         Args:
             self: The instance of the SamImageProcessor class.
             segmentation_map (ImageInput): The input segmentation map to be preprocessed.
@@ -462,11 +462,11 @@ input_data_format. Default is None.
             do_pad (Optional[bool]): Flag indicating whether padding should be applied. Default is None.
             mask_pad_size (Optional[Dict[str, int]]): Dictionary containing the padding size for the mask.
             input_data_format (Optional[Union[str, ChannelDimension]]): Format of the input data. Default is None.
-        
+
         Returns:
             np.ndarray: The preprocessed segmentation map as a NumPy array.
             original_size: The size of the original segmentation map.
-        
+
         Raises:
             None
         """
@@ -566,22 +566,22 @@ input_data_format. Default is None.
                 Whether to convert the image to RGB.
             return_tensors (`str` or `TensorType`, *optional*):
                 The type of tensors to return. Can be one of:
-                    - Unset: Return a list of `np.ndarray`.
-                    - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
-                    - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `mindspore.Tensor`.
-                    - `TensorType.NUMPY` or `'np'`: Return a batch of type `np.ndarray`.
-                    - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
+                    >   - Unset: Return a list of `np.ndarray`.
+                    >   - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
+                    >   - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `mindspore.Tensor`.
+                    >   - `TensorType.NUMPY` or `'np'`: Return a batch of type `np.ndarray`.
+                    >   - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
             data_format (`ChannelDimension` or `str`, *optional*, defaults to `ChannelDimension.FIRST`):
                 The channel dimension format for the output image. Can be one of:
-                - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
-                - Unset: Use the channel dimension format of the input image.
+                    >   - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
+                    >   - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+                    >   - Unset: Use the channel dimension format of the input image.
             input_data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the input image. If unset, the channel dimension format is inferred
                 from the input image. Can be one of:
-                - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
-                - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
+                    >   - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
+                    >   - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+                    >   - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
         """
         do_resize = do_resize if do_resize is not None else self.do_resize
         size = size if size is not None else self.size
@@ -997,15 +997,15 @@ input_data_format. Default is None.
 def _compute_stability_score(masks: "mindspore.Tensor", mask_threshold: float, stability_score_offset: int):
     '''
     Compute stability score based on given masks, threshold, and offset.
-    
+
     Args:
         masks (mindspore.Tensor): A tensor containing masks.
         mask_threshold (float): The threshold value to consider for masks.
         stability_score_offset (int): An offset value to adjust stability score calculations.
-    
+
     Returns:
         None: This function does not return any value.
-    
+
     Raises:
         None.
     '''
@@ -1116,10 +1116,10 @@ def _generate_per_layer_crops(crop_n_layers, overlap_ratio, original_size):
     """
     Generates 2 ** (layers idx + 1) crops for each crop_n_layers. Crops are in the XYWH format : The XYWH format
     consists of the following required indices:
-        - X: X coordinate of the top left of the bounding box
-        - Y: Y coordinate of the top left of the bounding box
-        - W: width of the bounding box
-        - H: height of the bounding box
+        >   - X: X coordinate of the top left of the bounding box
+        >   - Y: Y coordinate of the top left of the bounding box
+        >   - W: width of the bounding box
+        >   - H: height of the bounding box
     """
     crop_boxes, layer_idxs = [], []
     im_height, im_width = original_size
@@ -1179,16 +1179,16 @@ def _generate_crop_images(
 def _pad_masks(masks, crop_box: List[int], orig_height: int, orig_width: int):
     """
     This function pads the input masks based on the provided crop box and original image dimensions.
-    
+
     Args:
         masks (List): List of masks to be padded.
         crop_box (List[int]): A list containing the coordinates [left, top, right, bottom] of the crop box.
         orig_height (int): The original height of the image.
         orig_width (int): The original width of the image.
-    
+
     Returns:
         None: The function does not return a value; it modifies the input masks in place.
-    
+
     Raises:
         ValueError: If the crop_box coordinates are invalid or if the original dimensions are inconsistent.
     """
@@ -1223,16 +1223,16 @@ def _batched_mask_to_box(masks: "mindspore.Tensor"):
     """
     Computes the bounding boxes around the given input masks. The bounding boxes are in the XYXY format which
     corresponds the following required indices:
-        - LEFT: left hand side of the bounding box
-        - TOP: top of the bounding box
-        - RIGHT: right of the bounding box
-        - BOTTOM: bottom of the bounding box
+    >    - LEFT: left hand side of the bounding box
+    >    - TOP: top of the bounding box
+    >    - RIGHT: right of the bounding box
+    >    - BOTTOM: bottom of the bounding box
 
     Return [0,0,0,0] for an empty mask. For input shape channel_1 x channel_2 x ... x height x width, the output shape
     is channel_1 x channel_2 x ... x 4.
 
     Args:
-        - masks (`mindspore.Tensor` of shape `(batch, nb_mask, height, width)`)
+        masks (`mindspore.Tensor` of shape `(batch, nb_mask, height, width)`)
     """
     # torch.max below raises an error on empty inputs, just skip in this case
 

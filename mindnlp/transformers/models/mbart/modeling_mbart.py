@@ -115,17 +115,17 @@ class MBartAttention(nn.Cell):
         This method initializes an instance of the MBartAttention class.
         
         Args:
-        - embed_dim (int): The dimension of the input embeddings.
-        - num_heads (int): The number of attention heads to use.
-        - dropout (float, optional): The dropout probability. Default is 0.0.
-        - is_decoder (bool, optional): Indicates if the attention mechanism is used in a decoder context. Default is False.
-        - bias (bool): Indicates whether bias is applied in linear transformations.
-        
+            embed_dim (int): The dimension of the input embeddings.
+            num_heads (int): The number of attention heads to use.
+            dropout (float, optional): The dropout probability. Default is 0.0.
+            is_decoder (bool, optional): Indicates if the attention mechanism is used in a decoder context. Default is False.
+            bias (bool): Indicates whether bias is applied in linear transformations.
+
         Returns:
-        None
-        
+            None
+
         Raises:
-        - ValueError: If embed_dim is not divisible by num_heads.
+            - ValueError: If embed_dim is not divisible by num_heads.
         '''
         super().__init__()
         self.embed_dim = embed_dim
@@ -149,16 +149,16 @@ class MBartAttention(nn.Cell):
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         """
         This method '_shape' is defined within the class 'MBartAttention' and is used to reshape the input tensor for multi-head self-attention computation.
-        
+
         Args:
             self (object): The instance of the 'MBartAttention' class.
             tensor (mindspore.Tensor): The input tensor to be reshaped for multi-head self-attention computation.
             seq_len (int): The length of the sequence in the input tensor.
             bsz (int): The batch size of the input tensor.
-            
+
         Returns:
             None: This method does not return any value. It performs an in-place operation on the input tensor.
-        
+
         Raises:
             - ValueError: If the input tensor or the batch size is invalid or incompatible with the reshaping operation.
             - TypeError: If the input tensor or batch size is not of the expected type.
@@ -291,16 +291,16 @@ class MBartEncoderLayer(nn.Cell):
     def __init__(self, config: MBartConfig):
         """
         Initializes an instance of the MBartEncoderLayer class.
-        
+
         Args:
             self: The current instance of the class.
             config (MBartConfig): An instance of the MBartConfig class containing the configuration settings for the encoder layer.
-                - The 'config' parameter is of type MBartConfig.
-                - It specifies the configuration settings for the encoder layer.
-                
+                >- The 'config' parameter is of type MBartConfig.
+                >- It specifies the configuration settings for the encoder layer.
+
         Returns:
             None.
-            
+
         Raises:
             None.
         """
@@ -328,17 +328,17 @@ class MBartEncoderLayer(nn.Cell):
     ) -> Tensor:
         """
         Constructs the MBartEncoderLayer.
-        
+
         Args:
             self: The instance of the MBartEncoderLayer class.
             hidden_states (Tensor): The input hidden states tensor of shape (batch_size, sequence_length, hidden_size).
             attention_mask (Tensor): The attention mask tensor of shape (batch_size, sequence_length, sequence_length).
             layer_head_mask (Tensor): The layer head mask tensor of shape (num_attention_heads, sequence_length, sequence_length).
             output_attentions (bool, optional): Whether to output attention weights. Defaults to False.
-        
+
         Returns:
             Tensor: The output hidden states tensor of shape (batch_size, sequence_length, hidden_size).
-        
+
         Raises:
             None.
         """
@@ -380,14 +380,14 @@ class MBartDecoderLayer(nn.Cell):
     def __init__(self, config: MBartConfig):
         """
         Initializes an instance of the MBartDecoderLayer class.
-        
+
         Args:
             self: The instance of the MBartDecoderLayer class.
             config (MBartConfig): The configuration object for the MBart model. It contains the model parameters and settings.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             - TypeError: If the config parameter is not of type MBartConfig.
             - ValueError: If the config parameter is missing or has invalid values.
@@ -432,25 +432,25 @@ class MBartDecoderLayer(nn.Cell):
     ) -> Tensor:
         """
         Constructs the MBartDecoderLayer.
-        
+
         Args:
             self (MBartDecoderLayer): The instance of the MBartDecoderLayer class.
             hidden_states (Tensor): The input hidden states tensor of shape (batch_size, sequence_length, hidden_size).
             attention_mask (Optional[Tensor]): The attention mask tensor of shape (batch_size, sequence_length) or (batch_size, sequence_length, sequence_length), indicating which tokens should be attended to.
-Defaults to None.
+                Defaults to None.
             encoder_hidden_states (Optional[Tensor]): The hidden states tensor from the encoder of shape (batch_size, encoder_sequence_length, hidden_size). Defaults to None.
             encoder_attention_mask (Optional[Tensor]): The attention mask tensor for the encoder of shape (batch_size, encoder_sequence_length) or (batch_size, encoder_sequence_length,
-encoder_sequence_length). Defaults to None.
+                encoder_sequence_length). Defaults to None.
             layer_head_mask (Optional[Tensor]): The mask tensor for attention heads of shape (batch_size, num_heads, sequence_length, sequence_length). Defaults to None.
             cross_attn_layer_head_mask (Optional[Tensor]): The mask tensor for attention heads in the cross-attention layer of shape (batch_size, num_heads, sequence_length, encoder_sequence_length). Defaults
-to None.
+                to None.
             past_key_value (Optional[Tuple[Tensor]]): The tuple of tensors containing the past key and value states. Defaults to None.
             output_attentions (Optional[bool]): Whether to output attentions. Defaults to False.
             use_cache (Optional[bool]): Whether to use the cache. Defaults to True.
-        
+
         Returns:
             Tensor: The output tensor of shape (batch_size, sequence_length, hidden_size).
-        
+
         Raises:
             None
         """
@@ -525,16 +525,16 @@ class MBartClassificationHead(nn.Cell):
     ):
         """
         Initializes an instance of the MBartClassificationHead class.
-        
+
         Args:
             input_dim (int): The dimension of the input features.
             inner_dim (int): The dimension of the inner layer.
             num_classes (int): The number of output classes.
             pooler_dropout (float): The dropout probability for the pooler layer.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             ValueError: If input_dim, inner_dim, num_classes, or pooler_dropout is not a positive integer.
             TypeError: If input_dim, inner_dim, num_classes, or pooler_dropout is not of the correct type.
@@ -547,14 +547,14 @@ class MBartClassificationHead(nn.Cell):
     def construct(self, hidden_states: Tensor) -> Tensor:
         """
         This method constructs the MBartClassificationHead by processing the input hidden_states.
-        
+
         Args:
             self (MBartClassificationHead): The instance of the MBartClassificationHead class.
             hidden_states (Tensor): A tensor representing the hidden states. It is the input to be processed.
-        
+
         Returns:
             Tensor: A tensor representing the processed hidden states.
-        
+
         Raises:
             None
         """
@@ -575,14 +575,14 @@ class MBartPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initializes the weights of a cell in the MBartPreTrainedModel.
-        
+
         Args:
             self (MBartPreTrainedModel): The instance of MBartPreTrainedModel.
             cell (nn.Module): The cell whose weights are to be initialized.
-        
+
         Returns:
             None. This method operates in-place and does not return any value.
-        
+
         Raises:
             None. No exceptions are explicitly raised by this method.
         """
@@ -624,16 +624,16 @@ class MBartEncoder(MBartPreTrainedModel):
     def __init__(self, config: MBartConfig, embed_tokens: Optional[nn.Embedding] = None):
         """
         Initializes a new instance of the MBartEncoder class.
-        
+
         Args:
             self: The object itself.
             config (MBartConfig): The configuration for the MBart model.
-            embed_tokens (Optional[nn.Embedding]): An optional pre-trained embedding to be used for the tokens. 
+            embed_tokens (Optional[nn.Embedding]): An optional pre-trained embedding to be used for the tokens.
                 If provided, it will be used instead of the default embedding in the model.
-        
+
         Returns:
             None.
-        
+
         Raises:
             None.
         """
@@ -674,9 +674,9 @@ class MBartEncoder(MBartPreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutput]:
-        ''' 
+        '''
         Construct method in the MBartEncoder class.
-        
+
         Args:
             self: MBartEncoder
                 The instance of the MBartEncoder class.
@@ -694,18 +694,18 @@ class MBartEncoder(MBartPreTrainedModel):
                 Whether to return the hidden states.
             return_dict: Optional[bool], optional
                 Whether to return a dictionary.
-        
+
         Returns:
             Union[Tuple, BaseModelOutput]
                 Returns a tuple or BaseModelOutput based on return_dict parameter.
-        
+
         Raises:
-            ValueError
-                - If both input_ids and inputs_embeds are provided simultaneously.
-                - If neither input_ids nor inputs_embeds are provided.
-                - If the head_mask is specified for an incorrect number of layers.
-        
-            TypeError
+            ValueError:
+                >   - If both input_ids and inputs_embeds are provided simultaneously.
+                >   - If neither input_ids nor inputs_embeds are provided.
+                >   - If the head_mask is specified for an incorrect number of layers.
+
+            TypeError:
                 If the input_ids and inputs_embeds are not of type Tensor.
         '''
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
@@ -791,7 +791,7 @@ class MBartDecoder(MBartPreTrainedModel):
     """
     def __init__(self, config: MBartConfig, embed_tokens: Optional[nn.Embedding] = None):
         """Initialize the MBartDecoder class.
-        
+
         Args:
             self: The object itself.
             config (MBartConfig): The configuration object for MBart.
@@ -799,10 +799,10 @@ class MBartDecoder(MBartPreTrainedModel):
             embed_tokens (Optional[nn.Embedding]): An optional embedding layer.
                 If provided, the weights of this layer will be used for the embed_tokens layer.
                 Defaults to None.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -833,13 +833,13 @@ class MBartDecoder(MBartPreTrainedModel):
     def get_input_embeddings(self):
         """
         Returns the input embeddings used by the MBartDecoder.
-        
+
         Args:
             self (MBartDecoder): An instance of the MBartDecoder class.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -848,14 +848,14 @@ class MBartDecoder(MBartPreTrainedModel):
     def set_input_embeddings(self, new_embeddings):
         """
         This method 'set_input_embeddings' is a member of the 'MBartDecoder' class and is used to set the input embeddings for the decoder.
-        
+
         Args:
             self (object): The instance of the 'MBartDecoder' class.
             new_embeddings (object): The new input embeddings to be set for the decoder. It should be of the appropriate type and format compatible with the decoder's input requirements.
-        
+
         Returns:
             None: This method does not return any value explicitly. It updates the input embeddings of the decoder in place.
-        
+
         Raises:
             N/A: This method does not explicitly raise any exceptions.
         """
@@ -878,30 +878,30 @@ class MBartDecoder(MBartPreTrainedModel):
     ) -> Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]:
         """
         This method constructs the MBartDecoder model.
-        
+
         Args:
-        - self: The object instance.
-        - input_ids (Tensor, optional): The input tensor containing token ids. Default is None.
-        - attention_mask (Optional[Tensor], optional): The attention mask tensor. Default is None.
-        - encoder_hidden_states (Optional[Tensor], optional): The hidden states of the encoder. Default is None.
-        - encoder_attention_mask (Optional[Tensor], optional): The attention mask for the encoder. Default is None.
-        - head_mask (Optional[Tensor], optional): The mask for attention heads. Default is None.
-        - cross_attn_head_mask (Optional[Tensor], optional): The mask for cross-attention heads. Default is None.
-        - past_key_values (Optional[Tuple[Tuple[Tensor]]], optional): The past key values. Default is None.
-        - inputs_embeds (Tensor, optional): The embedded input tensors. Default is None.
-        - use_cache (bool, optional): Flag to use cache. Default is None.
-        - output_attentions (bool, optional): Flag to output attentions. Default is None.
-        - output_hidden_states (bool, optional): Flag to output hidden states. Default is None.
-        - return_dict (bool, optional): Flag to return a dictionary. Default is None.
-        
+            self: The object instance.
+            input_ids (Tensor, optional): The input tensor containing token ids. Default is None.
+            attention_mask (Optional[Tensor], optional): The attention mask tensor. Default is None.
+            encoder_hidden_states (Optional[Tensor], optional): The hidden states of the encoder. Default is None.
+            encoder_attention_mask (Optional[Tensor], optional): The attention mask for the encoder. Default is None.
+            head_mask (Optional[Tensor], optional): The mask for attention heads. Default is None.
+            cross_attn_head_mask (Optional[Tensor], optional): The mask for cross-attention heads. Default is None.
+            past_key_values (Optional[Tuple[Tuple[Tensor]]], optional): The past key values. Default is None.
+            inputs_embeds (Tensor, optional): The embedded input tensors. Default is None.
+            use_cache (bool, optional): Flag to use cache. Default is None.
+            output_attentions (bool, optional): Flag to output attentions. Default is None.
+            output_hidden_states (bool, optional): Flag to output hidden states. Default is None.
+            return_dict (bool, optional): Flag to return a dictionary. Default is None.
+
         Returns:
-        - Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]: A tuple or BaseModelOutputWithPastAndCrossAttentions object representing the output of the method.
-        
+            Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]: A tuple or BaseModelOutputWithPastAndCrossAttentions object representing the output of the method.
+
         Raises:
-        - ValueError: If both input_ids and inputs_embeds are specified simultaneously.
-        - ValueError: If neither input_ids nor inputs_embeds are specified.
-        - ValueError: If the specified head_mask or cross_attn_head_mask does not match the number of layers in the model.
-        - Warning: If `use_cache=True` is used with gradient checkpointing, as it is incompatible.
+            - ValueError: If both input_ids and inputs_embeds are specified simultaneously.
+            - ValueError: If neither input_ids nor inputs_embeds are specified.
+            - ValueError: If the specified head_mask or cross_attn_head_mask does not match the number of layers in the model.
+            - Warning: If `use_cache=True` is used with gradient checkpointing, as it is incompatible.
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1033,16 +1033,16 @@ class MBartModel(MBartPreTrainedModel):
 
     def __init__(self, config: MBartConfig):
         """Initialize an instance of the MBartModel class.
-        
+
         Args:
             self: The instance of the MBartModel class.
             config (MBartConfig): The configuration object for the MBartModel.
                 It specifies the parameters for the model, such as vocabulary size, model dimension, etc.
                 The config parameter is of type MBartConfig and is required.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1060,13 +1060,13 @@ class MBartModel(MBartPreTrainedModel):
     def get_input_embeddings(self):
         """
         This method returns the shared input embeddings for the MBartModel.
-        
+
         Args:
             self (MBartModel): The instance of the MBartModel class.
-        
+
         Returns:
             None: This method returns None as it directly returns the shared input embeddings.
-        
+
         Raises:
             N/A
         """
@@ -1075,14 +1075,14 @@ class MBartModel(MBartPreTrainedModel):
     def set_input_embeddings(self, new_embeddings):
         """
         Sets the input embeddings for the MBartModel.
-        
+
         Args:
             self (MBartModel): The instance of the MBartModel class.
             new_embeddings (torch.Tensor): The new input embeddings to be set. Should be a tensor of shape (vocab_size, embedding_dim).
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             TypeError: If the new_embeddings parameter is not a torch.Tensor.
             ValueError: If the shape of the new_embeddings tensor is invalid.
@@ -1094,13 +1094,13 @@ class MBartModel(MBartPreTrainedModel):
     def _tie_weights(self):
         """
         This method _tie_weights is a member of the class MBartModel and is used to tie the weights of word embeddings if the tie_word_embeddings configuration is set to True.
-        
+
         Args:
             self: An instance of the MBartModel class.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             No specific exceptions are raised within this method.
         """
@@ -1136,7 +1136,7 @@ class MBartModel(MBartPreTrainedModel):
     ) -> Union[Seq2SeqModelOutput, Tuple[Tensor]]:
         """
         Constructs the MBartModel.
-        
+
         Args:
             self (MBartModel): The instance of the MBartModel class.
             input_ids (Tensor, optional): The input token IDs tensor. Default: None.
@@ -1154,10 +1154,10 @@ class MBartModel(MBartPreTrainedModel):
             output_attentions (Optional[bool], optional): Whether to output attentions. Default: None.
             output_hidden_states (Optional[bool], optional): Whether to output hidden states. Default: None.
             return_dict (Optional[bool], optional): Whether to return a dictionary. Default: None.
-        
+
         Returns:
             Union[Seq2SeqModelOutput, Tuple[Tensor]]: The output of the MBartModel.
-        
+
         Raises:
             None.
         """
@@ -1231,16 +1231,16 @@ class MBartForConditionalGeneration(MBartPreTrainedModel):
     def __init__(self, config: MBartConfig):
         """
         __init__
-        
+
         Initializes an instance of the MBartForConditionalGeneration class.
-        
+
         Args:
             self: The object instance itself.
             config (MBartConfig): An instance of MBartConfig class containing the configuration settings for the MBart model.
-        
+
         Returns:
             None. This method initializes the model, final logits bias, and language model head, and therefore does not return any value.
-        
+
         Raises:
             N/A
         """
@@ -1263,21 +1263,21 @@ class MBartForConditionalGeneration(MBartPreTrainedModel):
     def resize_token_embeddings(self, new_num_tokens: int, pad_to_multiple_of: Optional[int] = None) -> nn.Embedding:
         """
         Resizes the token embeddings of the MBartForConditionalGeneration model.
-        
+
         Args:
             self (MBartForConditionalGeneration): The instance of the MBartForConditionalGeneration class.
             new_num_tokens (int): The new number of tokens for the token embeddings.
             pad_to_multiple_of (Optional[int], optional): The value to pad the number of tokens to a multiple of. Defaults to None.
-        
+
         Returns:
             nn.Embedding: The resized token embeddings.
-        
+
         Raises:
             None.
-        
-        This method resizes the token embeddings of the MBartForConditionalGeneration model by calling the base class's 
-        'resize_token_embeddings' method with the specified 'new_num_tokens' and 'pad_to_multiple_of' values. 
-        The resulting resized token embeddings are then used to resize the final logits bias. 
+
+        This method resizes the token embeddings of the MBartForConditionalGeneration model by calling the base class's
+        'resize_token_embeddings' method with the specified 'new_num_tokens' and 'pad_to_multiple_of' values.
+        The resulting resized token embeddings are then used to resize the final logits bias.
         The method returns the resized token embeddings.
         """
         new_embeddings = super().resize_token_embeddings(new_num_tokens, pad_to_multiple_of)
@@ -1323,7 +1323,7 @@ class MBartForConditionalGeneration(MBartPreTrainedModel):
     ) -> Union[Seq2SeqLMOutput, Tuple[Tensor]]:
         """
         Constructs the MBart model for conditional generation.
-        
+
         Args:
             self (MBartForConditionalGeneration): The instance of the MBartForConditionalGeneration class.
             input_ids (Tensor, optional): The input sequence IDs. Defaults to None.
@@ -1342,14 +1342,14 @@ class MBartForConditionalGeneration(MBartPreTrainedModel):
             output_attentions (bool, optional): Flag to indicate whether to output attentions. Defaults to None.
             output_hidden_states (bool, optional): Flag to indicate whether to output hidden states. Defaults to None.
             return_dict (bool, optional): Flag to indicate whether to return a dictionary. Defaults to None.
-        
+
         Returns:
             Union[Seq2SeqLMOutput, Tuple[Tensor]]: The output of the model. If `return_dict` is False, returns a tuple containing the masked language model logits and additional outputs. If `return_dict` is
-True, returns a Seq2SeqLMOutput object containing various model outputs.
-        
+            True, returns a Seq2SeqLMOutput object containing various model outputs.
+
         Raises:
             None.
-        
+
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1413,7 +1413,7 @@ True, returns a Seq2SeqLMOutput object containing various model outputs.
     ):
         """
         Prepare inputs for generation.
-        
+
         Args:
             self (MBartForConditionalGeneration): The instance of the MBartForConditionalGeneration class.
             decoder_input_ids (torch.Tensor): The input decoder sequence of token indices.
@@ -1424,19 +1424,19 @@ True, returns a Seq2SeqLMOutput object containing various model outputs.
             cross_attn_head_mask (torch.Tensor): The mask tensor to nullify selected heads of the cross-attention layers in the decoder.
             use_cache (bool): Whether to use the cache for the decoder's self-attention layers.
             encoder_outputs (torch.Tensor): The output tensor from the encoder.
-        
+
         Returns:
             dict: A dictionary containing the prepared inputs for generation, with the following key-value pairs:
-                - 'input_ids' (None): The input token indices for generation (set to None).
-                - 'encoder_outputs' (torch.Tensor): The output tensor from the encoder.
-                - 'past_key_values' (Tuple[torch.Tensor]): The cached key-value pairs of the decoder's self-attention layers.
-                - 'decoder_input_ids' (torch.Tensor): The modified decoder input sequence of token indices.
-                - 'attention_mask' (torch.Tensor): The attention mask tensor indicating which tokens to attend to and which ones to ignore.
-                - 'head_mask' (torch.Tensor): The mask tensor to nullify selected heads of the self-attention layers in the decoder.
-                - 'decoder_head_mask' (torch.Tensor): The mask tensor to nullify selected heads of the self-attention layers in the decoder's cross-attention.
-                - 'cross_attn_head_mask' (torch.Tensor): The mask tensor to nullify selected heads of the cross-attention layers in the decoder.
-                - 'use_cache' (bool): Whether to use the cache for the decoder's self-attention layers.
-        
+                >   - 'input_ids' (None): The input token indices for generation (set to None).
+                >   - 'encoder_outputs' (torch.Tensor): The output tensor from the encoder.
+                >   - 'past_key_values' (Tuple[torch.Tensor]): The cached key-value pairs of the decoder's self-attention layers.
+                >   - 'decoder_input_ids' (torch.Tensor): The modified decoder input sequence of token indices.
+                >   - 'attention_mask' (torch.Tensor): The attention mask tensor indicating which tokens to attend to and which ones to ignore.
+                >   - 'head_mask' (torch.Tensor): The mask tensor to nullify selected heads of the self-attention layers in the decoder.
+                >   - 'decoder_head_mask' (torch.Tensor): The mask tensor to nullify selected heads of the self-attention layers in the decoder's cross-attention.
+                >   - 'cross_attn_head_mask' (torch.Tensor): The mask tensor to nullify selected heads of the cross-attention layers in the decoder.
+                >   - 'use_cache' (bool): Whether to use the cache for the decoder's self-attention layers.
+
         Raises:
             None.
         """
@@ -1489,15 +1489,15 @@ class MBartForSequenceClassification(MBartPreTrainedModel):
     def __init__(self, config: MBartConfig):
         """
         Initializes an instance of the MBartForSequenceClassification class.
-        
+
         Args:
             self (MBartForSequenceClassification): The instance of the MBartForSequenceClassification class.
             config (MBartConfig): The configuration object for the MBart model, specifying various model hyperparameters.
                 It must be an instance of MBartConfig class.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             TypeError: If the 'config' parameter is not an instance of MBartConfig.
         """
@@ -1533,7 +1533,7 @@ class MBartForSequenceClassification(MBartPreTrainedModel):
     ) -> Union[Tuple, Seq2SeqSequenceClassifierOutput]:
         """
         Constructs the MBart model for sequence classification.
-        
+
         Args:
             self (MBartForSequenceClassification): The instance of the MBartForSequenceClassification class.
             input_ids (Tensor, optional): The input sequence tokens. Default: None.
@@ -1551,14 +1551,14 @@ class MBartForSequenceClassification(MBartPreTrainedModel):
             output_attentions (Optional[bool], optional): Whether to output attentions. Default: None.
             output_hidden_states (Optional[bool], optional): Whether to output hidden states. Default: None.
             return_dict (Optional[bool], optional): Whether to return a dictionary. Default: None.
-        
+
         Returns:
             Union[Tuple, Seq2SeqSequenceClassifierOutput]: The output of the method, which can be a tuple of various values or an instance of Seq2SeqSequenceClassifierOutput class.
-        
+
         Raises:
             NotImplementedError: If input embeddings are passed, which is currently not supported.
             ValueError: If all examples do not have the same number of <eos> tokens.
-        
+
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if labels is not None:
@@ -1639,14 +1639,14 @@ class MBartForQuestionAnswering(MBartPreTrainedModel):
     def __init__(self, config):
         """
         Initializes an instance of the MBartForQuestionAnswering class.
-        
+
         Args:
             self: The instance of the class.
             config (MBartConfig): The configuration object for the MBart model.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1680,7 +1680,7 @@ class MBartForQuestionAnswering(MBartPreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Seq2SeqQuestionAnsweringModelOutput]:
-        """    
+        """
             Args:
                 self: The object instance.
                 input_ids (Tensor, optional): The input token IDs. Default is None.
@@ -1699,11 +1699,11 @@ class MBartForQuestionAnswering(MBartPreTrainedModel):
                 output_attentions (Optional[bool], optional): Whether to output attentions. Default is None.
                 output_hidden_states (Optional[bool], optional): Whether to output hidden states. Default is None.
                 return_dict (Optional[bool], optional): Whether to return a dictionary. Default is None.
-        
+
             Returns:
                 Union[Tuple, Seq2SeqQuestionAnsweringModelOutput]: The model output, including the loss, start logits, end logits, past key values, decoder hidden states, decoder attentions, cross attentions,
-encoder last hidden state, encoder hidden states, and encoder attentions.
-        
+                encoder last hidden state, encoder hidden states, and encoder attentions.
+
             Raises:
                 None
         """
@@ -1780,16 +1780,16 @@ class MBartDecoderWrapper(MBartPreTrainedModel):
     def __init__(self, config):
         """
         Initializes an instance of the MBartDecoderWrapper class.
-        
+
         Args:
             self: The instance of the class.
             config (object): The configuration object for the MBartDecoderWrapper.
                 It contains the necessary settings and parameters for initializing the wrapper.
                 The config object must be an instance of the MBartConfig class.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             None.
         """
@@ -1799,25 +1799,27 @@ class MBartDecoderWrapper(MBartPreTrainedModel):
     def construct(self, *args, **kwargs):
         """
         Constructs a new instance of the MBartDecoderWrapper class.
-        
+
         Args:
             self: The current instance of the MBartDecoderWrapper class.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             None.
-        
+
         Description:
-        This method is used to construct a new instance of the MBartDecoderWrapper class. It takes no additional parameters other than self, which is automatically passed to the method. The method initializes
-the instance by calling the decoder method with the provided arguments and keyword arguments.
-        
+            This method is used to construct a new instance of the MBartDecoderWrapper class. It takes no additional parameters other than self, which is automatically passed to the method. The method initializes
+            the instance by calling the decoder method with the provided arguments and keyword arguments.
+
         Note that this method does not return any value. It is used solely for initialization purposes.
-        
+
         Example:
+            ```python
             wrapper = MBartDecoderWrapper()
             wrapper.construct()
+            ```
         """
         return self.decoder(*args, **kwargs)
 
@@ -1829,15 +1831,14 @@ class MBartForCausalLM(MBartPreTrainedModel):
     def __init__(self, config):
         """
         Initializes an instance of the 'MBartForCausalLM' class.
-        
+
         Args:
             self: The current object instance.
             config (object): The configuration object for the model. It must have the following attributes:
-        
-                - is_decoder (bool): Specifies whether the model is a decoder or not. Set to True for decoder models.
-                - is_encoder_decoder (bool): Specifies whether the model is an encoder-decoder or not. Set to False for decoder models.
-                - hidden_size (int): The size of the hidden states.
-                - vocab_size (int): The size of the vocabulary.
+                >- is_decoder (bool): Specifies whether the model is a decoder or not. Set to True for decoder models.
+                >- is_encoder_decoder (bool): Specifies whether the model is an encoder-decoder or not. Set to False for decoder models.
+                >- hidden_size (int): The size of the hidden states.
+                >- vocab_size (int): The size of the vocabulary.
         
         Returns:
             None. This method does not return any value.

@@ -101,13 +101,13 @@ class LlavaMultiModalProjector(nn.Cell):
         Args:
             self: The object instance.
             config (LlavaConfig): The configuration object containing the settings for the projector.
-                - config.vision_config.hidden_size (int): The size of the hidden layer for the visual input.
-                - config.text_config.hidden_size (int): The size of the hidden layer for the text input.
-                - config.projector_hidden_act (str): The activation function for the hidden layer.
-                
+                >   - config.vision_config.hidden_size (int): The size of the hidden layer for the visual input.
+                >   - config.text_config.hidden_size (int): The size of the hidden layer for the text input.
+                >   - config.projector_hidden_act (str): The activation function for the hidden layer.
+
         Returns:
             None. This method does not return any value.
-            
+
         Raises:
             None. This method does not raise any exceptions.
         """
@@ -118,16 +118,16 @@ class LlavaMultiModalProjector(nn.Cell):
         self.linear_2 = nn.Dense(config.text_config.hidden_size, config.text_config.hidden_size, has_bias=True)
 
     def construct(self, image_features):
-        ''' 
+        '''
         This method constructs a multi-modal projector within the LlavaMultiModalProjector class.
-        
+
         Args:
             self (LlavaMultiModalProjector): The instance of the LlavaMultiModalProjector class.
             image_features (tensor): The input tensor containing image features.
-        
+
         Returns:
             tensor: The hidden states tensor obtained after processing the image features through linear and activation layers.
-        
+
         Raises:
             None.
         '''
@@ -140,21 +140,22 @@ class LlavaMultiModalProjector(nn.Cell):
 class LlavaPreTrainedModel(PreTrainedModel):
 
     """
-    The `LlavaPreTrainedModel` class is a subclass of the `PreTrainedModel` class in the Hugging Face library. It represents a pre-trained model for natural language processing tasks. 
-    
+    The `LlavaPreTrainedModel` class is a subclass of the `PreTrainedModel` class in the Hugging Face library. It represents a pre-trained model for natural language processing tasks.
+
     This class provides functionality for initializing the weights of the model's cells. The `_init_weights` method is used to set the initial weights of the model's cells based on the specified configuration.
-The method supports different types of cells, including `Dense`, `Conv2d`, and `Embedding`. 
-    
-    If the cell has a `class_embedding` attribute, the method initializes it using a normal distribution with a standard deviation specified by the `initializer_range` attribute of the configuration. 
-    
+    The method supports different types of cells, including `Dense`, `Conv2d`, and `Embedding`.
+
+    If the cell has a `class_embedding` attribute, the method initializes it using a normal distribution with a standard deviation specified by the `initializer_range` attribute of the configuration.
+
     For `Dense` and `Conv2d` cells, the method initializes the `weight` attribute using a normal distribution with the same standard deviation as above. If the cell has a `bias` attribute, it is initialized
-with zeros. 
-    
+    with zeros.
+
     For `Embedding` cells, the method initializes the `weight` attribute using a normal distribution with the same standard deviation as above. If the cell has a `padding_idx` attribute, the corresponding
-element in the weight matrix is set to zero. 
-    
-    Note: The `LlavaPreTrainedModel` class assumes that the `PreTrainedModel` class is available in the code environment.
-    
+    element in the weight matrix is set to zero.
+
+    Note:
+        The `LlavaPreTrainedModel` class assumes that the `PreTrainedModel` class is available in the code environment.
+
     """
     config_class = LlavaConfig
     base_model_prefix = "model"
@@ -164,29 +165,29 @@ element in the weight matrix is set to zero.
     def _init_weights(self, cell):
         """
         Initializes the weights of a given cell in the LlavaPreTrainedModel.
-        
+
         Args:
             self (LlavaPreTrainedModel): The instance of the LlavaPreTrainedModel class.
             cell: The cell whose weights need to be initialized.
-        
+
         Returns:
             None. This method modifies the weights of the given cell in-place.
-        
+
         Raises:
             None.
-        
+
         This method initializes the weights of the provided cell based on the configuration settings of the LlavaPreTrainedModel.
         If the configuration has an 'initializer_range' attribute, the standard deviation is set to that value. Otherwise, it falls back to the 'initializer_range' value in the 'text_config' attribute of the
-configuration.
-        
+        configuration.
+
         If the cell has a 'class_embedding' attribute, it is initialized using a normal distribution with the calculated standard deviation.
-        
+
         If the cell is an instance of nn.Dense or nn.Conv2d, both the weight and bias are initialized using a normal distribution with the calculated standard deviation. If the cell has no bias, it remains
-unchanged.
-        
+        unchanged.
+
         If the cell is an instance of nn.Embedding, the weight tensor is initialized using a normal distribution with the calculated standard deviation. If a 'padding_idx' is specified, the corresponding
-weight value is set to 0.
-        
+        weight value is set to 0.
+
         Note:
             - The weight initialization is done in-place and modifies the original cell.
             - The 'initializer_range' attribute must be present either in the configuration or the 'text_config' attribute of the configuration.
@@ -221,63 +222,44 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
 
     """
     LlavaForConditionalGeneration
-    
+
     This class is a language model for conditional generation based on the Llava architecture. It extends the LlavaPreTrainedModel class.
-    
+
     Attributes:
-        - vision_tower (AutoModel): The vision tower model for extracting image features.
-        - multi_modal_projector (LlavaMultiModalProjector): The multi-modal projector for combining image and text features.
-        - vocab_size (int): The size of the vocabulary used by the language model.
-        - language_model (AutoModelForCausalLM): The language model for generating text.
-        - pad_token_id (int): The ID of the padding token in the vocabulary. Defaults to -1 if not provided.
-        
-    Methods:
-        - __init__(self, config: LlavaConfig): Initializes the LlavaForConditionalGeneration instance.
-        - get_input_embeddings(self): Returns the input embeddings of the language model.
-        - set_input_embeddings(self, value): Sets the input embeddings of the language model.
-        - get_output_embeddings(self): Returns the output embeddings of the language model.
-        - set_output_embeddings(self, new_embeddings): Sets the output embeddings of the language model.
-        - set_decoder(self, decoder): Sets the decoder of the language model.
-        - get_decoder(self): Returns the decoder of the language model.
-        - tie_weights(self): Ties the weights of the language model.
-        - resize_token_embeddings(self, new_num_tokens: Optional[int] = None, pad_to_multiple_of=None) -> nn.Embedding: Resizes the token embeddings of the language model.
-        - _merge_input_ids_with_image_features(self, image_features, inputs_embeds, input_ids, attention_mask, labels): Merges the input IDs with image features for multi-modal generation.
-        - construct(self, input_ids: mindspore.Tensor = None, pixel_values: mindspore.Tensor = None, attention_mask: Optional[mindspore.Tensor] = None, position_ids: Optional[mindspore.Tensor] = None,
-past_key_values: Optional[List[mindspore.Tensor]] = None, inputs_embeds: Optional[mindspore.Tensor] = None, vision_feature_layer: Optional[int] = None, vision_feature_select_strategy: Optional[str] = None,
-labels: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) ->
-Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inputs.
-        - prepare_inputs_for_generation(self, input_ids, past_key_values=None, inputs_embeds=None, pixel_values=None, attention_mask=None, **kwargs): Prepares the inputs for text generation.
-        - _reorder_cache(self, *args, **kwargs): Reorders the cache for text generation.
-    
+        vision_tower (AutoModel): The vision tower model for extracting image features.
+        multi_modal_projector (LlavaMultiModalProjector): The multi-modal projector for combining image and text features.
+        vocab_size (int): The size of the vocabulary used by the language model.
+        language_model (AutoModelForCausalLM): The language model for generating text.
+        pad_token_id (int): The ID of the padding token in the vocabulary. Defaults to -1 if not provided.
+
     Example usage:
-    
-    
-    from PIL import Image
-    import requests
-    from transformers import LlavaForConditionalGeneration
-    
-    model = LlavaForConditionalGeneration(config)
-    
-    input_ids = [1, 2, 3]
-    pixel_values = [0.1, 0.2, 0.3]
-    attention_mask = [1, 1, 1]
-    
-    output = model.construct(input_ids=input_ids, pixel_values=pixel_values, attention_mask=attention_mask)
-    
+        ```python
+        from PIL import Image
+        import requests
+        from transformers import LlavaForConditionalGeneration
+
+        model = LlavaForConditionalGeneration(config)
+
+        input_ids = [1, 2, 3]
+        pixel_values = [0.1, 0.2, 0.3]
+        attention_mask = [1, 1, 1]
+
+        output = model.construct(input_ids=input_ids, pixel_values=pixel_values, attention_mask=attention_mask)
+        ```
     """
     def __init__(self, config: LlavaConfig):
         """
         Initializes an instance of the LlavaForConditionalGeneration class.
-        
+
         Args:
             self: The instance of the class.
             config (LlavaConfig): An object of type LlavaConfig containing the configuration settings for the model.
                 It specifies the configuration parameters for the vision tower, multi-modal projector, vocab size, language model,
                 pad token id, and other model settings.
-        
+
         Returns:
             None. The method does not return any value.
-        
+
         Raises:
             N/A
         """
@@ -293,13 +275,13 @@ Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inp
     def get_input_embeddings(self):
         """
         Get the input embeddings from the language model.
-        
+
         Args:
             self (LlavaForConditionalGeneration): An instance of the LlavaForConditionalGeneration class.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -308,14 +290,14 @@ Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inp
     def set_input_embeddings(self, value):
         """
         Set the input embeddings for the LlavaForConditionalGeneration language model.
-        
+
         Args:
             self (LlavaForConditionalGeneration): The instance of the LlavaForConditionalGeneration class.
             value (Any): The input embeddings to be set for the language model.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             None.
         """
@@ -324,13 +306,13 @@ Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inp
     def get_output_embeddings(self):
         """
         Retrieve the output embeddings from the language model used for conditional generation.
-        
+
         Args:
             self: An instance of the LlavaForConditionalGeneration class.
-        
+
         Returns:
             None: This method returns None, as it simply delegates the call to the language model's get_output_embeddings method.
-        
+
         Raises:
             This method does not explicitly raise any exceptions. However, if the language_model.get_output_embeddings() method raises any exceptions, they will propagate up to the caller.
         """
@@ -339,15 +321,15 @@ Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inp
     def set_output_embeddings(self, new_embeddings):
         """
         Sets the output embeddings for the LlavaForConditionalGeneration model.
-        
+
         Args:
             self (LlavaForConditionalGeneration): An instance of the LlavaForConditionalGeneration class.
             new_embeddings (Tensor): The new output embeddings to be set for the model. It should have the same shape as the
                                      original output embeddings.
-                                     
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             TypeError: If the provided new_embeddings parameter is not of type Tensor.
             ValueError: If the shape of the new_embeddings parameter does not match the shape of the original output embeddings.
@@ -357,14 +339,14 @@ Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inp
     def set_decoder(self, decoder):
         """
         Sets the decoder for the language model used in LlavaForConditionalGeneration.
-        
+
         Args:
             self (LlavaForConditionalGeneration): The instance of the LlavaForConditionalGeneration class.
             decoder: The decoder object to be set for the language model. It should be compatible with the language model's requirements.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             - TypeError: If the provided decoder is not of the correct type.
             - ValueError: If the decoder object is invalid or incompatible with the language model.
@@ -374,13 +356,13 @@ Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inp
     def get_decoder(self):
         """
         Returns the decoder of the LlavaForConditionalGeneration model.
-        
+
         Args:
             self: An instance of the LlavaForConditionalGeneration class.
-            
+
         Returns:
             None. This method retrieves the decoder from the language model used by the LlavaForConditionalGeneration model.
-            
+
         Raises:
             None.
         """
@@ -389,13 +371,13 @@ Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inp
     def tie_weights(self):
         """
         Ties the weights of the language model used for conditional generation in the LlavaForConditionalGeneration class.
-        
+
         Args:
             self (LlavaForConditionalGeneration): An instance of the LlavaForConditionalGeneration class.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -404,20 +386,20 @@ Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inp
     def resize_token_embeddings(self, new_num_tokens: Optional[int] = None, pad_to_multiple_of=None) -> nn.Embedding:
         """
         Resize the token embeddings for conditional generation in the LlavaForConditionalGeneration class.
-        
+
         Args:
             self: The instance of the LlavaForConditionalGeneration class.
-            
+
             new_num_tokens (int, optional): The new number of tokens to resize the embeddings to. Defaults to None.
                 If provided, the token embeddings will be resized to accommodate this number of tokens.
-            
+
             pad_to_multiple_of (int): The value to pad the token embeddings to a multiple of. Defaults to None.
                 If provided, the token embeddings will be padded to a multiple of this value.
-        
+
         Returns:
             nn.Embedding: The resized token embeddings after the operation.
                 This updated nn.Embedding object reflects the changes made to the token embeddings.
-        
+
         Raises:
             None specified.
         """
@@ -430,7 +412,7 @@ Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inp
     def _merge_input_ids_with_image_features(self, image_features, inputs_embeds, input_ids, attention_mask, labels):
         """
         Merges image features with input embeddings and applies necessary modifications.
-        
+
         Args:
             self (LlavaForConditionalGeneration): The instance of the LlavaForConditionalGeneration class.
             image_features (Tensor): A tensor of shape (num_images, num_image_patches, embed_dim) representing the image features.
@@ -438,10 +420,10 @@ Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inp
             input_ids (Tensor): A tensor of shape (batch_size, sequence_length) representing the input token IDs.
             attention_mask (Tensor): A tensor of shape (batch_size, sequence_length) representing the attention mask.
             labels (Tensor): A tensor of shape (batch_size, sequence_length) representing the labels.
-        
+
         Returns:
             None
-        
+
         Raises:
             ValueError: If the number of image tokens provided in the input does not match the number of images given to the model.
         """
@@ -536,28 +518,29 @@ Union[Tuple, LlavaCausalLMOutputWithPast]: Generates text based on the given inp
                 (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
+            Union[Tuple, LlavaCausalLMOutputWithPast]
 
         Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, LlavaForConditionalGeneration
 
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, LlavaForConditionalGeneration
+            >>> model = LlavaForConditionalGeneration.from_pretrained("llava-hf/llava-1.5-7b-hf")
+            >>> processor = AutoProcessor.from_pretrained("llava-hf/llava-1.5-7b-hf")
 
-        >>> model = LlavaForConditionalGeneration.from_pretrained("llava-hf/llava-1.5-7b-hf")
-        >>> processor = AutoProcessor.from_pretrained("llava-hf/llava-1.5-7b-hf")
+            >>> prompt = "USER: <image>\nWhat's the content of the image? ASSISTANT:"
+            >>> url = "https://www.ilankelman.org/stopsigns/australia.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> prompt = "USER: <image>\nWhat's the content of the image? ASSISTANT:"
-        >>> url = "https://www.ilankelman.org/stopsigns/australia.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> inputs = processor(text=prompt, images=image, return_tensors="pt")
 
-        >>> inputs = processor(text=prompt, images=image, return_tensors="pt")
-
-        >>> # Generate
-        >>> generate_ids = model.generate(**inputs, max_new_tokens=15)
-        >>> processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-        "USER:  \nWhat's the content of the image? ASSISTANT: The image features a busy city street with a stop sign prominently displayed"
-        ```"""
+            >>> # Generate
+            >>> generate_ids = model.generate(**inputs, max_new_tokens=15)
+            >>> processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+            "USER:  \nWhat's the content of the image? ASSISTANT: The image features a busy city street with a stop sign prominently displayed"
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
