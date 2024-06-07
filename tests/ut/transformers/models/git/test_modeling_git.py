@@ -276,6 +276,12 @@ class GitModelTester:
 
         image_attention_mask = mindspore.ops.ones((self.batch_size, self.seq_length - self.text_seq_length), dtype=mindspore.int64)
         attention_mask = mindspore.ops.concat([input_mask, image_attention_mask], axis=1)
+        config = GitConfig(
+            vocab_size=30522,
+            hidden_size=768,
+        )
+        input_ids = mindspore.ops.randint(0, config.vocab_size, (self.batch_size, self.text_seq_length), dtype=mindspore.int64)
+        pixel_values = mindspore.ops.randn(self.batch_size, 3, self.image_size, self.image_size)
         return config, input_ids, attention_mask, pixel_values
 
     def get_config(self):
