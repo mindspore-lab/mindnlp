@@ -254,7 +254,6 @@ class ConvProjection(nn.Cell):
         # inputs has shape [batch, mol_seq, molecule_hidden_size+char_hidden_final]
         # we transpose it to be [batch, molecule_hidden_size+char_hidden_final, mol_seq]
         inputs = ops.swapaxes(inputs, 1, 2)
-        
         # `result`: shape (batch_size, char_seq_len, hidden_size)
         result = self.conv(inputs)
         result = ops.swapaxes(result, 1, 2)
