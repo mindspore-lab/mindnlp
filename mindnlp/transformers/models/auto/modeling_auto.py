@@ -122,6 +122,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("vit", "ViTModel"),
         ("whisper", "WhisperModel"),
         ("wav2vec2", "Wav2Vec2Model"),
+        ("wav2vec2-conformer", "Wav2Vec2ConformerModel"),
         ("xclip", "XCLIPModel"),
         ("xlm-roberta", "XLMRobertaModel"),
         ("xlnet", "XLNetModel"),
@@ -145,6 +146,7 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
         ("minicpm", "MiniCPMForCausalLM"),
         ("rwkv", "RwkvForCausalLM"),
         ("roc_bert", "RoCBertForPreTraining"),
+        ("wav2vec2-conformer", "Wav2Vec2ConformerForPreTraining"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
         ("xlnet", "XLNetLMHeadModel"),
     ]
