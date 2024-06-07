@@ -14,6 +14,8 @@
 
 """gptj model."""
 
+from .import configuration_gptj, modeling_gptj
+
 from .configuration_gptj import *
 from .modeling_gptj import *
 
