@@ -15,13 +15,9 @@
 """gptj model."""
 
 from .configuration_gptj import *
-from .modeling_flax_gptj import *
 from .modeling_gptj import *
-from .modeling_tf_gptj import *
 
 
 __all__ = []
 __all__.extend(configuration_gptj.__all__)
-__all__.extend(modeling_flax_gptj.__all__)
 __all__.extend(modeling_gptj.__all__)
-__all__.extend(modeling_tf_gptj.__all__)
