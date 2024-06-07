@@ -53,6 +53,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("bridgetower", "BridgeTowerModel"),
         ("bros", "BrosModel"),
         ("camembert", "CamembertModel"),
+        ("canine", "CanineModel"),
         ("codegen", "CodeGenModel"),
         ("cohere", "CohereModel"),
         ("cogvlm","CogVLMModel"),
