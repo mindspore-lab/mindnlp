@@ -136,6 +136,7 @@ from . import (
     starcoder2,
     swiftformer,
     switch_transformers,
+    swin2sr,
     t5,
     timesformer,
     tinybert,
@@ -272,6 +273,7 @@ from .squeezebert import *
 from .starcoder2 import *
 from .swiftformer import *
 from .switch_transformers import *
+from .swin2sr import *
 from .tinybert import *
 from .t5 import *
 from .timesformer import *
@@ -408,6 +410,7 @@ __all__.extend(squeezebert.__all__)
 __all__.extend(starcoder2.__all__)
 __all__.extend(swiftformer.__all__)
 __all__.extend(switch_transformers.__all__)
+__all__.extend(swin2sr.__all__)
 __all__.extend(t5.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)

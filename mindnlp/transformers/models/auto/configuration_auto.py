@@ -116,8 +116,12 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("stablelm", "StableLmConfig"),
         ("squeezebert", "SqueezeBertConfig"),
         ("starcoder2", "Starcoder2Config"),
+<<<<<<< HEAD
         ("swiftformer", "SwiftFormerConfig"),
         ("switch_transformers", "SwitchTransformersConfig"),
+=======
+        ("swin2sr", "Swin2SRConfig"),
+>>>>>>> add Swin2SR Model
         ("t5", "T5Config"),
         ("timesformer", "TimesformerConfig"),
         ("vit", "ViTConfig"),
