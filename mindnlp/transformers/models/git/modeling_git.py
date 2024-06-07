@@ -1020,7 +1020,6 @@ class GitModel(GitPreTrainedModel):
             (memory_key_padding_mask.shape[0], num_memory + num_tgt, num_memory + past_key_values_length + num_tgt)
         )
         full_attention_mask = full_attention_mask.copy()
-        
         if num_memory != 0:
             origin_left = full_attention_mask[:, :, :num_memory]
             update = zero_negative_infinity[:, None, :]
