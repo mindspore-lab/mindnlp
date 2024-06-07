@@ -121,6 +121,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("visual_bert", "VisualBertModel"),
         ("vit", "ViTModel"),
         ("whisper", "WhisperModel"),
+        ("wavlm", "WavLMModel"),
         ("wav2vec2", "Wav2Vec2Model"),
         ("xclip", "XCLIPModel"),
         ("xlm-roberta", "XLMRobertaModel"),

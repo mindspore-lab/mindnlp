@@ -124,6 +124,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("vision-text-dual-encoder", "VisionTextDualEncoderConfig"),
         ("vipllava", "VipLlavaConfig"),
         ("visual_bert", "VisualBertConfig"),
+        ("wavlm", "WavLMConfig"),
         ("wav2vec2", "Wav2Vec2Config"),
         ("whisper", "WhisperConfig"),
         ("xclip", "XCLIPConfig"),
