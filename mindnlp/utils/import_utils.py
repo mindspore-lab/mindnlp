@@ -341,6 +341,8 @@ def is_pyctcdecode_available():
     """
     return _pyctcdecode_available
 
+def is_natten_available():
+    return _natten_available
 
 def is_scipy_available():
     """
@@ -486,6 +488,13 @@ that match your environment. Please note that you may need to restart your runti
 """
 
 # docstyle-ignore
+NATTEN_IMPORT_ERROR = """
+{0} requires the natten library but it was not found in your environment. You can install it by referring to:
+shi-labs.com/natten . You can also install it with pip (may take longer to build):
+`pip install natten`. Please note that you may need to restart your runtime after installation.
+"""
+
+# docstyle-ignore
 MINDSPORE_IMPORT_ERROR = """
 {0} requires the MindSpore library but it was not found in your environment. Checkout the instructions on the
 installation page: https://www.mindspore.cn/install/ and follow the ones that match your environment.
@@ -546,6 +555,7 @@ BACKENDS_MAPPING = OrderedDict(
         ("pyctcdecode", (is_pyctcdecode_available, PYCTCDECODE_IMPORT_ERROR)),
         ("jieba", (is_jieba_available, JIEBA_IMPORT_ERROR)),
         ("vision", (is_vision_available, VISION_IMPORT_ERROR)),
+        ("natten", (is_natten_available, NATTEN_IMPORT_ERROR)),
 
     ]
 )

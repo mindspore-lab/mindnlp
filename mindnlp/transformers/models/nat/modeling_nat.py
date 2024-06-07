@@ -37,6 +37,14 @@ from ...modeling_outputs import (
 )
 
 
+if is_natten_available():
+    from natten.functional import natten2dav, natten2dqkrpb
+else:
+    def natten2dqkrpb(*args, **kwargs):
+        raise OptionalDependencyNotAvailable()
+    def natten2dav(*args, **kwargs):
+        raise OptionalDependencyNotAvailable()
+
 logger = logging.get_logger(__name__)
 
 
