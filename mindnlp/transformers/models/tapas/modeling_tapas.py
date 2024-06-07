@@ -66,28 +66,28 @@ class TableQuestionAnsweringOutput(ModelOutput):
     Output type of [`TapasForQuestionAnswering`].
 
     Args:
-        loss (`torch.FloatTensor` of shape `(1,)`, *optional*, returned when `labels` (and possibly `answer`, `aggregation_labels`, `numeric_values` and `numeric_values_scale` are provided)):
+        loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `labels` (and possibly `answer`, `aggregation_labels`, `numeric_values` and `numeric_values_scale` are provided)):
             Total loss as the sum of the hierarchical cell selection log-likelihood loss and (optionally) the
             semi-supervised regression loss and (optionally) supervised loss for aggregations.
-        logits (`torch.FloatTensor` of shape `(batch_size, sequence_length)`):
+        logits (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
             Prediction scores of the cell selection head, for every token.
-        logits_aggregation (`torch.FloatTensor`, *optional*, of shape `(batch_size, num_aggregation_labels)`):
+        logits_aggregation (`mindspore.Tensor`, *optional*, of shape `(batch_size, num_aggregation_labels)`):
             Prediction scores of the aggregation head, for every aggregation operator.
-        hidden_states (`tuple(torch.FloatTensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `torch.FloatTensor` (one for the output of the embeddings + one for the output of each layer) of
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`. Hidden-states of the model at the output of each layer
             plus the initial embedding outputs.
-        attentions (`tuple(torch.FloatTensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `torch.FloatTensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Attentions weights after the attention softmax, used to compute the weighted average in
             the self-attention heads.
     """
 
-    loss: Optional[torch.FloatTensor] = None
-    logits: torch.FloatTensor = None
-    logits_aggregation: torch.FloatTensor = None
-    hidden_states: Optional[Tuple[torch.FloatTensor]] = None
-    attentions: Optional[Tuple[torch.FloatTensor]] = None
+    loss: Optional[mindspore.Tensor] = None
+    logits: mindspore.Tensor = None
+    logits_aggregation: mindspore.Tensor = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    attentions: Optional[Tuple[mindspore.Tensor]] = None
 
 
 def load_tf_weights_in_tapas(model, config, tf_checkpoint_path):
@@ -224,7 +224,7 @@ def load_tf_weights_in_tapas(model, config, tf_checkpoint_path):
     return model
 
 
-class TapasEmbeddings(nn.Module):
+class TapasEmbeddings(nn.Cell):
     """
     Construct the embeddings from word, position and token_type embeddings. Same as BertEmbeddings but with a number of
     additional token type embeddings to encode tabular structure.
@@ -251,18 +251,18 @@ class TapasEmbeddings(nn.Module):
 
         self.config = config
 
-    def forward(self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None):
+    def construct(self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None):
         if input_ids is not None:
-            input_shape = input_ids.size()
+            input_shape = input_ids.shape
         else:
-            input_shape = inputs_embeds.size()[:-1]
+            input_shape = inputs_embeds.shape[:-1]
 
         seq_length = input_shape[1]
         device = input_ids.device if input_ids is not None else inputs_embeds.device
 
         if position_ids is None:
             # create absolute position embeddings
-            position_ids = torch.arange(seq_length, dtype=torch.long, device=device)
+            position_ids = torch.arange(seq_length, dtype=mindspore.int64, device=device)
             position_ids = position_ids.unsqueeze(0).expand(input_shape)
             # when self.config.reset_position_index_per_cell is set to True, create relative position embeddings
             if self.config.reset_position_index_per_cell:
@@ -277,14 +277,14 @@ class TapasEmbeddings(nn.Module):
                 # ? shape (batch_size, seq_len). First absolute position of the cell for every token
                 first_position = gather(first_position_per_segment, full_index)
                 # shape (1, seq_len)
-                position = torch.arange(seq_length, dtype=torch.long, device=device).unsqueeze(0)
+                position = torch.arange(seq_length, dtype=mindspore.int64, device=device).unsqueeze(0)
                 position_ids = torch.min(
                     torch.as_tensor(self.config.max_position_embeddings - 1, device=device), position - first_position
                 )
 
         if token_type_ids is None:
             token_type_ids = torch.zeros(
-                (input_shape + self.number_of_token_type_embeddings), dtype=torch.long, device=device
+                (input_shape + self.number_of_token_type_embeddings), dtype=mindspore.int64, device=device
             )
 
         if inputs_embeds is None:
@@ -303,7 +303,7 @@ class TapasEmbeddings(nn.Module):
         return embeddings
 
 
-class TapasSelfAttention(nn.Module):
+class TapasSelfAttention(nn.Cell):
     def __init__(self, config):
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -316,19 +316,19 @@ class TapasSelfAttention(nn.Module):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Linear(config.hidden_size, self.all_head_size)
-        self.key = nn.Linear(config.hidden_size, self.all_head_size)
-        self.value = nn.Linear(config.hidden_size, self.all_head_size)
+        self.query = nn.Dense(config.hidden_size, self.all_head_size)
+        self.key = nn.Dense(config.hidden_size, self.all_head_size)
+        self.value = nn.Dense(config.hidden_size, self.all_head_size)
 
         self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
         self.is_decoder = config.is_decoder
 
     def transpose_for_scores(self, x):
-        new_x_shape = x.size()[:-1] + (self.num_attention_heads, self.attention_head_size)
+        new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def forward(
+    def construct(
         self,
         hidden_states,
         attention_mask=None,
@@ -388,8 +388,8 @@ class TapasSelfAttention(nn.Module):
 
         context_layer = torch.matmul(attention_probs, value_layer)
 
-        context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
-        new_context_layer_shape = context_layer.size()[:-2] + (self.all_head_size,)
+        context_layer = context_layer.permute(0, 2, 1, 3)
+        new_context_layer_shape = context_layer.shape[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(*new_context_layer_shape)
 
         outputs = (context_layer, attention_probs) if output_attentions else (context_layer,)
@@ -399,21 +399,21 @@ class TapasSelfAttention(nn.Module):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertSelfOutput
-class TapasSelfOutput(nn.Module):
+class TapasSelfOutput(nn.Cell):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def forward(self, hidden_states: torch.Tensor, input_tensor: torch.Tensor) -> torch.Tensor:
+    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
 
 
-class TapasAttention(nn.Module):
+class TapasAttention(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.self = TapasSelfAttention(config)
@@ -440,16 +440,16 @@ class TapasAttention(nn.Module):
         self.pruned_heads = self.pruned_heads.union(heads)
 
     # Copied from transformers.models.bert.modeling_bert.BertAttention.forward
-    def forward(
+    def construct(
         self,
-        hidden_states: torch.Tensor,
-        attention_mask: Optional[torch.FloatTensor] = None,
-        head_mask: Optional[torch.FloatTensor] = None,
-        encoder_hidden_states: Optional[torch.FloatTensor] = None,
-        encoder_attention_mask: Optional[torch.FloatTensor] = None,
-        past_key_value: Optional[Tuple[Tuple[torch.FloatTensor]]] = None,
+        hidden_states: mindspore.Tensor,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        encoder_hidden_states: Optional[mindspore.Tensor] = None,
+        encoder_attention_mask: Optional[mindspore.Tensor] = None,
+        past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
-    ) -> Tuple[torch.Tensor]:
+    ) -> Tuple[mindspore.Tensor]:
         self_outputs = self.self(
             hidden_states,
             attention_mask,
@@ -465,37 +465,37 @@ class TapasAttention(nn.Module):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertIntermediate
-class TapasIntermediate(nn.Module):
+class TapasIntermediate(nn.Cell):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
+    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
 
 
 # Copied from transformers.models.bert.modeling_bert.BertOutput
-class TapasOutput(nn.Module):
+class TapasOutput(nn.Cell):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
+        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def forward(self, hidden_states: torch.Tensor, input_tensor: torch.Tensor) -> torch.Tensor:
+    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
 
 
-class TapasLayer(nn.Module):
+class TapasLayer(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
@@ -511,16 +511,16 @@ class TapasLayer(nn.Module):
         self.output = TapasOutput(config)
 
     # Copied from transformers.models.bert.modeling_bert.BertLayer.forward
-    def forward(
+    def construct(
         self,
-        hidden_states: torch.Tensor,
-        attention_mask: Optional[torch.FloatTensor] = None,
-        head_mask: Optional[torch.FloatTensor] = None,
-        encoder_hidden_states: Optional[torch.FloatTensor] = None,
-        encoder_attention_mask: Optional[torch.FloatTensor] = None,
-        past_key_value: Optional[Tuple[Tuple[torch.FloatTensor]]] = None,
+        hidden_states: mindspore.Tensor,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        encoder_hidden_states: Optional[mindspore.Tensor] = None,
+        encoder_attention_mask: Optional[mindspore.Tensor] = None,
+        past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
-    ) -> Tuple[torch.Tensor]:
+    ) -> Tuple[mindspore.Tensor]:
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
         self_attn_past_key_value = past_key_value[:2] if past_key_value is not None else None
         self_attention_outputs = self.attention(
@@ -583,14 +583,14 @@ class TapasLayer(nn.Module):
         return layer_output
 
 
-class TapasEncoder(nn.Module):
+class TapasEncoder(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.layer = nn.ModuleList([TapasLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.CellList([TapasLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def forward(
+    def construct(
         self,
         hidden_states,
         attention_mask=None,
@@ -647,13 +647,13 @@ class TapasEncoder(nn.Module):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertPooler
-class TapasPooler(nn.Module):
+class TapasPooler(nn.Cell):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
+    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -663,17 +663,17 @@ class TapasPooler(nn.Module):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertPredictionHeadTransform with Bert->Tapas
-class TapasPredictionHeadTransform(nn.Module):
+class TapasPredictionHeadTransform(nn.Cell):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
         if isinstance(config.hidden_act, str):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
             self.transform_act_fn = config.hidden_act
         self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
-    def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
+    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.transform_act_fn(hidden_states)
         hidden_states = self.LayerNorm(hidden_states)
@@ -681,14 +681,14 @@ class TapasPredictionHeadTransform(nn.Module):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertLMPredictionHead with Bert->Tapas
-class TapasLMPredictionHead(nn.Module):
+class TapasLMPredictionHead(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.transform = TapasPredictionHeadTransform(config)
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
+        self.decoder = nn.Dense(config.hidden_size, config.vocab_size, bias=False)
 
         self.bias = nn.Parameter(torch.zeros(config.vocab_size))
 
@@ -698,19 +698,19 @@ class TapasLMPredictionHead(nn.Module):
     def _tie_weights(self):
         self.decoder.bias = self.bias
 
-    def forward(self, hidden_states):
+    def construct(self, hidden_states):
         hidden_states = self.transform(hidden_states)
         hidden_states = self.decoder(hidden_states)
         return hidden_states
 
 
 # Copied from transformers.models.bert.modeling_bert.BertOnlyMLMHead with Bert->Tapas
-class TapasOnlyMLMHead(nn.Module):
+class TapasOnlyMLMHead(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.predictions = TapasLMPredictionHead(config)
 
-    def forward(self, sequence_output: torch.Tensor) -> torch.Tensor:
+    def construct(self, sequence_output: mindspore.Tensor) -> mindspore.Tensor:
         prediction_scores = self.predictions(sequence_output)
         return prediction_scores
 
@@ -728,7 +728,7 @@ class TapasPreTrainedModel(PreTrainedModel):
     # Copied from transformers.models.bert.modeling_bert.BertPreTrainedModel._init_weights
     def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(module, nn.Linear):
+        if isinstance(module, nn.Dense):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
@@ -748,7 +748,7 @@ TAPAS_START_DOCSTRING = r"""
     library implements for all its models (such as downloading or saving, resizing the input embeddings, pruning heads
     etc.)
 
-    This model is also a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass.
+    This model is also a PyTorch [torch.nn.Cell](https://pytorch.org/docs/stable/nn.html#torch.nn.Cell) subclass.
     Use it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage
     and behavior.
 
@@ -760,33 +760,33 @@ TAPAS_START_DOCSTRING = r"""
 
 TAPAS_INPUTS_DOCSTRING = r"""
     Args:
-        input_ids (`torch.LongTensor` of shape `({0})`):
+        input_ids (`mindspore.Tensor` of shape `({0})`):
             Indices of input sequence tokens in the vocabulary. Indices can be obtained using [`AutoTokenizer`]. See
             [`PreTrainedTokenizer.encode`] and [`PreTrainedTokenizer.__call__`] for details.
 
             [What are input IDs?](../glossary#input-ids)
-        attention_mask (`torch.FloatTensor` of shape `({0})`, *optional*):
+        attention_mask (`mindspore.Tensor` of shape `({0})`, *optional*):
             Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
 
             - 1 for tokens that are **not masked**,
             - 0 for tokens that are **masked**.
 
             [What are attention masks?](../glossary#attention-mask)
-        token_type_ids (`torch.LongTensor` of shape `({0}, 7)`, *optional*):
+        token_type_ids (`mindspore.Tensor` of shape `({0}, 7)`, *optional*):
             Token indices that encode tabular structure. Indices can be obtained using [`AutoTokenizer`]. See this
             class for more info.
 
             [What are token type IDs?](../glossary#token-type-ids)
-        position_ids (`torch.LongTensor` of shape `({0})`, *optional*):
+        position_ids (`mindspore.Tensor` of shape `({0})`, *optional*):
             Indices of positions of each input sequence tokens in the position embeddings. If
             `reset_position_index_per_cell` of [`TapasConfig`] is set to `True`, relative position embeddings will be
             used. Selected in the range `[0, config.max_position_embeddings - 1]`.
 
             [What are position IDs?](../glossary#position-ids)
-        head_mask (`torch.FloatTensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
+        head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
             Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`: - 1
             indicates the head is **not masked**, - 0 indicates the head is **masked**.
-        inputs_embeds (`torch.FloatTensor` of shape `({0}, hidden_size)`, *optional*):
+        inputs_embeds (`mindspore.Tensor` of shape `({0}, hidden_size)`, *optional*):
             Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation. This
             is useful if you want more control over how to convert `input_ids` indices into associated vectors than the
             model's internal embedding lookup matrix.
@@ -844,16 +844,16 @@ class TapasModel(TapasPreTrainedModel):
 
     @add_start_docstrings_to_model_forward(TAPAS_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
     @replace_return_docstrings(output_type=BaseModelOutputWithPooling, config_class=_CONFIG_FOR_DOC)
-    def forward(
+    def construct(
         self,
-        input_ids: Optional[torch.LongTensor] = None,
-        attention_mask: Optional[torch.FloatTensor] = None,
-        token_type_ids: Optional[torch.LongTensor] = None,
-        position_ids: Optional[torch.LongTensor] = None,
-        head_mask: Optional[torch.FloatTensor] = None,
-        inputs_embeds: Optional[torch.FloatTensor] = None,
-        encoder_hidden_states: Optional[torch.FloatTensor] = None,
-        encoder_attention_mask: Optional[torch.FloatTensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        encoder_hidden_states: Optional[mindspore.Tensor] = None,
+        encoder_attention_mask: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
@@ -893,9 +893,9 @@ class TapasModel(TapasPreTrainedModel):
             raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
         elif input_ids is not None:
             self.warn_if_padding_and_no_attention_mask(input_ids, attention_mask)
-            input_shape = input_ids.size()
+            input_shape = input_ids.shape
         elif inputs_embeds is not None:
-            input_shape = inputs_embeds.size()[:-1]
+            input_shape = inputs_embeds.shape[:-1]
         else:
             raise ValueError("You have to specify either input_ids or inputs_embeds")
 
@@ -905,17 +905,17 @@ class TapasModel(TapasPreTrainedModel):
             attention_mask = torch.ones(input_shape, device=device)
         if token_type_ids is None:
             token_type_ids = torch.zeros(
-                (*input_shape, len(self.config.type_vocab_sizes)), dtype=torch.long, device=device
+                (*input_shape, len(self.config.type_vocab_sizes)), dtype=mindspore.int64, device=device
             )
 
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
-        extended_attention_mask: torch.Tensor = self.get_extended_attention_mask(attention_mask, input_shape)
+        extended_attention_mask: mindspore.Tensor = self.get_extended_attention_mask(attention_mask, input_shape)
 
         # If a 2D ou 3D attention mask is provided for the cross-attention
         # we need to make broadcastabe to [batch_size, num_heads, seq_length, seq_length]
         if self.config.is_decoder and encoder_hidden_states is not None:
-            encoder_batch_size, encoder_sequence_length, _ = encoder_hidden_states.size()
+            encoder_batch_size, encoder_sequence_length, _ = encoder_hidden_states.shape
             encoder_hidden_shape = (encoder_batch_size, encoder_sequence_length)
             if encoder_attention_mask is None:
                 encoder_attention_mask = torch.ones(encoder_hidden_shape, device=device)
@@ -981,24 +981,24 @@ class TapasForMaskedLM(TapasPreTrainedModel):
 
     @add_start_docstrings_to_model_forward(TAPAS_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
     @replace_return_docstrings(output_type=MaskedLMOutput, config_class=_CONFIG_FOR_DOC)
-    def forward(
+    def construct(
         self,
-        input_ids: Optional[torch.LongTensor] = None,
-        attention_mask: Optional[torch.FloatTensor] = None,
-        token_type_ids: Optional[torch.LongTensor] = None,
-        position_ids: Optional[torch.LongTensor] = None,
-        head_mask: Optional[torch.FloatTensor] = None,
-        inputs_embeds: Optional[torch.FloatTensor] = None,
-        encoder_hidden_states: Optional[torch.FloatTensor] = None,
-        encoder_attention_mask: Optional[torch.FloatTensor] = None,
-        labels: Optional[torch.LongTensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        encoder_hidden_states: Optional[mindspore.Tensor] = None,
+        encoder_attention_mask: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
         **kwargs,
     ) -> Union[Tuple, MaskedLMOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
             config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
             loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
@@ -1105,54 +1105,54 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
 
         # aggregation head
         if config.num_aggregation_labels > 0:
-            self.aggregation_classifier = nn.Linear(config.hidden_size, config.num_aggregation_labels)
+            self.aggregation_classifier = nn.Dense(config.hidden_size, config.num_aggregation_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
     @add_start_docstrings_to_model_forward(TAPAS_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
     @replace_return_docstrings(output_type=TableQuestionAnsweringOutput, config_class=_CONFIG_FOR_DOC)
-    def forward(
+    def construct(
         self,
-        input_ids: Optional[torch.LongTensor] = None,
-        attention_mask: Optional[torch.FloatTensor] = None,
-        token_type_ids: Optional[torch.LongTensor] = None,
-        position_ids: Optional[torch.LongTensor] = None,
-        head_mask: Optional[torch.FloatTensor] = None,
-        inputs_embeds: Optional[torch.FloatTensor] = None,
-        table_mask: Optional[torch.LongTensor] = None,
-        labels: Optional[torch.LongTensor] = None,
-        aggregation_labels: Optional[torch.LongTensor] = None,
-        float_answer: Optional[torch.FloatTensor] = None,
-        numeric_values: Optional[torch.FloatTensor] = None,
-        numeric_values_scale: Optional[torch.FloatTensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        table_mask: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        aggregation_labels: Optional[mindspore.Tensor] = None,
+        float_answer: Optional[mindspore.Tensor] = None,
+        numeric_values: Optional[mindspore.Tensor] = None,
+        numeric_values_scale: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, TableQuestionAnsweringOutput]:
         r"""
-        table_mask (`torch.LongTensor` of shape `(batch_size, seq_length)`, *optional*):
+        table_mask (`mindspore.Tensor` of shape `(batch_size, seq_length)`, *optional*):
             Mask for the table. Indicates which tokens belong to the table (1). Question tokens, table headers and
             padding are 0.
-        labels (`torch.LongTensor` of shape `(batch_size, seq_length)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size, seq_length)`, *optional*):
             Labels per token for computing the hierarchical cell selection loss. This encodes the positions of the
             answer appearing in the table. Can be obtained using [`AutoTokenizer`].
 
             - 1 for tokens that are **part of the answer**,
             - 0 for tokens that are **not part of the answer**.
 
-        aggregation_labels (`torch.LongTensor` of shape `(batch_size, )`, *optional*):
+        aggregation_labels (`mindspore.Tensor` of shape `(batch_size, )`, *optional*):
             Aggregation function index for every example in the batch for computing the aggregation loss. Indices
             should be in `[0, ..., config.num_aggregation_labels - 1]`. Only required in case of strong supervision for
             aggregation (WikiSQL-supervised).
-        float_answer (`torch.FloatTensor` of shape `(batch_size, )`, *optional*):
+        float_answer (`mindspore.Tensor` of shape `(batch_size, )`, *optional*):
             Float answer for every example in the batch. Set to *float('nan')* for cell selection questions. Only
             required in case of weak supervision (WTQ) to calculate the aggregate mask and regression loss.
-        numeric_values (`torch.FloatTensor` of shape `(batch_size, seq_length)`, *optional*):
+        numeric_values (`mindspore.Tensor` of shape `(batch_size, seq_length)`, *optional*):
             Numeric values of every token, NaN for tokens which are not numeric values. Can be obtained using
             [`AutoTokenizer`]. Only required in case of weak supervision for aggregation (WTQ) to calculate the
             regression loss.
-        numeric_values_scale (`torch.FloatTensor` of shape `(batch_size, seq_length)`, *optional*):
+        numeric_values_scale (`mindspore.Tensor` of shape `(batch_size, seq_length)`, *optional*):
             Scale of the numeric values of every token. Can be obtained using [`AutoTokenizer`]. Only required in case
             of weak supervision for aggregation (WTQ) to calculate the regression loss.
 
@@ -1201,16 +1201,16 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
         sequence_output = self.dropout(sequence_output)
 
         if input_ids is not None:
-            input_shape = input_ids.size()
+            input_shape = input_ids.shape
         else:
-            input_shape = inputs_embeds.size()[:-1]
+            input_shape = inputs_embeds.shape[:-1]
 
         device = input_ids.device if input_ids is not None else inputs_embeds.device
 
         # Construct indices for the table.
         if token_type_ids is None:
             token_type_ids = torch.zeros(
-                (*input_shape, len(self.config.type_vocab_sizes)), dtype=torch.long, device=device
+                (*input_shape, len(self.config.type_vocab_sizes)), dtype=mindspore.int64, device=device
             )
 
         token_types = [
@@ -1239,14 +1239,14 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
         cell_index = ProductIndexMap(row_index, col_index)
 
         # Masks.
-        input_shape = input_ids.size() if input_ids is not None else inputs_embeds.size()[:-1]
+        input_shape = input_ids.shape if input_ids is not None else inputs_embeds.shape[:-1]
         device = input_ids.device if input_ids is not None else inputs_embeds.device
         if attention_mask is None:
             attention_mask = torch.ones(input_shape, device=device)
         # Table cells only, without question tokens and table headers.
         if table_mask is None:
             table_mask = torch.where(row_ids > 0, torch.ones_like(row_ids), torch.zeros_like(row_ids))
-        # torch.FloatTensor[batch_size, seq_length]
+        # mindspore.Tensor[batch_size, seq_length]
         input_mask_float = attention_mask.float().to(device)
         table_mask_float = table_mask.float().to(device)
         # Mask for cells that exist in the table (i.e. that are not padding).
@@ -1359,7 +1359,7 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
                         )
                 else:
                     # Set aggregation labels to zeros
-                    aggregation_labels = torch.zeros(labels.shape[0], dtype=torch.long, device=labels.device)
+                    aggregation_labels = torch.zeros(labels.shape[0], dtype=mindspore.int64, device=labels.device)
                     per_example_additional_loss = _calculate_aggregation_loss(
                         logits_aggregation,
                         aggregate_mask,
@@ -1427,28 +1427,28 @@ class TapasForSequenceClassification(TapasPreTrainedModel):
 
         self.tapas = TapasModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
+        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
     @add_start_docstrings_to_model_forward(TAPAS_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
     @replace_return_docstrings(output_type=SequenceClassifierOutput, config_class=_CONFIG_FOR_DOC)
-    def forward(
+    def construct(
         self,
-        input_ids: Optional[torch.LongTensor] = None,
-        attention_mask: Optional[torch.FloatTensor] = None,
-        token_type_ids: Optional[torch.LongTensor] = None,
-        position_ids: Optional[torch.LongTensor] = None,
-        head_mask: Optional[torch.FloatTensor] = None,
-        inputs_embeds: Optional[torch.FloatTensor] = None,
-        labels: Optional[torch.LongTensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[Tuple[torch.Tensor], SequenceClassifierOutput]:
+    ) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy). Note: this is called
@@ -1478,7 +1478,7 @@ class TapasForSequenceClassification(TapasPreTrainedModel):
         ... ]
 
         >>> inputs = tokenizer(table=table, queries=queries, padding="max_length", return_tensors="pt")
-        >>> labels = torch.tensor([1, 0])  # 1 means entailed, 0 means refuted
+        >>> labels = mindspore.Tensor([1, 0])  # 1 means entailed, 0 means refuted
 
         >>> outputs = model(**inputs, labels=labels)
         >>> loss = outputs.loss
@@ -1508,7 +1508,7 @@ class TapasForSequenceClassification(TapasPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == torch.long or labels.dtype == torch.int):
+                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -1557,9 +1557,9 @@ class IndexMap(object):
         Creates an index
 
         Args:
-            indices (`torch.LongTensor`, same shape as a *values* Tensor to which the indices refer):
+            indices (`mindspore.Tensor`, same shape as a *values* Tensor to which the indices refer):
                 Tensor containing the indices.
-            num_segments (`torch.LongTensor`):
+            num_segments (`mindspore.Tensor`):
                 Scalar tensor, the number of segments. All elements in a batched segmented tensor must have the same
                 number of segments (although many segments can be empty).
             batch_dims (`int`, *optional*, defaults to 0):
@@ -1572,7 +1572,7 @@ class IndexMap(object):
         self.batch_dims = batch_dims
 
     def batch_shape(self):
-        return self.indices.size()[: self.batch_dims]  # returns a torch.Size object
+        return self.indices.shape[: self.batch_dims]  # returns a torch.Size object
 
 
 class ProductIndexMap(IndexMap):
@@ -1605,7 +1605,7 @@ class ProductIndexMap(IndexMap):
 
     def project_outer(self, index):
         """Projects an index with the same index set onto the outer components."""
-        indices = torch.div(index.indices, self.inner_index.num_segments, rounding_mode="floor").type(torch.long)
+        indices = torch.div(index.indices, self.inner_index.num_segments, rounding_mode="floor").type(mindspore.int64)
         return IndexMap(indices=indices, num_segments=self.outer_index.num_segments, batch_dims=index.batch_dims)
 
     def project_inner(self, index):
@@ -1614,7 +1614,7 @@ class ProductIndexMap(IndexMap):
             indices=torch.fmod(index.indices, self.inner_index.num_segments)
             .type(torch.float)
             .floor()
-            .type(torch.long),
+            .type(mindspore.int64),
             num_segments=self.inner_index.num_segments,
             batch_dims=index.batch_dims,
         )
@@ -1626,7 +1626,7 @@ def gather(values, index, name="segmented_gather"):
     a value for that index in *values*. Two elements from the same segment always get assigned the same value.
 
     Args:
-        values (`torch.Tensor` of shape (B1, ..., Bn, num_segments, V1, ...)):
+        values (`mindspore.Tensor` of shape (B1, ..., Bn, num_segments, V1, ...)):
             Tensor with segment values.
         index (`IndexMap` of shape (B1, ..., Bn, I1, ..., Ik)):
             IndexMap.
@@ -1634,7 +1634,7 @@ def gather(values, index, name="segmented_gather"):
             Name for the operation. Currently not used
 
     Returns:
-        `tuple(torch.Tensor)`: Tensor of shape (B1, ..., Bn, I1, ..., Ik, V1, ...) with the gathered values.
+        `tuple(mindspore.Tensor)`: Tensor of shape (B1, ..., Bn, I1, ..., Ik, V1, ...) with the gathered values.
     """
     indices = index.indices
     # first, check whether the indices of the index represent scalar values (i.e. not vectorized)
@@ -1643,9 +1643,9 @@ def gather(values, index, name="segmented_gather"):
             values,
             index.batch_dims,
             indices.view(
-                values.size()[0], -1
+                values.shape[0], -1
             ),  # torch.gather expects index to have the same number of dimensions as values
-        ).view(indices.size())
+        ).view(indices.shape)
     else:
         # this means we have a vectorized version
         # we have to adjust the index
@@ -1670,12 +1670,12 @@ def flatten(index, name="segmented_flatten"):
         (`IndexMap`): The flattened IndexMap.
     """
     # first, get batch_size as scalar tensor
-    batch_size = torch.prod(torch.tensor(list(index.batch_shape())))
+    batch_size = torch.prod(mindspore.Tensor(list(index.batch_shape())))
     # next, create offset as 1-D tensor of length batch_size,
     # and multiply element-wise by num segments (to offset different elements in the batch) e.g. if batch size is 2: [0, 64]
     offset = torch.arange(start=0, end=batch_size, device=index.num_segments.device) * index.num_segments
     offset = offset.view(index.batch_shape())
-    for _ in range(index.batch_dims, len(index.indices.size())):  # typically range(1,2)
+    for _ in range(index.batch_dims, len(index.indices.shape)):  # typically range(1,2)
         offset = offset.unsqueeze(-1)
 
     indices = offset + index.indices
@@ -1698,17 +1698,17 @@ def range_index_map(batch_shape, num_segments, name="range_index_map"):
         (`IndexMap`): IndexMap of shape batch_shape with elements equal to range(num_segments).
     """
     batch_shape = torch.as_tensor(
-        batch_shape, dtype=torch.long
+        batch_shape, dtype=mindspore.int64
     )  # create a rank 1 tensor vector containing batch_shape (e.g. [2])
-    assert len(batch_shape.size()) == 1
+    assert len(batch_shape.shape) == 1
     num_segments = torch.as_tensor(num_segments)  # create a rank 0 tensor (scalar) containing num_segments (e.g. 64)
-    assert len(num_segments.size()) == 0
+    assert len(num_segments.shape) == 0
 
     indices = torch.arange(
         start=0, end=num_segments, device=num_segments.device
     )  # create a rank 1 vector with num_segments elements
     new_tensor = torch.cat(
-        [torch.ones_like(batch_shape, dtype=torch.long, device=num_segments.device), num_segments.unsqueeze(dim=0)],
+        [torch.ones_like(batch_shape, dtype=mindspore.int64, device=num_segments.device), num_segments.unsqueeze(dim=0)],
         dim=0,
     )
     # new_tensor is just a vector of [1 64] for example (assuming only 1 batch dimension)
@@ -1720,7 +1720,7 @@ def range_index_map(batch_shape, num_segments, name="range_index_map"):
     # equivalent (in Numpy:)
     # indices = torch.as_tensor(np.tile(indices.numpy(), multiples.tolist()))
 
-    return IndexMap(indices=indices, num_segments=num_segments, batch_dims=list(batch_shape.size())[0])
+    return IndexMap(indices=indices, num_segments=num_segments, batch_dims=list(batch_shape.shape)[0])
 
 
 def _segment_reduce(values, index, segment_reduce_fn, name):
@@ -1728,7 +1728,7 @@ def _segment_reduce(values, index, segment_reduce_fn, name):
     Applies a segment reduction segment-wise.
 
     Args:
-        values (`torch.Tensor`):
+        values (`mindspore.Tensor`):
             Tensor with segment values.
         index (`IndexMap`):
             IndexMap.
@@ -1744,9 +1744,9 @@ def _segment_reduce(values, index, segment_reduce_fn, name):
     # However if `values` has extra dimensions to the right keep them
     # unflattened. Segmented ops support vector-valued operations.
     flat_index = flatten(index)
-    vector_shape = values.size()[len(index.indices.size()) :]  # torch.Size object
+    vector_shape = values.shape[len(index.indices.shape) :]  # torch.Size object
     flattened_shape = torch.cat(
-        [torch.as_tensor([-1], dtype=torch.long), torch.as_tensor(vector_shape, dtype=torch.long)], dim=0
+        [torch.as_tensor([-1], dtype=mindspore.int64), torch.as_tensor(vector_shape, dtype=mindspore.int64)], dim=0
     )
     # changed "view" by "reshape" in the following line
     flat_values = values.reshape(flattened_shape.tolist())
@@ -1759,9 +1759,9 @@ def _segment_reduce(values, index, segment_reduce_fn, name):
     # Unflatten the values.
     new_shape = torch.cat(
         [
-            torch.as_tensor(index.batch_shape(), dtype=torch.long),
-            torch.as_tensor([index.num_segments], dtype=torch.long),
-            torch.as_tensor(vector_shape, dtype=torch.long),
+            torch.as_tensor(index.batch_shape(), dtype=mindspore.int64),
+            torch.as_tensor([index.num_segments], dtype=mindspore.int64),
+            torch.as_tensor(vector_shape, dtype=mindspore.int64),
         ],
         dim=0,
     )
@@ -1784,7 +1784,7 @@ def reduce_sum(values, index, name="segmented_reduce_sum"):
           vectors rather than scalars. Only the middle dimensions [I1, ..., Ik] are reduced by the operation.
 
     Args:
-        values (`torch.Tensor` of shape [B1, B2, ..., Bn, I1, .., Ik, V1, V2, ..]):
+        values (`mindspore.Tensor` of shape [B1, B2, ..., Bn, I1, .., Ik, V1, V2, ..]):
             Tensor containing the values of which the sum must be taken segment-wise.
         index (`IndexMap`, indices are of shape [B1, B2, ..., Bn, I1, .., Ik].):
             Index defining the segments.
@@ -1792,7 +1792,7 @@ def reduce_sum(values, index, name="segmented_reduce_sum"):
             Name for the operation. Currently not used
 
     Returns:
-        output_values (`torch.Tensor`of shape [B1, B2, ..., Bn, num_segments, V1, V2, ..]): Tensor containing the
+        output_values (`mindspore.Tensor`of shape [B1, B2, ..., Bn, num_segments, V1, V2, ..]): Tensor containing the
         output values. output_index (`IndexMap`): IndexMap with shape [B1, B2, ..., Bn, num_segments]. .
     """
     return _segment_reduce(values, index, "sum", name)
@@ -1813,7 +1813,7 @@ def reduce_mean(values, index, name="segmented_reduce_mean"):
     Only the middle dimensions [I1, ..., Ik] are reduced by the operation.
 
     Args:
-        values (`torch.Tensor` of shape [B1, B2, ..., Bn, I1, .., Ik, V1, V2, ..]):
+        values (`mindspore.Tensor` of shape [B1, B2, ..., Bn, I1, .., Ik, V1, V2, ..]):
             Tensor containing the values of which the mean must be taken segment-wise.
         index (`IndexMap`, indices are of shape [B1, B2, ..., Bn, I1, .., Ik].):
             Index defining the segments.
@@ -1821,7 +1821,7 @@ def reduce_mean(values, index, name="segmented_reduce_mean"):
             Name for the operation. Currently not used
 
     Returns:
-        output_values (`torch.Tensor`of shape [B1, B2, ..., Bn, num_segments, V1, V2, ..]): Tensor containing the
+        output_values (`mindspore.Tensor`of shape [B1, B2, ..., Bn, num_segments, V1, V2, ..]): Tensor containing the
         output values. output_index (`IndexMap`): IndexMap with shape [B1, B2, ..., Bn, num_segments].
     """
     return _segment_reduce(values, index, "mean", name)
@@ -1840,7 +1840,7 @@ def reduce_max(values, index, name="segmented_reduce_max"):
     Only the middle dimensions [I1, ..., Ik] are reduced by the operation.
 
     Args:
-        values (`torch.Tensor` of shape [B1, B2, ..., Bn, I1, .., Ik, V1, V2, ..]):
+        values (`mindspore.Tensor` of shape [B1, B2, ..., Bn, I1, .., Ik, V1, V2, ..]):
             Tensor containing the values of which the max must be taken segment-wise.
         index (`IndexMap`, indices are of shape [B1, B2, ..., Bn, I1, .., Ik].):
             Index defining the segments.
@@ -1848,7 +1848,7 @@ def reduce_max(values, index, name="segmented_reduce_max"):
             Name for the operation. Currently not used
 
     Returns:
-        output_values (`torch.Tensor`of shape [B1, B2, ..., Bn, num_segments, V1, V2, ..]): Tensor containing the
+        output_values (`mindspore.Tensor`of shape [B1, B2, ..., Bn, num_segments, V1, V2, ..]): Tensor containing the
         output values. output_index (`IndexMap`): IndexMap with shape [B1, B2, ..., Bn, num_segments].
     """
     return _segment_reduce(values, index, "amax", name)
@@ -1867,7 +1867,7 @@ def reduce_min(values, index, name="segmented_reduce_min"):
     Only the middle dimensions [I1, ..., Ik] are reduced by the operation.
 
     Args:
-        values (`torch.Tensor` of shape [B1, B2, ..., Bn, I1, .., Ik, V1, V2, ..]):
+        values (`mindspore.Tensor` of shape [B1, B2, ..., Bn, I1, .., Ik, V1, V2, ..]):
             Tensor containing the values of which the min must be taken segment-wise.
         index (`IndexMap`, indices are of shape [B1, B2, ..., Bn, I1, .., Ik].):
             Index defining the segments.
@@ -1875,7 +1875,7 @@ def reduce_min(values, index, name="segmented_reduce_min"):
             Name for the operation. Currently not used
 
     Returns:
-        output_values (`torch.Tensor`of shape [B1, B2, ..., Bn, num_segments, V1, V2, ..]): Tensor containing the
+        output_values (`mindspore.Tensor`of shape [B1, B2, ..., Bn, num_segments, V1, V2, ..]): Tensor containing the
         output values. output_index (`IndexMap`): IndexMap with shape [B1, B2, ..., Bn, num_segments].
     """
     return _segment_reduce(values, index, "amin", name)
@@ -1891,21 +1891,21 @@ def compute_column_logits(
     Computes the column logits.
 
     Args:
-        sequence_output (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`):
+        sequence_output (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
             Also known as last_hidden_state. Sequence of hidden-states at the output of the last layer of the model.
-        column_output_weights (`torch.FloatTensor` of shape `(hidden_size)`):
+        column_output_weights (`mindspore.Tensor` of shape `(hidden_size)`):
             Weights of the linear layer for column selection.
-        column_output_bias (`torch.FloatTensor` of shape `()`):
+        column_output_bias (`mindspore.Tensor` of shape `()`):
             Bias of the linear layer for column selection.
         cell_index (`ProductIndexMap`):
             Index that groups tokens into cells.
-        cell_mask (`torch.FloatTensor` of shape `(batch_size, max_num_rows * max_num_cols)`):
+        cell_mask (`mindspore.Tensor` of shape `(batch_size, max_num_rows * max_num_cols)`):
             Mask for cells that exist in the table (i.e. that are not padding).
         allow_empty_column_selection (`bool`):
             Whether to allow not to select any column
 
     Returns:
-        column_logits (`torch.FloatTensor`of shape `(batch_size, max_num_cols)`): Tensor containing the column logits
+        column_logits (`mindspore.Tensor`of shape `(batch_size, max_num_cols)`): Tensor containing the column logits
         for every example in the batch.
     """
 
@@ -1943,22 +1943,22 @@ def _single_column_cell_selection_loss(token_logits, column_logits, labels, cell
     the selected column are never selected.
 
     Args:
-        token_logits (`torch.FloatTensor` of shape `(batch_size, sequence_length)`):
+        token_logits (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
             Tensor containing the logits per token.
-        column_logits (`torch.FloatTensor` of shape `(batch_size, max_num_cols)`):
+        column_logits (`mindspore.Tensor` of shape `(batch_size, max_num_cols)`):
             Tensor containing the logits per column.
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`):
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
             Labels per token.
         cell_index (`ProductIndexMap`):
             Index that groups tokens into cells.
         col_index (`IndexMap`):
             Index that groups tokens into columns.
-        cell_mask (`torch.FloatTensor` of shape `(batch_size, max_num_rows * max_num_cols)`):
+        cell_mask (`mindspore.Tensor` of shape `(batch_size, max_num_rows * max_num_cols)`):
             Mask for cells that exist in the table (i.e. that are not padding).
 
     Returns:
-        selection_loss_per_example (`torch.FloatTensor` of shape `(batch_size,)`): Loss for each example. logits
-        (`torch.FloatTensor` of shape `(batch_size, sequence_length)`): New logits which are only allowed to select
+        selection_loss_per_example (`mindspore.Tensor` of shape `(batch_size,)`): Loss for each example. logits
+        (`mindspore.Tensor` of shape `(batch_size, sequence_length)`): New logits which are only allowed to select
         cells in a single column. Logits outside of the most likely column according to *column_logits* will be set to
         a very low value (such that the probabilities are 0).
     """
@@ -1975,7 +1975,7 @@ def _single_column_cell_selection_loss(token_logits, column_logits, labels, cell
     )  # no_cell_selected is of shape (batch_size,) and equals True
     # if an example of the batch has no cells selected (i.e. if there are no labels set to 1 for that example)
     column_label = torch.where(
-        no_cell_selected.view(column_label.size()), torch.zeros_like(column_label), column_label
+        no_cell_selected.view(column_label.shape), torch.zeros_like(column_label), column_label
     )
 
     column_dist = torch.distributions.Categorical(logits=column_logits)  # shape (batch_size, max_num_cols)
@@ -1988,7 +1988,7 @@ def _single_column_cell_selection_loss(token_logits, column_logits, labels, cell
     logits_per_cell, _ = reduce_mean(token_logits, cell_index)
     # labels_per_cell: shape (batch_size, 64*32), indicating whether each cell should be selected (1) or not (0)
     labels_per_cell, labels_index = reduce_max(
-        torch.as_tensor(labels, dtype=torch.long, device=labels.device), cell_index
+        torch.as_tensor(labels, dtype=mindspore.int64, device=labels.device), cell_index
     )
 
     # Mask for the selected column.
@@ -2012,7 +2012,7 @@ def _single_column_cell_selection_loss(token_logits, column_logits, labels, cell
 
     selection_loss_per_example = column_loss_per_example
     selection_loss_per_example += torch.where(
-        no_cell_selected.view(selection_loss_per_example.size()),
+        no_cell_selected.view(selection_loss_per_example.shape),
         torch.zeros_like(selection_loss_per_example),
         cell_loss,
     )
@@ -2021,7 +2021,7 @@ def _single_column_cell_selection_loss(token_logits, column_logits, labels, cell
     # to 0. This ensures backwards compatibility with models that select
     # cells from multiple columns.
     selected_column_id = torch.as_tensor(
-        torch.argmax(column_logits, dim=-1), dtype=torch.long, device=column_logits.device
+        torch.argmax(column_logits, dim=-1), dtype=mindspore.int64, device=column_logits.device
     )  # shape (batch_size,)
 
     # selected_column_mask: shape (batch_size, 64*32), equal to 1 if cell belongs to column selected by the model
@@ -2033,7 +2033,7 @@ def _single_column_cell_selection_loss(token_logits, column_logits, labels, cell
 
     # Never select cells with the special column id 0.
     selected_column_mask = torch.where(
-        torch.eq(column_id_for_cells, 0).view(selected_column_mask.size()),
+        torch.eq(column_id_for_cells, 0).view(selected_column_mask.shape),
         torch.zeros_like(selected_column_mask),
         selected_column_mask,
     )
@@ -2048,17 +2048,17 @@ def compute_token_logits(sequence_output, temperature, output_weights, output_bi
     Computes logits per token
 
     Args:
-        sequence_output (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`):
+        sequence_output (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
             Also known as last_hidden_state. Sequence of hidden-states at the output of the last layer of the model.
         temperature (`float`):
             Temperature for the Bernoulli distribution.
-        output_weights (`torch.FloatTensor` of shape `(hidden_size,)`):
+        output_weights (`mindspore.Tensor` of shape `(hidden_size,)`):
             Weights of the linear layer for cell selection.
-        output_bias (`torch.FloatTensor` of shape `()`):
+        output_bias (`mindspore.Tensor` of shape `()`):
             Bias of the linear layer for cell selection
 
     Returns:
-        logits (`torch.FloatTensor` of shape `(batch_size, sequence_length)`): Logits per token.
+        logits (`mindspore.Tensor` of shape `(batch_size, sequence_length)`): Logits per token.
     """
     logits = (torch.einsum("bsj,j->bs", sequence_output, output_weights) + output_bias) / temperature
 
@@ -2077,21 +2077,21 @@ def _calculate_aggregate_mask(answer, pooled_output, cell_selection_preference, 
     for this is a hyperparameter *cell_selection_preference*
 
     Args:
-        answer (`torch.FloatTensor` of shape `(batch_size, )`):
+        answer (`mindspore.Tensor` of shape `(batch_size, )`):
             Answer for every example in the batch. Nan if there is no scalar answer.
-        pooled_output (`torch.FloatTensor` of shape `(batch_size, hidden_size)`):
+        pooled_output (`mindspore.Tensor` of shape `(batch_size, hidden_size)`):
             Output of the pooler (BertPooler) on top of the encoder layer.
         cell_selection_preference (`float`):
             Preference for cell selection in ambiguous cases.
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`):
-            Labels per token. aggregation_classifier (`torch.nn.Linear`): Aggregation head
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
+            Labels per token. aggregation_classifier (`torch.nn.Dense`): Aggregation head
 
     Returns:
-        aggregate_mask (`torch.FloatTensor` of shape `(batch_size,)`): A mask set to 1 for examples that should use
+        aggregate_mask (`mindspore.Tensor` of shape `(batch_size,)`): A mask set to 1 for examples that should use
         aggregation functions.
     """
-    # torch.FloatTensor(batch_size,)
-    aggregate_mask_init = torch.logical_not(torch.isnan(answer)).type(torch.FloatTensor).to(answer.device)
+    # mindspore.Tensor(batch_size,)
+    aggregate_mask_init = torch.logical_not(torch.isnan(answer)).type(mindspore.Tensor).to(answer.device)
     logits_aggregation = aggregation_classifier(pooled_output)
     dist_aggregation = torch.distributions.categorical.Categorical(logits=logits_aggregation)
     # Index 0 corresponds to "no aggregation".
@@ -2106,7 +2106,7 @@ def _calculate_aggregate_mask(answer, pooled_output, cell_selection_preference, 
     # torch.where is not equivalent to tf.where (in tensorflow 1)
     # hence the added .view on the condition to match the shape of the first tensor
     aggregate_mask = torch.where(
-        torch.logical_and(is_pred_cell_selection, is_cell_supervision_available).view(aggregate_mask_init.size()),
+        torch.logical_and(is_pred_cell_selection, is_cell_supervision_available).view(aggregate_mask_init.shape),
         torch.zeros_like(aggregate_mask_init, dtype=torch.float32),
         aggregate_mask_init,
     )
@@ -2127,11 +2127,11 @@ def _calculate_aggregation_loss_known(
     where aggregation type is always known, standard cross entropy loss is accumulated for all examples
 
     Args:
-        logits_aggregation (`torch.FloatTensor` of shape `(batch_size, num_aggregation_labels)`):
+        logits_aggregation (`mindspore.Tensor` of shape `(batch_size, num_aggregation_labels)`):
             Logits per aggregation operation.
-        aggregate_mask (`torch.FloatTensor` of shape `(batch_size, )`):
+        aggregate_mask (`mindspore.Tensor` of shape `(batch_size, )`):
             A mask set to 1 for examples that should use aggregation functions.
-        aggregation_labels (`torch.LongTensor` of shape `(batch_size, )`):
+        aggregation_labels (`mindspore.Tensor` of shape `(batch_size, )`):
             Aggregation function id for every example in the batch.
         use_answer_as_supervision (`bool`, *optional*):
             Whether to use the answer as the only supervision for aggregation examples.
@@ -2139,12 +2139,12 @@ def _calculate_aggregation_loss_known(
             The number of aggregation operators to predict.
 
     Returns:
-        aggregation_loss_known (`torch.FloatTensor` of shape `(batch_size,)`): Aggregation loss (when its type is known
+        aggregation_loss_known (`mindspore.Tensor` of shape `(batch_size,)`): Aggregation loss (when its type is known
         during training) per example.
     """
     if use_answer_as_supervision:
         # Prepare "no aggregation" targets for cell selection examples.
-        target_aggregation = torch.zeros_like(aggregate_mask, dtype=torch.long)
+        target_aggregation = torch.zeros_like(aggregate_mask, dtype=mindspore.int64)
     else:
         # Use aggregation supervision as the target.
         target_aggregation = aggregation_labels
@@ -2152,7 +2152,7 @@ def _calculate_aggregation_loss_known(
     one_hot_labels = nn.functional.one_hot(target_aggregation, num_classes=num_aggregation_labels).type(torch.float32)
     log_probs = nn.functional.log_softmax(logits_aggregation, dim=-1)
 
-    # torch.FloatTensor[batch_size]
+    # mindspore.Tensor[batch_size]
     per_example_aggregation_intermediate = -torch.sum(one_hot_labels * log_probs, dim=-1)
     if use_answer_as_supervision:
         # Accumulate loss only for examples requiring cell selection
@@ -2167,13 +2167,13 @@ def _calculate_aggregation_loss_unknown(logits_aggregation, aggregate_mask):
     Calculates aggregation loss in the case of answer supervision.
 
     Args:
-        logits_aggregation (`torch.FloatTensor` of shape `(batch_size, num_aggregation_labels)`):
+        logits_aggregation (`mindspore.Tensor` of shape `(batch_size, num_aggregation_labels)`):
             Logits per aggregation operation.
-        aggregate_mask (`torch.FloatTensor` of shape `(batch_size, )`):
+        aggregate_mask (`mindspore.Tensor` of shape `(batch_size, )`):
             A mask set to 1 for examples that should use aggregation functions
 
     Returns:
-        aggregation_loss_unknown (`torch.FloatTensor` of shape `(batch_size,)`): Aggregation loss (in case of answer
+        aggregation_loss_unknown (`mindspore.Tensor` of shape `(batch_size,)`): Aggregation loss (in case of answer
         supervision) per example.
     """
     dist_aggregation = torch.distributions.categorical.Categorical(logits=logits_aggregation)
@@ -2198,11 +2198,11 @@ def _calculate_aggregation_loss(
     Calculates the aggregation loss per example.
 
     Args:
-        logits_aggregation (`torch.FloatTensor` of shape `(batch_size, num_aggregation_labels)`):
+        logits_aggregation (`mindspore.Tensor` of shape `(batch_size, num_aggregation_labels)`):
             Logits per aggregation operation.
-        aggregate_mask (`torch.FloatTensor` of shape `(batch_size, )`):
+        aggregate_mask (`mindspore.Tensor` of shape `(batch_size, )`):
             A mask set to 1 for examples that should use aggregation functions.
-        aggregation_labels (`torch.LongTensor` of shape `(batch_size, )`):
+        aggregation_labels (`mindspore.Tensor` of shape `(batch_size, )`):
             Aggregation function id for every example in the batch.
         use_answer_as_supervision (`bool`, *optional*):
             Whether to use the answer as the only supervision for aggregation examples.
@@ -2212,7 +2212,7 @@ def _calculate_aggregation_loss(
             Importance weight for the aggregation loss.
 
     Returns:
-        aggregation_loss (`torch.FloatTensor` of shape `(batch_size,)`): Aggregation loss per example.
+        aggregation_loss (`mindspore.Tensor` of shape `(batch_size,)`): Aggregation loss per example.
     """
     per_example_aggregation_loss = _calculate_aggregation_loss_known(
         logits_aggregation, aggregate_mask, aggregation_labels, use_answer_as_supervision, num_aggregation_labels
@@ -2233,19 +2233,19 @@ def _calculate_expected_result(
     Args:
         dist_per_cell (`torch.distributions.Bernoulli`):
             Cell selection distribution for each cell.
-        numeric_values (`torch.FloatTensor` of shape `(batch_size, seq_length)`):
+        numeric_values (`mindspore.Tensor` of shape `(batch_size, seq_length)`):
             Numeric values of every token. Nan for tokens which are not numeric values.
-        numeric_values_scale (`torch.FloatTensor` of shape `(batch_size, seq_length)`):
+        numeric_values_scale (`mindspore.Tensor` of shape `(batch_size, seq_length)`):
             Scale of the numeric values of every token.
-        input_mask_float (`torch.FloatTensor` of shape `(batch_size, seq_length)`):
+        input_mask_float (`mindspore.Tensor` of shape `(batch_size, seq_length)`):
             Mask for the table, without question tokens and table headers.
-        logits_aggregation (`torch.FloatTensor` of shape `(batch_size, num_aggregation_labels)`):
+        logits_aggregation (`mindspore.Tensor` of shape `(batch_size, num_aggregation_labels)`):
             Logits per aggregation operation.
         config ([`TapasConfig`]):
             Model configuration class with all the hyperparameters of the model
 
     Returns:
-        expected_result (`torch.FloatTensor` of shape `(batch_size,)`): The expected result per example.
+        expected_result (`mindspore.Tensor` of shape `(batch_size,)`): The expected result per example.
     """
     if config.use_gumbel_for_cells:
         gumbel_dist = torch.distributions.RelaxedBernoulli(
@@ -2331,26 +2331,26 @@ def _calculate_regression_loss(
     Calculates the regression loss per example.
 
     Args:
-        answer (`torch.FloatTensor` of shape `(batch_size,)`):
+        answer (`mindspore.Tensor` of shape `(batch_size,)`):
             Answer for every example in the batch. Nan if there is no scalar answer.
-        aggregate_mask (`torch.FloatTensor` of shape `(batch_size,)`):
+        aggregate_mask (`mindspore.Tensor` of shape `(batch_size,)`):
             A mask set to 1 for examples that should use aggregation functions.
         dist_per_cell (`torch.distributions.Bernoulli`):
             Cell selection distribution for each cell.
-        numeric_values (`torch.FloatTensor` of shape `(batch_size, seq_length)`):
+        numeric_values (`mindspore.Tensor` of shape `(batch_size, seq_length)`):
             Numeric values of every token. Nan for tokens which are not numeric values.
-        numeric_values_scale (`torch.FloatTensor` of shape `(batch_size, seq_length)`):
+        numeric_values_scale (`mindspore.Tensor` of shape `(batch_size, seq_length)`):
             Scale of the numeric values of every token.
-        input_mask_float (`torch.FloatTensor` of shape `(batch_size, seq_length)`):
+        input_mask_float (`mindspore.Tensor` of shape `(batch_size, seq_length)`):
             Mask for the table, without question tokens and table headers.
-        logits_aggregation (`torch.FloatTensor` of shape `(batch_size, num_aggregation_labels)`):
+        logits_aggregation (`mindspore.Tensor` of shape `(batch_size, num_aggregation_labels)`):
             Logits per aggregation operation.
         config ([`TapasConfig`]):
             Model configuration class with all the parameters of the model
 
     Returns:
-        per_example_answer_loss_scaled (`torch.FloatTensor` of shape `(batch_size,)`): Scales answer loss for each
-        example in the batch. large_answer_loss_mask (`torch.FloatTensor` of shape `(batch_size,)`): A mask which is 1
+        per_example_answer_loss_scaled (`mindspore.Tensor` of shape `(batch_size,)`): Scales answer loss for each
+        example in the batch. large_answer_loss_mask (`mindspore.Tensor` of shape `(batch_size,)`): A mask which is 1
         for examples for which their answer loss is larger than the answer_loss_cutoff.
     """
     # float32 (batch_size,)
