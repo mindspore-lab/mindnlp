@@ -19,10 +19,8 @@ import warnings
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
-import torch
-import torch.utils.checkpoint
-from torch import nn
-from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+import mindspore
+from mindspore import nn, ops
 
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _create_4d_causal_attention_mask
@@ -34,14 +32,9 @@ from ...modeling_outputs import (
     Seq2SeqSequenceClassifierOutput,
 )
 from ...modeling_utils import PreTrainedModel
-from ...utils import (
+from ...ms_utils import (
     ModelOutput,
-    add_code_sample_docstrings,
-    add_end_docstrings,
-    add_start_docstrings,
-    add_start_docstrings_to_model_forward,
     logging,
-    replace_return_docstrings,
 )
 from .configuration_led import LEDConfig
 
@@ -228,13 +221,13 @@ class LEDEncoderSelfAttention(nn.Cell):
             )
             # concat to local_attn_probs
             # (batch_size, seq_len, num_heads, extra attention count + 2*window+1)
-            attn_scores = torch.cat((global_key_attn_scores, attn_scores), dim=-1)
+            attn_scores = ops.cat((global_key_attn_scores, attn_scores), dim=-1)
 
             # free memory
             del global_key_attn_scores
 
-        attn_probs = nn.functional.softmax(
-            attn_scores, dim=-1, dtype=torch.float32
+        attn_probs = ops.softmax(
+            attn_scores, axis=-1
         )  # use fp32 for numerical stability
 
         if layer_head_mask is not None:
