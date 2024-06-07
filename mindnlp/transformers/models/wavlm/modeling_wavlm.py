@@ -554,7 +554,7 @@ class WavLMLayerNormConvLayer(nn.Cell):
             has_bias=config.conv_bias,
             pad_mode='valid',
         )
-        self.layer_norm = nn.LayerNorm([self.out_conv_dim], elementwise_affine=True)
+        self.layer_norm = nn.LayerNorm([self.out_conv_dim])
         self.activation = ACT2FN[config.feat_extract_activation]
 
     def construct(self, hidden_states):
@@ -845,7 +845,6 @@ class WavLMAttention(nn.Cell):
         memory_position = ops.arange(key_length, dtype=mindspore.int64)[None, :]
         relative_position = memory_position - context_position
         relative_position_bucket = self._relative_positions_bucket(relative_position)
-        relative_position_bucket = relative_position_bucket
         values = self.rel_attn_embed(relative_position_bucket)
         values = values.permute([2, 0, 1])
         return values
@@ -1507,7 +1506,7 @@ class WavLMForCTC(WavLMPreTrainedModel):
         elif target_lang is None and getattr(self.config, "adapter_attn_dim", None) is not None:
             logger.info("By default `target_lang` is set to 'eng'.")
         elif target_lang is not None:
-            self.load_adapter(target_lang, force_load=True)
+            self.load_adapter(target_lang)
 
     def freeze_feature_extractor(self):
         """
@@ -1798,8 +1797,8 @@ class WavLMForAudioFrameClassification(WavLMPreTrainedModel):
         logits = self.classifier(hidden_states)
 
         loss = None
-        if labels is not None:  
-            loss = ops.cross_entropy(logits.view(-1, self.num_labels), ops.argmax(labels.view(-1, self.num_labels), axis=1))
+        if labels is not None:
+            loss = ops.cross_entropy(logits.view(-1, self.num_labels), ops.argmax(labels.view(-1, self.num_labels), dim=1))
 
         if not return_dict:
             output = (logits,) + outputs[_HIDDEN_STATES_START_POSITION:]
