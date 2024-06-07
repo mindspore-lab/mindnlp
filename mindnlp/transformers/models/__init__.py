@@ -69,6 +69,7 @@ from . import (
     esm,
     ernie,
     ernie_m,
+    fastspeech2_conformer,
     chatglm,
     chatglm2,
     chatglm3,
@@ -213,6 +214,7 @@ from .chatglm import *
 from .chatglm2 import *
 from .chatglm3 import *
 from .funnel import *
+from .fastspeech2_conformer import *
 from .gemma import *
 from .git import *
 from .gpt import *
@@ -351,6 +353,7 @@ __all__.extend(ernie_m.__all__)
 __all__.extend(esm.__all__)
 __all__.extend(chatglm.__all__)
 __all__.extend(funnel.__all__)
+__all__.extend(fastspeech2_conformer.__all__)
 __all__.extend(chatglm2.__all__)
 __all__.extend(chatglm3.__all__)
 __all__.extend(gpt.__all__)
