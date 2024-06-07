@@ -208,6 +208,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("gpt2", "GPT2LMHeadModel"),
         ("gpt_pangu", "GPTPanguForCausalLM"),
         ("gpt_bigcode", "GPTBigCodeForCausalLM"),
+        ("gpt_neox", "GPTNeoXForCausalLM"),
         ("gpt_neox_japanese", "GPTNeoXJapaneseForCausalLM"),
         ("jetmoe", "JetMoEForCausalLM"),
         ("llama", "LlamaForCausalLM"),

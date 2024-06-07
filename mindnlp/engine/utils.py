@@ -272,7 +272,7 @@ class LabelSmoother:
         labels = ops.clamp(labels, min=0)
         nll_loss = log_probs.gather_elements(dim=-1, index=labels)
         # works for fp16 input tensor too, by internally upcasting it to fp32
-        smoothed_loss = log_probs.sum(axis=-1, keep_dims=True, dtype=mindspore.float32)
+        smoothed_loss = ops.sum(log_probs, dim=-1, keepdim=True, dtype=mindspore.float32)
 
         nll_loss = nll_loss.masked_fill(padding_mask, 0.0)
         smoothed_loss = smoothed_loss.masked_fill(padding_mask, 0.0)
