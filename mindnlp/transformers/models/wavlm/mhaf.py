@@ -5,11 +5,6 @@ import warnings
 
 import mindspore.ops.function.nn_func
 
-try:
-    import numpy as np
-except ModuleNotFoundError:
-    np = None
-
 import mindspore as ms
 from mindspore import ops
 

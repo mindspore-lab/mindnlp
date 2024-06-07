@@ -504,7 +504,6 @@ class WavLMAttention(nn.Cell):
         memory_position = ops.arange(key_length, dtype=ms.int64)[None, :]
         relative_position = memory_position - context_position
         relative_position_bucket = self._relative_positions_bucket(relative_position)
-        relative_position_bucket = relative_position_bucket
         values = self.rel_attn_embed(relative_position_bucket)
         values = values.permute([2, 0, 1])
         return values
@@ -803,7 +802,7 @@ class WavLMGumbelVectorQuantizer(nn.Cell):
     @staticmethod
     def _compute_perplexity(probs):
         marginal_probs = probs.mean(axis=0)
-        perplexity = ops.exp(-ops.sum(marginal_probs * ops.log(marginal_probs + 1e-7), axis=-1)).sum()
+        perplexity = ops.exp(-ops.sum(marginal_probs * ops.log(marginal_probs + 1e-7), dim=-1)).sum()
         return perplexity
 
     def construct(self, hidden_states):
@@ -1170,7 +1169,7 @@ class WavLMForCTC(WavLMPreTrainedModel):
         elif target_lang is None and getattr(self.config, "adapter_attn_dim", None) is not None:
             logger.info("By default `target_lang` is set to 'eng'.")
         elif target_lang is not None:
-            self.load_adapter(target_lang, force_load=True)
+            self.load_adapter(target_lang)
 
     def freeze_feature_extractor(self):
         """
