@@ -13,15 +13,13 @@
 # limitations under the License.
 # ============================================
 """
-VisionTextDualEncoder Model init
+WavLM Model init
 """
-from .import configuration_vision_text_dual_encoder, processing_vision_text_dual_encoder, modeling_vision_text_dual_encoder
+from .import configuration_wavlm, modeling_wavlm
 
-from .configuration_vision_text_dual_encoder import *
-from .processing_vision_text_dual_encoder import *
-from .modeling_vision_text_dual_encoder import *
+from .configuration_wavlm import *
+from .modeling_wavlm import *
 
 __all__ = []
-__all__.extend(configuration_vision_text_dual_encoder.__all__)
-__all__.extend(processing_vision_text_dual_encoder.__all__)
-__all__.extend(modeling_vision_text_dual_encoder.__all__)
+__all__.extend(configuration_wavlm.__all__)
+__all__.extend(modeling_wavlm.__all__)

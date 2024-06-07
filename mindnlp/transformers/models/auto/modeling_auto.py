@@ -117,6 +117,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("vision_text_dual_encoder", "VisionTextDualEncoderModel"),
         ("visual_bert", "VisualBertModel"),
         ("vit", "ViTModel"),
+        ("wavlm", "WavLMModel"),
         ("whisper", "WhisperModel"),
         ("wav2vec2", "Wav2Vec2Model"),
         ("xclip", "XCLIPModel"),

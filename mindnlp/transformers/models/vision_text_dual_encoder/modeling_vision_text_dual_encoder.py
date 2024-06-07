@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================
-"""PyTorch VisionTextDualEncoder model."""
+"""Mindspore VisionTextDualEncoder model."""
 
 from typing import Optional, Tuple, Union
 

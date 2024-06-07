@@ -144,6 +144,7 @@ from . import (
     vit,
     wav2vec2,
     wav2vec2_with_lm,
+    wavlm,
     whisper,
     x_clip,
     xlm,
@@ -280,6 +281,7 @@ from .vit import *
 from .whisper import *
 from .wav2vec2 import *
 from .wav2vec2_with_lm import *
+from .wavlm import *
 from .x_clip import *
 from .xlm import *
 from .xlm_roberta import *
@@ -415,6 +417,7 @@ __all__.extend(vit.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)
 __all__.extend(wav2vec2_with_lm.__all__)
+__all__.extend(wavlm.__all__)
 __all__.extend(x_clip.__all__)
 __all__.extend(xlm.__all__)
 __all__.extend(xlm_roberta.__all__)
