@@ -15,19 +15,14 @@
 
 import inspect
 import unittest
-import mindspore.ops
 import numpy as np
+
 from huggingface_hub import hf_hub_download
+from mindspore import ops
 
-import mindspore
-from mindspore import nn, Tensor,context
-from mindspore.common.initializer import initializer
-
-from mindnlp.transformers import GitConfig, GitVisionConfig,GitProcessor
+from mindnlp.transformers import GitConfig, GitProcessor, GitVisionConfig
 from mindnlp.transformers.models.auto import get_values
-from mindnlp.utils.testing_utils import  slow, require_mindspore ,is_mindspore_available
-from mindnlp.utils import is_mindspore_available, is_vision_available
-
+from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow, is_mindspore_available, is_vision_available
 
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
@@ -36,21 +31,14 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor,
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
-    from mindnlp.transformers import (
-        MODEL_FOR_CAUSAL_LM_MAPPING,
-        GitForCausalLM,
-        GitModel,
-        GitPreTrainedModel,
-        GitVisionModel,
-        GitConfig,
-    )
+    from mindspore import nn
+
+    from mindnlp.transformers import MODEL_FOR_CAUSAL_LM_MAPPING, GitForCausalLM, GitModel, GitVisionModel
 
 
 if is_vision_available():
     from PIL import Image
 
-    from mindnlp.transformers import CLIPProcessor
 
 class GitVisionModelTester:
     def __init__(
@@ -115,11 +103,8 @@ class GitVisionModelTester:
     def create_and_check_model(self, config, pixel_values):
         model = GitVisionModel(config=config)
         model.set_train(False)
-
-        mindspore.context.set_context(mode=mindspore.context.PYNATIVE_MODE, pynative_synchronize=True)
-
-        result = model.construct(pixel_values)
-
+        result = model(pixel_values)
+        # expected sequence length = num_patches + 1 (we add 1 for the [CLS] token)
         image_size = (self.image_size, self.image_size)
         patch_size = (self.patch_size, self.patch_size)
         num_patches = (image_size[1] // patch_size[1]) * (image_size[0] // patch_size[0])
@@ -163,7 +148,7 @@ class GitVisionModelTest(ModelTesterMixin, unittest.TestCase):
             model = model_class(config)
             self.assertIsInstance(model.get_input_embeddings(), (nn.Cell))
             x = model.get_output_embeddings()
-            self.assertTrue(x is None or isinstance(x, nn.Linear))
+            self.assertTrue(x is None or isinstance(x, nn.Dense))
 
     def test_forward_signature(self):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
@@ -210,7 +195,7 @@ class GitVisionModelTest(ModelTesterMixin, unittest.TestCase):
     @slow
     def test_model_from_pretrained(self):
         model_name = "microsoft/git-base"
-        model = GitVisionModel.from_pretrained(model_name,from_pt=True)
+        model = GitVisionModel.from_pretrained(model_name)
         self.assertIsNotNone(model)
 
 
@@ -221,7 +206,7 @@ class GitModelTester:
         num_channels=3,
         image_size=32,
         patch_size=16,
-        batch_size=10,
+        batch_size=13,
         text_seq_length=7,
         is_training=True,
         use_input_mask=True,
@@ -272,17 +257,17 @@ class GitModelTester:
         self.seq_length = self.text_seq_length + int((self.image_size / self.patch_size) ** 2) + 1
 
     def prepare_config_and_inputs(self):
-        input_mask = mindspore.ops.ones((self.batch_size, self.text_seq_length), dtype=mindspore.int64)
+        input_ids = ids_tensor([self.batch_size, self.text_seq_length], self.vocab_size)
 
-        image_attention_mask = mindspore.ops.ones((self.batch_size, self.seq_length - self.text_seq_length), dtype=mindspore.int64)
-        attention_mask = mindspore.ops.concat([input_mask, image_attention_mask], axis=1)
-        config = GitConfig(
-            vocab_size=30522,
-            hidden_size=768,
-        )
-        input_ids = mindspore.ops.randint(0, config.vocab_size, (self.batch_size, self.text_seq_length), dtype=mindspore.int64)
-        pixel_values = mindspore.ops.randn(self.batch_size, 3, self.image_size, self.image_size)
-        return config, input_ids, attention_mask, pixel_values
+        input_mask = None
+        if self.use_input_mask:
+            input_mask = random_attention_mask([self.batch_size, self.text_seq_length])
+
+        pixel_values = floats_tensor([self.batch_size, self.num_channels, self.image_size, self.image_size])
+
+        config = self.get_config()
+
+        return config, input_ids, input_mask, pixel_values
 
     def get_config(self):
         """
@@ -407,6 +392,11 @@ class GitModelTester:
 class GitModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     all_model_classes = (GitModel, GitForCausalLM) if is_mindspore_available() else ()
     all_generative_model_classes = (GitForCausalLM,) if is_mindspore_available() else ()
+    pipeline_model_mapping = (
+        {"feature-extraction": GitModel, "image-to-text": GitForCausalLM, "text-generation": GitForCausalLM}
+        if is_mindspore_available()
+        else {}
+    )
     fx_compatible = False
     test_torchscript = False
 
@@ -416,7 +406,7 @@ class GitModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
 
         if return_labels:
             if model_class in get_values(MODEL_FOR_CAUSAL_LM_MAPPING):
-                inputs_dict["labels"] = mindspore.zeros(
+                inputs_dict["labels"] = ops.zeros(
                     (self.model_tester.batch_size, self.model_tester.text_seq_length),
                     dtype=mindspore.int64,
                 )
@@ -454,7 +444,7 @@ class GitModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     @slow
     def test_model_from_pretrained(self):
         model_name = "microsoft/git-base"
-        model = GitModel.from_pretrained(model_name,from_pt=True)
+        model = GitModel.from_pretrained(model_name)
         self.assertIsNotNone(model)
 
     @unittest.skip(reason="GIT has pixel values as additional input")
@@ -475,6 +465,7 @@ class GitModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
 
 
 @require_mindspore
+@require_vision
 @slow
 class GitModelIntegrationTest(unittest.TestCase):
     def test_forward_pass(self):
@@ -484,14 +475,11 @@ class GitModelIntegrationTest(unittest.TestCase):
         image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
         inputs = processor(images=image, text="hello world", return_tensors="ms")
 
-        context.set_context(mode=context.PYNATIVE_MODE, pynative_synchronize=True)
-
-        outputs = model.construct(**inputs)
+        outputs = model(**inputs)
 
         expected_shape = (1, 201, 30522)
         self.assertEqual(outputs.logits.shape, expected_shape)
-
-        expected_slice = Tensor(
+        expected_slice = mindspore.tensor(
             [[-0.9514, -0.9512, -0.9507], [-0.5454, -0.5453, -0.5453], [-0.8862, -0.8857, -0.8848]],
         )
         self.assertTrue(np.allclose(outputs.logits[0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
@@ -504,23 +492,29 @@ class GitModelIntegrationTest(unittest.TestCase):
         inputs = processor(images=image, return_tensors="ms")
         pixel_values = inputs.pixel_values
 
-        outputs = model.generate(pixel_values=pixel_values, max_length=20)
-        generated_caption = processor.batch_decode(outputs, skip_special_tokens=True)[0]
+        outputs = model.generate(
+            pixel_values=pixel_values, max_length=20, output_scores=True, return_dict_in_generate=True
+        )
+        generated_caption = processor.batch_decode(outputs.sequences, skip_special_tokens=True)[0]
 
         expected_shape = (1, 9)
-        self.assertEqual(outputs.shape, expected_shape)
-
+        self.assertEqual(outputs.sequences.shape, expected_shape)
         self.assertEqual(generated_caption, "two cats laying on a pink blanket")
+        self.assertTrue(outputs.scores[-1].shape, expected_shape)
+        expected_slice = mindspore.tensor([[-0.8805, -0.8803, -0.8799]])
+        self.assertTrue(np.allclose(outputs.scores[-1][0, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
 
     def test_visual_question_answering(self):
         processor = GitProcessor.from_pretrained("microsoft/git-base-textvqa")
         model = GitForCausalLM.from_pretrained("microsoft/git-base-textvqa")
 
+        # prepare image
         file_path = hf_hub_download(repo_id="nielsr/textvqa-sample", filename="bus.png", repo_type="dataset")
         image = Image.open(file_path).convert("RGB")
         inputs = processor(images=image, return_tensors="ms")
         pixel_values = inputs.pixel_values
 
+        # prepare question
         question = "what does the front of the bus say at the top?"
         input_ids = processor(text=question, add_special_tokens=False).input_ids
         input_ids = [processor.tokenizer.cls_token_id] + input_ids
@@ -537,10 +531,12 @@ class GitModelIntegrationTest(unittest.TestCase):
         processor = GitProcessor.from_pretrained("microsoft/git-base-coco")
         model = GitForCausalLM.from_pretrained("microsoft/git-base-coco")
 
+        # create batch of size 2
         image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
         inputs = processor(images=[image, image], return_tensors="ms")
         pixel_values = inputs.pixel_values
 
+        # we have to prepare `input_ids` with the same batch size as `pixel_values`
         start_token_id = model.config.bos_token_id
         input_ids = mindspore.tensor([[start_token_id], [start_token_id]])
         generated_ids = model.generate(pixel_values=pixel_values, input_ids=input_ids, max_length=50)
