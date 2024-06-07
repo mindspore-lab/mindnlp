@@ -31,6 +31,7 @@ from mindnlp.utils.import_utils import *
 from ...backbone_utils import BackboneMixin
 from .configuration_nat import NatConfig
 from ...activations import ACT2FN
+from .natten import functional
 from mindspore.common.initializer import initializer, Normal
 from ...modeling_outputs import (
     BackboneOutput,
