@@ -124,7 +124,8 @@ class ConvNextDropPath(nn.Cell):
 
 
 class ConvNextLayerNorm(nn.Cell):
-    r"""LayerNorm that supports two data formats: channels_last (default) or channels_first.
+    r"""
+    LayerNorm that supports two data formats: channels_last (default) or channels_first.
     The ordering of the dimensions in the inputs. channels_last corresponds to inputs with shape (batch_size, height,
     width, channels) while channels_first corresponds to inputs with shape (batch_size, channels, height, width).
     """
@@ -188,7 +189,8 @@ class ConvNextLayerNorm(nn.Cell):
 
 
 class ConvNextEmbeddings(nn.Cell):
-    """This class is comparable to (and inspired by) the SwinEmbeddings class
+    """
+    This class is comparable to (and inspired by) the SwinEmbeddings class
     found in src/transformers/models/swin/modeling_swin.py.
     """
     def __init__(self, config):
@@ -240,7 +242,8 @@ class ConvNextEmbeddings(nn.Cell):
 
 
 class ConvNextLayer(nn.Cell):
-    """This corresponds to the `Block` class in the original implementation.
+    """
+    This corresponds to the `Block` class in the original implementation.
 
     There are two equivalent implementations: [DwConv, LayerNorm (channels_first), Conv, GELU,1x1 Conv]; all in (N, C,
     H, W) (2) [DwConv, Permute to (N, H, W, C), LayerNorm (channels_last), Linear, GELU, Linear]; Permute back
@@ -382,11 +385,11 @@ class ConvNextEncoder(nn.Cell):
     This class inherits from the nn.Cell class, which is a base class for all neural network layers in the MindSpore framework.
     
     The ConvNextEncoder class initializes a list of stages, where each stage consists of a ConvNextStage module. The number of stages is defined by the config.num_stages attribute. Each stage performs
-convolutional operations with different parameters, such as input and output channels, stride, and depth. The drop_path_rates parameter specifies the drop path rates for each stage.
+    convolutional operations with different parameters, such as input and output channels, stride, and depth. The drop_path_rates parameter specifies the drop path rates for each stage.
     
     The construct method of the ConvNextEncoder class takes a tensor of hidden states as input and performs the forward pass through each stage. It optionally returns a tuple containing all hidden states at
-each stage, as specified by the output_hidden_states parameter. If return_dict is set to True, it returns an instance of the BaseModelOutputWithNoAttention class, which encapsulates the last hidden state and
-all hidden states.
+    each stage, as specified by the output_hidden_states parameter. If return_dict is set to True, it returns an instance of the BaseModelOutputWithNoAttention class, which encapsulates the last hidden state and
+    all hidden states.
     
     Note that this docstring is generated based on the provided code, and the actual implementation may contain additional methods or attributes.
     
@@ -398,10 +401,10 @@ all hidden states.
         Args:
             self (ConvNextEncoder): The instance of the ConvNextEncoder class.
             config: A configuration object containing various settings for the ConvNextEncoder.
-                - drop_path_rate (float): The rate at which to apply drop path regularization.
-                - depths (list[int]): List of integers representing the depths of each stage.
-                - hidden_sizes (list[int]): List of integers representing the number of hidden units in each stage.
-                - num_stages (int): The total number of stages in the ConvNextEncoder.
+                >   - drop_path_rate (float): The rate at which to apply drop path regularization.
+                >   - depths (list[int]): List of integers representing the depths of each stage.
+                >   - hidden_sizes (list[int]): List of integers representing the number of hidden units in each stage.
+                >   - num_stages (int): The total number of stages in the ConvNextEncoder.
         
         Returns:
             None. This method does not return any value.
@@ -500,9 +503,10 @@ class ConvNextModel(ConvNextPreTrainedModel):
     The __init__ method initializes the ConvNextModel with the provided configuration. It sets up the embeddings, encoder, and layer normalization based on the configuration parameters.
     
     The construct method processes the input pixel values using the embeddings and encoder, and returns the last hidden state and pooled output. It allows for customization of returning hidden states and
-outputs as specified in the configuration parameters.
+    outputs as specified in the configuration parameters.
     
-    Note: This docstring is based on the provided code snippet and does not include complete signatures or any other code.
+    Note:
+        This docstring is based on the provided code snippet and does not include complete signatures or any other code.
     """
     def __init__(self, config):
         """
@@ -595,7 +599,7 @@ class ConvNextForImageClassification(ConvNextPreTrainedModel):
     """ConvNextForImageClassification
     
     This class represents a Convolutional Neural Network (CNN) model for image classification using the ConvNext architecture. The model is designed for tasks such as single-label or multi-label classification
-and regression. It inherits from the ConvNextPreTrainedModel class.
+    and regression. It inherits from the ConvNextPreTrainedModel class.
     
     Attributes:
         num_labels (int): The number of labels in the classification task.
@@ -616,9 +620,9 @@ and regression. It inherits from the ConvNextPreTrainedModel class.
         Args:
             self: The instance of the class.
             config: An instance of the configuration class containing the necessary parameters for model initialization.
-                - Type: config
-                - Purpose: To configure the model with specific settings and hyperparameters.
-                - Restrictions: Must be an instance of the appropriate configuration class.
+                >   - Type: config
+                >   - Purpose: To configure the model with specific settings and hyperparameters.
+                >   - Restrictions: Must be an instance of the appropriate configuration class.
         
         Returns:
             None. This method does not return any value.
@@ -696,15 +700,15 @@ class ConvNextBackbone(ConvNextPreTrainedModel, BackboneMixin):
     This class represents the ConvNext backbone used in a ConvNext model for image processing tasks. It inherits functionality from ConvNextPreTrainedModel and BackboneMixin. 
     
     The ConvNextBackbone class initializes the backbone architecture with ConvNextEmbeddings and ConvNextEncoder components. It also sets up layer normalization for hidden states based on the specified
-configuration.
+    configuration.
     The construct method processes input pixel values through the embeddings and encoder, optionally returning hidden states and feature maps. It handles the logic for outputting the desired information based
-on the configuration settings.
+    on the configuration settings.
     
     Returns:
         BackboneOutput: A named tuple containing the feature maps and hidden states of the backbone.
     
-    Examples:
-        
+    Example:
+        ```python
         >>> from transformers import AutoImageProcessor, AutoBackbone
         >>> import torch
         >>> from PIL import Image
@@ -718,7 +722,7 @@ on the configuration settings.
     
         >>> inputs = processor(image, return_tensors="pt")
         >>> outputs = model(**inputs)
-        
+        ```
     """
     def __init__(self, config):
         """
@@ -727,8 +731,8 @@ on the configuration settings.
         Args:
             self: The instance of the class.
             config: A configuration object containing the necessary parameters for initializing the backbone. It should have the following attributes:
-                - hidden_sizes (list): A list of integers representing the hidden layer sizes.
-                - channels (list): A list of integers representing the number of channels for each stage.
+                >   - hidden_sizes (list): A list of integers representing the hidden layer sizes.
+                >   - channels (list): A list of integers representing the number of channels for each stage.
         
         Returns:
             None. This method does not return any value.
@@ -760,24 +764,25 @@ on the configuration settings.
     ) -> BackboneOutput:
         """
         Returns:
+            BackboneOutput
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import AutoImageProcessor, AutoBackbone
+            >>> import torch
+            >>> from PIL import Image
+            >>> import requests
 
-        ```python
-        >>> from transformers import AutoImageProcessor, AutoBackbone
-        >>> import torch
-        >>> from PIL import Image
-        >>> import requests
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> processor = AutoImageProcessor.from_pretrained("facebook/convnext-tiny-224")
+            >>> model = AutoBackbone.from_pretrained("facebook/convnext-tiny-224")
 
-        >>> processor = AutoImageProcessor.from_pretrained("facebook/convnext-tiny-224")
-        >>> model = AutoBackbone.from_pretrained("facebook/convnext-tiny-224")
-
-        >>> inputs = processor(image, return_tensors="pt")
-        >>> outputs = model(**inputs)
-        ```"""
+            >>> inputs = processor(image, return_tensors="pt")
+            >>> outputs = model(**inputs)
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states

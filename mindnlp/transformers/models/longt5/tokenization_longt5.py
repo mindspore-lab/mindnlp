@@ -86,22 +86,22 @@ class LongT5Tokenizer(PreTrainedTokenizer):
         Initializes a LongT5Tokenizer object.
         
         Args:
-        - self (object): The instance of the class.
-        - vocab_file (str): Path to the vocabulary file.
-        - eos_token (str, optional): End-of-sequence token. Default is '</s>'.
-        - unk_token (str, optional): Token for unknown words. Default is '<unk>'.
-        - pad_token (str, optional): Token for padding. Default is '<pad>'.
-        - extra_ids (int): Number of additional special tokens.
-        - additional_special_tokens (List[str], optional): List of additional special tokens.
-        - sp_model_kwargs (Optional[Dict[str, Any]], optional): Optional arguments for the SentencePiece model.
-        - legacy (bool, optional): Flag to indicate whether to use legacy behavior.
+            self (object): The instance of the class.
+            vocab_file (str): Path to the vocabulary file.
+            eos_token (str, optional): End-of-sequence token. Default is '</s>'.
+            unk_token (str, optional): Token for unknown words. Default is '<unk>'.
+            pad_token (str, optional): Token for padding. Default is '<pad>'.
+            extra_ids (int): Number of additional special tokens.
+            additional_special_tokens (List[str], optional): List of additional special tokens.
+            sp_model_kwargs (Optional[Dict[str, Any]], optional): Optional arguments for the SentencePiece model.
+            legacy (bool, optional): Flag to indicate whether to use legacy behavior.
         
         Returns:
-        - None: This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
-        - ValueError: If both extra_ids and additional_special_tokens are provided, and they are not consistent.
-        - Exception: If an unexpected error occurs during the execution of the method.
+            - ValueError: If both extra_ids and additional_special_tokens are provided, and they are not consistent.
+            - Exception: If an unexpected error occurs during the execution of the method.
         """
         pad_token = AddedToken(pad_token, special=True) if isinstance(pad_token, str) else pad_token
         unk_token = AddedToken(unk_token, special=True) if isinstance(unk_token, str) else unk_token
@@ -211,7 +211,7 @@ class LongT5Tokenizer(PreTrainedTokenizer):
         
         Raises:
             FutureWarning: This method may raise a FutureWarning if the tokenizer was incorrectly instantiated with a model max length that needs correction. The warning provides guidance on how to avoid the
-warning and properly handle the model max length.
+                warning and properly handle the model max length.
             Warning: This method may raise a generic Warning if the 'init_max_model_length' is not None and does not match the 'max_model_length', indicating a potential issue with the maximum model length.
         
         """
@@ -267,14 +267,15 @@ warning and properly handle the model max length.
         
         Note:
             The method combines the default vocabulary dictionary generated from the `vocab_size` parameter and any additional tokens that have been added using the `add_tokens` method. The additional tokens
-are included in the vocabulary dictionary with their respective indices.
+            are included in the vocabulary dictionary with their respective indices.
         
         Example:
+            ```python
             >>> tokenizer = LongT5Tokenizer()
             >>> vocab = tokenizer.get_vocab()
             >>> vocab
             {'<pad>': 0, '<unk>': 1, '<s>': 2, '</s>': 3, '<extra_id_0>': 4, '<extra_id_1>': 5, ...}
-        
+            ```
             In this example, the vocabulary dictionary contains the default tokens as well as any additional tokens that have been added to the tokenizer.
         """
         vocab = {self.convert_ids_to_tokens(i): i for i in range(self.vocab_size)}
@@ -344,11 +345,11 @@ are included in the vocabulary dictionary with their respective indices.
             None
         
         This method retrieves the sentinel tokens from the input sequence using the 'get_sentinel_tokens' method and converts each token into its corresponding token ID using the 'convert_tokens_to_ids'
-method. The resulting token IDs are then returned as a list.
+        method. The resulting token IDs are then returned as a list.
         
         Note:
-        - The 'get_sentinel_tokens' method should be implemented in the 'LongT5Tokenizer' class.
-        - The 'convert_tokens_to_ids' method should be implemented in the same class or inherited from a parent class.
+            - The 'get_sentinel_tokens' method should be implemented in the 'LongT5Tokenizer' class.
+            - The 'convert_tokens_to_ids' method should be implemented in the same class or inherited from a parent class.
         """
         return [self.convert_tokens_to_ids(token) for token in self.get_sentinel_tokens()]
 
@@ -391,8 +392,8 @@ method. The resulting token IDs are then returned as a list.
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A sequence has the following format:
 
-        - single sequence: `X </s>`
-        - pair of sequences: `A </s> B </s>`
+        >   - single sequence: `X </s>`
+        >   - pair of sequences: `A </s> B </s>`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -441,7 +442,7 @@ method. The resulting token IDs are then returned as a list.
         
         Raises:
             No specific exceptions are raised by this method under normal operation. However, potential exceptions could be raised during the execution of the method if there are issues related to setting the
-state attributes or loading the vocab file using SentencePieceProcessor. It is recommended to handle exceptions related to attribute assignment or file loading gracefully in the surrounding code.
+            state attributes or loading the vocab file using SentencePieceProcessor. It is recommended to handle exceptions related to attribute assignment or file loading gracefully in the surrounding code.
         """
         self.__dict__ = d
 

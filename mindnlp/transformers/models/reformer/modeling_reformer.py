@@ -93,9 +93,9 @@ def _get_least_common_mult_chunk_len(config):
         config (object): The configuration object containing parameters for attention layers.
             This parameter is used to determine the chunk length based on the types of attention layers.
             It should have the following attributes:
-                - attn_layers (list): List of attention layer types, can contain 'lsh', 'local', or both.
-                - lsh_attn_chunk_length (int): Chunk length for 'lsh' attention layer.
-                - local_attn_chunk_length (int): Chunk length for 'local' attention layer.
+                >   - attn_layers (list): List of attention layer types, can contain 'lsh', 'local', or both.
+                >   - lsh_attn_chunk_length (int): Chunk length for 'lsh' attention layer.
+                >   - local_attn_chunk_length (int): Chunk length for 'local' attention layer.
     
     Returns:
         None. The function does not return a value directly, but the chunk length is determined based on the configuration and used within the function.
@@ -121,9 +121,9 @@ def _get_min_chunk_len(config):
     """
     Args:
         config (object): A configuration object containing the following attributes:
-            - attn_layers (list): List of attention layer types ('lsh', 'local').
-            - lsh_attn_chunk_length (int): Chunk length for 'lsh' attention layer.
-            - local_attn_chunk_length (int): Chunk length for 'local' attention layer.
+            >   - attn_layers (list): List of attention layer types ('lsh', 'local').
+            >   - lsh_attn_chunk_length (int): Chunk length for 'lsh' attention layer.
+            >   - local_attn_chunk_length (int): Chunk length for 'local' attention layer.
             
     Returns:
         None. This function calculates and returns the minimum chunk length based on the configuration provided.
@@ -156,10 +156,10 @@ class AxialPositionEmbeddings(nn.Cell):
         Args:
             self: The instance of the AxialPositionEmbeddings class.
             config: An object containing configuration parameters for the axial position embeddings.
-                - axial_pos_shape: A list of integers representing the shape of the axial positions.
-                - axial_pos_embds_dim: A list of integers representing the dimensions of the axial position embeddings.
-                - hidden_dropout_prob: A float value representing the dropout probability.
-                - hidden_size: An integer representing the hidden size of the model.
+                >   - axial_pos_shape: A list of integers representing the shape of the axial positions.
+                >   - axial_pos_embds_dim: A list of integers representing the dimensions of the axial position embeddings.
+                >   - hidden_dropout_prob: A float value representing the dropout probability.
+                >   - hidden_size: An integer representing the hidden size of the model.
         
         Returns:
             None. This method does not return any value.
@@ -198,19 +198,19 @@ class AxialPositionEmbeddings(nn.Cell):
         This method constructs position encodings based on the given position IDs and axial position weights.
         
         Args:
-        - self: The instance of the AxialPositionEmbeddings class.
-        - position_ids (torch.Tensor): A 2D tensor representing the position IDs of the input sequences. 
-          It has a shape of (batch_size, sequence_length).
+            self: The instance of the AxialPositionEmbeddings class.
+            position_ids (torch.Tensor): A 2D tensor representing the position IDs of the input sequences.
+              It has a shape of (batch_size, sequence_length).
         
         Returns:
-        None: This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
-        - ValueError: Raised if the following conditions are met:
-          1. During training, if the product of the axial_pos_shape factors does not match the sequence length.
-          2. During training and dropout is enabled, if the operation cannot be performed.
-          3. During inference, if the product of the axial_pos_shape factors is less than the sequence length.
-          4. During inference, if the required position encodings columns exceed the available columns.
+        ValueError: Raised if the following conditions are met:
+            >   1. During training, if the product of the axial_pos_shape factors does not match the sequence length.
+            >   2. During training and dropout is enabled, if the operation cannot be performed.
+            >   3. During inference, if the product of the axial_pos_shape factors is less than the sequence length.
+            >   4. During inference, if the required position encodings columns exceed the available columns.
         """
         # broadcast weights to correct shape
         batch_size = position_ids.shape[0]
@@ -286,9 +286,9 @@ class PositionEmbeddings(nn.Cell):
         Args:
             self: The instance of the PositionEmbeddings class.
             config: An instance of the configuration class containing the following attributes:
-                - hidden_dropout_prob (float): The dropout probability used for the hidden layers.
-                - max_position_embeddings (int): The maximum number of position embeddings.
-                - hidden_size (int): The size of the hidden layers.
+                >   - hidden_dropout_prob (float): The dropout probability used for the hidden layers.
+                >   - max_position_embeddings (int): The maximum number of position embeddings.
+                >   - hidden_size (int): The size of the hidden layers.
         
         Returns:
             None
@@ -313,8 +313,8 @@ class PositionEmbeddings(nn.Cell):
             None. The method returns the constructed position embeddings.
         
         Raises:
-            - ValueError: If the position_ids tensor is not provided or is not a valid 1D tensor.
-            - TypeError: If the dropout rate is not a float or the training flag is not a boolean.
+            ValueError: If the position_ids tensor is not provided or is not a valid 1D tensor.
+            TypeError: If the dropout rate is not a float or the training flag is not a boolean.
         """
         position_embeddings = self.embedding(position_ids)
         position_embeddings = ops.dropout(position_embeddings, p=self.dropout, training=self.training)
@@ -330,11 +330,11 @@ class ReformerEmbeddings(nn.Cell):
         Args:
             self (object): The instance of the ReformerEmbeddings class.
             config (object): An object containing configuration parameters for the embeddings.
-                - max_position_embeddings (int): The maximum number of positions for position embeddings.
-                - hidden_dropout_prob (float): The dropout probability for hidden layers.
-                - vocab_size (int): The size of the vocabulary.
-                - hidden_size (int): The size of the hidden layers.
-                - axial_pos_embds (bool): A flag indicating whether to use axial position embeddings.
+                >   - max_position_embeddings (int): The maximum number of positions for position embeddings.
+                >   - hidden_dropout_prob (float): The dropout probability for hidden layers.
+                >   - vocab_size (int): The size of the vocabulary.
+                >   - hidden_size (int): The size of the hidden layers.
+                >   - axial_pos_embds (bool): A flag indicating whether to use axial position embeddings.
         
         Returns:
             None. This method initializes various attributes of the ReformerEmbeddings class.
@@ -465,46 +465,47 @@ class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
     It inherits from nn.Cell, EfficientAttentionMixin.
     
     The class implements LSH self-attention mechanism for neural networks. It includes methods for initializing the LSH attention layer, constructing the attention mechanism, computing attention masks, hashing
-vectors, and other related operations.
+    vectors, and other related operations.
     
     Attributes:
-        - config: Configuration parameters for the LSH self-attention layer.
-        - chunk_length: Length of each attention chunk.
-        - num_hashes: Number of hashes used in the LSH mechanism.
-        - num_buckets: Number of buckets used for hashing.
-        - num_chunks_before: Number of chunks to consider before the current chunk.
-        - num_chunks_after: Number of chunks to consider after the current chunk.
-        - hash_seed: Seed for random hash rotations.
-        - is_decoder: Flag indicating if the layer is used in a decoder.
-        - max_position_embeddings: Maximum position embeddings allowed.
-        - dropout: Dropout probability for attention weights.
-        - num_attention_heads: Number of attention heads.
-        - attention_head_size: Size of each attention head.
-        - all_head_size: Total size of all attention heads.
-        - hidden_size: Size of the hidden layer.
-        - query_key: Dense layer for query and key vectors.
-        - value: Dense layer for value vectors.
-        - self_mask_value_float16: Float16 value for masking in self-attention.
-        - self_mask_value_float32: Float32 value for masking in self-attention.
-        - mask_value_float16: Float16 value for general masking.
-        - mask_value_float32: Float32 value for general masking.
+        config: Configuration parameters for the LSH self-attention layer.
+        chunk_length: Length of each attention chunk.
+        num_hashes: Number of hashes used in the LSH mechanism.
+        num_buckets: Number of buckets used for hashing.
+        num_chunks_before: Number of chunks to consider before the current chunk.
+        num_chunks_after: Number of chunks to consider after the current chunk.
+        hash_seed: Seed for random hash rotations.
+        is_decoder: Flag indicating if the layer is used in a decoder.
+        max_position_embeddings: Maximum position embeddings allowed.
+        dropout: Dropout probability for attention weights.
+        num_attention_heads: Number of attention heads.
+        attention_head_size: Size of each attention head.
+        all_head_size: Total size of all attention heads.
+        hidden_size: Size of the hidden layer.
+        query_key: Dense layer for query and key vectors.
+        value: Dense layer for value vectors.
+        self_mask_value_float16: Float16 value for masking in self-attention.
+        self_mask_value_float32: Float32 value for masking in self-attention.
+        mask_value_float16: Float16 value for general masking.
+        mask_value_float32: Float32 value for general masking.
     
     Methods:
-        - construct: Constructs the LSH self-attention mechanism based on input hidden states and optional parameters.
-        - _query_per_attn_head: Computes query vectors per attention head.
-        - _value_per_attn_head: Computes value vectors per attention head.
-        - _hash_vectors: Hashes input vectors into buckets for attention computation.
-        - _get_sorted_bucket_idx_and_undo_sorted_bucket_idx: Computes sorted bucket indices for efficient attention calculation.
-        - _set_num_buckets: Sets the number of buckets based on the input sequence length.
-        - _attend: Computes attention scores and outputs based on query, key, and value vectors.
-        - _compute_attn_mask: Computes attention mask based on query and key indices.
-        - _get_relevant_hid_states_and_buckets: Retrieves relevant hidden states and buckets for efficient attention calculation.
-        - _expand_to_indices_in_relevant_chunk: Expands indices for relevant chunks in hidden states.
-        - _len_and_dim_norm: Normalizes vectors based on length and attention head size.
-        - _len_norm: Length normalization for input vectors.
-        - _gather_by_expansion: Expands indices and vectors for all hashes and gathers relevant elements.
+        construct: Constructs the LSH self-attention mechanism based on input hidden states and optional parameters.
+        _query_per_attn_head: Computes query vectors per attention head.
+        _value_per_attn_head: Computes value vectors per attention head.
+        _hash_vectors: Hashes input vectors into buckets for attention computation.
+        _get_sorted_bucket_idx_and_undo_sorted_bucket_idx: Computes sorted bucket indices for efficient attention calculation.
+        _set_num_buckets: Sets the number of buckets based on the input sequence length.
+        _attend: Computes attention scores and outputs based on query, key, and value vectors.
+        _compute_attn_mask: Computes attention mask based on query and key indices.
+        _get_relevant_hid_states_and_buckets: Retrieves relevant hidden states and buckets for efficient attention calculation.
+        _expand_to_indices_in_relevant_chunk: Expands indices for relevant chunks in hidden states.
+        _len_and_dim_norm: Normalizes vectors based on length and attention head size.
+        _len_norm: Length normalization for input vectors.
+        _gather_by_expansion: Expands indices and vectors for all hashes and gathers relevant elements.
     
-    Note: This class is designed for implementing efficient self-attention mechanisms using Locality Sensitive Hashing.
+    Note:
+        This class is designed for implementing efficient self-attention mechanisms using Locality Sensitive Hashing.
     """
     def __init__(self, config):
         """
@@ -565,25 +566,25 @@ vectors, and other related operations.
         Constructs the LSH self-attention mechanism.
         
         Args:
-        - self: The object instance.
-        - hidden_states (torch.Tensor): The input hidden states with shape (batch_size, sequence_length, hidden_size).
-        - attention_mask (torch.Tensor, optional): Masking tensor for attention scores with shape (batch_size, sequence_length). Defaults to None.
-        - head_mask (torch.Tensor, optional): Masking tensor for individual attention heads with shape (num_attention_heads). Defaults to None.
-        - num_hashes (int, optional): Number of hash functions for LSH. Defaults to None.
-        - buckets (torch.Tensor, optional): Hash buckets for attention mechanism with shape (batch_size, num_attention_heads, num_hashes, sequence_length). Defaults to None.
-        - past_buckets_states (tuple, optional): Tuple containing past hash buckets and states. Defaults to None.
-        - use_cache (bool, optional): Flag to enable caching for attention mechanism. Defaults to False.
-        - output_attentions (bool, optional): Flag to output attention probabilities. Defaults to False.
-        
+            self: The object instance.
+            hidden_states (torch.Tensor): The input hidden states with shape (batch_size, sequence_length, hidden_size).
+            attention_mask (torch.Tensor, optional): Masking tensor for attention scores with shape (batch_size, sequence_length). Defaults to None.
+            head_mask (torch.Tensor, optional): Masking tensor for individual attention heads with shape (num_attention_heads). Defaults to None.
+            num_hashes (int, optional): Number of hash functions for LSH. Defaults to None.
+            buckets (torch.Tensor, optional): Hash buckets for attention mechanism with shape (batch_size, num_attention_heads, num_hashes, sequence_length). Defaults to None.
+            past_buckets_states (tuple, optional): Tuple containing past hash buckets and states. Defaults to None.
+            use_cache (bool, optional): Flag to enable caching for attention mechanism. Defaults to False.
+            output_attentions (bool, optional): Flag to output attention probabilities. Defaults to False.
+
         Returns:
-        None
+            None
         
         Raises:
-        - AssertionError: If the input sequence length is not equal to 1 when `past_buckets_states` is passed.
-        - AssertionError: If the last dimension of query_key_vectors or value_vectors does not match the attention head size.
-        - AssertionError: If the last dimension of the buckets tensor does not match the expected value based on the number of hashes and sequence length.
-        - AssertionError: If the shape of out_vectors does not match the expected shape.
-        - AssertionError: If the configuration parameters are not set correctly when chunk_length is None.
+            - AssertionError: If the input sequence length is not equal to 1 when `past_buckets_states` is passed.
+            - AssertionError: If the last dimension of query_key_vectors or value_vectors does not match the attention head size.
+            - AssertionError: If the last dimension of the buckets tensor does not match the expected value based on the number of hashes and sequence length.
+            - AssertionError: If the shape of out_vectors does not match the expected shape.
+            - AssertionError: If the configuration parameters are not set correctly when chunk_length is None.
         """
         sequence_length = hidden_states.shape[1]
         batch_size = hidden_states.shape[0]
@@ -869,12 +870,12 @@ vectors, and other related operations.
             None. This method does not return any value but updates the 'offset_buckets' attribute.
         
         Raises:
-            AssertionError: 
-                - If the number of buckets is not an even integer.
-                - If the input bucket factors are not even integers.
-                - If the attention mask sum is less than the expected value based on batch size and sequence length.
-            ValueError: 
-                - If the number of buckets is not an integer or a list of integers.
+            AssertionError:
+                >   - If the number of buckets is not an even integer.
+                >   - If the input bucket factors are not even integers.
+                >   - If the attention mask sum is less than the expected value based on batch size and sequence length.
+            ValueError:
+                >   - If the number of buckets is not an integer or a list of integers.
             IndexError: If the tensors' dimensions are incompatible for operations like indexing and concatenation.
             TypeError: If the data type of tensors is not supported for the operations performed in the method.
         """
@@ -1153,7 +1154,7 @@ vectors, and other related operations.
         """Compute attention mask for LSH self-attention.
         
         This method computes the attention mask for LSH self-attention based on the given query and key indices, attention mask, query-key dot shape, and the flag indicating whether to use standard
-self-attention.
+        self-attention.
         
         Args:
             self (LSHSelfAttention): An instance of the LSHSelfAttention class.
@@ -1214,10 +1215,10 @@ self-attention.
             None: This method does not return any value but updates the relevant hidden states and buckets.
         
         Raises:
-            AssertionError: 
-                - If the shape of 'bucket_idx' does not match the expected shape.
-                - If the shape of 'relevant_hidden_states' or 'relevant_bucket_idx_chunk' does not match the expected shapes.
-                - If the number of 'hidden_states' or 'bucket_idx' does not match the expected values.
+            AssertionError:
+                >   - If the shape of 'bucket_idx' does not match the expected shape.
+                >   - If the shape of 'relevant_hidden_states' or 'relevant_bucket_idx_chunk' does not match the expected shapes.
+                >   - If the number of 'hidden_states' or 'bucket_idx' does not match the expected values.
             IndexError: If there is an index error during the computation.
         """
         # concat hidden states
@@ -1446,30 +1447,30 @@ class LocalSelfAttention(nn.Cell, EfficientAttentionMixin):
 
     """
     The `LocalSelfAttention` class is a subclass of `nn.Cell` and `EfficientAttentionMixin` that represents a local self-attention mechanism. This mechanism is commonly used in transformer-based models for
-processing sequential data.
+    processing sequential data.
     
     Attributes:
-    - `num_attention_heads` (int): The number of attention heads.
-    - `chunk_length` (int): The length of each attention chunk.
-    - `num_chunks_before` (int): The number of chunks before the current position.
-    - `num_chunks_after` (int): The number of chunks after the current position.
-    - `is_decoder` (bool): Indicates whether the attention is used in a decoder architecture.
-    - `pad_token_id` (int): The token ID used for padding.
-    - `attention_head_size` (int): The size of each attention head.
-    - `all_head_size` (int): The total size of all attention heads.
-    - `hidden_size` (int): The hidden size of the input.
-    - `query` (nn.Dense): The dense layer used for computing query vectors.
-    - `key` (nn.Dense): The dense layer used for computing key vectors.
-    - `value` (nn.Dense): The dense layer used for computing value vectors.
-    - `dropout` (float): The dropout rate for attention probabilities.
-    - `mask_value_float16` (mindspore.tensor): The mask value for float16 data type.
-    - `mask_value_float32` (mindspore.tensor): The mask value for float32 data type.
+        `num_attention_heads` (int): The number of attention heads.
+        `chunk_length` (int): The length of each attention chunk.
+        `num_chunks_before` (int): The number of chunks before the current position.
+        `num_chunks_after` (int): The number of chunks after the current position.
+        `is_decoder` (bool): Indicates whether the attention is used in a decoder architecture.
+        `pad_token_id` (int): The token ID used for padding.
+        `attention_head_size` (int): The size of each attention head.
+        `all_head_size` (int): The total size of all attention heads.
+        `hidden_size` (int): The hidden size of the input.
+        `query` (nn.Dense): The dense layer used for computing query vectors.
+        `key` (nn.Dense): The dense layer used for computing key vectors.
+        `value` (nn.Dense): The dense layer used for computing value vectors.
+        `dropout` (float): The dropout rate for attention probabilities.
+        `mask_value_float16` (mindspore.tensor): The mask value for float16 data type.
+        `mask_value_float32` (mindspore.tensor): The mask value for float32 data type.
     
     Methods:
-    - `construct(hidden_states, attention_mask=None, head_mask=None, past_buckets_states=None, use_cache=False, output_attentions=False, **kwargs)`: Computes the local self-attention mechanism for the given
-hidden states.
-    - `_compute_attn_mask(query_indices, key_indices, attention_mask, query_key_dots_shape, do_standard_self_attention)`: Computes the attention mask based on query and key indices.
-    - `_retrieve_relevant_hidden_states(previous_hidden_states, chunk_length, num_chunks_before)`: Retrieves the relevant hidden states from previous states.
+        `construct(hidden_states, attention_mask=None, head_mask=None, past_buckets_states=None, use_cache=False, output_attentions=False, **kwargs)`: Computes the local self-attention mechanism for the given
+            hidden states.
+        `_compute_attn_mask(query_indices, key_indices, attention_mask, query_key_dots_shape, do_standard_self_attention)`: Computes the attention mask based on query and key indices.
+        `_retrieve_relevant_hidden_states(previous_hidden_states, chunk_length, num_chunks_before)`: Retrieves the relevant hidden states from previous states.
     
     """
     def __init__(self, config):
@@ -1481,15 +1482,15 @@ hidden states.
             self: The instance of the LocalSelfAttention class.
             config: An object containing configuration parameters for the attention mechanism.
                 This parameter is expected to have the following attributes:
-                - num_attention_heads (int): The number of attention heads.
-                - local_attn_chunk_length (int): The length of attention chunks.
-                - local_num_chunks_before (int): The number of chunks before the current position.
-                - local_num_chunks_after (int): The number of chunks after the current position.
-                - is_decoder (bool): Indicates if the attention mechanism is used in a decoder.
-                - pad_token_id (int): The token ID used for padding.
-                - attention_head_size (int): The size of each attention head.
-                - hidden_size (int): The size of the hidden layer.
-                - local_attention_probs_dropout_prob (float): The dropout probability for attention weights.
+                >   - num_attention_heads (int): The number of attention heads.
+                >   - local_attn_chunk_length (int): The length of attention chunks.
+                >   - local_num_chunks_before (int): The number of chunks before the current position.
+                >   - local_num_chunks_after (int): The number of chunks after the current position.
+                >   - is_decoder (bool): Indicates if the attention mechanism is used in a decoder.
+                >   - pad_token_id (int): The token ID used for padding.
+                >   - attention_head_size (int): The size of each attention head.
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - local_attention_probs_dropout_prob (float): The dropout probability for attention weights.
         
         Returns:
             None. This method initializes the attributes of the LocalSelfAttention class.
@@ -1770,7 +1771,7 @@ hidden states.
             None
         
         This static method retrieves relevant hidden states from previous hidden states based on the given parameters. It calculates the start position of the relevant hidden states based on the chunk length
-and the number of chunks before. The retrieved hidden states are then returned as an array with shape (batch_size, sequence_length, hidden_size), starting from the calculated start position.
+        and the number of chunks before. The retrieved hidden states are then returned as an array with shape (batch_size, sequence_length, hidden_size), starting from the calculated start position.
         """
         start_position = ((previous_hidden_states.shape[1] // chunk_length) - num_chunks_before) * chunk_length
         return previous_hidden_states[:, start_position:]
@@ -1793,6 +1794,7 @@ class ReformerSelfOutput(nn.Cell):
         construct(hidden_states): Applies the linear transformation and dropout to the input hidden states.
     
     Example usage:
+        ```python
         # Create an instance of the ReformerSelfOutput class
         config = Configuration()
         reformer_self_output = ReformerSelfOutput(config)
@@ -1800,7 +1802,7 @@ class ReformerSelfOutput(nn.Cell):
         # Apply the self-attention output module to the hidden states
         hidden_states = torch.randn(batch_size, sequence_length, hidden_size)
         output = reformer_self_output.construct(hidden_states)
-    
+        ```
     Note:
         This class assumes that the input hidden_states have already been processed by the self-attention module of the Reformer model.
     """
@@ -1813,9 +1815,9 @@ class ReformerSelfOutput(nn.Cell):
             self (object): The current instance of the class.
             config (object): An object containing configuration parameters for the ReformerSelfOutput.
                 This object should have the following attributes:
-                    - num_attention_heads (int): Number of attention heads.
-                    - attention_head_size (int): Size of each attention head.
-                    - hidden_dropout_prob (float): Dropout probability for hidden layers.
+                    >   - num_attention_heads (int): Number of attention heads.
+                    >   - attention_head_size (int): Size of each attention head.
+                    >   - hidden_dropout_prob (float): Dropout probability for hidden layers.
         
         Returns:
             None. This method does not return any value.
@@ -1844,10 +1846,11 @@ class ReformerSelfOutput(nn.Cell):
             None
         
         This method takes in the input hidden states and processes them to construct the output of the Reformer self-attention layer. The hidden states are first passed through a dense layer to transform the
-dimensions. Then, a dropout operation is applied to the transformed hidden states with a dropout probability specified by the instance variable 'dropout'. The dropout operation is only applied during training.
-Finally, the processed hidden states are returned as the output of the layer.
+        dimensions. Then, a dropout operation is applied to the transformed hidden states with a dropout probability specified by the instance variable 'dropout'. The dropout operation is only applied during training.
+        Finally, the processed hidden states are returned as the output of the layer.
         
-        Note: The output does not have any explicit restrictions as it is of type None and does not affect subsequent operations in the model.
+        Note:
+            The output does not have any explicit restrictions as it is of type None and does not affect subsequent operations in the model.
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
@@ -1860,14 +1863,14 @@ class ReformerAttention(nn.Cell):
     This class represents a ReformerAttention module, which is used in the Reformer model for attention mechanisms. It inherits from the nn.Cell class.
     
     Attributes:
-        - layer_id (int): The ID of the attention layer.
-        - attn_layers (list): The types of attention layers used in the Reformer model.
-        - layer_norm (nn.LayerNorm): Layer normalization module applied to the input hidden states.
-        - self_attention (LSHSelfAttention or LocalSelfAttention): The self-attention module used based on the attention layer type.
-        - output (ReformerSelfOutput): The module responsible for the final output of the self-attention mechanism.
+        layer_id (int): The ID of the attention layer.
+        attn_layers (list): The types of attention layers used in the Reformer model.
+        layer_norm (nn.LayerNorm): Layer normalization module applied to the input hidden states.
+        self_attention (LSHSelfAttention or LocalSelfAttention): The self-attention module used based on the attention layer type.
+        output (ReformerSelfOutput): The module responsible for the final output of the self-attention mechanism.
     
     Methods:
-        - construct(hidden_states, attention_mask=None, head_mask=None, num_hashes=None, past_buckets_states=None, use_cache=False, orig_sequence_length=None, output_attentions=False, buckets=None): 
+        construct(hidden_states, attention_mask=None, head_mask=None, num_hashes=None, past_buckets_states=None, use_cache=False, orig_sequence_length=None, output_attentions=False, buckets=None):
             Applies the ReformerAttention module to the input hidden_states and returns the attention output.
     
     Note:
@@ -1933,27 +1936,27 @@ class ReformerAttention(nn.Cell):
         This method constructs the attention output in the ReformerAttention class.
         
         Args:
-        - self: Reference to the class instance.
-        - hidden_states (torch.Tensor): Input tensor containing the hidden states.
-        - attention_mask (torch.Tensor, optional): Mask tensor for controlling attention computation.
-        - head_mask (torch.Tensor, optional): Mask tensor for controlling attention within each head.
-        - num_hashes (int, optional): Number of hashes to use in hashing attention.
-        - past_buckets_states (torch.Tensor, optional): Tensor containing past bucket states.
-        - use_cache (bool, optional): Flag indicating whether to use cache for attention computation.
-        - orig_sequence_length (int, optional): Original length of the sequence.
-        - output_attentions (bool, optional): Flag indicating whether to output attention weights.
-        - buckets (torch.Tensor, optional): Tensor containing bucket information.
+            self: Reference to the class instance.
+            hidden_states (torch.Tensor): Input tensor containing the hidden states.
+            attention_mask (torch.Tensor, optional): Mask tensor for controlling attention computation.
+            head_mask (torch.Tensor, optional): Mask tensor for controlling attention within each head.
+            num_hashes (int, optional): Number of hashes to use in hashing attention.
+            past_buckets_states (torch.Tensor, optional): Tensor containing past bucket states.
+            use_cache (bool, optional): Flag indicating whether to use cache for attention computation.
+            orig_sequence_length (int, optional): Original length of the sequence.
+            output_attentions (bool, optional): Flag indicating whether to output attention weights.
+            buckets (torch.Tensor, optional): Tensor containing bucket information.
         
         Returns:
-        - None: This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
-        - ValueError: If the orig_sequence_length is less than 1.
-        - AttributeError: If the self_attention_outputs object does not have the 'buckets' attribute.
-        - IndexError: If the layer_id in past_buckets_states is out of bounds.
-        - RuntimeError: If there is an issue with concatenating tensors using ops.cat.
-        - TypeError: If the input types are not as expected.
-        - Exception: For any other unforeseen errors during the method execution.
+            - ValueError: If the orig_sequence_length is less than 1.
+            - AttributeError: If the self_attention_outputs object does not have the 'buckets' attribute.
+            - IndexError: If the layer_id in past_buckets_states is out of bounds.
+            - RuntimeError: If there is an issue with concatenating tensors using ops.cat.
+            - TypeError: If the input types are not as expected.
+            - Exception: For any other unforeseen errors during the method execution.
         """
         hidden_states = self.layer_norm(hidden_states)
 
@@ -2016,13 +2019,13 @@ class ReformerFeedForwardDense(nn.Cell):
     ReformerFeedForwardDense represents a feedforward dense layer used in a Reformer model for neural network operations.
     
     Attributes:
-        - dropout (float): The dropout rate for the hidden states.
-        - act_fn (function): The activation function used for the hidden states.
-        - dense (nn.Dense): The dense layer for transforming hidden states.
+        dropout (float): The dropout rate for the hidden states.
+        act_fn (function): The activation function used for the hidden states.
+        dense (nn.Dense): The dense layer for transforming hidden states.
     
     Methods:
-        - __init__(self, config): Initializes the ReformerFeedForwardDense instance with the provided configuration.
-        - construct(self, hidden_states): Constructs the feedforward dense layer by applying dense transformation, dropout, and activation function to the hidden states.
+        __init__(self, config): Initializes the ReformerFeedForwardDense instance with the provided configuration.
+        construct(self, hidden_states): Constructs the feedforward dense layer by applying dense transformation, dropout, and activation function to the hidden states.
     
     This class inherits from nn.Cell and includes methods to initialize and construct the feedforward dense layer in a Reformer model.
     """
@@ -2033,12 +2036,11 @@ class ReformerFeedForwardDense(nn.Cell):
         
         Args:
             self (ReformerFeedForwardDense): The instance of the ReformerFeedForwardDense class.
-            config (object): The configuration object containing various settings for the dense layer.
-                Expected to have the following attributes:
-                    - hidden_dropout_prob (float): The dropout probability for the hidden layer.
-                    - hidden_act (str or function): The activation function for the hidden layer.
-                    - hidden_size (int): The size of the hidden layer.
-                    - feed_forward_size (int): The size of the feed-forward layer.
+            config (object): The configuration object containing various settings for the dense layer. Expected to have the following attributes:
+                    >   - hidden_dropout_prob (float): The dropout probability for the hidden layer.
+                    >   - hidden_act (str or function): The activation function for the hidden layer.
+                    >   - hidden_size (int): The size of the hidden layer.
+                    >   - feed_forward_size (int): The size of the feed-forward layer.
                 
         Returns:
             None. This method initializes the ReformerFeedForwardDense object with the provided configuration settings.
@@ -2089,12 +2091,12 @@ class ReformerFeedForwardOutput(nn.Cell):
     This class inherits from nn.Cell and contains methods for initializing and constructing the feed forward layer output.
     
     Attributes:
-        - dropout (float): The dropout rate for the hidden units.
-        - dense (nn.Dense): The fully connected layer for transforming input hidden states.
+        dropout (float): The dropout rate for the hidden units.
+        dense (nn.Dense): The fully connected layer for transforming input hidden states.
     
     Methods:
-        - __init__(config): Initializes the ReformerFeedForwardOutput with the given configuration.
-        - construct(hidden_states): Constructs the output of the feed forward layer using the provided hidden states.
+        __init__(config): Initializes the ReformerFeedForwardOutput with the given configuration.
+        construct(hidden_states): Constructs the output of the feed forward layer using the provided hidden states.
     """
     def __init__(self, config):
 
@@ -2104,9 +2106,9 @@ class ReformerFeedForwardOutput(nn.Cell):
         Args:
             self: The object instance.
             config: An object containing the configuration parameters.
-                - Type: Any valid object.
-                - Purpose: Specifies the configuration settings for the ReformerFeedForwardOutput instance.
-                - Restrictions: None.
+                >   - Type: Any valid object.
+                >   - Purpose: Specifies the configuration settings for the ReformerFeedForwardOutput instance.
+                >   - Restrictions: None.
         
         Returns:
             None
@@ -2146,7 +2148,7 @@ class ChunkReformerFeedForward(nn.Cell):
     This class represents a feed-forward module for chunked reformer attention output in a neural network.
     
     The ChunkReformerFeedForward class inherits from the nn.Cell class and is designed to process attention output in a chunked manner. It applies layer normalization, dense transformation, and output
-transformation to the input hidden states.
+    transformation to the input hidden states.
     
     Attributes:
         chunk_size_feed_forward (int): The size of each chunk for processing the attention output.
@@ -2158,27 +2160,22 @@ transformation to the input hidden states.
     Methods:
         __init__(self, config):
             Initializes a new instance of the ChunkReformerFeedForward class.
-            
-            Args:
-                config (object): The configuration object containing hyperparameters and settings for the module.
+            >   - Args:
+                >       - config (object): The configuration object containing hyperparameters and settings for the module.
         
         construct(self, attention_output):
             Constructs the output of the ChunkReformerFeedForward module.
-            
-            Args:
-                attention_output (Tensor): The input attention output tensor.
-            
-            Returns:
-                Tensor: The constructed output tensor after applying layer normalization, dense transformation, and output transformation.
+            >   - Args:
+            >       - attention_output (Tensor): The input attention output tensor.
+            >   - Returns:
+            >       - Tensor: The constructed output tensor after applying layer normalization, dense transformation, and output transformation.
         
         construct_chunk(self, hidden_states):
             Constructs a chunk of the ChunkReformerFeedForward module.
-            
-            Args:
-                hidden_states (Tensor): The input hidden states tensor.
-            
-            Returns:
-                Tensor: The constructed chunk of the feed-forward module after applying layer normalization, dense transformation, and output transformation.
+            >   - Args:
+            >       - hidden_states (Tensor): The input hidden states tensor.
+            >   - Returns:
+            >       - Tensor: The constructed chunk of the feed-forward module after applying layer normalization, dense transformation, and output transformation.
     """
     def __init__(self, config):
 
@@ -2188,9 +2185,9 @@ transformation to the input hidden states.
         Args:
             self (ChunkReformerFeedForward): The ChunkReformerFeedForward instance itself.
             config: A configuration object containing the necessary parameters for initialization.
-                - chunk_size_feed_forward (int): The chunk size for feed-forward operations.
-                - hidden_size (int): The size of the hidden layers.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - chunk_size_feed_forward (int): The chunk size for feed-forward operations.
+                >   - hidden_size (int): The size of the hidden layers.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
         
         Returns:
             None. This method initializes the ChunkReformerFeedForward instance with the provided configuration.
@@ -2263,11 +2260,10 @@ class ReformerLayer(nn.Cell):
         feed_forward_seed (int): Seed for the feed forward layer to ensure deterministic dropout behavior.
         
     Methods:
-        __init__(config, layer_id=0): Initializes the ReformerLayer with attention and feed forward components.
-        _init_attention_seed(): Sets a new seed for the attention layer to ensure deterministic dropout behavior.
-        _init_feed_forward_seed(): Sets a new seed for the feed forward layer to ensure deterministic dropout behavior.
-        construct(prev_attn_output, hidden_states, attention_mask=None, head_mask=None, num_hashes=None, past_buckets_states=None, use_cache=False, orig_sequence_length=None, output_attentions=False): 
-            Constructs the Reformer layer by applying attention and feed forward operations and returning the output.
+        __init__: Initializes the ReformerLayer with attention and feed forward components.
+        _init_attention_seed: Sets a new seed for the attention layer to ensure deterministic dropout behavior.
+        _init_feed_forward_seed: Sets a new seed for the feed forward layer to ensure deterministic dropout behavior.
+        construct: Constructs the Reformer layer by applying attention and feed forward operations and returning the output.
     
     Raises:
         None.
@@ -2488,25 +2484,25 @@ class _ReversibleFunction(nn.Cell):
         This method 'construct' is defined within the class '_ReversibleFunction' and is responsible for constructing the output based on the provided input parameters.
         
         Args:
-        - self: The instance of the class.
-        - hidden_states (Tensor): The input hidden states.
-        - layers (List[Layer]): List of layers to be applied during the construction process.
-        - attention_mask (Tensor): The attention mask to be applied during computations.
-        - head_mask (List[Tensor]): List of head masks for each layer.
-        - num_hashes (int): The number of hashes used in computations.
-        - all_hidden_states (List[Tensor]): List to store all hidden states if 'output_hidden_states' is True.
-        - all_attentions (List[Tensor]): List to store all attention probabilities if 'output_attentions' is True.
-        - past_buckets_states (Tensor): Past bucket states used in computations.
-        - use_cache (bool): Indicates whether to use caching during computations.
-        - orig_sequence_length (int): The original length of the input sequence.
-        - output_hidden_states (bool): Flag to determine if hidden states should be stored.
-        - output_attentions (bool): Flag to determine if attention probabilities should be stored.
-        
+            self: The instance of the class.
+            hidden_states (Tensor): The input hidden states.
+            layers (List[Layer]): List of layers to be applied during the construction process.
+            attention_mask (Tensor): The attention mask to be applied during computations.
+            head_mask (List[Tensor]): List of head masks for each layer.
+            num_hashes (int): The number of hashes used in computations.
+            all_hidden_states (List[Tensor]): List to store all hidden states if 'output_hidden_states' is True.
+            all_attentions (List[Tensor]): List to store all attention probabilities if 'output_attentions' is True.
+            past_buckets_states (Tensor): Past bucket states used in computations.
+            use_cache (bool): Indicates whether to use caching during computations.
+            orig_sequence_length (int): The original length of the input sequence.
+            output_hidden_states (bool): Flag to determine if hidden states should be stored.
+            output_attentions (bool): Flag to determine if attention probabilities should be stored.
+
         Returns:
-        - None: This method does not return any value explicitly; it updates the state of the class instance.
+            None: This method does not return any value explicitly; it updates the state of the class instance.
         
         Raises:
-        - None: This method does not raise any exceptions.
+            None: This method does not raise any exceptions.
         """
         all_buckets = ()
 
@@ -2603,14 +2599,14 @@ class ReformerEncoder(nn.Cell):
     The 'ReformerEncoder' class is a Python class that represents the encoder component of the Reformer model. It inherits from the 'nn.Cell' class.
     
     Attributes:
-        - dropout (float): The dropout probability for the hidden states.
-        - layers (nn.CellList): A list of 'ReformerLayer' instances representing the layers of the encoder.
-        - layer_norm (nn.LayerNorm): A layer normalization module.
+        dropout (float): The dropout probability for the hidden states.
+        layers (nn.CellList): A list of 'ReformerLayer' instances representing the layers of the encoder.
+        layer_norm (nn.LayerNorm): A layer normalization module.
     
     Methods:
-        - __init__(self, config): Initializes a new instance of the 'ReformerEncoder' class.
-        - construct(self, hidden_states, attention_mask=None, head_mask=None, num_hashes=None, past_buckets_states=None, use_cache=False, orig_sequence_length=None, output_hidden_states=False,
-output_attentions=False): Constructs the encoder by applying the Reformer layers to the input hidden states.
+        __init__(self, config): Initializes a new instance of the 'ReformerEncoder' class.
+        construct(self, hidden_states, attention_mask=None, head_mask=None, num_hashes=None, past_buckets_states=None, use_cache=False, orig_sequence_length=None, output_hidden_states=False,
+            output_attentions=False): Constructs the encoder by applying the Reformer layers to the input hidden states.
     
     """
     def __init__(self, config):
@@ -2621,10 +2617,10 @@ output_attentions=False): Constructs the encoder by applying the Reformer layers
         Args:
             self (ReformerEncoder): The ReformerEncoder instance to be initialized.
             config (Config): A configuration object containing settings for the ReformerEncoder.
-                - config.hidden_dropout_prob (float): The dropout probability for hidden layers.
-                - config.num_hidden_layers (int): The number of hidden layers in the ReformerEncoder.
-                - config.hidden_size (int): The size of hidden layers.
-                - config.layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - config.hidden_dropout_prob (float): The dropout probability for hidden layers.
+                >   - config.num_hidden_layers (int): The number of hidden layers in the ReformerEncoder.
+                >   - config.hidden_size (int): The size of hidden layers.
+                >   - config.layer_norm_eps (float): The epsilon value for layer normalization.
         
         Returns:
             None. This method initializes the ReformerEncoder instance with the specified configuration.
@@ -2679,11 +2675,11 @@ output_attentions=False): Constructs the encoder by applying the Reformer layers
         
         Returns:
             ReformerEncoderOutput: An instance of the ReformerEncoderOutput class containing the following attributes:
-                - hidden_states (Tensor): The output hidden states. Shape [batch_size, sequence_length, hidden_size].
-                - all_hidden_states (list): List of hidden states at each layer. Each element has shape [batch_size, sequence_length, hidden_size].
-                - all_attentions (list): List of attention matrices at each layer. Each element has shape [batch_size, num_attention_heads, sequence_length, sequence_length].
-                - past_buckets_states (list): List of past bucket states for fast decoding. Each element is a tuple of two tensors.
-                  Shape [(buckets, num_hashes, sequence_length // bucket_size, embedding_dim), (buckets, num_hashes, sequence_length // bucket_size)].
+                >   - hidden_states (Tensor): The output hidden states. Shape [batch_size, sequence_length, hidden_size].
+                >   - all_hidden_states (list): List of hidden states at each layer. Each element has shape [batch_size, sequence_length, hidden_size].
+                >   - all_attentions (list): List of attention matrices at each layer. Each element has shape [batch_size, num_attention_heads, sequence_length, sequence_length].
+                >   - past_buckets_states (list): List of past bucket states for fast decoding. Each element is a tuple of two tensors.
+                        Shape [(buckets, num_hashes, sequence_length // bucket_size, embedding_dim), (buckets, num_hashes, sequence_length // bucket_size)].
         
         Raises:
             None.
@@ -2730,7 +2726,7 @@ class ReformerOnlyLMHead(nn.Cell):
 
     """
     The class 'ReformerOnlyLMHead' represents a language model head for the Reformer model. It inherits from the 'nn.Cell' class and contains methods for initialization, construction, chunking, and weight
-tying.
+    tying.
     
     Attributes:
         seq_len_dim (int): The dimension representing the sequence length.
@@ -2842,8 +2838,8 @@ class ReformerPreTrainedModel(PreTrainedModel):
         
         Returns:
             dict: A dictionary containing dummy input tensors for the model. The dictionary has two keys:
-                - 'input_ids': A tensor representing dummy input IDs.
-                - 'attention_mask': A tensor representing dummy attention mask.
+                >   - 'input_ids': A tensor representing dummy input IDs.
+                >   - 'attention_mask': A tensor representing dummy attention mask.
         
         Raises:
             None.
@@ -2966,14 +2962,12 @@ class ReformerModel(ReformerPreTrainedModel):
         encoder (ReformerEncoder): The encoder layer of the model.
     
     Methods:
-        __init__(self, config): Initializes a new instance of the ReformerModel.
-        get_input_embeddings(self): Retrieves the input embeddings layer of the model.
-        set_input_embeddings(self, value): Sets the input embeddings layer of the model.
-        _prune_heads(self, heads_to_prune): Prunes the attention heads of the model.
-        construct(self, input_ids, attention_mask, position_ids, head_mask, inputs_embeds, num_hashes, past_buckets_states, use_cache, output_hidden_states, output_attentions, return_dict): Constructs the
-Reformer model with the given input and configurations.
-        _pad_to_mult_of_chunk_length(self, input_ids, inputs_embeds, attention_mask, position_ids, input_shape, padding_length, padded_seq_length): Pads the input tensors to be a multiple of the chunk length
-according to the Reformer model configuration.
+        __init__: Initializes a new instance of the ReformerModel.
+        get_input_embeddings: Retrieves the input embeddings layer of the model.
+        set_input_embeddings: Sets the input embeddings layer of the model.
+        _prune_heads: Prunes the attention heads of the model.
+        construct: Constructs the Reformer model with the given input and configurations.
+        _pad_to_mult_of_chunk_length: Pads the input tensors to be a multiple of the chunk length according to the Reformer model configuration.
     """
     def __init__(self, config):
 
@@ -3007,19 +3001,20 @@ according to the Reformer model configuration.
     def get_input_embeddings(self):
 
         """
-        Method: get_input_embeddings
+        Method:
+            get_input_embeddings
         
         Description:
-        This method retrieves the input embeddings from the ReformerModel.
+            This method retrieves the input embeddings from the ReformerModel.
         
         Args:
-        - self (object): The instance of the ReformerModel class.
+            self (object): The instance of the ReformerModel class.
         
         Returns:
-        - None: This method returns the input embeddings of type 'None'.
+            None: This method returns the input embeddings of type 'None'.
         
         Raises:
-        - None: This method does not raise any exceptions.
+            - None: This method does not raise any exceptions.
         """
         return self.embeddings.word_embeddings
 
@@ -3277,24 +3272,23 @@ class ReformerModelWithLMHead(ReformerPreTrainedModel):
     A Python class representing a Reformer model with a language modeling head (LMHead). This class inherits from the ReformerPreTrainedModel class.
     
     The ReformerModelWithLMHead class is designed to be used as a decoder for the Reformer model. It incorporates a ReformerModel, which performs the main computation, and a ReformerOnlyLMHead, which generates
-the language modeling predictions.
+    the language modeling predictions.
     
     Attributes:
         reformer (ReformerModel): The Reformer model used for the main computation.
         lm_head (ReformerOnlyLMHead): The language modeling head used for generating predictions.
     
     Methods:
-        __init__(self, config): Initializes the ReformerModelWithLMHead instance with the given configuration.
-        get_output_embeddings(self): Retrieves the decoder of the lm_head.
-        set_output_embeddings(self, new_embeddings): Sets the decoder of the lm_head to the provided new_embeddings.
-        construct(self, input_ids, position_ids, attention_mask, head_mask, inputs_embeds, num_hashes, past_buckets_states, use_cache, output_hidden_states, output_attentions, return_dict, labels): Constructs
-the Reformer model with the given inputs and returns the output.
-        prepare_inputs_for_generation(self, input_ids, past_key_values, use_cache, num_hashes, **kwargs): Prepares the inputs for generation by selecting the last token and returning a dictionary of inputs.
-        _reorder_cache(self, past_key_values, beam_idx): Reorders the past key values for beam search.
+        __init__: Initializes the ReformerModelWithLMHead instance with the given configuration.
+        get_output_embeddings: Retrieves the decoder of the lm_head.
+        set_output_embeddings: Sets the decoder of the lm_head to the provided new_embeddings.
+        construct: Constructs the Reformer model with the given inputs and returns the output.
+        prepare_inputs_for_generation: Prepares the inputs for generation by selecting the last token and returning a dictionary of inputs.
+        _reorder_cache: Reorders the past key values for beam search.
     
     Note:
         The ReformerModelWithLMHead class assumes that the config parameter has an 'is_decoder' attribute set to True. It also checks specific conditions related to the 'attn_layers' attribute in the config to
-ensure the correct configuration for causal mask usage.
+        ensure the correct configuration for causal mask usage.
     
     """
     _tied_weights_keys = ["lm_head.decoder.weight", "lm_head.decoder.bias"]
@@ -3337,10 +3331,11 @@ ensure the correct configuration for causal mask usage.
 
     def get_output_embeddings(self):
 
-        """Returns the output embeddings of the ReformerModelWithLMHead.
+        """
+        Returns the output embeddings of the ReformerModelWithLMHead.
         
         This method, 'get_output_embeddings', returns the decoder of the language model head of the ReformerModelWithLMHead. The decoder is responsible for mapping the hidden states of the model to the output
-vocabulary.
+        vocabulary.
         
         Args:
             self (ReformerModelWithLMHead): The instance of the ReformerModelWithLMHead class.
@@ -3371,7 +3366,7 @@ vocabulary.
         
         Note:
             This method replaces the current embeddings in the lm_head.decoder attribute with the provided new embeddings. The lm_head.decoder is responsible for generating the output of the
-ReformerModelWithLMHead. By setting new embeddings, the model can be fine-tuned or customized for different tasks or requirements.
+            ReformerModelWithLMHead. By setting new embeddings, the model can be fine-tuned or customized for different tasks or requirements.
         """
         self.lm_head.decoder = new_embeddings
 
@@ -3391,7 +3386,8 @@ ReformerModelWithLMHead. By setting new embeddings, the model can be fine-tuned 
         labels: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, CausalLMOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+        Args:
+            labels(`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
                 Labels for computing the sequence classification/regression loss. Indices should be in `[-100, 0, ...,
                 config.vocab_size - 1]`. All labels set to `-100` are ignored (masked), the loss is only computed for
                 labels in `[0, ..., config.vocab_size]`
@@ -3451,10 +3447,10 @@ ReformerModelWithLMHead. By setting new embeddings, the model can be fine-tuned 
         
         Returns:
             dict: A dictionary containing the prepared inputs for generation with the following keys:
-                - 'input_ids' (torch.Tensor): The tensor of input token IDs.
-                - 'past_buckets_states' (Tuple[torch.Tensor]): The tuple of past key values.
-                - 'use_cache' (bool): Whether to use the cache for fast decoding.
-                - 'num_hashes' (int): The number of hashes for LSH attention.
+                >   - 'input_ids' (torch.Tensor): The tensor of input token IDs.
+                >   - 'past_buckets_states' (Tuple[torch.Tensor]): The tuple of past key values.
+                >   - 'use_cache' (bool): Whether to use the cache for fast decoding.
+                >   - 'num_hashes' (int): The number of hashes for LSH attention.
         
         Raises:
             None
@@ -3481,13 +3477,13 @@ ReformerModelWithLMHead. By setting new embeddings, the model can be fine-tuned 
         Args:
             self: An instance of the ReformerModelWithLMHead class.
             past_key_values (List[Tuple[torch.Tensor, torch.Tensor]]): A list of tuples, where each tuple contains a past key tensor and a past value tensor for each layer. The past key tensor represents the
-previous key values, and the past value tensor represents the previous hidden states for each layer. The length of the list corresponds to the number of layers in the model.
+                previous key values, and the past value tensor represents the previous hidden states for each layer. The length of the list corresponds to the number of layers in the model.
             beam_idx (torch.Tensor): A tensor representing the indices to reorder the cache. These indices determine the new order of the cache.
         
         Returns:
             reord_past_buckets_states (List[Tuple[torch.Tensor, torch.Tensor]]): A list of tuples, where each tuple contains the reordered past key tensor and the reordered past value tensor for each layer.
-The reordered past key tensor represents the previous key values after reordering, and the reordered past value tensor represents the previous hidden states after reordering. The length of the list corresponds
-to the number of layers in the model.
+                The reordered past key tensor represents the previous key values after reordering, and the reordered past value tensor represents the previous hidden states after reordering.
+                The length of the list corresponds to the number of layers in the model.
         
         Raises:
             None.
@@ -3521,30 +3517,31 @@ class ReformerForMaskedLM(ReformerPreTrainedModel):
     checks that `config.is_decoder=False` for bi-directional self-attention. 
     
     The class has the following methods: 
-      - `get_output_embeddings()`: Returns the decoder for the language modeling head.
-      - `set_output_embeddings(new_embeddings)`: Sets the decoder for the language modeling head to `new_embeddings`.
-      - `construct(input_ids=None, position_ids=None, attention_mask=None, head_mask=None, inputs_embeds=None, 
+    >   - `get_output_embeddings()`: Returns the decoder for the language modeling head.
+    >   - `set_output_embeddings(new_embeddings)`: Sets the decoder for the language modeling head to `new_embeddings`.
+    >   - `construct(input_ids=None, position_ids=None, attention_mask=None, head_mask=None, inputs_embeds=None,
           num_hashes=None, labels=None, output_hidden_states=None, output_attentions=None, return_dict=None)`: 
           Constructs the model and computes the masked language modeling loss if the `labels` argument is provided. 
           This method takes several optional input arguments and returns a tuple with the following elements:
            * If `labels` is not `None`, returns a tuple `(masked_lm_loss, logits, hidden_states, attentions)`.
            * If `labels` is `None`, returns a tuple `(logits, hidden_states, attentions)`.
           where:
-            - `masked_lm_loss` is the masked language modeling loss, computed as cross-entropy loss between the logits 
+    >       - `masked_lm_loss` is the masked language modeling loss, computed as cross-entropy loss between the logits
               and the labels.
-            - `logits` is a tensor of shape `(batch_size, sequence_length, vocab_size)` containing the unnormalized 
+    >       - `logits` is a tensor of shape `(batch_size, sequence_length, vocab_size)` containing the unnormalized
               log probabilities for each vocabulary token.
-            - `hidden_states` is a tuple of length `config.num_hidden_layers + 1` with each tensor of shape 
+    >       - `hidden_states` is a tuple of length `config.num_hidden_layers + 1` with each tensor of shape
               `(batch_size, sequence_length, hidden_size)` representing the hidden states of the model at each layer.
-            - `attentions` is a tuple of length `config.num_hidden_layers` with each tensor of shape 
+    >       - `attentions` is a tuple of length `config.num_hidden_layers` with each tensor of shape
               `(batch_size, num_heads, sequence_length, sequence_length)` representing the attention weights for each 
               layer. 
     
-    Note: This class utilizes a false checkpoint since there is no available pre-trained model for the masked language 
-    modeling task with the Reformer architecture. 
+    Note:
+        This class utilizes a false checkpoint since there is no available pre-trained model for the masked language
+        modeling task with the Reformer architecture.
     
     Example:
-        
+        ```python
         from transformers import ReformerForMaskedLM, ReformerConfig
     
         # Initializing a Reformer configuration
@@ -3562,6 +3559,7 @@ class ReformerForMaskedLM(ReformerPreTrainedModel):
         # Constructing the model and computing the masked language modeling loss
         masked_lm_loss, logits, hidden_states, attentions = model.construct(input_ids, position_ids, attention_mask, 
             head_mask, inputs_embeds, num_hashes, labels, output_hidden_states, output_attentions, return_dict)
+        ```
         
     """
     _tied_weights_keys = ["lm_head.decoder.weight", "lm_head.decoder.bias"]
@@ -3648,7 +3646,7 @@ class ReformerForMaskedLM(ReformerPreTrainedModel):
                 the loss is only computed for the tokens with labels
 
         Returns:
-
+            Union[Tuple, MaskedLMOutput]
         <Tip warning={true}>
 
         This example uses a false checkpoint since we don't have any available pretrained model for the masked language
@@ -3657,41 +3655,40 @@ class ReformerForMaskedLM(ReformerPreTrainedModel):
         </Tip>
 
         Example:
+            ```python
+            >>> import torch
+            >>> from transformers import AutoTokenizer, ReformerForMaskedLM
 
-        ```python
-        >>> import torch
-        >>> from transformers import AutoTokenizer, ReformerForMaskedLM
+            >>> tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-reformer")
+            >>> model = ReformerForMaskedLM.from_pretrained("hf-internal-testing/tiny-random-reformer")
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-reformer")
-        >>> model = ReformerForMaskedLM.from_pretrained("hf-internal-testing/tiny-random-reformer")
+            >>> # add mask_token
+            >>> tokenizer.add_special_tokens({"mask_token": "[MASK]"})  # doctest: +IGNORE_RESULT
+            >>> inputs = tokenizer("The capital of France is [MASK].", return_tensors="pt")
 
-        >>> # add mask_token
-        >>> tokenizer.add_special_tokens({"mask_token": "[MASK]"})  # doctest: +IGNORE_RESULT
-        >>> inputs = tokenizer("The capital of France is [MASK].", return_tensors="pt")
+            >>> # resize model's embedding matrix
+            >>> model.resize_token_embeddings(new_num_tokens=model.config.vocab_size + 1)  # doctest: +IGNORE_RESULT
 
-        >>> # resize model's embedding matrix
-        >>> model.resize_token_embeddings(new_num_tokens=model.config.vocab_size + 1)  # doctest: +IGNORE_RESULT
+            >>> with torch.no_grad():
+            ...     logits = model(**inputs).logits
 
-        >>> with torch.no_grad():
-        ...     logits = model(**inputs).logits
+            >>> # retrieve index of [MASK]
+            >>> mask_token_index = (inputs.input_ids == tokenizer.mask_token_id)[0].nonzero(as_tuple=True)[0]
 
-        >>> # retrieve index of [MASK]
-        >>> mask_token_index = (inputs.input_ids == tokenizer.mask_token_id)[0].nonzero(as_tuple=True)[0]
+            >>> predicted_token_id = logits[0, mask_token_index].argmax(axis=-1)
+            >>> predicted_token = tokenizer.decode(predicted_token_id)
+            ```
 
-        >>> predicted_token_id = logits[0, mask_token_index].argmax(axis=-1)
-        >>> predicted_token = tokenizer.decode(predicted_token_id)
-        ```
+            ```python
+            >>> labels = tokenizer("The capital of France is Paris.", return_tensors="pt")["input_ids"]
+            >>> # mask labels of non-[MASK] tokens
+            >>> labels = torch.where(
+            ...     inputs.input_ids == tokenizer.mask_token_id, labels[:, : inputs["input_ids"].shape[-1]], -100
+            ... )
 
-        ```python
-        >>> labels = tokenizer("The capital of France is Paris.", return_tensors="pt")["input_ids"]
-        >>> # mask labels of non-[MASK] tokens
-        >>> labels = torch.where(
-        ...     inputs.input_ids == tokenizer.mask_token_id, labels[:, : inputs["input_ids"].shape[-1]], -100
-        ... )
-
-        >>> outputs = model(**inputs, labels=labels)
-        >>> loss = round(outputs.loss.item(), 2)
-        ```
+            >>> outputs = model(**inputs, labels=labels)
+            >>> loss = round(outputs.loss.item(), 2)
+            ```
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -3739,84 +3736,75 @@ class ReformerForSequenceClassification(ReformerPreTrainedModel):
     -------
     The `ReformerForSequenceClassification` class provides a sequence classification model that can be used for tasks such as sentiment analysis, text classification, and natural language inference.
     
-    Attributes
-    ----------
-    - `num_labels` : int
-        The number of labels for the sequence classification task.
-    - `config` : ReformerConfig
-        The configuration object that holds all the hyperparameters of the model.
-    - `reformer` : ReformerModel
-        The Reformer model used for encoding the input sequence.
-    - `classifier` : ReformerClassificationHead
-        The classification head that takes the encoded sequence and produces the final logits.
+    Attributes:
+        `num_labels` : int
+            The number of labels for the sequence classification task.
+        `config` : ReformerConfig
+            The configuration object that holds all the hyperparameters of the model.
+        `reformer` : ReformerModel
+            The Reformer model used for encoding the input sequence.
+        `classifier` : ReformerClassificationHead
+            The classification head that takes the encoded sequence and produces the final logits.
         
-    Methods
-    -------
-    - `construct(input_ids, position_ids, attention_mask, head_mask, inputs_embeds, num_hashes, labels, output_hidden_states, output_attentions, return_dict) -> Union[Tuple, SequenceClassifierOutput]`
-        Constructs the sequence classification model and performs forward propagation.
+    Methods:
+        `construct(input_ids, position_ids, attention_mask, head_mask, inputs_embeds, num_hashes, labels, output_hidden_states, output_attentions, return_dict) -> Union[Tuple, SequenceClassifierOutput]`:
+            Constructs the sequence classification model and performs forward propagation.
+            >   - Parameters:
+            >       - `input_ids` : Optional[mindspore.Tensor]
+                The input sequence tensor with shape `(batch_size, sequence_length)`.
+            >       - `position_ids` : Optional[mindspore.Tensor]
+                The position ids tensor with shape `(batch_size, sequence_length)` specifying the position of each token in the input sequence.
+            >       - `attention_mask` : Optional[mindspore.Tensor]
+                The attention mask tensor with shape `(batch_size, sequence_length)` indicating which tokens should be attended to and which ones should not.
+            >       - `head_mask` : Optional[mindspore.Tensor]
+                The head mask tensor with shape `(num_heads,)` or `(num_layers, num_heads)` indicating which heads or layers to mask during attention computation.
+            >       - `inputs_embeds` : Optional[mindspore.Tensor]
+                The embedded input sequence tensor with shape `(batch_size, sequence_length, embedding_size)`.
+            >       - `num_hashes` : Optional[int]
+                The number of hashes to use for the locality-sensitive hashing attention mechanism.
+            >       - `labels` : Optional[mindspore.Tensor]
+                The tensor of labels for computing the sequence classification/regression loss.
+            >       - `output_hidden_states` : Optional[bool]
+                Whether to output hidden states of the Reformer model.
+            >       - `output_attentions` : Optional[bool]
+                Whether to output attention weights of the Reformer model.
+            >       - `return_dict` : Optional[bool]
+                Whether to return the output as a dictionary or a tuple.
+            >   - Returns:
+            >       - If `return_dict` is True, returns a `SequenceClassifierOutput` object containing the loss, logits, hidden states, and attention weights.
+            >       - If `return_dict` is False, returns a tuple containing the loss, logits, and any additional hidden states or attention weights.
         
-        Parameters:
-        - `input_ids` : Optional[mindspore.Tensor]
-            The input sequence tensor with shape `(batch_size, sequence_length)`.
-        - `position_ids` : Optional[mindspore.Tensor]
-            The position ids tensor with shape `(batch_size, sequence_length)` specifying the position of each token in the input sequence.
-        - `attention_mask` : Optional[mindspore.Tensor]
-            The attention mask tensor with shape `(batch_size, sequence_length)` indicating which tokens should be attended to and which ones should not.
-        - `head_mask` : Optional[mindspore.Tensor]
-            The head mask tensor with shape `(num_heads,)` or `(num_layers, num_heads)` indicating which heads or layers to mask during attention computation.
-        - `inputs_embeds` : Optional[mindspore.Tensor]
-            The embedded input sequence tensor with shape `(batch_size, sequence_length, embedding_size)`.
-        - `num_hashes` : Optional[int]
-            The number of hashes to use for the locality-sensitive hashing attention mechanism.
-        - `labels` : Optional[mindspore.Tensor]
-            The tensor of labels for computing the sequence classification/regression loss.
-        - `output_hidden_states` : Optional[bool]
-            Whether to output hidden states of the Reformer model.
-        - `output_attentions` : Optional[bool]
-            Whether to output attention weights of the Reformer model.
-        - `return_dict` : Optional[bool]
-            Whether to return the output as a dictionary or a tuple.
-        
-        Returns:
-        - If `return_dict` is True, returns a `SequenceClassifierOutput` object containing the loss, logits, hidden states, and attention weights.
-        - If `return_dict` is False, returns a tuple containing the loss, logits, and any additional hidden states or attention weights.
-        
-    Examples
-    --------
-    Example of single-label classification:
-    
-    
-    import mindspore as ms
-    from transformers import ReformerForSequenceClassification
-    
-    model = ReformerForSequenceClassification(config)
-    
-    inputs = {
-        'input_ids': ms.Tensor([[1, 2, 3, 4, 5]]),
-        'attention_mask': ms.Tensor([[1, 1, 1, 1, 1]])
-    }
-    
-    outputs = model.construct(**inputs)
-    logits = outputs.logits
-    predicted_class_id = logits.argmax(axis=1).item()
-    label = model.config.id2label[predicted_class_id]
-    
-    
-    To train a model on `num_labels` classes, you can pass `num_labels=num_labels` to the `ReformerForSequenceClassification` constructor:
-    
-    
-    num_labels = len(model.config.id2label)
-    model = ReformerForSequenceClassification(config, num_labels=num_labels)
-    
-    inputs = {
-        'input_ids': ms.Tensor([[1, 2, 3, 4, 5]]),
-        'attention_mask': ms.Tensor([[1, 1, 1, 1, 1]]),
-        'labels': ms.Tensor([1])
-    }
-    
-    outputs = model.construct(**inputs)
-    loss = outputs.loss
-    
+    Example:
+        ```python
+        import mindspore as ms
+        from transformers import ReformerForSequenceClassification
+
+        model = ReformerForSequenceClassification(config)
+
+        inputs = {
+            'input_ids': ms.Tensor([[1, 2, 3, 4, 5]]),
+            'attention_mask': ms.Tensor([[1, 1, 1, 1, 1]])
+        }
+
+        outputs = model.construct(**inputs)
+        logits = outputs.logits
+        predicted_class_id = logits.argmax(axis=1).item()
+        label = model.config.id2label[predicted_class_id]
+        ```
+        To train a model on `num_labels` classes, you can pass `num_labels=num_labels` to the `ReformerForSequenceClassification` constructor:
+        ```python
+        num_labels = len(model.config.id2label)
+        model = ReformerForSequenceClassification(config, num_labels=num_labels)
+
+        inputs = {
+            'input_ids': ms.Tensor([[1, 2, 3, 4, 5]]),
+            'attention_mask': ms.Tensor([[1, 1, 1, 1, 1]]),
+            'labels': ms.Tensor([1])
+        }
+
+        outputs = model.construct(**inputs)
+        loss = outputs.loss
+        ```
     """
     def __init__(self, config):
 
@@ -3825,10 +3813,9 @@ class ReformerForSequenceClassification(ReformerPreTrainedModel):
         
         Args:
             self: The instance of the class.
-            config: An instance of the configuration containing settings for the ReformerForSequenceClassification. 
-                    It should contain the following attributes:
-                    - num_labels (int): The number of labels for sequence classification.
-                    - is_decoder (bool): If True, the ReformerForSequenceClassification is used as a decoder.
+            config: An instance of the configuration containing settings for the ReformerForSequenceClassification. It should contain the following attributes:
+                    >   - num_labels (int): The number of labels for sequence classification.
+                    >   - is_decoder (bool): If True, the ReformerForSequenceClassification is used as a decoder.
                     
         Returns:
             None. This method does not return any value.
@@ -3862,42 +3849,43 @@ class ReformerForSequenceClassification(ReformerPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
 
         Returns:
+            Union[Tuple, SequenceClassifierOutput]
 
         Example of single-label classification:
+            ```python
+            >>> import torch
+            >>> from transformers import AutoTokenizer, ReformerForSequenceClassification
 
-        ```python
-        >>> import torch
-        >>> from transformers import AutoTokenizer, ReformerForSequenceClassification
+            >>> tokenizer = AutoTokenizer.from_pretrained("google/reformer-crime-and-punishment")
+            >>> model = ReformerForSequenceClassification.from_pretrained("google/reformer-crime-and-punishment")
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("google/reformer-crime-and-punishment")
-        >>> model = ReformerForSequenceClassification.from_pretrained("google/reformer-crime-and-punishment")
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
 
-        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> with torch.no_grad():
+            ...     logits = model(**inputs).logits
 
-        >>> with torch.no_grad():
-        ...     logits = model(**inputs).logits
+            >>> predicted_class_id = logits.argmax().item()
+            >>> label = model.config.id2label[predicted_class_id]
+            ```
 
-        >>> predicted_class_id = logits.argmax().item()
-        >>> label = model.config.id2label[predicted_class_id]
-        ```
+            ```python
+            >>> # To train a model on `num_labels` classes, you can pass `num_labels=num_labels` to `.from_pretrained(...)`
+            >>> num_labels = len(model.config.id2label)
+            >>> model = ReformerForSequenceClassification.from_pretrained(
+            ...     "google/reformer-crime-and-punishment", num_labels=num_labels
+            ... )
 
-        ```python
-        >>> # To train a model on `num_labels` classes, you can pass `num_labels=num_labels` to `.from_pretrained(...)`
-        >>> num_labels = len(model.config.id2label)
-        >>> model = ReformerForSequenceClassification.from_pretrained(
-        ...     "google/reformer-crime-and-punishment", num_labels=num_labels
-        ... )
-
-        >>> labels = mindspore.tensor(1)
-        >>> loss = model(**inputs, labels=labels).loss
-        ```
-        """
+            >>> labels = mindspore.tensor(1)
+            >>> loss = model(**inputs, labels=labels).loss
+            ```
+            """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.reformer(
@@ -3957,7 +3945,7 @@ class ReformerClassificationHead(nn.Cell):
         Args:
             self (ReformerClassificationHead): The instance of the ReformerClassificationHead class.
             config (object): The configuration object containing the settings for the Reformer model. It should have attributes such as hidden_size (int), classifier_dropout (float, optional),
-hidden_dropout_prob (float), and num_labels (int). The config object is required and should not be None.
+                hidden_dropout_prob (float), and num_labels (int). The config object is required and should not be None.
         
         Returns:
             None: This method does not return any value.
@@ -4005,21 +3993,22 @@ class ReformerForQuestionAnswering(ReformerPreTrainedModel):
     This class represents a Reformer model for question answering tasks. It is a subclass of the ReformerPreTrainedModel.
     
     The ReformerForQuestionAnswering class implements the necessary methods to perform question answering on a given input sequence. It includes an initialization method, a construction method, and helper
-methods.
+        methods.
     
     The initialization method (__init__) takes a configuration object as input and initializes the Reformer model, as well as the necessary layers for question answering. The number of labels is also set in
-this method.
+        this method.
     
     The construction method (construct) takes various input tensors and parameters and performs question answering. It utilizes the Reformer model to obtain the sequence output, which is then passed through a
-dense layer for classification. The start and end logits are obtained from the output and are returned along with other relevant outputs.
+        dense layer for classification. The start and end logits are obtained from the output and are returned along with other relevant outputs.
     
     The construct method also allows optional inputs for start_positions and end_positions, which are used to compute the token classification loss. The loss is calculated using the cross-entropy loss
-function. If start_positions and end_positions are provided, the total loss is computed as the average of the start and end losses.
+        function. If start_positions and end_positions are provided, the total loss is computed as the average of the start and end losses.
     
     The construct method returns the start and end logits, along with other relevant outputs, depending on the value of the return_dict parameter. If return_dict is False, a tuple of outputs is returned. If
-return_dict is True, a QuestionAnsweringModelOutput object is returned, containing the start_logits, end_logits, hidden_states, and attentions.
+        return_dict is True, a QuestionAnsweringModelOutput object is returned, containing the start_logits, end_logits, hidden_states, and attentions.
     
-    Note: This class inherits from the ReformerPreTrainedModel class, which provides additional functionality for pre-training and fine-tuning the Reformer model.
+    Note:
+        This class inherits from the ReformerPreTrainedModel class, which provides additional functionality for pre-training and fine-tuning the Reformer model.
     """
     def __init__(self, config):
 
@@ -4029,9 +4018,9 @@ return_dict is True, a QuestionAnsweringModelOutput object is returned, containi
         Args:
             self (ReformerForQuestionAnswering): The instance of the class.
             config: The configuration for the ReformerForQuestionAnswering model.
-                Type: Any
-                Purpose: Specifies the configuration parameters for the model.
-                Restrictions: Must be a valid configuration object.
+                >   - Type: Any
+                >   - Purpose: Specifies the configuration parameters for the model.
+                >   - Restrictions: Must be a valid configuration object.
         
         Returns:
             None: This method does not return any value.
@@ -4064,14 +4053,15 @@ return_dict is True, a QuestionAnsweringModelOutput object is returned, containi
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, QuestionAnsweringModelOutput]:
         r"""
-        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
+        Args:
+            start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the start of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
+            end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the end of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

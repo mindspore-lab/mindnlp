@@ -290,29 +290,28 @@ class BlenderbotSmallEncoderLayer(nn.Cell):
 
     """
     This class represents a single layer of the BlenderbotSmall model encoder. The layer consists of self-attention mechanism followed by feedforward neural network blocks with layer normalization and residual
-connections. 
+    connections.
     
     The class initializes the encoder layer with configuration parameters and defines a 'construct' method that processes the input hidden states through the self-attention mechanism and feedforward neural
-network blocks. The method also includes functionality for dropout, layer normalization, and handling of attention masks and head masks. 
+    network blocks. The method also includes functionality for dropout, layer normalization, and handling of attention masks and head masks.
     
     Parameters:
         config (BlenderbotSmallConfig): Configuration object containing model hyperparameters.
         
     Methods:
-        - __init__(self, config: BlenderbotSmallConfig): Initializes the encoder layer with the provided configuration settings.
-        - construct(self, hidden_states: mindspore.Tensor, attention_mask: mindspore.Tensor, layer_head_mask: mindspore.Tensor, output_attentions: Optional[bool] = False) -> Tuple[mindspore.Tensor,
-Optional[mindspore.Tensor]]: Processes the input hidden states through the self-attention mechanism and feedforward neural network blocks, with optional attention outputs.
+        __init__: Initializes the encoder layer with the provided configuration settings.
+        construct: Processes the input hidden states through the self-attention mechanism and feedforward neural network blocks, with optional attention outputs.
     
     Attributes:
-        - embed_dim: Dimension of the embedding space.
-        - self_attn: Self-attention mechanism used in the layer.
-        - self_attn_layer_norm: Layer normalization for the self-attention output.
-        - dropout: Dropout probability applied in the layer.
-        - activation_fn: Activation function used in the feedforward neural network.
-        - activation_dropout: Dropout probability applied after the activation function.
-        - fc1: First fully connected layer in the feedforward neural network.
-        - fc2: Second fully connected layer in the feedforward neural network.
-        - final_layer_norm: Layer normalization for the final output of the layer.
+        embed_dim: Dimension of the embedding space.
+        self_attn: Self-attention mechanism used in the layer.
+        self_attn_layer_norm: Layer normalization for the self-attention output.
+        dropout: Dropout probability applied in the layer.
+        activation_fn: Activation function used in the feedforward neural network.
+        activation_dropout: Dropout probability applied after the activation function.
+        fc1: First fully connected layer in the feedforward neural network.
+        fc2: Second fully connected layer in the feedforward neural network.
+        final_layer_norm: Layer normalization for the final output of the layer.
     """
     def __init__(self, config: BlenderbotSmallConfig):
         """
@@ -422,26 +421,6 @@ class BlenderbotSmallDecoderLayer(nn.Cell):
         fc1: The first feed-forward neural network layer.
         fc2: The second feed-forward neural network layer.
         final_layer_norm: Layer normalization for the final output.
-    
-    Methods:
-        construct: Processes the input hidden_states and performs self-attention, cross-attention, and feed-forward operations.
-    
-    Args:
-        hidden_states (mindspore.Tensor): The input to the layer of shape (batch, seq_len, embed_dim).
-        attention_mask (mindspore.Tensor, optional): The attention mask for self-attention.
-        encoder_hidden_states (mindspore.Tensor, optional): The encoder hidden states for cross-attention.
-        encoder_attention_mask (mindspore.Tensor, optional): The attention mask for encoder cross-attention.
-        layer_head_mask (mindspore.Tensor, optional): The mask for attention heads in a given layer.
-        cross_attn_layer_head_mask (mindspore.Tensor, optional): The mask for cross-attention heads in a given layer.
-        past_key_value (Tuple(mindspore.Tensor), optional): Cached past key and value projection states.
-        output_attentions (bool, optional): Whether to return the attention tensors of all attention layers.
-        use_cache (bool, optional): Whether to use caching for the output.
-    
-    Returns:
-        Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: The output tensor and optional present_key_value tuple.
-    
-    Raises:
-        None
     """
     def __init__(self, config: BlenderbotSmallConfig):
         """
@@ -450,9 +429,9 @@ class BlenderbotSmallDecoderLayer(nn.Cell):
         Args:
             self (BlenderbotSmallDecoderLayer): The instance of the BlenderbotSmallDecoderLayer class.
             config (BlenderbotSmallConfig): The configuration object containing settings for the decoder layer.
-                - Type: BlenderbotSmallConfig
-                - Purpose: Specifies the configuration parameters for the decoder layer.
-                - Restrictions: Must be an instance of the BlenderbotSmallConfig class.
+                >   - Type: BlenderbotSmallConfig
+                >   - Purpose: Specifies the configuration parameters for the decoder layer.
+                >   - Restrictions: Must be an instance of the BlenderbotSmallConfig class.
         
         Returns:
             None: This method does not return any value.
@@ -586,14 +565,15 @@ class BlenderbotSmallPreTrainedModel(PreTrainedModel):
     The `BlenderbotSmallPreTrainedModel` class provides methods for initializing the weights of the model and generating dummy inputs for testing purposes.
     
     To initialize the weights, the `_init_weights` method is called with a specified `cell` object. If the `cell` is of type `nn.Dense`, the weights are initialized using the normal distribution with a
-standard deviation of `self.config.init_std`. If the `cell` has biases, they are initialized to zeros. If the `cell` is of type `nn.Embedding`, the weights are initialized using a normal distribution with a
-mean of 0.0 and a standard deviation of `self.config.init_std`. If a padding index is provided, the corresponding weights are set to 0.
+    standard deviation of `self.config.init_std`. If the `cell` has biases, they are initialized to zeros. If the `cell` is of type `nn.Embedding`, the weights are initialized using a normal distribution with a
+    mean of 0.0 and a standard deviation of `self.config.init_std`. If a padding index is provided, the corresponding weights are set to 0.
     
     The `dummy_inputs` property returns a dictionary of dummy inputs that can be used for testing. It includes 'attention_mask', 'input_ids', and 'decoder_input_ids'. The 'input_ids' tensor contains two rows,
-with the second row having a padding token represented by `self.config.pad_token_id`. The 'attention_mask' tensor is obtained by checking if each element of 'input_ids' is not equal to the padding token. The
-'decoder_input_ids' tensor is the same as the 'input_ids' tensor.
+    with the second row having a padding token represented by `self.config.pad_token_id`. The 'attention_mask' tensor is obtained by checking if each element of 'input_ids' is not equal to the padding token. The
+    'decoder_input_ids' tensor is the same as the 'input_ids' tensor.
     
-    Note: This docstring does not include signatures or any other code.
+    Note:
+        This docstring does not include signatures or any other code.
     """
     config_class = BlenderbotSmallConfig
     base_model_prefix = "model"
@@ -626,11 +606,11 @@ with the second row having a padding token represented by `self.config.pad_token
                 The instance of the BlenderbotSmallPreTrainedModel class.
         
         Returns:
-            dict
+            dict:
                 A dictionary containing dummy inputs with the following keys:
-                    - 'attention_mask': A tensor representing the attention mask for the input_ids.
-                    - 'input_ids': A tensor containing the input token IDs.
-                    - 'decoder_input_ids': A tensor containing the decoder input token IDs.
+                    >   - 'attention_mask': A tensor representing the attention mask for the input_ids.
+                    >   - 'input_ids': A tensor containing the input token IDs.
+                    >   - 'decoder_input_ids': A tensor containing the decoder input token IDs.
         
         Raises:
             None
@@ -661,7 +641,7 @@ class BlenderbotSmallEncoder(BlenderbotSmallPreTrainedModel):
         Args:
             self: The instance of the class.
             config (BlenderbotSmallConfig): The configuration for the encoder, including settings such as dropout, layer drop, embed dimension, padding index, maximum source positions, embed scale, and vocab
-size. 
+                size.
             embed_tokens (Optional[nn.Embedding]): Optional parameter representing the embedding tokens. If not provided, it defaults to None.
         
         Returns:
@@ -709,26 +689,20 @@ size.
         r"""
         Args:
             input_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
-                Indices of input sequence tokens in the vocabulary. Padding will be ignored by default should you
-                provide it.
-
-                Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
-                [`PreTrainedTokenizer.__call__`] for details.
-
-                [What are input IDs?](../glossary#input-ids)
+                >- Indices of input sequence tokens in the vocabulary. Padding will be ignored by default should you
+                    provide it.
+                >- Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
+                    [`PreTrainedTokenizer.__call__`] for details.
+                >- [What are input IDs?](../glossary#input-ids)
             attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
-
-                [What are attention masks?](../glossary#attention-mask)
+                >- Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
+                >- [What are attention masks?](../glossary#attention-mask)
             head_mask (`mindspore.Tensor` of shape `(encoder_layers, encoder_attention_heads)`, *optional*):
-                Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
-
+                >- Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
+                >   - 1 indicates the head is **not masked**,
+                >   - 0 indicates the head is **masked**.
             inputs_embeds (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
                 Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation.
                 This is useful if you want more control over how to convert `input_ids` indices into associated vectors
@@ -904,20 +878,22 @@ class BlenderbotSmallDecoder(BlenderbotSmallPreTrainedModel):
             None.
         
         Description:
-        This method allows setting the input embeddings for the BlenderbotSmallDecoder. The input embeddings are used to represent the input tokens in the decoding process. The 'value' parameter should be a
-tensor or any other compatible type that contains the desired input embeddings.
+            This method allows setting the input embeddings for the BlenderbotSmallDecoder. The input embeddings are used to represent the input tokens in the decoding process. The 'value' parameter should be a
+            tensor or any other compatible type that contains the desired input embeddings.
         
-        Note that the 'value' parameter replaces the existing embeddings set for the 'embed_tokens' attribute of the BlenderbotSmallDecoder instance. Therefore, calling this method will overwrite any
-previously set input embeddings.
+            Note that the 'value' parameter replaces the existing embeddings set for the 'embed_tokens' attribute of the BlenderbotSmallDecoder instance. Therefore, calling this method will overwrite any
+            previously set input embeddings.
         
         Example:
+            ```python
             decoder = BlenderbotSmallDecoder()
             embeddings = torch.tensor([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]])
             decoder.set_input_embeddings(embeddings)
+            ```
         
         In the example above, a new instance of BlenderbotSmallDecoder is created. The input embeddings are defined as a tensor with shape (2, 3), representing two tokens with three-dimensional embeddings. The
-'set_input_embeddings' method is then called on the decoder instance, passing the embeddings tensor as the 'value' parameter. This updates the 'embed_tokens' attribute of the decoder with the new input
-embeddings.
+        'set_input_embeddings' method is then called on the decoder instance, passing the embeddings tensor as the 'value' parameter. This updates the 'embed_tokens' attribute of the decoder with the new input
+        embeddings.
         """
         self.embed_tokens = value
 
@@ -939,55 +915,43 @@ embeddings.
         r"""
         Args:
             input_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
-                Indices of input sequence tokens in the vocabulary. Padding will be ignored by default should you
-                provide it.
-
-                Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
-                [`PreTrainedTokenizer.__call__`] for details.
-
-                [What are input IDs?](../glossary#input-ids)
+                >- Indices of input sequence tokens in the vocabulary. Padding will be ignored by default should you
+                    provide it.
+                >- Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
+                    [`PreTrainedTokenizer.__call__`] for details.
+                >- [What are input IDs?](../glossary#input-ids)
             attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
-
-                [What are attention masks?](../glossary#attention-mask)
+                >- Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
+                >- [What are attention masks?](../glossary#attention-mask)
             encoder_hidden_states (`mindspore.Tensor` of shape `(batch_size, encoder_sequence_length, hidden_size)`, *optional*):
                 Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention
                 of the decoder.
             encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, encoder_sequence_length)`, *optional*):
-                Mask to avoid performing cross-attention on padding tokens indices of encoder input_ids. Mask values
-                selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
-
+                >- Mask to avoid performing cross-attention on padding tokens indices of encoder input_ids. Mask values
+                    selected in `[0, 1]`:
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
                 [What are attention masks?](../glossary#attention-mask)
             head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-                Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
-
+                >- Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
+                >   - 1 indicates the head is **not masked**,
+                >   - 0 indicates the head is **masked**.
             cross_attn_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-                Mask to nullify selected heads of the cross-attention modules in the decoder to avoid performing
-                cross-attention on hidden heads. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
-
+                >- Mask to nullify selected heads of the cross-attention modules in the decoder to avoid performing
+                    cross-attention on hidden heads. Mask values selected in `[0, 1]`:
+                >   - 1 indicates the head is **not masked**,
+                >   - 0 indicates the head is **masked**.
             past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
-                Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
-                shape `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of
-                shape `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`.
-
-                Contains pre-computed hidden-states (key and values in the self-attention blocks and in the
-                cross-attention blocks) that can be used (see `past_key_values` input) to speed up sequential decoding.
-
-                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those
-                that don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of
-                all `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+                >- Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
+                    shape `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of
+                    shape `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`.
+                >- Contains pre-computed hidden-states (key and values in the self-attention blocks and in the
+                    cross-attention blocks) that can be used (see `past_key_values` input) to speed up sequential decoding.
+                >- If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those
+                    that don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of
+                    all `decoder_input_ids` of shape `(batch_size, sequence_length)`.
             inputs_embeds (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
                 Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation.
                 This is useful if you want more control over how to convert `input_ids` indices into associated vectors
@@ -1141,35 +1105,34 @@ class BlenderbotSmallModel(BlenderbotSmallPreTrainedModel):
         This class represents the BlenderbotSmallModel, which is a Python implementation of the Blenderbot Small model for chat-based language generation. 
     
         The BlenderbotSmallModel is a Seq2Seq model that consists of an encoder and a decoder. The encoder encodes the input text into hidden states, while the decoder generates the output text based on the
-encoded information. The model uses shared embeddings for both the encoder and the decoder.
+        encoded information. The model uses shared embeddings for both the encoder and the decoder.
     
         This class inherits from the BlenderbotSmallPreTrainedModel.
     
         Example usage:
-    
-        
-        from transformers import AutoTokenizer, BlenderbotSmallModel
-    
-        model = BlenderbotSmallModel.from_pretrained("facebook/blenderbot_small-90M")
-        tokenizer = AutoTokenizer.from_pretrained("facebook/blenderbot_small-90M")
-    
-        inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="pt")
-        decoder_inputs = tokenizer("Studies show that", return_tensors="pt")  # Batch size 1
-        outputs = model(input_ids=inputs.input_ids, decoder_input_ids=decoder_inputs.input_ids)
-    
-        last_hidden_states = outputs.last_hidden_state
-        list(last_hidden_states.shape)
-        [1, 3, 512]
-        
-    
+            ```python
+            from transformers import AutoTokenizer, BlenderbotSmallModel
+
+            model = BlenderbotSmallModel.from_pretrained("facebook/blenderbot_small-90M")
+            tokenizer = AutoTokenizer.from_pretrained("facebook/blenderbot_small-90M")
+
+            inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="pt")
+            decoder_inputs = tokenizer("Studies show that", return_tensors="pt")  # Batch size 1
+            outputs = model(input_ids=inputs.input_ids, decoder_input_ids=decoder_inputs.input_ids)
+
+            last_hidden_states = outputs.last_hidden_state
+            list(last_hidden_states.shape)
+            [1, 3, 512]
+            ```
+
         Methods:
-            - __init__(self, config: BlenderbotSmallConfig): Initializes the BlenderbotSmallModel with the provided configuration.
-            - get_input_embeddings(self): Returns the shared input embeddings.
-            - set_input_embeddings(self, value): Sets the shared input embeddings.
-            - get_encoder(self): Returns the encoder of the model.
-            - get_decoder(self): Returns the decoder of the model.
-            - construct(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask, cross_attn_head_mask, encoder_outputs, past_key_values, inputs_embeds,
-decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model with the given inputs and returns the output.
+            __init__(self, config: BlenderbotSmallConfig): Initializes the BlenderbotSmallModel with the provided configuration.
+            get_input_embeddings(self): Returns the shared input embeddings.
+            set_input_embeddings(self, value): Sets the shared input embeddings.
+            get_encoder(self): Returns the encoder of the model.
+            get_decoder(self): Returns the decoder of the model.
+            construct(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask, cross_attn_head_mask, encoder_outputs, past_key_values, inputs_embeds,
+                decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model with the given inputs and returns the output.
     
         """
     _tied_weights_keys = ["decoder.embed_tokens.weight", "encoder.embed_tokens.weight"]
@@ -1290,23 +1253,24 @@ decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, retur
     ) -> Union[Tuple[mindspore.Tensor], Seq2SeqModelOutput]:
         r"""
         Returns:
+            Union[Tuple[mindspore.Tensor], Seq2SeqModelOutput]
 
         Example:
+            ```python
+            >>> from transformers import AutoTokenizer, BlenderbotSmallModel
 
-        ```python
-        >>> from transformers import AutoTokenizer, BlenderbotSmallModel
+            >>> model = BlenderbotSmallModel.from_pretrained("facebook/blenderbot_small-90M")
+            >>> tokenizer = AutoTokenizer.from_pretrained("facebook/blenderbot_small-90M")
 
-        >>> model = BlenderbotSmallModel.from_pretrained("facebook/blenderbot_small-90M")
-        >>> tokenizer = AutoTokenizer.from_pretrained("facebook/blenderbot_small-90M")
+            >>> inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="pt")
+            >>> decoder_inputs = tokenizer("Studies show that", return_tensors="pt")  # Batch size 1
+            >>> outputs = model(input_ids=inputs.input_ids, decoder_input_ids=decoder_inputs.input_ids)
 
-        >>> inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="pt")
-        >>> decoder_inputs = tokenizer("Studies show that", return_tensors="pt")  # Batch size 1
-        >>> outputs = model(input_ids=inputs.input_ids, decoder_input_ids=decoder_inputs.input_ids)
-
-        >>> last_hidden_states = outputs.last_hidden_state
-        >>> list(last_hidden_states.shape)
-        [1, 3, 512]
-        ```"""
+            >>> last_hidden_states = outputs.last_hidden_state
+            >>> list(last_hidden_states.shape)
+            [1, 3, 512]
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1367,9 +1331,9 @@ class BlenderbotSmallForConditionalGeneration(BlenderbotSmallPreTrainedModel):
 
     """
     This class represents a small Blenderbot model for conditional generation tasks. It is designed to generate responses based on given inputs in a conversational setting. The class provides methods for
-initializing the model, resizing token embeddings, constructing the model output, preparing inputs for generation, and reordering cache during inference. It inherits from BlenderbotSmallPreTrainedModel and
-includes functionalities such as getting encoder and decoder, setting output embeddings, and manipulating final logits bias. The class is equipped to handle various input parameters for generating responses
-and computing loss during training.
+    initializing the model, resizing token embeddings, constructing the model output, preparing inputs for generation, and reordering cache during inference. It inherits from BlenderbotSmallPreTrainedModel and
+    includes functionalities such as getting encoder and decoder, setting output embeddings, and manipulating final logits bias. The class is equipped to handle various input parameters for generating responses
+    and computing loss during training.
     """
     base_model_prefix = "model"
     _keys_to_ignore_on_load_unexpected = ["final_logits_bias"]
@@ -1407,8 +1371,8 @@ and computing loss during training.
         Returns the encoder component of the BlenderbotSmallForConditionalGeneration model.
         
         Args:
-        - self: BlenderbotSmallForConditionalGeneration
-            The instance of the BlenderbotSmallForConditionalGeneration class.
+            self: BlenderbotSmallForConditionalGeneration
+                The instance of the BlenderbotSmallForConditionalGeneration class.
         
         Returns:
         None
@@ -1611,15 +1575,15 @@ and computing loss during training.
         
         Returns:
             dict: A dictionary containing the prepared inputs for generation. The keys are as follows:
-                - 'input_ids' (None): Placeholder for input ids.
-                - 'encoder_outputs' (Tuple[torch.Tensor]): The output tensor of the encoder.
-                - 'past_key_values' (Tuple[Tuple[torch.Tensor]]): The cached key-value states of the decoder.
-                - 'decoder_input_ids' (torch.Tensor): The modified input tensor of decoder tokens.
-                - 'attention_mask' (torch.Tensor): The attention mask tensor.
-                - 'head_mask' (torch.Tensor): The mask tensor for hiding heads of the encoder.
-                - 'decoder_head_mask' (torch.Tensor): The mask tensor for hiding heads of the decoder.
-                - 'cross_attn_head_mask' (torch.Tensor): The mask tensor for hiding heads of the cross-attention.
-                - 'use_cache' (bool): Whether to use cache for decoding.
+                >   - 'input_ids' (None): Placeholder for input ids.
+                >   - 'encoder_outputs' (Tuple[torch.Tensor]): The output tensor of the encoder.
+                >   - 'past_key_values' (Tuple[Tuple[torch.Tensor]]): The cached key-value states of the decoder.
+                >   - 'decoder_input_ids' (torch.Tensor): The modified input tensor of decoder tokens.
+                >   - 'attention_mask' (torch.Tensor): The attention mask tensor.
+                >   - 'head_mask' (torch.Tensor): The mask tensor for hiding heads of the encoder.
+                >   - 'decoder_head_mask' (torch.Tensor): The mask tensor for hiding heads of the decoder.
+                >   - 'cross_attn_head_mask' (torch.Tensor): The mask tensor for hiding heads of the cross-attention.
+                >   - 'use_cache' (bool): Whether to use cache for decoding.
         
         Raises:
             None.
@@ -1722,9 +1686,9 @@ class BlenderbotSmallForCausalLM(BlenderbotSmallPreTrainedModel):
 
     """
     Represents the BlenderbotSmallForCausalLM class, which is designed for causal language modeling with the BlenderbotSmall model architecture. This class inherits from BlenderbotSmallPreTrainedModel and
-provides methods for initializing the model, setting and getting input and output embeddings, setting and getting the decoder, constructing the model, and preparing inputs for generation. It also includes a
-method for reordering cache during generation. The class includes detailed information about the arguments and returns for the 'construct' and 'prepare_inputs_for_generation' methods. Additionally, example
-usage and expected outputs are provided for the 'construct' method.
+    provides methods for initializing the model, setting and getting input and output embeddings, setting and getting the decoder, constructing the model, and preparing inputs for generation. It also includes a
+    method for reordering cache during generation. The class includes detailed information about the arguments and returns for the 'construct' and 'prepare_inputs_for_generation' methods. Additionally, example
+    usage and expected outputs are provided for the 'construct' method.
     
     This class encapsulates the functionality for utilizing the BlenderbotSmall model for causal language modeling tasks and provides a comprehensive interface for model manipulation and generation.
     """
@@ -1805,7 +1769,7 @@ usage and expected outputs are provided for the 'construct' method.
         
         Note:
             The output embeddings are a representation of the model's internal hidden states after processing the input data. They capture the semantic information learned by the model during training and can
-be useful for various natural language processing tasks.
+            be useful for various natural language processing tasks.
         """
         return self.lm_head
 
@@ -1875,20 +1839,16 @@ be useful for various natural language processing tasks.
         r"""
         Args:
             input_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
-                Indices of input sequence tokens in the vocabulary. Padding will be ignored by default should you
-                provide it.
-
-                Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
-                [`PreTrainedTokenizer.__call__`] for details.
-
-                [What are input IDs?](../glossary#input-ids)
+                >- Indices of input sequence tokens in the vocabulary. Padding will be ignored by default should you
+                    provide it.
+                >- Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
+                    [`PreTrainedTokenizer.__call__`] for details.
+                >- [What are input IDs?](../glossary#input-ids)
             attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
-
-                [What are attention masks?](../glossary#attention-mask)
+                >- Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
+                >- [What are attention masks?](../glossary#attention-mask)
             encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
                 Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention
                 if the model is configured as a decoder.
@@ -1896,39 +1856,32 @@ be useful for various natural language processing tasks.
                 Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used
                 in the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
             head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-                Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
-
+                >- Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
+                >   - 1 indicates the head is **not masked**,
+                >   - 0 indicates the head is **masked**.
             cross_attn_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-                Mask to nullify selected heads of the cross-attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
-
+                >- Mask to nullify selected heads of the cross-attention modules. Mask values selected in `[0, 1]`:
+                >   - 1 indicates the head is **not masked**,
+                >   - 0 indicates the head is **masked**.
             past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
-                Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
-                shape `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of
-                shape `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`. The two additional
-                tensors are only required when the model is used as a decoder in a Sequence to Sequence model.
-
-                Contains pre-computed hidden-states (key and values in the self-attention blocks and in the
-                cross-attention blocks) that can be used (see `past_key_values` input) to speed up sequential decoding.
-
-                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those
-                that don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of
-                all `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+                >- Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
+                    shape `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of
+                    shape `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`. The two additional
+                    tensors are only required when the model is used as a decoder in a Sequence to Sequence model.
+                >- Contains pre-computed hidden-states (key and values in the self-attention blocks and in the
+                    cross-attention blocks) that can be used (see `past_key_values` input) to speed up sequential decoding.
+                >- If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those
+                    that don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of
+                    all `decoder_input_ids` of shape `(batch_size, sequence_length)`.
             labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
                 config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
                 (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
             use_cache (`bool`, *optional*):
-                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding
-                (see `past_key_values`).
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
+                >- If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding
+                    (see `past_key_values`).
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
             output_attentions (`bool`, *optional*):
                 Whether or not to return the attentions tensors of all attention layers. See `attentions` under
                 returned tensors for more detail.
@@ -1939,23 +1892,24 @@ be useful for various natural language processing tasks.
                 Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
 
         Returns:
+            Union[Tuple, CausalLMOutputWithCrossAttentions]
 
         Example:
+            ```python
+            >>> from transformers import AutoTokenizer, BlenderbotSmallForCausalLM
 
-        ```python
-        >>> from transformers import AutoTokenizer, BlenderbotSmallForCausalLM
+            >>> tokenizer = AutoTokenizer.from_pretrained("facebook/blenderbot_small-90M")
+            >>> model = BlenderbotSmallForCausalLM.from_pretrained("facebook/blenderbot_small-90M", add_cross_attention=False)
+            >>> assert model.config.is_decoder, f"{model.__class__} has to be configured as a decoder."
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> outputs = model(**inputs)
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("facebook/blenderbot_small-90M")
-        >>> model = BlenderbotSmallForCausalLM.from_pretrained("facebook/blenderbot_small-90M", add_cross_attention=False)
-        >>> assert model.config.is_decoder, f"{model.__class__} has to be configured as a decoder."
-        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
-        >>> outputs = model(**inputs)
-
-        >>> logits = outputs.logits
-        >>> expected_shape = [1, inputs.input_ids.shape[-1], model.config.vocab_size]
-        >>> list(logits.shape) == expected_shape
-        True
-        ```"""
+            >>> logits = outputs.logits
+            >>> expected_shape = [1, inputs.input_ids.shape[-1], model.config.vocab_size]
+            >>> list(logits.shape) == expected_shape
+            True
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states

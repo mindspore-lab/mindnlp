@@ -1723,11 +1723,10 @@ def dtype_byte_size(dtype):
     Returns the size (in bytes) occupied by one parameter of type `dtype`.
 
     Example:
-
-    ```py
-    >>> dtype_byte_size(torch.float32)
-    4
-    ```
+        ```python
+        >>> dtype_byte_size(torch.float32)
+        4
+        ```
     """
     if dtype == mindspore.bool_:
         return 1 / 8
@@ -2042,6 +2041,7 @@ class SQuADHead(nn.Cell):
                 Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
 
         Returns:
+            `Union[SquadHeadOutput, Tuple[mindspore.Tensor]]`
         """
         start_logits = self.start_logits(hidden_states, p_mask=p_mask)
 
@@ -2125,10 +2125,10 @@ class SequenceSummary(nn.Cell):
             NotImplementedError: If the 'summary_type' attribute in the config is set to 'attn'.
         
         This method initializes the SequenceSummary instance with the provided configuration. It sets the 'summary_type' attribute to the value obtained from the config, defaulting to 'last' if not specified.
-If 'summary_type' is 'attn', it raises a NotImplementedError.
+        If 'summary_type' is 'attn', it raises a NotImplementedError.
         The method then initializes the 'summary' attribute as an nn.Identity() object and checks if 'summary_use_proj' is specified in the config and is set to True. If so, it creates a Dense layer for
-summarization based on the 'summary_proj_to_labels' and 'num_labels' attributes in the config. The activation function for the summarization is determined based on the 'summary_activation' attribute in the
-config, defaulting to nn.Identity() if not specified.
+        summarization based on the 'summary_proj_to_labels' and 'num_labels' attributes in the config. The activation function for the summarization is determined based on the 'summary_activation' attribute in the
+        config, defaulting to nn.Identity() if not specified.
         The first and last dropout layers are initialized based on the 'summary_first_dropout' and 'summary_last_dropout' attributes in the config, respectively, using nn.Identity() if not specified.
         """
         super().__init__()
@@ -2174,26 +2174,28 @@ config, defaulting to nn.Identity() if not specified.
             TypeError: If the input arguments are of incorrect types.
         
         The method performs the following steps to construct the summary:
-        1. If the summary type is 'last', it selects the last hidden state from each input sequence.
-        2. If the summary type is 'first', it selects the first hidden state from each input sequence.
-        3. If the summary type is 'mean', it calculates the mean of all hidden states in each input sequence.
-        4. If the summary type is 'cls_index', it uses the CLS token indices to select the corresponding hidden states.
-           If cls_index is not provided, the last token in each sequence is used as the CLS token index.
-        5. If the summary type is not one of the available options, it returns the original hidden states.
-        6. The resulting hidden states are then passed through a series of dropout, summary, and activation layers.
-        7. Finally, the output tensor is returned.
+            >1. If the summary type is 'last', it selects the last hidden state from each input sequence.
+            >2. If the summary type is 'first', it selects the first hidden state from each input sequence.
+            >3. If the summary type is 'mean', it calculates the mean of all hidden states in each input sequence.
+            >4. If the summary type is 'cls_index', it uses the CLS token indices to select the corresponding hidden states.
+               If cls_index is not provided, the last token in each sequence is used as the CLS token index.
+            >5. If the summary type is not one of the available options, it returns the original hidden states.
+            >6. The resulting hidden states are then passed through a series of dropout, summary, and activation layers.
+            >7. Finally, the output tensor is returned.
         
         Note:
-        - The summary type can be one of the following: 'last', 'first', 'mean', or 'cls_index'.
-        - The cls_index parameter is only used when the summary type is 'cls_index'.
-        - The hidden_states tensor should have shape (batch_size, sequence_length, hidden_size).
-        - The cls_index tensor should have shape (batch_size, 1).
-        
+            >- The summary type can be one of the following: 'last', 'first', 'mean', or 'cls_index'.
+            >- The cls_index parameter is only used when the summary type is 'cls_index'.
+            >- The hidden_states tensor should have shape (batch_size, sequence_length, hidden_size).
+            >- The cls_index tensor should have shape (batch_size, 1).
+
         Example:
+            ```python
             >>> summary = SequenceSummary()
             >>> hidden_states = torch.randn(2, 5, 10)
             >>> cls_index = torch.tensor([[0], [1]])
             >>> output = summary.construct(hidden_states, cls_index)
+            ```
         """
         if self.summary_type == "last":
             output = hidden_states[:, -1, :]

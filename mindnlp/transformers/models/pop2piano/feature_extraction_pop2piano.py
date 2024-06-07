@@ -265,7 +265,7 @@ class Pop2PianoFeatureExtractor(SequenceFeatureExtractor):
         
         Returns:
             tuple: A tuple containing the padded features and attention masks. The padded features are of type np.ndarray and have been concatenated along the 0th axis. The attention masks are also of type
-np.ndarray and have been concatenated along the 0th axis.
+            np.ndarray and have been concatenated along the 0th axis.
         
         Raises:
             ValueError: If the input features are not of type np.ndarray or if the feature shapes are inconsistent.
@@ -333,27 +333,22 @@ np.ndarray and have been concatenated along the 0th axis.
                 Whether to return attention mask or not.
             return_tensors (`str` or [`~utils.TensorType`], *optional*):
                 If set, will return tensors instead of list of python integers. Acceptable values are:
-                - `'pt'`: Return PyTorch `torch.Tensor` objects.
-                - `'np'`: Return Numpy `np.ndarray` objects.
+                >   - `'pt'`: Return PyTorch `torch.Tensor` objects.
+                >   - `'np'`: Return Numpy `np.ndarray` objects.
                 If nothing is specified, it will return list of `np.ndarray` arrays.
         Return:
             `BatchFeature` with attention_mask, attention_mask_beatsteps and attention_mask_extrapolated_beatstep added
             to it:
-            - **attention_mask** numpy.ndarray of shape `(batch_size, max_input_features_seq_length)` --
+            >   - **attention_mask** numpy.ndarray of shape `(batch_size, max_input_features_seq_length)` --
                 Example :
-                    1, 1, 1, 0, 0 (audio 1, also here it is padded to max length of 5 thats why there are 2 zeros at
+            >       - 1, 1, 1, 0, 0 (audio 1, also here it is padded to max length of 5 thats why there are 2 zeros at
                     the end indicating they are padded)
-
-                    0, 0, 0, 0, 0 (zero pad to seperate audio 1 and 2)
-
-                    1, 1, 1, 1, 1 (audio 2)
-
-                    0, 0, 0, 0, 0 (zero pad to seperate audio 2 and 3)
-
-                    1, 1, 1, 1, 1 (audio 3)
-            - **attention_mask_beatsteps** numpy.ndarray of shape `(batch_size, max_beatsteps_seq_length)`
-            - **attention_mask_extrapolated_beatstep** numpy.ndarray of shape `(batch_size,
-              max_extrapolated_beatstep_seq_length)`
+            >       - 0, 0, 0, 0, 0 (zero pad to seperate audio 1 and 2)
+            >       - 1, 1, 1, 1, 1 (audio 2)
+            >       - 0, 0, 0, 0, 0 (zero pad to seperate audio 2 and 3)
+            >       - 1, 1, 1, 1, 1 (audio 3)
+            >   - **attention_mask_beatsteps** numpy.ndarray of shape `(batch_size, max_beatsteps_seq_length)`
+            >   - **attention_mask_extrapolated_beatstep** numpy.ndarray of shape `(batch_size, max_extrapolated_beatstep_seq_length)`
         """
         processed_features_dict = {}
         for feature_name, feature_value in inputs.items():
@@ -407,8 +402,8 @@ np.ndarray and have been concatenated along the 0th axis.
                 output or not. Automatically set to True for batched inputs.
             return_tensors (`str` or [`~utils.TensorType`], *optional*):
                 If set, will return tensors instead of list of python integers. Acceptable values are:
-                - `'pt'`: Return PyTorch `torch.Tensor` objects.
-                - `'np'`: Return Numpy `np.ndarray` objects.
+                >   - `'pt'`: Return PyTorch `torch.Tensor` objects.
+                >   - `'np'`: Return Numpy `np.ndarray` objects.
                 If nothing is specified, it will return list of `np.ndarray` arrays.
         """
         requires_backends(self, ["librosa"])

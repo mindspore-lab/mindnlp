@@ -110,17 +110,16 @@ class RobertaTokenizer(PreTrainedTokenizer):
 
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
+        ```python
+        >>> from transformers import RobertaTokenizer
 
-    ```python
-    >>> from transformers import RobertaTokenizer
+        >>> tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
+        >>> tokenizer("Hello world")["input_ids"]
+        [0, 31414, 232, 2]
 
-    >>> tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
-    >>> tokenizer("Hello world")["input_ids"]
-    [0, 31414, 232, 2]
-
-    >>> tokenizer(" Hello world")["input_ids"]
-    [0, 20920, 232, 2]
-    ```
+        >>> tokenizer(" Hello world")["input_ids"]
+        [0, 20920, 232, 2]
+        ```
 
     You can get around that behavior by passing `add_prefix_space=True` when instantiating this tokenizer or when you
     call it on some text, but since the model was not pretrained this way, it might yield a decrease in performance.
@@ -297,20 +296,22 @@ class RobertaTokenizer(PreTrainedTokenizer):
         
         Returns:
             dict or None: The vocabulary dictionary containing the base encoder and any additional tokens added to the tokenizer. If the tokenizer has not been initialized with a base encoder or any additional
-tokens, None is returned.
+            tokens, None is returned.
         
         Raises:
             None.
         
         Note:
             The vocabulary dictionary is created by copying the base encoder dictionary and updating it with the added_tokens_encoder dictionary. The base encoder dictionary contains the original encoding for
-the tokenizer, while the added_tokens_encoder dictionary contains any additional tokens that have been added to the tokenizer.
+            the tokenizer, while the added_tokens_encoder dictionary contains any additional tokens that have been added to the tokenizer.
         
         Example:
+            ```python
             >>> tokenizer = RobertaTokenizer()
             >>> vocab = tokenizer.get_vocab()
             >>> print(vocab)
             {'<s>': 0, '<pad>': 1, '</s>': 2, '<unk>': 3, '<mask>': 4}
+            ```
         """
         vocab = dict(self.encoder).copy()
         vocab.update(self.added_tokens_encoder)
@@ -414,15 +415,17 @@ the tokenizer, while the added_tokens_encoder dictionary contains any additional
             OSError: If the save_directory is not a valid directory.
         
         This method saves the vocabulary file and merge file used by the RobertaTokenizer. The vocabulary file contains the encoder dictionary in JSON format, while the merge file contains the BPE merge
-indices and tokens. The files are saved in the specified save_directory with optional filename_prefix added to the filenames.
+        indices and tokens. The files are saved in the specified save_directory with optional filename_prefix added to the filenames.
         
         Note:
             If the save_directory does not exist, the method will raise an OSError.
         
         Example:
+            ```python
             >>> tokenizer = RobertaTokenizer()
             >>> tokenizer.save_vocabulary('/path/to/save')
             ('/path/to/save/vocab.txt', '/path/to/save/merges.txt')
+            ```
         """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
@@ -459,8 +462,8 @@ indices and tokens. The files are saved in the specified save_directory with opt
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A RoBERTa sequence has the following format:
 
-        - single sequence: `<s> X </s>`
-        - pair of sequences: `<s> A </s></s> B </s>`
+        >   - single sequence: `<s> X </s>`
+        >   - pair of sequences: `<s> A </s></s> B </s>`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -536,7 +539,7 @@ indices and tokens. The files are saved in the specified save_directory with opt
             text (str): The input text to be prepared for tokenization.
             is_split_into_words (bool, optional): A flag indicating whether the text is already split into words. Defaults to False.
             **kwargs: Additional keyword arguments.
-                add_prefix_space (bool, optional): A flag indicating whether a prefix space should be added to the text. 
+                >   add_prefix_space (bool, optional): A flag indicating whether a prefix space should be added to the text.
                     If not provided, the value from the self.add_prefix_space attribute will be used.
         
         Returns:
@@ -551,11 +554,12 @@ indices and tokens. The files are saved in the specified save_directory with opt
             - The original kwargs dictionary is modified by removing the 'add_prefix_space' key using the pop() method.
         
         Example:
+            ```python
             tokenizer = RobertaTokenizer()
             prepared_text = tokenizer.prepare_for_tokenization("Hello world!", is_split_into_words=True)
             print(prepared_text)
             # Output: " Hello world!"
-        
+            ```
         """
         add_prefix_space = kwargs.pop("add_prefix_space", self.add_prefix_space)
         if (is_split_into_words or add_prefix_space) and (len(text) > 0 and not text[0].isspace()):

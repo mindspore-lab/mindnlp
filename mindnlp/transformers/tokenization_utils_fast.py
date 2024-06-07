@@ -94,20 +94,20 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
         
         Raises:
             ValueError: If the tokenizer cannot be instantiated from any of the following:
-                1. A `tokenizers` library serialization file.
-                2. A slow tokenizer instance to convert.
-                3. An equivalent slow tokenizer class to instantiate and convert.
+                >1. A `tokenizers` library serialization file.
+                >2. A slow tokenizer instance to convert.
+                >3. An equivalent slow tokenizer class to instantiate and convert.
                 You need to have sentencepiece installed to convert a slow tokenizer to a fast one.
             ValueError: If `from_slow` is True, but `slow_tokenizer` is None and `slow_tokenizer_class` is None.
                 Also, make sure you have sentencepiece installed if the tokenizer is based on sentencepiece.
         
         Note:
             This method takes the following optional keyword arguments:
-            - `tokenizer_object`: An existing tokenizer object.
-            - `__slow_tokenizer`: A slow tokenizer object.
-            - `tokenizer_file`: A file containing a serialized tokenizer object.
-            - `from_slow`: A boolean indicating whether the tokenizer should be converted from a slow version.
-            - `added_tokens_decoder`: A dictionary mapping index to token for additional tokens.
+            >- `tokenizer_object`: An existing tokenizer object.
+            >- `__slow_tokenizer`: A slow tokenizer object.
+            >- `tokenizer_file`: A file containing a serialized tokenizer object.
+            >- `from_slow`: A boolean indicating whether the tokenizer should be converted from a slow version.
+            >- `added_tokens_decoder`: A dictionary mapping index to token for additional tokens.
         
             If `tokenizer_object` is provided, a deep copy of it is used as the fast tokenizer.
             If `fast_tokenizer_file` is provided and `from_slow` is False, the fast tokenizer is loaded from the file.
@@ -127,8 +127,10 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
             The `added_tokens_decoder` dictionary is updated with the added tokens.
         
         Example:
+            ```python
             >>> tokenizer = PreTrainedTokenizerFast()
             >>> tokenizer.__init__()
+            ```
         
         """
         tokenizer_object = kwargs.pop("tokenizer_object", None)
@@ -298,10 +300,12 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
             The vocabulary is obtained by invoking the `get_vocab()` method of the tokenizer instance.
         
         Example:
+            ```python
             >>> tokenizer = PreTrainedTokenizerFast()
             >>> vocab = tokenizer.vocab()
             >>> print(vocab)
             {'word1': 0, 'word2': 1, 'word3': 2, ...}
+            ```
         """
         return self.get_vocab()
 
@@ -643,7 +647,7 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
         Args:
             self: An instance of the class `PreTrainedTokenizerFast`.
             batch_text_or_text_pairs (Union[List[TextInput], List[TextInputPair], List[PreTokenizedInput], List[PreTokenizedInputPair]]): A list of input texts or text pairs. Each element can be of type
-`TextInput`, `TextInputPair`, `PreTokenizedInput`, or `PreTokenizedInputPair`.
+            `TextInput`, `TextInputPair`, `PreTokenizedInput`, or `PreTokenizedInputPair`.
             add_special_tokens (bool, optional): Whether to add special tokens to the encoded sequences. Defaults to True.
             padding_strategy (PaddingStrategy, optional): The strategy to use for padding. Defaults to `PaddingStrategy.DO_NOT_PAD`.
             truncation_strategy (TruncationStrategy, optional): The strategy to use for truncation. Defaults to `TruncationStrategy.DO_NOT_TRUNCATE`.
@@ -756,31 +760,31 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
         This method encodes the input text or pair of texts and returns a BatchEncoding object containing the encoded inputs along with additional information.
         
         Args:
-        - self: The instance of the class.
-        - text: The input text to be encoded. It can be either a string or a list of tokens.
-        - text_pair: (Optional) The second input text to be encoded in case of pair encoding. It can be either a string or a list of tokens. Defaults to None.
-        - add_special_tokens: A boolean indicating whether to add special tokens to the encoded inputs. Defaults to True.
-        - padding_strategy: An enum from PaddingStrategy indicating the padding strategy to be applied during encoding. Defaults to PaddingStrategy.DO_NOT_PAD.
-        - truncation_strategy: An enum from TruncationStrategy indicating the truncation strategy to be applied during encoding. Defaults to TruncationStrategy.DO_NOT_TRUNCATE.
-        - max_length: (Optional) The maximum length of the encoded sequence. Defaults to None.
-        - stride: The stride to use when applying truncation. Defaults to 0.
-        - is_split_into_words: A boolean indicating whether the input text is already pre-tokenized into words. Defaults to False.
-        - pad_to_multiple_of: (Optional) The resulting tensor will be padded to be a multiple of pad_to_multiple_of. Defaults to None.
-        - return_tensors: (Optional) A boolean indicating whether to return tensors instead of lists of integers. Defaults to None.
-        - return_token_type_ids: (Optional) A boolean indicating whether to return token type ids. Defaults to None.
-        - return_attention_mask: (Optional) A boolean indicating whether to return attention masks. Defaults to None.
-        - return_overflowing_tokens: A boolean indicating whether to return overflowing tokens information. Defaults to False.
-        - return_special_tokens_mask: A boolean indicating whether to return special tokens masks. Defaults to False.
-        - return_offsets_mapping: A boolean indicating whether to return the offsets mapping. Defaults to False.
-        - return_length: A boolean indicating whether to return the length of the encoded inputs. Defaults to False.
-        - verbose: A boolean indicating whether to display verbose logs. Defaults to True.
-        - **kwargs: Additional keyword arguments to be passed to the underlying encoding method.
+            self: The instance of the class.
+            text: The input text to be encoded. It can be either a string or a list of tokens.
+            text_pair: (Optional) The second input text to be encoded in case of pair encoding. It can be either a string or a list of tokens. Defaults to None.
+            add_special_tokens: A boolean indicating whether to add special tokens to the encoded inputs. Defaults to True.
+            padding_strategy: An enum from PaddingStrategy indicating the padding strategy to be applied during encoding. Defaults to PaddingStrategy.DO_NOT_PAD.
+            truncation_strategy: An enum from TruncationStrategy indicating the truncation strategy to be applied during encoding. Defaults to TruncationStrategy.DO_NOT_TRUNCATE.
+            max_length: (Optional) The maximum length of the encoded sequence. Defaults to None.
+            stride: The stride to use when applying truncation. Defaults to 0.
+            is_split_into_words: A boolean indicating whether the input text is already pre-tokenized into words. Defaults to False.
+            pad_to_multiple_of: (Optional) The resulting tensor will be padded to be a multiple of pad_to_multiple_of. Defaults to None.
+            return_tensors: (Optional) A boolean indicating whether to return tensors instead of lists of integers. Defaults to None.
+            return_token_type_ids: (Optional) A boolean indicating whether to return token type ids. Defaults to None.
+            return_attention_mask: (Optional) A boolean indicating whether to return attention masks. Defaults to None.
+            return_overflowing_tokens: A boolean indicating whether to return overflowing tokens information. Defaults to False.
+            return_special_tokens_mask: A boolean indicating whether to return special tokens masks. Defaults to False.
+            return_offsets_mapping: A boolean indicating whether to return the offsets mapping. Defaults to False.
+            return_length: A boolean indicating whether to return the length of the encoded inputs. Defaults to False.
+            verbose: A boolean indicating whether to display verbose logs. Defaults to True.
+            **kwargs: Additional keyword arguments to be passed to the underlying encoding method.
         
         Returns:
-        A BatchEncoding object containing the encoded inputs and additional information such as token type ids, attention masks, special tokens masks, offsets mapping, and length of the encoded inputs.
+            A BatchEncoding object containing the encoded inputs and additional information such as token type ids, attention masks, special tokens masks, offsets mapping, and length of the encoded inputs.
         
         Raises:
-        None
+            None
         """
         batched_input = [(text, text_pair)] if text_pair else [text]
         batched_output = self._batch_encode_plus(
@@ -858,11 +862,12 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
             None
         
         Note:
-            - If token_ids is an integer, it is converted to a list containing that integer.
-            - The use_source_tokenizer argument can be passed as a keyword argument in kwargs to enable/disable using the source tokenizer for decoding.
-            - If clean_up_tokenization_spaces is True, the resulting text will have any extra spaces introduced during tokenization removed by calling the clean_up_tokenization() method.
+            >- If token_ids is an integer, it is converted to a list containing that integer.
+            >- The use_source_tokenizer argument can be passed as a keyword argument in kwargs to enable/disable using the source tokenizer for decoding.
+            >- If clean_up_tokenization_spaces is True, the resulting text will have any extra spaces introduced during tokenization removed by calling the clean_up_tokenization() method.
         
-        Examples:
+        Example:
+            ```python
             >>> tokenizer = PreTrainedTokenizerFast(...)
             >>> input_ids = tokenizer.encode("Hello, world!")
             >>> tokenizer._decode(input_ids)
@@ -873,6 +878,7 @@ class PreTrainedTokenizerFast(PreTrainedTokenizerBase):
             '10'
             >>> tokenizer._decode(10, clean_up_tokenization_spaces=True)
             '10'
+            ```
         """
         self._decode_use_source_tokenizer = kwargs.pop("use_source_tokenizer", False)
 

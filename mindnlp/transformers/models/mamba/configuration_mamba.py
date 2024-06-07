@@ -87,19 +87,19 @@ class MambaConfig(PretrainedConfig):
 
 
     Example:
+        ```python
+        >>> from transformers import MambaConfig, MambaModel
 
-    ```python
-    >>> from transformers import MambaConfig, MambaModel
+        >>> # Initializing a Mamba configuration
+        >>> configuration = MambaConfig()
 
-    >>> # Initializing a Mamba configuration
-    >>> configuration = MambaConfig()
+        >>> # Initializing a model (with random weights) from the configuration
+        >>> model = MambaModel(configuration)
 
-    >>> # Initializing a model (with random weights) from the configuration
-    >>> model = MambaModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "mamba"
 
     def __init__(

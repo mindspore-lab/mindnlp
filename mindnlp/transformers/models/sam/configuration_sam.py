@@ -319,33 +319,33 @@ class SamConfig(PretrainedConfig):
             Dictionary of keyword arguments.
 
     Example:
+        ```python
+        >>> from transformers import (
+        ...     SamVisionConfig,
+        ...     SamPromptEncoderConfig,
+        ...     SamMaskDecoderConfig,
+        ...     SamModel,
+        ... )
 
-    ```python
-    >>> from transformers import (
-    ...     SamVisionConfig,
-    ...     SamPromptEncoderConfig,
-    ...     SamMaskDecoderConfig,
-    ...     SamModel,
-    ... )
+        >>> # Initializing a SamConfig with `"facebook/sam-vit-huge"` style configuration
+        >>> configuration = SamConfig()
 
-    >>> # Initializing a SamConfig with `"facebook/sam-vit-huge"` style configuration
-    >>> configuration = SamConfig()
+        >>> # Initializing a SamModel (with random weights) from the `"facebook/sam-vit-huge"` style configuration
+        >>> model = SamModel(configuration)
 
-    >>> # Initializing a SamModel (with random weights) from the `"facebook/sam-vit-huge"` style configuration
-    >>> model = SamModel(configuration)
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
 
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
+        >>> # We can also initialize a SamConfig from a SamVisionConfig, SamPromptEncoderConfig, and SamMaskDecoderConfig
 
-    >>> # We can also initialize a SamConfig from a SamVisionConfig, SamPromptEncoderConfig, and SamMaskDecoderConfig
+        >>> # Initializing SAM vision, SAM Q-Former and language model configurations
+        >>> vision_config = SamVisionConfig()
+        >>> prompt_encoder_config = SamPromptEncoderConfig()
+        >>> mask_decoder_config = SamMaskDecoderConfig()
 
-    >>> # Initializing SAM vision, SAM Q-Former and language model configurations
-    >>> vision_config = SamVisionConfig()
-    >>> prompt_encoder_config = SamPromptEncoderConfig()
-    >>> mask_decoder_config = SamMaskDecoderConfig()
-
-    >>> config = SamConfig(vision_config, prompt_encoder_config, mask_decoder_config)
-    ```"""
+        >>> config = SamConfig(vision_config, prompt_encoder_config, mask_decoder_config)
+        ```
+    """
     model_type = "sam"
 
     def __init__(

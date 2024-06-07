@@ -63,10 +63,10 @@ def _get_unpad_data(attention_mask):
     """
     This function takes an attention_mask as input and performs the following operations:
     
-    1. Calculates the sum of values in the attention_mask along the last axis, treating it as an integer array, and stores the result in the 'seqlens_in_batch' variable.
-    2. Flattens the attention_mask and finds the indices of non-zero elements, storing them in the 'indices' variable.
-    3. Finds the maximum value in the 'seqlens_in_batch' array and assigns it to the 'max_seqlen_in_batch' variable.
-    4. Calculates the cumulative sum of 'seqlens_in_batch' along the first axis, and pads it with a zero at the beginning. The resulting array is stored in the 'cu_seqlens' variable.
+    >   1. Calculates the sum of values in the attention_mask along the last axis, treating it as an integer array, and stores the result in the 'seqlens_in_batch' variable.
+    >   2. Flattens the attention_mask and finds the indices of non-zero elements, storing them in the 'indices' variable.
+    >   3. Finds the maximum value in the 'seqlens_in_batch' array and assigns it to the 'max_seqlen_in_batch' variable.
+    >   4. Calculates the cumulative sum of 'seqlens_in_batch' along the first axis, and pads it with a zero at the beginning. The resulting array is stored in the 'cu_seqlens' variable.
     
     Args:
         attention_mask (ndarray): A 2D array representing the attention mask. The shape of the array is (batch_size, sequence_length). Each element in the array should be a non-negative integer.
@@ -117,14 +117,14 @@ class Embeddings(nn.Cell):
     Represents a neural network cell for embedding tokens with position embeddings.
     
     This class inherits from the nn.Cell module and provides methods for initializing and constructing embeddings for token sequences. The embedding process includes the use of word embeddings and optional
-pre-computed word embeddings, along with position embeddings.
+    pre-computed word embeddings, along with position embeddings.
     
     The 'Embeddings' class initializes the word embeddings, position embeddings, LayerNorm, and dropout, and constructs the embedded tokens by combining input embeddings with position embeddings. Additionally,
-it provides a method for constructing embedded tokens with the option to pass pre-computed word embeddings.
+    it provides a method for constructing embedded tokens with the option to pass pre-computed word embeddings.
     
     The 'construct' method takes input token ids and, if provided, pre-computed word embeddings to return the embedded tokens with position embeddings. The resulting embedded tokens have the shape (bs,
-max_seq_length, dim), where 'bs' represents the batch size, 'max_seq_length' represents the maximum sequence length, and 'dim' represents the dimensionality of the embeddings. No token_type embeddings are
-included in the output.
+    max_seq_length, dim), where 'bs' represents the batch size, 'max_seq_length' represents the maximum sequence length, and 'dim' represents the dimensionality of the embeddings. No token_type embeddings are
+    included in the output.
     
     Parameters:
         input_ids (mindspore.Tensor):
@@ -147,12 +147,12 @@ included in the output.
         Args:
             self: The instance of the class.
             config (PretrainedConfig): The configuration object containing the parameters for the embeddings.
-                - vocab_size (int): The size of the vocabulary.
-                - dim (int): The dimensionality of the embeddings.
-                - pad_token_id (int): The ID of the padding token.
-                - max_position_embeddings (int): The maximum number of positions for the position embeddings.
-                - sinusoidal_pos_embds (bool): Determines whether to use sinusoidal position embeddings.
-                - dropout (float): The dropout rate for the embeddings.
+                 >  - vocab_size (int): The size of the vocabulary.
+                 >  - dim (int): The dimensionality of the embeddings.
+                 >  - pad_token_id (int): The ID of the padding token.
+                 >  - max_position_embeddings (int): The maximum number of positions for the position embeddings.
+                 >  - sinusoidal_pos_embds (bool): Determines whether to use sinusoidal position embeddings.
+                 >  - dropout (float): The dropout rate for the embeddings.
         
         Returns:
             None
@@ -213,23 +213,22 @@ class MultiHeadSelfAttention(nn.Cell):
     The class inherits from the nn.Cell class and implements methods for initializing the attention mechanism, pruning heads, and constructing the attention weights and contextualized layer.
     
     Attributes:
-        - config (PretrainedConfig): The configuration object containing the parameters for the attention mechanism.
-        - n_heads (int): The number of attention heads.
-        - dim (int): The dimensionality of the attention mechanism.
-        - dropout (nn.Dropout): The dropout layer applied to the attention weights.
-        - is_causal (bool): Indicates whether the attention mechanism is causal or not.
-        - q_lin (nn.Dense): Linear layer for query projection.
-        - k_lin (nn.Dense): Linear layer for key projection.
-        - v_lin (nn.Dense): Linear layer for value projection.
-        - out_lin (nn.Dense): Linear layer for the output projection.
-        - pruned_heads (Set[int]): Set of pruned attention heads.
-        - attention_head_size (int): The size of each attention head.
+        config (PretrainedConfig): The configuration object containing the parameters for the attention mechanism.
+        n_heads (int): The number of attention heads.
+        dim (int): The dimensionality of the attention mechanism.
+        dropout (nn.Dropout): The dropout layer applied to the attention weights.
+        is_causal (bool): Indicates whether the attention mechanism is causal or not.
+        q_lin (nn.Dense): Linear layer for query projection.
+        k_lin (nn.Dense): Linear layer for key projection.
+        v_lin (nn.Dense): Linear layer for value projection.
+        out_lin (nn.Dense): Linear layer for the output projection.
+        pruned_heads (Set[int]): Set of pruned attention heads.
+        attention_head_size (int): The size of each attention head.
     
     Methods:
-        - __init__(self, config: PretrainedConfig): Initializes the MultiHeadSelfAttention object with the provided configuration.
-        - prune_heads(self, heads: List[int]): Prunes the specified attention heads from the attention mechanism.
-        - construct(self, query: mindspore.Tensor, key: mindspore.Tensor, value: mindspore.Tensor, mask: mindspore.Tensor, 
-                    head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False) -> Tuple[mindspore.Tensor, ...]: 
+        __init__: Initializes the MultiHeadSelfAttention object with the provided configuration.
+        prune_heads: Prunes the specified attention heads from the attention mechanism.
+        construct:
           Constructs the attention weights and contextualized layer.
     """
     def __init__(self, config: PretrainedConfig):
@@ -379,10 +378,10 @@ class FFN(nn.Cell):
         activation (Callable): The activation function used in the network.
     
     Methods:
-        construct(input: mindspore.Tensor) -> mindspore.Tensor:
+        construct:
             Applies the forward pass of the FFN to the input tensor.
     
-        ff_chunk(input: mindspore.Tensor) -> mindspore.Tensor:
+        ff_chunk:
             Performs a chunk of the forward pass on the input tensor.
     
     Note:
@@ -397,11 +396,11 @@ class FFN(nn.Cell):
             self: The object itself.
             config (PretrainedConfig): The configuration object containing various settings for the FFN.
                 The object should have the following attributes:
-                    - dropout (float): The dropout probability used in the FFN.
-                    - chunk_size_feed_forward (int): The chunk size for feed-forward operations.
-                    - dim (int): The input dimension of the FFN.
-                    - hidden_dim (int): The hidden dimension of the FFN.
-                    - activation (str): The activation function used in the FFN.
+                     >  - dropout (float): The dropout probability used in the FFN.
+                     >  - chunk_size_feed_forward (int): The chunk size for feed-forward operations.
+                     >  - dim (int): The input dimension of the FFN.
+                     >  - hidden_dim (int): The hidden dimension of the FFN.
+                     >  - activation (str): The activation function used in the FFN.
             
         Returns:
             None. This method does not return anything.
@@ -447,7 +446,7 @@ class FFN(nn.Cell):
             None.
         
         This method applies a series of operations to the input tensor to perform a forward pass through the FFN chunk. The operations include linear transformation, activation function, linear transformation,
-and dropout. The resulting tensor is then returned as the output of the FFN chunk.
+        and dropout. The resulting tensor is then returned as the output of the FFN chunk.
         """
         x = self.lin1(input)
         x = self.activation(x)
@@ -469,43 +468,28 @@ class TransformerBlock(nn.Cell):
     This class inherits from the nn.Cell class.
     
     Constructor:
-        __init__(self, config: PretrainedConfig)
+        __init__(self, config: PretrainedConfig):
             Initializes a new instance of the TransformerBlock class.
-            
-            Parameters:
-                config: PretrainedConfig
-                    The configuration object for the TransformerBlock.
-            
-            Raises:
-                ValueError: If the dimension of the configuration is not divisible evenly by the number of heads.
+            >   - Parameters:
+            >       - config: PretrainedConfig.
+            >           - The configuration object for the TransformerBlock.
+            >   - Raises:
+            >       - ValueError: If the dimension of the configuration is not divisible evenly by the number of heads.
         
     Methods:
-        construct(self, x: mindspore.Tensor, attn_mask: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False) -> Tuple[mindspore.Tensor, ...]
+        construct:
             Constructs the TransformerBlock using the given input tensors and parameters.
+            >   - Parameters:
+            >       - x: mindspore.Tensor(bs, seq_length, dim). The input tensor representing the data to be processed.
+            >       - attn_mask: Optional[mindspore.Tensor]. An optional attention mask tensor of shape (bs, seq_length) to mask out specific positions in the input tensor.
+            >       - head_mask: Optional[mindspore.Tensor]. An optional head mask tensor to mask out specific heads of the attention mechanism.
+            >       - output_attentions: bool. A flag indicating whether to return the attention weights in the output.
+            >   - Returns: Tuple[mindspore.Tensor, ...]. A tuple containing the following elements:
+            >       - sa_weights: mindspore.Tensor(bs, n_heads, seq_length, seq_length). The attention weights.
+            >       - ffn_output: mindspore.Tensor(bs, seq_length, dim). The output of the transformer block contextualization.
             
-            Parameters:
-                x: mindspore.Tensor(bs, seq_length, dim)
-                    The input tensor representing the data to be processed.
-                
-                attn_mask: Optional[mindspore.Tensor]
-                    An optional attention mask tensor of shape (bs, seq_length) to mask out specific positions in the input tensor.
-                
-                head_mask: Optional[mindspore.Tensor]
-                    An optional head mask tensor to mask out specific heads of the attention mechanism.
-                
-                output_attentions: bool
-                    A flag indicating whether to return the attention weights in the output.
-            
-            Returns:
-                Tuple[mindspore.Tensor, ...]
-                    A tuple containing the following elements:
-                    - sa_weights: mindspore.Tensor(bs, n_heads, seq_length, seq_length)
-                        The attention weights.
-                    - ffn_output: mindspore.Tensor(bs, seq_length, dim)
-                        The output of the transformer block contextualization.
-            
-            Raises:
-                TypeError: If sa_output is not a tuple when output_attentions is True.
+            >   - Raises:
+            >       - TypeError: If sa_output is not a tuple when output_attentions is True.
     """
     def __init__(self, config: PretrainedConfig):
         """
@@ -588,38 +572,40 @@ class Transformer(nn.Cell):
     This class represents a Transformer model, which is a type of neural network architecture commonly used in natural language processing tasks. 
     
     The Transformer class initializes with a configuration object that contains information about the model's architecture. It creates a list of TransformerBlock instances, one for each layer specified in the
-configuration. The number of layers is stored in the 'n_layers' attribute. 
+    configuration. The number of layers is stored in the 'n_layers' attribute.
     
     The 'construct' method takes as input an embedded input sequence tensor, 'x', and optionally an attention mask tensor, 'attn_mask'. It returns the hidden state tensor of the last layer, 'hidden_state',
-along with additional outputs depending on the specified options. If 'output_hidden_states' is True, it also returns a tuple containing the hidden states from each layer, 'all_hidden_states'. If
-'output_attentions' is True, it also returns a tuple containing the attention weights from each layer, 'all_attentions'. The method also supports returning the outputs as a 'BaseModelOutput' object if the
-'return_dict' flag is set to True.
+    along with additional outputs depending on the specified options. If 'output_hidden_states' is True, it also returns a tuple containing the hidden states from each layer, 'all_hidden_states'. If
+    'output_attentions' is True, it also returns a tuple containing the attention weights from each layer, 'all_attentions'. The method also supports returning the outputs as a 'BaseModelOutput' object if the
+    'return_dict' flag is set to True.
     
-    Note: The 'construct' method internally iterates through each layer of the Transformer model and applies the layer module to the input tensor. It accumulates the hidden states and attention weights if the
-corresponding output options are enabled.
+    Note:
+        The 'construct' method internally iterates through each layer of the Transformer model and applies the layer module to the input tensor. It accumulates the hidden states and attention weights if the
+        corresponding output options are enabled.
     
     Parameters:
-        - x: A tensor of shape (bs, seq_length, dim) representing the embedded input sequence.
-        - attn_mask: An optional tensor of shape (bs, seq_length) representing the attention mask on the sequence.
+        x: A tensor of shape (bs, seq_length, dim) representing the embedded input sequence.
+        attn_mask: An optional tensor of shape (bs, seq_length) representing the attention mask on the sequence.
     
     Returns:
-        - hidden_state: A tensor of shape (bs, seq_length, dim) representing the sequence of hidden states in the last (top) layer.
-        - all_hidden_states: A tuple of tensors, each of shape (bs, seq_length, dim), containing the hidden states from each layer. This is only returned if 'output_hidden_states' is set to True.
-        - all_attentions: A tuple of tensors, each of shape (bs, n_heads, seq_length, seq_length), containing the attention weights from each layer. This is only returned if 'output_attentions' is set to True.
+        hidden_state: A tensor of shape (bs, seq_length, dim) representing the sequence of hidden states in the last (top) layer.
+        all_hidden_states: A tuple of tensors, each of shape (bs, seq_length, dim), containing the hidden states from each layer. This is only returned if 'output_hidden_states' is set to True.
+        all_attentions: A tuple of tensors, each of shape (bs, n_heads, seq_length, seq_length), containing the attention weights from each layer. This is only returned if 'output_attentions' is set to True.
     
     Raises:
         - ValueError: If the length of 'layer_outputs' is not as expected based on the output options.
     
-    Note: The 'construct' method builds the Transformer model by sequentially applying the layer modules to the input tensor. It uses the 'head_mask' tensor for applying head-wise masking during attention
-operations.
+    Note:
+        The 'construct' method builds the Transformer model by sequentially applying the layer modules to the input tensor. It uses the 'head_mask' tensor for applying head-wise masking during attention
+        operations.
     
     Example usage:
-    
-    config = PretrainedConfig(n_layers=6)
-    transformer = Transformer(config)
-    input_tensor = mindspore.Tensor(bs, seq_length, dim)
-    output = transformer.construct(input_tensor, attn_mask, head_mask, output_attentions=True, output_hidden_states=True)
-    
+        ```python
+        config = PretrainedConfig(n_layers=6)
+        transformer = Transformer(config)
+        input_tensor = mindspore.Tensor(bs, seq_length, dim)
+        output = transformer.construct(input_tensor, attn_mask, head_mask, output_attentions=True, output_hidden_states=True)
+        ```
     """
     def __init__(self, config: PretrainedConfig):
         """
@@ -739,17 +725,18 @@ class DistilBertModel(DistilBertPreTrainedModel):
     Represents a DistilBERT model for natural language processing tasks.
     
     This class inherits from DistilBertPreTrainedModel and implements various methods for handling position embeddings, input embeddings, head pruning, and model construction. The class provides functionality
-to initialize the model, resize position embeddings, get position embeddings, resize input embeddings, set input embeddings, prune heads, and construct the model for inference.
+    to initialize the model, resize position embeddings, get position embeddings, resize input embeddings, set input embeddings, prune heads, and construct the model for inference.
     
     Methods:
-        - get_position_embeddings(): Returns the position embeddings.
-        - resize_position_embeddings(new_num_position_embeddings): Resizes position embeddings of the model.
-        - get_input_embeddings(): Returns the input embeddings.
-        - set_input_embeddings(new_embeddings): Sets new input embeddings.
-        - _prune_heads(heads_to_prune): Prunes heads of the model based on the provided dictionary.
-        - construct(input_ids, attention_mask, head_mask, inputs_embeds, output_attentions, output_hidden_states, return_dict): Constructs the model for inference with optional parameters.
+        get_position_embeddings(): Returns the position embeddings.
+        resize_position_embeddings(new_num_position_embeddings): Resizes position embeddings of the model.
+        get_input_embeddings(): Returns the input embeddings.
+        set_input_embeddings(new_embeddings): Sets new input embeddings.
+        _prune_heads(heads_to_prune): Prunes heads of the model based on the provided dictionary.
+        construct(input_ids, attention_mask, head_mask, inputs_embeds, output_attentions, output_hidden_states, return_dict): Constructs the model for inference with optional parameters.
     
-    Note: This class assumes familiarity with the DistilBERT model architecture and its specific components.
+    Note:
+        This class assumes familiarity with the DistilBERT model architecture and its specific components.
     """
     def __init__(self, config: PretrainedConfig):
         """
@@ -853,12 +840,14 @@ to initialize the model, resize position embeddings, get position embeddings, re
             None.
         
         This method allows setting new embeddings for the input in the DistilBertModel. The 'self' parameter refers to the instance of the DistilBertModel class on which the method is being called. The
-'new_embeddings' parameter is of type 'nn.Embedding' and represents the new embeddings to be set for the input. 
+        'new_embeddings' parameter is of type 'nn.Embedding' and represents the new embeddings to be set for the input.
         
         Example usage:
+            ```python
             model = DistilBertModel()
             embeddings = nn.Embedding(vocab_size, embedding_dim)
             model.set_input_embeddings(embeddings)
+            ```
         """
         self.embeddings.word_embeddings = new_embeddings
 
@@ -895,7 +884,7 @@ to initialize the model, resize position embeddings, get position embeddings, re
         
         Returns:
             Union[BaseModelOutput, Tuple[mindspore.Tensor, ...]]: The output of the DistilBertModel. If `return_dict` is set to True, a BaseModelOutput object is returned. Otherwise, a tuple containing a
-tensor and optionally, attention weights and hidden states is returned.
+            tensor and optionally, attention weights and hidden states is returned.
         
         Raises:
             ValueError: If both `input_ids` and `inputs_embeds` are specified simultaneously.
@@ -952,14 +941,12 @@ class DistilBertForMaskedLM(DistilBertPreTrainedModel):
         mlm_loss_fct (nn.CrossEntropyLoss): Cross-entropy loss function for MLM.
     
     Methods:
-        __init__(self, config: PretrainedConfig): Initializes the DistilBertForMaskedLM model.
-        get_position_embeddings(self) -> nn.Embedding: Returns the position embeddings.
-        resize_position_embeddings(self, new_num_position_embeddings: int): Resizes position embeddings of the model.
-        get_output_embeddings(self) -> nn.Cell: Returns the output embeddings.
-        set_output_embeddings(self, new_embeddings: nn.Cell): Sets the output embeddings.
-        construct(self, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor]
-= None, labels: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[MaskedLMOutput,
-Tuple[mindspore.Tensor, ...]]: Constructs the DistilBertForMaskedLM model.
+        __init__: Initializes the DistilBertForMaskedLM model.
+        get_position_embeddings: Returns the position embeddings.
+        resize_position_embeddings: Resizes position embeddings of the model.
+        get_output_embeddings: Returns the output embeddings.
+        set_output_embeddings: Sets the output embeddings.
+        construct: Constructs the DistilBertForMaskedLM model.
     
     Please see the documentation for the DistilBertPreTrainedModel class for more information on inherited attributes and methods.
     """
@@ -1059,10 +1046,11 @@ Tuple[mindspore.Tensor, ...]]: Constructs the DistilBertForMaskedLM model.
         return_dict: Optional[bool] = None,
     ) -> Union[MaskedLMOutput, Tuple[mindspore.Tensor, ...]]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
-            config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
-            loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
+                config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
+                loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1112,28 +1100,22 @@ class DistilBertForSequenceClassification(DistilBertPreTrainedModel):
         dropout (nn.Dropout): A dropout layer to prevent overfitting.
     
     Methods:
-        get_position_embeddings(): Returns the position embeddings.
-        resize_position_embeddings(new_num_position_embeddings: int): Resizes the position embeddings of the model.
-        construct(input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, 
-                  head_mask: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor] = None, 
-                  labels: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, 
-                  output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[SequenceClassifierOutput, Tuple[mindspore.Tensor, ...]]: 
-                  
+        get_position_embeddings: Returns the position embeddings.
+        resize_position_embeddings: Resizes the position embeddings of the model.
+        construct:
             Constructs the model for sequence classification.
-            
-            Args:
-                input_ids (Optional[mindspore.Tensor]): The input sequence tensor of shape `(batch_size, sequence_length)`.
-                attention_mask (Optional[mindspore.Tensor]): The attention mask tensor of shape `(batch_size, sequence_length)`.
-                head_mask (Optional[mindspore.Tensor]): The head mask tensor of shape `(num_heads,)`.
-                inputs_embeds (Optional[mindspore.Tensor]): The input embeddings tensor of shape `(batch_size, sequence_length, hidden_size)`.
-                labels (Optional[mindspore.Tensor]): The labels tensor of shape `(batch_size,)`.
-                output_attentions (Optional[bool]): Whether to return the attentions tensor or not.
-                output_hidden_states (Optional[bool]): Whether to return the hidden states tensor or not.
-                return_dict (Optional[bool]): Whether to return a dictionary of outputs or a tuple.
-                
-            Returns:
-                If `return_dict` is `False`, returns a tuple of `(loss, logits, hidden_states, attentions)`.
-                If `return_dict` is `True`, returns a dictionary of outputs with keys `loss`, `logits`, `hidden_states`, and `attentions`.
+            >   - Args:
+            >       - input_ids (Optional[mindspore.Tensor]): The input sequence tensor of shape `(batch_size, sequence_length)`.
+            >       - attention_mask (Optional[mindspore.Tensor]): The attention mask tensor of shape `(batch_size, sequence_length)`.
+            >       - head_mask (Optional[mindspore.Tensor]): The head mask tensor of shape `(num_heads,)`.
+            >       - inputs_embeds (Optional[mindspore.Tensor]): The input embeddings tensor of shape `(batch_size, sequence_length, hidden_size)`.
+            >       - labels (Optional[mindspore.Tensor]): The labels tensor of shape `(batch_size,)`.
+            >       - output_attentions (Optional[bool]): Whether to return the attentions tensor or not.
+            >       - output_hidden_states (Optional[bool]): Whether to return the hidden states tensor or not.
+            >       - return_dict (Optional[bool]): Whether to return a dictionary of outputs or a tuple.
+            >   - Returns:
+            >       - If `return_dict` is `False`, returns a tuple of `(loss, logits, hidden_states, attentions)`.
+            >       - If `return_dict` is `True`, returns a dictionary of outputs with keys `loss`, `logits`, `hidden_states`, and `attentions`.
     """
     def __init__(self, config: PretrainedConfig):
         """Initialize a DistilBertForSequenceClassification model.
@@ -1196,10 +1178,10 @@ class DistilBertForSequenceClassification(DistilBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[SequenceClassifierOutput, Tuple[mindspore.Tensor, ...]]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        >    labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1255,22 +1237,22 @@ class DistilBertForQuestionAnswering(DistilBertPreTrainedModel):
 
     """
     DistilBertForQuestionAnswering is a class that represents a fine-tuned DistilBERT model for question answering tasks. It is designed to provide predictions for the start and end positions of the answer
-span given a question and a context.
+    span given a question and a context.
     
     This class inherits from DistilBertPreTrainedModel and contains the following methods:
     
-    - `__init__(self, config: PretrainedConfig)`: Initializes the DistilBertForQuestionAnswering instance with a configuration object. Raises a ValueError if the number of labels in the configuration is not
-equal to 2.
+    >   - `__init__(self, config: PretrainedConfig)`: Initializes the DistilBertForQuestionAnswering instance with a configuration object. Raises a ValueError if the number of labels in the configuration is not
+            equal to 2.
     
-    - `get_position_embeddings(self) -> nn.Embedding`: Returns the position embeddings used by the model.
+    >   - `get_position_embeddings(self) -> nn.Embedding`: Returns the position embeddings used by the model.
     
-    - `resize_position_embeddings(self, new_num_position_embeddings: int)`: Resizes the position embeddings of the model if the specified number of position embeddings is different from the maximum number of
-position embeddings in the configuration.
+    >   - `resize_position_embeddings(self, new_num_position_embeddings: int)`: Resizes the position embeddings of the model if the specified number of position embeddings is different from the maximum number of
+            position embeddings in the configuration.
     
-    - `construct(self, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor] =
-None, start_positions: Optional[mindspore.Tensor] = None, end_positions: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict:
-Optional[bool] = None) -> Union[QuestionAnsweringModelOutput, Tuple[mindspore.Tensor, ...]]`: Constructs the model and performs question answering based on the given inputs. Returns a
-QuestionAnsweringModelOutput object or a tuple of tensors depending on the value of the return_dict parameter.
+    >   - `construct(self, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor] =
+            None, start_positions: Optional[mindspore.Tensor] = None, end_positions: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict:
+            Optional[bool] = None) -> Union[QuestionAnsweringModelOutput, Tuple[mindspore.Tensor, ...]]`: Constructs the model and performs question answering based on the given inputs. Returns a
+            QuestionAnsweringModelOutput object or a tuple of tensors depending on the value of the return_dict parameter.
     
     Please note that this class assumes the existence of a DistilBERT model and a dense layer for question answering outputs (qa_outputs), which are initialized in the __init__ method.
     """
@@ -1397,18 +1379,16 @@ class DistilBertForTokenClassification(DistilBertPreTrainedModel):
     Represents a DistilBERT model for token classification.
     
     This class inherits from DistilBertPreTrainedModel and implements methods for initializing the model, retrieving position embeddings, resizing position embeddings, and constructing the model for token
-classification tasks.
+    classification tasks.
     
     Attributes:
         config (PretrainedConfig): The configuration for the pretrained model.
     
     Methods:
-        __init__(config: PretrainedConfig): Initializes the DistilBertForTokenClassification model.
-        get_position_embeddings() -> nn.Embedding: Returns the position embeddings.
-        resize_position_embeddings(new_num_position_embeddings: int): Resizes position embeddings of the model.
-        construct(input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor] =
-None, labels: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[TokenClassifierOutput,
-Tuple[mindspore.Tensor, ...]]: Constructs the model for token classification tasks.
+        __init__: Initializes the DistilBertForTokenClassification model.
+        get_position_embeddings: Returns the position embeddings.
+        resize_position_embeddings: Resizes position embeddings of the model.
+        construct: Constructs the model for token classification tasks.
     
     Raises:
         NotImplementedError: If the method is not implemented.
@@ -1472,8 +1452,8 @@ Tuple[mindspore.Tensor, ...]]: Constructs the model for token classification tas
         return_dict: Optional[bool] = None,
     ) -> Union[TokenClassifierOutput, Tuple[mindspore.Tensor, ...]]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        >    labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1517,45 +1497,40 @@ class DistilBertForMultipleChoice(DistilBertPreTrainedModel):
         config (PretrainedConfig): The configuration class that defines the model architecture and parameters.
     
     Methods:
-        get_position_embeddings(self) -> nn.Embedding:
+        get_position_embeddings:
             Returns the position embeddings.
     
-        resize_position_embeddings(self, new_num_position_embeddings: int):
+        resize_position_embeddings:
             Resizes position embeddings of the model if `new_num_position_embeddings != config.max_position_embeddings`.
-            
-            Args:
-                new_num_position_embeddings (`int`): The number of new position embeddings. If position embeddings are learned, increasing the size will add newly initialized vectors at the end, whereas
-reducing the size will remove vectors from the end. If position embeddings are not learned (*e.g.* sinusoidal position embeddings), increasing the size will add correct vectors at the end following the
-position encoding algorithm, whereas reducing the size will remove vectors from the end.
+            >   - Args:
+                >   - new_num_position_embeddings (`int`): The number of new position embeddings. If position embeddings are learned, increasing the size will add newly initialized vectors at the end, whereas
+                    reducing the size will remove vectors from the end. If position embeddings are not learned (*e.g.* sinusoidal position embeddings),
+                    increasing the size will add correct vectors at the end following the position encoding algorithm, whereas reducing the size will remove vectors from the end.
     
-        construct(self, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor]
-= None, labels: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[MultipleChoiceModelOutput,
-Tuple[mindspore.Tensor, ...]]:
+        construct:
             This method is used to compute the outputs of the model for multiple choice tasks.
-    
-            Args:
-                input_ids (Optional[mindspore.Tensor]): The input ids of shape `(batch_size, num_choices, sequence_length)` for multiple choice tasks. 
-                attention_mask (Optional[mindspore.Tensor]): The attention mask of shape `(batch_size, num_choices, sequence_length)`. It is used to avoid performing attention on padding token indices.
-                head_mask (Optional[mindspore.Tensor]): The head mask of shape `(num_heads,)`. It is used to mask heads of the attention modules.
-                inputs_embeds (Optional[mindspore.Tensor]): The embedded input of shape `(batch_size, num_choices, sequence_length, hidden_size)`. It is an alternative to input_ids.
-                labels (Optional[mindspore.Tensor]): The labels for computing the multiple choice classification loss. Indices should be in `[0, ..., num_choices-1]` where `num_choices` is the size of the
-second dimension of the input tensors.
-                output_attentions (Optional[bool]): Whether to return attentions tensors or not.
-                output_hidden_states (Optional[bool]): Whether to return hidden states tensors or not.
-                return_dict (Optional[bool]): Whether to return a `MultipleChoiceModelOutput` instead of a tuple.
+            >   - Args:
+            >       - input_ids (Optional[mindspore.Tensor]): The input ids of shape `(batch_size, num_choices, sequence_length)` for multiple choice tasks.
+            >       - attention_mask (Optional[mindspore.Tensor]): The attention mask of shape `(batch_size, num_choices, sequence_length)`. It is used to avoid performing attention on padding token indices.
+            >       - head_mask (Optional[mindspore.Tensor]): The head mask of shape `(num_heads,)`. It is used to mask heads of the attention modules.
+            >       - inputs_embeds (Optional[mindspore.Tensor]): The embedded input of shape `(batch_size, num_choices, sequence_length, hidden_size)`. It is an alternative to input_ids.
+            >       - labels (Optional[mindspore.Tensor]): The labels for computing the multiple choice classification loss. Indices should be in `[0, ..., num_choices-1]` where `num_choices` is the size of the
+                        second dimension of the input tensors.
+            >       - output_attentions (Optional[bool]): Whether to return attentions tensors or not.
+            >       - output_hidden_states (Optional[bool]): Whether to return hidden states tensors or not.
+            >       - return_dict (Optional[bool]): Whether to return a `MultipleChoiceModelOutput` instead of a tuple.
     
             Returns:
                 If ``return_dict=True``, a :class:`~transformers.MultipleChoiceModelOutput` containing various elements depending on the configuration (e.g., ``loss``, ``logits``, ``hidden_states``,
-``attentions``), otherwise a tuple of objects as follows:
-                    
-                    - **logits** (:obj:`mindspore.Tensor` of shape `(batch_size, num_choices)`): The logits for each choice.
-                    - **hidden_states** (:obj:`Tuple[mindspore.Tensor]`, optional, returned when ``output_hidden_states=True`` is passed or when ``config.output_hidden_states=True``): Tuple of
-:obj:`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`.
-                    - **attentions** (:obj:`Tuple[mindspore.Tensor]`, optional, returned when ``output_attentions=True`` is passed or when ``config.output_attentions=True``): Tuple of :obj:`mindspore.Tensor`
-of shape `(batch_size, num_heads, sequence_length, sequence_length)`.
+                ``attentions``), otherwise a tuple of objects as follows:
+                >   - **logits** (:obj:`mindspore.Tensor` of shape `(batch_size, num_choices)`): The logits for each choice.
+                >   - **hidden_states** (:obj:`Tuple[mindspore.Tensor]`, optional, returned when ``output_hidden_states=True`` is passed or when ``config.output_hidden_states=True``): Tuple of
+                        :obj:`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`.
+                >   - **attentions** (:obj:`Tuple[mindspore.Tensor]`, optional, returned when ``output_attentions=True`` is passed or when ``config.output_attentions=True``): Tuple of :obj:`mindspore.Tensor`
+                    of shape `(batch_size, num_heads, sequence_length, sequence_length)`.
     
-    Examples::
-     
+    Example:
+        ```python
         # importing the required libraries
         from transformers import AutoTokenizer, DistilBertForMultipleChoice
         import torch
@@ -1577,6 +1552,7 @@ of shape `(batch_size, num_heads, sequence_length, sequence_length)`.
         # calculating the loss and logits
         loss = outputs.loss
         logits = outputs.logits
+        ```
     """
     def __init__(self, config: PretrainedConfig):
         """
@@ -1644,28 +1620,29 @@ of shape `(batch_size, num_heads, sequence_length, sequence_length)`.
             `input_ids` above)
 
         Returns:
+            Union[MultipleChoiceModelOutput, Tuple[mindspore.Tensor, ...]]
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import AutoTokenizer, DistilBertForMultipleChoice
+            >>> import torch
 
-        ```python
-        >>> from transformers import AutoTokenizer, DistilBertForMultipleChoice
-        >>> import torch
+            >>> tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased")
+            >>> model = DistilBertForMultipleChoice.from_pretrained("distilbert-base-cased")
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased")
-        >>> model = DistilBertForMultipleChoice.from_pretrained("distilbert-base-cased")
+            >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
+            >>> choice0 = "It is eaten with a fork and a knife."
+            >>> choice1 = "It is eaten while held in the hand."
+            >>> labels = mindspore.Tensor(0).unsqueeze(0)  # choice0 is correct (according to Wikipedia ;)), batch size 1
 
-        >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
-        >>> choice0 = "It is eaten with a fork and a knife."
-        >>> choice1 = "It is eaten while held in the hand."
-        >>> labels = mindspore.Tensor(0).unsqueeze(0)  # choice0 is correct (according to Wikipedia ;)), batch size 1
+            >>> encoding = tokenizer([[prompt, choice0], [prompt, choice1]], return_tensors="pt", padding=True)
+            >>> outputs = model(**{k: v.unsqueeze(0) for k, v in encoding.items()}, labels=labels)  # batch size is 1
 
-        >>> encoding = tokenizer([[prompt, choice0], [prompt, choice1]], return_tensors="pt", padding=True)
-        >>> outputs = model(**{k: v.unsqueeze(0) for k, v in encoding.items()}, labels=labels)  # batch size is 1
-
-        >>> # the linear classifier still needs to be trained
-        >>> loss = outputs.loss
-        >>> logits = outputs.logits
-        ```"""
+            >>> # the linear classifier still needs to be trained
+            >>> loss = outputs.loss
+            >>> logits = outputs.logits
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
 

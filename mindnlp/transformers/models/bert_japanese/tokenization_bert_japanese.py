@@ -218,16 +218,16 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
         Method: do_lower_case
         
         Description:
-        This method returns the lower case value of the input.
+            This method returns the lower case value of the input.
         
         Args:
-        - self: Represents the instance of the class BertJapaneseTokenizer. It is used to access the attributes and methods of the class.
+            self: Represents the instance of the class BertJapaneseTokenizer. It is used to access the attributes and methods of the class.
         
         Returns:
-        None: This method does not return any value, rather it directly accesses and returns the lower case value of the input.
+            None: This method does not return any value, rather it directly accesses and returns the lower case value of the input.
         
         Raises:
-        This method does not raise any exceptions.
+            This method does not raise any exceptions.
         """
         return self.lower_case
 
@@ -240,7 +240,7 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
         
         Returns:
             The method returns a dictionary representing the current state of the object. If the 'word_tokenizer_type' attribute of the object is one of ['mecab', 'sudachi', 'jumanpp'], the 'word_tokenizer'
-attribute is removed from the state dictionary before returning it.
+            attribute is removed from the state dictionary before returning it.
         
         Raises:
             This method does not raise any exceptions under normal circumstances.
@@ -303,11 +303,13 @@ attribute is removed from the state dictionary before returning it.
         BertJapaneseTokenizer class.
         
         Example:
+            ```python
             tokenizer = BertJapaneseTokenizer()
             text = "こんにちは、世界！"
             tokens = tokenizer._tokenize(text)
             print(tokens)
             # Output: ['こんにちは', '、', '世界', '！']
+            ```
         """
         if self.do_word_tokenize:
             tokens = self.word_tokenizer.tokenize(text, never_split=self.all_special_tokens)
@@ -348,8 +350,8 @@ attribute is removed from the state dictionary before returning it.
         
         Returns:
             Returns a dictionary representing the vocabulary. If the subword_tokenizer_type is 'sentencepiece', the vocabulary is constructed by mapping token IDs to their corresponding tokens for the range of
-0 to vocab_size. Any added tokens are then added to this vocabulary. If the subword_tokenizer_type is not 'sentencepiece', the vocabulary is a combination of the existing vocabulary and the
-added_tokens_encoder.
+            0 to vocab_size. Any added tokens are then added to this vocabulary. If the subword_tokenizer_type is not 'sentencepiece', the vocabulary is a combination of the existing vocabulary and the
+            added_tokens_encoder.
         
         Raises:
             No specific exceptions are documented to be raised by this method.
@@ -386,9 +388,8 @@ added_tokens_encoder.
         """
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A BERT sequence has the following format:
-
-        - single sequence: `[CLS] X [SEP]`
-        - pair of sequences: `[CLS] A [SEP] B [SEP]`
+            >   - single sequence: `[CLS] X [SEP]`
+            >   - pair of sequences: `[CLS] A [SEP] B [SEP]`
 
         Args:
             token_ids_0 (`List[int]`):

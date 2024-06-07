@@ -256,10 +256,12 @@ class DistilBertTokenizer(PreTrainedTokenizer):
             `add_tokens` method. The resulting dictionary is returned as the output of this method.
         
         Example:
+            ```python
             >>> tokenizer = DistilBertTokenizer()
             >>> vocab = tokenizer.get_vocab()
             >>> print(vocab)
             {'<pad>': 0, '<s>': 1, '</s>': 2, '<unk>': 3, '<mask>': 4, '<cls>': 5, '<sep>': 6, '<eod>': 7, '<eop>': 8}
+            ```
         """
         return dict(self.vocab, **self.added_tokens_encoder)
 
@@ -286,10 +288,12 @@ class DistilBertTokenizer(PreTrainedTokenizer):
             The resulting tokens are returned as a list.
         
         Example:
+            ```python
             tokenizer = DistilBertTokenizer()
             tokens = tokenizer._tokenize("Hello world!")
             print(tokens)
             # Output: ['hello', 'world', '!']
+            ```
         """
         split_tokens = []
         if self.do_basic_tokenize:
@@ -329,8 +333,8 @@ class DistilBertTokenizer(PreTrainedTokenizer):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A BERT sequence has the following format:
 
-        - single sequence: `[CLS] X [SEP]`
-        - pair of sequences: `[CLS] A [SEP] B [SEP]`
+        >   - single sequence: `[CLS] X [SEP]`
+        >   - pair of sequences: `[CLS] A [SEP] B [SEP]`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -431,8 +435,10 @@ class DistilBertTokenizer(PreTrainedTokenizer):
             This can indicate a corrupted vocabulary.
         
         Example:
+            ```python
             tokenizer = DistilBertTokenizer()
             tokenizer.save_vocabulary('/path/to/save', 'my_model')
+            ```
         """
         index = 0
         if os.path.isdir(save_directory):
@@ -515,7 +521,7 @@ class BasicTokenizer:
         Basic Tokenization of a piece of text. For sub-word tokenization, see WordPieceTokenizer.
 
         Args:
-            never_split (`List[str]`, *optional*)
+            never_split (`List[str]`, *optional*):
                 Kept for backward compatibility purposes. Now implemented directly at the base class level (see
                 [`PreTrainedTokenizer.tokenize`]) List of token not to split.
         """

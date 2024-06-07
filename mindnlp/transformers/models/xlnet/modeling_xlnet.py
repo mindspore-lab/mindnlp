@@ -50,35 +50,36 @@ class XLNetRelativeAttention(nn.Cell):
     """This class represents the relative attention mechanism used in XLNet model for sequence processing tasks.
     
     The XLNetRelativeAttention class implements the core operations for performing relative positional attention in the XLNet model. It includes methods for initializing the attention mechanism, pruning
-attention heads, shifting for relative attention score calculation, and processing post-attention outputs.
+    attention heads, shifting for relative attention score calculation, and processing post-attention outputs.
     
     Attributes:
-        - n_head (int): Number of attention heads.
-        - d_head (int): Dimensionality of each attention head.
-        - d_model (int): Dimensionality of the model.
-        - scale (float): Scaling factor for attention scores.
-        - q (Parameter): Query matrix for attention computation.
-        - k (Parameter): Key matrix for attention computation.
-        - v (Parameter): Value matrix for attention computation.
-        - o (Parameter): Output matrix for attention computation.
-        - r (Parameter): Relative position matrix.
-        - r_r_bias (Parameter): Relative position bias for rows.
-        - r_s_bias (Parameter): Relative position bias for segments.
-        - r_w_bias (Parameter): Relative position bias for columns.
-        - seg_embed (Parameter): Segment embedding matrix.
-        - layer_norm (LayerNorm): Layer normalization for model outputs.
-        - dropout (Dropout): Dropout layer for regularization.
+        n_head (int): Number of attention heads.
+        d_head (int): Dimensionality of each attention head.
+        d_model (int): Dimensionality of the model.
+        scale (float): Scaling factor for attention scores.
+        q (Parameter): Query matrix for attention computation.
+        k (Parameter): Key matrix for attention computation.
+        v (Parameter): Value matrix for attention computation.
+        o (Parameter): Output matrix for attention computation.
+        r (Parameter): Relative position matrix.
+        r_r_bias (Parameter): Relative position bias for rows.
+        r_s_bias (Parameter): Relative position bias for segments.
+        r_w_bias (Parameter): Relative position bias for columns.
+        seg_embed (Parameter): Segment embedding matrix.
+        layer_norm (LayerNorm): Layer normalization for model outputs.
+        dropout (Dropout): Dropout layer for regularization.
     
     Methods:
-        - prune_heads(self, heads): Method to prune specific attention heads (NotImplementedError).
-        - rel_shift(x, klen=-1): Static method to perform relative shift for attention score calculation.
-        - rel_shift_bnij(x, klen=-1): Static method to perform relative shift for attention score calculation with different axis.
-        - rel_attn_core(self, q_head, k_head_h, v_head_h, k_head_r, seg_mat=None, attn_mask=None, head_mask=None, output_attentions=False): Method for core relative positional attention operations.
-        - post_attention(self, h, attn_vec, residual=True): Method for post-attention processing.
-        - construct(self, h, g, attn_mask_h, attn_mask_g, r, seg_mat, mems=None, target_mapping=None, head_mask=None, output_attentions=False): Method for constructing the attention mechanism with optional
-outputs.
+        prune_heads(self, heads): Method to prune specific attention heads (NotImplementedError).
+        rel_shift(x, klen=-1): Static method to perform relative shift for attention score calculation.
+        rel_shift_bnij(x, klen=-1): Static method to perform relative shift for attention score calculation with different axis.
+        rel_attn_core(self, q_head, k_head_h, v_head_h, k_head_r, seg_mat=None, attn_mask=None, head_mask=None, output_attentions=False): Method for core relative positional attention operations.
+        post_attention(self, h, attn_vec, residual=True): Method for post-attention processing.
+        construct(self, h, g, attn_mask_h, attn_mask_g, r, seg_mat, mems=None, target_mapping=None, head_mask=None, output_attentions=False): Method for constructing the attention mechanism with optional
+            outputs.
     
-    Note: This class inherits from nn.Cell, which is a base class for neural network cells in the MindSpore framework.
+    Note:
+        This class inherits from nn.Cell, which is a base class for neural network cells in the MindSpore framework.
     """
     def __init__(self, config):
         '''
@@ -87,11 +88,11 @@ outputs.
         Args:
             self (XLNetRelativeAttention): The instance of the XLNetRelativeAttention class.
             config: An object containing configuration parameters for the XLNetRelativeAttention model. It should have the following attributes:
-                - d_model (int): The hidden size of the model.
-                - n_head (int): The number of attention heads.
-                - d_head (int): The size of each attention head.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
-                - dropout (float): The dropout rate.
+                >   - d_model (int): The hidden size of the model.
+                >   - n_head (int): The number of attention heads.
+                >   - d_head (int): The size of each attention head.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - dropout (float): The dropout rate.
         
         Returns:
             None: This method does not return any value.
@@ -172,16 +173,18 @@ outputs.
             ValueError: If x has an invalid shape or klen is not within the valid range.
         
         Note:
-            - This method applies a relative shift operation to the input tensor `x`, rearranging the elements along the batch and head dimensions.
-            - The input tensor `x` should have shape (batch_size, seq_length, head_size, hidden_size).
-            - The relative shift is performed by reshaping the tensor, selecting specific indices, and reshaping it back to the original shape.
-            - The relative shift helps in capturing the relative positions of tokens in the attention mechanism.
-            - If `klen` is not provided, the default value of -1 is used which indicates that the relative attention length is not restricted.
+            >   - This method applies a relative shift operation to the input tensor `x`, rearranging the elements along the batch and head dimensions.
+            >   - The input tensor `x` should have shape (batch_size, seq_length, head_size, hidden_size).
+            >   - The relative shift is performed by reshaping the tensor, selecting specific indices, and reshaping it back to the original shape.
+            >   - The relative shift helps in capturing the relative positions of tokens in the attention mechanism.
+            >   - If `klen` is not provided, the default value of -1 is used which indicates that the relative attention length is not restricted.
         
         Example:
+            ```python
             >>> x = Tensor([[1, 2, 3], [4, 5, 6]])
             >>> klen = 2
             >>> rel_shift_bnij(x, klen)
+            ```
         """
         x_size = x.shape
 
@@ -424,10 +427,10 @@ class XLNetFeedForward(nn.Cell):
     XLNetFeedForward is a class that represents a feed-forward neural network layer for the XLNet model. It inherits from nn.Cell and contains methods for initializing and constructing the feed-forward layer.
     
     The __init__ method initializes the XLNetFeedForward object with the given configuration. It sets up the layer normalization, dense layers, dropout, and activation function based on the configuration
-parameters.
+    parameters.
     
     The construct method takes an input tensor and passes it through the feed-forward layer. It applies the layer_1, activation function, dropout, layer_2, and layer normalization operations to the input
-tensor, and returns the output tensor after the feed-forward processing.
+    tensor, and returns the output tensor after the feed-forward processing.
     """
     def __init__(self, config):
         """
@@ -446,27 +449,27 @@ tensor, and returns the output tensor after the feed-forward processing.
         Description:
         This method initializes the XLNetFeedForward object by setting the layer normalization, two dense layers, dropout rate, and activation function.
         
-        - self.layer_norm: A LayerNorm module that normalizes the input to the dimensions of the model's hidden size. It takes the following parameters:
-            - config.d_model: An integer representing the size of the input and output layers.
-            - epsilon: A small value added to the variance to avoid division by zero. Default value is 'config.layer_norm_eps'.
-        
-        - self.layer_1: A Dense layer that maps the input to a hidden layer. It takes the following parameters:
-            - config.d_model: An integer representing the size of the input layer.
-            - config.d_inner: An integer representing the size of the hidden layer.
-        
-        - self.layer_2: A Dense layer that maps the hidden layer to the output layer. It takes the following parameters:
-            - config.d_inner: An integer representing the size of the hidden layer.
-            - config.d_model: An integer representing the size of the output layer.
-        
-        - self.dropout: A Dropout layer that randomly sets elements to zero during training to prevent overfitting. It takes the following parameter:
-            - p: The probability of an element to be zeroed. Default value is 'config.dropout'.
-        
-        - self.activation_function: The activation function used in the feed-forward layer. It can be either a string representing the name of the activation function or a custom activation function. If it is
-a string, it is looked up in the ACT2FN mapping, which maps activation function names to their corresponding functions. Otherwise, it is directly assigned to the provided activation function.
+        >   - self.layer_norm: A LayerNorm module that normalizes the input to the dimensions of the model's hidden size. It takes the following parameters:
+        >       - config.d_model: An integer representing the size of the input and output layers.
+        >       - epsilon: A small value added to the variance to avoid division by zero. Default value is 'config.layer_norm_eps'.
+
+        >   - self.layer_1: A Dense layer that maps the input to a hidden layer. It takes the following parameters:
+        >       - config.d_model: An integer representing the size of the input layer.
+        >       - config.d_inner: An integer representing the size of the hidden layer.
+
+        >   - self.layer_2: A Dense layer that maps the hidden layer to the output layer. It takes the following parameters:
+        >       - config.d_inner: An integer representing the size of the hidden layer.
+        >       - config.d_model: An integer representing the size of the output layer.
+
+        >   - self.dropout: A Dropout layer that randomly sets elements to zero during training to prevent overfitting. It takes the following parameter:
+        >       - p: The probability of an element to be zeroed. Default value is 'config.dropout'.
+
+        >   - self.activation_function: The activation function used in the feed-forward layer. It can be either a string representing the name of the activation function or a custom activation function. If it is
+                a string, it is looked up in the ACT2FN mapping, which maps activation function names to their corresponding functions. Otherwise, it is directly assigned to the provided activation function.
         
         Note:
-        - The 'config' parameter should be an instance of the configuration class, which contains necessary model parameters.
-        - The 'config.ff_activation' parameter can be either a string or a custom activation function.
+            - The 'config' parameter should be an instance of the configuration class, which contains necessary model parameters.
+            - The 'config.ff_activation' parameter can be either a string or a custom activation function.
         """
         super().__init__()
         self.layer_norm = nn.LayerNorm(config.d_model, epsilon=config.layer_norm_eps)
@@ -493,15 +496,16 @@ a string, it is looked up in the ACT2FN mapping, which maps activation function 
             None
         
         This method applies the XLNet feed-forward layer operations on the input tensor. It performs the following steps:
-        1. Applies layer_1 on the input tensor.
-        2. Applies the activation function on the output of layer_1.
-        3. Applies dropout regularization on the output of the activation function.
-        4. Applies layer_2 on the output of the dropout operation.
-        5. Applies dropout regularization on the output of layer_2.
-        6. Adds the input tensor to the output of layer_2 and applies layer normalization.
-        7. Returns the final output tensor.
+        >   1. Applies layer_1 on the input tensor.
+        >   2. Applies the activation function on the output of layer_1.
+        >   3. Applies dropout regularization on the output of the activation function.
+        >   4. Applies layer_2 on the output of the dropout operation.
+        >   5. Applies dropout regularization on the output of layer_2.
+        >   6. Adds the input tensor to the output of layer_2 and applies layer normalization.
+        >   7. Returns the final output tensor.
         
-        Note: The input tensor is expected to have the shape (batch_size, sequence_length, hidden_size).
+        Note:
+            The input tensor is expected to have the shape (batch_size, sequence_length, hidden_size).
         """
         output = inp
         output = self.layer_1(output)
@@ -580,25 +584,25 @@ class XLNetLayer(nn.Cell):
         This method constructs the XLNet layer.
         
         Args:
-        - self: The instance of the XLNetLayer class.
-        - output_h (tensor): The output tensor from the previous layer for the current head.
-        - output_g (tensor): The output tensor from the previous layer for the global context.
-        - attn_mask_h (tensor): The attention mask for the current head.
-        - attn_mask_g (tensor): The attention mask for the global context.
-        - r (int): The number of attention heads.
-        - seg_mat (tensor): The segment matrix specifying the segment for each token.
-        - mems (tensor, optional): The memory tensor. Defaults to None.
-        - target_mapping (tensor, optional): The target mapping tensor. Defaults to None.
-        - head_mask (tensor, optional): The head mask tensor. Defaults to None.
-        - output_attentions (bool, optional): Controls whether to output attentions. Defaults to False.
+            self: The instance of the XLNetLayer class.
+            output_h (tensor): The output tensor from the previous layer for the current head.
+            output_g (tensor): The output tensor from the previous layer for the global context.
+            attn_mask_h (tensor): The attention mask for the current head.
+            attn_mask_g (tensor): The attention mask for the global context.
+            r (int): The number of attention heads.
+            seg_mat (tensor): The segment matrix specifying the segment for each token.
+            mems (tensor, optional): The memory tensor. Defaults to None.
+            target_mapping (tensor, optional): The target mapping tensor. Defaults to None.
+            head_mask (tensor, optional): The head mask tensor. Defaults to None.
+            output_attentions (bool, optional): Controls whether to output attentions. Defaults to False.
         
         Returns:
-        tuple: A tuple containing the output tensors for the current head and the global context, and any additional outputs.
+            tuple: A tuple containing the output tensors for the current head and the global context, and any additional outputs.
         
         Raises:
-        - ValueError: If the dimensions of input tensors are not compatible.
-        - RuntimeError: If there is a runtime issue during the execution of the method.
-        - TypeError: If the input types are not as expected.
+            ValueError: If the dimensions of input tensors are not compatible.
+            RuntimeError: If there is a runtime issue during the execution of the method.
+            TypeError: If the input types are not as expected.
         """
         outputs = self.rel_attn(
             output_h,
@@ -744,8 +748,7 @@ class XLNetLMHeadModelOutput(ModelOutput):
             Tuple of `torch.FloatTensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
-            Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
-            heads.
+            Attentions weights after the attention softmax, used to compute the weighted average in the self-attention heads.
     """
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
@@ -942,12 +945,12 @@ class XLNetModel(XLNetPreTrainedModel):
 
     """
     The XLNetModel class represents a model for XLNet, which is a type of pre-trained model for natural language processing. It inherits from the XLNetPreTrainedModel class and provides methods for
-initializing the model, creating attention masks, caching memory, and constructing the model for inference. The class also includes methods for managing input embeddings, positional embeddings, and relative
-positional encoding.
+    initializing the model, creating attention masks, caching memory, and constructing the model for inference. The class also includes methods for managing input embeddings, positional embeddings, and relative
+    positional encoding.
     
     The class includes methods for creating attention masks, caching memory, and constructing the model for inference. It also provides functionality for managing input embeddings, positional embeddings, and
-relative positional encoding. The class methods are designed to handle various input parameters and configurations for fine-tuning and using the XLNet model for specific NLP tasks. The class is designed to be
-flexible and efficient for handling different use cases and scenarios.
+    relative positional encoding. The class methods are designed to handle various input parameters and configurations for fine-tuning and using the XLNet model for specific NLP tasks. The class is designed to be
+    flexible and efficient for handling different use cases and scenarios.
     """
     def __init__(self, config):
         """
@@ -956,16 +959,16 @@ flexible and efficient for handling different use cases and scenarios.
         Args:
             self: The instance of the XLNetModel class.
             config: A configuration object containing the following parameters:
-                - mem_len (int): The length of the memory.
-                - reuse_len (int): The length of the segment that can be reused.
-                - d_model (int): The dimension of the model.
-                - same_length (bool): A flag indicating whether the segments have the same length.
-                - attn_type (str): The type of attention mechanism to be used.
-                - bi_data (bool): A flag indicating whether the input data is bidirectional.
-                - clamp_len (int): The maximum length of the segments.
-                - n_layer (int): The number of layers in the model.
-                - vocab_size (int): The size of the vocabulary for word embeddings.
-                - dropout (float): The dropout rate.
+                >   - mem_len (int): The length of the memory.
+                >   - reuse_len (int): The length of the segment that can be reused.
+                >   - d_model (int): The dimension of the model.
+                >   - same_length (bool): A flag indicating whether the segments have the same length.
+                >   - attn_type (str): The type of attention mechanism to be used.
+                >   - bi_data (bool): A flag indicating whether the input data is bidirectional.
+                >   - clamp_len (int): The maximum length of the segments.
+                >   - n_layer (int): The number of layers in the model.
+                >   - vocab_size (int): The size of the vocabulary for word embeddings.
+                >   - dropout (float): The dropout rate.
         
         Returns:
             None. This method does not return any value.
@@ -1115,24 +1118,24 @@ flexible and efficient for handling different use cases and scenarios.
         
         Args:
             pos_seq (torch.Tensor): A tensor containing the positional sequence.
-                - Type: torch.Tensor
-                - Purpose: This tensor represents the positions of the input tokens in the sequence.
-                - Restrictions: None
+                >   - Type: torch.Tensor
+                >   - Purpose: This tensor represents the positions of the input tokens in the sequence.
+                >   - Restrictions: None
         
             inv_freq (torch.Tensor): A tensor containing the inverse frequency values.
-                - Type: torch.Tensor
-                - Purpose: This tensor represents the inverse frequency values to be used in the positional embedding calculation.
-                - Restrictions: None
+                >   - Type: torch.Tensor
+                >   - Purpose: This tensor represents the inverse frequency values to be used in the positional embedding calculation.
+                >   - Restrictions: None
         
             bsz (int, optional): An optional parameter representing the batch size.
-                - Type: int
-                - Purpose: This parameter is used to expand the positional embeddings tensor if provided.
-                - Restrictions: None
+                >   - Type: int
+                >   - Purpose: This parameter is used to expand the positional embeddings tensor if provided.
+                >   - Restrictions: None
         
         Returns:
             torch.Tensor: A tensor containing the positional embeddings.
-                - Type: torch.Tensor
-                - Purpose: This tensor represents the positional embeddings for the input sequence.
+                >   - Type: torch.Tensor
+                >   - Purpose: This tensor represents the positional embeddings for the input sequence.
         
         Raises:
             None
@@ -1219,28 +1222,28 @@ flexible and efficient for handling different use cases and scenarios.
     ) -> Union[Tuple, XLNetModelOutput]:
         """
         Args:
-        - self: The instance of the XLNetModel class.
-        - input_ids (Optional[mindspore.Tensor]): The input tensor containing the token IDs. Default is None.
-        - attention_mask (Optional[mindspore.Tensor]): The attention mask tensor to avoid attending to padding tokens. Default is None.
-        - mems (Optional[mindspore.Tensor]): The memory tensor for caching previous hidden states. Default is None.
-        - perm_mask (Optional[mindspore.Tensor]): The permutation mask tensor for partial attention over sequence. Default is None.
-        - target_mapping (Optional[mindspore.Tensor]): The target mapping tensor for masked language modeling. Default is None.
-        - token_type_ids (Optional[mindspore.Tensor]): The tensor containing token type IDs for differentiating sequences. Default is None.
-        - input_mask (Optional[mindspore.Tensor]): The input mask tensor indicating padding tokens. Default is None.
-        - head_mask (Optional[mindspore.Tensor]): The mask tensor for controlling the attention heads. Default is None.
-        - inputs_embeds (Optional[mindspore.Tensor]): The tensor containing precomputed embeddings. Default is None.
-        - use_mems (Optional[bool]): Flag indicating whether to use memory for caching. Default is None.
-        - output_attentions (Optional[bool]): Flag indicating whether to output attention weights. Default is None.
-        - output_hidden_states (Optional[bool]): Flag indicating whether to output hidden states of all layers. Default is None.
-        - return_dict (Optional[bool]): Flag indicating whether to return output as a dict. Default is None.
+            self: The instance of the XLNetModel class.
+            input_ids (Optional[mindspore.Tensor]): The input tensor containing the token IDs. Default is None.
+            attention_mask (Optional[mindspore.Tensor]): The attention mask tensor to avoid attending to padding tokens. Default is None.
+            mems (Optional[mindspore.Tensor]): The memory tensor for caching previous hidden states. Default is None.
+            perm_mask (Optional[mindspore.Tensor]): The permutation mask tensor for partial attention over sequence. Default is None.
+            target_mapping (Optional[mindspore.Tensor]): The target mapping tensor for masked language modeling. Default is None.
+            token_type_ids (Optional[mindspore.Tensor]): The tensor containing token type IDs for differentiating sequences. Default is None.
+            input_mask (Optional[mindspore.Tensor]): The input mask tensor indicating padding tokens. Default is None.
+            head_mask (Optional[mindspore.Tensor]): The mask tensor for controlling the attention heads. Default is None.
+            inputs_embeds (Optional[mindspore.Tensor]): The tensor containing precomputed embeddings. Default is None.
+            use_mems (Optional[bool]): Flag indicating whether to use memory for caching. Default is None.
+            output_attentions (Optional[bool]): Flag indicating whether to output attention weights. Default is None.
+            output_hidden_states (Optional[bool]): Flag indicating whether to output hidden states of all layers. Default is None.
+            return_dict (Optional[bool]): Flag indicating whether to return output as a dict. Default is None.
         
         Returns:
-        Union[Tuple, XLNetModelOutput]: The output of the XLNetModel construct method, which includes the last hidden state, memory tensors, hidden states of all layers, and attention weights.
+            Union[Tuple, XLNetModelOutput]: The output of the XLNetModel construct method, which includes the last hidden state, memory tensors, hidden states of all layers, and attention weights.
         
         Raises:
-        - ValueError: Raised if both input_ids and inputs_embeds are specified simultaneously, or if neither input_ids nor inputs_embeds are specified.
-        - FutureWarning: Raised when the 'use_cache' argument is deprecated. Use 'use_mems' instead.
-        - ValueError: Raised if an unsupported attention type is encountered.
+            ValueError: Raised if both input_ids and inputs_embeds are specified simultaneously, or if neither input_ids nor inputs_embeds are specified.
+            FutureWarning: Raised when the 'use_cache' argument is deprecated. Use 'use_mems' instead.
+            ValueError: Raised if an unsupported attention type is encountered.
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1452,7 +1455,7 @@ class XLNetLMHeadModel(XLNetPreTrainedModel):
     A Python class representing the XLNetLMHeadModel, which inherits from XLNetPreTrainedModel. 
     
     XLNetLMHeadModel includes methods for initializing the model, preparing inputs for generation, and constructing the model for language modeling tasks. It also provides a method for reordering the cache
-during beam search or beam sample generation.
+    during beam search or beam sample generation.
     
     The XLNetLMHeadModel class is designed to work with XLNetModel and nn.Dense to process input data, generate predictions, and calculate loss during training.
     
@@ -1518,8 +1521,8 @@ during beam search or beam sample generation.
             None: This method does not return any value.
         
         Raises:
-            - TypeError: If the new_embeddings parameter is not of type tensor.
-            - ValueError: If the new_embeddings parameter does not meet the required shape or type constraints.
+            TypeError: If the new_embeddings parameter is not of type tensor.
+            ValueError: If the new_embeddings parameter does not meet the required shape or type constraints.
         """
         self.lm_loss = new_embeddings
 
@@ -1599,73 +1602,75 @@ during beam search or beam sample generation.
             **kwargs,  # delete when `use_cache` is removed in XLNetModel
     ) -> Union[Tuple, XLNetLMHeadModelOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, num_predict)`, *optional*):
-            Labels for masked language modeling. `num_predict` corresponds to `target_mapping.shape[1]`. If
-            `target_mapping` is `None`, then `num_predict` corresponds to `sequence_length`.
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size, num_predict)`, *optional*):
+                Labels for masked language modeling. `num_predict` corresponds to `target_mapping.shape[1]`. If
+                `target_mapping` is `None`, then `num_predict` corresponds to `sequence_length`.
 
-            The labels should correspond to the masked input words that should be predicted and depends on
-            `target_mapping`. Note in order to perform standard auto-regressive language modeling a *<mask>* token has
-            to be added to the `input_ids` (see the `prepare_inputs_for_generation` function and examples below)
+                The labels should correspond to the masked input words that should be predicted and depends on
+                `target_mapping`. Note in order to perform standard auto-regressive language modeling a *<mask>* token has
+                to be added to the `input_ids` (see the `prepare_inputs_for_generation` function and examples below)
 
-            Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100` are ignored, the loss
-            is only computed for labels in `[0, ..., config.vocab_size]`
+                Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100` are ignored, the loss
+                is only computed for labels in `[0, ..., config.vocab_size]`
 
-        Return:
+        Returns:
+            `Union[Tuple, XLNetLMHeadModelOutput]`
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import AutoTokenizer, XLNetLMHeadModel
+            >>> import torch
 
-        ```python
-        >>> from transformers import AutoTokenizer, XLNetLMHeadModel
-        >>> import torch
+            >>> tokenizer = AutoTokenizer.from_pretrained("xlnet/xlnet-large-cased")
+            >>> model = XLNetLMHeadModel.from_pretrained("xlnet/xlnet-large-cased")
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("xlnet/xlnet-large-cased")
-        >>> model = XLNetLMHeadModel.from_pretrained("xlnet/xlnet-large-cased")
+            >>> # We show how to setup inputs to predict a next token using a bi-directional context.
+            >>> input_ids = torch.tensor(
+            ...     tokenizer.encode("Hello, my dog is very <mask>", add_special_tokens=False)
+            ... ).unsqueeze(
+            ...     0
+            ... )  # We will predict the masked token
+            >>> perm_mask = torch.zeros((1, input_ids.shape[1], input_ids.shape[1]), dtype=torch.float)
+            >>> perm_mask[:, :, -1] = 1.0  # Previous tokens don't see last token
+            >>> target_mapping = torch.zeros(
+            ...     (1, 1, input_ids.shape[1]), dtype=torch.float
+            ... )  # Shape [1, 1, seq_length] => let's predict one token
+            >>> target_mapping[
+            ...     0, 0, -1
+            ... ] = 1.0  # Our first (and only) prediction will be the last token of the sequence (the masked token)
 
-        >>> # We show how to setup inputs to predict a next token using a bi-directional context.
-        >>> input_ids = torch.tensor(
-        ...     tokenizer.encode("Hello, my dog is very <mask>", add_special_tokens=False)
-        ... ).unsqueeze(
-        ...     0
-        ... )  # We will predict the masked token
-        >>> perm_mask = torch.zeros((1, input_ids.shape[1], input_ids.shape[1]), dtype=torch.float)
-        >>> perm_mask[:, :, -1] = 1.0  # Previous tokens don't see last token
-        >>> target_mapping = torch.zeros(
-        ...     (1, 1, input_ids.shape[1]), dtype=torch.float
-        ... )  # Shape [1, 1, seq_length] => let's predict one token
-        >>> target_mapping[
-        ...     0, 0, -1
-        ... ] = 1.0  # Our first (and only) prediction will be the last token of the sequence (the masked token)
+            >>> outputs = model(input_ids, perm_mask=perm_mask, target_mapping=target_mapping)
+            >>> next_token_logits = outputs[
+            ...     0
+            ... ]  # Output has shape [target_mapping.size(0), target_mapping.size(1), config.vocab_size]
 
-        >>> outputs = model(input_ids, perm_mask=perm_mask, target_mapping=target_mapping)
-        >>> next_token_logits = outputs[
-        ...     0
-        ... ]  # Output has shape [target_mapping.size(0), target_mapping.size(1), config.vocab_size]
+            >>> # The same way can the XLNetLMHeadModel be used to be trained by standard auto-regressive language modeling.
+            >>> input_ids = torch.tensor(
+            ...     tokenizer.encode("Hello, my dog is very <mask>", add_special_tokens=False)
+            ... ).unsqueeze(
+            ...     0
+            ... )  # We will predict the masked token
+            >>> labels = torch.tensor(tokenizer.encode("cute", add_special_tokens=False)).unsqueeze(0)
+            >>> assert labels.shape[0] == 1, "only one word will be predicted"
+            >>> perm_mask = torch.zeros((1, input_ids.shape[1], input_ids.shape[1]), dtype=torch.float)
+            >>> perm_mask[
+            ...     :, :, -1
+            ... ] = 1.0  # Previous tokens don't see last token as is done in standard auto-regressive lm training
+            >>> target_mapping = torch.zeros(
+            ...     (1, 1, input_ids.shape[1]), dtype=torch.float
+            ... )  # Shape [1, 1, seq_length] => let's predict one token
+            >>> target_mapping[
+            ...     0, 0, -1
+            ... ] = 1.0  # Our first (and only) prediction will be the last token of the sequence (the masked token)
 
-        >>> # The same way can the XLNetLMHeadModel be used to be trained by standard auto-regressive language modeling.
-        >>> input_ids = torch.tensor(
-        ...     tokenizer.encode("Hello, my dog is very <mask>", add_special_tokens=False)
-        ... ).unsqueeze(
-        ...     0
-        ... )  # We will predict the masked token
-        >>> labels = torch.tensor(tokenizer.encode("cute", add_special_tokens=False)).unsqueeze(0)
-        >>> assert labels.shape[0] == 1, "only one word will be predicted"
-        >>> perm_mask = torch.zeros((1, input_ids.shape[1], input_ids.shape[1]), dtype=torch.float)
-        >>> perm_mask[
-        ...     :, :, -1
-        ... ] = 1.0  # Previous tokens don't see last token as is done in standard auto-regressive lm training
-        >>> target_mapping = torch.zeros(
-        ...     (1, 1, input_ids.shape[1]), dtype=torch.float
-        ... )  # Shape [1, 1, seq_length] => let's predict one token
-        >>> target_mapping[
-        ...     0, 0, -1
-        ... ] = 1.0  # Our first (and only) prediction will be the last token of the sequence (the masked token)
-
-        >>> outputs = model(input_ids, perm_mask=perm_mask, target_mapping=target_mapping, labels=labels)
-        >>> loss = outputs.loss
-        >>> next_token_logits = (
-        ...     outputs.logits
-        ... )  # Logits have shape [target_mapping.size(0), target_mapping.size(1), config.vocab_size]
-        ```"""
+            >>> outputs = model(input_ids, perm_mask=perm_mask, target_mapping=target_mapping, labels=labels)
+            >>> loss = outputs.loss
+            >>> next_token_logits = (
+            ...     outputs.logits
+            ... )  # Logits have shape [target_mapping.size(0), target_mapping.size(1), config.vocab_size]
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         transformer_outputs = self.transformer(
@@ -1726,27 +1731,27 @@ class XLNetForSequenceClassification(XLNetPreTrainedModel):
     To instantiate this class, you need to provide a `config` object as an argument. The `config` object contains various configuration parameters for the XLNet model and the classification layer.
     
     Methods:
-        - `construct`: This method constructs the XLNetForSequenceClassification model by performing the necessary computations. It takes several input tensors, such as `input_ids`, `attention_mask`, `mems`,
-`perm_mask`, `target_mapping`, `token_type_ids`, `input_mask`, `head_mask`, `inputs_embeds`, `labels`, and various optional arguments. It returns a tuple of outputs, including `loss`, `logits`, `mems`,
-`hidden_states`, and `attentions`.
+        `construct`: This method constructs the XLNetForSequenceClassification model by performing the necessary computations. It takes several input tensors, such as `input_ids`, `attention_mask`, `mems`,
+            `perm_mask`, `target_mapping`, `token_type_ids`, `input_mask`, `head_mask`, `inputs_embeds`, `labels`, and various optional arguments. It returns a tuple of outputs, including `loss`, `logits`, `mems`,
+            `hidden_states`, and `attentions`.
     
     Attributes:
-        - `num_labels`: The number of labels in the classification task.
-        - `config`: The configuration object containing parameters for the XLNet model and the classification layer.
-        - `transformer`: The XLNetModel instance used for sequence representation.
-        - `sequence_summary`: The SequenceSummary instance used to summarize the sequence representation.
-        - `logits_proj`: The linear layer used to project the sequence summary to the number of labels.
+        `num_labels`: The number of labels in the classification task.
+        `config`: The configuration object containing parameters for the XLNet model and the classification layer.
+        `transformer`: The XLNetModel instance used for sequence representation.
+        `sequence_summary`: The SequenceSummary instance used to summarize the sequence representation.
+        `logits_proj`: The linear layer used to project the sequence summary to the number of labels.
         
     Note:
-        - The `construct` method automatically determines the `problem_type` based on the `config` parameters and the provided `labels`. The `problem_type` can be either 'regression',
-'single_label_classification', or 'multi_label_classification'.
-        - The loss function used for regression is Mean-Square Loss (MSELoss), while for classification, it is Cross-Entropy Loss (CrossEntropyLoss) for single-label classification and Binary Cross-Entropy
-Loss (BCEWithLogitsLoss) for multi-label classification.
-        - The `construct` method allows for various optional arguments, such as `output_attentions`, `output_hidden_states`, and `return_dict`, which control the output format of the XLNet model.
-        - The `construct` method returns either a tuple of outputs if `return_dict` is False, or an instance of `XLNetForSequenceClassificationOutput` if `return_dict` is True.
+        >   - The `construct` method automatically determines the `problem_type` based on the `config` parameters and the provided `labels`. The `problem_type` can be either 'regression',
+                'single_label_classification', or 'multi_label_classification'.
+        >   - The loss function used for regression is Mean-Square Loss (MSELoss), while for classification, it is Cross-Entropy Loss (CrossEntropyLoss) for single-label classification and Binary Cross-Entropy
+                Loss (BCEWithLogitsLoss) for multi-label classification.
+        >   - The `construct` method allows for various optional arguments, such as `output_attentions`, `output_hidden_states`, and `return_dict`, which control the output format of the XLNet model.
+        >   - The `construct` method returns either a tuple of outputs if `return_dict` is False, or an instance of `XLNetForSequenceClassificationOutput` if `return_dict` is True.
     
-    Examples:
-        
+    Example:
+        ```python
         config = XLNetConfig(...)
         model = XLNetForSequenceClassification(config)
         inputs = {
@@ -1755,7 +1760,7 @@ Loss (BCEWithLogitsLoss) for multi-label classification.
             'labels': labels,
         }
         outputs = model.construct(**inputs)
-        
+        ```
     """
     def __init__(self, config):
         """
@@ -1800,10 +1805,11 @@ Loss (BCEWithLogitsLoss) for multi-label classification.
             **kwargs,  # delete when `use_cache` is removed in XLNetModel
     ) -> Union[Tuple, XLNetForSequenceClassificationOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1878,37 +1884,38 @@ class XLNetForTokenClassification(XLNetPreTrainedModel):
     
     Methods:
         __init__(self, config): Initializes the XLNetForTokenClassification instance with the provided configuration.
-        construct(self, input_ids, attention_mask, mems, perm_mask, target_mapping, token_type_ids, input_mask, head_mask, inputs_embeds, labels, use_mems, output_attentions, output_hidden_states, return_dict,
-**kwargs): 
+        construct(self, input_ids, attention_mask, mems, perm_mask, target_mapping, token_type_ids, input_mask, head_mask, inputs_embeds, labels, use_mems, output_attentions, output_hidden_states, return_dict, **kwargs):
             Constructs the XLNetForTokenClassification model using the input tensors and optional parameters, and computes the token classification loss.
     
-        Parameters:
-            - input_ids (mindspore.Tensor): The input tensor representing token IDs.
-            - attention_mask (mindspore.Tensor): The tensor indicating attention masks.
-            - mems (mindspore.Tensor): The tensor for memory inputs.
-            - perm_mask (mindspore.Tensor): The tensor for permutation masks.
-            - target_mapping (mindspore.Tensor): The tensor for target mapping.
-            - token_type_ids (mindspore.Tensor): The tensor for token type IDs.
-            - input_mask (mindspore.Tensor): The tensor indicating input masks.
-            - head_mask (mindspore.Tensor): The tensor for head masks.
-            - inputs_embeds (mindspore.Tensor): The tensor for input embeddings.
-            - labels (mindspore.Tensor): The tensor for target labels.
-            - use_mems (bool): Flag indicating whether to use memory inputs.
-            - output_attentions (bool): Flag indicating whether to output attentions.
-            - output_hidden_states (bool): Flag indicating whether to output hidden states.
-            - return_dict (bool): Flag indicating whether to return output as a dictionary.
-            - kwargs (dict): Additional keyword arguments.
-    
-        Returns:
-            Union[Tuple, XLNetForTokenClassificationOutput]: A tuple or XLNetForTokenClassificationOutput object containing the computed loss, logits, memories, hidden states, and attentions.
-    
-        Notes:
-            - labels should be a torch.LongTensor with indices in [0, ..., num_choices].
-            - Loss is computed using CrossEntropyLoss.
-    
-        Example usage:
-            model = XLNetForTokenClassification(config)
-            outputs = model.construct(input_ids=input_tensor, attention_mask=attention_mask, labels=label_tensor)
+            >   - Parameters:
+            >       - input_ids (mindspore.Tensor): The input tensor representing token IDs.
+            >       - attention_mask (mindspore.Tensor): The tensor indicating attention masks.
+            >       - mems (mindspore.Tensor): The tensor for memory inputs.
+            >       - perm_mask (mindspore.Tensor): The tensor for permutation masks.
+            >       - target_mapping (mindspore.Tensor): The tensor for target mapping.
+            >       - token_type_ids (mindspore.Tensor): The tensor for token type IDs.
+            >       - input_mask (mindspore.Tensor): The tensor indicating input masks.
+            >       - head_mask (mindspore.Tensor): The tensor for head masks.
+            >       - inputs_embeds (mindspore.Tensor): The tensor for input embeddings.
+            >       - labels (mindspore.Tensor): The tensor for target labels.
+            >       - use_mems (bool): Flag indicating whether to use memory inputs.
+            >       - output_attentions (bool): Flag indicating whether to output attentions.
+            >       - output_hidden_states (bool): Flag indicating whether to output hidden states.
+            >       - return_dict (bool): Flag indicating whether to return output as a dictionary.
+            >       - kwargs (dict): Additional keyword arguments.
+
+            >   - Returns:
+            >       - Union[Tuple, XLNetForTokenClassificationOutput]: A tuple or XLNetForTokenClassificationOutput object containing the computed loss, logits, memories, hidden states, and attentions.
+
+            >   - Notes:
+            >       - labels should be a torch.LongTensor with indices in [0, ..., num_choices].
+            >       - Loss is computed using CrossEntropyLoss.
+
+            >   - Example usage:
+            >       ```python
+            >       model = XLNetForTokenClassification(config)
+            >       outputs = model.construct(input_ids=input_tensor, attention_mask=attention_mask, labels=label_tensor)
+            >       ```
     """
     def __init__(self, config):
         """
@@ -1917,9 +1924,9 @@ class XLNetForTokenClassification(XLNetPreTrainedModel):
         Args:
             self (XLNetForTokenClassification): The instance of the XLNetForTokenClassification class.
             config: A configuration object containing parameters for the model.
-                - Type: Any
-                - Purpose: Specifies the configuration settings for the model.
-                - Restrictions: Must be compatible with the XLNetModel and nn.Dense classes.
+                >   - Type: Any
+                >   - Purpose: Specifies the configuration settings for the model.
+                >   - Restrictions: Must be compatible with the XLNetModel and nn.Dense classes.
         
         Returns:
             None: This method does not return any value explicitly.
@@ -1955,9 +1962,10 @@ class XLNetForTokenClassification(XLNetPreTrainedModel):
             **kwargs,  # delete when `use_cache` is removed in XLNetModel
     ) -> Union[Tuple, XLNetForTokenClassificationOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the multiple choice classification loss. Indices should be in `[0, ..., num_choices]`
-            where *num_choices* is the size of the second dimension of the input tensors. (see *input_ids* above)
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the multiple choice classification loss. Indices should be in `[0, ..., num_choices]`
+                where *num_choices* is the size of the second dimension of the input tensors. (see *input_ids* above)
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -2004,8 +2012,8 @@ class XLNetForMultipleChoice(XLNetPreTrainedModel):
 
     """
     This class represents an XLNet model for multiple choice tasks. It extends the XLNetPreTrainedModel class and provides functionality for constructing the model and handling multiple choice classification
-tasks. The class includes methods for initializing the model with configuration, constructing the model with input tensors, and computing the loss for multiple choice classification. It utilizes XLNetModel and
-SequenceSummary modules for processing input data and generating model outputs. The class also incorporates various input and output options to customize the model behavior during training and evaluation.
+    tasks. The class includes methods for initializing the model with configuration, constructing the model with input tensors, and computing the loss for multiple choice classification. It utilizes XLNetModel and
+    SequenceSummary modules for processing input data and generating model outputs. The class also incorporates various input and output options to customize the model behavior during training and evaluation.
     """
     def __init__(self, config):
         """
@@ -2020,8 +2028,8 @@ SequenceSummary modules for processing input data and generating model outputs. 
             None. This method initializes the XLNetForMultipleChoice object with the specified configuration.
         
         Raises:
-            - TypeError: If the provided config is not of the expected type.
-            - ValueError: If there are any issues during the initialization process.
+            TypeError: If the provided config is not of the expected type.
+            ValueError: If there are any issues during the initialization process.
         """
         super().__init__(config)
 
@@ -2051,10 +2059,11 @@ SequenceSummary modules for processing input data and generating model outputs. 
             **kwargs,  # delete when `use_cache` is removed in XLNetModel
     ) -> Union[Tuple, XLNetForMultipleChoiceOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
-            num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
-            `input_ids` above)
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
+                num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
+                `input_ids` above)
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -2116,30 +2125,31 @@ class XLNetForQuestionAnsweringSimple(XLNetPreTrainedModel):
 
     """
     This class represents a simple implementation of the XLNet model for question answering tasks. It is designed specifically for question answering tasks where the start and end positions of the answer in
-the input sequence need to be predicted.
+    the input sequence need to be predicted.
     
     The `XLNetForQuestionAnsweringSimple` class inherits from the `XLNetPreTrainedModel` class, which provides the basic infrastructure and functionality for XLNet models.
     
     The class has a constructor method `__init__` that initializes the XLNetForQuestionAnsweringSimple instance with the given configuration. The configuration includes the number of labels for the
-classification task and other model-specific settings. It also initializes the XLNetModel transformer, which is responsible for the main computations of the XLNet model, and the `qa_outputs` module, which is a
-fully connected layer for predicting start and end positions.
+    classification task and other model-specific settings. It also initializes the XLNetModel transformer, which is responsible for the main computations of the XLNet model, and the `qa_outputs` module, which is a
+    fully connected layer for predicting start and end positions.
     
     The `construct` method is the main entry point for using the XLNetForQuestionAnsweringSimple model. It takes various input tensors, such as `input_ids`, `attention_mask`, and `token_type_ids`, which
-represent the input sequence and its properties. It also takes optional tensors such as `start_positions` and `end_positions`, which are the labels for the positions of the start and end of the answer span in
-the input sequence.
+    represent the input sequence and its properties. It also takes optional tensors such as `start_positions` and `end_positions`, which are the labels for the positions of the start and end of the answer span in
+    the input sequence.
     
     The method returns either a tuple or a `XLNetForQuestionAnsweringSimpleOutput` object, depending on the `return_dict` parameter. The output contains the predicted start and end logits, and optionally, the
-total loss, the transformer's mems, hidden states, and attentions.
+    total loss, the transformer's mems, hidden states, and attentions.
     
     The `construct` method also handles the computation of the loss if the start and end positions are provided. It clamps the positions to the length of the sequence and applies the CrossEntropyLoss to
-calculate the start and end losses. The total loss is the average of the start and end losses.
+    calculate the start and end losses. The total loss is the average of the start and end losses.
     
     If the `return_dict` parameter is `False`, the method returns a tuple containing the total loss (if available), the start logits, the end logits, and other optional outputs. If the total loss is not
-available, the tuple contains only the logits and optional outputs.
+    available, the tuple contains only the logits and optional outputs.
     
     If the `return_dict` parameter is `True`, the method returns a `XLNetForQuestionAnsweringSimpleOutput` object that encapsulates all the outputs.
     
-    Note: The class assumes the usage of the `mindspore` library for tensor operations and loss computation.
+    Note:
+        The class assumes the usage of the `mindspore` library for tensor operations and loss computation.
     
     """
     def __init__(self, config):
@@ -2150,10 +2160,10 @@ available, the tuple contains only the logits and optional outputs.
             self: The instance of the class.
             config (XLNetConfig): The configuration object for the XLNet model.
                 The 'config' object should contain the following attributes:
-                - num_labels (int): The number of labels for the classification task.
-                  This is used to initialize the 'qa_outputs' layer.
-                - hidden_size (int): The size of the hidden state in the transformer model.
-                  This is used to initialize the 'qa_outputs' layer.
+                >   - num_labels (int): The number of labels for the classification task.
+                      This is used to initialize the 'qa_outputs' layer.
+                >   - hidden_size (int): The size of the hidden state in the transformer model.
+                      This is used to initialize the 'qa_outputs' layer.
         
         Returns:
             None
@@ -2263,24 +2273,24 @@ class XLNetForQuestionAnswering(XLNetPreTrainedModel):
 
     """
     The XLNetForQuestionAnswering class represents a XLNet model for question answering. It inherits from XLNetPreTrainedModel and provides methods for constructing the model and processing input data for
-question answering tasks. The class includes methods for computing start and end positions of the labelled span, determining if a question has an answer or no answer, and computing the plausibility of the
-answer. Additionally, it provides functionality for handling optional masks of tokens that can't be in answers.
+    question answering tasks. The class includes methods for computing start and end positions of the labelled span, determining if a question has an answer or no answer, and computing the plausibility of the
+    answer. Additionally, it provides functionality for handling optional masks of tokens that can't be in answers.
     
     Example usage:
-    
-    from transformers import AutoTokenizer, XLNetForQuestionAnswering
-    import torch
-    
-    tokenizer = AutoTokenizer.from_pretrained("xlnet/xlnet-base-cased")
-    model = XLNetForQuestionAnswering.from_pretrained("xlnet/xlnet-base-cased")
-    
-    input_ids = torch.tensor(tokenizer.encode("Hello, my dog is cute", add_special_tokens=True)).unsqueeze(0)  # Batch size 1
-    start_positions = torch.tensor([1])
-    end_positions = torch.tensor([3])
-    outputs = model(input_ids, start_positions=start_positions, end_positions=end_positions)
-    
-    loss = outputs.loss
-    
+        ```python
+        from transformers import AutoTokenizer, XLNetForQuestionAnswering
+        import torch
+
+        tokenizer = AutoTokenizer.from_pretrained("xlnet/xlnet-base-cased")
+        model = XLNetForQuestionAnswering.from_pretrained("xlnet/xlnet-base-cased")
+
+        input_ids = torch.tensor(tokenizer.encode("Hello, my dog is cute", add_special_tokens=True)).unsqueeze(0)  # Batch size 1
+        start_positions = torch.tensor([1])
+        end_positions = torch.tensor([3])
+        outputs = model(input_ids, start_positions=start_positions, end_positions=end_positions)
+
+        loss = outputs.loss
+        ```
     """
     def __init__(self, config):
         """
@@ -2289,9 +2299,9 @@ answer. Additionally, it provides functionality for handling optional masks of t
         Args:
             self (XLNetForQuestionAnswering): The instance of the XLNetForQuestionAnswering class.
             config: An object containing configuration settings for XLNetForQuestionAnswering.
-                Type: Any
-                Purpose: Specifies the configuration settings to initialize the XLNetForQuestionAnswering instance.
-                Restrictions: Must be a valid configuration object.
+                >   - Type: Any
+                >   - Purpose: Specifies the configuration settings to initialize the XLNetForQuestionAnswering instance.
+                >   - Restrictions: Must be a valid configuration object.
         
         Returns:
             None: This method does not return any value.
@@ -2334,43 +2344,45 @@ answer. Additionally, it provides functionality for handling optional masks of t
             **kwargs,  # delete when `use_cache` is removed in XLNetModel
     ) -> Union[Tuple, XLNetForQuestionAnsweringOutput]:
         r"""
-        start_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
-        is_impossible (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels whether a question has an answer or no answer (SQuAD 2.0)
-        cls_index (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the classification token to use as input for computing plausibility of the
-            answer.
-        p_mask (`torch.FloatTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Optional mask of tokens which can't be in answers (e.g. [CLS], [PAD], ...). 1.0 means token should be
-            masked. 0.0 mean token is not masked.
+        Args:
+            start_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the start of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
+            end_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the end of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
+            is_impossible (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels whether a question has an answer or no answer (SQuAD 2.0)
+            cls_index (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the classification token to use as input for computing plausibility of the
+                answer.
+            p_mask (`torch.FloatTensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Optional mask of tokens which can't be in answers (e.g. [CLS], [PAD], ...). 1.0 means token should be
+                masked. 0.0 mean token is not masked.
 
         Returns:
+            `Union[Tuple, XLNetForQuestionAnsweringOutput]`
 
         Example:
+            ```python
+            >>> from transformers import AutoTokenizer, XLNetForQuestionAnswering
+            >>> import torch
 
-        ```python
-        >>> from transformers import AutoTokenizer, XLNetForQuestionAnswering
-        >>> import torch
+            >>> tokenizer = AutoTokenizer.from_pretrained("xlnet/xlnet-base-cased")
+            >>> model = XLNetForQuestionAnswering.from_pretrained("xlnet/xlnet-base-cased")
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("xlnet/xlnet-base-cased")
-        >>> model = XLNetForQuestionAnswering.from_pretrained("xlnet/xlnet-base-cased")
+            >>> input_ids = torch.tensor(tokenizer.encode("Hello, my dog is cute", add_special_tokens=True)).unsqueeze(
+            ...     0
+            ... )  # Batch size 1
+            >>> start_positions = torch.tensor([1])
+            >>> end_positions = torch.tensor([3])
+            >>> outputs = model(input_ids, start_positions=start_positions, end_positions=end_positions)
 
-        >>> input_ids = torch.tensor(tokenizer.encode("Hello, my dog is cute", add_special_tokens=True)).unsqueeze(
-        ...     0
-        ... )  # Batch size 1
-        >>> start_positions = torch.tensor([1])
-        >>> end_positions = torch.tensor([3])
-        >>> outputs = model(input_ids, start_positions=start_positions, end_positions=end_positions)
-
-        >>> loss = outputs.loss
-        ```"""
+            >>> loss = outputs.loss
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         transformer_outputs = self.transformer(

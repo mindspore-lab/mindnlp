@@ -130,13 +130,14 @@ class BigBirdPegasusSelfAttention(nn.Cell):
         
         Args:
             self: An instance of the BigBirdPegasusSelfAttention class.
-            config: An object containing configuration parameters for the self-attention layer. It should have the following attributes:
-                - hidden_size (int): The size of the hidden layer.
-                - num_attention_heads (int): The number of attention heads.
-                - embedding_size (int, optional): The size of the embedding layer. Only required if hidden_size is not a multiple of num_attention_heads.
-                - use_bias (bool): Flag indicating whether to include bias in the linear transformations.
-                - attention_probs_dropout_prob (float): The dropout probability for attention probabilities.
-                - is_decoder (bool): Flag indicating whether the self-attention layer is used as a decoder.
+            config:
+                >- An object containing configuration parameters for the self-attention layer. It should have the following attributes:
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - num_attention_heads (int): The number of attention heads.
+                >   - embedding_size (int, optional): The size of the embedding layer. Only required if hidden_size is not a multiple of num_attention_heads.
+                >   - use_bias (bool): Flag indicating whether to include bias in the linear transformations.
+                >   - attention_probs_dropout_prob (float): The dropout probability for attention probabilities.
+                >   - is_decoder (bool): Flag indicating whether the self-attention layer is used as a decoder.
         
         Returns:
             None.
@@ -195,22 +196,22 @@ class BigBirdPegasusSelfAttention(nn.Cell):
         This method constructs the self-attention mechanism for the BigBirdPegasus model.
         
         Args:
-        - self: The instance of the class.
-        - hidden_states (Tensor): The input hidden states for the attention mechanism.
-        - attention_mask (Tensor, optional): Mask to avoid attending to specific positions. Default is None.
-        - head_mask (Tensor, optional): Mask for specific attention heads. Default is None.
-        - encoder_hidden_states (Tensor, optional): Hidden states of the encoder if cross-attention is used. Default is None.
-        - encoder_attention_mask (Tensor, optional): Mask for encoder attention. Default is None.
-        - past_key_value (Tuple[Tensor, Tensor], optional): Tuple of past key and value if available. Default is None.
-        - output_attentions (bool): Flag to output attention probabilities. Default is False.
+            self: The instance of the class.
+            hidden_states (Tensor): The input hidden states for the attention mechanism.
+            attention_mask (Tensor, optional): Mask to avoid attending to specific positions. Default is None.
+            head_mask (Tensor, optional): Mask for specific attention heads. Default is None.
+            encoder_hidden_states (Tensor, optional): Hidden states of the encoder if cross-attention is used. Default is None.
+            encoder_attention_mask (Tensor, optional): Mask for encoder attention. Default is None.
+            past_key_value (Tuple[Tensor, Tensor], optional): Tuple of past key and value if available. Default is None.
+            output_attentions (bool): Flag to output attention probabilities. Default is False.
         
         Returns:
-        - Tuple[Tensor, Tensor] or Tuple[Tensor, Tuple[Tensor, Tensor]]: The context layer and optionally the attention probabilities and past key/value.
+            Tuple[Tensor, Tensor] or Tuple[Tensor, Tuple[Tensor, Tensor]]: The context layer and optionally the attention probabilities and past key/value.
         
         Raises:
-        - ValueError: If the dimensions of the input tensors are incompatible.
-        - TypeError: If the input parameters are not of the expected types.
-        - RuntimeError: If there are runtime issues during the computation.
+            - ValueError: If the dimensions of the input tensors are incompatible.
+            - TypeError: If the input parameters are not of the expected types.
+            - RuntimeError: If there are runtime issues during the computation.
         """
         mixed_query_layer = self.query(hidden_states)
 
@@ -286,30 +287,31 @@ class BigBirdPegasusBlockSparseAttention(nn.Cell):
 
     """
     The `BigBirdPegasusBlockSparseAttention` class represents a block sparse attention mechanism used in the BigBird model for text generation tasks. This class inherits from the `nn.Cell` class and provides
-methods for performing block sparse attention operations.
+    methods for performing block sparse attention operations.
     
     The class initializes and constructs the block sparse attention mechanism using the provided configuration parameters. It also includes methods for fast matrix multiplication, creating random attention
-masks, and generating adjacency lists for random attention.
+    masks, and generating adjacency lists for random attention.
     
-    The class includes the following methods:
-    - `__init__(self, config, seed=None)`: Initializes the BigBirdPegasusBlockSparseAttention with the given configuration and optional seed for randomization.
-    - `swapaxes_for_scores(self, x)`: Swaps axes for the attention scores.
-    - `construct(self, hidden_states, band_mask=None, from_mask=None, to_mask=None, from_blocked_mask=None, to_blocked_mask=None, output_attentions=None)`: Constructs the block sparse attention mechanism using
-the given hidden states and masks.
-    - `ms_bmm_nd(self, inp_1, inp_2, ndim=None)`: Fast n-dimensional matrix multiplication.
-    - `ms_bmm_nd_swapaxes(self, inp_1, inp_2, ndim=None)`: Fast n-dimensional matrix multiplication with swapaxes.
-    - `bigbird_block_sparse_attention(self, query_layer, key_layer, value_layer, band_mask, from_mask, to_mask, from_blocked_mask, to_blocked_mask, n_heads, n_rand_blocks, attention_head_size, from_block_size,
-to_block_size, batch_size, from_seq_len, to_seq_len, seed, plan_from_length, plan_num_rand_blocks, output_attentions)`: Performs the block sparse attention mechanism with the given input tensors and parameters.
-    - `ms_gather_b2(params, indices)`: Gathers elements from the input tensors based on the provided indices.
-    - `_create_rand_mask_from_inputs(from_blocked_mask, to_blocked_mask, rand_attn, num_attention_heads, num_rand_blocks, batch_size, from_seq_length, from_block_size)`: Creates a 3D attention mask from 2D
-tensor masks.
-    - `_get_rand_attn_plan(from_seq_length, from_block_size, num_rand_blocks)`: Generates a plan for random attention placement.
-    - `_bigbird_block_rand_mask(self, from_seq_length, to_seq_length, from_block_size, to_block_size, num_rand_blocks, last_idx=-1)`: Creates an adjacency list of random attention.
-    - `_bigbird_block_rand_mask_with_head(self, from_seq_length, to_seq_length, from_block_size, to_block_size, num_heads, plan_from_length, plan_num_rand_blocks, window_block_left=1, window_block_right=1,
-global_block_top=1, global_block_bottom=1, global_block_left=1, global_block_right=1)`: Creates an adjacency list of random attention with multiple heads.
-    - `_get_single_block_row_attention(block_id, to_start_block_id, to_end_block_id, num_rand_blocks, window_block_left=1, window_block_right=1, global_block_left=1, global_block_right=1)`: Gets random row
-attention for a single block row.
-    
+    Methods:
+        `__init__(self, config, seed=None)`: Initializes the BigBirdPegasusBlockSparseAttention with the given configuration and optional seed for randomization.
+        `swapaxes_for_scores(self, x)`: Swaps axes for the attention scores.
+        `construct(self, hidden_states, band_mask=None, from_mask=None, to_mask=None, from_blocked_mask=None, to_blocked_mask=None, output_attentions=None)`: Constructs the block sparse attention mechanism using
+            the given hidden states and masks.
+        `ms_bmm_nd(self, inp_1, inp_2, ndim=None)`: Fast n-dimensional matrix multiplication.
+        `ms_bmm_nd_swapaxes(self, inp_1, inp_2, ndim=None)`: Fast n-dimensional matrix multiplication with swapaxes.
+        `bigbird_block_sparse_attention(self, query_layer, key_layer, value_layer, band_mask, from_mask, to_mask, from_blocked_mask, to_blocked_mask, n_heads, n_rand_blocks, attention_head_size, from_block_size,
+            to_block_size, batch_size, from_seq_len, to_seq_len, seed, plan_from_length, plan_num_rand_blocks, output_attentions)`:
+                Performs the block sparse attention mechanism with the given input tensors and parameters.
+        `ms_gather_b2(params, indices)`: Gathers elements from the input tensors based on the provided indices.
+        `_create_rand_mask_from_inputs(from_blocked_mask, to_blocked_mask, rand_attn, num_attention_heads, num_rand_blocks, batch_size, from_seq_length, from_block_size)`: Creates a 3D attention mask from 2D
+            tensor masks.
+        `_get_rand_attn_plan(from_seq_length, from_block_size, num_rand_blocks)`: Generates a plan for random attention placement.
+        `_bigbird_block_rand_mask(self, from_seq_length, to_seq_length, from_block_size, to_block_size, num_rand_blocks, last_idx=-1)`: Creates an adjacency list of random attention.
+        `_bigbird_block_rand_mask_with_head(self, from_seq_length, to_seq_length, from_block_size, to_block_size, num_heads, plan_from_length, plan_num_rand_blocks, window_block_left=1, window_block_right=1,
+            global_block_top=1, global_block_bottom=1, global_block_left=1, global_block_right=1)`: Creates an adjacency list of random attention with multiple heads.
+        `_get_single_block_row_attention(block_id, to_start_block_id, to_end_block_id, num_rand_blocks, window_block_left=1, window_block_right=1, global_block_left=1, global_block_right=1)`: Gets random row
+            attention for a single block row.
+
     This class provides a comprehensive implementation of the block sparse attention mechanism for efficient text generation tasks.
     """
     def __init__(self, config, seed=None):
@@ -319,12 +321,12 @@ attention for a single block row.
         Args:
             self (object): The instance of the BigBirdPegasusBlockSparseAttention class.
             config (object): An object containing configuration parameters for the attention block.
-                - max_position_embeddings (int): Maximum sequence length.
-                - hidden_size (int): Size of the hidden layer.
-                - num_attention_heads (int): Number of attention heads.
-                - num_random_blocks (int): Number of random blocks.
-                - block_size (int): Size of each block.
-                - use_bias (bool): Indicates whether bias is used in Dense layers.
+                >   - max_position_embeddings (int): Maximum sequence length.
+                >   - hidden_size (int): Size of the hidden layer.
+                >   - num_attention_heads (int): Number of attention heads.
+                >   - num_random_blocks (int): Number of random blocks.
+                >   - block_size (int): Size of each block.
+                >   - use_bias (bool): Indicates whether bias is used in Dense layers.
             seed (int, optional): Random seed for reproducibility.
         
         Returns:
@@ -370,11 +372,11 @@ attention for a single block row.
             None.
         
         This method takes in two parameters, 'self' and 'x'. 'self' is an instance of the BigBirdPegasusBlockSparseAttention class, used to access other class attributes and methods. 'x' is a torch.Tensor
-object representing the input tensor to be processed. The input tensor should have a shape compatible with (batch_size, sequence_length, hidden_size).
+        object representing the input tensor to be processed. The input tensor should have a shape compatible with (batch_size, sequence_length, hidden_size).
         
         The method performs an axis swapping operation on the input tensor 'x'. It first calculates the new shape of 'x' by combining the existing dimensions with the number of attention heads and the size of
-each attention head. Then, using the 'view' method of the tensor, the shape of 'x' is rearranged to match the new shape. Finally, the 'permute' method is applied to the tensor to swap the axes according to the
-specified permutation order (0, 2, 1, 3).
+        each attention head. Then, using the 'view' method of the tensor, the shape of 'x' is rearranged to match the new shape. Finally, the 'permute' method is applied to the tensor to swap the axes according to the
+        specified permutation order (0, 2, 1, 3).
         
         The method returns the processed tensor with the axes swapped. The shape of the output tensor is (batch_size, num_attention_heads, sequence_length, attention_head_size).
         
@@ -398,20 +400,20 @@ specified permutation order (0, 2, 1, 3).
         This method 'construct' is a part of the class 'BigBirdPegasusBlockSparseAttention'. It takes the following parameters:
         
         Args:
-        - self: The instance of the class.
-        - hidden_states (tensor): The input tensor of shape (batch_size, seqlen, _), where batch_size is the number of sequences in a batch, seqlen is the sequence length, and _ represents the hidden size.
-        - band_mask (tensor, optional): The band mask tensor used for sparse attention computation. Default is None.
-        - from_mask (tensor, optional): The from mask tensor. Default is None.
-        - to_mask (tensor, optional): The to mask tensor. Default is None.
-        - from_blocked_mask (tensor, optional): The from blocked mask tensor. Default is None.
-        - to_blocked_mask (tensor, optional): The to blocked mask tensor. Default is None.
-        - output_attentions (bool, optional): Whether to output attention probabilities. Default is None.
+            self: The instance of the class.
+            hidden_states (tensor): The input tensor of shape (batch_size, seqlen, _), where batch_size is the number of sequences in a batch, seqlen is the sequence length, and _ represents the hidden size.
+            band_mask (tensor, optional): The band mask tensor used for sparse attention computation. Default is None.
+            from_mask (tensor, optional): The from mask tensor. Default is None.
+            to_mask (tensor, optional): The to mask tensor. Default is None.
+            from_blocked_mask (tensor, optional): The from blocked mask tensor. Default is None.
+            to_blocked_mask (tensor, optional): The to blocked mask tensor. Default is None.
+            output_attentions (bool, optional): Whether to output attention probabilities. Default is None.
         
         Returns:
-        - outputs: A tuple containing the context layer tensor of shape (batch_size, from_seq_length, -1) and the attention probabilities tensor if output_attentions is True, else only the context layer tensor.
+            outputs: A tuple containing the context layer tensor of shape (batch_size, from_seq_length, -1) and the attention probabilities tensor if output_attentions is True, else only the context layer tensor.
         
         Raises:
-        - ValueError: If the query sided sequence length is not a multiple of the block size or if the key/value sided sequence length is not a multiple of the block size.
+            - ValueError: If the query sided sequence length is not a multiple of the block size or if the key/value sided sequence length is not a multiple of the block size.
         """
         # Currently this `class` can't be used in decoder.
 
@@ -500,34 +502,34 @@ specified permutation order (0, 2, 1, 3).
         This method calculates the context layer and attention probabilities using the BigBird block-sparse attention mechanism.
         
         Args:
-        - self: The instance of the class.
-        - query_layer: The input query tensor of shape (batch_size, from_seq_len, hidden_size).
-        - key_layer: The input key tensor of shape (batch_size, to_seq_len, hidden_size).
-        - value_layer: The input value tensor of shape (batch_size, to_seq_len, hidden_size).
-        - band_mask: Band mask tensor to apply attention masking of shape (batch_size, n_heads, from_seq_len, to_seq_len).
-        - from_mask: Mask tensor to apply masking to the 'from' sequence of shape (batch_size, 1, 1, from_seq_len).
-        - to_mask: Mask tensor to apply masking to the 'to' sequence of shape (batch_size, 1, 1, to_seq_len).
-        - from_blocked_mask: Mask tensor for blocked 'from' sequence of shape (batch_size, n_heads, from_seq_len // from_block_size, from_block_size).
-        - to_blocked_mask: Mask tensor for blocked 'to' sequence of shape (batch_size, n_heads, to_seq_len // to_block_size, to_block_size).
-        - n_heads: Number of attention heads.
-        - n_rand_blocks: Number of random blocks in the BigBird attention mechanism.
-        - attention_head_size: Size of each attention head.
-        - from_block_size: Size of each block in the 'from' sequence.
-        - to_block_size: Size of each block in the 'to' sequence.
-        - batch_size: Size of the input batch.
-        - from_seq_len: Length of the 'from' sequence.
-        - to_seq_len: Length of the 'to' sequence.
-        - seed: Seed value for random operations.
-        - plan_from_length: Length of the plan for random attention if applicable.
-        - plan_num_rand_blocks: Number of random blocks in the plan if applicable.
-        - output_attentions: Flag to indicate whether to output attention probabilities.
+            self: The instance of the class.
+            query_layer: The input query tensor of shape (batch_size, from_seq_len, hidden_size).
+            key_layer: The input key tensor of shape (batch_size, to_seq_len, hidden_size).
+            value_layer: The input value tensor of shape (batch_size, to_seq_len, hidden_size).
+            band_mask: Band mask tensor to apply attention masking of shape (batch_size, n_heads, from_seq_len, to_seq_len).
+            from_mask: Mask tensor to apply masking to the 'from' sequence of shape (batch_size, 1, 1, from_seq_len).
+            to_mask: Mask tensor to apply masking to the 'to' sequence of shape (batch_size, 1, 1, to_seq_len).
+            from_blocked_mask: Mask tensor for blocked 'from' sequence of shape (batch_size, n_heads, from_seq_len // from_block_size, from_block_size).
+            to_blocked_mask: Mask tensor for blocked 'to' sequence of shape (batch_size, n_heads, to_seq_len // to_block_size, to_block_size).
+            n_heads: Number of attention heads.
+            n_rand_blocks: Number of random blocks in the BigBird attention mechanism.
+            attention_head_size: Size of each attention head.
+            from_block_size: Size of each block in the 'from' sequence.
+            to_block_size: Size of each block in the 'to' sequence.
+            batch_size: Size of the input batch.
+            from_seq_len: Length of the 'from' sequence.
+            to_seq_len: Length of the 'to' sequence.
+            seed: Seed value for random operations.
+            plan_from_length: Length of the plan for random attention if applicable.
+            plan_num_rand_blocks: Number of random blocks in the plan if applicable.
+            output_attentions: Flag to indicate whether to output attention probabilities.
         
         Returns:
-        - context_layer: The context layer tensor of shape (batch_size, from_seq_len, hidden_size).
-        - attention_probs: The attention probabilities tensor of shape (batch_size, n_heads, from_seq_len, to_seq_len) if 'output_attentions' is True, else None.
+            context_layer: The context layer tensor of shape (batch_size, from_seq_len, hidden_size).
+            attention_probs: The attention probabilities tensor of shape (batch_size, n_heads, from_seq_len, to_seq_len) if 'output_attentions' is True, else None.
         
         Raises:
-        - ValueError: Raised if the number of blocks in 'from' and 'to' sequences are not equal.
+            - ValueError: Raised if the number of blocks in 'from' and 'to' sequences are not equal.
         """
         # BigBirdPegasus block-sparse attention as suggested in paper
 
@@ -1326,9 +1328,8 @@ class BigBirdPegasusEncoderAttention(nn.Cell):
         output (object): The output layer applied to the attention outputs.
     
     Methods:
-        set_attention_type(value: str): Sets the attention type to the specified value.
-        construct(hidden_states, attention_mask=None, head_mask=None, past_key_value=None, output_attentions=False, band_mask=None, 
-        from_mask=None, to_mask=None, from_blocked_mask=None, to_blocked_mask=None): Constructs the attention outputs based on the attention type.
+        set_attention_type: Sets the attention type to the specified value.
+        construct: Constructs the attention outputs based on the attention type.
     
     Raises:
         ValueError: If an invalid attention type is provided or if the attention type cannot be set to the specified value.
@@ -1654,19 +1655,19 @@ class BigBirdPegasusEncoderLayer(nn.Cell):
 
     """
     This class represents a BigBirdPegasusEncoderLayer in a neural network model. It is used for encoding input sequences using a combination of attention mechanisms and feedforward neural networks. The layer
-includes mechanisms for self-attention, layer normalization, activation functions, and dropout regularization. It also supports different types of attention, such as 'original_full' and 'block_sparse'.
+    includes mechanisms for self-attention, layer normalization, activation functions, and dropout regularization. It also supports different types of attention, such as 'original_full' and 'block_sparse'.
     
     The BigBirdPegasusEncoderLayer inherits from the nn.Cell class and consists of methods for initialization, constructing the layer, and setting the attention type. The layer's parameters and operations are
-defined based on the provided configuration, including attention types, embedding dimensions, and feedforward neural network dimensions.
+    defined based on the provided configuration, including attention types, embedding dimensions, and feedforward neural network dimensions.
     
     The `construct` method processes the input hidden states through self-attention mechanisms, normalization, activation functions, and feedforward neural networks. It allows for optional outputs of attention
-tensors from all attention layers. The method handles different types of masks for attention and dropout regularization based on the provided configurations.
+    tensors from all attention layers. The method handles different types of masks for attention and dropout regularization based on the provided configurations.
     
     The `set_attention_type` method allows for setting the type of attention mechanism used in the layer, ensuring that it is either 'original_full' or 'block_sparse'. It updates the attention type parameter
-and adjusts the self-attention mechanism accordingly.
+    and adjusts the self-attention mechanism accordingly.
     
     Overall, the BigBirdPegasusEncoderLayer class encapsulates the functionality of an encoder layer within the BigBirdPegasus model, providing essential operations for processing input sequences and capturing
-complex patterns in the data.
+    complex patterns in the data.
     """
     def __init__(self, config: BigBirdPegasusConfig, seed=None):
         """
@@ -1777,7 +1778,7 @@ complex patterns in the data.
         If the provided attention type is not valid, a ValueError will be raised.
         
         Note:
-        This method also updates the attention type of the self-attention sub-layer within the BigBirdPegasusEncoderLayer.
+            This method also updates the attention type of the self-attention sub-layer within the BigBirdPegasusEncoderLayer.
         """
         if value not in ["original_full", "block_sparse"]:
             raise ValueError(
@@ -1796,10 +1797,10 @@ class BigBirdPegasusDecoderLayer(nn.Cell):
     This class represents a decoder layer for the BigBirdPegasus model. It includes self-attention and cross-attention mechanisms, feedforward neural network, layer normalization, and dropout.
     
     The class inherits from nn.Cell and has an initialization method that takes a BigBirdPegasusConfig object as input and constructs the decoder layer. The construct method takes input hidden states and
-various optional arguments to perform decoding and returns the output tensor. It also includes detailed parameter descriptions and option flags for controlling the output.
+    various optional arguments to perform decoding and returns the output tensor. It also includes detailed parameter descriptions and option flags for controlling the output.
     
     The decoder layer consists of self-attention, encoder attention, layer normalization, feedforward neural network, and dropout operations. The construct method also supports caching of past key and value
-projection states and returning attention weights if specified.
+    projection states and returning attention weights if specified.
     
     This class provides a comprehensive implementation of a decoder layer for the BigBirdPegasus model with detailed parameter and method descriptions.
     """
@@ -1817,24 +1818,25 @@ projection states and returning attention weights if specified.
             None.
         
         This method initializes the BigBirdPegasusDecoderLayer by setting the values of various attributes. It takes in the self parameter, which is a reference to the current instance of the class, and the
-config parameter, which is an instance of the BigBirdPegasusConfig class. 
+        config parameter, which is an instance of the BigBirdPegasusConfig class.
         
-        The config parameter is used to set the following attributes:
-        - embed_dim (int): The embedding dimension size, which is set to the value of config.d_model.
-        - self_attn (BigBirdPegasusDecoderAttention): The self-attention mechanism for the decoder layer, which is created using the embed_dim, config.decoder_attention_heads, config.attention_dropout,
-config.is_decoder, and config.use_bias parameters.
-        - dropout (float): The dropout rate, which is set to the value of config.dropout.
-        - activation_fn (function): The activation function used in the decoder layer, which is determined based on the value of config.activation_function.
-        - activation_dropout (float): The dropout rate for the activation function, which is set to the value of config.activation_dropout.
-        - self_attn_layer_norm (nn.LayerNorm): The layer normalization module applied to the output of the self-attention mechanism, which is created using the embed_dim parameter.
-        - encoder_attn (BigBirdPegasusDecoderAttention): The encoder attention mechanism for the decoder layer, which is created using the embed_dim, config.decoder_attention_heads, config.attention_dropout,
-config.is_decoder, and config.use_bias parameters.
-        - encoder_attn_layer_norm (nn.LayerNorm): The layer normalization module applied to the output of the encoder attention mechanism, which is created using the embed_dim parameter.
-        - fc1 (nn.Dense): The first fully connected layer in the decoder feed-forward network, which has an input size of embed_dim and an output size of config.decoder_ffn_dim.
-        - fc2 (nn.Dense): The second fully connected layer in the decoder feed-forward network, which has an input size of config.decoder_ffn_dim and an output size of embed_dim.
-        - final_layer_norm (nn.LayerNorm): The layer normalization module applied to the output of the decoder layer, which is created using the embed_dim parameter.
+        Attributes:
+            embed_dim (int): The embedding dimension size, which is set to the value of config.d_model.
+            self_attn (BigBirdPegasusDecoderAttention): The self-attention mechanism for the decoder layer, which is created using the embed_dim, config.decoder_attention_heads, config.attention_dropout,
+                config.is_decoder, and config.use_bias parameters.
+            dropout (float): The dropout rate, which is set to the value of config.dropout.
+            activation_fn (function): The activation function used in the decoder layer, which is determined based on the value of config.activation_function.
+            activation_dropout (float): The dropout rate for the activation function, which is set to the value of config.activation_dropout.
+            self_attn_layer_norm (nn.LayerNorm): The layer normalization module applied to the output of the self-attention mechanism, which is created using the embed_dim parameter.
+            encoder_attn (BigBirdPegasusDecoderAttention): The encoder attention mechanism for the decoder layer, which is created using the embed_dim, config.decoder_attention_heads, config.attention_dropout,
+                config.is_decoder, and config.use_bias parameters.
+            encoder_attn_layer_norm (nn.LayerNorm): The layer normalization module applied to the output of the encoder attention mechanism, which is created using the embed_dim parameter.
+            fc1 (nn.Dense): The first fully connected layer in the decoder feed-forward network, which has an input size of embed_dim and an output size of config.decoder_ffn_dim.
+            fc2 (nn.Dense): The second fully connected layer in the decoder feed-forward network, which has an input size of config.decoder_ffn_dim and an output size of embed_dim.
+            final_layer_norm (nn.LayerNorm): The layer normalization module applied to the output of the decoder layer, which is created using the embed_dim parameter.
         
-        Note: The BigBirdPegasusDecoderAttention and nn.Dense classes are assumed to be imported from the appropriate libraries.
+        Note:
+            The BigBirdPegasusDecoderAttention and nn.Dense classes are assumed to be imported from the appropriate libraries.
         """
         super().__init__()
         self.embed_dim = config.d_model
@@ -2009,13 +2011,13 @@ class BigBirdPegasusPreTrainedModel(PreTrainedModel):
 
     """
     The 'BigBirdPegasusPreTrainedModel' class represents a pre-trained model for natural language processing tasks. It inherits from the 'PreTrainedModel' class and includes methods for initializing weights
-and generating dummy inputs for the model. 
+    and generating dummy inputs for the model.
     
     The '_init_weights' method initializes the weights of the model's cells based on the specified standard deviation. It handles different cell types such as 'nn.Dense' and 'nn.Embedding', setting their
-weights and biases accordingly. For 'nn.Embedding' cells, it also handles padding indices to ensure proper weight initialization.
+    weights and biases accordingly. For 'nn.Embedding' cells, it also handles padding indices to ensure proper weight initialization.
     
     The 'dummy_inputs' property returns a dictionary of dummy inputs for the model, including an attention mask and input IDs. It uses the specified pad token ID to generate the inputs and handles padding for
-the input sequences.
+    the input sequences.
     
     This class provides essential functionality for initializing model weights and generating dummy inputs, making it suitable for use in natural language processing tasks.
     """
@@ -2052,9 +2054,9 @@ the input sequences.
         
         Returns:
             dict: A dictionary containing dummy inputs for the model, with the following keys:
-                  - 'attention_mask': A tensor representing the attention mask. It is obtained by applying the 'ne' (not equal) operation on the 'input_ids' tensor, with the padding token as the argument.
-                  - 'input_ids': A tensor representing the input IDs for the model. It contains two rows, where each row represents a different sequence. The first row consists of the values [0, 6, 10, 4, 2],
-and the second row consists of the values [0, 8, 12, 2, pad_token], where 'pad_token' is the padding token ID obtained from the model's configuration.
+                >   - 'attention_mask': A tensor representing the attention mask. It is obtained by applying the 'ne' (not equal) operation on the 'input_ids' tensor, with the padding token as the argument.
+                >   - 'input_ids': A tensor representing the input IDs for the model. It contains two rows, where each row represents a different sequence. The first row consists of the values [0, 6, 10, 4, 2],
+                        and the second row consists of the values [0, 8, 12, 2, pad_token], where 'pad_token' is the padding token ID obtained from the model's configuration.
         
         Raises:
             None.
@@ -2136,19 +2138,14 @@ class BigBirdPegasusEncoder(BigBirdPegasusPreTrainedModel):
             input_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
                 Indices of input sequence tokens in the vocabulary. Padding will be ignored by default should you
                 provide it.
-
                 Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
                 [`PreTrainedTokenizer.__call__`] for details.
-
                 [What are input IDs?](../glossary#input-ids)
             attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
-
+                >- Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
                 [What are attention masks?](../glossary#attention-mask)
-
             inputs_embeds (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
                 Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation.
                 This is useful if you want more control over how to convert `input_ids` indices into associated vectors
@@ -2337,8 +2334,8 @@ class BigBirdPegasusEncoder(BigBirdPegasusPreTrainedModel):
         Method: create_masks_for_block_sparse_attn
         
         Description:
-        This method creates various types of masks for block-sparse attention in the BigBirdPegasusEncoder class. It takes an attention_mask and the block_size as input and returns multiple masks required for
-block-sparse attention.
+            This method creates various types of masks for block-sparse attention in the BigBirdPegasusEncoder class. It takes an attention_mask and the block_size as input and returns multiple masks required for
+            block-sparse attention.
         
         Args:
             attention_mask (mindspore.Tensor): A 2D tensor representing the attention mask for the input sequence.
@@ -2510,53 +2507,41 @@ class BigBirdPegasusDecoder(BigBirdPegasusPreTrainedModel):
             input_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
                 Indices of input sequence tokens in the vocabulary. Padding will be ignored by default should you
                 provide it.
-
                 Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
                 [`PreTrainedTokenizer.__call__`] for details.
-
                 [What are input IDs?](../glossary#input-ids)
             attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
-
+                >- Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
                 [What are attention masks?](../glossary#attention-mask)
             encoder_hidden_states (`mindspore.Tensor` of shape `(batch_size, encoder_sequence_length, hidden_size)`, *optional*):
                 Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention
                 of the decoder.
             encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, encoder_sequence_length)`, *optional*):
-                Mask to avoid performing cross-attention on padding tokens indices of encoder input_ids. Mask values
-                selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
-
+                >- Mask to avoid performing cross-attention on padding tokens indices of encoder input_ids. Mask values
+                    selected in `[0, 1]`:
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
                 [What are attention masks?](../glossary#attention-mask)
             head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-                Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
-
+                >- Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
+                >   - 1 indicates the head is **not masked**,
+                >   - 0 indicates the head is **masked**.
             cross_attn_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-                Mask to nullify selected heads of the cross-attention modules in decoder to avoid performing
-                cross-attention on hidden heads. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
-
+                >- Mask to nullify selected heads of the cross-attention modules in decoder to avoid performing
+                    cross-attention on hidden heads. Mask values selected in `[0, 1]`:
+                >   - 1 indicates the head is **not masked**,
+                >   - 0 indicates the head is **masked**.
             past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
-                Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
-                shape `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of
-                shape `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`.
-
-                Contains pre-computed hidden-states (key and values in the self-attention blocks and in the
-                cross-attention blocks) that can be used (see `past_key_values` input) to speed up sequential decoding.
-
-                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those
-                that don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of
-                all `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+                >- Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
+                    shape `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of
+                    shape `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`.
+                >- Contains pre-computed hidden-states (key and values in the self-attention blocks and in the
+                    cross-attention blocks) that can be used (see `past_key_values` input) to speed up sequential decoding.
+                >- If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those
+                    that don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of
+                    all `decoder_input_ids` of shape `(batch_size, sequence_length)`.
             inputs_embeds (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
                 Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation.
                 This is useful if you want more control over how to convert `input_ids` indices into associated vectors
@@ -2710,23 +2695,23 @@ class BigBirdPegasusModel(BigBirdPegasusPreTrainedModel):
     This class represents a BigBirdPegasus model for sequence-to-sequence tasks. It is a variant of the BigBird model that is specifically designed for text generation tasks using the Pegasus architecture.
     
     The BigBirdPegasusModel class inherits from the BigBirdPegasusPreTrainedModel class, which is a base class for all pre-trained BigBirdPegasus models. It provides common methods and attributes for loading
-and saving models.
+    and saving models.
     
-    The BigBirdPegasusModel class has the following methods:
-    
-    - __init__(self, config: BigBirdPegasusConfig): Initializes the BigBirdPegasusModel instance with a given configuration.
-    - get_input_embeddings(self): Returns the shared input embeddings used by the model.
-    - set_input_embeddings(self, value): Sets the shared input embeddings of the model.
-    - _tie_weights(self): Ties the weights of the encoder and decoder embedding layers if specified in the configuration.
-    - get_encoder(self): Returns the encoder module of the model.
-    - get_decoder(self): Returns the decoder module of the model.
-    - construct(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask, cross_attn_head_mask, encoder_outputs, past_key_values, inputs_embeds,
-decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model by performing encoding and decoding operations on the input sequence.
+    Methods:
+        __init__(self, config: BigBirdPegasusConfig): Initializes the BigBirdPegasusModel instance with a given configuration.
+        get_input_embeddings(self): Returns the shared input embeddings used by the model.
+        set_input_embeddings(self, value): Sets the shared input embeddings of the model.
+        _tie_weights(self): Ties the weights of the encoder and decoder embedding layers if specified in the configuration.
+        get_encoder(self): Returns the encoder module of the model.
+        get_decoder(self): Returns the decoder module of the model.
+        construct(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask, cross_attn_head_mask, encoder_outputs, past_key_values, inputs_embeds,
+            decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model by performing encoding and decoding operations on the input sequence.
     
     Please refer to the documentation of the individual methods for more details on their parameters and return values.
     
-    Note: This docstring is generated based on the provided code snippet and may not include all the class attributes, methods, and their details. Please refer to the source code or official documentation for
-complete information.
+    Note:
+        This docstring is generated based on the provided code snippet and may not include all the class attributes, methods, and their details. Please refer to the source code or official documentation for
+        complete information.
     """
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
@@ -2737,9 +2722,9 @@ complete information.
         Args:
             self: The current instance of the class.
             config (BigBirdPegasusConfig): The configuration object containing various settings for the model.
-                - `pad_token_id` (int): The index of the padding token in the vocabulary.
-                - `vocab_size` (int): The size of the vocabulary.
-                - `d_model` (int): The dimensionality of the model's hidden states.
+                >   - `pad_token_id` (int): The index of the padding token in the vocabulary.
+                >   - `vocab_size` (int): The size of the vocabulary.
+                >   - `d_model` (int): The dimensionality of the model's hidden states.
         
         Returns:
             None
@@ -2806,7 +2791,7 @@ complete information.
         
         Note:
             This method is used to ensure that the encoder and decoder token embeddings share the same weights when the tie_word_embeddings flag is set to True. It helps in reducing the number of parameters in
-the model and improves training efficiency.
+            the model and improves training efficiency.
         """
         if self.config.tie_word_embeddings:
             self._tie_or_clone_weights(self.encoder.embed_tokens, self.shared)
@@ -2873,7 +2858,7 @@ the model and improves training efficiency.
             head_mask (mindspore.Tensor, optional): The head mask tensor of shape (num_layers, num_heads) or (num_layers, num_heads, sequence_length, sequence_length). Defaults to None.
             decoder_head_mask (mindspore.Tensor, optional): The decoder head mask tensor of shape (num_layers, num_heads) or (num_layers, num_heads, sequence_length, sequence_length). Defaults to None.
             cross_attn_head_mask (mindspore.Tensor, optional): The cross-attention head mask tensor of shape (num_layers, num_heads) or (num_layers, num_heads, sequence_length, sequence_length). Defaults to
-None.
+                None.
             encoder_outputs (List[mindspore.Tensor], optional): The encoder outputs of shape [(batch_size, sequence_length, hidden_size), ...]. Defaults to None.
             past_key_values (List[mindspore.Tensor], optional): The past key values of shape [(batch_size, num_heads, past_sequence_length, hidden_size), ...]. Defaults to None.
             inputs_embeds (mindspore.Tensor, optional): The embedded inputs tensor of shape (batch_size, sequence_length, hidden_size). Defaults to None.
@@ -2966,25 +2951,20 @@ class BigBirdPegasusForConditionalGeneration(BigBirdPegasusPreTrainedModel):
     This class represents a conditional generation model based on BigBirdPegasus. It is a subclass of BigBirdPegasusPreTrainedModel. 
     
     The BigBirdPegasusForConditionalGeneration class extends the functionality of its parent class by adding methods for conditional generation tasks, such as generating text given a prompt or a set of input
-tokens. 
+    tokens.
     
     Methods:
-    - __init__(self, config: BigBirdPegasusConfig): Initializes the model with the given configuration.
-    - get_encoder(self): Returns the encoder of the model.
-    - get_decoder(self): Returns the decoder of the model.
-    - resize_token_embeddings(self, new_num_tokens: int, pad_to_multiple_of: Optional[int] = None) -> nn.Embedding: Resizes the token embeddings of the model.
-    - _resize_final_logits_bias(self, new_num_tokens: int) -> None: Resizes the bias tensor used for final logits.
-    - get_output_embeddings(self): Returns the output embedding layer of the model.
-    - set_output_embeddings(self, new_embeddings): Sets the output embedding layer of the model.
-    - construct(self, input_ids: mindspore.Tensor = None, attention_mask: Optional[mindspore.Tensor] = None, decoder_input_ids: Optional[mindspore.Tensor] = None, decoder_attention_mask:
-Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, decoder_head_mask: Optional[mindspore.Tensor] = None, cross_attn_head_mask: Optional[mindspore.Tensor] = None, encoder_outputs:
-Optional[List[mindspore.Tensor]] = None, past_key_values: Optional[List[mindspore.Tensor]] = None, inputs_embeds: Optional[mindspore.Tensor] = None, decoder_inputs_embeds: Optional[mindspore.Tensor] = None,
-labels: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) ->
-Union[Tuple, Seq2SeqLMOutput]: Constructs the model for conditional generation tasks.
-    - prepare_inputs_for_generation(self, decoder_input_ids, past_key_values=None, attention_mask=None, decoder_attention_mask=None, head_mask=None, decoder_head_mask=None, cross_attn_head_mask=None,
-use_cache=None, encoder_outputs=None, **kwargs): Prepares the input tensors for generation.
-    - prepare_decoder_input_ids_from_labels(self, labels: mindspore.Tensor): Prepares the decoder input IDs from the given labels.
-    - _reorder_cache(past_key_values, beam_idx): Reorders the past key values for beam search.
+        __init__: Initializes the model with the given configuration.
+        get_encoder: Returns the encoder of the model.
+        get_decoder: Returns the decoder of the model.
+        resize_token_embeddings: Resizes the token embeddings of the model.
+        _resize_final_logits_bias: Resizes the bias tensor used for final logits.
+        get_output_embeddings: Returns the output embedding layer of the model.
+        set_output_embeddings: Sets the output embedding layer of the model.
+        construct: Constructs the model for conditional generation tasks.
+        prepare_inputs_for_generation: Prepares the input tensors for generation.
+        prepare_decoder_input_ids_from_labels: Prepares the decoder input IDs from the given labels.
+        _reorder_cache: Reorders the past key values for beam search.
     
     The BigBirdPegasusForConditionalGeneration class is designed to be used for various conditional generation tasks, such as text generation, text completion, and text summarization.
     """
@@ -3080,9 +3060,10 @@ use_cache=None, encoder_outputs=None, **kwargs): Prepares the input tensors for 
             None.
         
         The method `_resize_final_logits_bias` resizes the `final_logits_bias` tensor based on the provided `new_num_tokens` parameter. If the `new_num_tokens` is less than or equal to the current number of
-tokens in `final_logits_bias`, the tensor is sliced to retain only the first `new_num_tokens` columns. Otherwise, extra bias columns are added to the tensor using `zeros` and `cat` operations.
+        tokens in `final_logits_bias`, the tensor is sliced to retain only the first `new_num_tokens` columns. Otherwise, extra bias columns are added to the tensor using `zeros` and `cat` operations.
         
-        Note: This method directly modifies the `final_logits_bias` attribute of the BigBirdPegasusForConditionalGeneration instance.
+        Note:
+            This method directly modifies the `final_logits_bias` attribute of the BigBirdPegasusForConditionalGeneration instance.
         """
         old_num_tokens = self.final_logits_bias.shape[-1]
         if new_num_tokens <= old_num_tokens:
@@ -3219,23 +3200,23 @@ tokens in `final_logits_bias`, the tensor is sliced to retain only the first `ne
         This method prepares inputs for generation in the BigBirdPegasusForConditionalGeneration class.
         
         Args:
-        - self: The instance of the class.
-        - decoder_input_ids (Tensor): The input tensor for the decoder.
-        - past_key_values (tuple, optional): A tuple of past key values for the model's autoregressive decoding. Defaults to None.
-        - attention_mask (Tensor, optional): The attention mask for the input. Defaults to None.
-        - decoder_attention_mask (Tensor, optional): The attention mask for the decoder input. Defaults to None.
-        - head_mask (Tensor, optional): The mask for the attention heads. Defaults to None.
-        - decoder_head_mask (Tensor, optional): The mask for the decoder's attention heads. Defaults to None.
-        - cross_attn_head_mask (Tensor, optional): The mask for cross-attention heads. Defaults to None.
-        - use_cache (bool, optional): Whether to use caching for the model. Defaults to None.
-        - encoder_outputs (Tensor, optional): The outputs from the encoder. Defaults to None.
+            self: The instance of the class.
+            decoder_input_ids (Tensor): The input tensor for the decoder.
+            past_key_values (tuple, optional): A tuple of past key values for the model's autoregressive decoding. Defaults to None.
+            attention_mask (Tensor, optional): The attention mask for the input. Defaults to None.
+            decoder_attention_mask (Tensor, optional): The attention mask for the decoder input. Defaults to None.
+            head_mask (Tensor, optional): The mask for the attention heads. Defaults to None.
+            decoder_head_mask (Tensor, optional): The mask for the decoder's attention heads. Defaults to None.
+            cross_attn_head_mask (Tensor, optional): The mask for cross-attention heads. Defaults to None.
+            use_cache (bool, optional): Whether to use caching for the model. Defaults to None.
+            encoder_outputs (Tensor, optional): The outputs from the encoder. Defaults to None.
         
         Returns:
-        - dict: A dictionary containing 'input_ids', 'encoder_outputs', 'past_key_values', 'decoder_input_ids', 'attention_mask', 'decoder_attention_mask', 'head_mask', 'decoder_head_mask',
-'cross_attn_head_mask', and 'use_cache'.
+            dict: A dictionary containing 'input_ids', 'encoder_outputs', 'past_key_values', 'decoder_input_ids', 'attention_mask', 'decoder_attention_mask', 'head_mask', 'decoder_head_mask',
+                'cross_attn_head_mask', and 'use_cache'.
         
         Raises:
-        - None
+            None
         """
         # cut decoder_input_ids if past_key_values is used
         if past_key_values is not None:
@@ -3310,8 +3291,8 @@ class BigBirdPegasusForSequenceClassification(BigBirdPegasusPreTrainedModel):
 
     """
     This class represents a BigBirdPegasus model for sequence classification. It inherits from BigBirdPegasusPreTrainedModel and includes methods for model initialization and construction of the sequence
-classifier. The construct method takes various input parameters for decoding and attention masks, and returns the sequence classifier output including logits and optional loss. The class also handles different
-problem types such as regression, single label classification, and multi-label classification. Additionally, it ensures consistency in the number of <eos> tokens for all examples. 
+    classifier. The construct method takes various input parameters for decoding and attention masks, and returns the sequence classifier output including logits and optional loss. The class also handles different
+    problem types such as regression, single label classification, and multi-label classification. Additionally, it ensures consistency in the number of <eos> tokens for all examples.
     """
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
@@ -3362,9 +3343,9 @@ problem types such as regression, single label classification, and multi-label c
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Seq2SeqSequenceClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        >    labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if labels is not None:
@@ -3444,13 +3425,13 @@ class BigBirdPegasusForQuestionAnswering(BigBirdPegasusPreTrainedModel):
     This class represents a BigBirdPegasus model for question answering tasks. It is designed to perform question answering using the BigBirdPegasus architecture.
     
     The class includes methods for initialization and constructing the model for question answering tasks. It inherits from the BigBirdPegasusPreTrainedModel class and utilizes a sequence-to-sequence model for
-processing input and generating output.
+    processing input and generating output.
     
     The __init__ method initializes the model with configuration settings, including setting the number of labels for classification. The construct method constructs the model for question answering by
-processing input tensors and generating start and end position logits for the answer span.
+    processing input tensors and generating start and end position logits for the answer span.
     
     The class provides functionality for computing the token classification loss based on the start and end positions of the labelled span. It handles the calculation of loss and returns the output in the
-desired format based on the return_dict parameter.
+    desired format based on the return_dict parameter.
     
     For detailed information on the methods and parameters of this class, please refer to the class code and method docstrings.
     """
@@ -3463,9 +3444,9 @@ desired format based on the return_dict parameter.
         Args:
             self: The object instance itself.
             config: An object containing configuration settings for the model.
-                Type: Any
-                Purpose: Contains configuration settings for the model initialization.
-                Restrictions: Must be a valid configuration object.
+                >   - Type: Any
+                >   - Purpose: Contains configuration settings for the model initialization.
+                >   - Restrictions: Must be a valid configuration object.
         
         Returns:
             None. This method does not return any value.
@@ -3630,10 +3611,10 @@ class BigBirdPegasusForCausalLM(BigBirdPegasusPreTrainedModel):
     The `BigBirdPegasusForCausalLM` class represents a BigBird Pegasus model for causal language modeling tasks. It inherits from the `BigBirdPegasusPreTrainedModel` class. 
     
     The class initializes the model with the provided configuration and defines methods for getting and setting input and output embeddings, setting the decoder, and constructing the model for generation.
-Additionally, it provides methods for preparing inputs for generation and reordering cache for beam search.
+    Additionally, it provides methods for preparing inputs for generation and reordering cache for beam search.
     
     The `construct` method processes the input data for the model and returns the model outputs. The `prepare_inputs_for_generation` method prepares input data for generation, and the `_reorder_cache` method
-reorders the cache for beam search.
+    reorders the cache for beam search.
     
     The class also includes detailed documentation for the input and output parameters of the `construct` method, providing information on the usage and functionality of each parameter.
     
@@ -3649,7 +3630,7 @@ reorders the cache for beam search.
         Args:
             self: The instance of the class.
             config: A configuration object containing the model's configuration parameters. It is expected to be a dictionary or an object that can be deep-copied. It should include the necessary parameters
-for initializing the model. The 'is_decoder' and 'is_encoder_decoder' attributes will be modified within this method. 
+                for initializing the model. The 'is_decoder' and 'is_encoder_decoder' attributes will be modified within this method.
         
         Returns:
             None. This method does not return any value.
@@ -3675,16 +3656,16 @@ for initializing the model. The 'is_decoder' and 'is_encoder_decoder' attributes
         Method: get_input_embeddings
         
         Description:
-        Returns the input embeddings used by the BigBirdPegasusForCausalLM model's decoder.
+            Returns the input embeddings used by the BigBirdPegasusForCausalLM model's decoder.
         
         Args:
-        - self (object): The instance of the BigBirdPegasusForCausalLM class.
+            self (object): The instance of the BigBirdPegasusForCausalLM class.
         
         Returns:
-        - None: This method returns None as it directly retrieves and returns the input embeddings from the decoder of the model.
+            None: This method returns None as it directly retrieves and returns the input embeddings from the decoder of the model.
         
         Raises:
-        - None
+            None
         """
         return self.model.decoder.embed_tokens
 
@@ -3707,8 +3688,9 @@ for initializing the model. The 'is_decoder' and 'is_encoder_decoder' attributes
         inputs in the decoder. By setting the input embeddings, the model will use the provided embeddings during inference 
         and decoding.
         
-        Note: It is important to ensure that the 'value' parameter is a tensor of shape (vocab_size, embedding_dim) where 'vocab_size'
-        is the size of the vocabulary and 'embedding_dim' is the dimensionality of the embedding space.
+        Note:
+            It is important to ensure that the 'value' parameter is a tensor of shape (vocab_size, embedding_dim) where 'vocab_size'
+            is the size of the vocabulary and 'embedding_dim' is the dimensionality of the embedding space.
         """
         self.model.decoder.embed_tokens = value
 
@@ -3795,19 +3777,15 @@ for initializing the model. The 'is_decoder' and 'is_encoder_decoder' attributes
         r"""
         Args:
             input_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
-                Indices of input sequence tokens in the vocabulary. Padding will be ignored by default should you
-                provide it.
-
-                Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
-                [`PreTrainedTokenizer.__call__`] for details.
-
+                >- Indices of input sequence tokens in the vocabulary. Padding will be ignored by default should you
+                    provide it.
+                >- Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
+                    [`PreTrainedTokenizer.__call__`] for details.
                 [What are input IDs?](../glossary#input-ids)
             attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
-
+                >- Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
                 [What are attention masks?](../glossary#attention-mask)
             encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
                 Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention
@@ -3816,39 +3794,32 @@ for initializing the model. The 'is_decoder' and 'is_encoder_decoder' attributes
                 Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used
                 in the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
             head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-                Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
-
+                >- Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
+                >   - 1 indicates the head is **not masked**,
+                >   - 0 indicates the head is **masked**.
             cross_attn_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
                 Mask to nullify selected heads of the cross-attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
-
+                >   - 1 indicates the head is **not masked**,
+                >   - 0 indicates the head is **masked**.
             past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
-                Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
-                shape `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of
-                shape `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`. The two additional
-                tensors are only required when the model is used as a decoder in a Sequence to Sequence model.
-
-                Contains pre-computed hidden-states (key and values in the self-attention blocks and in the
-                cross-attention blocks) that can be used (see `past_key_values` input) to speed up sequential decoding.
-
-                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those
-                that don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of
-                all `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+                >- Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
+                    shape `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of
+                    shape `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`. The two additional
+                    tensors are only required when the model is used as a decoder in a Sequence to Sequence model.
+                >- Contains pre-computed hidden-states (key and values in the self-attention blocks and in the
+                    cross-attention blocks) that can be used (see `past_key_values` input) to speed up sequential decoding.
+                >- If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those
+                    that don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of
+                    all `decoder_input_ids` of shape `(batch_size, sequence_length)`.
             labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
                 config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
                 (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
             use_cache (`bool`, *optional*):
-                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding
-                (see `past_key_values`).
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
+                >- If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding
+                    (see `past_key_values`).
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
             output_attentions (`bool`, *optional*):
                 Whether or not to return the attentions tensors of all attention layers. See `attentions` under
                 returned tensors for more detail.
@@ -3859,22 +3830,23 @@ for initializing the model. The 'is_decoder' and 'is_encoder_decoder' attributes
                 Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
 
         Returns:
+            Union[Tuple, CausalLMOutputWithCrossAttentions]
 
         Example:
+            ```python
+            >>> from transformers import AutoTokenizer, BigBirdPegasusForCausalLM
 
-        ```python
-        >>> from transformers import AutoTokenizer, BigBirdPegasusForCausalLM
+            >>> tokenizer = AutoTokenizer.from_pretrained("google/bigbird-pegasus-large-arxiv")
+            >>> model = BigBirdPegasusForCausalLM.from_pretrained(
+            ...     "google/bigbird-pegasus-large-arxiv", add_cross_attention=False
+            ... )
+            >>> assert model.config.is_decoder, f"{model.__class__} has to be configured as a decoder."
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> outputs = model(**inputs)
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("google/bigbird-pegasus-large-arxiv")
-        >>> model = BigBirdPegasusForCausalLM.from_pretrained(
-        ...     "google/bigbird-pegasus-large-arxiv", add_cross_attention=False
-        ... )
-        >>> assert model.config.is_decoder, f"{model.__class__} has to be configured as a decoder."
-        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
-        >>> outputs = model(**inputs)
-
-        >>> logits = outputs.logits
-        ```"""
+            >>> logits = outputs.logits
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -3933,11 +3905,11 @@ for initializing the model. The 'is_decoder' and 'is_encoder_decoder' attributes
             
         Returns:
             Dict[str, Union[torch.Tensor, Tuple[torch.Tensor], bool]]: A dictionary containing the following items:
-                - 'input_ids' (torch.Tensor): The input tensor.
-                - 'attention_mask' (torch.Tensor): The attention mask tensor.
-                - 'past_key_values' (Optional[Union[Tuple[torch.Tensor], Tuple[torch.Tensor, torch.Tensor]]]):
-                    Optional tuple of past key and value tensors.
-                - 'use_cache' (Optional[bool]): Whether to use cache for faster decoding.
+                >   - 'input_ids' (torch.Tensor): The input tensor.
+                >   - 'attention_mask' (torch.Tensor): The attention mask tensor.
+                >   - 'past_key_values' (Optional[Union[Tuple[torch.Tensor], Tuple[torch.Tensor, torch.Tensor]]]):
+                        Optional tuple of past key and value tensors.
+                >   - 'use_cache' (Optional[bool]): Whether to use cache for faster decoding.
         
         Raises:
             None.

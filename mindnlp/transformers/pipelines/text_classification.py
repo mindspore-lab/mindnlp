@@ -76,17 +76,16 @@ class TextClassificationPipeline(Pipeline):
     examples](../task_summary#sequence-classification) for more information.
 
     Example:
+        ```python
+        >>> from transformers import pipeline
 
-    ```python
-    >>> from transformers import pipeline
+        >>> classifier = pipeline(model="distilbert-base-uncased-finetuned-sst-2-english")
+        >>> classifier("This movie is disgustingly good !")
+        [{'label': 'POSITIVE', 'score': 1.0}]
 
-    >>> classifier = pipeline(model="distilbert-base-uncased-finetuned-sst-2-english")
-    >>> classifier("This movie is disgustingly good !")
-    [{'label': 'POSITIVE', 'score': 1.0}]
-
-    >>> classifier("Director tried too much.")
-    [{'label': 'NEGATIVE', 'score': 0.996}]
-    ```
+        >>> classifier("Director tried too much.")
+        [{'label': 'NEGATIVE', 'score': 0.996}]
+        ```
 
     Learn more about the basics of using a pipeline in the [pipeline tutorial](../pipeline_tutorial)
 
@@ -132,8 +131,8 @@ class TextClassificationPipeline(Pipeline):
         
         Returns:
             tuple: A tuple containing three dictionaries: preprocess_params, an empty dictionary, and postprocess_params. 
-            - preprocess_params (dict): The parameters for tokenization and preprocessing.
-            - postprocess_params (dict): The parameters for post-processing.
+            >- preprocess_params (dict): The parameters for tokenization and preprocessing.
+            >- postprocess_params (dict): The parameters for post-processing.
             
         Raises:
             UserWarning: If `return_all_scores` is set to True or False, as it is now deprecated.
@@ -184,20 +183,20 @@ class TextClassificationPipeline(Pipeline):
                 If this argument is not specified, then it will apply the following functions according to the number
                 of labels:
 
-                - If the model has a single label, will apply the sigmoid function on the output.
-                - If the model has several labels, will apply the softmax function on the output.
+                >- If the model has a single label, will apply the sigmoid function on the output.
+                >- If the model has several labels, will apply the softmax function on the output.
 
                 Possible values are:
 
-                - `"sigmoid"`: Applies the sigmoid function on the output.
-                - `"softmax"`: Applies the softmax function on the output.
-                - `"none"`: Does not apply any function on the output.
+                >- `"sigmoid"`: Applies the sigmoid function on the output.
+                >- `"softmax"`: Applies the softmax function on the output.
+                >- `"none"`: Does not apply any function on the output.
 
         Return:
             A list or a list of list of `dict`: Each result comes as list of dictionaries with the following keys:
 
-            - **label** (`str`) -- The label predicted.
-            - **score** (`float`) -- The corresponding probability.
+            >- **label** (`str`) -- The label predicted.
+            >- **score** (`float`) -- The corresponding probability.
 
             If `top_k` is used, one such dictionary is returned per label.
         """
@@ -217,15 +216,15 @@ class TextClassificationPipeline(Pipeline):
         Args:
             self: An instance of the TextClassificationPipeline class.
             inputs: The input data to be preprocessed. It can be one of the following:
-                - A dictionary containing the text and text_pair keys, representing the main text and its paired text for classification.
-                - A list containing a single sublist with two elements, representing the main text and its paired text for classification.
-                - A list containing only the main text for classification.
+                >- A dictionary containing the text and text_pair keys, representing the main text and its paired text for classification.
+                >- A list containing a single sublist with two elements, representing the main text and its paired text for classification.
+                >- A list containing only the main text for classification.
             
         Returns:
             A dictionary containing preprocessed inputs in the form of {"input_ids": tensor, "attention_mask": tensor}.
             The tensors represent the encoded input sequences and attention masks, respectively. The keys in the dictionary are as follows:
-                - "input_ids": A tensor containing the encoded input sequences.
-                - "attention_mask": A tensor indicating which tokens should be attended to.
+                >- "input_ids": A tensor containing the encoded input sequences.
+                >- "attention_mask": A tensor indicating which tokens should be attended to.
         
         Raises:
             ValueError: If the inputs are invalid and don't match any of the supported formats.
@@ -276,19 +275,19 @@ class TextClassificationPipeline(Pipeline):
                 - 'logits': A tensor representing the model logits.
             function_to_apply (ClassificationFunction): The function to apply to the model outputs. 
                 Can be one of the following:
-                - ClassificationFunction.SIGMOID: Applies the sigmoid function.
-                - ClassificationFunction.SOFTMAX: Applies the softmax function.
-                - ClassificationFunction.NONE: No function applied.
+                >- ClassificationFunction.SIGMOID: Applies the sigmoid function.
+                >- ClassificationFunction.SOFTMAX: Applies the softmax function.
+                >- ClassificationFunction.NONE: No function applied.
             top_k (int): The number of top predictions to return. Default is 1.
             _legacy (bool): A flag indicating whether to use legacy behavior. Default is True.
         
         Returns:
             dict or None: If top_k is 1 and _legacy is True, returns a dictionary with keys:
-                - 'label': The predicted label.
-                - 'score': The confidence score of the prediction.
+                >- 'label': The predicted label.
+                >- 'score': The confidence score of the prediction.
             If top_k is not 1 or _legacy is False, returns a list of dictionaries with keys:
-                - 'label': The predicted label.
-                - 'score': The confidence score of the prediction.
+                >- 'label': The predicted label.
+                >- 'score': The confidence score of the prediction.
                 The list is sorted by score in descending order and truncated to top_k if specified.
         
         Raises:

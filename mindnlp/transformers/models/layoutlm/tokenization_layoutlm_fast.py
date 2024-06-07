@@ -173,8 +173,8 @@ class LayoutLMTokenizerFast(PreTrainedTokenizerFast):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A LayoutLM sequence has the following format:
 
-        - single sequence: `[CLS] X [SEP]`
-        - pair of sequences: `[CLS] A [SEP] B [SEP]`
+        >   - single sequence: `[CLS] X [SEP]`
+        >   - pair of sequences: `[CLS] A [SEP] B [SEP]`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -198,7 +198,6 @@ class LayoutLMTokenizerFast(PreTrainedTokenizerFast):
         """
         Create a mask from the two sequences passed to be used in a sequence-pair classification task. A LayoutLM sequence
         pair mask has the following format:
-
         ```
         0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1
         | first sequence    | second sequence |
@@ -244,8 +243,10 @@ class LayoutLMTokenizerFast(PreTrainedTokenizerFast):
         If no prefix is provided, the saved vocabulary files will have default filenames.
         
         Example usage:
+            ```python
             tokenizer = LayoutLMTokenizerFast.from_pretrained('layoutlm-base-uncased')
             tokenizer.save_vocabulary('/path/to/save_directory', filename_prefix='my_vocab')
+            ```
         """
         files = self._tokenizer.model.save(save_directory, name=filename_prefix)
         return tuple(files)

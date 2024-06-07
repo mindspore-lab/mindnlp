@@ -96,16 +96,13 @@ class BartphoTokenizer(PreTrainedTokenizer):
             Will be passed to the `SentencePieceProcessor.__init__()` method. The [Python wrapper for
             SentencePiece](https://github.com/google/sentencepiece/tree/master/python) can be used, among other things,
             to set:
-
-            - `enable_sampling`: Enable subword regularization.
-            - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
-
-              - `nbest_size = {0,1}`: No sampling is performed.
-              - `nbest_size > 1`: samples from the nbest_size results.
-              - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
+            >   - `enable_sampling`: Enable subword regularization.
+            >   - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
+            >   - `nbest_size = {0,1}`: No sampling is performed.
+            >   - `nbest_size > 1`: samples from the nbest_size results.
+            >   - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
                 using forward-filtering-and-backward-sampling algorithm.
-
-            - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
+            >   - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
               BPE-dropout.
 
     Attributes:
@@ -215,7 +212,7 @@ class BartphoTokenizer(PreTrainedTokenizer):
     def __setstate__(self, d):
         """
         This method '__setstate__' is defined within the class 'BartphoTokenizer' and is used to restore the object's state from a dictionary representation. It takes two parameters, 'self' which refers to the
-instance of the class, and 'd' which is a dictionary representing the state to be restored.
+        instance of the class, and 'd' which is a dictionary representing the state to be restored.
         
         Args:
             self (BartphoTokenizer): The instance of the BartphoTokenizer class.
@@ -226,7 +223,7 @@ instance of the class, and 'd' which is a dictionary representing the state to b
         
         Raises:
             No specific exceptions are documented to be raised by this method. However, potential exceptions that could arise during the execution of this method may include, but are not limited to, those
-related to the initialization of the 'SentencePieceProcessor' instance or its 'LoadFromSerializedProto' method.
+            related to the initialization of the 'SentencePieceProcessor' instance or its 'LoadFromSerializedProto' method.
         """
         self.__dict__ = d
 
@@ -244,8 +241,8 @@ related to the initialization of the 'SentencePieceProcessor' instance or its 'L
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. An BARTPho sequence has the following format:
 
-        - single sequence: `<s> X </s>`
-        - pair of sequences: `<s> A </s></s> B </s>`
+        >   - single sequence: `<s> X </s>`
+        >   - pair of sequences: `<s> A </s></s> B </s>`
 
         Args:
             token_ids_0 (`List[int]`):

@@ -63,18 +63,18 @@ class ResNetConfig(BackboneConfigMixin, PretrainedConfig):
             same order as defined in the `stage_names` attribute.
 
     Example:
-    ```python
-    >>> from transformers import ResNetConfig, ResNetModel
+        ```python
+        >>> from transformers import ResNetConfig, ResNetModel
 
-    >>> # Initializing a ResNet resnet-50 style configuration
-    >>> configuration = ResNetConfig()
+        >>> # Initializing a ResNet resnet-50 style configuration
+        >>> configuration = ResNetConfig()
 
-    >>> # Initializing a model (with random weights) from the resnet-50 style configuration
-    >>> model = ResNetModel(configuration)
+        >>> # Initializing a model (with random weights) from the resnet-50 style configuration
+        >>> model = ResNetModel(configuration)
 
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
     """
     model_type = "resnet"
     layer_types = ["basic", "bottleneck"]

@@ -36,14 +36,14 @@ class MSRobertaEmbeddings(nn.Cell):
         Args:
             self (object): The instance of the MSRobertaEmbeddings class.
             config (object): An object containing configuration parameters for the embeddings. It should include the following attributes:
-                - vocab_size (int): The size of the vocabulary.
-                - hidden_size (int): The size of the hidden layers.
-                - max_position_embeddings (int): The maximum allowed position for embeddings.
-                - type_vocab_size (int): The size of the token type vocabulary.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
-                - hidden_dropout_prob (float): The dropout probability for hidden layers.
-                - position_embedding_type (str, optional): The type of position embedding. Defaults to 'absolute'.
-                - pad_token_id (int): The token id for padding.
+                >   - vocab_size (int): The size of the vocabulary.
+                >   - hidden_size (int): The size of the hidden layers.
+                >   - max_position_embeddings (int): The maximum allowed position for embeddings.
+                >   - type_vocab_size (int): The size of the token type vocabulary.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - hidden_dropout_prob (float): The dropout probability for hidden layers.
+                >   - position_embedding_type (str, optional): The type of position embedding. Defaults to 'absolute'.
+                >   - pad_token_id (int): The token id for padding.
         
         Returns:
             None. This method initializes the embeddings for the MSRoberta model and doesn't return any value.
@@ -190,9 +190,9 @@ class MSRobertaLMHead(nn.Cell):
             self (MSRobertaLMHead): The instance of the MSRobertaLMHead class.
             config (Config): An object containing the configuration parameters for the model.
                 It includes the following attributes:
-                - hidden_size (int): The size of the hidden layers.
-                - vocab_size (int): The size of the vocabulary.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - hidden_size (int): The size of the hidden layers.
+                >   - vocab_size (int): The size of the vocabulary.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
         
         Returns:
             None. This method initializes the MSRobertaLMHead instance with the provided configuration.
@@ -239,11 +239,10 @@ class MSRobertaClassificationHead(nn.Cell):
         
         Args:
             self: The instance of the class.
-            config: An object of the configuration class containing the necessary parameters for initialization.
-                    It must have the following attributes:
-                        - hidden_size (int): The size of the hidden state.
-                        - hidden_dropout_prob (float): The dropout probability for the hidden state.
-                        - num_labels (int): The number of output labels.
+            config: An object of the configuration class containing the necessary parameters for initialization. It must have the following attributes:
+                    >   - hidden_size (int): The size of the hidden state.
+                    >   - hidden_dropout_prob (float): The dropout probability for the hidden state.
+                    >   - num_labels (int): The number of output labels.
         
         Returns:
             None. This method does not return any value.
@@ -418,12 +417,12 @@ class MSRobertaForSequenceClassification(MSRobertaPreTrainedModel):
                 Shape: (batch_size,) or (batch_size, num_labels). Defaults to None.
         
         Returns:
-            tuple: A tuple containing the output logits and additional outputs. 
-                - logits (torch.Tensor): The output logits for sequence classification. 
+            tuple: A tuple containing the output logits and additional outputs.
+                >   - logits (torch.Tensor): The output logits for sequence classification.
                   Shape: (batch_size, num_labels) or (batch_size,) if num_labels equals 1.
-                - sequence_output (torch.Tensor): The output tensor from the MSRoberta model. 
+                >   - sequence_output (torch.Tensor): The output tensor from the MSRoberta model.
                   Shape: (batch_size, sequence_length, hidden_size).
-                - additional outputs (tuple): Any additional outputs from the MSRoberta model.
+                >   - additional outputs (tuple): Any additional outputs from the MSRoberta model.
         
         Raises:
             ValueError: If the input_ids tensor shape is not (batch_size, sequence_length).
@@ -489,7 +488,7 @@ class MSRobertaForMultipleChoice(MSRobertaPreTrainedModel):
         
         Returns:
             tuple: A tuple of output tensors. The first element is reshaped_logits of shape (batch_size, num_choices), representing the logits for each choice. The remaining elements are the same as the
-outputs of the Roberta model.
+                outputs of the Roberta model.
         
         Raises:
             TypeError: If the input_ids is not a torch.Tensor.

@@ -64,10 +64,10 @@ class WhisperProcessor(ProcessorMixin):
         This method retrieves the decoder prompt IDs for a given task and language. It utilizes the tokenizer to obtain the prompt IDs.
         
         Args:
-            - self: The instance of the WhisperProcessor class.
-            - task (optional): A string representing the task for which decoder prompt IDs are required. Defaults to None.
-            - language (optional): A string representing the language for which decoder prompt IDs are required. Defaults to None.
-            - no_timestamps (optional): A boolean indicating whether to include timestamps in the decoder prompt IDs. Defaults to True.
+            self: The instance of the WhisperProcessor class.
+            task (optional): A string representing the task for which decoder prompt IDs are required. Defaults to None.
+            language (optional): A string representing the language for which decoder prompt IDs are required. Defaults to None.
+            no_timestamps (optional): A boolean indicating whether to include timestamps in the decoder prompt IDs. Defaults to True.
         
         Returns:
             None
@@ -76,12 +76,14 @@ class WhisperProcessor(ProcessorMixin):
             None
         
         Note:
-        The decoder prompt IDs are obtained by calling the tokenizer's get_decoder_prompt_ids method with the specified task, language, and no_timestamps parameters. The returned decoder prompt IDs are then
-returned by this method.
+            The decoder prompt IDs are obtained by calling the tokenizer's get_decoder_prompt_ids method with the specified task, language, and no_timestamps parameters. The returned decoder prompt IDs are then
+            returned by this method.
         
         Example usage:
+            ```python
             processor = WhisperProcessor()
             decoder_prompt_ids = processor.get_decoder_prompt_ids(task='translation', language='english', no_timestamps=True)
+            ```
         """
         return self.tokenizer.get_decoder_prompt_ids(task=task, language=language, no_timestamps=no_timestamps)
 

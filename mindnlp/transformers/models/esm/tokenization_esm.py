@@ -173,13 +173,13 @@ class EsmTokenizer(PreTrainedTokenizer):
         
         Args:
             self (EsmTokenizer): The EsmTokenizer instance itself.
-                - Type: EsmTokenizer object
-                - Purpose: Represents the current instance of the EsmTokenizer class.
+                >   - Type: EsmTokenizer object
+                >   - Purpose: Represents the current instance of the EsmTokenizer class.
         
         Returns:
             dict: A dictionary containing the combined vocabulary.
-                - Type: dict
-                - Purpose: Represents the vocabulary with the base vocabulary and any added tokens.
+                >   - Type: dict
+                >   - Purpose: Represents the vocabulary with the base vocabulary and any added tokens.
         
         Raises:
             None.

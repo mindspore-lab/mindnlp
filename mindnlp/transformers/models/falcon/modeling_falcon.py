@@ -81,9 +81,9 @@ def _get_unpad_data(padding_mask):
     
     Returns:
         tuple: A tuple containing the following three elements:
-            - indices (ndarray): Flattened indices of the padding elements in the padding mask.
-            - cu_seqlens (ndarray): The cumulative sum of sequence lengths in the batch, padded with a zero at the beginning.
-            - max_seqlen_in_batch (int): The maximum sequence length in the batch.
+            >   - indices (ndarray): Flattened indices of the padding elements in the padding mask.
+            >   - cu_seqlens (ndarray): The cumulative sum of sequence lengths in the batch, padded with a zero at the beginning.
+            >   - max_seqlen_in_batch (int): The maximum sequence length in the batch.
     
     Raises:
         None.
@@ -429,16 +429,16 @@ class FalconAttention(nn.Cell):
         Args:
             self (FalconAttention): The instance of the FalconAttention class.
             config (FalconConfig): An instance of FalconConfig containing configuration parameters for the attention mechanism.
-                - hidden_size (int): The size of the hidden layers.
-                - num_attention_heads (int): The number of attention heads.
-                - hidden_dropout (float): The dropout rate for hidden layers.
-                - max_position_embeddings (int): The maximum number of position embeddings.
-                - rope_theta (float): The theta value for rope operations.
-                - rotary (bool): Flag indicating whether to use rotary operations.
-                - new_decoder_architecture (bool): Flag indicating the use of a new decoder architecture.
-                - multi_query (bool): Flag indicating the use of multiple queries.
-                - num_kv_heads (int): The number of key-value heads.
-                - bias (bool): Flag indicating the presence of bias in linear transformations.
+                >   - hidden_size (int): The size of the hidden layers.
+                >   - num_attention_heads (int): The number of attention heads.
+                >   - hidden_dropout (float): The dropout rate for hidden layers.
+                >   - max_position_embeddings (int): The maximum number of position embeddings.
+                >   - rope_theta (float): The theta value for rope operations.
+                >   - rotary (bool): Flag indicating whether to use rotary operations.
+                >   - new_decoder_architecture (bool): Flag indicating the use of a new decoder architecture.
+                >   - multi_query (bool): Flag indicating the use of multiple queries.
+                >   - num_kv_heads (int): The number of key-value heads.
+                >   - bias (bool): Flag indicating the presence of bias in linear transformations.
         
         Returns:
             None. The method initializes the FalconAttention instance with the provided configuration parameters.
@@ -630,9 +630,9 @@ class FalconAttention(nn.Cell):
 
         Returns:
             Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]], Optional[mindspore.Tensor]]:
-                - output_tensor (mindspore.Tensor): The output tensor of shape [batch_size, seq_length, hidden_size].
-                - present (Tuple[mindspore.Tensor, mindspore.Tensor], optional): The present key-value states of the layer.
-                - attention_scores (mindspore.Tensor, optional): The attention scores tensor of shape [batch_size, num_heads, seq_length, seq_length].
+                >   - output_tensor (mindspore.Tensor): The output tensor of shape [batch_size, seq_length, hidden_size].
+                >   - present (Tuple[mindspore.Tensor, mindspore.Tensor], optional): The present key-value states of the layer.
+                >   - attention_scores (mindspore.Tensor, optional): The attention scores tensor of shape [batch_size, num_heads, seq_length, seq_length].
 
         """
         if "padding_mask" in kwargs:
@@ -856,12 +856,12 @@ class FalconDecoderLayer(nn.Cell):
             self: The FalconDecoderLayer instance itself.
             config (FalconConfig): An instance of FalconConfig that specifies the configuration parameters for the Falcon decoder layer.
                 It contains the following attributes:
-                    - hidden_size (int): The size of the hidden layers.
-                    - num_attention_heads (int): The number of attention heads.
-                    - hidden_dropout (float): The dropout rate for hidden layers.
-                    - new_decoder_architecture (bool): Flag indicating whether to use a new decoder architecture.
-                    - layer_norm_epsilon (float): A small epsilon value for layer normalization calculations.
-                    - parallel_attn (bool): Flag indicating whether to use parallel attention.
+                    >   - hidden_size (int): The size of the hidden layers.
+                    >   - num_attention_heads (int): The number of attention heads.
+                    >   - hidden_dropout (float): The dropout rate for hidden layers.
+                    >   - new_decoder_architecture (bool): Flag indicating whether to use a new decoder architecture.
+                    >   - layer_norm_epsilon (float): A small epsilon value for layer normalization calculations.
+                    >   - parallel_attn (bool): Flag indicating whether to use parallel attention.
         
         Returns:
             None. This method initializes the FalconDecoderLayer object with the specified configuration parameters.
@@ -1052,12 +1052,12 @@ class FalconModel(FalconPreTrainedModel):
         Args:
             self (FalconModel): The FalconModel instance to be initialized.
             config (FalconConfig): Configuration object containing various parameters for the model.
-                - config.hidden_size (int): Size of the hidden layer dimension.
-                - config.num_attention_heads (int): Number of attention heads.
-                - config.alibi (bool): Flag indicating whether to use alibi.
-                - config.vocab_size (int): Size of the vocabulary.
-                - config.num_hidden_layers (int): Number of hidden layers.
-                - config.layer_norm_epsilon (float): Epsilon value for layer normalization.
+                >   - config.hidden_size (int): Size of the hidden layer dimension.
+                >   - config.num_attention_heads (int): Number of attention heads.
+                >   - config.alibi (bool): Flag indicating whether to use alibi.
+                >   - config.vocab_size (int): Size of the vocabulary.
+                >   - config.num_hidden_layers (int): Number of hidden layers.
+                >   - config.layer_norm_epsilon (float): Epsilon value for layer normalization.
         
         Returns:
             None: This method does not return any value.
@@ -1339,7 +1339,7 @@ class FalconForCausalLM(FalconPreTrainedModel):
             None.
         
         This method returns the output embeddings of the FalconForCausalLM model. The output embeddings represent the final hidden states of the model's language model head. These embeddings can be used for
-downstream tasks such as fine-tuning or feature extraction.
+        downstream tasks such as fine-tuning or feature extraction.
         
         Note that the method takes only one parameter, `self`, which refers to the instance of the FalconForCausalLM class itself. No additional arguments are required.
         
@@ -1387,11 +1387,11 @@ downstream tasks such as fine-tuning or feature extraction.
         
         Returns:
             dict: A dictionary containing the prepared inputs for generation, including the following keys:
-                - 'input_ids' (mindspore.Tensor): The updated input tensor.
-                - 'position_ids' (mindspore.Tensor): The updated position ids.
-                - 'past_key_values' (Optional[mindspore.Tensor]): The past key values.
-                - 'use_cache' (bool): The value of the 'use_cache' keyword argument.
-                - 'attention_mask' (Optional[mindspore.Tensor]): The attention mask.
+                >   - 'input_ids' (mindspore.Tensor): The updated input tensor.
+                >   - 'position_ids' (mindspore.Tensor): The updated position ids.
+                >   - 'past_key_values' (Optional[mindspore.Tensor]): The past key values.
+                >   - 'use_cache' (bool): The value of the 'use_cache' keyword argument.
+                >   - 'attention_mask' (Optional[mindspore.Tensor]): The attention mask.
         
         Raises:
             None.
@@ -1445,10 +1445,11 @@ downstream tasks such as fine-tuning or feature extraction.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], CausalLMOutputWithCrossAttentions]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
-            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
-            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+                `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
+                are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
@@ -1562,10 +1563,11 @@ class FalconForSequenceClassification(FalconPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutputWithPast]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
@@ -1790,9 +1792,9 @@ class FalconForQuestionAnswering(FalconPreTrainedModel):
         Args:
             self: The object itself.
             config: The configuration object that contains various settings for the model.
-                - Type: Any
-                - Purpose: Specifies the configuration settings for the model.
-                - Restrictions: None
+                >- Type: Any
+                >- Purpose: Specifies the configuration settings for the model.
+                >- Restrictions: None
         
         Returns:
             None

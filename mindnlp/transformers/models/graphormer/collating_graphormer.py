@@ -128,21 +128,21 @@ class GraphormerDataCollator:
         This method, named '__call__', is defined within the class 'GraphormerDataCollator' and is used to process data for graph neural network models. It takes the following parameters:
         
         Args:
-        - self: The instance of the class.
-        - edge_index (List): A list of edge indices representing the connectivity of nodes in the graph.
-        - edge_attr (List): A list of edge attributes corresponding to the edges in the graph.
-        - y (List): A list of target values or labels associated with the graph data.
-        - num_nodes (List): A list containing the number of nodes in each graph.
-        - node_feat (List): A list of node features for each graph in the dataset.
-        - batch_info (Dict): A dictionary containing batch information for the graphs.
+            self: The instance of the class.
+            edge_index (List): A list of edge indices representing the connectivity of nodes in the graph.
+            edge_attr (List): A list of edge attributes corresponding to the edges in the graph.
+            y (List): A list of target values or labels associated with the graph data.
+            num_nodes (List): A list containing the number of nodes in each graph.
+            node_feat (List): A list of node features for each graph in the dataset.
+            batch_info (Dict): A dictionary containing batch information for the graphs.
         
         Returns:
-        - None: This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
-        - TypeError: If the input parameters are not of the expected types.
-        - ValueError: If the input parameters do not meet specific requirements within the method logic.
-        - IndexError: If there are issues with index access during the processing of graph data.
+            - TypeError: If the input parameters are not of the expected types.
+            - ValueError: If the input parameters do not meet specific requirements within the method logic.
+            - IndexError: If there are issues with index access during the processing of graph data.
         """
         features = []
         num_features = len(edge_index)

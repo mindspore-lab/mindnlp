@@ -99,18 +99,20 @@ class MiniCPMConfig(PretrainedConfig):
         attention_dropout (`float`, *optional*, defaults to 0.0):
             The dropout ratio for the attention probabilities.
 
-    ```python
-    >>> from transformers import MiniCPMModel, MiniCPMConfig
+    Example:
+        ```python
+        >>> from transformers import MiniCPMModel, MiniCPMConfig
 
-    >>> # Initializing a MiniCPM minicpm-7b style configuration
-    >>> configuration = MiniCPMConfig()
+        >>> # Initializing a MiniCPM minicpm-7b style configuration
+        >>> configuration = MiniCPMConfig()
 
-    >>> # Initializing a model from the minicpm-7b style configuration
-    >>> model = MiniCPMModel(configuration)
+        >>> # Initializing a model from the minicpm-7b style configuration
+        >>> model = MiniCPMModel(configuration)
 
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "minicpm"
     keys_to_ignore_at_inference = ["past_key_values"]
 

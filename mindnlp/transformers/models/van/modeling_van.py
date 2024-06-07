@@ -104,14 +104,16 @@ class VanDropPath(nn.Cell):
         
         Note:
             The drop_path operation randomly sets a fraction of the hidden states to zero during training. This helps in regularizing the model and preventing overfitting. The drop probability is controlled by
-the 'drop_prob' attribute of the VanDropPath class.
+            the 'drop_prob' attribute of the VanDropPath class.
         
         Example:
+            ```python
             >>> drop_path = VanDropPath()
             >>> hidden_states = mindspore.Tensor([[1, 2, 3], [4, 5, 6]], mindspore.float32)
             >>> output = drop_path.construct(hidden_states)
             >>> print(output)
             [[1, 0, 3], [4, 0, 6]]
+            ```
         """
         return drop_path(hidden_states, self.drop_prob, self.training)
 
@@ -129,7 +131,7 @@ the 'drop_prob' attribute of the VanDropPath class.
             None.
         
         This method returns a formatted string representation of the drop probability of the VanDropPath instance. The drop probability is obtained from the `drop_prob` attribute of the instance. The returned
-string is of the form 'p={}', where '{}' is replaced by the actual drop probability value.
+        string is of the form 'p={}', where '{}' is replaced by the actual drop probability value.
         
         Example:
             If the `drop_prob` attribute of the instance is 0.3, the method will return the string "p=0.3".
@@ -532,22 +534,22 @@ class VanStage(nn.Cell):
         Initializes a new instance of the VanStage class.
         
         Args:
-        - self: The current object instance.
-        - config (VanConfig): An instance of VanConfig class containing configuration parameters.
-        - in_channels (int): The number of input channels.
-        - hidden_size (int): The size of the hidden layer.
-        - patch_size (int): The size of the patch.
-        - stride (int): The stride for patching.
-        - depth (int): The depth of the network.
-        - mlp_ratio (int, optional): The ratio for the multi-layer perceptron. Defaults to 4.
-        - drop_path_rate (float, optional): The rate for drop path regularization. Defaults to 0.0.
+            self: The current object instance.
+            config (VanConfig): An instance of VanConfig class containing configuration parameters.
+            in_channels (int): The number of input channels.
+            hidden_size (int): The size of the hidden layer.
+            patch_size (int): The size of the patch.
+            stride (int): The stride for patching.
+            depth (int): The depth of the network.
+            mlp_ratio (int, optional): The ratio for the multi-layer perceptron. Defaults to 4.
+            drop_path_rate (float, optional): The rate for drop path regularization. Defaults to 0.0.
         
         Returns:
-        None. This method does not return any value.
+            None. This method does not return any value.
         
         Raises:
-        - TypeError: If any of the input arguments does not match the expected type.
-        - ValueError: If any of the input arguments does not meet the specified restrictions.
+            - TypeError: If any of the input arguments does not match the expected type.
+            - ValueError: If any of the input arguments does not meet the specified restrictions.
         """
         super().__init__()
         self.embeddings = VanOverlappingPatchEmbedder(in_channels, hidden_size, patch_size, stride)
@@ -602,12 +604,12 @@ class VanEncoder(nn.Cell):
         Args:
             self: The instance of the class.
             config (VanConfig): An object containing configuration parameters for the VanEncoder. It includes the following attributes:
-                - patch_sizes (List[int]): List of patch sizes for each stage.
-                - strides (List[int]): List of stride values for each stage.
-                - hidden_sizes (List[int]): List of hidden layer sizes for each stage.
-                - depths (List[int]): List of depths for each stage.
-                - mlp_ratios (List[int]): List of MLP expansion ratios for each stage.
-                - drop_path_rate (float): Drop path rate for the encoder.
+                >   - patch_sizes (List[int]): List of patch sizes for each stage.
+                >   - strides (List[int]): List of stride values for each stage.
+                >   - hidden_sizes (List[int]): List of hidden layer sizes for each stage.
+                >   - depths (List[int]): List of depths for each stage.
+                >   - mlp_ratios (List[int]): List of MLP expansion ratios for each stage.
+                >   - drop_path_rate (float): Drop path rate for the encoder.
         
         Returns:
             None. This method initializes the VanEncoder object.
@@ -712,8 +714,8 @@ class VanModel(VanPreTrainedModel):
 
     """
     The VanModel class represents a model for processing pixel values using the VanEncoder and providing various output representations. It inherits from the VanPreTrainedModel class and includes methods for
-initialization and constructing the model's output. The constructor initializes the model with the provided configuration, while the construct method processes the pixel values and returns the output
-representation. The class provides flexibility for handling hidden states and returning output in the form of BaseModelOutputWithPoolingAndNoAttention. 
+    initialization and constructing the model's output. The constructor initializes the model with the provided configuration, while the construct method processes the pixel values and returns the output
+    representation. The class provides flexibility for handling hidden states and returning output in the form of BaseModelOutputWithPoolingAndNoAttention.
     """
     def __init__(self, config):
         """
@@ -723,8 +725,8 @@ representation. The class provides flexibility for handling hidden states and re
             self: The object itself.
             config (object): The configuration object that contains various settings for the model.
                 This object should have the following attributes:
-                    - hidden_sizes (list): A list of integers representing the sizes of hidden layers.
-                    - layer_norm_eps (float): A small value used for numerical stability in layer normalization.
+                    >   - hidden_sizes (list): A list of integers representing the sizes of hidden layers.
+                    >   - layer_norm_eps (float): A small value used for numerical stability in layer normalization.
                 The config object is required for the proper initialization of the model.
         
         Returns:
@@ -758,7 +760,7 @@ representation. The class provides flexibility for handling hidden states and re
         
         Returns:
             Union[Tuple, BaseModelOutputWithPoolingAndNoAttention]: A tuple containing the last hidden state and the pooled output, along with the encoder hidden states if return_dict is False. Otherwise, it
-returns a BaseModelOutputWithPoolingAndNoAttention object.
+            returns a BaseModelOutputWithPoolingAndNoAttention object.
         
         Raises:
             None
@@ -798,24 +800,24 @@ class VanForImageClassification(VanPreTrainedModel):
         classifier (nn.Module): The classifier module for predicting the final output based on the extracted features.
     
     Methods:
-        __init__(self, config):
+        __init__:
             Initializes the VanForImageClassification model with the given configuration.
     
-        construct(self, pixel_values, labels, output_hidden_states, return_dict) -> Union[Tuple, ImageClassifierOutputWithNoAttention]:
-            Constructs the model for image classification. 
-            Args:
-                pixel_values (Optional[mindspore.Tensor]): The input pixel values representing the image.
-                labels (Optional[mindspore.Tensor]): Labels for computing the image classification/regression loss.
-                output_hidden_states (Optional[bool]): Flag to output hidden states.
-                return_dict (Optional[bool]): Flag to determine if the return should be a dictionary.
-    
-            Returns:
-                Union[Tuple, ImageClassifierOutputWithNoAttention]: Tuple of output elements or ImageClassifierOutputWithNoAttention object.
-    
+        construct:
+            Constructs the model for image classification.
+            >   - Args:
+            >       - pixel_values (Optional[mindspore.Tensor]): The input pixel values representing the image.
+            >       - labels (Optional[mindspore.Tensor]): Labels for computing the image classification/regression loss.
+            >       - output_hidden_states (Optional[bool]): Flag to output hidden states.
+            >       - return_dict (Optional[bool]): Flag to determine if the return should be a dictionary.
+            >   - Returns:
+            >       - Union[Tuple, ImageClassifierOutputWithNoAttention]: Tuple of output elements or ImageClassifierOutputWithNoAttention object.
+
         Example usage:
+            ```python
             model = VanForImageClassification(config)
             output = model.construct(pixel_values, labels, output_hidden_states, return_dict)
-    
+            ```
     Note:
         The construct method computes the loss based on the labels and the model's prediction, and returns the output based on the configured settings.
     """
@@ -855,10 +857,11 @@ class VanForImageClassification(VanPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, ImageClassifierOutputWithNoAttention]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

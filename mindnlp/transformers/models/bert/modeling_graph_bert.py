@@ -117,19 +117,19 @@ class MSBertSelfAttention(nn.Cell):
         Args:
             self: The instance of the class.
             config: A configuration object containing various parameters.
-                - Type: Object
-                - Purpose: Specifies the configuration parameters for the attention mechanism.
-                - Restrictions: None
+                >   - Type: Object
+                >   - Purpose: Specifies the configuration parameters for the attention mechanism.
+                >   - Restrictions: None
         
             causal: A boolean value indicating whether the attention mechanism is causal or not.
-                - Type: bool
-                - Purpose: Determines if the attention mechanism is restricted to attend to previous positions only.
-                - Restrictions: None
+                >   - Type: bool
+                >   - Purpose: Determines if the attention mechanism is restricted to attend to previous positions only.
+                >   - Restrictions: None
         
             init_cache: A boolean value indicating whether to initialize the cache or not.
-                - Type: bool
-                - Purpose: Determines if the cache for attention weights and values should be initialized.
-                - Restrictions: None
+                >   - Type: bool
+                >   - Purpose: Determines if the cache for attention weights and values should be initialized.
+                >   - Restrictions: None
         
         Returns:
             None. This method does not return any value.
@@ -138,14 +138,14 @@ class MSBertSelfAttention(nn.Cell):
             ValueError: If the hidden size is not a multiple of the number of attention heads.
         
         Notes:
-            - This method is called when creating an instance of the MSBertSelfAttention class.
-            - The attention mechanism is responsible for computing self-attention weights and values based on the input.
-            - The method initializes various instance variables and parameters required for the attention mechanism.
-            - If the hidden size is not divisible by the number of attention heads, a ValueError is raised.
-            - The method also initializes the cache variables if `init_cache` is True, otherwise sets them to None.
-            - The method creates dense layers for query, key, and value projections.
-            - The method initializes dropout and softmax layers for attention probabilities computation.
-            - The method creates a causal mask if `causal` is True, otherwise uses a mask of ones.
+            >   - This method is called when creating an instance of the MSBertSelfAttention class.
+            >   - The attention mechanism is responsible for computing self-attention weights and values based on the input.
+            >   - The method initializes various instance variables and parameters required for the attention mechanism.
+            >   - If the hidden size is not divisible by the number of attention heads, a ValueError is raised.
+            >   - The method also initializes the cache variables if `init_cache` is True, otherwise sets them to None.
+            >   - The method creates dense layers for query, key, and value projections.
+            >   - The method initializes dropout and softmax layers for attention probabilities computation.
+            >   - The method creates a causal mask if `causal` is True, otherwise uses a mask of ones.
         """
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0:
@@ -268,12 +268,12 @@ class MSBertSelfAttention(nn.Cell):
             self (MSBertSelfAttention): The instance of the MSBertSelfAttention class.
             hidden_states (Tensor): The input tensor of shape (batch_size, seq_length, hidden_size) representing the hidden states.
             attention_mask (Tensor, optional): The attention mask tensor of shape (batch_size, seq_length) or (batch_size, seq_length, seq_length) to mask out certain positions from the attention computation.
-Defaults to None.
+                Defaults to None.
             head_mask (Tensor, optional): The tensor of shape (num_attention_heads,) representing the mask for the attention heads. Defaults to None.
         
         Returns:
             outputs (tuple): A tuple containing the context layer tensor of shape (batch_size, seq_length, hidden_size) and the attention probabilities tensor of shape (batch_size, num_attention_heads,
-seq_length, seq_length) if self.output_attentions is True, else only the context layer tensor is returned.
+                seq_length, seq_length) if self.output_attentions is True, else only the context layer tensor is returned.
         
         Raises:
             None.
@@ -463,9 +463,9 @@ class MSBertAttention(nn.Cell):
         
         Returns:
             Tuple[torch.Tensor]: A tuple containing:
-                - attention_output (torch.Tensor): The output tensor of shape (batch_size, sequence_length, hidden_size),
+                >   - attention_output (torch.Tensor): The output tensor of shape (batch_size, sequence_length, hidden_size),
                   which represents the attended hidden states for each token in the input sequence.
-                - self_outputs[1:] (tuple): A tuple of length `num_layers` containing tensors representing intermediate
+                >   - self_outputs[1:] (tuple): A tuple of length `num_layers` containing tensors representing intermediate
                   outputs of the self-attention mechanism.
         
         Raises:
@@ -488,9 +488,9 @@ class MSBertIntermediate(nn.Cell):
         Args:
             self: The instance of the MSBertIntermediate class.
             config: An object representing the configuration for the MSBertIntermediate model. It contains the following attributes:
-                - hidden_size (int): The size of the hidden layer.
-                - intermediate_size (int): The size of the intermediate layer.
-                - hidden_act (str): The activation function for the hidden layer.
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - intermediate_size (int): The size of the intermediate layer.
+                >   - hidden_act (str): The activation function for the hidden layer.
         
         Returns:
             None. This method does not return any value.
@@ -521,7 +521,7 @@ class MSBertIntermediate(nn.Cell):
             None.
         
         This method takes in the input hidden states and applies the intermediate layer transformations. It first passes the hidden states through a dense layer, then applies an activation function. The
-resulting hidden states are returned as the output.
+        resulting hidden states are returned as the output.
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
@@ -653,9 +653,9 @@ class MSBertEncoder(nn.Cell):
         Args:
             self (MSBertEncoder): The instance of the class itself.
             config: An object containing the configuration parameters for the MSBertEncoder.
-                - output_attentions (bool): Whether to output attentions weights.
-                - output_hidden_states (bool): Whether to output all hidden states.
-                - layer (nn.CellList): List of MSBertLayer instances.
+                >   - output_attentions (bool): Whether to output attentions weights.
+                >   - output_hidden_states (bool): Whether to output all hidden states.
+                >   - layer (nn.CellList): List of MSBertLayer instances.
         
         Returns:
             None. This method does not return any value.
@@ -684,8 +684,8 @@ class MSBertEncoder(nn.Cell):
             None.
         
         Description:
-        This method iterates over each layer within the MSBertEncoder instance and sets the recompute flag for each layer by calling the 'recompute()' method of the layer. The recompute flag is used to
-indicate whether the layer needs to be recomputed during the forward pass of the encoder. By setting the recompute flag, it allows for dynamic computation of the layer based on the input.
+            This method iterates over each layer within the MSBertEncoder instance and sets the recompute flag for each layer by calling the 'recompute()' method of the layer. The recompute flag is used to
+            indicate whether the layer needs to be recomputed during the forward pass of the encoder. By setting the recompute flag, it allows for dynamic computation of the layer based on the input.
         
         Example usage:
             encoder = MSBertEncoder()
@@ -725,12 +725,12 @@ indicate whether the layer needs to be recomputed during the forward pass of the
         
         Returns:
             outputs (Tuple): A tuple containing the following elements:
-                - hidden_states (Tensor): The output hidden states of the encoder. 
+                >   - hidden_states (Tensor): The output hidden states of the encoder.
                     Shape: (batch_size, sequence_length, hidden_size)
-                - all_hidden_states (Tuple[Tensor]): A tuple of hidden states of all layers.
+                >   - all_hidden_states (Tuple[Tensor]): A tuple of hidden states of all layers.
                     Each element of the tuple has the shape (batch_size, sequence_length, hidden_size).
                     This will be included if the 'output_hidden_states' flag is set to True.
-                - all_attentions (Tuple[Tensor]): A tuple of attention scores of all layers.
+                >   - all_attentions (Tuple[Tensor]): A tuple of attention scores of all layers.
                     Each element of the tuple has the shape (batch_size, num_heads, sequence_length, sequence_length).
                     This will be included if the 'output_attentions' flag is set to True.
         
@@ -777,9 +777,9 @@ class MSBertPooler(nn.Cell):
         Args:
             self (MSBertPooler): The instance of the MSBertPooler class.
             config: An object containing configuration parameters.
-                - Type: Any
-                - Purpose: Holds the configuration settings for the MSBertPooler.
-                - Restrictions: Must be compatible with the expected configuration format.
+                >   - Type: Any
+                >   - Purpose: Holds the configuration settings for the MSBertPooler.
+                >   - Restrictions: Must be compatible with the expected configuration format.
         
         Returns:
             None: This method does not return any value.
@@ -828,9 +828,9 @@ class MSBertPredictionHeadTransform(nn.Cell):
         Args:
             self: An instance of the MSBertPredictionHeadTransform class.
             config: An object containing configuration settings for the transformation. It is expected to have the following attributes:
-                - hidden_size (int): The size of the hidden layer.
-                - hidden_act (str): The activation function to be used for the hidden layer.
-                - layer_norm_eps (float): The epsilon value for LayerNorm.
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - hidden_act (str): The activation function to be used for the hidden layer.
+                >   - layer_norm_eps (float): The epsilon value for LayerNorm.
         
         Returns:
             None. This method initializes the dense layer, activation function, and LayerNorm parameters for the transformation.
@@ -856,19 +856,19 @@ class MSBertPredictionHeadTransform(nn.Cell):
         
         Args:
             self: The instance of the 'MSBertPredictionHeadTransform' class.
-                Type: MSBertPredictionHeadTransform
-                Purpose: Represents the current instance of the class.
-                Restrictions: None
+                >   - Type: MSBertPredictionHeadTransform
+                >   - Purpose: Represents the current instance of the class.
+                >   - Restrictions: None
         
             hidden_states: The input hidden states that need to undergo transformations.
-                Type: Any
-                Purpose: Represents the hidden states to be processed.
-                Restrictions: Should be compatible with the operations performed within the method.
+                >   - Type: Any
+                >   - Purpose: Represents the hidden states to be processed.
+                >   - Restrictions: Should be compatible with the operations performed within the method.
         
         Returns:
             The transformed hidden states after passing through the dense layer, activation function, and LayerNorm.
-                Type: None
-                Purpose: To return the processed hidden states for further usage.
+                >   - Type: None
+                >   - Purpose: To return the processed hidden states for further usage.
         
         Raises:
             None. This method does not raise any exceptions.
@@ -890,9 +890,9 @@ class MSBertLMPredictionHead(nn.Cell):
         Args:
             self: The object instance.
             config: An instance of the configuration class that contains the model's configuration settings.
-                - Type: Any
-                - Purpose: This parameter is used to configure the MSBertLMPredictionHead instance.
-                - Restrictions: None
+                >   - Type: Any
+                >   - Purpose: This parameter is used to configure the MSBertLMPredictionHead instance.
+                >   - Restrictions: None
         
         Returns:
             None
@@ -918,7 +918,7 @@ class MSBertLMPredictionHead(nn.Cell):
         Constructs the MSBertLMPredictionHead.
         
         This method takes in the hidden states and masked language model positions, and applies a series of operations to compute the final hidden states for the MSBertLMPredictionHead. The resulting hidden
-states are then transformed and decoded to produce the final output.
+            states are then transformed and decoded to produce the final output.
         
         Args:
             self (MSBertLMPredictionHead): An instance of the MSBertLMPredictionHead class.
@@ -955,9 +955,9 @@ class MSBertPreTrainingHeads(nn.Cell):
         Args:
             self (object): The instance of the class.
             config (object): An object containing configuration settings.
-                - Type: Custom class
-                - Purpose: Provides configuration parameters for the pre-training heads.
-                - Restrictions: Must be compatible with the MSBertLMPredictionHead and nn.Dense classes.
+                >   - Type: Custom class
+                >   - Purpose: Provides configuration parameters for the pre-training heads.
+                >   - Restrictions: Must be compatible with the MSBertLMPredictionHead and nn.Dense classes.
         
         Returns:
             None. This method initializes the MSBertPreTrainingHeads class with the specified configuration.
@@ -1107,9 +1107,9 @@ class MSBertModel(MSBertPreTrainedModel):
         
         Returns:
             Tuple: A tuple containing the following:
-                - sequence_output (Tensor): The output tensor from the encoder for each token in the input sequence.
-                - pooled_output (Tensor): The pooled output tensor from the pooler layer, if available.
-                - Additional encoder outputs.
+                >   - sequence_output (Tensor): The output tensor from the encoder for each token in the input sequence.
+                >   - pooled_output (Tensor): The pooled output tensor from the pooler layer, if available.
+                >   - Additional encoder outputs.
         
         Raises:
             ValueError: If the dimensions of the head_mask tensor are incompatible.
@@ -1173,7 +1173,7 @@ class MSBertForPretraining(MSBertPreTrainedModel):
         Args:
             self: The instance of the MSBertForPretraining class.
             config: The configuration for the MSBertForPretraining, containing various parameters and settings for model initialization. It should be an instance of the configuration class specific to the
-MSBertForPretraining model.
+                MSBertForPretraining model.
         
         Returns:
             None. This method does not return any value.
@@ -1249,8 +1249,8 @@ class MSBertForSequenceClassification(MSBertPreTrainedModel):
         Args:
             self: The instance of the class.
             config (object): A configuration object containing the settings for the model. It should include the following attributes:
-                - num_labels (int): The number of labels for sequence classification.
-                - classifier_dropout (float, optional): The dropout probability for the classifier layer. If not provided, the value will default to config.hidden_dropout_prob.
+                >   - num_labels (int): The number of labels for sequence classification.
+                >   - classifier_dropout (float, optional): The dropout probability for the classifier layer. If not provided, the value will default to config.hidden_dropout_prob.
         
         Returns:
             None. This method initializes the instance with the provided configuration.

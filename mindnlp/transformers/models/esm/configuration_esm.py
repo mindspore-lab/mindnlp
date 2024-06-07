@@ -87,17 +87,17 @@ class EsmConfig(PretrainedConfig):
         token_dropout (`bool`, defaults to `False`):
             When this is enabled, masked tokens are treated as if they had been dropped out by input dropout.
 
-    Examples:
+    Example:
+        ```python
+        >>> from transformers import EsmModel, EsmConfig
 
-    ```python
-    >>> from transformers import EsmModel, EsmConfig
+        >>> # Initializing a ESM facebook/esm-1b style configuration >>> configuration = EsmConfig()
 
-    >>> # Initializing a ESM facebook/esm-1b style configuration >>> configuration = EsmConfig()
+        >>> # Initializing a model from the configuration >>> model = ESMModel(configuration)
 
-    >>> # Initializing a model from the configuration >>> model = ESMModel(configuration)
-
-    >>> # Accessing the model configuration >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration >>> configuration = model.config
+        ```
+    """
     model_type = "esm"
 
     def __init__(
@@ -213,16 +213,17 @@ class EsmFoldConfig:
     The EsmFoldConfig class inherits from a base class and includes methods for post-initialization and dictionary serialization.
     
     Methods:
-    - __post_init__(self): Initializes the EsmFoldConfig instance, setting defaults for any missing attributes.
-    - to_dict(self): Serializes the EsmFoldConfig instance to a Python dictionary, including the trunk configuration.
+        __post_init__(self): Initializes the EsmFoldConfig instance, setting defaults for any missing attributes.
+        to_dict(self): Serializes the EsmFoldConfig instance to a Python dictionary, including the trunk configuration.
     
     Attributes:
-    - trunk: Represents the configuration of the trunk model used in the ESM fold.
+        trunk: Represents the configuration of the trunk model used in the ESM fold.
     
-    Note: Ensure that the trunk attribute is either set to a TrunkConfig instance or a dictionary that can be converted to a TrunkConfig.
+    Note:
+        Ensure that the trunk attribute is either set to a TrunkConfig instance or a dictionary that can be converted to a TrunkConfig.
     
     Return:
-    A Python dictionary containing all the attributes of the EsmFoldConfig instance, including the trunk configuration.
+        A Python dictionary containing all the attributes of the EsmFoldConfig instance, including the trunk configuration.
     """
     esm_type: str = None
     fp16_esm: bool = True
@@ -257,6 +258,7 @@ class EsmFoldConfig:
             is properly set.
         
         Example usage:
+            ```python
             config = EsmFoldConfig()
             config.__post_init__()
             # The 'trunk' attribute will be initialized with a new instance of the 'TrunkConfig' class.
@@ -265,6 +267,7 @@ class EsmFoldConfig:
             config.__post_init__()
             # The 'trunk' attribute will be initialized with a new instance of the 'TrunkConfig' class,
             # with 'option1' set to True and 'option2' set to False.
+            ```
         """
         if self.trunk is None:
             self.trunk = TrunkConfig()
@@ -300,13 +303,14 @@ class TrunkConfig:
     
     Raises:
         ValueError: If any of the following conditions are not met:
-            - `max_recycles` is not a positive integer.
-            - `sequence_state_dim` is not a round multiple of itself.
-            - `pairwise_state_dim` is not a round multiple of itself.
-            - `sequence_state_dim` is not equal to `sequence_num_heads * sequence_head_width`.
-            - `pairwise_state_dim` is not equal to `pairwise_num_heads * pairwise_head_width`.
-            - `pairwise_state_dim` is not an even number.
-            - `dropout` is greater than 0.4.
+
+            >- `max_recycles` is not a positive integer.
+            >- `sequence_state_dim` is not a round multiple of itself.
+            >- `pairwise_state_dim` is not a round multiple of itself.
+            >- `sequence_state_dim` is not equal to `sequence_num_heads * sequence_head_width`.
+            >- `pairwise_state_dim` is not equal to `pairwise_num_heads * pairwise_head_width`.
+            >- `pairwise_state_dim` is not an even number.
+            >- `dropout` is greater than 0.4.
     
     Methods:
         __post_init__(self): Performs post-initialization validations for the configuration attributes.
@@ -472,7 +476,7 @@ def get_default_vocab_list():
     
     Returns:
         List: A list of default vocabulary items including '<cls>', '<pad>', '<eos>', '<unk>', 'L', 'A', 'G', 'V', 'S', 'E', 'R', 'T', 'I', 'D', 'P', 'K', 'Q', 'N', 'F', 'Y', 'M', 'H', 'W', 'C', 'X', 'B', 'U',
-'Z', 'O', '.', '-', '<null_1>', '<mask>'.
+            'Z', 'O', '.', '-', '<null_1>', '<mask>'.
     
     Raises:
         None.

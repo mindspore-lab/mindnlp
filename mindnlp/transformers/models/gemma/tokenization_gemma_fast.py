@@ -39,13 +39,14 @@ class GemmaTokenizerFast(PreTrainedTokenizerFast):
 
     This uses notably ByteFallback and no prefix space. Normalization is applied to replace  `" "` with `"▁"`
 
-    ```python
-    >>> from transformers import GemmaTokenizerFast
+    Example:
+        ```python
+        >>> from transformers import GemmaTokenizerFast
 
-    >>> tokenizer = GemmaTokenizerFast.from_pretrained("hf-internal-testing/dummy-gemma")
-    >>> tokenizer.encode("Hello this is a test")
-    [2, 4521, 736, 603, 476, 2121]
-    ```
+        >>> tokenizer = GemmaTokenizerFast.from_pretrained("hf-internal-testing/dummy-gemma")
+        >>> tokenizer.encode("Hello this is a test")
+        [2, 4521, 736, 603, 476, 2121]
+        ```
 
     If you want to change the `bos_token` or the `eos_token`, make sure to specify them when initializing the model, or
     call `tokenizer.update_post_processor()` to make sure that the post-processing is correctly done (otherwise the
@@ -194,7 +195,7 @@ class GemmaTokenizerFast(PreTrainedTokenizerFast):
             None.
         
         This method adds an EOS token to the GemmaTokenizerFast object. The EOS token is used to mark the end of a sentence or text sequence. It is commonly used in natural language processing tasks such as
-language modeling and text generation. By adding an EOS token, the GemmaTokenizerFast object can handle text sequences more effectively, allowing for better analysis and processing.
+        language modeling and text generation. By adding an EOS token, the GemmaTokenizerFast object can handle text sequences more effectively, allowing for better analysis and processing.
         """
         return self._add_eos_token
 
@@ -241,8 +242,8 @@ language modeling and text generation. By adding an EOS token, the GemmaTokenize
         Setter method for adding a beginning of sentence (BOS) token to the GemmaTokenizerFast.
         
         Args:
-        - self: (GemmaTokenizerFast) The instance of GemmaTokenizerFast.
-        - value: (bool) A boolean value indicating whether to add the BOS token. True enables adding the BOS token, while False disables it.
+            self: (GemmaTokenizerFast) The instance of GemmaTokenizerFast.
+            value: (bool) A boolean value indicating whether to add the BOS token. True enables adding the BOS token, while False disables it.
         
         Returns:
         None: This method does not return any value.
@@ -292,47 +293,47 @@ language modeling and text generation. By adding an EOS token, the GemmaTokenize
     # Copied from transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast.build_inputs_with_special_tokens
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
         """
-                Build inputs with special tokens for the GemmaTokenizerFast.
-        
-                Args:
-                    self (GemmaTokenizerFast): An instance of the GemmaTokenizerFast class.
-                    token_ids_0 (list): A list of token IDs representing the first sequence.
-                    token_ids_1 (list, optional): A list of token IDs representing the second sequence. 
-                        Defaults to None.
-        
-                Returns:
-                    list: A list of token IDs representing the input sequences with added special tokens.
-        
-                Raises:
-                    None.
-        
-                This method takes two sequences of token IDs and adds special tokens, such as 
-                beginning of sequence (bos) and end of sequence (eos) tokens. The special tokens 
-                are added based on the configuration of the tokenizer.
-        
-                The token_ids_0 parameter is a list of token IDs representing the first sequence. 
-                This parameter is required.
-        
-                The token_ids_1 parameter is an optional list of token IDs representing the second 
-                sequence. If provided, the method concatenates the first and second sequences with 
-                the special tokens in between.
-        
-                The method returns a list of token IDs representing the input sequences with the 
-                special tokens added.
-        
-                Example:
-                
-                tokenizer = GemmaTokenizerFast()
-                token_ids_0 = [101, 202, 303]
-                token_ids_1 = [404, 505]
-                inputs = tokenizer.build_inputs_with_special_tokens(token_ids_0, token_ids_1)
-                print(inputs)
-                
-                Output:
-                
-                [101, 202, 303, 102, 404, 505, 102]
-                
-                """
+        Build inputs with special tokens for the GemmaTokenizerFast.
+
+        Args:
+            self (GemmaTokenizerFast): An instance of the GemmaTokenizerFast class.
+            token_ids_0 (list): A list of token IDs representing the first sequence.
+            token_ids_1 (list, optional): A list of token IDs representing the second sequence.
+                Defaults to None.
+
+        Returns:
+            list: A list of token IDs representing the input sequences with added special tokens.
+
+        Raises:
+            None.
+
+        This method takes two sequences of token IDs and adds special tokens, such as
+        beginning of sequence (bos) and end of sequence (eos) tokens. The special tokens
+        are added based on the configuration of the tokenizer.
+
+        The token_ids_0 parameter is a list of token IDs representing the first sequence.
+        This parameter is required.
+
+        The token_ids_1 parameter is an optional list of token IDs representing the second
+        sequence. If provided, the method concatenates the first and second sequences with
+        the special tokens in between.
+
+        The method returns a list of token IDs representing the input sequences with the
+        special tokens added.
+
+        Example:
+            ```python
+            tokenizer = GemmaTokenizerFast()
+            token_ids_0 = [101, 202, 303]
+            token_ids_1 = [404, 505]
+            inputs = tokenizer.build_inputs_with_special_tokens(token_ids_0, token_ids_1)
+            print(inputs)
+
+            Output:
+
+            [101, 202, 303, 102, 404, 505, 102]
+            ```
+        """
         bos_token_id = [self.bos_token_id] if self.add_bos_token else []
         eos_token_id = [self.eos_token_id] if self.add_eos_token else []
 

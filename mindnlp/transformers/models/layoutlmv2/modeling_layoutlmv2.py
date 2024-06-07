@@ -58,16 +58,16 @@ class LayoutLMv2Embeddings(nn.Cell):
         Args:
             self: The instance of the LayoutLMv2Embeddings class.
             config: An object containing configuration parameters for the embeddings.
-                - vocab_size (int): The size of the vocabulary.
-                - hidden_size (int): The size of the hidden layers.
-                - pad_token_id (int): The padding token ID.
-                - max_position_embeddings (int): The maximum position embeddings.
-                - max_2d_position_embeddings (int): The maximum 2D position embeddings.
-                - coordinate_size (int): The size of coordinate embeddings.
-                - shape_size (int): The size of shape embeddings.
-                - type_vocab_size (int): The size of the token type vocabulary.
-                - layer_norm_eps (float): The epsilon value for LayerNorm.
-                - hidden_dropout_prob (float): The dropout probability.
+                >   - vocab_size (int): The size of the vocabulary.
+                >   - hidden_size (int): The size of the hidden layers.
+                >   - pad_token_id (int): The padding token ID.
+                >   - max_position_embeddings (int): The maximum position embeddings.
+                >   - max_2d_position_embeddings (int): The maximum 2D position embeddings.
+                >   - coordinate_size (int): The size of coordinate embeddings.
+                >   - shape_size (int): The size of shape embeddings.
+                >   - type_vocab_size (int): The size of the token type vocabulary.
+                >   - layer_norm_eps (float): The epsilon value for LayerNorm.
+                >   - hidden_dropout_prob (float): The dropout probability.
         
         Returns:
             None. This method initializes various embeddings and layers within the LayoutLMv2Embeddings class.
@@ -247,17 +247,17 @@ class LayoutLMv2SelfAttention(nn.Cell):
             self (LayoutLMv2SelfAttention): The instance of the LayoutLMv2SelfAttention class.
             hidden_states (Tensor): The input hidden states with shape (batch_size, sequence_length, hidden_size).
             attention_mask (Tensor, optional): The attention mask with shape (batch_size, sequence_length). It is a binary mask where 1's indicate the positions to attend and 0's indicate the positions to
-ignore. Defaults to None.
+                ignore. Defaults to None.
             head_mask (Tensor, optional): The head mask with shape (num_heads,) or (num_layers, num_heads). It masks the attention weights of specific heads. Defaults to None.
             output_attentions (bool, optional): Whether to output the attention probabilities. Defaults to False.
             rel_pos (Tensor, optional): The relative position bias with shape (num_heads, sequence_length, sequence_length). It contains relative position information between each token pair. Defaults to None.
             rel_2d_pos (Tensor, optional): The relative 2D position bias with shape (num_heads, sequence_length, sequence_length). It contains relative 2D position information between each token pair. Defaults
-to None.
+                to None.
         
         Returns:
             tuple: A tuple containing the context layer and attention probabilities if output_attentions is True, otherwise only the context layer.
-                - context_layer (Tensor): The output context layer with shape (batch_size, sequence_length, hidden_size).
-                - attention_probs (Tensor, optional): The attention probabilities with shape (batch_size, num_heads, sequence_length, sequence_length) if output_attentions is True.
+                >   - context_layer (Tensor): The output context layer with shape (batch_size, sequence_length, hidden_size).
+                >   - attention_probs (Tensor, optional): The attention probabilities with shape (batch_size, num_heads, sequence_length, sequence_length) if output_attentions is True.
         
         Raises:
             None
@@ -371,9 +371,9 @@ class LayoutLMv2SelfOutput(nn.Cell):
         Args:
             self (object): The instance of the class.
             config (object): An object containing configuration parameters.
-                - hidden_size (int): The size of the hidden state.
-                - layer_norm_eps (float): The epsilon value for LayerNorm.
-                - hidden_dropout_prob (float): The dropout probability for hidden layers.
+                >   - hidden_size (int): The size of the hidden state.
+                >   - layer_norm_eps (float): The epsilon value for LayerNorm.
+                >   - hidden_dropout_prob (float): The dropout probability for hidden layers.
         
         Returns:
             None. This method initializes the LayoutLMv2SelfOutput class attributes.
@@ -421,12 +421,11 @@ class LayoutLMv2Intermediate(nn.Cell):
         
         Args:
             self (object): The current instance of the class.
-            config (object): An object containing configuration parameters for the intermediate layer.
-                It must have the following attributes:
-                    - hidden_size (int): The size of the hidden layer.
-                    - intermediate_size (int): The size of the intermediate layer.
-                    - hidden_act (str or function): The activation function for the hidden layer.
-                        If a string, it should be a key in the ACT2FN dictionary.
+            config (object): An object containing configuration parameters for the intermediate layer. It must have the following attributes:
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - intermediate_size (int): The size of the intermediate layer.
+                >   - hidden_act (str or function): The activation function for the hidden layer.
+                    If a string, it should be a key in the ACT2FN dictionary.
         
         Returns:
             None: This method does not return any value.
@@ -525,9 +524,9 @@ class LayoutLMv2Layer(nn.Cell):
         Args:
             self: Instance of the LayoutLMv2Layer class.
             config: Configuration object containing parameters for the layer initialization.
-                - Type: object
-                - Purpose: To configure the layer with specific settings.
-                - Restrictions: Must be a valid configuration object.
+                >   - Type: object
+                >   - Purpose: To configure the layer with specific settings.
+                >   - Restrictions: Must be a valid configuration object.
         
         Returns:
             None
@@ -564,8 +563,8 @@ class LayoutLMv2Layer(nn.Cell):
         
         Returns:
             outputs (tuple): A tuple of the following tensors:
-                - layer_output (torch.Tensor): The output tensor of shape `(batch_size, sequence_length, hidden_size)`.
-                - attention_weights (torch.Tensor, optional): The attention weights tensor of shape `(batch_size, num_heads, sequence_length, sequence_length)`. Only returned if `output_attentions=True`.
+                >   - layer_output (torch.Tensor): The output tensor of shape `(batch_size, sequence_length, hidden_size)`.
+                >   - attention_weights (torch.Tensor, optional): The attention weights tensor of shape `(batch_size, num_heads, sequence_length, sequence_length)`. Only returned if `output_attentions=True`.
         
         Raises:
             None.
@@ -955,18 +954,18 @@ class LayoutLMv2VisualBackbone(nn.Cell):
         
         Args:
             self: An instance of the 'LayoutLMv2VisualBackbone' class.
-                - Type: LayoutLMv2VisualBackbone
-                - Purpose: Represents the current instance of the LayoutLMv2VisualBackbone class.
+                >   - Type: LayoutLMv2VisualBackbone
+                >   - Purpose: Represents the current instance of the LayoutLMv2VisualBackbone class.
             
             images: The input images to be processed by the visual backbone.
-                - Type: N-dimensional array
-                - Purpose: Represents the input images for processing.
-                - Restrictions: Must be compatible with the model input size.
+                >   - Type: N-dimensional array
+                >   - Purpose: Represents the input images for processing.
+                >   - Restrictions: Must be compatible with the model input size.
         
         Returns:
             The processed features of the input images after passing through the visual backbone network.
-                - Type: Numpy array
-                - Purpose: Represents the extracted features from the input images.
+                >   - Type: Numpy array
+                >   - Purpose: Represents the extracted features from the input images.
                 
         Raises:
             No specific exceptions are documented to be raised by this method under normal circumstances.
@@ -1042,9 +1041,9 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
         Args:
             self: The instance of the LayoutLMv2Model class.
             config: A configuration object containing various settings and hyperparameters for the model.
-                - Type: dict
-                - Purpose: Configure the model with specific settings.
-                - Restrictions: Must contain specific keys and values required by the model.
+                >   - Type: dict
+                >   - Purpose: Configure the model with specific settings.
+                >   - Restrictions: Must contain specific keys and values required by the model.
         
         Returns:
             None. This method does not return any value.
@@ -1271,33 +1270,33 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
         Return:
+            Union[Tuple, BaseModelOutputWithPooling]
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import AutoProcessor, LayoutLMv2Model, set_seed
+            >>> from PIL import Image
+            >>> import torch
+            >>> from datasets import load_dataset
 
-        ```python
-        >>> from transformers import AutoProcessor, LayoutLMv2Model, set_seed
-        >>> from PIL import Image
-        >>> import torch
-        >>> from datasets import load_dataset
+            >>> set_seed(88)
 
-        >>> set_seed(88)
-
-        >>> processor = AutoProcessor.from_pretrained("microsoft/layoutlmv2-base-uncased")
-        >>> model = LayoutLMv2Model.from_pretrained("microsoft/layoutlmv2-base-uncased")
+            >>> processor = AutoProcessor.from_pretrained("microsoft/layoutlmv2-base-uncased")
+            >>> model = LayoutLMv2Model.from_pretrained("microsoft/layoutlmv2-base-uncased")
 
 
-        >>> dataset = load_dataset("hf-internal-testing/fixtures_docvqa")
-        >>> image_path = dataset["test"][0]["file"]
-        >>> image = Image.open(image_path).convert("RGB")
+            >>> dataset = load_dataset("hf-internal-testing/fixtures_docvqa")
+            >>> image_path = dataset["test"][0]["file"]
+            >>> image = Image.open(image_path).convert("RGB")
 
-        >>> encoding = processor(image, return_tensors="pt")
+            >>> encoding = processor(image, return_tensors="pt")
 
-        >>> outputs = model(**encoding)
-        >>> last_hidden_states = outputs.last_hidden_state
+            >>> outputs = model(**encoding)
+            >>> last_hidden_states = outputs.last_hidden_state
 
-        >>> last_hidden_states.shape
-        ops.Size([1, 342, 768])
-        ```
+            >>> last_hidden_states.shape
+            ops.Size([1, 342, 768])
+            ```
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1410,9 +1409,9 @@ class LayoutLMv2ForSequenceClassification(LayoutLMv2PreTrainedModel):
         Args:
             self: The object instance.
             config: An instance of the LayoutLMv2Config class containing the configuration parameters for the model.
-                - Type: LayoutLMv2Config
-                - Purpose: Specifies the model's configuration parameters.
-                - Restrictions: None
+                >   - Type: LayoutLMv2Config
+                >   - Purpose: Specifies the model's configuration parameters.
+                >   - Restrictions: None
         
         Returns:
             None
@@ -1460,43 +1459,44 @@ class LayoutLMv2ForSequenceClassification(LayoutLMv2PreTrainedModel):
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
 
         Returns:
+            Union[Tuple, SequenceClassifierOutput]
 
         Example:
+            ```python
+            >>> from transformers import AutoProcessor, LayoutLMv2ForSequenceClassification, set_seed
+            >>> from PIL import Image
+            >>> import torch
+            >>> from datasets import load_dataset
 
-        ```python
-        >>> from transformers import AutoProcessor, LayoutLMv2ForSequenceClassification, set_seed
-        >>> from PIL import Image
-        >>> import torch
-        >>> from datasets import load_dataset
+            >>> set_seed(88)
 
-        >>> set_seed(88)
+            >>> dataset = load_dataset("rvl_cdip", split="train", streaming=True)
+            >>> data = next(iter(dataset))
+            >>> image = data["image"].convert("RGB")
 
-        >>> dataset = load_dataset("rvl_cdip", split="train", streaming=True)
-        >>> data = next(iter(dataset))
-        >>> image = data["image"].convert("RGB")
+            >>> processor = AutoProcessor.from_pretrained("microsoft/layoutlmv2-base-uncased")
+            >>> model = LayoutLMv2ForSequenceClassification.from_pretrained(
+            ...     "microsoft/layoutlmv2-base-uncased", num_labels=dataset.info.features["label"].num_classes
+            ... )
 
-        >>> processor = AutoProcessor.from_pretrained("microsoft/layoutlmv2-base-uncased")
-        >>> model = LayoutLMv2ForSequenceClassification.from_pretrained(
-        ...     "microsoft/layoutlmv2-base-uncased", num_labels=dataset.info.features["label"].num_classes
-        ... )
+            >>> encoding = processor(image, return_tensors="pt")
+            >>> sequence_label = torch.tensor([data["label"]])
 
-        >>> encoding = processor(image, return_tensors="pt")
-        >>> sequence_label = torch.tensor([data["label"]])
+            >>> outputs = model(**encoding, labels=sequence_label)
 
-        >>> outputs = model(**encoding, labels=sequence_label)
-
-        >>> loss, logits = outputs.loss, outputs.logits
-        >>> predicted_idx = logits.argmax(axis=-1).item()
-        >>> predicted_answer = dataset.info.features["label"].names[4]
-        >>> predicted_idx, predicted_answer
-        (4, 'advertisement')
-        ```
+            >>> loss, logits = outputs.loss, outputs.logits
+            >>> predicted_idx = logits.argmax(axis=-1).item()
+            >>> predicted_answer = dataset.info.features["label"].names[4]
+            >>> predicted_idx, predicted_answer
+            (4, 'advertisement')
+            ```
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1607,9 +1607,9 @@ class LayoutLMv2ForTokenClassification(LayoutLMv2PreTrainedModel):
         Args:
             self (LayoutLMv2ForTokenClassification): The instance of the LayoutLMv2ForTokenClassification class.
             config: An object containing the configuration settings for the LayoutLMv2 model.
-                - Type: LayoutLMv2Config
-                - Purpose: Specifies the configuration parameters for the model.
-                - Restrictions: Must be an instance of LayoutLMv2Config.
+                >   - Type: LayoutLMv2Config
+                >   - Purpose: Specifies the configuration parameters for the model.
+                >   - Restrictions: Must be an instance of LayoutLMv2Config.
         
         Returns:
             None: This method does not return any value.
@@ -1661,48 +1661,48 @@ class LayoutLMv2ForTokenClassification(LayoutLMv2PreTrainedModel):
             Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
 
         Returns:
+            Union[Tuple, TokenClassifierOutput]
 
         Example:
+            ```python
+            >>> from transformers import AutoProcessor, LayoutLMv2ForTokenClassification, set_seed
+            >>> from PIL import Image
+            >>> from datasets import load_dataset
 
-        ```python
-        >>> from transformers import AutoProcessor, LayoutLMv2ForTokenClassification, set_seed
-        >>> from PIL import Image
-        >>> from datasets import load_dataset
+            >>> set_seed(88)
 
-        >>> set_seed(88)
+            >>> datasets = load_dataset("nielsr/funsd", split="test")
+            >>> labels = datasets.features["ner_tags"].feature.names
+            >>> id2label = {v: k for v, k in enumerate(labels)}
 
-        >>> datasets = load_dataset("nielsr/funsd", split="test")
-        >>> labels = datasets.features["ner_tags"].feature.names
-        >>> id2label = {v: k for v, k in enumerate(labels)}
+            >>> processor = AutoProcessor.from_pretrained("microsoft/layoutlmv2-base-uncased", revision="no_ocr")
+            >>> model = LayoutLMv2ForTokenClassification.from_pretrained(
+            ...     "microsoft/layoutlmv2-base-uncased", num_labels=len(labels)
+            ... )
 
-        >>> processor = AutoProcessor.from_pretrained("microsoft/layoutlmv2-base-uncased", revision="no_ocr")
-        >>> model = LayoutLMv2ForTokenClassification.from_pretrained(
-        ...     "microsoft/layoutlmv2-base-uncased", num_labels=len(labels)
-        ... )
+            >>> data = datasets[0]
+            >>> image = Image.open(data["image_path"]).convert("RGB")
+            >>> words = data["words"]
+            >>> boxes = data["bboxes"]  # make sure to normalize your bounding boxes
+            >>> word_labels = data["ner_tags"]
+            >>> encoding = processor(
+            ...     image,
+            ...     words,
+            ...     boxes=boxes,
+            ...     word_labels=word_labels,
+            ...     padding="max_length",
+            ...     truncation=True,
+            ...     return_tensors="pt",
+            ... )
 
-        >>> data = datasets[0]
-        >>> image = Image.open(data["image_path"]).convert("RGB")
-        >>> words = data["words"]
-        >>> boxes = data["bboxes"]  # make sure to normalize your bounding boxes
-        >>> word_labels = data["ner_tags"]
-        >>> encoding = processor(
-        ...     image,
-        ...     words,
-        ...     boxes=boxes,
-        ...     word_labels=word_labels,
-        ...     padding="max_length",
-        ...     truncation=True,
-        ...     return_tensors="pt",
-        ... )
+            >>> outputs = model(**encoding)
+            >>> logits, loss = outputs.logits, outputs.loss
 
-        >>> outputs = model(**encoding)
-        >>> logits, loss = outputs.logits, outputs.loss
-
-        >>> predicted_token_class_ids = logits.argmax(-1)
-        >>> predicted_tokens_classes = [id2label[t.item()] for t in predicted_token_class_ids[0]]
-        >>> predicted_tokens_classes[:5]
-        ['B-ANSWER', 'B-HEADER', 'B-HEADER', 'B-HEADER', 'B-HEADER']
-        ```
+            >>> predicted_token_class_ids = logits.argmax(-1)
+            >>> predicted_tokens_classes = [id2label[t.item()] for t in predicted_token_class_ids[0]]
+            >>> predicted_tokens_classes[:5]
+            ['B-ANSWER', 'B-HEADER', 'B-HEADER', 'B-HEADER', 'B-HEADER']
+            ```
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1821,49 +1821,48 @@ class LayoutLMv2ForQuestionAnswering(LayoutLMv2PreTrainedModel):
             are not taken into account for computing the loss.
 
         Returns:
+            Union[Tuple, QuestionAnsweringModelOutput]
 
         Example:
+            In this example below, we give the LayoutLMv2 model an image (of texts) and ask it a question. It will give us
+            a prediction of what it thinks the answer is (the span of the answer within the texts parsed from the image).
+            ```python
+            >>> from transformers import AutoProcessor, LayoutLMv2ForQuestionAnswering, set_seed
+            >>> import torch
+            >>> from PIL import Image
+            >>> from datasets import load_dataset
 
-        In this example below, we give the LayoutLMv2 model an image (of texts) and ask it a question. It will give us
-        a prediction of what it thinks the answer is (the span of the answer within the texts parsed from the image).
+            >>> set_seed(88)
+            >>> processor = AutoProcessor.from_pretrained("microsoft/layoutlmv2-base-uncased")
+            >>> model = LayoutLMv2ForQuestionAnswering.from_pretrained("microsoft/layoutlmv2-base-uncased")
 
-        ```python
-        >>> from transformers import AutoProcessor, LayoutLMv2ForQuestionAnswering, set_seed
-        >>> import torch
-        >>> from PIL import Image
-        >>> from datasets import load_dataset
+            >>> dataset = load_dataset("hf-internal-testing/fixtures_docvqa")
+            >>> image_path = dataset["test"][0]["file"]
+            >>> image = Image.open(image_path).convert("RGB")
+            >>> question = "When is coffee break?"
+            >>> encoding = processor(image, question, return_tensors="pt")
 
-        >>> set_seed(88)
-        >>> processor = AutoProcessor.from_pretrained("microsoft/layoutlmv2-base-uncased")
-        >>> model = LayoutLMv2ForQuestionAnswering.from_pretrained("microsoft/layoutlmv2-base-uncased")
+            >>> outputs = model(**encoding)
+            >>> predicted_start_idx = outputs.start_logits.argmax(-1).item()
+            >>> predicted_end_idx = outputs.end_logits.argmax(-1).item()
+            >>> predicted_start_idx, predicted_end_idx
+            (154, 287)
 
-        >>> dataset = load_dataset("hf-internal-testing/fixtures_docvqa")
-        >>> image_path = dataset["test"][0]["file"]
-        >>> image = Image.open(image_path).convert("RGB")
-        >>> question = "When is coffee break?"
-        >>> encoding = processor(image, question, return_tensors="pt")
+            >>> predicted_answer_tokens = encoding.input_ids.squeeze()[predicted_start_idx : predicted_end_idx + 1]
+            >>> predicted_answer = processor.tokenizer.decode(predicted_answer_tokens)
+            >>> predicted_answer  # results are not very good without further fine-tuning
+            'council mem - bers conducted by trrf treasurer philip g. kuehn to get answers which the public ...
+            ```
 
-        >>> outputs = model(**encoding)
-        >>> predicted_start_idx = outputs.start_logits.argmax(-1).item()
-        >>> predicted_end_idx = outputs.end_logits.argmax(-1).item()
-        >>> predicted_start_idx, predicted_end_idx
-        (154, 287)
-
-        >>> predicted_answer_tokens = encoding.input_ids.squeeze()[predicted_start_idx : predicted_end_idx + 1]
-        >>> predicted_answer = processor.tokenizer.decode(predicted_answer_tokens)
-        >>> predicted_answer  # results are not very good without further fine-tuning
-        'council mem - bers conducted by trrf treasurer philip g. kuehn to get answers which the public ...
-        ```
-
-        ```python
-        >>> target_start_index = torch.tensor([7])
-        >>> target_end_index = torch.tensor([14])
-        >>> outputs = model(**encoding, start_positions=target_start_index, end_positions=target_end_index)
-        >>> predicted_answer_span_start = outputs.start_logits.argmax(-1).item()
-        >>> predicted_answer_span_end = outputs.end_logits.argmax(-1).item()
-        >>> predicted_answer_span_start, predicted_answer_span_end
-        (154, 287)
-        ```
+            ```python
+            >>> target_start_index = torch.tensor([7])
+            >>> target_end_index = torch.tensor([14])
+            >>> outputs = model(**encoding, start_positions=target_start_index, end_positions=target_end_index)
+            >>> predicted_answer_span_start = outputs.start_logits.argmax(-1).item()
+            >>> predicted_answer_span_end = outputs.end_logits.argmax(-1).item()
+            >>> predicted_answer_span_start, predicted_answer_span_end
+            (154, 287)
+            ```
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

@@ -52,13 +52,12 @@ class MSErnieMEmbeddings(nn.Cell):
         Args:
             self: The object instance.
             config (object): A configuration object containing various parameters.
-            
-                - hidden_size (int): The size of the hidden state.
-                - vocab_size (int): The size of the vocabulary.
-                - pad_token_id (int): The ID of the padding token.
-                - max_position_embeddings (int): The maximum number of positional embeddings.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
-                - hidden_dropout_prob (float): The dropout probability for the hidden state.
+                >   - hidden_size (int): The size of the hidden state.
+                >   - vocab_size (int): The size of the vocabulary.
+                >   - pad_token_id (int): The ID of the padding token.
+                >   - max_position_embeddings (int): The maximum number of positional embeddings.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - hidden_dropout_prob (float): The dropout probability for the hidden state.
                 
         Returns:
             None
@@ -128,14 +127,14 @@ class MSErnieMSelfAttention(nn.Cell):
     The `MSErnieMSelfAttention` class represents a self-attention mechanism for the MS ERNIE model. This class inherits from `nn.Cell`. 
     
     This class implements the self-attention mechanism, which is a crucial component in natural language processing tasks like machine translation and text summarization. The self-attention mechanism allows
-the model to weigh the significance of different words in a sequence when processing each word, enabling the model to capture long-range dependencies and improve performance on various language understanding
-tasks.
-    
+    the model to weigh the significance of different words in a sequence when processing each word, enabling the model to capture long-range dependencies and improve performance on various language understanding
+    tasks.
+
     The class includes methods for initializing the self-attention mechanism, transposing input tensors for calculating attention scores, and constructing the self-attention mechanism using the provided input
-tensors. Additionally, it supports position embeddings and optional output of attention probabilities.
+    tensors. Additionally, it supports position embeddings and optional output of attention probabilities.
     
     The `MSErnieMSelfAttention` class ensures that the self-attention mechanism is efficiently implemented and seamlessly integrated into the MS ERNIE model, contributing to the model's effectiveness in
-natural language understanding and generation tasks.
+    natural language understanding and generation tasks.
     """
     def __init__(self, config, position_embedding_type=None):
         """
@@ -213,22 +212,22 @@ natural language understanding and generation tasks.
         Method to construct self-attention mechanism in the MSErnieMSelfAttention class.
         
         Args:
-        - self: The instance of the class.
-        - hidden_states (mindspore.Tensor): The input hidden states to the self-attention mechanism.
-        - attention_mask (Optional[mindspore.Tensor], optional): Mask tensor indicating which positions should be attended to and which should not. Defaults to None.
-        - head_mask (Optional[mindspore.Tensor], optional): Mask tensor indicating which heads to mask. Defaults to None.
-        - encoder_hidden_states (Optional[mindspore.Tensor], optional): Hidden states from an encoder in case of cross-attention. Defaults to None.
-        - encoder_attention_mask (Optional[mindspore.Tensor], optional): Mask tensor for encoder_hidden_states. Defaults to None.
-        - past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]], optional): Tuple containing the past key and value tensors. Defaults to None.
-        - output_attentions (Optional[bool], optional): Flag to output attentions. Defaults to False.
+            self: The instance of the class.
+            hidden_states (mindspore.Tensor): The input hidden states to the self-attention mechanism.
+            attention_mask (Optional[mindspore.Tensor], optional): Mask tensor indicating which positions should be attended to and which should not. Defaults to None.
+            head_mask (Optional[mindspore.Tensor], optional): Mask tensor indicating which heads to mask. Defaults to None.
+            encoder_hidden_states (Optional[mindspore.Tensor], optional): Hidden states from an encoder in case of cross-attention. Defaults to None.
+            encoder_attention_mask (Optional[mindspore.Tensor], optional): Mask tensor for encoder_hidden_states. Defaults to None.
+            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]], optional): Tuple containing the past key and value tensors. Defaults to None.
+            output_attentions (Optional[bool], optional): Flag to output attentions. Defaults to False.
         
         Returns:
-        Tuple[mindspore.Tensor]: A tuple containing the context layer and attention probabilities if output_attentions is True, otherwise just the context layer.
+            Tuple[mindspore.Tensor]: A tuple containing the context layer and attention probabilities if output_attentions is True, otherwise just the context layer.
         
         Raises:
-        - ValueError: If the position_embedding_type is not 'relative_key' or 'relative_key_query'.
-        - TypeError: If there are issues with the input types or dimensions during the computations.
-        - RuntimeError: If there are runtime issues during the self-attention mechanism.
+            - ValueError: If the position_embedding_type is not 'relative_key' or 'relative_key_query'.
+            - TypeError: If there are issues with the input types or dimensions during the computations.
+            - RuntimeError: If there are runtime issues during the self-attention mechanism.
         """
         mixed_query_layer = self.q_proj(hidden_states)
 
@@ -401,13 +400,13 @@ class MSErnieMAttention(nn.Cell):
             self (MSErnieMAttention): The instance of the MSErnieMAttention class.
             hidden_states (mindspore.Tensor): The input hidden states of the model. Shape: (batch_size, seq_length, hidden_size).
             attention_mask (Optional[mindspore.Tensor], optional): The attention mask tensor, indicating which tokens should be attended to and which should not. Shape: (batch_size, seq_length). Defaults to
-None.
+                None.
             head_mask (Optional[mindspore.Tensor], optional): The head mask tensor, indicating which heads should be masked out. Shape: (num_heads, seq_length, seq_length). Defaults to None.
             encoder_hidden_states (Optional[mindspore.Tensor], optional): The hidden states of the encoder. Shape: (batch_size, seq_length, hidden_size). Defaults to None.
             encoder_attention_mask (Optional[mindspore.Tensor], optional): The attention mask tensor for the encoder, indicating which tokens should be attended to and which should not. Shape: (batch_size,
-seq_length). Defaults to None.
+                seq_length). Defaults to None.
             past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]], optional): The tuple of past key and value tensors for keeping the previous attention weights. Shape: ((batch_size, num_heads, seq_length,
-hidden_size), (batch_size, num_heads, seq_length, hidden_size)). Defaults to None.
+                hidden_size), (batch_size, num_heads, seq_length, hidden_size)). Defaults to None.
             output_attentions (Optional[bool], optional): Whether to output attention weights. Defaults to False.
             
         Returns:
@@ -436,27 +435,28 @@ class MSErnieMEncoderLayer(nn.Cell):
     This class represents an encoder layer for the MSErnieM model. It includes self-attention, linear transformations, dropout, layer normalization, and activation functions for processing input hidden states.
     
     The MSErnieMEncoderLayer class inherits from nn.Cell and consists of an __init__ method for initializing the layer's components and a construct method for performing the encoding operations on input
-tensors.
+        tensors.
     
     Attributes:
-        - self_attn (MSErnieMAttention): Self-attention mechanism for capturing dependencies within the input hidden states.
-        - linear1 (nn.Dense): Linear transformation layer from hidden size to intermediate size.
-        - dropout (nn.Dropout): Dropout layer for regularization during activation functions.
-        - linear2 (nn.Dense): Linear transformation layer from intermediate size back to hidden size.
-        - norm1 (nn.LayerNorm): Layer normalization for normalizing hidden states.
-        - norm2 (nn.LayerNorm): Layer normalization for normalizing hidden states.
-        - dropout1 (nn.Dropout): Dropout layer for regularization after the first linear transformation.
-        - dropout2 (nn.Dropout): Dropout layer for regularization after the second linear transformation.
-        - activation (function): Activation function applied to the hidden states.
+        self_attn (MSErnieMAttention): Self-attention mechanism for capturing dependencies within the input hidden states.
+        linear1 (nn.Dense): Linear transformation layer from hidden size to intermediate size.
+        dropout (nn.Dropout): Dropout layer for regularization during activation functions.
+        linear2 (nn.Dense): Linear transformation layer from intermediate size back to hidden size.
+        norm1 (nn.LayerNorm): Layer normalization for normalizing hidden states.
+        norm2 (nn.LayerNorm): Layer normalization for normalizing hidden states.
+        dropout1 (nn.Dropout): Dropout layer for regularization after the first linear transformation.
+        dropout2 (nn.Dropout): Dropout layer for regularization after the second linear transformation.
+        activation (function): Activation function applied to the hidden states.
     
     Methods:
         - __init__(self, config): Constructor method for initializing the encoder layer with provided configuration settings.
         - construct(self, hidden_states, attention_mask=None, head_mask=None, past_key_value=None, output_attentions=True): Method for processing input hidden states through the encoder layer's components.
     
     The construct method performs a series of operations on the input hidden states, including self-attention, linear transformations, activation functions, dropout, and layer normalization. It returns the
-processed hidden states and optional attention outputs if specified.
+    processed hidden states and optional attention outputs if specified.
     
-    Note: The MSErnieMEncoderLayer class is designed to be used within the MSErnieM model architecture for encoding input sequences.
+    Note:
+        The MSErnieMEncoderLayer class is designed to be used within the MSErnieM model architecture for encoding input sequences.
     """
     def __init__(self, config):
         """
@@ -466,12 +466,12 @@ processed hidden states and optional attention outputs if specified.
             self (object): The MSErnieMEncoderLayer instance itself.
             config (object): An object containing configuration parameters for the encoder layer.
                 This object should have the following attributes:
-                - hidden_dropout_prob (float, optional): The dropout probability for the hidden layers. Default is 0.1.
-                - act_dropout (float, optional): The dropout probability for the activation layers. Default is the value of hidden_dropout_prob.
-                - hidden_size (int): The size of the hidden layers.
-                - intermediate_size (int): The size of the intermediate layers.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
-                - hidden_act (str or function): The activation function to use. If str, it should be a key in the ACT2FN dictionary.
+                >   - hidden_dropout_prob (float, optional): The dropout probability for the hidden layers. Default is 0.1.
+                >   - act_dropout (float, optional): The dropout probability for the activation layers. Default is the value of hidden_dropout_prob.
+                >   - hidden_size (int): The size of the hidden layers.
+                >   - intermediate_size (int): The size of the intermediate layers.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - hidden_act (str or function): The activation function to use. If str, it should be a key in the ACT2FN dictionary.
         
         Returns:
             None. This method initializes various components of the MSErnieMEncoderLayer object but does not return any value.
@@ -519,7 +519,7 @@ processed hidden states and optional attention outputs if specified.
         
         Returns:
             mindspore.Tensor or Tuple[mindspore.Tensor]: The output hidden states. If `output_attentions` is True, returns a tuple containing the hidden states and attentions. Otherwise, only returns the
-hidden states.
+            hidden states.
         
         Raises:
             None
@@ -567,17 +567,15 @@ class MSErnieMEncoder(nn.Cell):
             
         construct(self, input_embeds, attention_mask=None, head_mask=None, past_key_values=None, output_attentions=False, output_hidden_states=False):
             Constructs the MSErnieMEncoder model by processing the input embeddings and generating the desired outputs.
-    
-            Args:
-                input_embeds (mindspore.Tensor): The input embeddings for the model.
-                attention_mask (Optional[mindspore.Tensor], optional): The attention mask tensor to mask certain positions. Defaults to None.
-                head_mask (Optional[mindspore.Tensor], optional): The head mask tensor to mask certain heads. Defaults to None.
-                past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]], optional): The cached key-value tensors from previous decoding steps. Defaults to None.
-                output_attentions (Optional[bool], optional): Whether to output attention weights. Defaults to False.
-                output_hidden_states (Optional[bool], optional): Whether to output hidden states. Defaults to False.
-    
-            Returns:
-                Tuple[mindspore.Tensor]: A tuple containing the last hidden state, hidden states, and attentions (if enabled).
+            >   - Args:
+                >       - input_embeds (mindspore.Tensor): The input embeddings for the model.
+                >       - attention_mask (Optional[mindspore.Tensor], optional): The attention mask tensor to mask certain positions. Defaults to None.
+                >       - head_mask (Optional[mindspore.Tensor], optional): The head mask tensor to mask certain heads. Defaults to None.
+                >       - past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]], optional): The cached key-value tensors from previous decoding steps. Defaults to None.
+                >       - output_attentions (Optional[bool], optional): Whether to output attention weights. Defaults to False.
+                >       - output_hidden_states (Optional[bool], optional): Whether to output hidden states. Defaults to False.
+            >   - Returns:
+                >       - Tuple[mindspore.Tensor]: A tuple containing the last hidden state, hidden states, and attentions (if enabled).
     
         """
     def __init__(self, config):
@@ -588,8 +586,8 @@ class MSErnieMEncoder(nn.Cell):
             self: The object itself.
             config (object): An object containing the configuration parameters for the MSErnieMEncoder.
                 The config object should have the following attributes:
-                - num_hidden_layers (int): The number of hidden layers in the encoder.
-                - other attributes specific to the MSErnieMEncoderLayer.
+                >   - num_hidden_layers (int): The number of hidden layers in the encoder.
+                >   - other attributes specific to the MSErnieMEncoderLayer.
         
         Returns:
             None. This method does not return any value.
@@ -672,8 +670,8 @@ class MSErnieMPooler(nn.Cell):
         activation (nn.Tanh): An activation function used in the pooling layer.
     
     Methods:
-        __init__(self, config): Initializes the MSErnieMPooler instance.
-        construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor: Constructs the pooling layer.
+        __init__: Initializes the MSErnieMPooler instance.
+        construct: Constructs the pooling layer.
     
     """
     def __init__(self, config):
@@ -683,9 +681,9 @@ class MSErnieMPooler(nn.Cell):
         Args:
             self: The object itself.
             config: An instance of the configuration class for MSErnieMPooler.
-                - Type: Any valid configuration class.
-                - Purpose: Specifies the configuration settings for the MSErnieMPooler instance.
-                - Restrictions: None.
+                >   - Type: Any valid configuration class.
+                >   - Purpose: Specifies the configuration settings for the MSErnieMPooler instance.
+                >   - Restrictions: None.
         
         Returns:
             None.
@@ -758,24 +756,24 @@ class MSErnieMModel(MSErnieMPreTrainedModel):
     The MSErnieMModel class includes methods for initializing the model, getting and setting input embeddings, pruning model heads, and constructing the model.
     
     Methods:
-    - __init__(self, config, add_pooling_layer=True): Initializes the MSErnieMModel with the given configuration. By default, it adds a pooling layer to the model.
-    - get_input_embeddings(self): Returns the word embeddings used as input to the model.
-    - set_input_embeddings(self, value): Sets the word embeddings used as input to the model.
-    - _prune_heads(self, heads_to_prune): Prunes the specified heads in the model.
-    - construct(self, input_ids, position_ids, attention_mask, head_mask, inputs_embeds, past_key_values, use_cache, output_hidden_states, output_attentions): Constructs the model with the given input and
-configuration.
+        __init__: Initializes the MSErnieMModel with the given configuration. By default, it adds a pooling layer to the model.
+        get_input_embeddings: Returns the word embeddings used as input to the model.
+        set_input_embeddings: Sets the word embeddings used as input to the model.
+        _prune_heads: Prunes the specified heads in the model.
+        construct: Constructs the model with the given input and configuration.
     
-    Note: The MSErnieMModel class inherits from the MSErnieMPreTrainedModel, which provides additional functionality and methods.
+    Note:
+        The MSErnieMModel class inherits from the MSErnieMPreTrainedModel, which provides additional functionality and methods.
     
     Example usage:
-    
-    config = MSErnieMConfig()
-    model = MSErnieMModel(config)
-    input_ids = ...
-    position_ids = ...
-    attention_mask = ...
-    output = model.construct(input_ids, position_ids, attention_mask)
-    
+        ···python
+        config = MSErnieMConfig()
+        model = MSErnieMModel(config)
+        input_ids = ...
+        position_ids = ...
+        attention_mask = ...
+        output = model.construct(input_ids, position_ids, attention_mask)
+        ```
     """
     def __init__(self, config, add_pooling_layer=True):
         """
@@ -784,12 +782,12 @@ configuration.
         Args:
             self: The instance of the MSErnieMModel class.
             config: An object containing configuration settings for the model.
-                    Type: object
-                    Purpose: Specifies the configuration settings for the model.
+                >   - Type: object
+                >   - Purpose: Specifies the configuration settings for the model.
             add_pooling_layer: A boolean flag indicating whether to add a pooling layer.
-                              Type: bool
-                              Purpose: Specifies whether to include a pooling layer in the model.
-                              Restrictions: Must be a boolean value.
+                >   - Type: bool
+                >   - Purpose: Specifies whether to include a pooling layer in the model.
+                >   - Restrictions: Must be a boolean value.
         
         Returns:
             None. The method does not return any value.
@@ -953,7 +951,7 @@ class MSErnieMForSequenceClassification(MSErnieMPreTrainedModel):
     Methods:
         __init__(self, config): Initializes the MSErnieMForSequenceClassification instance.
         construct(self, input_ids, attention_mask, position_ids, head_mask, inputs_embeds, past_key_values, use_cache, output_hidden_states, output_attentions, labels): Constructs the model and computes the
-loss and logits for the given input.
+            loss and logits for the given input.
     """
     # Copied from transformers.models.bert.modeling_bert.BertForSequenceClassification.__init__ with Bert->ErnieM,bert->ernie_m
     def __init__(self, config):
@@ -963,9 +961,9 @@ loss and logits for the given input.
         Args:
             self: The instance of the class.
             config: An object of type 'Config' containing the configuration parameters for the model.
-                - Type: Config
-                - Purpose: Specifies the configuration of the model.
-                - Restrictions: None
+                >   - Type: Config
+                >   - Purpose: Specifies the configuration of the model.
+                >   - Restrictions: None
         
         Returns:
             None
@@ -1001,10 +999,10 @@ loss and logits for the given input.
         labels: Optional[mindspore.Tensor] = None,
     ) -> Tuple[mindspore.Tensor]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        >    labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         outputs = self.ernie_m(
             input_ids,
@@ -1050,16 +1048,16 @@ class MSErnieMForMultipleChoice(MSErnieMPreTrainedModel):
 
     """
     This class represents a Multiple Choice classification model based on the MSErnieM architecture. It inherits from the MSErnieMPreTrainedModel and is designed to facilitate multiple choice question
-answering tasks.
+    answering tasks.
     
     The class implements the initialization method to set up the model and a construct method to process input data and produce classification predictions. The construct method handles input tensors for
-input_ids, attention_mask, position_ids, head_mask, inputs_embeds, and labels, and provides options for output_attentions and output_hidden_states.
+    input_ids, attention_mask, position_ids, head_mask, inputs_embeds, and labels, and provides options for output_attentions and output_hidden_states.
     
     The construct method computes the multiple choice classification loss based on the input data and generates reshaped logits for each choice. It utilizes the MSErnieM model to process the input data and
-applies dropout and dense layers for classification. Additionally, it handles the cross-entropy loss calculation for training the model.
+    applies dropout and dense layers for classification. Additionally, it handles the cross-entropy loss calculation for training the model.
     
     Overall, the MSErnieMForMultipleChoice class encapsulates the functionality for performing multiple choice classification using the MSErnieM architecture and provides flexibility for processing various
-input tensors and generating classification predictions.
+    input tensors and generating classification predictions.
     """
     # Copied from transformers.models.bert.modeling_bert.BertForMultipleChoice.__init__ with Bert->ErnieM,bert->ernie_m
     def __init__(self, config):
@@ -1101,10 +1099,10 @@ input tensors and generating classification predictions.
         output_hidden_states: Optional[bool] = None,
     ) -> Tuple[mindspore.Tensor]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
-            num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
-            `input_ids` above)
+        >    labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
+                num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
+                `input_ids` above)
         """
         num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
 
@@ -1149,21 +1147,22 @@ class MSErnieMForTokenClassification(MSErnieMPreTrainedModel):
     The `MSErnieMForTokenClassification` class inherits from `MSErnieMPreTrainedModel` and extends its functionality by adding a token classification layer on top of the base model. 
     
     The class's constructor initializes the model and sets up the necessary components. It takes a `config` object as input and initializes the base model with the provided configuration. The number of labels
-for token classification is also stored for later use. The dropout layer and the token classification layer are defined. Lastly, the `post_init` method is called to perform any additional initialization steps.
+    for token classification is also stored for later use. The dropout layer and the token classification layer are defined. Lastly, the `post_init` method is called to perform any additional initialization steps.
     
     The `construct` method is the main entry point for using the model for token classification. It takes various input tensors such as `input_ids`, `attention_mask`, `position_ids`, `head_mask`,
-`inputs_embeds`, `past_key_values`, `output_hidden_states`, `output_attentions`, and `labels`. 
+    `inputs_embeds`, `past_key_values`, `output_hidden_states`, `output_attentions`, and `labels`.
     
     The method first passes the input tensors through the base model (`self.ernie_m`) to obtain the sequence output. The sequence output is then passed through a dropout layer to prevent overfitting. Finally,
-the token classification layer (`self.classifier`) is applied to generate logits for each token in the sequence.
+    the token classification layer (`self.classifier`) is applied to generate logits for each token in the sequence.
     
     If `labels` are provided, the method calculates the token classification loss using the cross-entropy function. The loss is computed by reshaping the logits and labels tensors to have a shape of
-`(batch_size * sequence_length, num_labels)` and applying the cross-entropy function.
+    `(batch_size * sequence_length, num_labels)` and applying the cross-entropy function.
     
     The method returns a tuple containing the logits for each token, as well as any additional outputs from the base model. If a loss is calculated, it is included in the output tuple.
     
-    Note: The `MSErnieMForTokenClassification` class assumes that the input tensors are of type `mindspore.Tensor`, and the labels tensor should have a shape of `(batch_size, sequence_length)` with indices in
-the range `[0, ..., config.num_labels - 1]`.
+    Note:
+        The `MSErnieMForTokenClassification` class assumes that the input tensors are of type `mindspore.Tensor`, and the labels tensor should have a shape of `(batch_size, sequence_length)` with indices in
+        the range `[0, ..., config.num_labels - 1]`.
     
     """
     # Copied from transformers.models.bert.modeling_bert.BertForTokenClassification.__init__ with Bert->ErnieM,bert->ernie_m
@@ -1174,9 +1173,9 @@ the range `[0, ..., config.num_labels - 1]`.
         Args:
             self: The instance of the class.
             config: An object containing configuration parameters for the model.
-                - Type: dict
-                - Purpose: Configuration settings for the model.
-                - Restrictions: Must contain the key 'num_labels'.
+                >   - Type: dict
+                >   - Purpose: Configuration settings for the model.
+                >   - Restrictions: Must contain the key 'num_labels'.
         
         Returns:
             None. This method does not return any value.
@@ -1211,8 +1210,8 @@ the range `[0, ..., config.num_labels - 1]`.
         labels: Optional[mindspore.Tensor] = None,
     ) -> Tuple[mindspore.Tensor]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        >    labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         outputs = self.ernie_m(
             input_ids,
@@ -1353,14 +1352,14 @@ class MSErnieMForInformationExtraction(MSErnieMPreTrainedModel):
     The 'MSErnieMForInformationExtraction' class is a model for information extraction tasks using the MSERNIE-M (multi-lingual) model. It extends the 'MSErnieMPreTrainedModel' class. 
     
     This class initializes the MSERNIE-M model and includes methods for constructing the model for information extraction tasks, such as computing start and end position losses and probabilities. It also
-provides functionality for calculating the total loss, start probability, and end probability.
+    provides functionality for calculating the total loss, start probability, and end probability.
     
     The 'MSErnieMForInformationExtraction' class inherits the configuration parameters and methods from 'MSErnieMPreTrainedModel' and extends it to support information extraction tasks. The class is designed
-to handle input tensors for input_ids, attention_mask, position_ids, head_mask, and inputs_embeds, and provides output in the form of a tuple containing total loss, start probability, end probability, and
-additional model outputs.
+    to handle input tensors for input_ids, attention_mask, position_ids, head_mask, and inputs_embeds, and provides output in the form of a tuple containing total loss, start probability, end probability, and
+    additional model outputs.
     
     The class is suitable for tasks such as named entity recognition, question answering, and other information extraction tasks where start and end positions within a sequence need to be identified and
-predicted.
+    predicted.
     
     This class is a part of the MindSpore library and is designed to provide a high-level interface for utilizing the MSERNIE-M model for information extraction tasks.
     """

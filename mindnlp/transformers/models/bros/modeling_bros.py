@@ -84,21 +84,23 @@ class BrosPositionalEmbedding1D(nn.Cell):
     This class inherits from nn.Cell and is used to create a 1D positional embedding for Bros.
     
     The positional embedding is constructed based on the input configuration and positional sequence. The constructor initializes the dimensional parameters for the positional embedding, and the construct
-method generates the positional embedding based on the given positional sequence.
+    method generates the positional embedding based on the given positional sequence.
     
     Attributes:
         dim_bbox_sinusoid_emb_1d (int): The dimensional parameter for the sinusoidal positional embedding.
         inv_freq (Tensor): The inverse frequency used in constructing the positional embedding.
     
     Methods:
-        construct(pos_seq: Tensor) -> Tensor: Constructs the positional embedding based on the given positional sequence.
+        construct: Constructs the positional embedding based on the given positional sequence.
     
     Example:
+        ```python
         # Create a BrosPositionalEmbedding1D instance
         config = Config()
         bros_positional_embedding = BrosPositionalEmbedding1D(config)
         pos_sequence = Tensor([1, 2, 3])
         pos_embedding = bros_positional_embedding.construct(pos_sequence)
+        ```
     """
     # Reference: https://github.com/kimiyoung/transformer-xl/blob/master/pytorch/mem_transformer.py#L15
 
@@ -109,9 +111,9 @@ method generates the positional embedding based on the given positional sequence
         Args:
             self: The current instance of the class.
             config: A configuration object containing parameters for the initialization.
-                - Type: Any
-                - Purpose: Provides configuration options for the BrosPositionalEmbedding1D instance.
-                - Restrictions: None
+                >   - Type: Any
+                >   - Purpose: Provides configuration options for the BrosPositionalEmbedding1D instance.
+                >   - Restrictions: None
         
         Returns:
             None
@@ -156,21 +158,21 @@ class BrosPositionalEmbedding2D(nn.Cell):
     This class inherits from nn.Cell and is used to create positional embeddings for 2D spatial information.
     
     Parameters:
-    - config (dict): A dictionary containing configuration parameters for the positional embedding.
-    - dim_bbox (int): The dimension of the bounding box.
-    - x_pos_emb (BrosPositionalEmbedding1D): An instance of BrosPositionalEmbedding1D for the x-axis positional embedding.
-    - y_pos_emb (BrosPositionalEmbedding1D): An instance of BrosPositionalEmbedding1D for the y-axis positional embedding.
+        config (dict): A dictionary containing configuration parameters for the positional embedding.
+        dim_bbox (int): The dimension of the bounding box.
+        x_pos_emb (BrosPositionalEmbedding1D): An instance of BrosPositionalEmbedding1D for the x-axis positional embedding.
+        y_pos_emb (BrosPositionalEmbedding1D): An instance of BrosPositionalEmbedding1D for the y-axis positional embedding.
     
     Methods:
-    - construct(bbox: mindspore.Tensor) -> mindspore.Tensor: Constructs the positional embedding for the input bounding box tensor.
-      Args:
-        - bbox (mindspore.Tensor): Input bounding box tensor.
-      Returns:
-        - mindspore.Tensor: Positional embedding tensor for the input bounding box.
-      
+        construct: Constructs the positional embedding for the input bounding box tensor.
+            >   - Args:
+                >   - bbox (mindspore.Tensor): Input bounding box tensor.
+            >   - Returns:
+                >   - mindspore.Tensor: Positional embedding tensor for the input bounding box.
+
     Note:
-    - The construct method iterates over the dimensions of the bounding box and applies positional embedding based on the dimension index.
-    - The positional embeddings for x and y axes are created separately using BrosPositionalEmbedding1D instances and concatenated along the last axis.
+        >   - The construct method iterates over the dimensions of the bounding box and applies positional embedding based on the dimension index.
+        >   - The positional embeddings for x and y axes are created separately using BrosPositionalEmbedding1D instances and concatenated along the last axis.
     """
     def __init__(self, config):
         """
@@ -179,9 +181,9 @@ class BrosPositionalEmbedding2D(nn.Cell):
         Args:
             self: The instance of the class.
             config: A configuration object containing parameters for initialization.
-                Type: object
-                Purpose: Configures the positional embedding.
-                Restrictions: Must contain the 'dim_bbox' attribute.
+                >   - Type: object
+                >   - Purpose: Configures the positional embedding.
+                >   - Restrictions: Must contain the 'dim_bbox' attribute.
         
         Returns:
             None. The method initializes the BrosPositionalEmbedding2D instance.
@@ -231,10 +233,10 @@ class BrosBboxEmbeddings(nn.Cell):
     The BrosBboxEmbeddings class represents a neural network cell for generating positional embeddings for bounding boxes. It inherits from the nn.Cell class.
     
     This class initializes with a configuration object and sets up the necessary components for generating positional embeddings for bounding boxes. It includes a positional embedding layer and a projection
-layer for processing the positional embeddings.
+    layer for processing the positional embeddings.
     
     The construct method takes a tensor representing bounding boxes as input and performs operations to generate positional embeddings for the bounding boxes. It first processes the input tensor and then
-applies the positional embedding and projection layers to obtain the positional embeddings for the bounding boxes.
+    applies the positional embedding and projection layers to obtain the positional embeddings for the bounding boxes.
     
     This class provides functionality for generating positional embeddings specifically tailored for bounding boxes, which can be used in various machine learning applications.
     """
@@ -292,10 +294,10 @@ class BrosTextEmbeddings(nn.Cell):
         Args:
             self: An instance of the BrosTextEmbeddings class.
             config: A configuration object containing various parameters for setting up the embeddings.
-                - Type: object
-                - Purpose: Specifies the configuration settings for the embeddings.
-                - Restrictions: Must contain specific attributes such as vocab_size, hidden_size, max_position_embeddings,
-                  type_vocab_size, pad_token_id, layer_norm_eps, hidden_dropout_prob, position_embedding_type.
+                >   - Type: object
+                >   - Purpose: Specifies the configuration settings for the embeddings.
+                >   - Restrictions: Must contain specific attributes such as vocab_size, hidden_size, max_position_embeddings,
+                    type_vocab_size, pad_token_id, layer_norm_eps, hidden_dropout_prob, position_embedding_type.
         
         Returns:
             None. This method does not return any value.
@@ -384,15 +386,15 @@ class BrosSelfAttention(nn.Cell):
     
     The BrosSelfAttention class inherits from the nn.Cell class and implements the following methods:
     
-    - __init__(self, config): Initializes the BrosSelfAttention instance with the given configuration. It checks if the hidden size is a multiple of the number of attention heads and sets up the required
-layers and embeddings.
+    >   - __init__(self, config): Initializes the BrosSelfAttention instance with the given configuration. It checks if the hidden size is a multiple of the number of attention heads and sets up the required
+        layers and embeddings.
     
-    - swapaxes_for_scores(self, x: mindspore.Tensor): Swaps axes of the input tensor to prepare it for calculating attention scores. Returns the modified tensor.
+    >   - swapaxes_for_scores(self, x: mindspore.Tensor): Swaps axes of the input tensor to prepare it for calculating attention scores. Returns the modified tensor.
     
-    - construct(self, hidden_states: mindspore.Tensor, bbox_pos_emb: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, encoder_hidden_states:
-Optional[mindspore.Tensor] = None, encoder_attention_mask: Optional[mindspore.Tensor] = None, past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None, output_attentions: Optional[mindspore.Tensor] =
-False) -> Tuple[mindspore.Tensor]: Constructs the self-attention mechanism. It takes hidden states, positional embeddings, attention masks, and other optional inputs as arguments. Returns a tuple containing
-the context layer and optional attention scores or past key-value pairs.
+    >   - construct(self, hidden_states: mindspore.Tensor, bbox_pos_emb: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, encoder_hidden_states:
+        Optional[mindspore.Tensor] = None, encoder_attention_mask: Optional[mindspore.Tensor] = None, past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None, output_attentions: Optional[mindspore.Tensor] =
+        False) -> Tuple[mindspore.Tensor]: Constructs the self-attention mechanism. It takes hidden states, positional embeddings, attention masks, and other optional inputs as arguments. Returns a tuple containing
+        the context layer and optional attention scores or past key-value pairs.
     
     Please note that this class is designed to be used as part of the Bros model and assumes specific configurations and dependencies.
     
@@ -404,9 +406,9 @@ the context layer and optional attention scores or past key-value pairs.
         Args:
             self: The instance of the BrosSelfAttention class.
             config: An object containing configuration parameters for the BrosSelfAttention instance. It should have attributes:
-                - hidden_size (int): The size of the hidden state.
-                - num_attention_heads (int): The number of attention heads.
-                - embedding_size (int, optional): The size of the embedding. If not provided, the hidden size should be a multiple of the number of attention heads.
+                >   - hidden_size (int): The size of the hidden state.
+                >   - num_attention_heads (int): The number of attention heads.
+                >   - embedding_size (int, optional): The size of the embedding. If not provided, the hidden size should be a multiple of the number of attention heads.
         
         Returns:
             None. This method does not return any value.
@@ -458,18 +460,18 @@ the context layer and optional attention scores or past key-value pairs.
             None.
         
         Description:
-        This method reshapes the input tensor 'x' by swapping and permuting its axes to prepare it for self-attention scoring. The input tensor 'x' is expected to have shape (batch_size, seq_length,
-hidden_size), where 'batch_size' represents the number of samples in a batch, 'seq_length' represents the length of the sequence, and 'hidden_size' represents the size of the hidden dimension.
-        
-        The method first calculates the new shape for the tensor after axis swapping and reshaping. The new shape is obtained by taking all dimensions of 'x' except the last one, and appending two additional
-dimensions: 'self.num_attention_heads' representing the number of attention heads and 'self.attention_head_size' representing the size of each attention head.
-        
-        Then, the method reshapes the tensor 'x' using the calculated new shape. This results in a tensor with shape (batch_size, seq_length, self.num_attention_heads, self.attention_head_size).
-        
-        Finally, the method permutes the axes of the tensor 'x' using the permutation order (0, 2, 1, 3). The permutation reorders the axes of the tensor to (batch_size, self.num_attention_heads, seq_length,
-self.attention_head_size).
-        
-        This method modifies the input tensor 'x' in-place and does not return any value.
+            This method reshapes the input tensor 'x' by swapping and permuting its axes to prepare it for self-attention scoring. The input tensor 'x' is expected to have shape (batch_size, seq_length,
+            hidden_size), where 'batch_size' represents the number of samples in a batch, 'seq_length' represents the length of the sequence, and 'hidden_size' represents the size of the hidden dimension.
+
+            The method first calculates the new shape for the tensor after axis swapping and reshaping. The new shape is obtained by taking all dimensions of 'x' except the last one, and appending two additional
+            dimensions: 'self.num_attention_heads' representing the number of attention heads and 'self.attention_head_size' representing the size of each attention head.
+
+            Then, the method reshapes the tensor 'x' using the calculated new shape. This results in a tensor with shape (batch_size, seq_length, self.num_attention_heads, self.attention_head_size).
+
+            Finally, the method permutes the axes of the tensor 'x' using the permutation order (0, 2, 1, 3). The permutation reorders the axes of the tensor to (batch_size, self.num_attention_heads, seq_length,
+            self.attention_head_size).
+
+            This method modifies the input tensor 'x' in-place and does not return any value.
         """
         new_x_shape = x.shape[:-1] + (
             self.num_attention_heads,
@@ -611,15 +613,16 @@ class BrosSelfOutput(nn.Cell):
     This class represents a self-output layer for a neural network, providing methods for processing and transforming input tensors. It inherits from the nn.Cell class.
     
     The BrosSelfOutput class initializes with the given configuration and contains methods for constructing the self-output layer. The construct method takes hidden_states and input_tensor as input tensors and
-processes them using dense, dropout, and LayerNorm operations to produce the final hidden_states output tensor.
+    processes them using dense, dropout, and LayerNorm operations to produce the final hidden_states output tensor.
     
     Detailed descriptions of the methods:
-    - __init__(self, config): Initializes the BrosSelfOutput with the provided configuration, setting up the dense, LayerNorm, and dropout layers.
-    - construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor: Processes the input hidden_states tensor using the dense, dropout, and LayerNorm operations, and
-returns the resulting hidden_states tensor.
+        >   - __init__(self, config): Initializes the BrosSelfOutput with the provided configuration, setting up the dense, LayerNorm, and dropout layers.
+        >   - construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor: Processes the input hidden_states tensor using the dense, dropout, and LayerNorm operations, and
+            returns the resulting hidden_states tensor.
     
-    Note: This docstring provides an overview of the class and its methods. For detailed information on the configuration and operations, refer to the class implementation and the corresponding neural network
-framework documentation.
+    Note:
+        This docstring provides an overview of the class and its methods. For detailed information on the configuration and operations, refer to the class implementation and the corresponding neural network
+        framework documentation.
     """
     def __init__(self, config):
         """
@@ -628,9 +631,9 @@ framework documentation.
         Args:
             self: The instance of the BrosSelfOutput class.
             config: A configuration object containing the settings for the BrosSelfOutput. It includes the following attributes:
-                - hidden_size (int): The size of the hidden layer.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
-                - hidden_dropout_prob (float): The dropout probability for the hidden layer.
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - hidden_dropout_prob (float): The dropout probability for the hidden layer.
         
         Returns:
             None. This method does not return any value.
@@ -682,32 +685,32 @@ class BrosAttention(nn.Cell):
     Methods:
         __init__(self, config):
             Initializes a BrosAttention instance.
-            
-            Args:
-                config: A configuration object containing the BrosAttention parameters.
+
+            >   - Args:
+                >   - config: A configuration object containing the BrosAttention parameters.
             
         prune_heads(self, heads):
             Prunes the specified attention heads from the model.
-            
-            Args:
-                heads: A list of integers representing the indices of the attention heads to be pruned.
+
+            >   - Args:
+                >   - heads: A list of integers representing the indices of the attention heads to be pruned.
             
         construct(self, hidden_states, bbox_pos_emb, attention_mask=None, head_mask=None, encoder_hidden_states=None, 
                   encoder_attention_mask=None, past_key_value=None, output_attentions=False):
             Constructs the BrosAttention module.
-            
-            Args:
-                hidden_states (mindspore.Tensor): The input hidden states.
-                bbox_pos_emb (mindspore.Tensor): The positional embeddings for bounding boxes.
-                attention_mask (Optional[mindspore.Tensor]): An optional tensor containing attention masks.
-                head_mask (Optional[mindspore.Tensor]): An optional tensor containing head masks.
-                encoder_hidden_states (Optional[mindspore.Tensor]): An optional tensor containing encoder hidden states.
-                encoder_attention_mask (Optional[mindspore.Tensor]): An optional tensor containing encoder attention masks.
-                past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): An optional tuple containing past key-value states.
-                output_attentions (Optional[bool]): Whether to output attention scores.
-            
+
+            >   - Args:
+                >   - hidden_states (mindspore.Tensor): The input hidden states.
+                >   - bbox_pos_emb (mindspore.Tensor): The positional embeddings for bounding boxes.
+                >   - attention_mask (Optional[mindspore.Tensor]): An optional tensor containing attention masks.
+                >   - head_mask (Optional[mindspore.Tensor]): An optional tensor containing head masks.
+                >   - encoder_hidden_states (Optional[mindspore.Tensor]): An optional tensor containing encoder hidden states.
+                >   - encoder_attention_mask (Optional[mindspore.Tensor]): An optional tensor containing encoder attention masks.
+                >   - past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): An optional tuple containing past key-value states.
+                >   - output_attentions (Optional[bool]): Whether to output attention scores.
+
             Returns:
-                Tuple[mindspore.Tensor]: A tuple containing the attention output and other optional outputs.
+                >   - Tuple[mindspore.Tensor]: A tuple containing the attention output and other optional outputs.
     """
     def __init__(self, config):
         """
@@ -745,7 +748,7 @@ class BrosAttention(nn.Cell):
         
         Note:
             The method internally modifies the 'query', 'key', 'value', and 'output.dense' attributes of the 'BrosAttention' instance by pruning the specified attention heads. It also updates the
-'num_attention_heads', 'all_head_size', and 'pruned_heads' attributes accordingly.
+            'num_attention_heads', 'all_head_size', and 'pruned_heads' attributes accordingly.
         """
         if len(heads) == 0:
             return
@@ -821,12 +824,12 @@ class BrosIntermediate(nn.Cell):
     It inherits from the nn.Cell class.
       
     Attributes:
-        - dense (nn.Dense): A fully connected layer that maps the input tensor to the hidden size specified in the configuration.
-        - intermediate_act_fn (function): An activation function applied to the intermediate hidden states.
+        dense (nn.Dense): A fully connected layer that maps the input tensor to the hidden size specified in the configuration.
+        intermediate_act_fn (function): An activation function applied to the intermediate hidden states.
       
     Methods:
-        - __init__(self, config): Initializes the BrosIntermediate instance with the given configuration.
-        - construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor: Constructs the intermediate hidden states of the BrosIntermediate model.
+        __init__: Initializes the BrosIntermediate instance with the given configuration.
+        construct: Constructs the intermediate hidden states of the BrosIntermediate model.
     
     """
     def __init__(self, config):
@@ -837,10 +840,10 @@ class BrosIntermediate(nn.Cell):
             self (BrosIntermediate): The instance of the BrosIntermediate class.
             config (object): An object containing configuration parameters for the BrosIntermediate instance.
                 It should have attributes including:
-                    - hidden_size (int): The size of the hidden layers.
-                    - intermediate_size (int): The size of the intermediate layers.
-                    - hidden_act (str or function): The activation function for the hidden layers. 
-                      Can be either a string representing a predefined activation function or a custom activation function.
+                    >   - hidden_size (int): The size of the hidden layers.
+                    >   - intermediate_size (int): The size of the intermediate layers.
+                    >   - hidden_act (str or function): The activation function for the hidden layers.
+                        Can be either a string representing a predefined activation function or a custom activation function.
         
         Returns:
             None. This method initializes the BrosIntermediate object with the specified configuration parameters.
@@ -892,31 +895,30 @@ class BrosOutput(nn.Cell):
     Methods:
         __init__(self, config):
             Initializes the BrosOutput instance.
-            
-            Args:
-                config (object): An object containing the configuration parameters for the BrosOutput instance.
+            >   - Args:
+                >   - config (object): An object containing the configuration parameters for the BrosOutput instance.
         
         construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
             Applies a series of transformations to the input tensor and returns the final output.
-            
-            Args:
-                hidden_states (mindspore.Tensor): The hidden states tensor.
-                input_tensor (mindspore.Tensor): The input tensor.
-            
+            >   - Args:
+                >   - hidden_states (mindspore.Tensor): The hidden states tensor.
+                >   - input_tensor (mindspore.Tensor): The input tensor.
             Returns:
-                mindspore.Tensor: The output tensor after applying the transformations.
+                >   - mindspore.Tensor: The output tensor after applying the transformations.
     
     Note:
-        - The dense layer applies a linear transformation to the hidden states tensor.
-        - The dropout operation helps prevent overfitting by randomly dropping elements.
-        - The LayerNorm operation normalizes the hidden states tensor by calculating the mean and variance.
+        >   - The dense layer applies a linear transformation to the hidden states tensor.
+        >   - The dropout operation helps prevent overfitting by randomly dropping elements.
+        >   - The LayerNorm operation normalizes the hidden states tensor by calculating the mean and variance.
     
     Example:
+        ```python
         config = BrosConfig()
         output_layer = BrosOutput(config)
         hidden_states = mindspore.Tensor(np.random.randn(32, 64), dtype=mindspore.float32)
         input_tensor = mindspore.Tensor(np.random.randn(32, 64), dtype=mindspore.float32)
         output = output_layer.construct(hidden_states, input_tensor)
+        ```
     """
     def __init__(self, config):
         """
@@ -925,9 +927,9 @@ class BrosOutput(nn.Cell):
         Args:
             self (BrosOutput): The instance of the BrosOutput class.
             config: The configuration object containing parameters for the model.
-                Type: Any
-                Purpose: Specifies the configuration settings for the model.
-                Restrictions: None
+                >   - Type: Any
+                >   - Purpose: Specifies the configuration settings for the model.
+                >   - Restrictions: None
         
         Returns:
             None: This method does not return any value.
@@ -981,11 +983,10 @@ class BrosLayer(nn.Cell):
         output (BrosOutput): An instance of BrosOutput class for final output processing.
     
     Methods:
-        construct(self, hidden_states, bbox_pos_emb, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, past_key_value=None, output_attentions=False) ->
-Tuple[mindspore.Tensor]:
+        construct:
             Constructs the layer by processing the input hidden states with attention mechanisms and feed-forward processing.
         
-        feed_forward_chunk(self, attention_output):
+        feed_forward_chunk:
             Processes the attention output through intermediate and output layers for feed-forward processing.
     """
     def __init__(self, config):
@@ -994,10 +995,11 @@ Tuple[mindspore.Tensor]:
         
         Args:
             self: The object instance.
-            config: An object of type 'Config' containing the configuration parameters for the BrosLayer.
-                    - chunk_size_feed_forward (int): The size of chunks used for feed-forward operations.
-                    - is_decoder (bool): Indicates whether the BrosLayer is used as a decoder model.
-                    - add_cross_attention (bool): Indicates whether cross attention is added.
+            config:
+                >- An object of type 'Config' containing the configuration parameters for the BrosLayer.
+                >   - chunk_size_feed_forward (int): The size of chunks used for feed-forward operations.
+                >   - is_decoder (bool): Indicates whether the BrosLayer is used as a decoder model.
+                >   - add_cross_attention (bool): Indicates whether cross attention is added.
                     
         Returns:
             None
@@ -1033,21 +1035,21 @@ Tuple[mindspore.Tensor]:
         This method constructs a BrosLayer by processing the input hidden states and additional parameters.
         
         Args:
-        - self: The instance of the BrosLayer class.
-        - hidden_states (mindspore.Tensor): The hidden states input tensor.
-        - bbox_pos_emb (mindspore.Tensor): The positional embedding tensor for bounding box positions.
-        - attention_mask (Optional[mindspore.Tensor]): Optional tensor for attention masking.
-        - head_mask (Optional[mindspore.Tensor]): Optional tensor for head masking.
-        - encoder_hidden_states (Optional[mindspore.Tensor]): Optional tensor for encoder hidden states.
-        - encoder_attention_mask (Optional[mindspore.Tensor]): Optional tensor for encoder attention masking.
-        - past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): Optional tuple for storing past key and value tensors.
-        - output_attentions (Optional[bool]): Optional boolean flag to indicate whether to output attentions.
+            self: The instance of the BrosLayer class.
+            hidden_states (mindspore.Tensor): The hidden states input tensor.
+            bbox_pos_emb (mindspore.Tensor): The positional embedding tensor for bounding box positions.
+            attention_mask (Optional[mindspore.Tensor]): Optional tensor for attention masking.
+            head_mask (Optional[mindspore.Tensor]): Optional tensor for head masking.
+            encoder_hidden_states (Optional[mindspore.Tensor]): Optional tensor for encoder hidden states.
+            encoder_attention_mask (Optional[mindspore.Tensor]): Optional tensor for encoder attention masking.
+            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): Optional tuple for storing past key and value tensors.
+            output_attentions (Optional[bool]): Optional boolean flag to indicate whether to output attentions.
         
         Returns:
-        Tuple[mindspore.Tensor]: A tuple containing the output tensors after processing the input hidden states.
+            Tuple[mindspore.Tensor]: A tuple containing the output tensors after processing the input hidden states.
         
         Raises:
-        - Exception: If `encoder_hidden_states` are passed while cross-attention layers are not instantiated by setting `config.add_cross_attention=True`.
+            - Exception: If `encoder_hidden_states` are passed while cross-attention layers are not instantiated by setting `config.add_cross_attention=True`.
         """
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
         self_attn_past_key_value = past_key_value[:2] if past_key_value is not None else None
@@ -1137,10 +1139,8 @@ class BrosEncoder(nn.Cell):
         layer (nn.CellList): List of BrosLayer instances representing the encoder layers.
     
     Methods:
-        __init__(config): Initializes the BrosEncoder with the provided configuration.
-        construct(hidden_states, bbox_pos_emb, attention_mask=None, head_mask=None, encoder_hidden_states=None, 
-                  encoder_attention_mask=None, past_key_values=None, use_cache=None, output_attentions=False, 
-                  output_hidden_states=False, return_dict=True): 
+        __init__: Initializes the BrosEncoder with the provided configuration.
+        construct:
             Constructs the encoder using the specified input tensors and parameters, returning the output hidden states 
             and optional additional information based on the provided flags.
     
@@ -1157,7 +1157,7 @@ class BrosEncoder(nn.Cell):
             self (BrosEncoder): The instance of the BrosEncoder class.
             config (dict): A dictionary containing configuration parameters for the encoder.
                 Must include the following key:
-                    - num_hidden_layers (int): Number of hidden layers in the encoder.
+                    >   - num_hidden_layers (int): Number of hidden layers in the encoder.
         
         Returns:
             None. This method does not return any value.
@@ -1204,13 +1204,13 @@ class BrosEncoder(nn.Cell):
         Returns:
             Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]: The output of the BrosEncoder. 
             If return_dict is True, a dictionary with the following keys will be returned:
-                - last_hidden_state (mindspore.Tensor): The last layer hidden state of the BrosEncoder. Shape: (batch_size, sequence_length, hidden_size).
-                - past_key_values (Tuple[Tuple[mindspore.Tensor]]): The past key-value tensors for next time steps. Shape: (num_layers, 2, batch_size, num_attention_heads, sequence_length, hidden_size).
-                - hidden_states (Tuple[mindspore.Tensor]): All the hidden states of the BrosEncoder if output_hidden_states is True. Shape: (num_layers, batch_size, sequence_length, hidden_size).
-                - attentions (Tuple[mindspore.Tensor]): All the attention tensors of the BrosEncoder if output_attentions is True. Shape: (num_layers, batch_size, num_attention_heads, sequence_length,
-sequence_length).
-                - cross_attentions (Tuple[mindspore.Tensor]): All the cross-attention tensors of the BrosEncoder if output_attentions and add_cross_attention are True. Shape: (num_layers, batch_size,
-num_attention_heads, sequence_length, encoder_sequence_length).
+                >   - last_hidden_state (mindspore.Tensor): The last layer hidden state of the BrosEncoder. Shape: (batch_size, sequence_length, hidden_size).
+                >   - past_key_values (Tuple[Tuple[mindspore.Tensor]]): The past key-value tensors for next time steps. Shape: (num_layers, 2, batch_size, num_attention_heads, sequence_length, hidden_size).
+                >   - hidden_states (Tuple[mindspore.Tensor]): All the hidden states of the BrosEncoder if output_hidden_states is True. Shape: (num_layers, batch_size, sequence_length, hidden_size).
+                >   - attentions (Tuple[mindspore.Tensor]): All the attention tensors of the BrosEncoder if output_attentions is True. Shape: (num_layers, batch_size, num_attention_heads, sequence_length,
+                        sequence_length).
+                >   - cross_attentions (Tuple[mindspore.Tensor]): All the cross-attention tensors of the BrosEncoder if output_attentions and add_cross_attention are True. Shape: (num_layers, batch_size,
+                        num_attention_heads, sequence_length, encoder_sequence_length).
             If return_dict is False, a tuple of the above values will be returned.
         
         Raises:
@@ -1302,8 +1302,8 @@ class BrosPooler(nn.Cell):
         activation (nn.Tanh): Activation function applied to the pooled output.
     
     Methods:
-        __init__(self, config): Initializes the BrosPooler class with the specified configuration.
-        construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor: Constructs the pooling layer on the input tensor.
+        __init__: Initializes the BrosPooler class with the specified configuration.
+        construct: Constructs the pooling layer on the input tensor.
     
     """
     def __init__(self, config):
@@ -1313,9 +1313,9 @@ class BrosPooler(nn.Cell):
         Args:
             self: Instance of the BrosPooler class.
             config: Configuration object containing parameters for initialization.
-                Type: Custom class
-                Purpose: Specifies the configuration settings for the BrosPooler instance.
-                Restrictions: Must be a valid configuration object.
+                >   - Type: Custom class
+                >   - Purpose: Specifies the configuration settings for the BrosPooler instance.
+                >   - Restrictions: Must be a valid configuration object.
         
         Returns:
             None
@@ -1368,15 +1368,17 @@ class BrosRelationExtractor(nn.Cell):
         dummy_node (Parameter): Parameter representing a dummy node in the network.
     
     Methods:
-        __init__(config): Constructor method for initializing class attributes.
-        construct(query_layer, key_layer): Method for constructing relation scores based on query and key layers.
+        __init__: Constructor method for initializing class attributes.
+        construct: Method for constructing relation scores based on query and key layers.
     
     Example Usage:
+        ```python
         config = Configuration(n_relations=5, hidden_size=64, classifier_dropout_prob=0.5)
         relation_extractor = BrosRelationExtractor(config)
         query_layer = mindspore.Tensor(...)
         key_layer = mindspore.Tensor(...)
         relation_scores = relation_extractor.construct(query_layer, key_layer)
+        ```
     """
     def __init__(self, config):
         """
@@ -1385,9 +1387,9 @@ class BrosRelationExtractor(nn.Cell):
         Args:
             self (BrosRelationExtractor): The instance of the BrosRelationExtractor class.
             config: A configuration object containing the following attributes:
-                - n_relations (int): The number of relations.
-                - hidden_size (int): The size of the hidden layers in the backbone and head.
-                - classifier_dropout_prob (float): The dropout probability for the classifier.
+                >   - n_relations (int): The number of relations.
+                >   - hidden_size (int): The size of the hidden layers in the backbone and head.
+                >   - classifier_dropout_prob (float): The dropout probability for the classifier.
         
         Returns:
             None: This method does not return any value.
@@ -1474,24 +1476,24 @@ class BrosModel(BrosPreTrainedModel):
 
     """
     A BrosModel represents a Bros language model that is used for various natural language processing tasks. It is designed to handle inputs with both text and bounding box information and provides a
-comprehensive set of functionalities for processing and encoding text data.
+    comprehensive set of functionalities for processing and encoding text data.
     
     Attributes:
-        - config: The configuration object that stores the model's hyperparameters and settings.
-        - embeddings: An instance of BrosTextEmbeddings that handles the word embeddings for the input text.
-        - bbox_embeddings: An instance of BrosBboxEmbeddings that handles the encoding of bounding box information.
-        - encoder: An instance of BrosEncoder that performs the main encoding operations on the input.
-        - pooler: An optional instance of BrosPooler that performs pooling operations on the encoded sequence.
+        config: The configuration object that stores the model's hyperparameters and settings.
+        embeddings: An instance of BrosTextEmbeddings that handles the word embeddings for the input text.
+        bbox_embeddings: An instance of BrosBboxEmbeddings that handles the encoding of bounding box information.
+        encoder: An instance of BrosEncoder that performs the main encoding operations on the input.
+        pooler: An optional instance of BrosPooler that performs pooling operations on the encoded sequence.
         
     Methods:
-        - __init__(config, add_pooling_layer=True): Initializes a BrosModel instance with the given configuration.
-        - get_input_embeddings(): Returns the word embeddings used for input text.
-        - set_input_embeddings(value): Sets the word embeddings used for input text to the given value.
-        - _prune_heads(heads_to_prune): Prunes specific attention heads in the model.
-        - construct(input_ids, bbox, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, encoder_hidden_states, encoder_attention_mask, past_key_values, use_cache, output_attentions,
-output_hidden_states, return_dict): Constructs the model with the given input and returns the encoded sequence and other optional outputs.
+        __init__: Initializes a BrosModel instance with the given configuration.
+        get_input_embeddings: Returns the word embeddings used for input text.
+        set_input_embeddings: Sets the word embeddings used for input text to the given value.
+        _prune_heads: Prunes specific attention heads in the model.
+        construct: Constructs the model with the given input and returns the encoded sequence and other optional outputs.
     
-    Examples:
+    Example:
+        ```python
         >>> import torch
         >>> from transformers import BrosProcessor, BrosModel
     
@@ -1505,6 +1507,7 @@ output_hidden_states, return_dict): Constructs the model with the given input an
     
         >>> outputs = model(**encoding)
         >>> last_hidden_states = outputs.last_hidden_state
+        ```
     """
     def __init__(self, config, add_pooling_layer=True):
         """
@@ -1590,24 +1593,25 @@ output_hidden_states, return_dict): Constructs the model with the given input an
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPoolingAndCrossAttentions]:
         r"""
         Returns:
+            Union[Tuple[mindspore.Tensor], BaseModelOutputWithPoolingAndCrossAttentions]
 
-        Examples:
+        Example:
+            ```python
+            >>> import torch
+            >>> from transformers import BrosProcessor, BrosModel
 
-        ```python
-        >>> import torch
-        >>> from transformers import BrosProcessor, BrosModel
+            >>> processor = BrosProcessor.from_pretrained("jinho8345/bros-base-uncased")
 
-        >>> processor = BrosProcessor.from_pretrained("jinho8345/bros-base-uncased")
+            >>> model = BrosModel.from_pretrained("jinho8345/bros-base-uncased")
 
-        >>> model = BrosModel.from_pretrained("jinho8345/bros-base-uncased")
+            >>> encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="pt")
+            >>> bbox = torch.tensor([[[0, 0, 1, 1]]]).repeat(1, encoding["input_ids"].shape[-1], 1)
+            >>> encoding["bbox"] = bbox
 
-        >>> encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="pt")
-        >>> bbox = torch.tensor([[[0, 0, 1, 1]]]).repeat(1, encoding["input_ids"].shape[-1], 1)
-        >>> encoding["bbox"] = bbox
-
-        >>> outputs = model(**encoding)
-        >>> last_hidden_states = outputs.last_hidden_state
-        ```"""
+            >>> outputs = model(**encoding)
+            >>> last_hidden_states = outputs.last_hidden_state
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1716,12 +1720,13 @@ class BrosForTokenClassification(BrosPreTrainedModel):
 
     """
     BrosForTokenClassification is a class for token classification tasks using the Bros model. It inherits from BrosPreTrainedModel and is designed to be used for token classification tasks such as named
-entity recognition or part-of-speech tagging.
+    entity recognition or part-of-speech tagging.
     
     Returns:
         TokenClassifierOutput: A data class that holds the outputs of the BrosForTokenClassification model.
     
-    Examples:
+    Example:
+        ```python
         >>> import torch
         >>> from transformers import BrosProcessor, BrosForTokenClassification
     
@@ -1734,6 +1739,7 @@ entity recognition or part-of-speech tagging.
         >>> encoding["bbox"] = bbox
     
         >>> outputs = model(**encoding)
+        ```
     """
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
 
@@ -1779,25 +1785,25 @@ entity recognition or part-of-speech tagging.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], TokenClassifierOutput]:
         r"""
-
         Returns:
+            `Union[Tuple[mindspore.Tensor], TokenClassifierOutput]`
 
-        Examples:
+        Example:
+            ```python
+            >>> import torch
+            >>> from transformers import BrosProcessor, BrosForTokenClassification
 
-        ```python
-        >>> import torch
-        >>> from transformers import BrosProcessor, BrosForTokenClassification
+            >>> processor = BrosProcessor.from_pretrained("jinho8345/bros-base-uncased")
 
-        >>> processor = BrosProcessor.from_pretrained("jinho8345/bros-base-uncased")
+            >>> model = BrosForTokenClassification.from_pretrained("jinho8345/bros-base-uncased")
 
-        >>> model = BrosForTokenClassification.from_pretrained("jinho8345/bros-base-uncased")
+            >>> encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="pt")
+            >>> bbox = torch.tensor([[[0, 0, 1, 1]]]).repeat(1, encoding["input_ids"].shape[-1], 1)
+            >>> encoding["bbox"] = bbox
 
-        >>> encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="pt")
-        >>> bbox = torch.tensor([[[0, 0, 1, 1]]]).repeat(1, encoding["input_ids"].shape[-1], 1)
-        >>> encoding["bbox"] = bbox
-
-        >>> outputs = model(**encoding)
-        ```"""
+            >>> outputs = model(**encoding)
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.bros(
@@ -1846,25 +1852,25 @@ class BrosSpadeEEForTokenClassification(BrosPreTrainedModel):
     This class represents a BrosSpadeEEForTokenClassification model for token classification tasks. It is a subclass of BrosPreTrainedModel.
     
     The BrosSpadeEEForTokenClassification model consists of a BrosModel backbone and two token classifiers: initial_token_classifier and subsequent_token_classifier. The initial_token_classifier is used to
-classify the initial tokens in the input sequence, while the subsequent_token_classifier is used to classify the subsequent tokens.
+    classify the initial tokens in the input sequence, while the subsequent_token_classifier is used to classify the subsequent tokens.
     
     The class provides a 'construct' method that takes various input tensors such as input_ids, bbox, attention_mask, token_type_ids, etc. It returns the predicted initial token logits and subsequent token
-logits. Optionally, it can also return hidden states and attentions if specified.
+    logits. Optionally, it can also return hidden states and attentions if specified.
     
     Example usage:
-    
-    import torch
-    from transformers import BrosProcessor, BrosSpadeEEForTokenClassification
-    
-    processor = BrosProcessor.from_pretrained("jinho8345/bros-base-uncased")
-    model = BrosSpadeEEForTokenClassification.from_pretrained("jinho8345/bros-base-uncased")
-    
-    encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="pt")
-    bbox = torch.tensor([[[0, 0, 1, 1]]]).repeat(1, encoding["input_ids"].shape[-1], 1)
-    encoding["bbox"] = bbox
-    
-    outputs = model(**encoding)
-    
+        ```python
+        import torch
+        from transformers import BrosProcessor, BrosSpadeEEForTokenClassification
+
+        processor = BrosProcessor.from_pretrained("jinho8345/bros-base-uncased")
+        model = BrosSpadeEEForTokenClassification.from_pretrained("jinho8345/bros-base-uncased")
+
+        encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="pt")
+        bbox = torch.tensor([[[0, 0, 1, 1]]]).repeat(1, encoding["input_ids"].shape[-1], 1)
+        encoding["bbox"] = bbox
+
+        outputs = model(**encoding)
+        ```
     
     Please note that the docstring above is a summary of the class functionality and does not include method signatures or additional details.
     """
@@ -1877,9 +1883,9 @@ logits. Optionally, it can also return hidden states and attentions if specified
         Args:
             self: The instance of the class.
             config: A configuration object containing the model configuration parameters.
-                - Type: object
-                - Purpose: The configuration for initializing the model.
-                - Restrictions: Must contain the following attributes: 'num_labels', 'n_relations', 'hidden_size', 'classifier_dropout', 'hidden_dropout_prob'.
+                >   - Type: object
+                >   - Purpose: The configuration for initializing the model.
+                >   - Restrictions: Must contain the following attributes: 'num_labels', 'n_relations', 'hidden_size', 'classifier_dropout', 'hidden_dropout_prob'.
         
         Returns:
             None. This method does not return any value.
@@ -1931,23 +1937,24 @@ logits. Optionally, it can also return hidden states and attentions if specified
     ) -> Union[Tuple[mindspore.Tensor], BrosSpadeOutput]:
         r"""
         Returns:
+            Union[Tuple[mindspore.Tensor], BrosSpadeOutput]
 
-        Examples:
+        Example:
+            ```python
+            >>> import torch
+            >>> from transformers import BrosProcessor, BrosSpadeEEForTokenClassification
 
-        ```python
-        >>> import torch
-        >>> from transformers import BrosProcessor, BrosSpadeEEForTokenClassification
+            >>> processor = BrosProcessor.from_pretrained("jinho8345/bros-base-uncased")
 
-        >>> processor = BrosProcessor.from_pretrained("jinho8345/bros-base-uncased")
+            >>> model = BrosSpadeEEForTokenClassification.from_pretrained("jinho8345/bros-base-uncased")
 
-        >>> model = BrosSpadeEEForTokenClassification.from_pretrained("jinho8345/bros-base-uncased")
+            >>> encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="pt")
+            >>> bbox = torch.tensor([[[0, 0, 1, 1]]]).repeat(1, encoding["input_ids"].shape[-1], 1)
+            >>> encoding["bbox"] = bbox
 
-        >>> encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="pt")
-        >>> bbox = torch.tensor([[[0, 0, 1, 1]]]).repeat(1, encoding["input_ids"].shape[-1], 1)
-        >>> encoding["bbox"] = bbox
-
-        >>> outputs = model(**encoding)
-        ```"""
+            >>> outputs = model(**encoding)
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.bros(
@@ -2021,28 +2028,29 @@ class BrosSpadeELForTokenClassification(BrosPreTrainedModel):
     This class represents a Bros Spade Entity Linking model for token classification. 
     
     The BrosSpadeELForTokenClassification class is a subclass of the BrosPreTrainedModel class and is used for token classification tasks. It inherits the __init__ and construct methods from the
-BrosPreTrainedModel class.
+    BrosPreTrainedModel class.
     
     Attributes:
-        - config: The configuration object used to initialize the model.
-        - num_labels: The number of labels for token classification.
-        - n_relations: The number of relations used in the model.
-        - backbone_hidden_size: The hidden size of the model's backbone.
-        - bros: An instance of the BrosModel class.
-        - entity_linker: An instance of the BrosRelationExtractor class.
+        config: The configuration object used to initialize the model.
+        num_labels: The number of labels for token classification.
+        n_relations: The number of relations used in the model.
+        backbone_hidden_size: The hidden size of the model's backbone.
+        bros: An instance of the BrosModel class.
+        entity_linker: An instance of the BrosRelationExtractor class.
     
     Methods:
-        - __init__(self, config): Initializes the BrosSpadeELForTokenClassification object with the given config.
-        - construct(self, input_ids, bbox, attention_mask, bbox_first_token_mask, token_type_ids, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict):
-Constructs the model and performs token classification.
+        __init__(self, config): Initializes the BrosSpadeELForTokenClassification object with the given config.
+        construct: Constructs the model and performs token classification.
     
     Returns:
-        - If return_dict is False:
-            - A tuple containing the logits and other model outputs.
-        - If return_dict is True:
-            - An instance of the TokenClassifierOutput class containing the loss, logits, hidden states, and attentions.
-    
-    Examples:
+        Conditional returns:
+            >   - If return_dict is False:
+            >       - A tuple containing the logits and other model outputs.
+            >   - If return_dict is True:
+            >       - An instance of the TokenClassifierOutput class containing the loss, logits, hidden states, and attentions.
+
+    Example:
+        ```python
         >>> import torch
         >>> from transformers import BrosProcessor, BrosSpadeELForTokenClassification
     
@@ -2055,6 +2063,7 @@ Constructs the model and performs token classification.
         >>> encoding["bbox"] = bbox
     
         >>> outputs = model(**encoding)
+        ```
     """
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
 
@@ -2065,9 +2074,9 @@ Constructs the model and performs token classification.
         Args:
             self: The object instance.
             config: An instance of the BrosConfig class containing the configuration parameters. It should have the following attributes:
-                - num_labels (int): The number of possible labels for token classification.
-                - n_relations (int): The number of possible relations.
-                - hidden_size (int): The hidden size of the model.
+                >   - num_labels (int): The number of possible labels for token classification.
+                >   - n_relations (int): The number of possible relations.
+                >   - hidden_size (int): The hidden size of the model.
             
         Returns:
             None. This method does not return any value.
@@ -2077,7 +2086,7 @@ Constructs the model and performs token classification.
         
         Note:
             This method initializes the BrosSpadeELForTokenClassification instance by setting the provided configuration parameters. It also initializes the bros model and the entity linker for relation
-extraction. The method init_weights() is called to initialize the weights of the model.
+            extraction. The method init_weights() is called to initialize the weights of the model.
         """
         super().__init__(config)
         self.config = config
@@ -2109,23 +2118,24 @@ extraction. The method init_weights() is called to initialize the weights of the
     ) -> Union[Tuple[mindspore.Tensor], TokenClassifierOutput]:
         r"""
         Returns:
+            Union[Tuple[mindspore.Tensor], TokenClassifierOutput]
 
-        Examples:
+        Example:
+            ```python
+            >>> import torch
+            >>> from transformers import BrosProcessor, BrosSpadeELForTokenClassification
 
-        ```python
-        >>> import torch
-        >>> from transformers import BrosProcessor, BrosSpadeELForTokenClassification
+            >>> processor = BrosProcessor.from_pretrained("jinho8345/bros-base-uncased")
 
-        >>> processor = BrosProcessor.from_pretrained("jinho8345/bros-base-uncased")
+            >>> model = BrosSpadeELForTokenClassification.from_pretrained("jinho8345/bros-base-uncased")
 
-        >>> model = BrosSpadeELForTokenClassification.from_pretrained("jinho8345/bros-base-uncased")
+            >>> encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="pt")
+            >>> bbox = torch.tensor([[[0, 0, 1, 1]]]).repeat(1, encoding["input_ids"].shape[-1], 1)
+            >>> encoding["bbox"] = bbox
 
-        >>> encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="pt")
-        >>> bbox = torch.tensor([[[0, 0, 1, 1]]]).repeat(1, encoding["input_ids"].shape[-1], 1)
-        >>> encoding["bbox"] = bbox
-
-        >>> outputs = model(**encoding)
-        ```"""
+            >>> outputs = model(**encoding)
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.bros(

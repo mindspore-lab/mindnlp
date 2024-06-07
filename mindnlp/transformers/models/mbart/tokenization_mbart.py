@@ -287,8 +287,8 @@ class MBartTokenizer(PreTrainedTokenizer):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. An MBART sequence has the following format, where `X` represents the sequence:
 
-        - `input_ids` (for encoder) `X [eos, src_lang_code]`
-        - `decoder_input_ids`: (for decoder) `X [eos, tgt_lang_code]`
+        >   - `input_ids` (for encoder) `X [eos, src_lang_code]`
+        >   - `decoder_input_ids`: (for decoder) `X [eos, tgt_lang_code]`
 
         BOS is never used. Pairs of sequences are not the expected use case, but they will be handled without a
         separator.
@@ -360,11 +360,12 @@ class MBartTokenizer(PreTrainedTokenizer):
             The vocabulary includes both the tokens from the original MBart model and any additional tokens that have been added using the `add_tokens` method.
         
         Example:
+            ```python
             >>> tokenizer = MBartTokenizer.from_pretrained('facebook/mbart-large-cc25')
             >>> vocab = tokenizer.get_vocab()
             >>> print(vocab)
             {'<s>': 0, '</s>': 1, '<pad>': 2, '<unk>': 3, '<mask>': 4, '▁': 5, 'a': 6, 'b': 7, 'c': 8, ...}
-        
+            ```
         """
         vocab = {self.convert_ids_to_tokens(i): i for i in range(self.vocab_size)}
         vocab.update(self.added_tokens_encoder)
@@ -503,14 +504,16 @@ class MBartTokenizer(PreTrainedTokenizer):
             None.
         
         Description:
-        This method is used to switch the tokenizer to the target mode. It sets the target language special tokens using the 
-        `set_tgt_lang_special_tokens` method with the target language specified during initialization.
-        
+            This method is used to switch the tokenizer to the target mode. It sets the target language special tokens using the
+            `set_tgt_lang_special_tokens` method with the target language specified during initialization.
+
         The `self` parameter is the instance of the MBartTokenizer class that the method is called on.
         
         Example:
+            ```python
             tokenizer = MBartTokenizer()
             tokenizer._switch_to_target_mode()
+            ```
         """
         return self.set_tgt_lang_special_tokens(self.tgt_lang)
 

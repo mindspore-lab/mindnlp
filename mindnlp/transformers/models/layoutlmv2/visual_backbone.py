@@ -56,12 +56,12 @@ class Conv2d(nn.Conv2d):
     This class represents a custom convolutional layer for 2-dimensional data, inheriting from the nn.Conv2d class.
     
     Attributes:
-    - norm: A normalization function applied to the output of the convolutional layer. If None, no normalization is applied.
-    - activation: An activation function applied to the output of the normalization step. If None, no activation is applied.
+        norm: A normalization function applied to the output of the convolutional layer. If None, no normalization is applied.
+        activation: An activation function applied to the output of the normalization step. If None, no activation is applied.
     
     Methods:
-    - __init__(self, *args, **kwargs): Initializes the Conv2d object with optional normalization and activation parameters.
-    - construct(self, x): Applies the convolutional operation to the input tensor x, followed by optional normalization and activation.
+        __init__(self, *args, **kwargs): Initializes the Conv2d object with optional normalization and activation parameters.
+        construct(self, x): Applies the convolutional operation to the input tensor x, followed by optional normalization and activation.
     
     """
     def __init__(self, *args, **kwargs):
@@ -78,17 +78,17 @@ class Conv2d(nn.Conv2d):
             None.
         
         Description:
-        This method initializes an instance of the Conv2d class. It takes the following optional keyword arguments:
-        - norm: Specifies the normalization method to be applied. Default is None.
-        - activation: Specifies the activation function to be applied. Default is None.
+            This method initializes an instance of the Conv2d class. It takes the following optional keyword arguments:
+            >   - norm: Specifies the normalization method to be applied. Default is None.
+            >   - activation: Specifies the activation function to be applied. Default is None.
         
         The method first extracts the 'norm' and 'activation' keyword arguments using the pop() method from the kwargs dictionary.
         Next, it calls the __init__() method of the parent class using the super() function, passing all the arguments and keyword arguments (*args, **kwargs).
         After that, it assigns the 'norm' and 'activation' values to the instance variables self.norm and self.activation respectively.
         
         Note:
-        - The 'norm' parameter should be of type 'None' or any valid normalization method.
-        - The 'activation' parameter should be of type 'None' or any valid activation function.
+            >   - The 'norm' parameter should be of type 'None' or any valid normalization method.
+            >   - The 'activation' parameter should be of type 'None' or any valid activation function.
         """
         norm = kwargs.pop("norm", None)
         activation = kwargs.pop("activation", None)
@@ -499,14 +499,15 @@ class ResNet(nn.Cell):
         Returns:
             list[CNNBlockBase]: a list of block module.
 
-        Examples:
-        ::
+        Example:
+            ```python
             stage = ResNet.make_stage(
                 BottleneckBlock, 3, in_channels=16, out_channels=64,
                 bottleneck_channels=16, num_groups=1,
                 stride_per_block=[2, 1, 1],
                 dilations_per_block=[1, 1, 2]
             )
+            ```
 
         Usually, layers that produce the same feature map spatial size are defined as one
         "stage" (in :paper:`FPN`). Under such definition, ``stride_per_block[1:]`` should
@@ -592,16 +593,16 @@ def build_resnet_backbone(cfg):
     
     Args:
         cfg (object): The configuration object containing the following attributes:
-            - MODEL.RESNETS.STEM_IN_CHANNELS (int): The number of input channels for the stem block.
-            - MODEL.RESNETS.STEM_OUT_CHANNELS (int): The number of output channels for the stem block.
-            - MODEL.RESNETS.NORM (str): The normalization method to be used in the backbone.
-            - MODEL.RESNETS.OUT_FEATURES (list): The list of feature names to be outputted by the backbone.
-            - MODEL.RESNETS.DEPTH (int): The depth of the ResNet backbone.
-            - MODEL.RESNETS.NUM_GROUPS (int): The number of groups in each bottleneck block.
-            - MODEL.RESNETS.WIDTH_PER_GROUP (int): The width of each group in each bottleneck block.
-            - MODEL.RESNETS.RES2_OUT_CHANNELS (int): The number of output channels for the res2 block.
-            - MODEL.RESNETS.STRIDE_IN_1X1 (bool): Whether to apply stride in the 1x1 convolution in each bottleneck block.
-            - MODEL.RESNETS.RES5_DILATION (int): The dilation value for the res5 block. Must be 1 or 2.
+            >   - MODEL.RESNETS.STEM_IN_CHANNELS (int): The number of input channels for the stem block.
+            >   - MODEL.RESNETS.STEM_OUT_CHANNELS (int): The number of output channels for the stem block.
+            >   - MODEL.RESNETS.NORM (str): The normalization method to be used in the backbone.
+            >   - MODEL.RESNETS.OUT_FEATURES (list): The list of feature names to be outputted by the backbone.
+            >   - MODEL.RESNETS.DEPTH (int): The depth of the ResNet backbone.
+            >   - MODEL.RESNETS.NUM_GROUPS (int): The number of groups in each bottleneck block.
+            >   - MODEL.RESNETS.WIDTH_PER_GROUP (int): The width of each group in each bottleneck block.
+            >   - MODEL.RESNETS.RES2_OUT_CHANNELS (int): The number of output channels for the res2 block.
+            >   - MODEL.RESNETS.STRIDE_IN_1X1 (bool): Whether to apply stride in the 1x1 convolution in each bottleneck block.
+            >   - MODEL.RESNETS.RES5_DILATION (int): The dilation value for the res5 block. Must be 1 or 2.
     
     Returns:
         None
@@ -704,8 +705,8 @@ def build_resnet_fpn_backbone(cfg):
         None.
     
     This function builds a ResNet-FPN backbone using the specified configuration. It first constructs the bottom-up ResNet backbone using the provided configuration. Then, it retrieves the required input
-features and output channels from the configuration. Finally, it constructs the FPN backbone using the bottom-up backbone, input features, output channels, normalization method, top block, and fuse type
-specified in the configuration. The constructed FPN backbone is returned as the result.
+    features and output channels from the configuration. Finally, it constructs the FPN backbone using the bottom-up backbone, input features, output channels, normalization method, top block, and fuse type
+    specified in the configuration. The constructed FPN backbone is returned as the result.
     """
     bottom_up = build_resnet_backbone(cfg)
     in_features = cfg.MODEL.FPN.IN_FEATURES
@@ -735,10 +736,12 @@ class LastLevelMaxPool(nn.Cell):
         construct(x): Constructs the max pooling operation on the input data x and returns the result.
     
     Example Usage:
+        ```python
         # Create an instance of LastLevelMaxPool
         last_level_max_pool = LastLevelMaxPool()
         # Perform max pooling on input data
         result = last_level_max_pool.construct(input_data)
+        ```
     """
     def __init__(self):
         """
@@ -832,8 +835,8 @@ class FPN(nn.Cell):
                 The amount of padding to be applied to the feature maps. Default is 0.
         
         Returns:
-            None
-            This method does not return any value.
+            None:
+                This method does not return any value.
         
         Raises:
             AssertionError
@@ -949,24 +952,24 @@ class FPN(nn.Cell):
             None
         
         This method constructs the FPN by performing the following steps:
-        1. Extracts the bottom-up features using the 'bottom_up' function.
-        2. Initializes an empty list 'results' to store the intermediate results.
-        3. Retrieves the bottom-up feature corresponding to the last specified input feature.
-        4. Applies the first lateral convolution to the bottom-up feature and appends the result to 'results'.
-        5. Iterates over the remaining lateral and output convolutions.
-            a. Retrieves the input feature for the current convolution from the 'bottom_up_features'.
-            b. Resizes the previous feature map using nearest neighbor interpolation.
-            c. Applies the lateral convolution to the input feature.
-            d. Adds the lateral features and the resized top-down features.
-            e. If the fusion type is 'avg', averages the resulting features.
-            f. Inserts the output of the current convolution at the beginning of 'results'.
-        6. If a 'top_block' is specified:
-            a. Checks if the 'top_block.in_feature' is present in 'bottom_up_features'.
-            b. If present, retrieves the corresponding feature; otherwise, retrieves it from 'results' using the index.
-            c. Applies the 'top_block' to the 'top_block_in_feature' after converting it to 'ms.float16' datatype.
-            d. Extends 'results' with the output of the 'top_block'.
-        7. Asserts that the length of 'self._out_features' is equal to the length of 'results'.
-        8. Returns a tuple containing the 'self._out_features' and the corresponding outputs from 'results'.
+        >   1. Extracts the bottom-up features using the 'bottom_up' function.
+        >   2. Initializes an empty list 'results' to store the intermediate results.
+        >   3. Retrieves the bottom-up feature corresponding to the last specified input feature.
+        >   4. Applies the first lateral convolution to the bottom-up feature and appends the result to 'results'.
+        >   5. Iterates over the remaining lateral and output convolutions.
+        >       a. Retrieves the input feature for the current convolution from the 'bottom_up_features'.
+        >       b. Resizes the previous feature map using nearest neighbor interpolation.
+        >       c. Applies the lateral convolution to the input feature.
+        >       d. Adds the lateral features and the resized top-down features.
+        >       e. If the fusion type is 'avg', averages the resulting features.
+        >       f. Inserts the output of the current convolution at the beginning of 'results'.
+        >   6. If a 'top_block' is specified:
+        >       a. Checks if the 'top_block.in_feature' is present in 'bottom_up_features'.
+        >       b. If present, retrieves the corresponding feature; otherwise, retrieves it from 'results' using the index.
+        >       c. Applies the 'top_block' to the 'top_block_in_feature' after converting it to 'ms.float16' datatype.
+        >       d. Extends 'results' with the output of the 'top_block'.
+        >   7. Asserts that the length of 'self._out_features' is equal to the length of 'results'.
+        >   8. Returns a tuple containing the 'self._out_features' and the corresponding outputs from 'results'.
         """
         bottom_up_features = self.bottom_up(x)
 

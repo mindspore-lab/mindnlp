@@ -91,19 +91,19 @@ class PegasusConfig(PretrainedConfig):
             `eos_token_id`.
 
     Example:
+        ```python
+        >>> from transformers import PegasusConfig, PegasusModel
 
-    ```python
-    >>> from transformers import PegasusConfig, PegasusModel
+        >>> # Initializing a PEGASUS google/pegasus-large style configuration
+        >>> configuration = PegasusConfig()
 
-    >>> # Initializing a PEGASUS google/pegasus-large style configuration
-    >>> configuration = PegasusConfig()
+        >>> # Initializing a model (with random weights) from the google/pegasus-large style configuration
+        >>> model = PegasusModel(configuration)
 
-    >>> # Initializing a model (with random weights) from the google/pegasus-large style configuration
-    >>> model = PegasusModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "pegasus"
     keys_to_ignore_at_inference = ["past_key_values"]
     attribute_map = {"num_attention_heads": "encoder_attention_heads", "hidden_size": "d_model"}
@@ -218,22 +218,24 @@ class PegasusConfig(PretrainedConfig):
         
         
         The `num_attention_heads` method returns an integer value representing the number of attention heads used in the encoder of the Pegasus model. Attention heads are a key component of transformer models,
-and they enable the model to focus on different parts of the input sequence during processing. By varying the number of attention heads, the model can capture different levels of information and dependencies
-in the input data.
+        and they enable the model to focus on different parts of the input sequence during processing. By varying the number of attention heads, the model can capture different levels of information and dependencies
+        in the input data.
         
         This method is a property, which means that it can be accessed as an attribute without needing to call it explicitly as a function. When accessed, it directly returns the number of attention heads
-specified in the `encoder_attention_heads` attribute of the current instance of the PegasusConfig class.
+        specified in the `encoder_attention_heads` attribute of the current instance of the PegasusConfig class.
         
         Note that the `num_attention_heads` method does not take any additional parameters beyond the `self` parameter, as it is designed to provide information specific to the current instance of the class.
         
         Example usage:
+            ```python
             >>> config = PegasusConfig()
             >>> num_heads = config.num_attention_heads
             >>> print(num_heads)
             12
+            ```
         
         In this example, a new instance of the PegasusConfig class is created. The `num_attention_heads` property is accessed as an attribute (`config.num_attention_heads`), and the resulting number of
-attention heads (12 in this case) is printed.
+        attention heads (12 in this case) is printed.
         """
         return self.encoder_attention_heads
 

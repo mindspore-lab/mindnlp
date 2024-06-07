@@ -97,19 +97,19 @@ class PhiConfig(PretrainedConfig):
             Denotes end of sequences token id.
 
     Example:
+        ```python
+        >>> from transformers import PhiModel, PhiConfig
 
-    ```python
-    >>> from transformers import PhiModel, PhiConfig
+        >>> # Initializing a Phi-1 style configuration
+        >>> configuration = PhiConfig.from_pretrained("microsoft/phi-1")
 
-    >>> # Initializing a Phi-1 style configuration
-    >>> configuration = PhiConfig.from_pretrained("microsoft/phi-1")
+        >>> # Initializing a model from the configuration
+        >>> model = PhiModel(configuration)
 
-    >>> # Initializing a model from the configuration
-    >>> model = PhiModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "phi"
     keys_to_ignore_at_inference = ["past_key_values"]
 

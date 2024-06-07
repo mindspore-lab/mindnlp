@@ -33,20 +33,20 @@ class PeftAdapterMixin:
 
     Currently supported PEFT methods are all non-prefix tuning methods. Below is the list of supported PEFT methods
     that anyone can load, train and run with this mixin class:
-    - Low Rank Adapters (LoRA): https://huggingface.co/docs/peft/conceptual_guides/lora
-    - IA3: https://huggingface.co/docs/peft/conceptual_guides/ia3
-    - AdaLora: https://arxiv.org/abs/2303.10512
+    >- Low Rank Adapters (LoRA): https://huggingface.co/docs/peft/conceptual_guides/lora
+    >- IA3: https://huggingface.co/docs/peft/conceptual_guides/ia3
+    >- AdaLora: https://arxiv.org/abs/2303.10512
 
     Other PEFT models such as prompt tuning, prompt learning are out of scope as these adapters are not "injectable"
     into a torch module. For using these methods, please refer to the usage guide of PEFT library.
 
     With this mixin, if the correct PEFT version is installed, it is possible to:
 
-    - Load an adapter stored on a local path or in a remote Hub repository, and inject it in the model
-    - Attach new adapters in the model and train them with Trainer or by your own.
-    - Attach multiple adapters and iteratively activate / deactivate them
-    - Activate / deactivate all adapters from the model.
-    - Get the `state_dict` of the active adapter.
+    >- Load an adapter stored on a local path or in a remote Hub repository, and inject it in the model
+    >- Attach new adapters in the model and train them with Trainer or by your own.
+    >- Attach multiple adapters and iteratively activate / deactivate them
+    >- Activate / deactivate all adapters from the model.
+    >- Get the `state_dict` of the active adapter.
     """
     _hf_peft_config_loaded = False
 

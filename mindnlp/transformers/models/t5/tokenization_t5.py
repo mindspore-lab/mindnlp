@@ -99,38 +99,34 @@ class T5Tokenizer(PreTrainedTokenizer):
             Will be passed to the `SentencePieceProcessor.__init__()` method. The [Python wrapper for
             SentencePiece](https://github.com/google/sentencepiece/tree/master/python) can be used, among other things,
             to set:
-
-            - `enable_sampling`: Enable subword regularization.
-            - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
-
-              - `nbest_size = {0,1}`: No sampling is performed.
-              - `nbest_size > 1`: samples from the nbest_size results.
-              - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
-                using forward-filtering-and-backward-sampling algorithm.
-
-            - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
-              BPE-dropout.
+            >   - `enable_sampling`: Enable subword regularization.
+            >   - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
+                >   - `nbest_size = {0,1}`: No sampling is performed.
+                >   - `nbest_size > 1`: samples from the nbest_size results.
+                >   - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
+                    using forward-filtering-and-backward-sampling algorithm.
+            >   - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
+                BPE-dropout.
         legacy (`bool`, *optional*):
             Whether or not the `legacy` behaviour of the tokenizer should be used. Legacy is before the merge of #24622
             and #25224 which includes fixes to properly handle tokens that appear after special tokens. A simple
             example:
+                - `legacy=True`:
+                ```python
+                >>> from transformers import T5Tokenizer
 
-            - `legacy=True`:
-            ```python
-            >>> from transformers import T5Tokenizer
+                >>> tokenizer = T5Tokenizer.from_pretrained("t5-base", legacy=True)
+                >>> tokenizer.encode("Hello <extra_id_0>.")
+                [8774, 32099, 3, 5, 1]
+                ```
+                - `legacy=False`:
+                ```python
+                >>> from transformers import T5Tokenizer
 
-            >>> tokenizer = T5Tokenizer.from_pretrained("t5-base", legacy=True)
-            >>> tokenizer.encode("Hello <extra_id_0>.")
-            [8774, 32099, 3, 5, 1]
-            ```
-            - `legacy=False`:
-            ```python
-            >>> from transformers import T5Tokenizer
-
-            >>> tokenizer = T5Tokenizer.from_pretrained("t5-base", legacy=False)
-            >>> tokenizer.encode("Hello <extra_id_0>.")  # the extra space `[3]` is no longer here
-            [8774, 32099, 5, 1]
-            ```
+                >>> tokenizer = T5Tokenizer.from_pretrained("t5-base", legacy=False)
+                >>> tokenizer.encode("Hello <extra_id_0>.")  # the extra space `[3]` is no longer here
+                [8774, 32099, 5, 1]
+                ```
             Checkout the [pull request](https://github.com/huggingface/transformers/pull/24565) for more details.
 
     Attributes:
@@ -283,8 +279,8 @@ class T5Tokenizer(PreTrainedTokenizer):
         
         Raises:
             FutureWarning: If the tokenizer was incorrectly instantiated with a model max length that will be corrected in Transformers v5. This warning is to ensure backward compatibility when
-padding/encoding with `truncation` set to True. It is recommended not to rely on automatic truncation to the deprecated max length. To encode/pad to sequences longer than the deprecated max length, either
-instantiate the tokenizer with `model_max_length` or pass `max_length` when encoding/padding.
+            padding/encoding with `truncation` set to True. It is recommended not to rely on automatic truncation to the deprecated max length. To encode/pad to sequences longer than the deprecated max length, either
+            instantiate the tokenizer with `model_max_length` or pass `max_length` when encoding/padding.
         """
         if pretrained_model_name_or_path in T5Tokenizer.max_model_input_sizes:
             deprecated_max_model_length = T5Tokenizer.max_model_input_sizes[pretrained_model_name_or_path]
@@ -376,17 +372,17 @@ instantiate the tokenizer with `model_max_length` or pass `max_length` when enco
         
         Args:
             self: An instance of the T5Tokenizer class.
-                - Type: T5Tokenizer object.
-                - Purpose: Represents the current instance of the T5Tokenizer class.
-                - Restrictions: None.
+                >   - Type: T5Tokenizer object.
+                >   - Purpose: Represents the current instance of the T5Tokenizer class.
+                >   - Restrictions: None.
         
         Returns:
-            None
-                - Type: None
-                - Purpose: There is no return value; this method modifies the internal state of the object.
+            None:
+                >   - Type: None
+                >   - Purpose: There is no return value; this method modifies the internal state of the object.
         
         Raises:
-            None
+            None:
                 - This method does not raise any exceptions explicitly.
         """
         return list(
@@ -403,11 +399,11 @@ instantiate the tokenizer with `model_max_length` or pass `max_length` when enco
                 It is used to access the necessary methods and attributes within the tokenizer.
         
         Returns:
-            None
+            None:
             The method does not return a value but directly returns the list of token IDs for sentinel tokens.
         
         Raises:
-            None
+            None:
             This method does not raise any exceptions.
         """
         return [self.convert_tokens_to_ids(token) for token in self.get_sentinel_tokens()]
@@ -451,8 +447,8 @@ instantiate the tokenizer with `model_max_length` or pass `max_length` when enco
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A sequence has the following format:
 
-        - single sequence: `X </s>`
-        - pair of sequences: `A </s> B </s>`
+        >   - single sequence: `X </s>`
+        >   - pair of sequences: `A </s> B </s>`
 
         Args:
             token_ids_0 (`List[int]`):

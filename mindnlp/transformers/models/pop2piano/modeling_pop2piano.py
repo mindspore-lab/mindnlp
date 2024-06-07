@@ -109,16 +109,16 @@ class Pop2PianoDenseActDense(nn.Cell):
     This class represents a Pop2PianoDenseActDense layer, which is used in neural network models. It inherits from the nn.Cell class.
     
     The Pop2PianoDenseActDense layer consists of two dense linear transformations (wi and wo), an activation function (act), and a dropout layer (dropout). The layer takes a tensor of hidden states as input
-and applies the following operations to the input:
+    and applies the following operations to the input:
     
-    1. The input tensor is passed through the wi dense linear transformation.
-    2. The result is then passed through the activation function specified by the Pop2PianoConfig's dense_act_fn attribute.
-    3. The output of the activation function is then passed through the dropout layer, which randomly sets elements of the tensor to zero with a probability specified by the Pop2PianoConfig's dropout_rate
-attribute.
-    4. If the weight of the wo dense linear transformation is a tensor and the input tensor's dtype is different from the weight's dtype, and the weight's dtype is not int8, the input tensor is converted to
-the same dtype as the weight.
-    5. The converted input tensor is then passed through the wo dense linear transformation.
-    6. The final output of the layer is returned.
+    >   1. The input tensor is passed through the wi dense linear transformation.
+    >   2. The result is then passed through the activation function specified by the Pop2PianoConfig's dense_act_fn attribute.
+    >   3. The output of the activation function is then passed through the dropout layer, which randomly sets elements of the tensor to zero with a probability specified by the Pop2PianoConfig's dropout_rate
+        attribute.
+    >   4. If the weight of the wo dense linear transformation is a tensor and the input tensor's dtype is different from the weight's dtype, and the weight's dtype is not int8, the input tensor is converted to
+        the same dtype as the weight.
+    >   5. The converted input tensor is then passed through the wo dense linear transformation.
+    >   6. The final output of the layer is returned.
     
     Please note that this class assumes the existence of the Pop2PianoConfig class, which should be passed as an argument to the class's constructor.
     
@@ -136,7 +136,7 @@ the same dtype as the weight.
         Args:
             self: The instance of the class.
             config (Pop2PianoConfig): An instance of the Pop2PianoConfig class containing the configuration parameters for the model. It specifies the model's dimensions and activation function for the dense
-layers.
+                layers.
         
         Returns:
             None. This method does not return any value.
@@ -195,8 +195,8 @@ class Pop2PianoDenseGatedActDense(nn.Cell):
         Args:
             self (Pop2PianoDenseGatedActDense): The instance of the Pop2PianoDenseGatedActDense class.
             config (Pop2PianoConfig): An instance of Pop2PianoConfig containing configuration parameters.
-                - This parameter is used to configure the dense layers and activation functions.
-                - It specifies the dimensions of the model, feed-forward layers, dropout rate, and activation function type.
+                >   - This parameter is used to configure the dense layers and activation functions.
+                >   - It specifies the dimensions of the model, feed-forward layers, dropout rate, and activation function type.
         
         Returns:
             None: This method does not return any value.
@@ -226,7 +226,6 @@ class Pop2PianoDenseGatedActDense(nn.Cell):
             None. This method does not return any value but updates the hidden_states variable within the method.
         
         Raises:
-            This method may raise the following exceptions:
             - TypeError: If the input parameters are not of the expected types.
             - ValueError: If there are issues with the shapes or values of the tensors being manipulated.
             - RuntimeError: If there are runtime issues during the execution of the method.
@@ -258,13 +257,13 @@ class Pop2PianoLayerFF(nn.Cell):
     
     Attributes:
         DenseReluDense (Pop2PianoDenseGatedActDense or Pop2PianoDenseActDense): A dense layer with gated activation function, if config.is_gated_act is True, otherwise a dense layer with regular activation
-function.
+            function.
         layer_norm (Pop2PianoLayerNorm): A layer normalization module.
         dropout (nn.Dropout): A dropout module.
     
     Methods:
-        __init__(self, config: Pop2PianoConfig): Initializes the Pop2PianoLayerFF instance with the provided configuration.
-        construct(self, hidden_states): Constructs the feed-forward layer by applying layer normalization, dense layer, dropout, and residual connection.
+        __init__: Initializes the Pop2PianoLayerFF instance with the provided configuration.
+        construct: Constructs the feed-forward layer by applying layer normalization, dense layer, dropout, and residual connection.
     
     """
     def __init__(self, config: Pop2PianoConfig):
@@ -320,30 +319,31 @@ class Pop2PianoAttention(nn.Cell):
     It inherits from nn.Cell and provides functionalities for attention computation and head pruning.
     
     Attributes:
-        - config: Pop2PianoConfig, the configuration for the attention mechanism
-        - has_relative_attention_bias: bool, flag indicating whether relative attention bias is enabled
-        - relative_attention_num_buckets: int, the number of buckets for relative attention
-        - relative_attention_max_distance: int, the maximum distance for relative attention
-        - d_model: int, the model dimension
-        - key_value_proj_dim: int, the dimension of projected key and value
-        - n_heads: int, the number of attention heads
-        - dropout: float, dropout rate
-        - inner_dim: int, the inner dimension for multi-head attention
-        - q: nn.Dense, query projection layer
-        - k: nn.Dense, key projection layer
-        - v: nn.Dense, value projection layer
-        - o: nn.Dense, output projection layer
-        - relative_attention_bias: nn.Embedding, embedding layer for relative attention bias
-        - pruned_heads: set, set of pruned attention heads
-        - gradient_checkpointing: bool, flag for gradient checkpointing
+        config: Pop2PianoConfig, the configuration for the attention mechanism
+        has_relative_attention_bias: bool, flag indicating whether relative attention bias is enabled
+        relative_attention_num_buckets: int, the number of buckets for relative attention
+        relative_attention_max_distance: int, the maximum distance for relative attention
+        d_model: int, the model dimension
+        key_value_proj_dim: int, the dimension of projected key and value
+        n_heads: int, the number of attention heads
+        dropout: float, dropout rate
+        inner_dim: int, the inner dimension for multi-head attention
+        q: nn.Dense, query projection layer
+        k: nn.Dense, key projection layer
+        v: nn.Dense, value projection layer
+        o: nn.Dense, output projection layer
+        relative_attention_bias: nn.Embedding, embedding layer for relative attention bias
+        pruned_heads: set, set of pruned attention heads
+        gradient_checkpointing: bool, flag for gradient checkpointing
     
     Methods:
-        - prune_heads(heads): Prunes specified attention heads from the model
-        - _relative_position_bucket(relative_position, bidirectional, num_buckets, max_distance): Computes relative position buckets
-        - compute_bias(query_length, key_length): Computes binned relative position bias
-        - construct(hidden_states, mask, key_value_states, position_bias, past_key_value, layer_head_mask, query_length, use_cache, output_attentions): Constructs attention mechanism
+        prune_heads(heads): Prunes specified attention heads from the model
+        _relative_position_bucket(relative_position, bidirectional, num_buckets, max_distance): Computes relative position buckets
+        compute_bias(query_length, key_length): Computes binned relative position bias
+        construct(hidden_states, mask, key_value_states, position_bias, past_key_value, layer_head_mask, query_length, use_cache, output_attentions): Constructs attention mechanism
     
-    Note: For detailed information on each method and attribute, refer to the method and attribute documentation in the class implementation.
+    Note:
+        For detailed information on each method and attribute, refer to the method and attribute documentation in the class implementation.
     """
     def __init__(self, config: Pop2PianoConfig, has_relative_attention_bias=False):
         """
@@ -396,7 +396,7 @@ class Pop2PianoAttention(nn.Cell):
         
         Raises:
             No specific exceptions are documented to be raised within this method. However, it is important to handle potential exceptions related to the internal functions being called within this method,
-such as 'find_pruneable_heads_and_indices' and 'prune_linear_layer'.
+            such as 'find_pruneable_heads_and_indices' and 'prune_linear_layer'.
         """
         if len(heads) == 0:
             return
@@ -623,7 +623,7 @@ class Pop2PianoLayerSelfAttention(nn.Cell):
     Methods:
         __init__(self, config, has_relative_attention_bias=False): Constructs a new Pop2PianoLayerSelfAttention object.
         construct(self, hidden_states, attention_mask=None, position_bias=None, layer_head_mask=None, past_key_value=None, use_cache=False, output_attentions=False): Performs self-attention on the input hidden
-states.
+            states.
     
     """
     def __init__(self, config, has_relative_attention_bias=False):
@@ -701,18 +701,18 @@ class Pop2PianoLayerCrossAttention(nn.Cell):
     This class inherits from nn.Cell and contains methods for initializing the layer and constructing the cross-attention mechanism.
     
     Attributes:
-        - EncDecAttention: Instance of Pop2PianoAttention for performing cross-attention.
-        - layer_norm: Instance of Pop2PianoLayerNorm for layer normalization.
-        - dropout: Dropout layer for regularization.
+        EncDecAttention: Instance of Pop2PianoAttention for performing cross-attention.
+        layer_norm: Instance of Pop2PianoLayerNorm for layer normalization.
+        dropout: Dropout layer for regularization.
     
     Methods:
-        - __init__(self, config): Initializes the Pop2PianoLayerCrossAttention with the given configuration.
+        __init__(self, config): Initializes the Pop2PianoLayerCrossAttention with the given configuration.
         
-        - construct(self, hidden_states, key_value_states, attention_mask=None, position_bias=None, layer_head_mask=None, past_key_value=None, use_cache=False, query_length=None, output_attentions=False): 
+        construct(self, hidden_states, key_value_states, attention_mask=None, position_bias=None, layer_head_mask=None, past_key_value=None, use_cache=False, query_length=None, output_attentions=False):
           Constructs the cross-attention mechanism by applying layer normalization, attention computation, and dropout.
     
     Returns:
-        - outputs: Tuple containing the layer output and additional attention outputs.
+        outputs: Tuple containing the layer output and additional attention outputs.
     
     """
     def __init__(self, config):
@@ -722,9 +722,9 @@ class Pop2PianoLayerCrossAttention(nn.Cell):
         Args:
             self (Pop2PianoLayerCrossAttention): The instance of the Pop2PianoLayerCrossAttention class.
             config (object): Configuration object containing necessary parameters for initialization.
-                - Type: object
-                - Purpose: Contains configuration settings for the attention layer.
-                - Restrictions: Must be a valid configuration object.
+                >   - Type: object
+                >   - Purpose: Contains configuration settings for the attention layer.
+                >   - Restrictions: Must be a valid configuration object.
         
         Returns:
             None: This method does not return any value.
@@ -796,13 +796,13 @@ class Pop2PianoBlock(nn.Cell):
     This class represents a block of the Pop2Piano model. It is a subclass of nn.Cell and contains layers for self-attention, cross-attention (if applicable), and feed-forward processing.
     
     Attributes:
-        - is_decoder (bool): Indicates whether the block is a decoder block or not.
-        - layer (nn.CellList): List of layers in the block, including self-attention, cross-attention, and feed-forward layers.
+        is_decoder (bool): Indicates whether the block is a decoder block or not.
+        layer (nn.CellList): List of layers in the block, including self-attention, cross-attention, and feed-forward layers.
     
     Methods:
-        - __init__(self, config, has_relative_attention_bias=False): Initializes a new instance of the Pop2PianoBlock class.
-        - construct(self, hidden_states, attention_mask=None, position_bias=None, encoder_hidden_states=None, encoder_attention_mask=None, encoder_decoder_position_bias=None, layer_head_mask=None,
-cross_attn_layer_head_mask=None, past_key_value=None, use_cache=False, output_attentions=False): Constructs the block by applying the layers sequentially to the input hidden states.
+        __init__(self, config, has_relative_attention_bias=False): Initializes a new instance of the Pop2PianoBlock class.
+        construct(self, hidden_states, attention_mask=None, position_bias=None, encoder_hidden_states=None, encoder_attention_mask=None, encoder_decoder_position_bias=None, layer_head_mask=None,
+            cross_attn_layer_head_mask=None, past_key_value=None, use_cache=False, output_attentions=False): Constructs the block by applying the layers sequentially to the input hidden states.
     
     """
     def __init__(self, config, has_relative_attention_bias=False):
@@ -1059,8 +1059,8 @@ class Pop2PianoPreTrainedModel(PreTrainedModel):
         
         Returns:
             torch.Tensor: The shifted input tensor of the same shape as input_ids, where the first token in each sequence is replaced with the decoder_start_token_id, and subsequent tokens are shifted one
-position to the right.
-        
+                position to the right.
+
         Raises:
             ValueError: If self.model.config.decoder_start_token_id is not defined or is None.
             ValueError: If self.model.config.pad_token_id is not defined or is None.
@@ -1095,10 +1095,10 @@ class Pop2PianoStack(Pop2PianoPreTrainedModel):
 
     """
     This class represents a stack of Pop2Piano blocks that can be used for modeling and processing tasks in a Pop2Piano-based architecture. The class inherits from Pop2PianoPreTrainedModel and includes methods
-for initializing the model, setting input embeddings, and constructing the model with various input and output options.
+    for initializing the model, setting input embeddings, and constructing the model with various input and output options.
     
     The class includes methods for initializing the model with token embeddings, processing input data, and generating model outputs. It also supports features such as caching, attention masks, and output
-options for hidden states and attentions.
+    options for hidden states and attentions.
     
     The Pop2PianoStack class is designed to handle multiple layers of Pop2Piano blocks and provides flexibility for customizing model behavior and output based on the input configurations.
     
@@ -1195,29 +1195,29 @@ options for hidden states and attentions.
         This method constructs the Pop2PianoStack model with the specified input parameters.
         
         Args:
-        - self: The instance of the Pop2PianoStack class.
-        - input_ids (optional): Tensor of shape (batch_size, sequence_length) representing input token IDs.
-        - attention_mask (optional): Tensor of shape (batch_size, sequence_length) representing attention mask.
-        - encoder_hidden_states (optional): Tensor representing hidden states from the encoder.
-        - encoder_attention_mask (optional): Tensor representing the attention mask for encoder_hidden_states.
-        - inputs_embeds (optional): Tensor representing the input embeddings.
-        - head_mask (optional): Tensor representing the head mask for self-attention.
-        - cross_attn_head_mask (optional): Tensor representing the head mask for cross-attention.
-        - past_key_values (optional): List of past key values for caching.
-        - use_cache (optional): Boolean indicating whether to use caching.
-        - output_attentions (optional): Boolean indicating whether to output attentions.
-        - output_hidden_states (optional): Boolean indicating whether to output hidden states.
-        - return_dict (optional): Boolean indicating whether to return a dictionary.
+            self: The instance of the Pop2PianoStack class.
+            input_ids (optional): Tensor of shape (batch_size, sequence_length) representing input token IDs.
+            attention_mask (optional): Tensor of shape (batch_size, sequence_length) representing attention mask.
+            encoder_hidden_states (optional): Tensor representing hidden states from the encoder.
+            encoder_attention_mask (optional): Tensor representing the attention mask for encoder_hidden_states.
+            inputs_embeds (optional): Tensor representing the input embeddings.
+            head_mask (optional): Tensor representing the head mask for self-attention.
+            cross_attn_head_mask (optional): Tensor representing the head mask for cross-attention.
+            past_key_values (optional): List of past key values for caching.
+            use_cache (optional): Boolean indicating whether to use caching.
+            output_attentions (optional): Boolean indicating whether to output attentions.
+            output_hidden_states (optional): Boolean indicating whether to output hidden states.
+            return_dict (optional): Boolean indicating whether to return a dictionary.
         
         Returns:
-        - None
+            None
         
         Raises:
-        - ValueError: If both input_ids and inputs_embeds are specified simultaneously.
-        - ValueError: If neither input_ids nor inputs_embeds are specified.
-        - ValueError: If model is not initialized with valid token embeddings.
-        - ValueError: If `use_cache` is set to True when model is not used as a decoder.
-        - Warning: If `use_cache=True` is incompatible with gradient checkpointing.
+            - ValueError: If both input_ids and inputs_embeds are specified simultaneously.
+            - ValueError: If neither input_ids nor inputs_embeds are specified.
+            - ValueError: If model is not initialized with valid token embeddings.
+            - ValueError: If `use_cache` is set to True when model is not used as a decoder.
+            - Warning: If `use_cache=True` is incompatible with gradient checkpointing.
         
         Note: Detailed implementation logic is provided in the method's code.
         """
@@ -1397,11 +1397,11 @@ class Pop2PianoConcatEmbeddingToMel(nn.Cell):
         Args:
             self: The instance of the Pop2PianoConcatEmbeddingToMel class.
             config: A configuration object containing parameters for the initialization.
-                - Type: Config
-                - Purpose: Specifies the configuration settings for the embedding layer.
-                - Restrictions: Must contain the following attributes:
-                    - composer_vocab_size: An integer specifying the vocabulary size for the composer.
-                    - d_model: An integer specifying the dimension of the embedding.
+                >   - Type: Config
+                >   - Purpose: Specifies the configuration settings for the embedding layer.
+                >   - Restrictions: Must contain the following attributes:
+                >       - composer_vocab_size: An integer specifying the vocabulary size for the composer.
+                >       - d_model: An integer specifying the dimension of the embedding.
         
         Returns:
             None. This method initializes the Pop2PianoConcatEmbeddingToMel class and does not return any value.
@@ -1437,34 +1437,34 @@ class Pop2PianoForConditionalGeneration(Pop2PianoPreTrainedModel):
 
     """
     The `Pop2PianoForConditionalGeneration` class is a subclass of `Pop2PianoPreTrainedModel` that represents a Pop2Piano model for conditional generation. It is specifically designed for generating MIDI token
-ids based on given input features.
+    ids based on given input features.
     
     ### Initialization:
     The class constructor `__init__` takes a `Pop2PianoConfig` object as an argument and initializes the model. It sets up the necessary components like the shared embedding layer, encoder, decoder, and LM
-head.
+    head.
     
     ### Model Components:
-    - `shared`: An embedding layer that maps token ids to their corresponding embeddings.
-    - `encoder`: The Pop2PianoStack module responsible for encoding the input features.
-    - `decoder`: The Pop2PianoStack module responsible for decoding and generating the output sequence.
-    - `lm_head`: A linear layer that maps the decoder output to the vocabulary space.
+    >   - `shared`: An embedding layer that maps token ids to their corresponding embeddings.
+    >   - `encoder`: The Pop2PianoStack module responsible for encoding the input features.
+    >   - `decoder`: The Pop2PianoStack module responsible for decoding and generating the output sequence.
+    >   - `lm_head`: A linear layer that maps the decoder output to the vocabulary space.
     
     ### Getter and Setter Methods:
-    - `get_input_embeddings()`: Returns the shared embedding layer.
-    - `set_input_embeddings(new_embeddings)`: Sets the shared embedding layer to the provided `new_embeddings`.
-    - `set_output_embeddings(new_embeddings)`: Sets the LM head to the provided `new_embeddings`.
-    - `get_output_embeddings()`: Returns the LM head.
-    - `get_encoder()`: Returns the encoder module.
-    - `get_decoder()`: Returns the decoder module.
+    >   - `get_input_embeddings()`: Returns the shared embedding layer.
+    >   - `set_input_embeddings(new_embeddings)`: Sets the shared embedding layer to the provided `new_embeddings`.
+    >   - `set_output_embeddings(new_embeddings)`: Sets the LM head to the provided `new_embeddings`.
+    >   - `get_output_embeddings()`: Returns the LM head.
+    >   - `get_encoder()`: Returns the encoder module.
+    >   - `get_decoder()`: Returns the decoder module.
     
     ### Generation Methods:
-    - `get_mel_conditioner_outputs()`: Concatenates mel conditioner tokens to the front of the input features for controlling the type of MIDI token generated by the model. It takes the input features,
-composer name, generation config, and attention mask as inputs.
-    - `construct()`: Constructs the model for conditional generation. It takes various inputs like input ids, attention mask, decoder input ids, etc., and returns the generated MIDI token ids.
-    - `generate()`: Generates token ids for MIDI outputs. It takes input features, attention mask, composer name, generation config, and additional kwargs as inputs. It returns the generated MIDI token ids.
-    - `prepare_inputs_for_generation()`: Prepares the inputs for generation. It takes input ids, past key values, attention mask, and various masks as inputs and returns a dictionary of prepared inputs.
-    - `prepare_decoder_input_ids_from_labels()`: Prepares the decoder input ids from labels. It takes labels as input and returns the shifted right labels.
-    - `_reorder_cache()`: Reorders the past key values according to the beam index.
+    >   - `get_mel_conditioner_outputs()`: Concatenates mel conditioner tokens to the front of the input features for controlling the type of MIDI token generated by the model. It takes the input features,
+        composer name, generation config, and attention mask as inputs.
+    >   - `construct()`: Constructs the model for conditional generation. It takes various inputs like input ids, attention mask, decoder input ids, etc., and returns the generated MIDI token ids.
+    >   - `generate()`: Generates token ids for MIDI outputs. It takes input features, attention mask, composer name, generation config, and additional kwargs as inputs. It returns the generated MIDI token ids.
+    >   - `prepare_inputs_for_generation()`: Prepares the inputs for generation. It takes input ids, past key values, attention mask, and various masks as inputs and returns a dictionary of prepared inputs.
+    >   - `prepare_decoder_input_ids_from_labels()`: Prepares the decoder input ids from labels. It takes labels as input and returns the shifted right labels.
+    >   - `_reorder_cache()`: Reorders the past key values according to the beam index.
     
     Please refer to the documentation of the parent class `Pop2PianoPreTrainedModel` for more details on other inherited methods and attributes.
     """
@@ -1477,11 +1477,11 @@ composer name, generation config, and attention mask as inputs.
         Args:
             self: The object instance.
             config (Pop2PianoConfig): The configuration object used for initializing the model.
-                - The 'config' parameter is of type Pop2PianoConfig.
-                - This parameter is required to create an instance of the model.
-                - It contains various configuration settings for the model.
-                - The 'config' parameter is used to set the attributes of the model object.
-                - The 'config' parameter should not be None.
+                >   - The 'config' parameter is of type Pop2PianoConfig.
+                >   - This parameter is required to create an instance of the model.
+                >   - It contains various configuration settings for the model.
+                >   - The 'config' parameter is used to set the attributes of the model object.
+                >   - The 'config' parameter should not be None.
         
         Returns:
             None
@@ -1633,8 +1633,8 @@ composer name, generation config, and attention mask as inputs.
             attention_mask (``, *optional*):
                 For batched generation `input_features` are padded to have the same shape across all examples.
                 `attention_mask` helps to determine which areas were padded and which were not.
-                - 1 for tokens that are **not padded**,
-                - 0 for tokens that are **padded**.
+                >   - 1 for tokens that are **not padded**,
+                >   - 0 for tokens that are **padded**.
         """
         composer_to_feature_token = generation_config.composer_to_feature_token
         if composer not in composer_to_feature_token.keys():
@@ -1682,11 +1682,13 @@ composer name, generation config, and attention mask as inputs.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], Seq2SeqLMOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[-100, 0, ...,
-            config.vocab_size - 1]`. All labels set to `-100` are ignored (masked), the loss is only computed for
-            labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[-100, 0, ...,
+                config.vocab_size - 1]`. All labels set to `-100` are ignored (masked), the loss is only computed for
+                labels in `[0, ..., config.vocab_size]`
         Returns:
+            Union[Tuple[mindspore.Tensor], Seq2SeqLMOutput]
         """
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -1792,8 +1794,8 @@ composer name, generation config, and attention mask as inputs.
             attention_mask:
                 For batched generation `input_features` are padded to have the same shape across all examples.
                 `attention_mask` helps to determine which areas were padded and which were not.
-                - 1 for tokens that are **not padded**,
-                - 0 for tokens that are **padded**.
+                >   - 1 for tokens that are **not padded**,
+                >   - 0 for tokens that are **padded**.
             composer (`str`, *optional*, defaults to `"composer1"`):
                 This value is passed to `Pop2PianoConcatEmbeddingToMel` to generate different embeddings for each
                 `"composer"`. Please make sure that the composet value is present in `composer_to_feature_token` in
@@ -1815,8 +1817,8 @@ composer name, generation config, and attention mask as inputs.
             or when `config.return_dict_in_generate=True`) or a `mindspore.Tensor`.
                 Since Pop2Piano is an encoder-decoder model (`model.config.is_encoder_decoder=True`), the possible
                 [`~utils.ModelOutput`] types are:
-                    - [`~generation.GenerateEncoderDecoderOutput`],
-                    - [`~generation.GenerateBeamEncoderDecoderOutput`]
+                    >   - [`~generation.GenerateEncoderDecoderOutput`],
+                    >   - [`~generation.GenerateBeamEncoderDecoderOutput`]
         """
         if generation_config is None:
             generation_config = self.generation_config
@@ -1927,7 +1929,7 @@ composer name, generation config, and attention mask as inputs.
         Args:
             self: An instance of the Pop2PianoForConditionalGeneration class.
             past_key_values: A tuple representing the past key values of the decoder. It contains the cached states for each layer of the decoder. If None, a warning will be logged and the method will return
-None.
+                None.
             beam_idx: A tensor representing the indices of the beams. It is used to reorder the past key values.
         
         Returns:

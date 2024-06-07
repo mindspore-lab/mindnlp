@@ -153,7 +153,7 @@ class XLNetConfig(PretrainedConfig):
             
         Raises:
             NotImplementedError: This exception is raised when trying to set the maximum position embeddings for the XLNetConfig class. Since the model type is one of the few models that has no sequence length
-limit, setting the maximum position embeddings is not allowed.
+                limit, setting the maximum position embeddings is not allowed.
         
         Note:
             The model type should be specified before using this method.

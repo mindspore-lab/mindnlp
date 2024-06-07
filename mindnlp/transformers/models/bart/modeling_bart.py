@@ -62,10 +62,10 @@ def _get_unpad_data(attention_mask):
     
     Returns:
         tuple: A tuple containing the following elements:
-            - indices (Tensor): A 1D tensor containing the indices of the non-zero elements in the flattened attention mask.
-            - cu_seqlens (Tensor): A 1D tensor representing the cumulative sum of sequence lengths in the batch, 
+            >   - indices (Tensor): A 1D tensor containing the indices of the non-zero elements in the flattened attention mask.
+            >   - cu_seqlens (Tensor): A 1D tensor representing the cumulative sum of sequence lengths in the batch,
               padded with a zero at the beginning. Its shape is [batch_size + 1].
-            - max_seqlen_in_batch (int): The maximum sequence length in the batch.
+            >   - max_seqlen_in_batch (int): The maximum sequence length in the batch.
     
     Raises:
         None.
@@ -326,10 +326,9 @@ BART_ATTENTION_CLASSES = {
 
 
 class BartEncoderLayer(nn.Cell):
-
     '''
     BartEncoderLayer represents a single layer of the BART (Bidirectional and Auto-Regressive Transformers) encoder. This layer consists of multi-head self-attention mechanism followed by feed-forward neural
-network (FFN) and layer normalization.
+    network (FFN) and layer normalization.
     
     Args:
         config (BartConfig): An instance of BartConfig containing the configuration for the BART model.
@@ -349,17 +348,15 @@ network (FFN) and layer normalization.
         final_layer_norm (nn.LayerNorm): The final layer normalization applied to the output of the feed-forward neural network.
     
     Methods:
-        construct(hidden_states, attention_mask, layer_head_mask, output_attentions=False) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor]]:
-            Applies the BART encoder layer to the input hidden_states.
-    
-            Args:
-                hidden_states (mindspore.Tensor): Input to the layer of shape (batch, seq_len, embed_dim).
-                attention_mask (mindspore.Tensor): Attention mask of size (batch, 1, tgt_len, src_len) where padding elements are indicated by very large negative values.
-                layer_head_mask (mindspore.Tensor): Mask for attention heads in a given layer of size (encoder_attention_heads,).
-                output_attentions (bool, optional): Whether or not to return the attentions tensors of all attention layers.
-    
-            Returns:
-                Tuple[mindspore.Tensor, Optional[mindspore.Tensor]]: The output tensor and the attention weights if output_attentions is True.
+        construct(hidden_states, attention_mask, layer_head_mask, output_attentions=False):
+            >- Applies the BART encoder layer to the input hidden_states.
+            >- Args:
+            >   - hidden_states (mindspore.Tensor): Input to the layer of shape (batch, seq_len, embed_dim).
+            >   - attention_mask (mindspore.Tensor): Attention mask of size (batch, 1, tgt_len, src_len) where padding elements are indicated by very large negative values.
+            >   - layer_head_mask (mindspore.Tensor): Mask for attention heads in a given layer of size (encoder_attention_heads,).
+            >   - output_attentions (bool, optional): Whether or not to return the attentions tensors of all attention layers.
+            >- Returns:
+            >   - Tuple[mindspore.Tensor, Optional[mindspore.Tensor]]: The output tensor and the attention weights if output_attentions is True.
     '''
     def __init__(self, config: BartConfig):
         """
@@ -368,7 +365,7 @@ network (FFN) and layer normalization.
         Args:
             self: The instance of the class.
             config (BartConfig): The configuration object for the BART model, containing various parameters such as d_model, encoder_attention_heads, attention_dropout, dropout, activation_function,
-activation_dropout, and encoder_ffn_dim. 
+                activation_dropout, and encoder_ffn_dim.
         
         Returns:
             None. This method does not return any value.
@@ -448,36 +445,36 @@ class BartDecoderLayer(nn.Cell):
 
     """
     This class represents a BART decoder layer used in natural language processing tasks. The BARTDecoderLayer class implements the decoder layer architecture for the BART (Bidirectional and Auto-Regressive
-Transformers) model.
+    Transformers) model.
     
     Attributes:
-        - embed_dim (int): The dimension of the input embeddings.
-        - self_attn (BART_ATTENTION_CLASSES): Self-attention mechanism for the decoder layer.
-        - dropout (float): Dropout probability for regularization.
-        - activation_fn (ACT2FN): Activation function used in the decoder layer.
-        - activation_dropout (float): Dropout probability applied to the activation function output.
-        - self_attn_layer_norm (nn.LayerNorm): Layer normalization for the self-attention output.
-        - encoder_attn (BART_ATTENTION_CLASSES): Cross-attention mechanism with the encoder.
-        - encoder_attn_layer_norm (nn.LayerNorm): Layer normalization for the encoder attention output.
-        - fc1 (nn.Dense): Fully connected layer 1 in the decoder.
-        - fc2 (nn.Dense): Fully connected layer 2 in the decoder.
-        - final_layer_norm (nn.LayerNorm): Final layer normalization for the decoder output.
+        embed_dim (int): The dimension of the input embeddings.
+        self_attn (BART_ATTENTION_CLASSES): Self-attention mechanism for the decoder layer.
+        dropout (float): Dropout probability for regularization.
+        activation_fn (ACT2FN): Activation function used in the decoder layer.
+        activation_dropout (float): Dropout probability applied to the activation function output.
+        self_attn_layer_norm (nn.LayerNorm): Layer normalization for the self-attention output.
+        encoder_attn (BART_ATTENTION_CLASSES): Cross-attention mechanism with the encoder.
+        encoder_attn_layer_norm (nn.LayerNorm): Layer normalization for the encoder attention output.
+        fc1 (nn.Dense): Fully connected layer 1 in the decoder.
+        fc2 (nn.Dense): Fully connected layer 2 in the decoder.
+        final_layer_norm (nn.LayerNorm): Final layer normalization for the decoder output.
     
     Methods:
-        - construct(hidden_states, attention_mask, encoder_hidden_states, encoder_attention_mask, layer_head_mask,
+        construct(hidden_states, attention_mask, encoder_hidden_states, encoder_attention_mask, layer_head_mask,
                     cross_attn_layer_head_mask, past_key_value, output_attentions, use_cache): 
             Constructs the forward pass of the BART decoder layer.
     
     Args:
-        - hidden_states (mindspore.Tensor): Input to the layer of shape (batch, seq_len, embed_dim).
-        - attention_mask (mindspore.Tensor): Attention mask of size (batch, 1, tgt_len, src_len).
-        - encoder_hidden_states (mindspore.Tensor): Cross-attention input to the layer of shape (batch, seq_len, embed_dim).
-        - encoder_attention_mask (mindspore.Tensor): Encoder attention mask of size (batch, 1, tgt_len, src_len).
-        - layer_head_mask (mindspore.Tensor): Mask for attention heads in a given layer of size (encoder_attention_heads).
-        - cross_attn_layer_head_mask (mindspore.Tensor): Mask for cross-attention heads in a given layer of size (decoder_attention_heads).
-        - past_key_value (Tuple(mindspore.Tensor)): Cached past key and value projection states.
-        - output_attentions (bool, optional): Whether or not to return the attentions tensors of all attention layers.
-        - use_cache (bool, optional): Whether to use caching for past key and value states.
+        hidden_states (mindspore.Tensor): Input to the layer of shape (batch, seq_len, embed_dim).
+        attention_mask (mindspore.Tensor): Attention mask of size (batch, 1, tgt_len, src_len).
+        encoder_hidden_states (mindspore.Tensor): Cross-attention input to the layer of shape (batch, seq_len, embed_dim).
+        encoder_attention_mask (mindspore.Tensor): Encoder attention mask of size (batch, 1, tgt_len, src_len).
+        layer_head_mask (mindspore.Tensor): Mask for attention heads in a given layer of size (encoder_attention_heads).
+        cross_attn_layer_head_mask (mindspore.Tensor): Mask for cross-attention heads in a given layer of size (decoder_attention_heads).
+        past_key_value (Tuple(mindspore.Tensor)): Cached past key and value projection states.
+        output_attentions (bool, optional): Whether or not to return the attentions tensors of all attention layers.
+        use_cache (bool, optional): Whether to use caching for past key and value states.
     
     Returns:
         Tuple containing the decoder layer outputs, optional attentions tensors, and cached key and value states if requested.
@@ -486,14 +483,16 @@ Transformers) model.
         """
         Args:
             self (BartDecoderLayer): The current instance of the BartDecoderLayer class.
-            config (BartConfig): An instance of BartConfig containing the configuration parameters for the decoder layer.
-                The config parameter should have the following attributes:
-                    - d_model (int): The dimension of the model.
-                    - decoder_attention_heads (int): The number of attention heads for the decoder.
-                    - attention_dropout (float): The dropout probability for attention layers.
-                    - activation_function (str): The name of the activation function to be used.
-                    - activation_dropout (float): The dropout probability for activation layers.
-                    - decoder_ffn_dim (int): The dimension of the feed-forward network in the decoder.
+            config (BartConfig):
+                >- An instance of BartConfig containing the configuration parameters for the decoder layer.
+                >- The config parameter should have the following attributes:
+                >   - d_model (int): The dimension of the model.
+                >   - decoder_attention_heads (int): The number of attention heads for the decoder.
+                >   - attention_dropout (float): The dropout probability for attention layers.
+                >   - activation_function (str): The name of the activation function to be used.
+                >   - activation_dropout (float): The dropout probability for activation layers.
+                >   - decoder_ffn_dim (int): The dimension of the feed-forward network in the decoder.
+
                 This parameter is used to initialize the decoder layer with the specified configuration.
         
         Returns:
@@ -678,7 +677,7 @@ class BartPreTrainedModel(PreTrainedModel):
 
     """
     BartPreTrainedModel class represents a pre-trained BART (Bidirectional and Auto-Regressive Transformers) model for natural language processing tasks. This class inherits from PreTrainedModel and includes
-methods for initializing weights and generating dummy inputs for the model.
+    methods for initializing weights and generating dummy inputs for the model.
     
     Attributes:
         config: The configuration instance for the BART model.
@@ -688,6 +687,7 @@ methods for initializing weights and generating dummy inputs for the model.
         dummy_inputs(self): Generates dummy input data for the BART model, including input_ids and attention_mask.
     
     Example usage:
+        ```python
         # Initialize a BART pre-trained model
         model = BartPreTrainedModel(config)
     
@@ -696,6 +696,7 @@ methods for initializing weights and generating dummy inputs for the model.
     
         # Generate dummy inputs for the model
         inputs = model.dummy_inputs()
+        ```
     """
     config_class = BartConfig
     base_model_prefix = "model"
@@ -725,17 +726,17 @@ methods for initializing weights and generating dummy inputs for the model.
         Method: dummy_inputs
         
         Description:
-        This method generates dummy inputs for a BartPreTrainedModel.
+            This method generates dummy inputs for a BartPreTrainedModel.
         
         Args:
-        - self: BartPreTrainedModel
-            The instance of BartPreTrainedModel class.
+            self: BartPreTrainedModel
+                The instance of BartPreTrainedModel class.
         
         Returns:
-        - dict
-            A dictionary containing dummy inputs for the model with the following keys:
-            - 'attention_mask': A Tensor representing the attention mask for the input_ids.
-            - 'input_ids': A Tensor representing the input token IDs.
+            dict:
+                A dictionary containing dummy inputs for the model with the following keys:
+                >   - 'attention_mask': A Tensor representing the attention mask for the input_ids.
+                >   - 'input_ids': A Tensor representing the input token IDs.
         
         Raises:
         This method does not raise any exceptions.
@@ -821,9 +822,9 @@ class BartEncoder(BartPreTrainedModel):
             self (BartEncoder): The instance of BartEncoder.
                 This parameter refers to the current instance of the BartEncoder class.
             value: The input embeddings value to be set.
-                Type: Any
-                Purpose: The input embeddings value to assign to the embed_tokens attribute of the BartEncoder instance.
-                Restrictions: None
+                >   - Type: Any
+                >   - Purpose: The input embeddings value to assign to the embed_tokens attribute of the BartEncoder instance.
+                >   - Restrictions: None
         
         Returns:
             None: This method does not return any value explicitly.
@@ -855,16 +856,14 @@ class BartEncoder(BartPreTrainedModel):
                 [What are input IDs?](../glossary#input-ids)
             attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
             head_mask (`mindspore.Tensor` of shape `(encoder_layers, encoder_attention_heads)`, *optional*):
                 Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
+                >   - 1 indicates the head is **not masked**,
+                >   - 0 indicates the head is **masked**.
 
             inputs_embeds (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
                 Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation.
@@ -971,12 +970,12 @@ class BartDecoder(BartPreTrainedModel):
         Args:
             self: The BartDecoder instance.
             config (BartConfig): The configuration object for the Bart model.
-                - config: BartConfig type.
-                - Purpose: Specifies the configuration settings for the Bart model.
+                >   - config: BartConfig type.
+                >   - Purpose: Specifies the configuration settings for the Bart model.
             embed_tokens (Optional[nn.Embedding]): Optional parameter. The embedding tokens for the Bart model.
-                - embed_tokens: Optional[nn.Embedding] type.
-                - Purpose: Represents the embedding tokens used in the Bart model.
-                - Restrictions: Must be of type Optional[nn.Embedding]. Defaults to None.
+                >   - embed_tokens: Optional[nn.Embedding] type.
+                >   - Purpose: Represents the embedding tokens used in the Bart model.
+                >   - Restrictions: Must be of type Optional[nn.Embedding]. Defaults to None.
         
         Returns:
             None
@@ -1066,9 +1065,8 @@ class BartDecoder(BartPreTrainedModel):
                 [What are input IDs?](../glossary#input-ids)
             attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
             encoder_hidden_states (`mindspore.Tensor` of shape `(batch_size, encoder_sequence_length, hidden_size)`, *optional*):
@@ -1077,23 +1075,20 @@ class BartDecoder(BartPreTrainedModel):
             encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, encoder_sequence_length)`, *optional*):
                 Mask to avoid performing cross-attention on padding tokens indices of encoder input_ids. Mask values
                 selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
             head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
                 Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
+                >   - 1 indicates the head is **not masked**,
+                >   - 0 indicates the head is **masked**.
 
             cross_attn_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
                 Mask to nullify selected heads of the cross-attention modules in the decoder to avoid performing
                 cross-attention on hidden heads. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
+                >   - 1 indicates the head is **not masked**,
+                >   - 0 indicates the head is **masked**.
 
             past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
                 Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
@@ -1240,7 +1235,7 @@ class BartModel(BartPreTrainedModel):
 
     """
     BartModel is a class that represents the BART (Bidirectional and Auto-Regressive Transformers) model for sequence-to-sequence tasks. It inherits from BartPreTrainedModel and encapsulates the architecture
-and functionality of the BART model.
+    and functionality of the BART model.
     
     Attributes:
         shared (nn.Embedding): Shared embedding layer for both encoder and decoder parts of the model.
@@ -1255,7 +1250,7 @@ and functionality of the BART model.
         get_encoder(): Retrieves the encoder component of the model.
         get_decoder(): Retrieves the decoder component of the model.
         construct(input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask, cross_attn_head_mask, encoder_outputs, past_key_values, inputs_embeds,
-decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the BART model for sequence-to-sequence tasks with the specified inputs and configurations.
+            decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the BART model for sequence-to-sequence tasks with the specified inputs and configurations.
     """
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
@@ -1266,8 +1261,8 @@ decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, retur
         Args:
             self: The instance of the BartModel class.
             config (BartConfig): The configuration object for the BartModel. It specifies the model's settings and hyperparameters.
-                - config.pad_token_id (int): The index of the padding token in the vocabulary.
-                - config.vocab_size (int): The size of the model's vocabulary.
+                >   - config.pad_token_id (int): The index of the padding token in the vocabulary.
+                >   - config.vocab_size (int): The size of the model's vocabulary.
         
         Returns:
             None. This method does not return any value.
@@ -1302,17 +1297,19 @@ decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, retur
             None
         
         Description:
-        This method is used to tie the weights of the word embeddings in the encoder and decoder of the BartModel. The tying of weights means that the same weight parameters are shared between the encoder and
-decoder embeddings.
-        
-        The method first checks if the 'tie_word_embeddings' flag in the model configuration is set to True. If it is, the method calls the '_tie_or_clone_weights' function to tie the weights of the
-'embed_tokens' in the encoder with the 'shared' weights. It then repeats the process for the 'embed_tokens' in the decoder.
-        
-        Note that tying the weights can help reduce the number of parameters in the model and improve efficiency, especially in scenarios where the encoder and decoder share the same vocabulary.
+            This method is used to tie the weights of the word embeddings in the encoder and decoder of the BartModel. The tying of weights means that the same weight parameters are shared between the encoder and
+            decoder embeddings.
+
+            The method first checks if the 'tie_word_embeddings' flag in the model configuration is set to True. If it is, the method calls the '_tie_or_clone_weights' function to tie the weights of the
+            'embed_tokens' in the encoder with the 'shared' weights. It then repeats the process for the 'embed_tokens' in the decoder.
+
+            Note that tying the weights can help reduce the number of parameters in the model and improve efficiency, especially in scenarios where the encoder and decoder share the same vocabulary.
         
         Example:
+            ```python
             model = BartModel()
             model._tie_weights()
+            ```
         """
         if self.config.tie_word_embeddings:
             self._tie_or_clone_weights(self.encoder.embed_tokens, self.shared)
@@ -1324,14 +1321,14 @@ decoder embeddings.
         
         Args:
             self: The instance of the BartModel class.
-                Type: BartModel
-                Purpose: Represents the current instance of the BartModel class.
-                Restrictions: None.
+                >   - Type: BartModel
+                >   - Purpose: Represents the current instance of the BartModel class.
+                >   - Restrictions: None.
         
         Returns:
             None: The method returns None.
-                Type: None
-                Purpose: Indicates that the method does not return any specific value.
+                >   - Type: None
+                >   - Purpose: Indicates that the method does not return any specific value.
         
         Raises:
             None.
@@ -1429,7 +1426,7 @@ decoder embeddings.
         
         Returns:
             Union[Tuple, Seq2SeqModelOutput]: A tuple or a Seq2SeqModelOutput object containing the last hidden state, past key values, decoder hidden states, decoder attentions, cross attentions, encoder last
-hidden state, encoder hidden states, and encoder attentions.
+                hidden state, encoder hidden states, and encoder attentions.
         
         Raises:
             ValueError: If no `decoder_input_ids` or `decoder_inputs_embeds` are passed and `input_ids` is `None`.
@@ -1508,9 +1505,9 @@ class BartForConditionalGeneration(BartPreTrainedModel):
 
     """
     This class represents a BART model for conditional text generation. It inherits from BartPreTrainedModel and provides methods for model initialization, encoder and decoder retrieval, resizing token
-embeddings, output embeddings, model construction, preparing inputs for generation, preparing decoder input ids from labels, and reordering cache. The class includes methods for initializing the model,
-retrieving encoder and decoder, resizing token embeddings, constructing the model, preparing inputs for text generation, and reordering cache for efficient generation. Additionally, it provides methods for
-setting and getting output embeddings and resizing final logits bias. The class also includes a method for preparing decoder input ids from labels for masked language modeling.
+    embeddings, output embeddings, model construction, preparing inputs for generation, preparing decoder input ids from labels, and reordering cache. The class includes methods for initializing the model,
+    retrieving encoder and decoder, resizing token embeddings, constructing the model, preparing inputs for text generation, and reordering cache for efficient generation. Additionally, it provides methods for
+    setting and getting output embeddings and resizing final logits bias. The class also includes a method for preparing decoder input ids from labels for masked language modeling.
     """
     base_model_prefix = "model"
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight", "lm_head.weight"]
@@ -1633,21 +1630,22 @@ setting and getting output embeddings and resizing final logits bias. The class 
 
     def set_output_embeddings(self, new_embeddings):
         """
-        Method: set_output_embeddings
+        Method:
+            set_output_embeddings
         
         Description:
-        Sets the output embeddings for the BartForConditionalGeneration model.
+            Sets the output embeddings for the BartForConditionalGeneration model.
         
         Args:
-        - self (BartForConditionalGeneration): The instance of the BartForConditionalGeneration class.
-        - new_embeddings (Tensor): The new embeddings to be set as the output embeddings for the model.
+            self (BartForConditionalGeneration): The instance of the BartForConditionalGeneration class.
+            new_embeddings (Tensor): The new embeddings to be set as the output embeddings for the model.
         
         Returns:
-        - None: The method does not return any value.
+            None: The method does not return any value.
         
         Raises:
-        - TypeError: If the new_embeddings parameter is not of type Tensor.
-        - ValueError: If the new_embeddings parameter is empty or invalid.
+            TypeError: If the new_embeddings parameter is not of type Tensor.
+            ValueError: If the new_embeddings parameter is empty or invalid.
         """
         self.lm_head = new_embeddings
 
@@ -1672,11 +1670,12 @@ setting and getting output embeddings and resizing final logits bias. The class 
     ) -> Union[Tuple, Seq2SeqLMOutput]:
         r"""
         labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
+        >   Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
             config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
             (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
+            Union[Tuple, Seq2SeqLMOutput]
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1760,16 +1759,16 @@ setting and getting output embeddings and resizing final logits bias. The class 
         
         Returns:
             dict: A dictionary containing the prepared inputs for generation. The dictionary has the following keys:
-                - 'input_ids' (None): Represents the input IDs, which are set to None.
-                - 'encoder_outputs' (torch.Tensor): Represents the encoder outputs.
-                - 'past_key_values' (Tuple[torch.Tensor]): Represents the past key values for generating the output.
-                - 'decoder_input_ids' (torch.Tensor): Represents the decoder input IDs after removing the prefix.
-                - 'attention_mask' (torch.Tensor): Represents the attention mask tensor for the encoder.
-                - 'decoder_attention_mask' (torch.Tensor): Represents the attention mask tensor for the decoder.
-                - 'head_mask' (torch.Tensor): Represents the mask tensor for the encoder's attention heads.
-                - 'decoder_head_mask' (torch.Tensor): Represents the mask tensor for the decoder's attention heads.
-                - 'cross_attn_head_mask' (torch.Tensor): Represents the mask tensor for the cross-attention heads.
-                - 'use_cache' (bool): Represents whether to use cache for faster decoding.
+                >   - 'input_ids' (None): Represents the input IDs, which are set to None.
+                >   - 'encoder_outputs' (torch.Tensor): Represents the encoder outputs.
+                >   - 'past_key_values' (Tuple[torch.Tensor]): Represents the past key values for generating the output.
+                >   - 'decoder_input_ids' (torch.Tensor): Represents the decoder input IDs after removing the prefix.
+                >   - 'attention_mask' (torch.Tensor): Represents the attention mask tensor for the encoder.
+                >   - 'decoder_attention_mask' (torch.Tensor): Represents the attention mask tensor for the decoder.
+                >   - 'head_mask' (torch.Tensor): Represents the mask tensor for the encoder's attention heads.
+                >   - 'decoder_head_mask' (torch.Tensor): Represents the mask tensor for the decoder's attention heads.
+                >   - 'cross_attn_head_mask' (torch.Tensor): Represents the mask tensor for the cross-attention heads.
+                >   - 'use_cache' (bool): Represents whether to use cache for faster decoding.
         
         Raises:
             None.
@@ -1805,7 +1804,7 @@ setting and getting output embeddings and resizing final logits bias. The class 
         Prepare decoder input IDs from labels.
         
         This method takes in two parameters: self, labels. The 'self' parameter refers to the current instance of the 'BartForConditionalGeneration' class, while the 'labels' parameter is a tensor containing
-the input labels.
+        the input labels.
         
         Args:
             self (BartForConditionalGeneration): The current instance of the BartForConditionalGeneration class.
@@ -1849,14 +1848,14 @@ class BartForSequenceClassification(BartPreTrainedModel):
 
     """
     The `BartForSequenceClassification` class represents a BART model fine-tuned for sequence classification tasks. It inherits from the `BartPreTrainedModel` class and includes methods for model
-initialization and sequence classification.
+    initialization and sequence classification.
     
     This class includes an `__init__` method for initializing the BART model and a `construct` method for constructing the sequence classification outputs. The `construct` method accepts various input and
-output parameters, including input and output tensors, attention masks, labels, and cache usage. It processes the input data through the BART model, computes the classification logits, and calculates the loss
-based on the specified problem type.
+    output parameters, including input and output tensors, attention masks, labels, and cache usage. It processes the input data through the BART model, computes the classification logits, and calculates the loss
+    based on the specified problem type.
     
     The class also includes additional methods for handling sequence classification tasks and managing model outputs. The `BartForSequenceClassification` class provides a comprehensive solution for utilizing
-BART models for sequence classification applications.
+    BART models for sequence classification applications.
     """
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
@@ -1906,7 +1905,7 @@ BART models for sequence classification applications.
     ) -> Union[Tuple, Seq2SeqSequenceClassifierOutput]:
         r"""
         labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+        >   Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
             config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -1988,45 +1987,45 @@ class BartForQuestionAnswering(BartPreTrainedModel):
     This class represents a BART model for question answering tasks. It inherits from the BartPreTrainedModel class.
     
     BARTForQuestionAnswering is a fine-tuned version of the BART model, specifically designed for question answering tasks. It takes in input sequences and returns the predicted start and end positions of the
-answer span within the input sequence.
+    answer span within the input sequence.
     
     The BARTForQuestionAnswering class contains the following methods:
-    
-    - __init__(self, config): Initializes the BARTForQuestionAnswering model with the provided configuration.
-    - construct(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask, cross_attn_head_mask, encoder_outputs, start_positions, end_positions, inputs_embeds,
-decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the BART model for question answering and returns the predicted start and end positions of the answer span.
+    >   - __init__(self, config): Initializes the BARTForQuestionAnswering model with the provided configuration.
+
+    >   - construct(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask, cross_attn_head_mask, encoder_outputs, start_positions, end_positions, inputs_embeds,
+            decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the BART model for question answering and returns the predicted start and end positions of the answer span.
     
     The construct method takes the following parameters:
     
-    - input_ids (mindspore.Tensor): The input token IDs.
-    - attention_mask (Optional[mindspore.Tensor]): The attention mask tensor.
-    - decoder_input_ids (Optional[mindspore.Tensor]): The decoder input token IDs.
-    - decoder_attention_mask (Optional[mindspore.Tensor]): The decoder attention mask tensor.
-    - head_mask (Optional[mindspore.Tensor]): The attention head mask tensor.
-    - decoder_head_mask (Optional[mindspore.Tensor]): The decoder attention head mask tensor.
-    - cross_attn_head_mask (Optional[mindspore.Tensor]): The cross-attention head mask tensor.
-    - encoder_outputs (Optional[List[mindspore.Tensor]]): The encoder outputs tensor.
-    - start_positions (Optional[mindspore.Tensor]): The labels for the start positions of the answer span.
-    - end_positions (Optional[mindspore.Tensor]): The labels for the end positions of the answer span.
-    - inputs_embeds (Optional[mindspore.Tensor]): The embedded input tensor.
-    - decoder_inputs_embeds (Optional[mindspore.Tensor]): The embedded decoder input tensor.
-    - use_cache (Optional[bool]): Whether to use cache.
-    - output_attentions (Optional[bool]): Whether to output attentions.
-    - output_hidden_states (Optional[bool]): Whether to output hidden states.
-    - return_dict (Optional[bool]): Whether to return a Seq2SeqQuestionAnsweringModelOutput object.
+    >   - input_ids (mindspore.Tensor): The input token IDs.
+    >   - attention_mask (Optional[mindspore.Tensor]): The attention mask tensor.
+    >   - decoder_input_ids (Optional[mindspore.Tensor]): The decoder input token IDs.
+    >   - decoder_attention_mask (Optional[mindspore.Tensor]): The decoder attention mask tensor.
+    >   - head_mask (Optional[mindspore.Tensor]): The attention head mask tensor.
+    >   - decoder_head_mask (Optional[mindspore.Tensor]): The decoder attention head mask tensor.
+    >   - cross_attn_head_mask (Optional[mindspore.Tensor]): The cross-attention head mask tensor.
+    >   - encoder_outputs (Optional[List[mindspore.Tensor]]): The encoder outputs tensor.
+    >   - start_positions (Optional[mindspore.Tensor]): The labels for the start positions of the answer span.
+    >   - end_positions (Optional[mindspore.Tensor]): The labels for the end positions of the answer span.
+    >   - inputs_embeds (Optional[mindspore.Tensor]): The embedded input tensor.
+    >   - decoder_inputs_embeds (Optional[mindspore.Tensor]): The embedded decoder input tensor.
+    >   - use_cache (Optional[bool]): Whether to use cache.
+    >   - output_attentions (Optional[bool]): Whether to output attentions.
+    >   - output_hidden_states (Optional[bool]): Whether to output hidden states.
+    >   - return_dict (Optional[bool]): Whether to return a Seq2SeqQuestionAnsweringModelOutput object.
     
     The construct method returns a Seq2SeqQuestionAnsweringModelOutput object that contains the following attributes:
     
-    - loss (Optional[mindspore.Tensor]): The total loss.
-    - start_logits (mindspore.Tensor): The predicted start logits.
-    - end_logits (mindspore.Tensor): The predicted end logits.
-    - past_key_values (Optional[mindspore.Tensor]): The past key values.
-    - decoder_hidden_states (Optional[mindspore.Tensor]): The decoder hidden states.
-    - decoder_attentions (Optional[mindspore.Tensor]): The decoder attentions.
-    - cross_attentions (Optional[mindspore.Tensor]): The cross attentions.
-    - encoder_last_hidden_state (Optional[mindspore.Tensor]): The encoder last hidden state.
-    - encoder_hidden_states (Optional[mindspore.Tensor]): The encoder hidden states.
-    - encoder_attentions (Optional[mindspore.Tensor]): The encoder attentions.
+    >   - loss (Optional[mindspore.Tensor]): The total loss.
+    >   - start_logits (mindspore.Tensor): The predicted start logits.
+    >   - end_logits (mindspore.Tensor): The predicted end logits.
+    >   - past_key_values (Optional[mindspore.Tensor]): The past key values.
+    >   - decoder_hidden_states (Optional[mindspore.Tensor]): The decoder hidden states.
+    >   - decoder_attentions (Optional[mindspore.Tensor]): The decoder attentions.
+    >   - cross_attentions (Optional[mindspore.Tensor]): The cross attentions.
+    >   - encoder_last_hidden_state (Optional[mindspore.Tensor]): The encoder last hidden state.
+    >   - encoder_hidden_states (Optional[mindspore.Tensor]): The encoder hidden states.
+    >   - encoder_attentions (Optional[mindspore.Tensor]): The encoder attentions.
     """
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
@@ -2196,25 +2195,24 @@ class BartForCausalLM(BartPreTrainedModel):
     This class represents a Bart model for causal language modeling (LM). It is a subclass of BartPreTrainedModel.
     
     BartForCausalLM is designed for generating text in an autoregressive manner, where the model predicts the next word in a sequence given the previous words. It consists of a decoder component that takes
-input_ids and attention_mask as inputs, and produces a sequence of predicted logits. The decoder can be configured with various options such as encoder_hidden_states, encoder_attention_mask, head_mask,
-cross_attn_head_mask, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, and return_dict.
+    input_ids and attention_mask as inputs, and produces a sequence of predicted logits. The decoder can be configured with various options such as encoder_hidden_states, encoder_attention_mask, head_mask,
+    cross_attn_head_mask, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, and return_dict.
     
     The class provides methods for getting and setting the input and output embeddings, as well as getting and setting the decoder component. The construct method is the main method for generating text. It
-takes input_ids, attention_mask, and other optional arguments, and returns the predicted logits, along with other optional outputs such as loss, past_key_values, hidden_states, attentions, and cross_attentions.
+    takes input_ids, attention_mask, and other optional arguments, and returns the predicted logits, along with other optional outputs such as loss, past_key_values, hidden_states, attentions, and cross_attentions.
     
     The prepare_inputs_for_generation method is used to prepare inputs for text generation. It takes input_ids, past_key_values, attention_mask, use_cache, and other optional arguments, and returns a
-dictionary containing the prepared inputs.
+    dictionary containing the prepared inputs.
     
     The _reorder_cache method is a static method that is used to reorder the past_key_values cache during beam search.
     
     Example usage:
-    
-    
-    tokenizer = AutoTokenizer.from_pretrained("facebook/bart-base")
-    model = BartForCausalLM.from_pretrained("facebook/bart-base", add_cross_attention=False)
-    inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
-    outputs = model(**inputs)
-    
+        ```python
+        tokenizer = AutoTokenizer.from_pretrained("facebook/bart-base")
+        model = BartForCausalLM.from_pretrained("facebook/bart-base", add_cross_attention=False)
+        inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+        outputs = model(**inputs)
+        ```
     
     This example demonstrates how to use the BartForCausalLM class for text generation. The model takes input_ids as input and generates predicted logits as output.
     """
@@ -2335,18 +2333,20 @@ dictionary containing the prepared inputs.
             None.
         
         Description:
-        This method allows the user to set the decoder module for the BartForCausalLM model. The decoder module is responsible for generating the output sequence during the model's forward pass.
-        
-        The `self` parameter refers to the instance of the BartForCausalLM class on which the method is called.
-        
-        The `decoder` parameter is of type `nn.Module` and represents the decoder module to be set for the model. The decoder module should be compatible with the BartForCausalLM model architecture.
-        
-        Note that setting the decoder module will overwrite any previously set decoder module for the model.
+            This method allows the user to set the decoder module for the BartForCausalLM model. The decoder module is responsible for generating the output sequence during the model's forward pass.
+
+            The `self` parameter refers to the instance of the BartForCausalLM class on which the method is called.
+
+            The `decoder` parameter is of type `nn.Module` and represents the decoder module to be set for the model. The decoder module should be compatible with the BartForCausalLM model architecture.
+
+            Note that setting the decoder module will overwrite any previously set decoder module for the model.
         
         Example:
+            ```python
             >>> model = BartForCausalLM()
             >>> decoder = nn.Linear(768, 1024)
             >>> model.set_decoder(decoder)
+            ```
         """
         self.model.decoder = decoder
 
@@ -2393,9 +2393,8 @@ dictionary containing the prepared inputs.
                 [What are input IDs?](../glossary#input-ids)
             attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
             encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
@@ -2406,15 +2405,13 @@ dictionary containing the prepared inputs.
                 in the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
             head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
                 Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
+                >   - 1 indicates the head is **not masked**,
+                >   - 0 indicates the head is **masked**.
 
             cross_attn_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
                 Mask to nullify selected heads of the cross-attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
+                >   - 1 indicates the head is **not masked**,
+                >   - 0 indicates the head is **masked**.
 
             past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
                 Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
@@ -2435,9 +2432,8 @@ dictionary containing the prepared inputs.
             use_cache (`bool`, *optional*):
                 If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding
                 (see `past_key_values`).
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
             output_attentions (`bool`, *optional*):
                 Whether or not to return the attentions tensors of all attention layers. See `attentions` under
                 returned tensors for more detail.
@@ -2448,23 +2444,24 @@ dictionary containing the prepared inputs.
                 Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
 
         Returns:
+            Union[Tuple, CausalLMOutputWithCrossAttentions]
 
         Example:
+            ```python
+            >>> from transformers import AutoTokenizer, BartForCausalLM
 
-        ```python
-        >>> from transformers import AutoTokenizer, BartForCausalLM
+            >>> tokenizer = AutoTokenizer.from_pretrained("facebook/bart-base")
+            >>> model = BartForCausalLM.from_pretrained("facebook/bart-base", add_cross_attention=False)
+            >>> assert model.config.is_decoder, f"{model.__class__} has to be configured as a decoder."
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> outputs = model(**inputs)
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("facebook/bart-base")
-        >>> model = BartForCausalLM.from_pretrained("facebook/bart-base", add_cross_attention=False)
-        >>> assert model.config.is_decoder, f"{model.__class__} has to be configured as a decoder."
-        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
-        >>> outputs = model(**inputs)
-
-        >>> logits = outputs.logits
-        >>> expected_shape = [1, inputs.input_ids.shape[-1], model.config.vocab_size]
-        >>> list(logits.shape) == expected_shape
-        True
-        ```"""
+            >>> logits = outputs.logits
+            >>> expected_shape = [1, inputs.input_ids.shape[-1], model.config.vocab_size]
+            >>> list(logits.shape) == expected_shape
+            True
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -2524,10 +2521,10 @@ dictionary containing the prepared inputs.
         
         Returns:
             dict: A dictionary containing the prepared inputs for generation.
-                - input_ids (torch.Tensor): The modified input ids.
-                - attention_mask (torch.Tensor): The attention mask.
-                - past_key_values (tuple): The past key values.
-                - use_cache (bool): The use_cache flag.
+                >   - input_ids (torch.Tensor): The modified input ids.
+                >   - attention_mask (torch.Tensor): The attention mask.
+                >   - past_key_values (tuple): The past key values.
+                >   - use_cache (bool): The use_cache flag.
         
         Raises:
             None.

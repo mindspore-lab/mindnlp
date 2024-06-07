@@ -129,11 +129,11 @@ def feature_extractor_class_from_name(class_name: str):
     
     Note:
         This function searches for the feature extractor class in the following places:
-        1. In the mapping of feature extractor names to their corresponding module names.
+        >   1. In the mapping of feature extractor names to their corresponding module names.
            If a match is found, the class is imported from the respective module.
-        2. In the additional content of the feature extractor mapping.
+        >   2. In the additional content of the feature extractor mapping.
            If a match is found based on the class name, the corresponding extractor is returned.
-        3. In the main 'mindnlp.transformers' module.
+        >   3. In the main 'mindnlp.transformers' module.
            If the class name exists as an attribute in the main module, it is returned.
     """
     for module_name, extractors in FEATURE_EXTRACTOR_MAPPING_NAMES.items():
@@ -176,10 +176,9 @@ def get_feature_extractor_config(
     Args:
         pretrained_model_name_or_path (`str` or `os.PathLike`):
             This can be either:
-
-            - a string, the *model id* of a pretrained model configuration hosted inside a model repo on
+            >   - a string, the *model id* of a pretrained model configuration hosted inside a model repo on
               hf-mirror.com.
-            - a path to a *directory* containing a configuration file saved using the
+            >   - a path to a *directory* containing a configuration file saved using the
               [`~PreTrainedTokenizer.save_pretrained`] method, e.g., `./my_model_directory/`.
 
         cache_dir (`str` or `os.PathLike`, *optional*):
@@ -212,21 +211,21 @@ def get_feature_extractor_config(
     Returns:
         `Dict`: The configuration of the tokenizer.
 
-    Examples:
+    Example:
+        ```python
+        # Download configuration from hf-mirror.com and cache.
+        tokenizer_config = get_tokenizer_config("google-bert/bert-base-uncased")
+        # This model does not have a tokenizer config so the result will be an empty dict.
+        tokenizer_config = get_tokenizer_config("FacebookAI/xlm-roberta-base")
 
-    ```python
-    # Download configuration from hf-mirror.com and cache.
-    tokenizer_config = get_tokenizer_config("google-bert/bert-base-uncased")
-    # This model does not have a tokenizer config so the result will be an empty dict.
-    tokenizer_config = get_tokenizer_config("FacebookAI/xlm-roberta-base")
+        # Save a pretrained tokenizer locally and you can reload its config
+        from transformers import AutoTokenizer
 
-    # Save a pretrained tokenizer locally and you can reload its config
-    from transformers import AutoTokenizer
-
-    tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-cased")
-    tokenizer.save_pretrained("tokenizer-test")
-    tokenizer_config = get_tokenizer_config("tokenizer-test")
-    ```"""
+        tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-cased")
+        tokenizer.save_pretrained("tokenizer-test")
+        tokenizer_config = get_tokenizer_config("tokenizer-test")
+        ```
+    """
     use_auth_token = kwargs.pop("use_auth_token", None)
     if use_auth_token is not None:
         warnings.warn(
@@ -277,7 +276,7 @@ class AutoFeatureExtractor:
         
         Raises:
             EnvironmentError: This exception is raised with the message 'AutoFeatureExtractor is designed to be instantiated using the `AutoFeatureExtractor.from_pretrained(pretrained_model_name_or_path)`
-method.' 
+            method.'
         """
         raise EnvironmentError(
             "AutoFeatureExtractor is designed to be instantiated "
@@ -299,13 +298,12 @@ method.'
         Params:
             pretrained_model_name_or_path (`str` or `os.PathLike`):
                 This can be either:
-
-                - a string, the *model id* of a pretrained feature_extractor hosted inside a model repo on
+                >   - a string, the *model id* of a pretrained feature_extractor hosted inside a model repo on
                   hf-mirror.com.
-                - a path to a *directory* containing a feature extractor file saved using the
+                >   - a path to a *directory* containing a feature extractor file saved using the
                   [`~feature_extraction_utils.FeatureExtractionMixin.save_pretrained`] method, e.g.,
                   `./my_model_directory/`.
-                - a path or url to a saved feature extractor JSON *file*, e.g.,
+                >   - a path or url to a saved feature extractor JSON *file*, e.g.,
                   `./my_model_directory/preprocessor_config.json`.
             cache_dir (`str` or `os.PathLike`, *optional*):
                 Path to a directory in which a downloaded pretrained model feature extractor should be cached if the
@@ -346,17 +344,17 @@ method.'
 
         </Tip>
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import AutoFeatureExtractor
 
-        ```python
-        >>> from transformers import AutoFeatureExtractor
+            >>> # Download feature extractor from hf-mirror.com and cache.
+            >>> feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/wav2vec2-base-960h")
 
-        >>> # Download feature extractor from hf-mirror.com and cache.
-        >>> feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/wav2vec2-base-960h")
-
-        >>> # If feature extractor files are in a directory (e.g. feature extractor was saved using *save_pretrained('./test/saved_model/')*)
-        >>> # feature_extractor = AutoFeatureExtractor.from_pretrained("./test/saved_model/")
-        ```"""
+            >>> # If feature extractor files are in a directory (e.g. feature extractor was saved using *save_pretrained('./test/saved_model/')*)
+            >>> # feature_extractor = AutoFeatureExtractor.from_pretrained("./test/saved_model/")
+            ```
+        """
         use_auth_token = kwargs.pop("use_auth_token", None)
         if use_auth_token is not None:
             warnings.warn(

@@ -117,19 +117,19 @@ class AutoformerConfig(PretrainedConfig):
 
 
         Example:
+            ```python
+            >>> from transformers import AutoformerConfig, AutoformerModel
 
-    ```python
-    >>> from transformers import AutoformerConfig, AutoformerModel
+            >>> # Initializing a default Autoformer configuration
+            >>> configuration = AutoformerConfig()
 
-    >>> # Initializing a default Autoformer configuration
-    >>> configuration = AutoformerConfig()
+            >>> # Randomly initializing a model (with random weights) from the configuration
+            >>> model = AutoformerModel(configuration)
 
-    >>> # Randomly initializing a model (with random weights) from the configuration
-    >>> model = AutoformerModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+            >>> # Accessing the model configuration
+            >>> configuration = model.config
+            ```
+    """
     model_type = "autoformer"
     attribute_map = {
         "hidden_size": "d_model",
@@ -218,8 +218,7 @@ class AutoformerConfig(PretrainedConfig):
         
             Raises:
                 ValueError: If `cardinality` is not None and `num_static_categorical_features` is greater than 0, but the lengths of `cardinality` and `num_static_categorical_features` do not match.
-                ValueError: If `embedding_dimension` is not None and `num_static_categorical_features` is greater than 0, but the lengths of `embedding_dimension` and `num_static_categorical_features` do not
-match.
+                ValueError: If `embedding_dimension` is not None and `num_static_categorical_features` is greater than 0, but the lengths of `embedding_dimension` and `num_static_categorical_features` do not match.
             """
         # time series specific configuration
         self.prediction_length = prediction_length

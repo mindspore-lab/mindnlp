@@ -98,17 +98,14 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
             Will be passed to the `SentencePieceProcessor.__init__()` method. The [Python wrapper for
             SentencePiece](https://github.com/google/sentencepiece/tree/master/python) can be used, among other things,
             to set:
-
-            - `enable_sampling`: Enable subword regularization.
-            - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
-
-              - `nbest_size = {0,1}`: No sampling is performed.
-              - `nbest_size > 1`: samples from the nbest_size results.
-              - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
-                using forward-filtering-and-backward-sampling algorithm.
-
-            - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
-              BPE-dropout.
+            >   - `enable_sampling`: Enable subword regularization.
+            >   - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
+            >       - `nbest_size = {0,1}`: No sampling is performed.
+            >       - `nbest_size > 1`: samples from the nbest_size results.
+            >       - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
+                        using forward-filtering-and-backward-sampling algorithm.
+            >   - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
+                    BPE-dropout.
         add_bos_token (`bool`, *optional*, defaults to `True`):
             Whether to add a beginning of sequence token at the start of sequences.
         add_eos_token (`bool`, *optional*, defaults to `False`):
@@ -149,29 +146,29 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
         This method initializes an instance of the CodeLlamaTokenizer class.
         
         Args:
-        - self: The instance of the class.
-        - vocab_file (str): The path to the vocabulary file.
-        - unk_token (str, optional): The unknown token, default is '<unk>'.
-        - bos_token (str, optional): The beginning of sequence token, default is '<s>'.
-        - eos_token (str, optional): The end of sequence token, default is '</s>'.
-        - prefix_token (str, optional): The prefix token, default is '▁<PRE>'.
-        - middle_token (str, optional): The middle token, default is '▁<MID>'.
-        - suffix_token (str, optional): The suffix token, default is '▁<SUF>'.
-        - eot_token (str, optional): The end of text token, default is '▁<EOT>'.
-        - fill_token (str, optional): The fill token, default is '<FILL_ME>'.
-        - suffix_first (bool): Indicates whether suffix comes before prefix.
-        - sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional arguments for the sentencepiece model.
-        - add_bos_token (bool, optional): Whether to add the bos token, default is True.
-        - add_eos_token (bool, optional): Whether to add the eos token, default is False.
-        - clean_up_tokenization_spaces (bool, optional): Whether to clean up tokenization spaces, default is False.
-        - additional_special_tokens (list, optional): Additional special tokens to include.
-        - use_default_system_prompt (bool, optional): Whether to use the default system prompt.
+            self: The instance of the class.
+            vocab_file (str): The path to the vocabulary file.
+            unk_token (str, optional): The unknown token, default is '<unk>'.
+            bos_token (str, optional): The beginning of sequence token, default is '<s>'.
+            eos_token (str, optional): The end of sequence token, default is '</s>'.
+            prefix_token (str, optional): The prefix token, default is '▁<PRE>'.
+            middle_token (str, optional): The middle token, default is '▁<MID>'.
+            suffix_token (str, optional): The suffix token, default is '▁<SUF>'.
+            eot_token (str, optional): The end of text token, default is '▁<EOT>'.
+            fill_token (str, optional): The fill token, default is '<FILL_ME>'.
+            suffix_first (bool): Indicates whether suffix comes before prefix.
+            sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional arguments for the sentencepiece model.
+            add_bos_token (bool, optional): Whether to add the bos token, default is True.
+            add_eos_token (bool, optional): Whether to add the eos token, default is False.
+            clean_up_tokenization_spaces (bool, optional): Whether to clean up tokenization spaces, default is False.
+            additional_special_tokens (list, optional): Additional special tokens to include.
+            use_default_system_prompt (bool, optional): Whether to use the default system prompt.
         
         Returns:
-        None. This method initiates the CodeLlamaTokenizer instance.
+            None: This method initiates the CodeLlamaTokenizer instance.
         
         Raises:
-        - MissingBackendError: If the required backend 'protobuf' is not available.
+            - MissingBackendError: If the required backend 'protobuf' is not available.
         """
         requires_backends(self, "protobuf")
         self.sp_model_kwargs = {} if sp_model_kwargs is None else sp_model_kwargs
@@ -244,10 +241,10 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
         
         Raises:
             This method does not explicitly raise any exceptions. However, potential exceptions that may occur during the method execution include:
-            - FileNotFoundError: If the specified vocab_file cannot be found.
-            - IOError: If there are issues with reading the vocab_file.
-            - ValueError: If the provided sp_model_kwargs are invalid or missing required information.
-            - Any other relevant exceptions that may occur during the loading and initialization of the tokenizer.
+                >   - FileNotFoundError: If the specified vocab_file cannot be found.
+                >   - IOError: If there are issues with reading the vocab_file.
+                >   - ValueError: If the provided sp_model_kwargs are invalid or missing required information.
+                >   - Any other relevant exceptions that may occur during the loading and initialization of the tokenizer.
         """
         tokenizer = spm.SentencePieceProcessor(**self.sp_model_kwargs)
         with open(self.vocab_file, "rb") as f:
@@ -276,16 +273,18 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
             None.
         
         This method retrieves the prefix token that is used for tokenizing code in the CodeLlamaTokenizer class. The prefix token serves as a marker or indicator to identify the start of a code block or
-expression. It is used during the tokenization process to correctly identify and separate different parts of the code.
+        expression. It is used during the tokenization process to correctly identify and separate different parts of the code.
         
         Note that the prefix token is an internal attribute of the CodeLlamaTokenizer class, and it is not meant to be modified directly. To change the prefix token, use the appropriate setter method or modify
-the underlying implementation of the class if necessary.
+        the underlying implementation of the class if necessary.
         
         Example usage:
+            ```python
             tokenizer = CodeLlamaTokenizer()
             prefix = tokenizer.prefix_token
             print(prefix)
             # Output: '>>'
+            ```
         """
         return self._prefix_token
 
@@ -339,7 +338,7 @@ the underlying implementation of the class if necessary.
             None.
         
         This method returns the middle ID of the CodeLlamaTokenizer instance. If the middle token is None, it returns None. The middle ID is obtained by converting the middle token to its corresponding ID
-using the 'convert_tokens_to_ids' method.
+        using the 'convert_tokens_to_ids' method.
         """
         if self._middle_token is None:
             return None
@@ -378,7 +377,7 @@ using the 'convert_tokens_to_ids' method.
             None.
         
         This method retrieves the ID corresponding to the suffix token. If the suffix token is None, the method returns None. The suffix token is obtained by converting the suffix token to its corresponding ID
-using the convert_tokens_to_ids method.
+        using the convert_tokens_to_ids method.
         """
         if self._suffix_token is None:
             return None
@@ -566,15 +565,15 @@ using the convert_tokens_to_ids method.
         Method to build inputs with special tokens in the CodeLlamaTokenizer class.
         
         Args:
-        - self: Reference to the current instance of the class.
-        - token_ids_0 (list): List of token IDs for the first input sequence.
-        - token_ids_1 (list, optional): List of token IDs for the second input sequence. Defaults to None.
+            self: Reference to the current instance of the class.
+            token_ids_0 (list): List of token IDs for the first input sequence.
+            token_ids_1 (list, optional): List of token IDs for the second input sequence. Defaults to None.
         
         Returns:
-        - list: A list representing the input sequences with special tokens added based on the configuration settings.
+            list: A list representing the input sequences with special tokens added based on the configuration settings.
         
         Raises:
-        - None.
+            - None.
         """
         bos_token_id = [self.bos_token_id] if self.add_bos_token else []
         eos_token_id = [self.eos_token_id] if self.add_eos_token else []
@@ -631,7 +630,6 @@ using the convert_tokens_to_ids method.
         """
         Creates a mask from the two sequences passed to be used in a sequence-pair classification task. An ALBERT
         sequence pair mask has the following format:
-
         ```
         0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1
         | first sequence    | second sequence |
@@ -671,8 +669,8 @@ using the convert_tokens_to_ids method.
 
         The output should look something like:
 
-        <bos>[INST] B_SYS SystemPrompt E_SYS Prompt [/INST] Answer <eos><bos>[INST] Prompt [/INST] Answer <eos>
-        <bos>[INST] Prompt [/INST]
+            <bos>[INST] B_SYS SystemPrompt E_SYS Prompt [/INST] Answer <eos><bos>[INST] Prompt [/INST] Answer <eos>
+            <bos>[INST] Prompt [/INST]
 
         The reference for this chat template is [this code
         snippet](https://github.com/facebookresearch/llama/blob/556949fdfb72da27c2f4a40b7f0e4cf0b8153a28/llama/generation.py#L320-L362)
@@ -724,16 +722,16 @@ using the convert_tokens_to_ids method.
         Method: __getstate__
         
         Description:
-        This method is used to retrieve the state of the CodeLlamaTokenizer object for serialization purposes. It returns a dictionary representing the current state of the object.
+            This method is used to retrieve the state of the CodeLlamaTokenizer object for serialization purposes. It returns a dictionary representing the current state of the object.
         
         Args:
-        - self: The instance of the CodeLlamaTokenizer class.
+            self: The instance of the CodeLlamaTokenizer class.
         
         Returns:
-        - None: This method does not return any value. Instead, it modifies the state dictionary and returns None.
+            None: This method does not return any value. Instead, it modifies the state dictionary and returns None.
         
         Raises:
-        - None: This method does not raise any exceptions.
+            - None: This method does not raise any exceptions.
         """
         state = self.__dict__.copy()
         state["sp_model"] = None
@@ -743,7 +741,7 @@ using the convert_tokens_to_ids method.
     def __setstate__(self, d):
         """
         This method '__setstate__' is defined within the 'CodeLlamaTokenizer' class to set the internal state of the object based on the provided dictionary 'd'. It reconstructs the object's state including
-the SentencePiece model by loading it from a serialized proto.
+        the SentencePiece model by loading it from a serialized proto.
         
         Args:
             self (CodeLlamaTokenizer): The instance of the CodeLlamaTokenizer class.
@@ -754,9 +752,9 @@ the SentencePiece model by loading it from a serialized proto.
         
         Raises:
             No specific exceptions are documented to be raised by this method. However, potential exceptions that could be raised during the execution may include but are not limited to:
-            - TypeError: If the input 'd' is not a dictionary.
-            - ValueError: If the input 'd' does not contain the required state information.
-            - Any exceptions related to the SentencePieceProcessor initialization or loading process.
+                >   - TypeError: If the input 'd' is not a dictionary.
+                >   - ValueError: If the input 'd' does not contain the required state information.
+                >   - Any exceptions related to the SentencePieceProcessor initialization or loading process.
         """
         self.__dict__ = d
         self.sp_model = spm.SentencePieceProcessor(**self.sp_model_kwargs)
