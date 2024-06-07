@@ -776,7 +776,6 @@ class AutoTokenizer:
         if "_commit_hash" in tokenizer_config:
             kwargs["_commit_hash"] = tokenizer_config["_commit_hash"]
         config_tokenizer_class = tokenizer_config.get("tokenizer_class")
-        print(config_tokenizer_class)
 
         # If that did not work, let's try to use the config.
         if config_tokenizer_class is None:
