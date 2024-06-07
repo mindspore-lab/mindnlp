@@ -75,6 +75,7 @@ from . import (
     gemma,
     gpt,
     gpt2,
+    gptj,
     gpt_bigcode,
     gpt_neo,
     gpt_neox,
@@ -208,6 +209,7 @@ from .chatglm3 import *
 from .funnel import *
 from .gemma import *
 from .gpt import *
+from .gptj import *
 from .gpt_neo import *
 from .gpt_neox import *
 from .gpt_neox_japanese import *
@@ -341,6 +343,7 @@ __all__.extend(funnel.__all__)
 __all__.extend(chatglm2.__all__)
 __all__.extend(chatglm3.__all__)
 __all__.extend(gpt.__all__)
+__all__.extend(gptj.__all__)
 __all__.extend(gemma.__all__)
 __all__.extend(gpt_neo.__all__)
 __all__.extend(gpt_neox.__all__)
