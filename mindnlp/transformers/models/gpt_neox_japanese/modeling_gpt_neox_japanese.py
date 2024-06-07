@@ -754,10 +754,8 @@ class GPTNeoXJapaneseForCausalLM(GPTNeoXJapanesePreTrainedModel):
 
 
 __all__ = [
-    "GPTNeoXJapaneseAttention",
-    "GPTNeoXJapaneseMLP",
+    "GPTNeoXJapaneseForCausalLM",
     "GPTNeoXJapaneseLayer",
     "GPTNeoXJapaneseModel",
     "GPTNeoXJapanesePreTrainedModel",
-    "GPTNeoXJapaneseForCausalLM",
 ]
