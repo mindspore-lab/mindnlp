@@ -493,7 +493,7 @@ class WavLMModelIntegrationTest(unittest.TestCase):
 
         input_speech = self._load_datasamples(2)
 
-        inputs = feature_extractor(input_speech, return_tensors="ms", padding=True)
+        inputs = feature_extractor(input_speech, return_tensors="ms", padding=True, sampling_rate=16_000)
 
         input_values = inputs.input_values
         attention_mask = inputs.attention_mask
