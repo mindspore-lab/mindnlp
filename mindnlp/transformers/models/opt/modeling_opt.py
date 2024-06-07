@@ -283,32 +283,32 @@ class OPTDecoderLayer(nn.Cell):
     This class inherits from nn.Cell and is designed to be used within a transformer decoder stack for sequence-to-sequence tasks.
     
     Attributes:
-        - embed_dim (int): The dimension of the hidden states in the layer.
-        - self_attn (OPTAttention): The self-attention mechanism used in the layer.
-        - do_layer_norm_before (bool): Flag indicating whether layer normalization is applied before the self-attention operation.
-        - dropout (float): The dropout rate applied to the layer.
-        - activation_fn (function): The activation function used in the feedforward neural network.
-        - self_attn_layer_norm (nn.LayerNorm): Layer normalization applied to the self-attention output.
-        - fc1 (nn.Dense): The first linear transformation in the feedforward neural network.
-        - fc2 (nn.Dense): The second linear transformation in the feedforward neural network.
-        - final_layer_norm (nn.LayerNorm): Layer normalization applied to the final output of the layer.
+        embed_dim (int): The dimension of the hidden states in the layer.
+        self_attn (OPTAttention): The self-attention mechanism used in the layer.
+        do_layer_norm_before (bool): Flag indicating whether layer normalization is applied before the self-attention operation.
+        dropout (float): The dropout rate applied to the layer.
+        activation_fn (function): The activation function used in the feedforward neural network.
+        self_attn_layer_norm (nn.LayerNorm): Layer normalization applied to the self-attention output.
+        fc1 (nn.Dense): The first linear transformation in the feedforward neural network.
+        fc2 (nn.Dense): The second linear transformation in the feedforward neural network.
+        final_layer_norm (nn.LayerNorm): Layer normalization applied to the final output of the layer.
     
     Methods:
-        - construct(hidden_states, attention_mask, layer_head_mask, past_key_value, output_attentions, use_cache): 
+        construct(hidden_states, attention_mask, layer_head_mask, past_key_value, output_attentions, use_cache):
           Constructs the output of the decoder layer given the input hidden states and optional arguments.
     
     Args:
-        - hidden_states (mindspore.Tensor): The input to the layer of shape `(batch, seq_len, embed_dim)`.
-        - attention_mask (mindspore.Tensor, optional): The attention mask of size `(batch, 1, tgt_len, src_len)`.
-        - layer_head_mask (mindspore.Tensor, optional): The mask for attention heads in a given layer.
-        - past_key_value (Tuple(mindspore.Tensor), optional): Cached past key and value projection states.
-        - output_attentions (bool, optional): Whether to return the attention tensors of all attention layers.
-        - use_cache (bool, optional): If set to True, past key value states are returned for speeding up decoding.
+        hidden_states (mindspore.Tensor): The input to the layer of shape `(batch, seq_len, embed_dim)`.
+        attention_mask (mindspore.Tensor, optional): The attention mask of size `(batch, 1, tgt_len, src_len)`.
+        layer_head_mask (mindspore.Tensor, optional): The mask for attention heads in a given layer.
+        past_key_value (Tuple(mindspore.Tensor), optional): Cached past key and value projection states.
+        output_attentions (bool, optional): Whether to return the attention tensors of all attention layers.
+        use_cache (bool, optional): If set to True, past key value states are returned for speeding up decoding.
     
     Returns:
-        - outputs (Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]): The output tensor of the decoder layer.
-          If output_attentions is True, self-attention weights are also included in the output.
-          If use_cache is True, present key value states are also included in the output.
+        outputs (Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]): The output tensor of the decoder layer.
+            >   - If output_attentions is True, self-attention weights are also included in the output.
+            >   - If use_cache is True, present key value states are also included in the output.
     """
     def __init__(self, config: OPTConfig):
         """Initializes an instance of the OPTDecoderLayer class.
@@ -316,15 +316,15 @@ class OPTDecoderLayer(nn.Cell):
         Args:
             self (OPTDecoderLayer): The instance of the class.
             config (OPTConfig): The configuration object containing the parameters for the layer.
-                - hidden_size (int): The size of the hidden layer.
-                - num_attention_heads (int): The number of attention heads.
-                - attention_dropout (float): The dropout rate for attention layers.
-                - is_decoder (bool): Specifies if the layer is used as a decoder.
-                - enable_bias (bool): Specifies if bias is enabled.
-                - do_layer_norm_before (bool): Specifies if layer normalization is applied before the self-attention layer.
-                - dropout (float): The dropout rate for the layer.
-                - activation_function (str): The activation function to be used.
-                - layer_norm_elementwise_affine (bool): Specifies if elementwise affine transformation is used in layer normalization.
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - num_attention_heads (int): The number of attention heads.
+                >   - attention_dropout (float): The dropout rate for attention layers.
+                >   - is_decoder (bool): Specifies if the layer is used as a decoder.
+                >   - enable_bias (bool): Specifies if bias is enabled.
+                >   - do_layer_norm_before (bool): Specifies if layer normalization is applied before the self-attention layer.
+                >   - dropout (float): The dropout rate for the layer.
+                >   - activation_function (str): The activation function to be used.
+                >   - layer_norm_elementwise_affine (bool): Specifies if elementwise affine transformation is used in layer normalization.
         
         Returns:
             None. This method does not return any value.
@@ -435,17 +435,18 @@ class OPTPreTrainedModel(PreTrainedModel):
     This class represents a pre-trained model for optimization tasks in natural language processing (NLP). It is a subclass of the PreTrainedModel class.
     
     The OPTPreTrainedModel class provides methods and attributes for initializing the weights of different types of cells, such as Dense and Embedding. The weights are initialized using a specified standard
-deviation, and biases are set to zero if present.
+    deviation, and biases are set to zero if present.
     
     Methods:
-        - _init_weights(self, cell): Initializes the weights of the given cell based on the specified standard deviation. For Dense cells, the weight data is set using the initializer function with a Normal
-distribution. If the cell has biases, they are initialized to zero. For Embedding cells, the weight data is filled with random values from a Normal distribution, and if a padding index is provided, the
-corresponding weight is set to zero.
+        _init_weights(self, cell): Initializes the weights of the given cell based on the specified standard deviation. For Dense cells, the weight data is set using the initializer function with a Normal
+        distribution. If the cell has biases, they are initialized to zero. For Embedding cells, the weight data is filled with random values from a Normal distribution, and if a padding index is provided, the
+        corresponding weight is set to zero.
     
     Attributes:
-        - config: An instance of a configuration class that stores various settings and hyperparameters for the pre-trained model.
+        config: An instance of a configuration class that stores various settings and hyperparameters for the pre-trained model.
     
-    Note: This class is designed to be used as a base class for specific optimization tasks in NLP. It does not implement any specific optimization algorithms or provide training or inference functionality.
+    Note:
+        This class is designed to be used as a base class for specific optimization tasks in NLP. It does not implement any specific optimization algorithms or provide training or inference functionality.
     """
     config_class = OPTConfig
     base_model_prefix = "model"
@@ -467,8 +468,8 @@ corresponding weight is set to zero.
             None.
         
         This method initializes the weights of the specified neural network cell. If the cell is an instance of nn.Dense, the weight is initialized using the Normal initializer with standard deviation
-'self.config.init_std'. If the cell has a bias, the bias is initialized with zeros. If the cell is an instance of nn.Embedding, the weight is initialized with random values drawn from a normal distribution
-with mean 0 and standard deviation 'self.config.init_std'. If the cell has a padding index, the weight at the padding index is set to 0.
+        'self.config.init_std'. If the cell has a bias, the bias is initialized with zeros. If the cell is an instance of nn.Embedding, the weight is initialized with random values drawn from a normal distribution
+        with mean 0 and standard deviation 'self.config.init_std'. If the cell has a padding index, the weight at the padding index is set to 0.
         """
         std = self.config.init_std
         if isinstance(cell, nn.Dense):
@@ -568,17 +569,17 @@ class OPTDecoder(OPTPreTrainedModel):
         Method: set_input_embeddings
         
         Description:
-        Sets the input embeddings for the OPTDecoder instance.
+            Sets the input embeddings for the OPTDecoder instance.
         
         Args:
-        - self (OPTDecoder): The instance of OPTDecoder.
-        - value (Any): The input embeddings to be set. It can be of any type.
+            self (OPTDecoder): The instance of OPTDecoder.
+            value (Any): The input embeddings to be set. It can be of any type.
         
         Returns:
-        None: This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
-        - TypeError: If the input embeddings value is not of the expected type.
+            - TypeError: If the input embeddings value is not of the expected type.
         """
         self.embed_tokens = value
 
@@ -606,16 +607,14 @@ class OPTDecoder(OPTPreTrainedModel):
                 [What are input IDs?](../glossary#input-ids)
             attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
             head_mask (`mindspore.Tensor` of shape `(num_hidden_layers, num_attention_heads)`, *optional*):
                 Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
+                >   - 1 indicates the head is **not masked**,
+                >   - 0 indicates the head is **masked**.
 
             past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
                 Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
@@ -754,20 +753,18 @@ class OPTModel(OPTPreTrainedModel):
 
     """
     The `OPTModel` class represents an OPT (Orphaned Pretrained Transformer) model, which is a specific type of pre-trained transformer model used for various natural language processing tasks. This class
-inherits from the `OPTPreTrainedModel` class.
+    inherits from the `OPTPreTrainedModel` class.
     
     Attributes:
-        - `decoder`: An instance of `OPTDecoder` class representing the decoder component of the OPT model.
+        `decoder`: An instance of `OPTDecoder` class representing the decoder component of the OPT model.
     
     Methods:
-        - `__init__(self, config: OPTConfig)`: Constructs a new OPTModel instance by initializing the superclass and setting up the decoder component.
-        - `get_input_embeddings(self)`: Retrieves the input embeddings used by the decoder.
-        - `set_input_embeddings(self, value)`: Sets the input embeddings of the decoder.
-        - `get_decoder(self)`: Retrieves the decoder instance.
-        - `construct(self, input_ids: mindspore.Tensor = None, attention_mask: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, past_key_values: Optional[List[mindspore.Tensor]]
-= None, inputs_embeds: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] =
-None) -> Union[Tuple, BaseModelOutputWithPast]`: Constructs the OPT model by calling the decoder with the provided input parameters. It returns the decoder outputs, which can include the last hidden state,
-past key values, hidden states, and attentions.
+        `__init__`: Constructs a new OPTModel instance by initializing the superclass and setting up the decoder component.
+        `get_input_embeddings`: Retrieves the input embeddings used by the decoder.
+        `set_input_embeddings`: Sets the input embeddings of the decoder.
+        `get_decoder`: Retrieves the decoder instance.
+        `construct`: Constructs the OPT model by calling the decoder with the provided input parameters. It returns the decoder outputs, which can include the last hidden state,
+            past key values, hidden states, and attentions.
     
     Note:
         - The constructor `__init__` should be called to initialize a new instance of `OPTModel` with a `config` object.
@@ -910,38 +907,39 @@ past key values, hidden states, and attentions.
 
 
 class OPTForCausalLM(OPTPreTrainedModel):
-
     """
     This class represents an OPT (Optimus) model for Causal Language Modeling (LM), which is used for generating text based on given input sequences. 
     The class includes methods for initializing the model, getting and setting input and output embeddings, setting and getting the decoder, constructing the model, and preparing inputs for text generation. 
     It inherits from OPTPreTrainedModel and provides functionalities for handling various parameters related to text generation tasks. 
     
     Methods:
-    - __init__(self, config): Initialize the OPTForCausalLM model with a given configuration.
-    - get_input_embeddings(self): Get the input embeddings from the model's decoder.
-    - set_input_embeddings(self, value): Set new input embeddings for the model's decoder.
-    - get_output_embeddings(self): Get the output embeddings from the model's lm_head layer.
-    - set_output_embeddings(self, new_embeddings): Set new output embeddings for the model's lm_head layer.
-    - set_decoder(self, decoder): Set a new decoder for the model.
-    - get_decoder(self): Get the current decoder used in the model.
-    - construct(self, input_ids, attention_mask, head_mask, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Construct the model for text generation
-with various input parameters and return the output.
-    - prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, **kwargs): Prepare inputs for text generation by handling past key values and attention masks.
-    - _reorder_cache(past_key_values, beam_idx): Reorder the cache elements based on the beam index for efficient decoding.
+        __init__(self, config): Initialize the OPTForCausalLM model with a given configuration.
+        get_input_embeddings(self): Get the input embeddings from the model's decoder.
+        set_input_embeddings(self, value): Set new input embeddings for the model's decoder.
+        get_output_embeddings(self): Get the output embeddings from the model's lm_head layer.
+        set_output_embeddings(self, new_embeddings): Set new output embeddings for the model's lm_head layer.
+        set_decoder(self, decoder): Set a new decoder for the model.
+        get_decoder(self): Get the current decoder used in the model.
+        construct(self, input_ids, attention_mask, head_mask, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Construct the model for text generation
+            with various input parameters and return the output.
+        prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, **kwargs): Prepare inputs for text generation by handling past key values and attention masks.
+        _reorder_cache(past_key_values, beam_idx): Reorder the cache elements based on the beam index for efficient decoding.
     
     Example Usage:
-    >>> from transformers import AutoTokenizer, OPTForCausalLM
-    
-    >>> model = OPTForCausalLM.from_pretrained("facebook/opt-350m")
-    >>> tokenizer = AutoTokenizer.from_pretrained("facebook/opt-350m")
-    
-    >>> prompt = "Hey, are you conscious? Can you talk to me?"
-    >>> inputs = tokenizer(prompt, return_tensors="pt")
-    
-    >>> # Generate
-    >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
-    >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-    "Hey, are you conscious? Can you talk to me?\nI'm not conscious. I'm just a little bit of a weirdo."
+        ```python
+        >>> from transformers import AutoTokenizer, OPTForCausalLM
+
+        >>> model = OPTForCausalLM.from_pretrained("facebook/opt-350m")
+        >>> tokenizer = AutoTokenizer.from_pretrained("facebook/opt-350m")
+
+        >>> prompt = "Hey, are you conscious? Can you talk to me?"
+        >>> inputs = tokenizer(prompt, return_tensors="pt")
+
+        >>> # Generate
+        >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
+        >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        "Hey, are you conscious? Can you talk to me?\nI'm not conscious. I'm just a little bit of a weirdo."
+        ```
     """
     _tied_weights_keys = ["lm_head.weight"]
 
@@ -1015,13 +1013,15 @@ with various input parameters and return the output.
             N/A
         
         This method retrieves and returns the output embeddings of the OPTForCausalLM model. The output embeddings are the final layer of the model, which are responsible for generating the predictions or
-outputs based on the input sequences. The output embeddings capture the learned representation of the input sequence and can be used for various downstream tasks.
+        outputs based on the input sequences. The output embeddings capture the learned representation of the input sequence and can be used for various downstream tasks.
         
         Note: The output embeddings are accessed through the 'lm_head' attribute of the OPTForCausalLM instance.
         
         Example usage:
+            ```python
             model = OPTForCausalLM()
             output_embeddings = model.get_output_embeddings()
+            ```
         """
         return self.lm_head
 
@@ -1099,16 +1099,14 @@ outputs based on the input sequences. The output embeddings capture the learned 
                 [What are input IDs?](../glossary#input-ids)
             attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
             head_mask (`mindspore.Tensor` of shape `(num_hidden_layers, num_attention_heads)`, *optional*):
                 Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
+                >   - 1 indicates the head is **not masked**,
+                >   - 0 indicates the head is **masked**.
 
             past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
                 Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
@@ -1143,23 +1141,24 @@ outputs based on the input sequences. The output embeddings capture the learned 
                 Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
 
         Returns:
+            Union[Tuple, CausalLMOutputWithPast]
 
         Example:
+            ```python
+            >>> from transformers import AutoTokenizer, OPTForCausalLM
 
-        ```python
-        >>> from transformers import AutoTokenizer, OPTForCausalLM
+            >>> model = OPTForCausalLM.from_pretrained("facebook/opt-350m")
+            >>> tokenizer = AutoTokenizer.from_pretrained("facebook/opt-350m")
 
-        >>> model = OPTForCausalLM.from_pretrained("facebook/opt-350m")
-        >>> tokenizer = AutoTokenizer.from_pretrained("facebook/opt-350m")
+            >>> prompt = "Hey, are you conscious? Can you talk to me?"
+            >>> inputs = tokenizer(prompt, return_tensors="pt")
 
-        >>> prompt = "Hey, are you conscious? Can you talk to me?"
-        >>> inputs = tokenizer(prompt, return_tensors="pt")
-
-        >>> # Generate
-        >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
-        >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-        "Hey, are you conscious? Can you talk to me?\nI'm not conscious. I'm just a little bit of a weirdo."
-        ```"""
+            >>> # Generate
+            >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
+            >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+            "Hey, are you conscious? Can you talk to me?\nI'm not conscious. I'm just a little bit of a weirdo."
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1217,11 +1216,11 @@ outputs based on the input sequences. The output embeddings capture the learned 
         
         Returns:
             dict: A dictionary containing the model inputs for generation. The dictionary can have the following keys:
-                - 'inputs_embeds': The input tensor of token embeddings if inputs_embeds is not None and past_key_values is None.
-                - 'input_ids': The input tensor of token IDs if inputs_embeds is None or past_key_values is not None.
-                - 'past_key_values': The tuple of past key values used for generation.
-                - 'use_cache': The flag indicating whether to use cache during generation.
-                - 'attention_mask': The attention mask tensor indicating which tokens should be attended to.
+                >   - 'inputs_embeds': The input tensor of token embeddings if inputs_embeds is not None and past_key_values is None.
+                >   - 'input_ids': The input tensor of token IDs if inputs_embeds is None or past_key_values is not None.
+                >   - 'past_key_values': The tuple of past key values used for generation.
+                >   - 'use_cache': The flag indicating whether to use cache during generation.
+                >   - 'attention_mask': The attention mask tensor indicating which tokens should be attended to.
         
         Raises:
             None.
@@ -1293,19 +1292,18 @@ class OPTForSequenceClassification(OPTPreTrainedModel):
     OPTForSequenceClassification
     
     This class is a sequence classification model based on the OPT (OpenAI's Pretrained Transformer) architecture. It inherits from OPTPreTrainedModel and provides functionalities for sequence classification
-tasks.
+    tasks.
     
     Attributes:
-        - num_labels (int): The number of labels for the classification task.
-        - model (OPTModel): The OPTModel instance that serves as the core transformer model.
-        - score (nn.Dense): A fully connected layer that maps the transformer outputs to the number of labels.
+        num_labels (int): The number of labels for the classification task.
+        model (OPTModel): The OPTModel instance that serves as the core transformer model.
+        score (nn.Dense): A fully connected layer that maps the transformer outputs to the number of labels.
         
     Methods:
-        - __init__(self, config: OPTConfig): Initializes the OPTForSequenceClassification instance.
-        - construct(self, input_ids, attention_mask, head_mask, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict) -> Union[Tuple,
-SequenceClassifierOutputWithPast]: Constructs the sequence classification model and returns the output.
-        - get_input_embeddings(self): Returns the embedding layer for the input tokens.
-        - set_input_embeddings(self, value): Sets the embedding layer for the input tokens.
+        __init__: Initializes the OPTForSequenceClassification instance.
+        construct: Constructs the sequence classification model and returns the output.
+        get_input_embeddings(self): Returns the embedding layer for the input tokens.
+        set_input_embeddings(self, value): Sets the embedding layer for the input tokens.
     
     """
     def __init__(self, config: OPTConfig):
@@ -1345,10 +1343,11 @@ SequenceClassifierOutputWithPast]: Constructs the sequence classification model 
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1453,9 +1452,9 @@ class OPTForQuestionAnswering(OPTPreTrainedModel):
 
     '''
     This class represents a question answering model using the OPT (OpenAI's Public Tenders) architecture. It inherits from OPTPreTrainedModel and provides methods for model construction, obtaining input
-embeddings, and setting input embeddings. The model is designed to take in various inputs, such as input IDs, attention masks, head masks, past key values, and inputs embeddings, and return outputs for
-question answering tasks. The construct method allows for flexible input options and returns a tuple or a QuestionAnsweringModelOutput based on the input and return options. The class also provides methods for
-accessing and updating the input embeddings for the model.
+    embeddings, and setting input embeddings. The model is designed to take in various inputs, such as input IDs, attention masks, head masks, past key values, and inputs embeddings, and return outputs for
+    question answering tasks. The construct method allows for flexible input options and returns a tuple or a QuestionAnsweringModelOutput based on the input and return options. The class also provides methods for
+    accessing and updating the input embeddings for the model.
     '''
     def __init__(self, config: OPTConfig):
         """
@@ -1505,37 +1504,38 @@ accessing and updating the input embeddings for the model.
             are not taken into account for computing the loss.
 
         Returns:
+            Union[Tuple, QuestionAnsweringModelOutput]
 
         Example:
+            ```python
+            >>> from transformers import AutoTokenizer, OPTForQuestionAnswering
 
-        ```python
-        >>> from transformers import AutoTokenizer, OPTForQuestionAnswering
+            >>> torch.manual_seed(4)  # doctest: +IGNORE_RESULT
+            >>> tokenizer = AutoTokenizer.from_pretrained("facebook/opt-350m")
 
-        >>> torch.manual_seed(4)  # doctest: +IGNORE_RESULT
-        >>> tokenizer = AutoTokenizer.from_pretrained("facebook/opt-350m")
+            >>> # note: we are loading a OPTForQuestionAnswering from the hub here,
+            >>> # so the head will be randomly initialized, hence the predictions will be random
+            >>> model = OPTForQuestionAnswering.from_pretrained("facebook/opt-350m")
 
-        >>> # note: we are loading a OPTForQuestionAnswering from the hub here,
-        >>> # so the head will be randomly initialized, hence the predictions will be random
-        >>> model = OPTForQuestionAnswering.from_pretrained("facebook/opt-350m")
+            >>> question, text = "Who was Jim Henson?", "Jim Henson was a nice puppet"
 
-        >>> question, text = "Who was Jim Henson?", "Jim Henson was a nice puppet"
+            >>> inputs = tokenizer(question, text, return_tensors="pt")
+            >>> with torch.no_grad():
+            ...     outputs = model(**inputs)
 
-        >>> inputs = tokenizer(question, text, return_tensors="pt")
-        >>> with torch.no_grad():
-        ...     outputs = model(**inputs)
+            >>> answer_start_index = outputs.start_logits.argmax()
+            >>> answer_end_index = outputs.end_logits.argmax()
 
-        >>> answer_start_index = outputs.start_logits.argmax()
-        >>> answer_end_index = outputs.end_logits.argmax()
+            >>> answer_offset = len(tokenizer(question)[0])
 
-        >>> answer_offset = len(tokenizer(question)[0])
-
-        >>> predict_answer_tokens = inputs.input_ids[
-        ...     0, answer_offset + answer_start_index : answer_offset + answer_end_index + 1
-        ... ]
-        >>> predicted = tokenizer.decode(predict_answer_tokens)
-        >>> predicted
-        ' a nice puppet'
-        ```"""
+            >>> predict_answer_tokens = inputs.input_ids[
+            ...     0, answer_offset + answer_start_index : answer_offset + answer_end_index + 1
+            ... ]
+            >>> predicted = tokenizer.decode(predict_answer_tokens)
+            >>> predicted
+            ' a nice puppet'
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         transformer_outputs = self.model(

@@ -55,13 +55,13 @@ class MambaMixer(nn.Cell):
         Args:
             self (MambaMixer): The MambaMixer instance.
             config: A configuration object containing the following attributes:
-                - hidden_size (int): The size of the hidden layer.
-                - state_size (int): The size of the state.
-                - conv_kernel (int): The size of the convolutional kernel.
-                - intermediate_size (int): The size of the intermediate layer.
-                - time_step_rank (int): The rank of the time step.
-                - use_conv_bias (bool): Specifies whether to use bias in convolution.
-                - hidden_act (str): The activation function for the hidden layer.
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - state_size (int): The size of the state.
+                >   - conv_kernel (int): The size of the convolutional kernel.
+                >   - intermediate_size (int): The size of the intermediate layer.
+                >   - time_step_rank (int): The rank of the time step.
+                >   - use_conv_bias (bool): Specifies whether to use bias in convolution.
+                >   - hidden_act (str): The activation function for the hidden layer.
             layer_idx (int): The index of the layer.
         
         Returns:
@@ -202,15 +202,15 @@ class MambaCache:
     This class inherits from [parent class].
     
     Attributes:
-    - seqlen_offset (int): The offset for sequence length.
-    - dtype (mindspore.dtype): The data type used for the cache.
-    - conv_states (dict): A dictionary storing convolutional states for each hidden layer.
-    - ssm_states (dict): A dictionary storing SSM (Spatio-spectral modulation) states for each hidden layer.
+        seqlen_offset (int): The offset for sequence length.
+        dtype (mindspore.dtype): The data type used for the cache.
+        conv_states (dict): A dictionary storing convolutional states for each hidden layer.
+        ssm_states (dict): A dictionary storing SSM (Spatio-spectral modulation) states for each hidden layer.
     
     Args:
-    - config: The configuration for the Mamba model.
-    - batch_size (int): The size of the input batch.
-    - dtype: The data type to be used, default is mindspore.float16.
+        config: The configuration for the Mamba model.
+        batch_size (int): The size of the input batch.
+        dtype: The data type to be used, default is mindspore.float16.
     """
     def __init__(self, config, batch_size, dtype=mindspore.float16):
 
@@ -249,16 +249,17 @@ class MambaRMSNorm(nn.Cell):
 
     """
     MambaRMSNorm is a neural network cell that represents a modified version of the RMS normalization layer. It inherits from the nn.Cell class and provides functionality for normalizing hidden states in a
-neural network.
+    neural network.
     
     This class initializes the MambaRMSNorm layer with the specified hidden size and epsilon value for variance. The hidden_size parameter determines the size of the input hidden states, while the eps
-parameter sets the variance epsilon value for numerical stability.
+    parameter sets the variance epsilon value for numerical stability.
     
     The construct method of MambaRMSNorm takes hidden_states as input and performs RMS normalization on the input hidden states. It first converts the input hidden states to float32 data type, calculates the
-variance of the hidden states, and then applies the RMS normalization using the variance and epsilon values. The normalized hidden states are then multiplied by the weight parameter and converted back to the
-original input data type before being returned.
+    variance of the hidden states, and then applies the RMS normalization using the variance and epsilon values. The normalized hidden states are then multiplied by the weight parameter and converted back to the
+    original input data type before being returned.
     
-    Note: The implementation details and usage of this class should be referenced from the source code and any related documentation.
+    Note:
+        The implementation details and usage of this class should be referenced from the source code and any related documentation.
     """
     def __init__(self, hidden_size, eps=1e-6):
         """
@@ -497,10 +498,10 @@ class MambaModel(MambaPreTrainedModel):
         Args:
             self: The instance of the class.
             config: An object that holds the configuration parameters for the model. It should have the following attributes:
-                - vocab_size (int): The size of the vocabulary.
-                - hidden_size (int): The size of the hidden state.
-                - num_hidden_layers (int): The number of hidden layers in the model.
-                - layer_norm_epsilon (float): The epsilon value used in layer normalization.
+                >   - vocab_size (int): The size of the vocabulary.
+                >   - hidden_size (int): The size of the hidden state.
+                >   - num_hidden_layers (int): The number of hidden layers in the model.
+                >   - layer_norm_epsilon (float): The epsilon value used in layer normalization.
         
         Returns:
             None. This method does not return any value.
@@ -566,20 +567,20 @@ class MambaModel(MambaPreTrainedModel):
         This method constructs the MambaModel by processing input data through multiple mixer blocks.
         
         Args:
-        - self: The instance of the MambaModel class.
-        - input_ids (Optional[mindspore.Tensor]): The input tensor containing token indices. Default is None.
-        - inputs_embeds (Optional[mindspore.Tensor]): The input tensor containing pre-computed embeddings. Default is None.
-        - cache_params (Optional[List[mindspore.Tensor]]): List of tensors used for caching intermediate states. Default is None.
-        - use_cache (Optional[bool]): Flag indicating whether to use caching. Default is None.
-        - output_hidden_states (Optional[bool]): Flag indicating whether to output hidden states. Default is None.
-        - return_dict (Optional[bool]): Flag indicating whether to return the output as a dictionary. Default is None.
+            self: The instance of the MambaModel class.
+            input_ids (Optional[mindspore.Tensor]): The input tensor containing token indices. Default is None.
+            inputs_embeds (Optional[mindspore.Tensor]): The input tensor containing pre-computed embeddings. Default is None.
+            cache_params (Optional[List[mindspore.Tensor]]): List of tensors used for caching intermediate states. Default is None.
+            use_cache (Optional[bool]): Flag indicating whether to use caching. Default is None.
+            output_hidden_states (Optional[bool]): Flag indicating whether to output hidden states. Default is None.
+            return_dict (Optional[bool]): Flag indicating whether to return the output as a dictionary. Default is None.
         
         Returns:
-        - Union[Tuple, MambaOutput]: The return value can be either a tuple containing hidden states, cache parameters, and all hidden states (if not None), or a MambaOutput object containing the last hidden
-state, cache parameters (if caching is enabled), and all hidden states.
+            Union[Tuple, MambaOutput]: The return value can be either a tuple containing hidden states, cache parameters, and all hidden states (if not None), or a MambaOutput object containing the last hidden
+            state, cache parameters (if caching is enabled), and all hidden states.
         
         Raises:
-        - ValueError: Raised if both input_ids and inputs_embeds are specified simultaneously.
+            - ValueError: Raised if both input_ids and inputs_embeds are specified simultaneously.
         """
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -635,10 +636,10 @@ class MambaForCausalLM(MambaPreTrainedModel):
     This class represents a Mamba model for Causal Language Modeling (LM), which is a subclass of MambaPreTrainedModel. 
     
     The class includes methods for initializing the model, getting and setting the output embeddings, getting and setting the input embeddings, updating model keyword arguments for generation, preparing inputs
-for generation, and constructing the model for LM tasks. 
+    for generation, and constructing the model for LM tasks.
     
     The 'construct' method takes input_ids, inputs_embeds, cache_params, labels, output_hidden_states, and return_dict as input parameters, and returns the model output for Causal LM tasks. It calculates the
-loss if labels are provided and returns the loss along with the logits and other relevant outputs.
+    loss if labels are provided and returns the loss along with the logits and other relevant outputs.
     
     The class also provides functionality to handle cache_params, hidden states, and embedding tensors during the model's execution for LM tasks. 
     """
@@ -753,7 +754,7 @@ loss if labels are provided and returns the loss along with the logits and other
             None.
         
         This method updates the model_kwargs dictionary with the 'cache_params' key-value pair from the outputs object, if present. If 'cache_params' is not present in the outputs object, it sets the
-corresponding value in model_kwargs to None. The method then returns the updated model_kwargs dictionary.
+        corresponding value in model_kwargs to None. The method then returns the updated model_kwargs dictionary.
         """
         model_kwargs["cache_params"] = outputs.get("cache_params", None)
         return model_kwargs
@@ -801,10 +802,11 @@ corresponding value in model_kwargs to None. The method then returns the updated
         **kwargs,  # for now we need this for generation
     ) -> Union[Tuple, MambaCausalLMOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
-            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
-            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+                `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
+                are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

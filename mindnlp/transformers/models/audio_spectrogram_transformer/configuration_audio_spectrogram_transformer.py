@@ -74,19 +74,19 @@ class ASTConfig(PretrainedConfig):
             Frequency dimension of the spectrograms (number of Mel-frequency bins).
 
     Example:
+        ```python
+        >>> from transformers import ASTConfig, ASTModel
 
-    ```python
-    >>> from transformers import ASTConfig, ASTModel
+        >>> # Initializing a AST MIT/ast-finetuned-audioset-10-10-0.4593 style configuration
+        >>> configuration = ASTConfig()
 
-    >>> # Initializing a AST MIT/ast-finetuned-audioset-10-10-0.4593 style configuration
-    >>> configuration = ASTConfig()
+        >>> # Initializing a model (with random weights) from the MIT/ast-finetuned-audioset-10-10-0.4593 style configuration
+        >>> model = ASTModel(configuration)
 
-    >>> # Initializing a model (with random weights) from the MIT/ast-finetuned-audioset-10-10-0.4593 style configuration
-    >>> model = ASTModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "audio-spectrogram-transformer"
 
     def __init__(

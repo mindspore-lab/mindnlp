@@ -214,8 +214,8 @@ class SPTokenizer:
                 Determines whether to fallback to byte encoding if character encoding fails. Default is True.
         
         Returns:
-            None
-            This method does not return any value.
+            None:
+                This method does not return any value.
         
         Raises:
             AssertionError
@@ -355,11 +355,12 @@ class SPTokenizer:
             self, text: str, linebreak=True, whitespaces=True, add_dummy_prefix=True
     ) -> List[int]:
         """
-        @param text: Text to encode.
-        @param linebreak: Whether to encode newline (\n) in text.
-        @param whitespaces: Whether to encode multiple whitespaces or tab in text, useful for source code encoding.
-        @param special_tokens: Whether to encode special token ([MASK], [gMASK], etc.) in text.
-        @param add_dummy_prefix: Whether to add dummy blank space in the beginning.
+        Args:
+            text: Text to encode.
+            linebreak: Whether to encode newline (\n) in text.
+            whitespaces: Whether to encode multiple whitespaces or tab in text, useful for source code encoding.
+            special_tokens: Whether to encode special token ([MASK], [gMASK], etc.) in text.
+            add_dummy_prefix: Whether to add dummy blank space in the beginning.
         """
         text = self._preprocess(text, linebreak, whitespaces)
         if not add_dummy_prefix:
@@ -423,7 +424,7 @@ class SPTokenizer:
             None.
             
         This method takes a list of tokens and converts them into a string using the text tokenizer. The resulting string is then passed through the postprocessing method to remove any unwanted characters or
-formatting. The method returns the final decoded string as output. This method is a part of the SPTokenizer class and requires an instance of the class to be called.
+        formatting. The method returns the final decoded string as output. This method is a part of the SPTokenizer class and requires an instance of the class to be called.
         """
         text = self._get_text_tokenizer().convert_tokens_to_string(tokens)
         text = self.postprocess(text)
@@ -433,11 +434,12 @@ formatting. The method returns the final decoded string as output. This method i
             self, text: str, linebreak=True, whitespaces=True, add_dummy_prefix=True
     ) -> List[str]:
         """
-        @param text: Text to encode.
-        @param linebreak: Whether to encode newline (\n) in text.
-        @param whitespaces: Whether to encode multiple whitespaces or tab in text, useful for source code encoding.
-        @param special_tokens: Whether to encode special token ([MASK], [gMASK], etc.) in text.
-        @param add_dummy_prefix: Whether to add dummy blank space in the beginning.
+        Args:
+            text: Text to encode.
+            linebreak: Whether to encode newline (\n) in text.
+            whitespaces: Whether to encode multiple whitespaces or tab in text, useful for source code encoding.
+            special_tokens: Whether to encode special token ([MASK], [gMASK], etc.) in text.
+            add_dummy_prefix: Whether to add dummy blank space in the beginning.
         """
         text = self._preprocess(text, linebreak, whitespaces)
         if not add_dummy_prefix:
@@ -600,7 +602,7 @@ class ChatGLMTokenizer(PreTrainedTokenizer):
             
         Returns:
             str: The preprocessed text based on the specified configuration. If self.remove_space is True, leading and trailing spaces are removed, and consecutive spaces within the text are replaced with a
-single space. If self.do_lower_case is True, the text is converted to lowercase. The preprocessed text is returned.
+            single space. If self.do_lower_case is True, the text is converted to lowercase. The preprocessed text is returned.
         
         Raises:
             None
@@ -638,13 +640,15 @@ single space. If self.do_lower_case is True, the text is converted to lowercase.
             None.
         
         Note:
-            - The tokens should be generated using the sp_tokenizer of the ChatGLMTokenizer instance.
-            - The resulting string may contain whitespace and punctuation marks based on the original tokenization.
+            >   - The tokens should be generated using the sp_tokenizer of the ChatGLMTokenizer instance.
+            >   - The resulting string may contain whitespace and punctuation marks based on the original tokenization.
         
         Example:
+            ```python
             tokenizer = ChatGLMTokenizer()
             tokens = ['Hello', ',', 'how', 'are', 'you', '?']
             string_representation = tokenizer.convert_tokens_to_string(tokens)
+            ```
         """
         return self.sp_tokenizer.decode_tokens(tokens)
 
@@ -717,8 +721,8 @@ single space. If self.do_lower_case is True, the text is converted to lowercase.
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A BERT sequence has the following format:
 
-        - single sequence: `[CLS] X [SEP]`
-        - pair of sequences: `[CLS] A [SEP] B [SEP]`
+        >   - single sequence: `[CLS] X [SEP]`
+        >   - pair of sequences: `[CLS] A [SEP] B [SEP]`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -753,14 +757,12 @@ single space. If self.do_lower_case is True, the text is converted to lowercase.
             max_length: maximum length of the returned list and optionally padding length (see below).
                 Will truncate by taking into account the special tokens.
             padding_strategy: PaddingStrategy to use for padding.
-
-                - PaddingStrategy.LONGEST Pad to the longest sequence in the batch
-                - PaddingStrategy.MAX_LENGTH: Pad to the max length (default)
-                - PaddingStrategy.DO_NOT_PAD: Do not pad
-                The tokenizer padding sides are defined in self.padding_side:
-
-                    - 'left': pads on the left of the sequences
-                    - 'right': pads on the right of the sequences
+                >   - PaddingStrategy.LONGEST Pad to the longest sequence in the batch
+                >   - PaddingStrategy.MAX_LENGTH: Pad to the max length (default)
+                >   - PaddingStrategy.DO_NOT_PAD: Do not pad
+                >   - The tokenizer padding sides are defined in self.padding_side:
+                >       - 'left': pads on the left of the sequences
+                >       - 'right': pads on the right of the sequences
             pad_to_multiple_of: (optional) Integer if set will pad the sequence to a multiple of the provided value.
                 This is especially useful to enable the use of Tensor Core on NVIDIA hardware with compute capability
                 `>= 7.5` (Volta).

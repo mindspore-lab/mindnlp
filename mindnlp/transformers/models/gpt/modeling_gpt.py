@@ -53,23 +53,23 @@ class Attention(nn.Cell):
     This class represents an attention mechanism used in neural networks. It is designed to be used as a part of a larger model and inherits from the nn.Cell class.
     
     Attributes:
-        - bias (Tensor): A tensor representing the bias used in the attention computation.
-        - n_head (int): The number of attention heads.
-        - split_size (int): The size of each split in the attention mechanism.
-        - scale (bool): A flag indicating whether to scale the attention weights.
-        - c_attn (Conv1D): A 1D convolutional layer used for computing the attention weights.
-        - c_proj (Conv1D): A 1D convolutional layer used for projecting the attention weights.
-        - attn_dropout (Dropout): A dropout layer applied to the attention weights.
-        - resid_dropout (Dropout): A dropout layer applied to the projected attention weights.
-        - pruned_heads (set): A set of pruned attention heads.
+        bias (Tensor): A tensor representing the bias used in the attention computation.
+        n_head (int): The number of attention heads.
+        split_size (int): The size of each split in the attention mechanism.
+        scale (bool): A flag indicating whether to scale the attention weights.
+        c_attn (Conv1D): A 1D convolutional layer used for computing the attention weights.
+        c_proj (Conv1D): A 1D convolutional layer used for projecting the attention weights.
+        attn_dropout (Dropout): A dropout layer applied to the attention weights.
+        resid_dropout (Dropout): A dropout layer applied to the projected attention weights.
+        pruned_heads (set): A set of pruned attention heads.
     
     Methods:
-        - __init__(self, nx, n_positions, config, scale=False): Initializes the Attention object.
-        - prune_heads(self, heads): Prunes the specified attention heads.
-        - _attn(self, q, k, v, attention_mask=None, head_mask=None, output_attentions=False): Computes the attention weights.
-        - merge_heads(self, x): Merges the attention heads.
-        - split_heads(self, x, k=False): Splits the input into multiple attention heads.
-        - construct(self, x, attention_mask=None, head_mask=None, output_attentions=False): Constructs the attention mechanism.
+        __init__(self, nx, n_positions, config, scale=False): Initializes the Attention object.
+        prune_heads(self, heads): Prunes the specified attention heads.
+        _attn(self, q, k, v, attention_mask=None, head_mask=None, output_attentions=False): Computes the attention weights.
+        merge_heads(self, x): Merges the attention heads.
+        split_heads(self, x, k=False): Splits the input into multiple attention heads.
+        construct(self, x, attention_mask=None, head_mask=None, output_attentions=False): Constructs the attention mechanism.
     
     Note:
         - The Attention class assumes that the input tensors follow specific shapes and sizes. It is important to ensure that the input data is compatible with the class implementation.
@@ -118,18 +118,18 @@ class Attention(nn.Cell):
         
         Args:
             self (Attention): An instance of the Attention class.
-                - Type: Attention class object
-                - Purpose: Represents the current instance of the Attention class where the pruning operation is to be applied.
+                >   - Type: Attention class object
+                >   - Purpose: Represents the current instance of the Attention class where the pruning operation is to be applied.
         
             heads (list): The list of attention heads to be pruned.
-                - Type: List
-                - Purpose: Contains the indices of the attention heads to be pruned.
-                - Restrictions: Should be a non-empty list of integers representing valid attention head indices.
+                >   - Type: List
+                >   - Purpose: Contains the indices of the attention heads to be pruned.
+                >   - Restrictions: Should be a non-empty list of integers representing valid attention head indices.
         
         Returns:
-            None
-                - Type: None
-                - Purpose: The method does not return any value explicitly but updates the attributes of the Attention class in place.
+            None:
+                >   - Type: None
+                >   - Purpose: The method does not return any value explicitly but updates the attributes of the Attention class in place.
         
         Raises:
             - N/A
@@ -153,23 +153,23 @@ class Attention(nn.Cell):
         Method _attn in the class Attention calculates attention weights based on the input query (q), key (k), and value (v) tensors.
         
         Args:
-        - self (Attention): The instance of the Attention class.
-        - q (Tensor): The input query tensor.
-        - k (Tensor): The input key tensor.
-        - v (Tensor): The input value tensor.
-        - attention_mask (Tensor, optional): A mask tensor to mask certain positions in the attention weights. Default is None.
-        - head_mask (Tensor, optional): A mask tensor to mask certain heads in multi-head attention. Default is None.
-        - output_attentions (bool, optional): A flag indicating whether to output the attention weights. Default is False.
+            self (Attention): The instance of the Attention class.
+            q (Tensor): The input query tensor.
+            k (Tensor): The input key tensor.
+            v (Tensor): The input value tensor.
+            attention_mask (Tensor, optional): A mask tensor to mask certain positions in the attention weights. Default is None.
+            head_mask (Tensor, optional): A mask tensor to mask certain heads in multi-head attention. Default is None.
+            output_attentions (bool, optional): A flag indicating whether to output the attention weights. Default is False.
         
         Returns:
-        - outputs (List[Tensor]): A list containing the output tensor representing the weighted values. If output_attentions is True, the list also includes the attention weights tensor.
+            outputs (List[Tensor]): A list containing the output tensor representing the weighted values. If output_attentions is True, the list also includes the attention weights tensor.
         
         Raises:
-        - ValueError: If the dimensionality of the input tensors is not compatible for matrix multiplication.
-        - ValueError: If the dimensions of the bias tensor are not compatible with the computed attention weights.
-        - TypeError: If any of the input tensors are not of type Tensor.
-        - TypeError: If head_mask is provided but not of type Tensor.
-        - TypeError: If output_attentions is provided but not of type bool.
+            - ValueError: If the dimensionality of the input tensors is not compatible for matrix multiplication.
+            - ValueError: If the dimensions of the bias tensor are not compatible with the computed attention weights.
+            - TypeError: If any of the input tensors are not of type Tensor.
+            - TypeError: If head_mask is provided but not of type Tensor.
+            - TypeError: If output_attentions is provided but not of type bool.
         """
         w = ops.matmul(q, k)
         if self.scale:
@@ -224,7 +224,7 @@ class Attention(nn.Cell):
         
         Returns:
             torch.Tensor or None: If `k` is True, the function returns a tensor with shape (batch_size, seq_len, n_head, d_model/n_head), where the last two dimensions are transposed. If `k` is False, the
-function returns a tensor with shape (batch_size, seq_len, n_head, d_model/n_head).
+            function returns a tensor with shape (batch_size, seq_len, n_head, d_model/n_head).
         
         Raises:
             None: This method does not raise any exceptions.
@@ -277,27 +277,30 @@ class MLP(nn.Cell):
     MLP is a class that represents a multi-layer perceptron (MLP) model.
     
     MLP is a neural network model that consists of multiple layers of perceptrons or artificial neurons. Each layer is fully connected to the next layer, and the final layer produces the output. The MLP class
-inherits from the nn.Cell class, which is a base class for all neural network modules in the PyTorch framework.
+    inherits from the nn.Cell class, which is a base class for all neural network modules in the PyTorch framework.
     
     The MLP class has the following attributes:
-    - n_state: an integer representing the number of output channels in the first convolutional layer.
-    - config: an object containing various configuration parameters for the MLP model.
+    >   - n_state: an integer representing the number of output channels in the first convolutional layer.
+    >   - config: an object containing various configuration parameters for the MLP model.
     
     The MLP class has the following methods:
-    - __init__(self, n_state, config): Initializes the MLP object. It takes two parameters: n_state, which represents the number of output channels in the first convolutional layer, and config, which is an
-object containing configuration parameters for the MLP model. Inside the method, it initializes the parent class (nn.Cell), sets the number of input channels (nx) to the value specified in the config, creates
-a 1-dimensional convolutional layer (self.c_fc) with n_state output channels and nx input channels, creates another 1-dimensional convolutional layer (self.c_proj) with nx output channels and n_state input
-channels, sets the activation function (self.act) to the value specified in the config, and sets the dropout probability (self.dropout) to the value specified in the config.
-    - construct(self, x): Constructs the MLP model. It takes one parameter, x, which represents the input tensor. Inside the method, it applies the activation function to the output of the first convolutional
-layer (self.c_fc), applies the second convolutional layer (self.c_proj) to the result, and returns the output after applying dropout (self.dropout).
+    >   - __init__(self, n_state, config): Initializes the MLP object. It takes two parameters: n_state, which represents the number of output channels in the first convolutional layer, and config, which is an
+        object containing configuration parameters for the MLP model. Inside the method, it initializes the parent class (nn.Cell), sets the number of input channels (nx) to the value specified in the config, creates
+        a 1-dimensional convolutional layer (self.c_fc) with n_state output channels and nx input channels, creates another 1-dimensional convolutional layer (self.c_proj) with nx output channels and n_state input
+        channels, sets the activation function (self.act) to the value specified in the config, and sets the dropout probability (self.dropout) to the value specified in the config.
+    >   - construct(self, x): Constructs the MLP model. It takes one parameter, x, which represents the input tensor. Inside the method, it applies the activation function to the output of the first convolutional
+        layer (self.c_fc), applies the second convolutional layer (self.c_proj) to the result, and returns the output after applying dropout (self.dropout).
     
-    Note: The MLP class assumes the existence of the ACT_FNS dictionary, which maps activation function names to their corresponding functions.
+    Note:
+        The MLP class assumes the existence of the ACT_FNS dictionary, which maps activation function names to their corresponding functions.
     
     Example usage:
+        ```python
         config = MLPConfig(n_embd=128, afn='relu', resid_pdrop=0.2)
         mlp = MLP(n_state=64, config=config)
         input_tensor = torch.randn(10, 128)
         output = mlp.construct(input_tensor)
+        ```
     """
     def __init__(self, n_state, config):  # in MLP: n_state=3072 (4 * n_embd)
         """
@@ -354,23 +357,20 @@ class Block(nn.Cell):
     Methods:
         __init__(self, n_positions, config, scale=False):
             Initializes a new instance of the Block class.
-            
-            Args:
-                n_positions (int): The number of positions in the input sequence.
-                config (object): The configuration object for the block.
-                scale (bool, optional): Whether to scale the attention scores. Defaults to False.
+            >   - Args:
+            >       - n_positions (int): The number of positions in the input sequence.
+            >       - config (object): The configuration object for the block.
+            >       - scale (bool, optional): Whether to scale the attention scores. Defaults to False.
         
         construct(self, x, attention_mask=None, head_mask=None, output_attentions=False):
             Constructs the block by performing the necessary computations on the input.
-            
-            Args:
-                x (Tensor): The input tensor.
-                attention_mask (Tensor, optional): The attention mask tensor. Defaults to None.
-                head_mask (Tensor, optional): The head mask tensor. Defaults to None.
-                output_attentions (bool, optional): Whether to output the attention weights. Defaults to False.
-            
-            Returns:
-                outputs (list): A list containing the output tensor and optional attention weights.
+            >   - Args:
+            >       - x (Tensor): The input tensor.
+            >       - attention_mask (Tensor, optional): The attention mask tensor. Defaults to None.
+            >       - head_mask (Tensor, optional): The head mask tensor. Defaults to None.
+            >       - output_attentions (bool, optional): Whether to output the attention weights. Defaults to False.
+            >   - Returns:
+            >       - outputs (list): A list containing the output tensor and optional attention weights.
     """
     def __init__(self, n_positions, config, scale=False):
         """
@@ -414,21 +414,21 @@ class Block(nn.Cell):
         
         This method constructs a block by performing the following steps:
         
-        1. Calculate attention outputs using the 'attn' method, passing the input tensor, attention mask, 
+        >   1. Calculate attention outputs using the 'attn' method, passing the input tensor, attention mask,
            head mask, and output attentions flag as parameters. Store the result in 'attn_outputs'.
         
-        2. Retrieve the first element from 'attn_outputs' and assign it to 'a'.
+        >   2. Retrieve the first element from 'attn_outputs' and assign it to 'a'.
         
-        3. Add 'x' and 'a' and apply layer normalization using the 'ln_1' method. Store the result in 'n'.
+        >   3. Add 'x' and 'a' and apply layer normalization using the 'ln_1' method. Store the result in 'n'.
         
-        4. Apply multi-layer perceptron (MLP) to 'n' using the 'mlp' method. Store the result in 'm'.
+        >   4. Apply multi-layer perceptron (MLP) to 'n' using the 'mlp' method. Store the result in 'm'.
         
-        5. Add 'n' and 'm' and apply layer normalization using the 'ln_2' method. Store the result in 'h'.
+        >   5. Add 'n' and 'm' and apply layer normalization using the 'ln_2' method. Store the result in 'h'.
         
-        6. Create a list 'outputs' containing 'h' as the first element, followed by any additional elements 
+        >   6. Create a list 'outputs' containing 'h' as the first element, followed by any additional elements
            from 'attn_outputs'.
         
-        7. Return 'outputs'.
+        >   7. Return 'outputs'.
         """
         attn_outputs = self.attn(
             x,
@@ -514,7 +514,7 @@ class GPTModel(GPTPreTrainedModel):
 
     """
     This class represents a GPT (Generative Pre-trained Transformer) model for natural language processing tasks. It inherits from the GPTPreTrainedModel class and implements the GPT architecture for
-generating text based on input sequences. The model includes methods for initializing embeddings, pruning heads, and constructing the model for inference or training.
+    generating text based on input sequences. The model includes methods for initializing embeddings, pruning heads, and constructing the model for inference or training.
     
     Attributes:
         config: The configuration for the GPTModel, including parameters such as vocab_size, n_embd, n_positions, embd_pdrop, and n_layer.
@@ -525,7 +525,7 @@ generating text based on input sequences. The model includes methods for initial
         set_input_embeddings(self, new_embeddings): Sets new input embeddings for the model.
         _prune_heads(self, heads_to_prune): Prunes specified heads of the model based on the provided dictionary of layer numbers and heads to prune.
         construct(self, input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, output_attentions, output_hidden_states, return_dict): Constructs the GPTModel for inference or
-training based on the input data and configuration.
+            training based on the input data and configuration.
     """
     def __init__(self, config):
         """
@@ -534,11 +534,11 @@ training based on the input data and configuration.
         Args:
             self (GPTModel): The GPTModel instance to be initialized.
             config (object): The configuration object containing parameters for the model.
-                - vocab_size (int): The size of the vocabulary.
-                - n_embd (int): The embedding dimension.
-                - n_positions (int): The maximum number of positions.
-                - embd_pdrop (float): The dropout probability for embeddings.
-                - n_layer (int): The number of layers in the model.
+                >   - vocab_size (int): The size of the vocabulary.
+                >   - n_embd (int): The embedding dimension.
+                >   - n_positions (int): The maximum number of positions.
+                >   - embd_pdrop (float): The dropout probability for embeddings.
+                >   - n_layer (int): The number of layers in the model.
         
         Returns:
             None: This method does not return any value.
@@ -588,18 +588,20 @@ training based on the input data and configuration.
             None.
         
         Description:
-        This method allows for updating the input embeddings of the GPTModel by assigning the provided 'new_embeddings' to the 'tokens_embed' attribute. The 'tokens_embed' attribute is used by the model during
-tokenization and embedding stages.
+            This method allows for updating the input embeddings of the GPTModel by assigning the provided 'new_embeddings' to the 'tokens_embed' attribute. The 'tokens_embed' attribute is used by the model during
+            tokenization and embedding stages.
         
         The 'self' parameter refers to the current instance of the GPTModel class, while the 'new_embeddings' parameter represents the new input embeddings to be assigned. The 'new_embeddings' can be of any
-data type and should contain the updated embeddings.
+        data type and should contain the updated embeddings.
         
         Note that the 'tokens_embed' attribute is expected to be updated directly by this method. Any existing input embeddings will be overwritten.
         
         Example:
+            ```python
             model = GPTModel()
             new_embeddings = get_new_embeddings()
             model.set_input_embeddings(new_embeddings)
+            ```
         """
         self.tokens_embed = new_embeddings
 
@@ -639,7 +641,7 @@ data type and should contain the updated embeddings.
         
         Returns:
             Union[Tuple[mindspore.Tensor], BaseModelOutput]: The output of the GPTModel. If return_dict is False, it returns a tuple containing the hidden states, all hidden states, and all attentions. If
-return_dict is True, it returns a BaseModelOutput with last_hidden_state, hidden_states, and attentions.
+            return_dict is True, it returns a BaseModelOutput with last_hidden_state, hidden_states, and attentions.
         
         Raises:
             ValueError: If both input_ids and inputs_embeds are specified at the same time.
@@ -736,17 +738,18 @@ class GPTLMHeadModel(GPTPreTrainedModel):
     constructing language model outputs, and preparing inputs for generation. It inherits from the GPTPreTrainedModel class.
     
     Methods:
-    - __init__(self, config): Initializes the model with a given configuration.
-    - get_output_embeddings(self): Returns the output embeddings of the model.
-    - set_output_embeddings(self, new_embeddings): Sets new output embeddings for the model.
-    - construct(self, input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Constructs language model outputs based
-on input features.
-    - prepare_inputs_for_generation(self, input_ids, **kwargs): Prepares input data for language generation.
+        __init__(self, config): Initializes the model with a given configuration.
+        get_output_embeddings(self): Returns the output embeddings of the model.
+        set_output_embeddings(self, new_embeddings): Sets new output embeddings for the model.
+        construct(self, input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Constructs language model outputs based
+            on input features.
+        prepare_inputs_for_generation(self, input_ids, **kwargs): Prepares input data for language generation.
     
     The construct method takes various input arguments for language modeling and returns model outputs, including logits and hidden states.
     The prepare_inputs_for_generation method prepares input data specifically for language generation tasks.
     
-    Note: The GPTLMHeadModel class is designed for use in natural language processing tasks and is a part of the GPT model framework.
+    Note:
+        The GPTLMHeadModel class is designed for use in natural language processing tasks and is a part of the GPT model framework.
     """
     _tied_weights_keys = ["lm_head.weight"]
 
@@ -819,10 +822,11 @@ on input features.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], CausalLMOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
-            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
-            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+                `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
+                are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -880,36 +884,35 @@ class GPTDoubleHeadsModel(GPTPreTrainedModel):
 
     """
     This class represents a GPT (Generative Pre-trained Transformer) model with double heads. It is used for language modeling and multiple choice classification tasks. The GPTDoubleHeadsModel inherits from
-the GPTPreTrainedModel class.
+    the GPTPreTrainedModel class.
     
     The GPTDoubleHeadsModel class contains methods for initializing the model, getting and setting the output embeddings, and constructing the model. It also includes a detailed docstring for the `construct`
-method, which describes the input parameters, return values, and provides examples of how to use the method.
+    method, which describes the input parameters, return values, and provides examples of how to use the method.
     
     To use the GPTDoubleHeadsModel, follow these steps:
-    1. Instantiate the GPTDoubleHeadsModel class, passing the `config` parameter.
-    2. Use the `get_output_embeddings` method to get the output embeddings of the model.
-    3. Use the `set_output_embeddings` method to set new embeddings for the model.
-    4. Use the `construct` method to perform language modeling and multiple choice classification tasks. The method takes various input tensors and returns the model outputs, including logits for language
-modeling and multiple choice classification.
+    >   1. Instantiate the GPTDoubleHeadsModel class, passing the `config` parameter.
+    >   2. Use the `get_output_embeddings` method to get the output embeddings of the model.
+    >   3. Use the `set_output_embeddings` method to set new embeddings for the model.
+    >   4. Use the `construct` method to perform language modeling and multiple choice classification tasks. The method takes various input tensors and returns the model outputs, including logits for language
+            modeling and multiple choice classification.
     
     Here is an example of how to use the GPTDoubleHeadsModel:
-    
-    
-    from transformers import AutoTokenizer, GPTDoubleHeadsModel
-    
-    tokenizer = AutoTokenizer.from_pretrained("openai-gpt")
-    model = GPTDoubleHeadsModel.from_pretrained("openai-gpt")
-    tokenizer.add_special_tokens({"cls_token": "[CLS]"})
-    model.resize_token_embeddings(len(tokenizer))
-    
-    choices = ["Hello, my dog is cute [CLS]", "Hello, my cat is cute [CLS]"]
-    input_ids = tokenizer.encode_batch(choices)
-    mc_token_ids = [len(ids) - 1 for ids in input_ids]
-    
-    outputs = model.construct(input_ids, mc_token_ids=mc_token_ids)
-    lm_logits = outputs.logits
-    mc_logits = outputs.mc_logits
-    
+        ```python
+        from transformers import AutoTokenizer, GPTDoubleHeadsModel
+
+        tokenizer = AutoTokenizer.from_pretrained("openai-gpt")
+        model = GPTDoubleHeadsModel.from_pretrained("openai-gpt")
+        tokenizer.add_special_tokens({"cls_token": "[CLS]"})
+        model.resize_token_embeddings(len(tokenizer))
+
+        choices = ["Hello, my dog is cute [CLS]", "Hello, my cat is cute [CLS]"]
+        input_ids = tokenizer.encode_batch(choices)
+        mc_token_ids = [len(ids) - 1 for ids in input_ids]
+
+        outputs = model.construct(input_ids, mc_token_ids=mc_token_ids)
+        lm_logits = outputs.logits
+        mc_logits = outputs.mc_logits
+        ```
     
     For more details on how to use the GPTDoubleHeadsModel class, refer to the documentation and examples provided in the code.
     """
@@ -998,28 +1001,29 @@ modeling and multiple choice classification.
             where *num_choices* is the size of the second dimension of the input tensors. (see *input_ids* above)
 
         Return:
+            Union[Tuple[mindspore.Tensor], GPTDoubleHeadsModelOutput]
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import AutoTokenizer, OpenAIGPTDoubleHeadsModel
 
-        ```python
-        >>> from transformers import AutoTokenizer, OpenAIGPTDoubleHeadsModel
 
+            >>> tokenizer = AutoTokenizer.from_pretrained("openai-gpt")
+            >>> model = OpenAIGPTDoubleHeadsModel.from_pretrained("openai-gpt")
+            >>> tokenizer.add_special_tokens(
+            ...     {"cls_token": "[CLS]"}
+            ... )  # Add a [CLS] to the vocabulary (we should train it also!)
+            >>> model.resize_token_embeddings(len(tokenizer))
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("openai-gpt")
-        >>> model = OpenAIGPTDoubleHeadsModel.from_pretrained("openai-gpt")
-        >>> tokenizer.add_special_tokens(
-        ...     {"cls_token": "[CLS]"}
-        ... )  # Add a [CLS] to the vocabulary (we should train it also!)
-        >>> model.resize_token_embeddings(len(tokenizer))
+            >>> choices = ["Hello, my dog is cute [CLS]", "Hello, my cat is cute [CLS]"]
+            >>> input_ids = torch.tensor([tokenizer.encode(s) for s in choices]).unsqueeze(0)  # Batch size 1, 2 choices
+            >>> mc_token_ids = torch.tensor([input_ids.shape[-1] - 1, input_ids.shape[-1] - 1]).unsqueeze(0)  # Batch size 1
 
-        >>> choices = ["Hello, my dog is cute [CLS]", "Hello, my cat is cute [CLS]"]
-        >>> input_ids = torch.tensor([tokenizer.encode(s) for s in choices]).unsqueeze(0)  # Batch size 1, 2 choices
-        >>> mc_token_ids = torch.tensor([input_ids.shape[-1] - 1, input_ids.shape[-1] - 1]).unsqueeze(0)  # Batch size 1
-
-        >>> outputs = model(input_ids, mc_token_ids=mc_token_ids)
-        >>> lm_logits = outputs.logits
-        >>> mc_logits = outputs.mc_logits
-        ```"""
+            >>> outputs = model(input_ids, mc_token_ids=mc_token_ids)
+            >>> lm_logits = outputs.logits
+            >>> mc_logits = outputs.mc_logits
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         transformer_outputs = self.transformer(
@@ -1066,37 +1070,38 @@ class GPTForSequenceClassification(GPTPreTrainedModel):
 
     """
     This class 'GPTForSequenceClassification' represents a sequence classification model based on the GPT (Generative Pre-trained Transformer) architecture. It is designed to classify sequences based on the
-provided input.
+    provided input.
     
     This class inherits from the 'GPTPreTrainedModel' class, which provides the basic functionality for a pre-trained GPT model.
     
     The class contains an initializer method '__init__' which takes a 'config' parameter. It calls the initializer of the parent class and initializes the 'num_labels' attribute with the 'num_labels' value
-from the 'config'. It also initializes a 'transformer' attribute with an instance of the 'GPTModel' class from the 'config'. Additionally, it creates a 'score' attribute which is a neural network layer with a
-dense layer of shape '(config.n_embd, num_labels)' and no bias. Finally, it calls the 'post_init' method.
+    from the 'config'. It also initializes a 'transformer' attribute with an instance of the 'GPTModel' class from the 'config'. Additionally, it creates a 'score' attribute which is a neural network layer with a
+    dense layer of shape '(config.n_embd, num_labels)' and no bias. Finally, it calls the 'post_init' method.
     
     The 'construct' method is responsible for constructing the sequence classification model. It takes several optional input tensors as parameters, including 'input_ids', 'attention_mask', 'token_type_ids',
-'position_ids', 'head_mask', 'inputs_embeds', 'labels', 'output_attentions', 'output_hidden_states', and 'return_dict'. It returns a Tuple of tensors or a 'SequenceClassifierOutput' object.
+    'position_ids', 'head_mask', 'inputs_embeds', 'labels', 'output_attentions', 'output_hidden_states', and 'return_dict'. It returns a Tuple of tensors or a 'SequenceClassifierOutput' object.
     
     The 'labels' parameter is an optional tensor of shape '(batch_size,)', which provides the labels for computing the sequence classification/regression loss. The indices in 'labels' should be in the range of
-'[0, ..., config.num_labels - 1]'. If 'config.num_labels == 1', a regression loss (Mean-Square loss) is computed. If 'config.num_labels > 1', a classification loss (Cross-Entropy) is computed.
+    '[0, ..., config.num_labels - 1]'. If 'config.num_labels == 1', a regression loss (Mean-Square loss) is computed. If 'config.num_labels > 1', a classification loss (Cross-Entropy) is computed.
     
     The 'return_dict' parameter indicates whether the method should return a 'SequenceClassifierOutput' object. If 'return_dict' is not provided, it defaults to the value of 'self.config.use_return_dict'.
     
     The method first calls the 'transformer' model with the provided input tensors and other optional parameters to obtain the transformer outputs, including the 'hidden_states' tensor. Then, it passes the
-'hidden_states' tensor through the 'score' layer to obtain the 'logits' tensor.
+    'hidden_states' tensor through the 'score' layer to obtain the 'logits' tensor.
     
     Next, the method checks the shape of the 'input_ids' tensor to determine the batch size. If 'input_ids' is not None, the shape of 'input_ids' is used to calculate the sequence lengths. If
-'self.config.pad_token_id' is not None, the method checks for padding tokens in 'input_ids' and calculates the sequence lengths accordingly. If 'input_ids' is None, the sequence lengths are set to -1.
+    'self.config.pad_token_id' is not None, the method checks for padding tokens in 'input_ids' and calculates the sequence lengths accordingly. If 'input_ids' is None, the sequence lengths are set to -1.
     
     The method then selects the relevant logits based on the sequence lengths. If 'sequence_lengths' is an integer, the method uses it to index the 'logits' tensor. Otherwise, it uses the 'sequence_lengths'
-tensor to gather the relevant logits.
+    tensor to gather the relevant logits.
     
     The 'loss' variable is set to None initially. If 'labels' is provided, the method determines the 'problem_type' based on the 'config' and the shape and dtype of 'labels'. Depending on the 'problem_type',
-the method calculates the loss using operations provided by the 'ops' module.
+    the method calculates the loss using operations provided by the 'ops' module.
     
     Finally, depending on the 'return_dict' parameter, the method either returns a Tuple of tensors or a 'SequenceClassifierOutput' object containing the 'loss', 'logits', 'hidden_states', and 'attentions'.
     
-    Note: This docstring does not include method signatures or any other code for clarity.
+    Note:
+        This docstring does not include method signatures or any other code for clarity.
     """
     def __init__(self, config):
         """
@@ -1105,9 +1110,9 @@ the method calculates the loss using operations provided by the 'ops' module.
         Args:
             self (GPTForSequenceClassification): The instance itself.
             config: An object containing configuration settings for the model.
-                - Type: object
-                - Purpose: Specifies the configuration settings for the model.
-                - Restrictions: Must be compatible with the GPTModel configuration.
+                >   - Type: object
+                >   - Purpose: Specifies the configuration settings for the model.
+                >   - Restrictions: Must be compatible with the GPTModel configuration.
         
         Returns:
             None: This method does not return any value.
@@ -1138,10 +1143,11 @@ the method calculates the loss using operations provided by the 'ops' module.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

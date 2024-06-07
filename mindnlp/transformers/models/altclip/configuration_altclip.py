@@ -86,20 +86,20 @@ class AltCLIPTextConfig(PretrainedConfig):
         project_dim (`int`, *optional*, defaults to 768):
             The dimentions of the teacher model before the mapping layer.
 
-    Examples:
+    Example:
+        ```python
+        >>> from transformers import AltCLIPTextModel, AltCLIPTextConfig
 
-    ```python
-    >>> from transformers import AltCLIPTextModel, AltCLIPTextConfig
+        >>> # Initializing a AltCLIPTextConfig with BAAI/AltCLIP style configuration
+        >>> configuration = AltCLIPTextConfig()
 
-    >>> # Initializing a AltCLIPTextConfig with BAAI/AltCLIP style configuration
-    >>> configuration = AltCLIPTextConfig()
+        >>> # Initializing a AltCLIPTextModel (with random weights) from the BAAI/AltCLIP style configuration
+        >>> model = AltCLIPTextModel(configuration)
 
-    >>> # Initializing a AltCLIPTextModel (with random weights) from the BAAI/AltCLIP style configuration
-    >>> model = AltCLIPTextModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "altclip_text_model"
 
     def __init__(
@@ -185,7 +185,6 @@ class AltCLIPVisionConfig(PretrainedConfig):
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
 
-
     Args:
         hidden_size (`int`, *optional*, defaults to 768):
             Dimensionality of the encoder layers and the pooler layer.
@@ -217,19 +216,19 @@ class AltCLIPVisionConfig(PretrainedConfig):
             testing).
 
     Example:
+        ```python
+        >>> from transformers import AltCLIPVisionConfig, AltCLIPVisionModel
 
-    ```python
-    >>> from transformers import AltCLIPVisionConfig, AltCLIPVisionModel
+        >>> # Initializing a AltCLIPVisionConfig with BAAI/AltCLIP style configuration
+        >>> configuration = AltCLIPVisionConfig()
 
-    >>> # Initializing a AltCLIPVisionConfig with BAAI/AltCLIP style configuration
-    >>> configuration = AltCLIPVisionConfig()
+        >>> # Initializing a AltCLIPVisionModel (with random weights) from the BAAI/AltCLIP style configuration
+        >>> model = AltCLIPVisionModel(configuration)
 
-    >>> # Initializing a AltCLIPVisionModel (with random weights) from the BAAI/AltCLIP style configuration
-    >>> model = AltCLIPVisionModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "altclip_vision_model"
 
     def __init__(
@@ -343,27 +342,27 @@ class AltCLIPConfig(PretrainedConfig):
             Dictionary of keyword arguments.
 
     Example:
+        ```python
+        >>> from transformers import AltCLIPConfig, AltCLIPModel
 
-    ```python
-    >>> from transformers import AltCLIPConfig, AltCLIPModel
+        >>> # Initializing a AltCLIPConfig with BAAI/AltCLIP style configuration
+        >>> configuration = AltCLIPConfig()
 
-    >>> # Initializing a AltCLIPConfig with BAAI/AltCLIP style configuration
-    >>> configuration = AltCLIPConfig()
+        >>> # Initializing a AltCLIPModel (with random weights) from the BAAI/AltCLIP style configuration
+        >>> model = AltCLIPModel(configuration)
 
-    >>> # Initializing a AltCLIPModel (with random weights) from the BAAI/AltCLIP style configuration
-    >>> model = AltCLIPModel(configuration)
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
 
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
+        >>> # We can also initialize a AltCLIPConfig from a AltCLIPTextConfig and a AltCLIPVisionConfig
 
-    >>> # We can also initialize a AltCLIPConfig from a AltCLIPTextConfig and a AltCLIPVisionConfig
+        >>> # Initializing a AltCLIPText and AltCLIPVision configuration
+        >>> config_text = AltCLIPTextConfig()
+        >>> config_vision = AltCLIPVisionConfig()
 
-    >>> # Initializing a AltCLIPText and AltCLIPVision configuration
-    >>> config_text = AltCLIPTextConfig()
-    >>> config_vision = AltCLIPVisionConfig()
-
-    >>> config = AltCLIPConfig.from_text_vision_configs(config_text, config_vision)
-    ```"""
+        >>> config = AltCLIPConfig.from_text_vision_configs(config_text, config_vision)
+        ```
+    """
     model_type = "altclip"
 
     def __init__(

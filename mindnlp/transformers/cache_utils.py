@@ -94,16 +94,18 @@ class DynamicCache(Cache):
         Description:
         This method initializes the 'DynamicCache' instance by setting up the key and value caches, as well as initializing the number of seen tokens.
         
-        - The 'key_cache' is a list of mindspore.Tensor objects that stores the keys.
-        - The 'value_cache' is a list of mindspore.Tensor objects that stores the corresponding values.
-        - The 'seen_tokens' is an integer that represents the number of tokens that have been seen.
+        >- The 'key_cache' is a list of mindspore.Tensor objects that stores the keys.
+        >- The 'value_cache' is a list of mindspore.Tensor objects that stores the corresponding values.
+        >- The 'seen_tokens' is an integer that represents the number of tokens that have been seen.
         
         The 'key_cache' and 'value_cache' lists are initially empty, while the 'seen_tokens' is set to 0.
         
         Example:
+            ```python
             cache = DynamicCache()
             # Initializes a new instance of 'DynamicCache' with empty key and value caches,
             # and the number of seen tokens set to 0.
+            ```
         """
         self.key_cache: List[mindspore.Tensor] = []
         self.value_cache: List[mindspore.Tensor] = []
@@ -233,16 +235,13 @@ class SinkCache(Cache):
         
         Raises:
             None
-        '''
         
         The `__init__` method is used to initialize a new instance of the `SinkCache` class. It takes three parameters: `self`, `window_length`, and `num_sink_tokens`. 
         
-        - `self` (SinkCache): The `self` parameter refers to the instance of the `SinkCache` class that is being initialized.
-        
-        - `window_length` (int): The `window_length` parameter specifies the length of the window used for caching. This value determines the size of the cache and affects the number of tokens that can be
-stored.
-        
-        - `num_sink_tokens` (int): The `num_sink_tokens` parameter represents the number of sink tokens. Sink tokens are special tokens used in the caching mechanism.
+        >- `self` (SinkCache): The `self` parameter refers to the instance of the `SinkCache` class that is being initialized.
+        >- `window_length` (int): The `window_length` parameter specifies the length of the window used for caching. This value determines the size of the cache and affects the number of tokens that can be
+            stored.
+        >- `num_sink_tokens` (int): The `num_sink_tokens` parameter represents the number of sink tokens. Sink tokens are special tokens used in the caching mechanism.
         
         The method does not return any value (`None`).
         
@@ -293,7 +292,7 @@ stored.
             None
         
         This method applies the rotary positional embedding to the key states using the provided cosine and sine values. The embedding is applied by element-wise multiplication of the key states with the
-cosine values, and element-wise multiplication of the half-rotated key states with the sine values. The resulting rotated key states are then returned.
+        cosine values, and element-wise multiplication of the half-rotated key states with the sine values. The resulting rotated key states are then returned.
         """
         rotated_key_states = (key_states * cos) + (self._rotate_half(key_states) * sin)
         return rotated_key_states
@@ -543,13 +542,14 @@ class StaticCache(Cache):
         
         Note:
             This method calculates the usable length of a sequence in the StaticCache layer. It takes into account any changes in the sequence length and the layer index. If 'new_sequence_length' is not
-provided, the method assumes the sequence length remains unchanged. If 'layer_idx' is not provided, the method defaults to the first layer (index 0).
+            provided, the method assumes the sequence length remains unchanged. If 'layer_idx' is not provided, the method defaults to the first layer (index 0).
         
         Example:
+            ```python
             >>> cache = StaticCache()
             >>> cache.get_usable_length(new_sequence_length=100, layer_idx=2)
             100
-        
+            ```
             For more information, please refer to https://github.com/huggingface/transformers/pull/29114.
         """
         raise ValueError(

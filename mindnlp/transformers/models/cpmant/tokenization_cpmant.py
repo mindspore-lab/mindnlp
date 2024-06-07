@@ -68,9 +68,11 @@ class WordpieceTokenizer:
             Tokenizes the input token into subword tokens using the WordPiece algorithm and the specified vocabulary.
     
     Example usage:
+        ```python
         vocab = {'hello': 'he', 'world': 'wo', 'hello,': 'hello'}
         tokenizer = WordpieceTokenizer(vocab, '<unk>', 200)
         tokenized_text = tokenizer.tokenize('helloworld')
+        ```
     """
     def __init__(self, vocab, unk_token="<unk>", max_input_chars_per_word=200):
         """
@@ -94,7 +96,9 @@ class WordpieceTokenizer:
         The max_input_chars_per_word parameter limits the number of characters allowed per word. If a word exceeds this limit, it will be split into subwords.
         
         Example:
+            ```python
             tokenizer = WordpieceTokenizer(vocab=['hello', 'world'], unk_token='<unk>', max_input_chars_per_word=200)
+            ```
         """
         self.vocab = vocab
         self.unk_token = unk_token
@@ -192,25 +196,25 @@ class CpmAntTokenizer(PreTrainedTokenizer):
         Initialize a CpmAntTokenizer object with the provided parameters.
         
         Args:
-        - vocab_file (str): The path to the vocabulary file to load.
-        - bod_token (str, optional): Beginning of document token (default is '<d>').
-        - eod_token (str, optional): End of document token (default is '</d>').
-        - bos_token (str, optional): Beginning of sentence token (default is '<s>').
-        - eos_token (str, optional): End of sentence token (default is '</s>').
-        - pad_token (str, optional): Padding token (default is '<pad>').
-        - unk_token (str, optional): Token for unknown words (default is '<unk>').
-        - line_token (str, optional): Line break token (default is '</n>').
-        - space_token (str, optional): Space token (default is '</_>').
-        - padding_side (str, optional): Side for padding (default is 'left').
-        
+            vocab_file (str): The path to the vocabulary file to load.
+            bod_token (str, optional): Beginning of document token (default is '<d>').
+            eod_token (str, optional): End of document token (default is '</d>').
+            bos_token (str, optional): Beginning of sentence token (default is '<s>').
+            eos_token (str, optional): End of sentence token (default is '</s>').
+            pad_token (str, optional): Padding token (default is '<pad>').
+            unk_token (str, optional): Token for unknown words (default is '<unk>').
+            line_token (str, optional): Line break token (default is '</n>').
+            space_token (str, optional): Space token (default is '</_>').
+            padding_side (str, optional): Side for padding (default is 'left').
+
         Returns:
-        None: This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
-        - MissingBackendError: If required backend 'jieba' is not available.
-        - FileNotFoundError: If the specified 'vocab_file' does not exist.
-        - KeyError: If 'space_token' or 'line_token' are missing in the loaded vocabulary.
-        - Exception: Any other unforeseen error that may occur during initialization.
+            - MissingBackendError: If required backend 'jieba' is not available.
+            - FileNotFoundError: If the specified 'vocab_file' does not exist.
+            - KeyError: If 'space_token' or 'line_token' are missing in the loaded vocabulary.
+            - Exception: Any other unforeseen error that may occur during initialization.
         """
         requires_backends(self, ["jieba"])
         self.bod_token = bod_token
@@ -284,7 +288,7 @@ class CpmAntTokenizer(PreTrainedTokenizer):
             None: This method does not return any specific value.
         
         Raises:
-            - KeyError: If the newline character '\n' is not found in the encoder dictionary, a KeyError is raised.
+            KeyError: If the newline character `'\n'` is not found in the encoder dictionary, a KeyError is raised.
         """
         return self.encoder["\n"]
 
@@ -306,22 +310,24 @@ class CpmAntTokenizer(PreTrainedTokenizer):
 
     def get_vocab(self):
         """
-            Retrieves the vocabulary of the CpmAntTokenizer instance.
-        
-            Args:
-                self (CpmAntTokenizer): The instance of CpmAntTokenizer.
-        
-            Returns:
-                dict: The vocabulary of the tokenizer, which is a dictionary mapping tokens to their corresponding IDs.
-        
-            Raises:
-                None.
-        
-            Example:
-                >>> tokenizer = CpmAntTokenizer()
-                >>> vocab = tokenizer.get_vocab()
-                >>> vocab
-                {'<pad>': 0, '<unk>': 1, '<s>': 2, '</s>': 3, ...}
+        Retrieves the vocabulary of the CpmAntTokenizer instance.
+
+        Args:
+            self (CpmAntTokenizer): The instance of CpmAntTokenizer.
+
+        Returns:
+            dict: The vocabulary of the tokenizer, which is a dictionary mapping tokens to their corresponding IDs.
+
+        Raises:
+            None.
+
+        Example:
+            ```python
+            >>> tokenizer = CpmAntTokenizer()
+            >>> vocab = tokenizer.get_vocab()
+            >>> vocab
+            {'<pad>': 0, '<unk>': 1, '<s>': 2, '</s>': 3, ...}
+            ```
         """
         return dict(self.encoder, **self.added_tokens_encoder)
 
@@ -374,10 +380,12 @@ class CpmAntTokenizer(PreTrainedTokenizer):
             - The method will join the tokens together using an empty string as a separator.
         
         Example:
+            ```python
             >>> tokenizer = CpmAntTokenizer()
             >>> tokens = ['Hello', 'world', '!']
             >>> tokenizer.convert_tokens_to_string(tokens)
             'Hello world!'
+            ```
         """
         return "".join(tokens)
 
@@ -435,7 +443,7 @@ class CpmAntTokenizer(PreTrainedTokenizer):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A CPMAnt sequence has the following format:
 
-        - single sequence: `[BOS] Sequence`.
+        >   - single sequence: `[BOS] Sequence`.
 
         Args:
             token_ids_0 (`List[int]`): The first tokenized sequence that special tokens will be added.

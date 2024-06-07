@@ -81,12 +81,12 @@ class MossAttention(nn.Cell):
         Args:
             self (MossAttention): The current instance of MossAttention.
             config (object): A configuration object containing the following attributes:
-                - max_position_embeddings (int): The maximum number of positions for positional embeddings.
-                - attn_pdrop (float): The dropout probability for attention weights.
-                - resid_pdrop (float): The dropout probability for residual connections.
-                - hidden_size (int): The dimension of the hidden state.
-                - num_attention_heads (int): The number of attention heads for multi-head attention.
-                - rotary_dim (int): The dimension for rotary position embeddings.
+                >   - max_position_embeddings (int): The maximum number of positions for positional embeddings.
+                >   - attn_pdrop (float): The dropout probability for attention weights.
+                >   - resid_pdrop (float): The dropout probability for residual connections.
+                >   - hidden_size (int): The dimension of the hidden state.
+                >   - num_attention_heads (int): The number of attention heads for multi-head attention.
+                >   - rotary_dim (int): The dimension for rotary position embeddings.
         
         Returns:
             None. This method initializes the MossAttention object.
@@ -404,14 +404,13 @@ class MossBlock(nn.Cell):
         
         Args:
             self (MossBlock): The instance of MossBlock.
-            config (object): An object containing configuration parameters for the MossBlock.
-                This object should have the following attributes:
-                - n_inner (int or None): The inner dimension size. If None, defaults to 4 times the embedding size.
-                - n_embd (int): The embedding size.
-                - layer_norm_epsilon (float): The epsilon value for LayerNorm.
+            config (object): An object containing configuration parameters for the MossBlock. This object should have the following attributes:
+                >   - n_inner (int or None): The inner dimension size. If None, defaults to 4 times the embedding size.
+                >   - n_embd (int): The embedding size.
+                >   - layer_norm_epsilon (float): The epsilon value for LayerNorm.
         
         Returns:
-            None. This method initializes the MossBlock instance with the specified configuration parameters.
+            None: This method initializes the MossBlock instance with the specified configuration parameters.
         
         Raises:
             No specific exceptions are raised by this method.
@@ -448,7 +447,7 @@ class MossBlock(nn.Cell):
         
         Returns:
             Union[Tuple[Tensor], Optional[Tuple[Tensor, Tuple[Tensor, ...]]]]: A tuple containing the output tensor after applying the self-attention and feed-forward layers. If `use_cache` is True, the tuple
-includes the hidden states and the past hidden states for the self-attention layer. Otherwise, the tuple only includes the hidden states.
+            includes the hidden states and the past hidden states for the self-attention layer. Otherwise, the tuple only includes the hidden states.
         
         Raises:
             None
@@ -611,14 +610,14 @@ class MossModel(MossPreTrainedModel):
         Args:
             self: The current instance of the class.
             config: An object containing configuration parameters for the model. It should have the following attributes:
-                - n_embd (int): The embedding dimension.
-                - vocab_size (int): The size of the vocabulary.
-                - embd_pdrop (float): The dropout probability for the embedding layer.
-                - n_layer (int): The number of MossBlocks to be used in the model.
-                - layer_norm_epsilon (float): A small value added to the variance to avoid division by zero in LayerNorm.
-                - rotary_dim (int): The dimension of the rotary positional encoding. It should be less than or equal to n_ctx // num_attention_heads.
-                - n_ctx (int): The length of the input sequence.
-                - num_attention_heads (int): The number of attention heads in each MossBlock.
+                >   - n_embd (int): The embedding dimension.
+                >   - vocab_size (int): The size of the vocabulary.
+                >   - embd_pdrop (float): The dropout probability for the embedding layer.
+                >   - n_layer (int): The number of MossBlocks to be used in the model.
+                >   - layer_norm_epsilon (float): A small value added to the variance to avoid division by zero in LayerNorm.
+                >   - rotary_dim (int): The dimension of the rotary positional encoding. It should be less than or equal to n_ctx // num_attention_heads.
+                >   - n_ctx (int): The length of the input sequence.
+                >   - num_attention_heads (int): The number of attention heads in each MossBlock.
         
         Returns:
             None
@@ -833,8 +832,8 @@ class MossForCausalLM(MossPreTrainedModel):
         Args:
             self (MossForCausalLM): The current instance of the MossForCausalLM class.
             config (object): An object containing configuration parameters.
-                - wbits (int): Number of bits for weight quantization. Default is 32.
-                - groupsize (int): Size of the weight quantization group. Default is 128.
+                >   - wbits (int): Number of bits for weight quantization. Default is 32.
+                >   - groupsize (int): Size of the weight quantization group. Default is 128.
         
         Returns:
             None. This method initializes the MossForCausalLM instance.
@@ -927,10 +926,11 @@ class MossForCausalLM(MossPreTrainedModel):
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Tuple]:
         r"""
-        labels (`Tensor(dtype=mindspore.int64)` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
-            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
-            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`Tensor(dtype=mindspore.int64)` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+                `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
+                are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

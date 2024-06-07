@@ -95,18 +95,20 @@ class MixtralConfig(PretrainedConfig):
         router_aux_loss_coef (`float`, *optional*, defaults to 0.001):
             The aux loss factor for the total loss.
 
-    ```python
-    >>> from transformers import MixtralModel, MixtralConfig
+    Example:
+        ```python
+        >>> from transformers import MixtralModel, MixtralConfig
 
-    >>> # Initializing a Mixtral 7B style configuration
-    >>> configuration = MixtralConfig()
+        >>> # Initializing a Mixtral 7B style configuration
+        >>> configuration = MixtralConfig()
 
-    >>> # Initializing a model from the Mixtral 7B style configuration
-    >>> model = MixtralModel(configuration)
+        >>> # Initializing a model from the Mixtral 7B style configuration
+        >>> model = MixtralModel(configuration)
 
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "mixtral"
     keys_to_ignore_at_inference = ["past_key_values"]
 

@@ -70,18 +70,18 @@ class MBartTokenizerFast(PreTrainedTokenizerFast):
     The tokenization method is `<tokens> <eos> <language code>` for source language documents, and `<language code>
     <tokens> <eos>` for target language documents.
 
-    Examples:
+    Example:
+        ```python
+        >>> from transformers import MBartTokenizerFast
 
-    ```python
-    >>> from transformers import MBartTokenizerFast
-
-    >>> tokenizer = MBartTokenizerFast.from_pretrained(
-    ...     "facebook/mbart-large-en-ro", src_lang="en_XX", tgt_lang="ro_RO"
-    ... )
-    >>> example_english_phrase = " UN Chief Says There Is No Military Solution in Syria"
-    >>> expected_translation_romanian = "Şeful ONU declară că nu există o soluţie militară în Siria"
-    >>> inputs = tokenizer(example_english_phrase, text_target=expected_translation_romanian, return_tensors="pt")
-    ```"""
+        >>> tokenizer = MBartTokenizerFast.from_pretrained(
+        ...     "facebook/mbart-large-en-ro", src_lang="en_XX", tgt_lang="ro_RO"
+        ... )
+        >>> example_english_phrase = " UN Chief Says There Is No Military Solution in Syria"
+        >>> expected_translation_romanian = "Şeful ONU declară că nu există o soluţie militară în Siria"
+        >>> inputs = tokenizer(example_english_phrase, text_target=expected_translation_romanian, return_tensors="pt")
+        ```
+    """
     vocab_files_names = VOCAB_FILES_NAMES
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
@@ -183,7 +183,7 @@ class MBartTokenizerFast(PreTrainedTokenizerFast):
             None.
         
         This method checks if the slow tokenizer can be saved by verifying the existence of the vocabulary file specified by the 'vocab_file' attribute of the class. If the 'vocab_file' attribute is set and it
-corresponds to an existing file, the method returns True. Otherwise, it returns False.
+        corresponds to an existing file, the method returns True. Otherwise, it returns False.
         """
         return os.path.isfile(self.vocab_file) if self.vocab_file else False
 
@@ -219,8 +219,8 @@ corresponds to an existing file, the method returns True. Otherwise, it returns 
 
         An MBART sequence has the following format, where `X` represents the sequence:
 
-        - `input_ids` (for encoder) `X [eos, src_lang_code]`
-        - `decoder_input_ids`: (for decoder) `X [eos, tgt_lang_code]`
+        >   - `input_ids` (for encoder) `X [eos, src_lang_code]`
+        >   - `decoder_input_ids`: (for decoder) `X [eos, tgt_lang_code]`
 
         BOS is never used. Pairs of sequences are not the expected use case, but they will be handled without a
         separator.
@@ -303,11 +303,13 @@ corresponds to an existing file, the method returns True. Otherwise, it returns 
         Note:
             This method internally calls the prepare_seq2seq_batch method of the base class, passing the necessary parameters.
         
-        Examples:
+        Example:
+            ```python
             >>> tokenizer = MBartTokenizerFast.from_pretrained('facebook/mbart-large-50')
             >>> src_texts = ['Hello world!', 'How are you?']
             >>> tgt_texts = ['Bonjour le monde!', 'Comment ça va?']
             >>> batch_encodings = tokenizer.prepare_seq2seq_batch(src_texts, src_lang='en_XX', tgt_texts=tgt_texts, tgt_lang='fr_FR')
+            ```
         """
         self.src_lang = src_lang
         self.tgt_lang = tgt_lang
@@ -343,17 +345,19 @@ corresponds to an existing file, the method returns True. Otherwise, it returns 
             None.
         
         Description:
-        This method switches the tokenizer to the target mode for the MBartTokenizerFast class. In target mode, the tokenizer is configured to tokenize text according to the target language specified during
-initialization.
+            This method switches the tokenizer to the target mode for the MBartTokenizerFast class. In target mode, the tokenizer is configured to tokenize text according to the target language specified during
+            initialization.
         
         The method takes one parameter, 'self', which refers to an instance of the MBartTokenizerFast class. This parameter is required to access the tokenizer instance and perform the necessary operations to
-switch to the target mode.
+        switch to the target mode.
         
         The method does not raise any exceptions.
         
         Example:
+            ```python
             tokenizer = MBartTokenizerFast()
             tokenizer._switch_to_target_mode()
+            ```
         """
         return self.set_tgt_lang_special_tokens(self.tgt_lang)
 

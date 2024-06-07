@@ -129,9 +129,9 @@ def _get_unpad_data(attention_mask):
     
     Returns:
         tuple: A tuple containing the following:
-            - indices (Tensor): A tensor containing the indices of the flattened attention mask.
-            - cu_seqlens (Tensor): A tensor representing the cumulative sequence lengths based on the attention mask.
-            - max_seqlen_in_batch (int): The maximum sequence length in the batch.
+            >   - indices (Tensor): A tensor containing the indices of the flattened attention mask.
+            >   - cu_seqlens (Tensor): A tensor representing the cumulative sequence lengths based on the attention mask.
+            >   - max_seqlen_in_batch (int): The maximum sequence length in the batch.
     
     Raises:
         None
@@ -156,12 +156,12 @@ class MixtralRMSNorm(nn.Cell):
     This class inherits from the nn.Cell class and provides methods to perform RMS normalization on hidden states. 
     
     Attributes:
-        - weight (Parameter): A learnable parameter that scales the normalized hidden states.
-        - variance_epsilon (float): A small epsilon value added to the variance to avoid division by zero.
+        weight (Parameter): A learnable parameter that scales the normalized hidden states.
+        variance_epsilon (float): A small epsilon value added to the variance to avoid division by zero.
     
     Methods:
-        - __init__(self, hidden_size, eps=1e-06): Initializes the MixtralRMSNorm instance with the given hidden size and epsilon value.
-        - construct(self, hidden_states): Applies the RMS normalization on the input hidden states and returns the normalized result.
+        __init__(self, hidden_size, eps=1e-06): Initializes the MixtralRMSNorm instance with the given hidden size and epsilon value.
+        construct(self, hidden_states): Applies the RMS normalization on the input hidden states and returns the normalized result.
     
     Note:
         - MixtralRMSNorm is equivalent to T5LayerNorm.
@@ -374,7 +374,7 @@ class MixtralAttention(nn.Cell):
             self: The object instance.
             config (MixtralConfig): An instance of the MixtralConfig class containing the configuration parameters for the attention layer.
             layer_idx (Optional[int]): The index of the layer. Defaults to None. If layer_idx is not provided, a warning will be logged, as not passing a `layer_idx` is not recommended and may cause errors
-during the forward call if caching is used.
+                during the forward call if caching is used.
         
         Returns:
             None
@@ -435,7 +435,7 @@ during the forward call if caching is used.
             None
         
         This method reshapes the input tensor by rearranging its dimensions. The tensor is reshaped into a new shape of (bsz, seq_len, num_heads, head_dim) by using the view and swapaxes operations. The
-returned tensor has its dimensions rearranged to facilitate further processing in the MixtralAttention layer.
+        returned tensor has its dimensions rearranged to facilitate further processing in the MixtralAttention layer.
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
@@ -541,7 +541,7 @@ class MixtralBlockSparseTop2MLP(nn.Cell):
 
     """
     The MixtralBlockSparseTop2MLP class represents a neural network block that utilizes sparse top-2 multi-layer perceptron (MLP) for processing hidden states. It inherits from nn.Cell and includes methods for
-initialization and construction of the MLP layers.
+    initialization and construction of the MLP layers.
     
     Attributes:
         ffn_dim (int): The dimension of the feed-forward network.
@@ -552,10 +552,11 @@ initialization and construction of the MLP layers.
         act_fn (function): The activation function to be applied on the hidden states.
     
     Methods:
-        __init__(self, config: MixtralConfig): Initializes the MixtralBlockSparseTop2MLP instance with the provided configuration.
-        construct(self, hidden_states): Constructs the sparse top-2 MLP using the provided hidden states and returns the processed hidden states.
+        __init__: Initializes the MixtralBlockSparseTop2MLP instance with the provided configuration.
+        construct: Constructs the sparse top-2 MLP using the provided hidden states and returns the processed hidden states.
     
-    Note: The code provided in the class is an example and may not fully represent the functionality of the MixtralBlockSparseTop2MLP class.
+    Note:
+        The code provided in the class is an example and may not fully represent the functionality of the MixtralBlockSparseTop2MLP class.
     """
     def __init__(self, config: MixtralConfig):
         ''' 
@@ -619,10 +620,10 @@ class MixtralSparseMoeBlock(nn.Cell):
         Args:
             self: An instance of the MixtralSparseMoeBlock class.
             config: A configuration object containing the following attributes:
-                - hidden_size (int): The dimension of the hidden layer.
-                - intermediate_size (int): The dimension of the feed-forward network.
-                - num_local_experts (int): The number of local experts.
-                - num_experts_per_tok (int): The number of experts per token.
+                >   - hidden_size (int): The dimension of the hidden layer.
+                >   - intermediate_size (int): The dimension of the feed-forward network.
+                >   - num_local_experts (int): The number of local experts.
+                >   - num_experts_per_tok (int): The number of experts per token.
         
         Returns:
             None. This method initializes the instance attributes and does not return any value.
@@ -658,23 +659,23 @@ class MixtralSparseMoeBlock(nn.Cell):
             None.
         
         This method constructs the MixtralSparseMoeBlock by applying the following steps:
-        1. Reshapes the hidden_states tensor to (-1, hidden_dim).
-        2. Computes the router logits by passing the reshaped hidden_states through the gate module.
-        3. Computes the routing weights by applying softmax to the router logits along axis 1.
-        4. Selects the top-k routing weights and corresponding indices.
-        5. Normalizes the routing weights.
-        6. Converts the routing weights to the same data type as hidden_states.
-        7. Initializes the final_hidden_states tensor with zeros of shape (batch_size * sequence_length, hidden_dim).
-        8. Generates the expert_mask tensor using one_hot encoding and permutation.
-        9. Iterates over each expert and performs the following steps:
-            a. Retrieves the non-zero indices from the expert_mask for the current expert.
-            b. Splits the non-zero indices tensor into index and top_x tensors.
-            c. If top_x tensor is empty, continue to the next iteration.
-            d. Retrieves the current hidden states by indexing the hidden_states tensor with top_x.
-            e. Computes the current hidden states using the expert_layer and routing_weights.
-            f. Updates the final_hidden_states tensor by adding the computed current_hidden_states using index_add.
-        10. Reshapes the final_hidden_states tensor to its original shape (batch_size, sequence_length, hidden_dim).
-        11. Returns the final_hidden_states tensor and the router_logits tensor.
+        >   1. Reshapes the hidden_states tensor to (-1, hidden_dim).
+        >   2. Computes the router logits by passing the reshaped hidden_states through the gate module.
+        >   3. Computes the routing weights by applying softmax to the router logits along axis 1.
+        >   4. Selects the top-k routing weights and corresponding indices.
+        >   5. Normalizes the routing weights.
+        >   6. Converts the routing weights to the same data type as hidden_states.
+        >   7. Initializes the final_hidden_states tensor with zeros of shape (batch_size * sequence_length, hidden_dim).
+        >   8. Generates the expert_mask tensor using one_hot encoding and permutation.
+        >   9. Iterates over each expert and performs the following steps:
+        >       a. Retrieves the non-zero indices from the expert_mask for the current expert.
+        >       b. Splits the non-zero indices tensor into index and top_x tensors.
+        >       c. If top_x tensor is empty, continue to the next iteration.
+        >       d. Retrieves the current hidden states by indexing the hidden_states tensor with top_x.
+        >       e. Computes the current hidden states using the expert_layer and routing_weights.
+        >       f. Updates the final_hidden_states tensor by adding the computed current_hidden_states using index_add.
+        >   10. Reshapes the final_hidden_states tensor to its original shape (batch_size, sequence_length, hidden_dim).
+        >   11. Returns the final_hidden_states tensor and the router_logits tensor.
         """
         batch_size, sequence_length, hidden_dim = hidden_states.shape
         hidden_states = hidden_states.view(-1, hidden_dim)
@@ -823,11 +824,12 @@ class MixtralPreTrainedModel(PreTrainedModel):
     The `MixtralPreTrainedModel` class is a subclass of `PreTrainedModel` that represents a pre-trained model for Mixtral models. 
     
     This class provides a method `_init_weights` that initializes the weights of the model. It takes a `cell` parameter and initializes the weights based on the type of the `cell`. If the `cell` is an instance
-of `nn.Dense`, the weight is initialized using the `Normal` initializer with a range specified by the `initializer_range` attribute of the `config` object. If the `cell` has a bias, it is initialized with
-zeros. If the `cell` is an instance of `nn.Embedding`, the weight is initialized with random values from a normal distribution with a mean of 0 and a standard deviation specified by the `initializer_range`
-attribute of the `config` object. If the `cell` has a `padding_idx`, the weight at the `padding_idx` is set to 0.
+    of `nn.Dense`, the weight is initialized using the `Normal` initializer with a range specified by the `initializer_range` attribute of the `config` object. If the `cell` has a bias, it is initialized with
+    zeros. If the `cell` is an instance of `nn.Embedding`, the weight is initialized with random values from a normal distribution with a mean of 0 and a standard deviation specified by the `initializer_range`
+    attribute of the `config` object. If the `cell` has a `padding_idx`, the weight at the `padding_idx` is set to 0.
     
-    Note: This docstring does not include signatures or any other code.
+    Note:
+        This docstring does not include signatures or any other code.
     """
     config_class = MixtralConfig
     base_model_prefix = "model"
@@ -1072,27 +1074,25 @@ class MixtralModel(MixtralPreTrainedModel):
 
 
 class MixtralForCausalLM(MixtralPreTrainedModel):
-
     """
     Represents a Mixtral model for causal language modeling.
     
     This class provides methods for initializing the model, setting and getting input and output embeddings, setting and getting the decoder, constructing the model, preparing inputs for generation, and
-reordering cache values.
+    reordering cache values.
     
     The class inherits from MixtralPreTrainedModel and contains the following methods:
-    - __init__(self, config)
-    - get_input_embeddings(self)
-    - set_input_embeddings(self, value)
-    - get_output_embeddings(self)
-    - set_output_embeddings(self, new_embeddings)
-    - set_decoder(self, decoder)
-    - get_decoder(self)
-    - construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, output_router_logits, return_dict)
-    - prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, output_router_logits, **kwargs)
-    - _reorder_cache(past_key_values, beam_idx)
+    >   - __init__(self, config)
+    >   - get_input_embeddings(self)
+    >   - set_input_embeddings(self, value)
+    >   - get_output_embeddings(self)
+    >   - set_output_embeddings(self, new_embeddings)
+    >   - set_decoder(self, decoder)
+    >   - get_decoder(self)
+    >   - construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, output_router_logits, return_dict)
+    >   - prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, output_router_logits, **kwargs)
+    >   - _reorder_cache(past_key_values, beam_idx)
     
     The class also includes a detailed example demonstrating the usage of the MixtralForCausalLM model for generating text.
-    
     """
     _tied_weights_keys = ["lm_head.weight"]
 
@@ -1103,9 +1103,9 @@ reordering cache values.
         Args:
             self: The instance of the class.
             config: A dictionary containing configuration parameters for the model.
-                - Type: dict
-                - Purpose: Specifies the configuration settings for the model.
-                - Restrictions: Must be a valid dictionary object.
+                >   - Type: dict
+                >   - Purpose: Specifies the configuration settings for the model.
+                >   - Restrictions: Must be a valid dictionary object.
         
         Returns:
             None. The method initializes various attributes of the MixtralForCausalLM instance.
@@ -1167,7 +1167,7 @@ reordering cache values.
             None.
         
         This method retrieves the output embeddings from the MixtralForCausalLM model. The output embeddings represent the learned representations of the model's output tokens. These embeddings can be used for
-downstream tasks such as fine-tuning or further analysis.
+        downstream tasks such as fine-tuning or further analysis.
         """
         return self.lm_head
 
@@ -1243,23 +1243,24 @@ downstream tasks such as fine-tuning or further analysis.
                 (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
+            Union[Tuple, MoeCausalLMOutputWithPast]
 
         Example:
+            ```python
+            >>> from transformers import AutoTokenizer, MixtralForCausalLM
 
-        ```python
-        >>> from transformers import AutoTokenizer, MixtralForCausalLM
+            >>> model = MixtralForCausalLM.from_pretrained("mistralai/Mixtral-8x7B-v0.1")
+            >>> tokenizer = AutoTokenizer.from_pretrained("mistralai/Mixtral-8x7B-v0.1")
 
-        >>> model = MixtralForCausalLM.from_pretrained("mistralai/Mixtral-8x7B-v0.1")
-        >>> tokenizer = AutoTokenizer.from_pretrained("mistralai/Mixtral-8x7B-v0.1")
+            >>> prompt = "Hey, are you conscious? Can you talk to me?"
+            >>> inputs = tokenizer(prompt, return_tensors="pt")
 
-        >>> prompt = "Hey, are you conscious? Can you talk to me?"
-        >>> inputs = tokenizer(prompt, return_tensors="pt")
-
-        >>> # Generate
-        >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
-        >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-        "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
-        ```"""
+            >>> # Generate
+            >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
+            >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+            "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_router_logits = (
             output_router_logits if output_router_logits is not None else self.config.output_router_logits
@@ -1433,6 +1434,7 @@ downstream tasks such as fine-tuning or further analysis.
             without creating an instance of the class.
         
         Example:
+            ```python
             >>> past_key_values = ((tensor([[1, 2, 3]]), tensor([[4, 5, 6]]))),
                                   (tensor([[7, 8, 9]]), tensor([[10, 11, 12]]))))
             >>> beam_idx = tensor([1, 0])
@@ -1440,6 +1442,7 @@ downstream tasks such as fine-tuning or further analysis.
             >>> print(reordered_past)
             ((tensor([[4, 5, 6]]), tensor([[1, 2, 3]]))),
              (tensor([[10, 11, 12]]), tensor([[7, 8, 9]]))))
+             ```
         """
         reordered_past = ()
         for layer_past in past_key_values:
@@ -1456,8 +1459,8 @@ class MixtralForSequenceClassification(MixtralPreTrainedModel):
     MixtralForSequenceClassification
     
     This class represents a Mixtral model for sequence classification. It inherits from MixtralPreTrainedModel and is designed to handle sequence classification tasks. It includes methods for initializing the
-model, getting and setting input embeddings, and constructing the model for sequence classification. The class also provides detailed documentation for the construct method, which accepts various input
-parameters and returns the sequence classification output.
+    model, getting and setting input embeddings, and constructing the model for sequence classification. The class also provides detailed documentation for the construct method, which accepts various input
+    parameters and returns the sequence classification output.
     
     Attributes:
         num_labels: An integer representing the number of labels for sequence classification.
@@ -1469,17 +1472,18 @@ parameters and returns the sequence classification output.
         get_input_embeddings(self): Retrieves the input embeddings from the model.
         set_input_embeddings(self, value): Sets the input embeddings for the model.
         construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model for sequence
-classification, processing the input data and returning the sequence classification output.
+            classification, processing the input data and returning the sequence classification output.
     
     The construct method supports various optional input parameters, including input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions,
-output_hidden_states, and return_dict. The labels parameter is optional and can be used for computing the sequence classification/regression loss. The method also handles different problem types such as
-regression, single-label classification, and multi-label classification, and computes the loss accordingly.
+    output_hidden_states, and return_dict. The labels parameter is optional and can be used for computing the sequence classification/regression loss. The method also handles different problem types such as
+    regression, single-label classification, and multi-label classification, and computes the loss accordingly.
     
     Returns:
         When return_dict is False, the construct method returns a tuple containing the loss and other sequence classifier outputs. When return_dict is True, it returns a SequenceClassifierOutputWithPast object
-that includes the loss, logits, past_key_values, hidden_states, and attentions.
+        that includes the loss, logits, past_key_values, hidden_states, and attentions.
     
-    Note: The class documentation and method descriptions are based on the provided Python code and its associated functionality.
+    Note:
+        The class documentation and method descriptions are based on the provided Python code and its associated functionality.
     """
     def __init__(self, config):
         """
@@ -1514,13 +1518,13 @@ that includes the loss, logits, past_key_values, hidden_states, and attentions.
         This method retrieves the input embeddings from the model.
         
         Args:
-        - self: An instance of the MixtralForSequenceClassification class.
+            self: An instance of the MixtralForSequenceClassification class.
         
         Returns:
-        - None: This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
-        - None
+            None
         """
         return self.model.embed_tokens
 
@@ -1554,10 +1558,11 @@ that includes the loss, logits, past_key_values, hidden_states, and attentions.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

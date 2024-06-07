@@ -194,19 +194,19 @@ class Wav2Vec2Config(PretrainedConfig):
             if `add_adapter is True`.
 
     Example:
+        ```python
+        >>> from transformers import Wav2Vec2Config, Wav2Vec2Model
 
-    ```python
-    >>> from transformers import Wav2Vec2Config, Wav2Vec2Model
+        >>> # Initializing a Wav2Vec2 facebook/wav2vec2-base-960h style configuration
+        >>> configuration = Wav2Vec2Config()
 
-    >>> # Initializing a Wav2Vec2 facebook/wav2vec2-base-960h style configuration
-    >>> configuration = Wav2Vec2Config()
+        >>> # Initializing a model (with random weights) from the facebook/wav2vec2-base-960h style configuration
+        >>> model = Wav2Vec2Model(configuration)
 
-    >>> # Initializing a model (with random weights) from the facebook/wav2vec2-base-960h style configuration
-    >>> model = Wav2Vec2Model(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "wav2vec2"
 
     def __init__(
@@ -430,6 +430,6 @@ class Wav2Vec2Config(PretrainedConfig):
             None.
         
         This method calculates the ratio of inputs to logits by multiplying the convolution stride values. The convolution stride values are accessed using the self.conv_stride attribute. The
-functools.reduce() function is used to multiply all the stride values together. If there are no stride values, the ratio is assumed to be 1. The calculated ratio is then returned as the output of this method.
+        functools.reduce() function is used to multiply all the stride values together. If there are no stride values, the ratio is assumed to be 1. The calculated ratio is then returned as the output of this method.
         """
         return functools.reduce(operator.mul, self.conv_stride, 1)

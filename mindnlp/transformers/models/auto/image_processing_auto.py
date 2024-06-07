@@ -45,83 +45,84 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("blip", "BlipImageProcessor"),
         ("blip-2", "BlipImageProcessor"),
         ("bridgetower", "BridgeTowerImageProcessor"),
-        # ("chinese_clip", "ChineseCLIPImageProcessor"),
+        ("chinese_clip", "ChineseCLIPImageProcessor"),
         ("clip", "CLIPImageProcessor"),
-        # ("clipseg", "ViTImageProcessor"),
-        # ("conditional_detr", "ConditionalDetrImageProcessor"),
+        ("clipseg", "ViTImageProcessor"),
+        ("conditional_detr", "ConditionalDetrImageProcessor"),
         ("convnext", "ConvNextImageProcessor"),
-        # ("convnextv2", "ConvNextImageProcessor"),
+        ("convnextv2", "ConvNextImageProcessor"),
         ("cvt", "ConvNextImageProcessor"),
-        # ("data2vec-vision", "BeitImageProcessor"),
-        # ("deformable_detr", "DeformableDetrImageProcessor"),
-        # ("deit", "DeiTImageProcessor"),
-        # ("depth_anything", "DPTImageProcessor"),
-        # ("deta", "DetaImageProcessor"),
-        # ("detr", "DetrImageProcessor"),
-        # ("dinat", "ViTImageProcessor"),
-        # ("dinov2", "BitImageProcessor"),
-        # ("donut-swin", "DonutImageProcessor"),
-        # ("dpt", "DPTImageProcessor"),
+        ("data2vec-vision", "BeitImageProcessor"),
+        ("deformable_detr", "DeformableDetrImageProcessor"),
+        ("deit", "DeiTImageProcessor"),
+        ("depth_anything", "DPTImageProcessor"),
+        ("deta", "DetaImageProcessor"),
+        ("detr", "DetrImageProcessor"),
+        ("dinat", "ViTImageProcessor"),
+        ("dinov2", "BitImageProcessor"),
+        ("donut-swin", "DonutImageProcessor"),
+        ("dpt", "DPTImageProcessor"),
         ("efficientformer", "EfficientFormerImageProcessor"),
         ("efficientnet", "EfficientNetImageProcessor"),
-        # ("flava", "FlavaImageProcessor"),
-        # ("focalnet", "BitImageProcessor"),
-        # ("fuyu", "FuyuImageProcessor"),
+        ("flava", "FlavaImageProcessor"),
+        ("focalnet", "BitImageProcessor"),
+        ("fuyu", "FuyuImageProcessor"),
         ("git", "CLIPImageProcessor"),
-        # ("glpn", "GLPNImageProcessor"),
+        ("glpn", "GLPNImageProcessor"),
         ("groupvit", "CLIPImageProcessor"),
-        # ("idefics", "IdeficsImageProcessor"),
+        ("idefics", "IdeficsImageProcessor"),
         ("imagegpt", "ImageGPTImageProcessor"),
-        # ("instructblip", "BlipImageProcessor"),
-        # ("kosmos-2", "CLIPImageProcessor"),
+        ("instructblip", "BlipImageProcessor"),
+        ("kosmos-2", "CLIPImageProcessor"),
         ("layoutlmv2", "LayoutLMv2ImageProcessor"),
         ("layoutlmv3", "LayoutLMv3ImageProcessor"),
-        # ("levit", "LevitImageProcessor"),
+        ("levit", "LevitImageProcessor"),
         ("llava", "CLIPImageProcessor"),
-        # ("mask2former", "Mask2FormerImageProcessor"),
+        ("mask2former", "Mask2FormerImageProcessor"),
         ("maskformer", "MaskFormerImageProcessor"),
-        # ("mgp-str", "ViTImageProcessor"),
-        # ("mobilenet_v1", "MobileNetV1ImageProcessor"),
-        # ("mobilenet_v2", "MobileNetV2ImageProcessor"),
+        ("mgp-str", "ViTImageProcessor"),
+        ("mobilenet_v1", "MobileNetV1ImageProcessor"),
+        ("mobilenet_v2", "MobileNetV2ImageProcessor"),
         ("mobilevit", "MobileViTImageProcessor"),
-        # ("mobilevitv2", "MobileViTImageProcessor"),
-        # ("nat", "ViTImageProcessor"),
-        # ("nougat", "NougatImageProcessor"),
-        # ("oneformer", "OneFormerImageProcessor"),
-        # ("owlv2", "Owlv2ImageProcessor"),
+        ("mobilevit", "MobileViTImageProcessor"),
+        ("mobilevitv2", "MobileViTImageProcessor"),
+        ("nat", "ViTImageProcessor"),
+        ("nougat", "NougatImageProcessor"),
+        ("oneformer", "OneFormerImageProcessor"),
+        ("owlv2", "Owlv2ImageProcessor"),
         ("owlvit", "OwlViTImageProcessor"),
-        # ("perceiver", "PerceiverImageProcessor"),
-        # ("pix2struct", "Pix2StructImageProcessor"),
+        ("perceiver", "PerceiverImageProcessor"),
+        ("pix2struct", "Pix2StructImageProcessor"),
         ("poolformer", "PoolFormerImageProcessor"),
-        # ("pvt", "PvtImageProcessor"),
-        # ("pvt_v2", "PvtImageProcessor"),
+        ("pvt", "PvtImageProcessor"),
+        ("pvt_v2", "PvtImageProcessor"),
         ("regnet", "ConvNextImageProcessor"),
         ("resnet", "ConvNextImageProcessor"),
         ("sam", "SamImageProcessor"),
         ("segformer", "SegformerImageProcessor"),
-        # ("seggpt", "SegGptImageProcessor"),
-        # ("siglip", "SiglipImageProcessor"),
+        ("seggpt", "SegGptImageProcessor"),
+        ("siglip", "SiglipImageProcessor"),
         ("swiftformer", "ViTImageProcessor"),
-        # ("swin", "ViTImageProcessor"),
-        # ("swin2sr", "Swin2SRImageProcessor"),
-        # ("swinv2", "ViTImageProcessor"),
+        ("swin", "ViTImageProcessor"),
+        ("swin2sr", "Swin2SRImageProcessor"),
+        ("swinv2", "ViTImageProcessor"),
         ("table-transformer", "DetrImageProcessor"),
         ("timesformer", "VideoMAEImageProcessor"),
-        # ("tvlt", "TvltImageProcessor"),
-        # ("tvp", "TvpImageProcessor"),
-        # ("udop", "LayoutLMv3ImageProcessor"),
-        # ("upernet", "SegformerImageProcessor"),
+        ("tvlt", "TvltImageProcessor"),
+        ("tvp", "TvpImageProcessor"),
+        ("udop", "LayoutLMv3ImageProcessor"),
+        ("upernet", "SegformerImageProcessor"),
         ("van", "ConvNextImageProcessor"),
         ("videomae", "VideoMAEImageProcessor"),
-        # ("vilt", "ViltImageProcessor"),
+        ("vilt", "ViltImageProcessor"),
         ("vipllava", "CLIPImageProcessor"),
         ("vit", "ViTImageProcessor"),
-        # ("vit_hybrid", "ViTHybridImageProcessor"),
-        # ("vit_mae", "ViTImageProcessor"),
-        # ("vit_msn", "ViTImageProcessor"),
-        # ("vitmatte", "VitMatteImageProcessor"),
+        ("vit_hybrid", "ViTHybridImageProcessor"),
+        ("vit_mae", "ViTImageProcessor"),
+        ("vit_msn", "ViTImageProcessor"),
+        ("vitmatte", "VitMatteImageProcessor"),
         ("xclip", "CLIPImageProcessor"),
-        # ("yolos", "YolosImageProcessor"),
+        ("yolos", "YolosImageProcessor"),
     ]
 )
 
@@ -181,10 +182,9 @@ def get_image_processor_config(
     Args:
         pretrained_model_name_or_path (`str` or `os.PathLike`):
             This can be either:
-
-            - a string, the *model id* of a pretrained model configuration hosted inside a model repo on
+            >   - a string, the *model id* of a pretrained model configuration hosted inside a model repo on
               hf-mirror.com.
-            - a path to a *directory* containing a configuration file saved using the
+            >   - a path to a *directory* containing a configuration file saved using the
               [`~PreTrainedTokenizer.save_pretrained`] method, e.g., `./my_model_directory/`.
 
         cache_dir (`str` or `os.PathLike`, *optional*):
@@ -217,21 +217,21 @@ def get_image_processor_config(
     Returns:
         `Dict`: The configuration of the image processor.
 
-    Examples:
+    Example:
+        ```python
+        # Download configuration from hf-mirror.com and cache.
+        image_processor_config = get_image_processor_config("google-bert/bert-base-uncased")
+        # This model does not have a image processor config so the result will be an empty dict.
+        image_processor_config = get_image_processor_config("FacebookAI/xlm-roberta-base")
 
-    ```python
-    # Download configuration from hf-mirror.com and cache.
-    image_processor_config = get_image_processor_config("google-bert/bert-base-uncased")
-    # This model does not have a image processor config so the result will be an empty dict.
-    image_processor_config = get_image_processor_config("FacebookAI/xlm-roberta-base")
+        # Save a pretrained image processor locally and you can reload its config
+        from transformers import AutoTokenizer
 
-    # Save a pretrained image processor locally and you can reload its config
-    from transformers import AutoTokenizer
-
-    image_processor = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
-    image_processor.save_pretrained("image-processor-test")
-    image_processor_config = get_image_processor_config("image-processor-test")
-    ```"""
+        image_processor = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
+        image_processor.save_pretrained("image-processor-test")
+        image_processor_config = get_image_processor_config("image-processor-test")
+        ```
+    """
     use_auth_token = kwargs.pop("use_auth_token", None)
     if use_auth_token is not None:
         warnings.warn(
@@ -282,7 +282,7 @@ class AutoImageProcessor:
         
         Raises:
             EnvironmentError: Raised when attempting to directly instantiate an AutoImageProcessor object. AutoImageProcessor is designed to be instantiated using the
-`AutoImageProcessor.from_pretrained(pretrained_model_name_or_path)` method.
+            `AutoImageProcessor.from_pretrained(pretrained_model_name_or_path)` method.
         """
         raise EnvironmentError(
             "AutoImageProcessor is designed to be instantiated "
@@ -304,13 +304,12 @@ class AutoImageProcessor:
         Params:
             pretrained_model_name_or_path (`str` or `os.PathLike`):
                 This can be either:
-
-                - a string, the *model id* of a pretrained image_processor hosted inside a model repo on
+                >   - a string, the *model id* of a pretrained image_processor hosted inside a model repo on
                   hf-mirror.com.
-                - a path to a *directory* containing a image processor file saved using the
+                >   - a path to a *directory* containing a image processor file saved using the
                   [`~image_processing_utils.ImageProcessingMixin.save_pretrained`] method, e.g.,
                   `./my_model_directory/`.
-                - a path or url to a saved image processor JSON *file*, e.g.,
+                >   - a path or url to a saved image processor JSON *file*, e.g.,
                   `./my_model_directory/preprocessor_config.json`.
             cache_dir (`str` or `os.PathLike`, *optional*):
                 Path to a directory in which a downloaded pretrained model image processor should be cached if the
@@ -351,17 +350,17 @@ class AutoImageProcessor:
 
         </Tip>
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import AutoImageProcessor
 
-        ```python
-        >>> from transformers import AutoImageProcessor
+            >>> # Download image processor from hf-mirror.com and cache.
+            >>> image_processor = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
 
-        >>> # Download image processor from hf-mirror.com and cache.
-        >>> image_processor = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
-
-        >>> # If image processor files are in a directory (e.g. image processor was saved using *save_pretrained('./test/saved_model/')*)
-        >>> # image_processor = AutoImageProcessor.from_pretrained("./test/saved_model/")
-        ```"""
+            >>> # If image processor files are in a directory (e.g. image processor was saved using *save_pretrained('./test/saved_model/')*)
+            >>> # image_processor = AutoImageProcessor.from_pretrained("./test/saved_model/")
+            ```
+        """
         use_auth_token = kwargs.pop("use_auth_token", None)
         if use_auth_token is not None:
             warnings.warn(

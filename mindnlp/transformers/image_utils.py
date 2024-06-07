@@ -62,7 +62,7 @@ class ChannelDimension(ExplicitEnum):
     Represents a channel dimension for data analysis and visualization.
     
     This class inherits from ExplicitEnum and provides a set of predefined channel dimensions. It allows for easy management and manipulation of channel dimensions within a data processing or visualization
-context.
+    context.
     
     Attributes:
         - TODO: List any attributes specific to the ChannelDimension class.
@@ -81,7 +81,7 @@ class AnnotationFormat(ExplicitEnum):
     Represents an annotation format for storing and manipulating data.
     
     This class is a subclass of ExplicitEnum, which allows for the creation of enumerated types with explicit values. The AnnotationFormat class provides a way to define and manage different annotation formats
-used in data processing and analysis.
+    used in data processing and analysis.
     
     Attributes:
         name (str): The name of the annotation format.
@@ -94,11 +94,12 @@ used in data processing and analysis.
         validate(): Validates the current annotation format.
     
     Example usage:
+        ```python
         >>> format = AnnotationFormat(name="XML", description="Annotation data stored in XML format", file_extension=".xml")
         >>> format.load("annotations.xml")
         >>> format.save("annotations.xml")
         >>> format.validate()
-    
+        ```
     """
     COCO_DETECTION = "coco_detection"
     COCO_PANOPTIC = "coco_panoptic"
@@ -110,23 +111,23 @@ class AnnotionFormat(ExplicitEnum):
     Represents a class for defining annotation formats. This class inherits from ExplicitEnum.
     
     AnnotionFormat provides a way to define and manage different annotation formats. It inherits properties and methods from the ExplicitEnum class, allowing for easy management and manipulation of annotation
-formats within a Python application.
+    formats within a Python application.
     
     Attributes:
         ExplicitEnum: The base class from which AnnotionFormat inherits.
     
     Usage:
         AnnotionFormat instances can be used to define and manage annotation formats within a Python application. The class provides methods and properties for working with annotation formats in a structured
-and consistent manner.
+    and consistent manner.
     
     Example:
-        
+        ```python
         # Define a new annotation format
         class MyAnnotationFormat(AnnotionFormat):
             JSON = 'json'
             XML = 'xml'
-        
-    
+        ```
+
     Note:
         It is recommended to use AnnotionFormat for defining annotation formats to ensure consistent usage and management within the application.
     """
@@ -371,8 +372,8 @@ def is_valid_annotation_coco_detection(annotation: Dict[str, Union[List, Tuple]]
     """
     Args:
         annotation (dict): A dictionary representing an annotation with the following keys:
-            - 'image_id': An identifier for the image associated with the annotation.
-            - 'annotations': A list or tuple of annotations associated with the image.
+            >- 'image_id': An identifier for the image associated with the annotation.
+            >- 'annotations': A list or tuple of annotations associated with the image.
     Returns:
         bool: Returns True if the annotation is valid for COCO detection, False otherwise.
     Raises:
@@ -398,7 +399,7 @@ def is_valid_annotation_coco_panoptic(annotation: Dict[str, Union[List, Tuple]])
     
     Args:
         annotation (Dict[str, Union[List, Tuple]]): A dictionary representing a COCO Panoptic annotation containing the keys 'image_id', 'segments_info', and 'file_name'. The value associated with the key
-'segments_info' must be a list or tuple, and if it is not empty, the first element must be a dictionary.
+        'segments_info' must be a list or tuple, and if it is not empty, the first element must be a dictionary.
     
     Returns:
         bool: True if the annotation is valid, otherwise False.

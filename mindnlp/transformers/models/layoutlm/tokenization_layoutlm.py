@@ -238,15 +238,15 @@ class LayoutLMTokenizer(PreTrainedTokenizer):
         This method '_tokenize' is defined within the 'LayoutLMTokenizer' class and is responsible for tokenizing the input text.
         
         Args:
-        - self: The instance of the LayoutLMTokenizer class.
-        - text (str): The input text to be tokenized.
-        - split_special_tokens (bool): A flag indicating whether special tokens should be split. If set to True, special tokens will be split; otherwise, they will not be split.
+            self: The instance of the LayoutLMTokenizer class.
+            text (str): The input text to be tokenized.
+            split_special_tokens (bool): A flag indicating whether special tokens should be split. If set to True, special tokens will be split; otherwise, they will not be split.
         
         Returns:
-        None: This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
-        None
+            None
         '''
         split_tokens = []
         if self.do_basic_tokenize:
@@ -282,8 +282,8 @@ class LayoutLMTokenizer(PreTrainedTokenizer):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A LayoutLM sequence has the following format:
 
-        - single sequence: `[CLS] X [SEP]`
-        - pair of sequences: `[CLS] A [SEP] B [SEP]`
+        >   - single sequence: `[CLS] X [SEP]`
+        >   - pair of sequences: `[CLS] A [SEP] B [SEP]`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -334,7 +334,6 @@ class LayoutLMTokenizer(PreTrainedTokenizer):
         """
         Create a mask from the two sequences passed to be used in a sequence-pair classification task. A LayoutLM sequence
         pair mask has the following format:
-
         ```
         0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1
         | first sequence    | second sequence |

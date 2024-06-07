@@ -62,16 +62,17 @@ class CodeGenTokenizerFast(PreTrainedTokenizerFast):
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
 
-    ```python
-    >>> from transformers import CodeGenTokenizerFast
+    Example:
+        ```python
+        >>> from transformers import CodeGenTokenizerFast
 
-    >>> tokenizer = CodeGenTokenizerFast.from_pretrained("Salesforce/codegen-350M-mono")
-    >>> tokenizer("Hello world")["input_ids"]
-    [15496, 995]
+        >>> tokenizer = CodeGenTokenizerFast.from_pretrained("Salesforce/codegen-350M-mono")
+        >>> tokenizer("Hello world")["input_ids"]
+        [15496, 995]
 
-    >>> tokenizer(" Hello world")["input_ids"]
-    [18435, 995]
-    ```
+        >>> tokenizer(" Hello world")["input_ids"]
+        [18435, 995]
+        ```
 
     You can get around that behavior by passing `add_prefix_space=True` when instantiating this tokenizer, but since
     the model was not pretrained this way, it might yield a decrease in performance.
@@ -125,22 +126,22 @@ class CodeGenTokenizerFast(PreTrainedTokenizerFast):
         Initializes an instance of the CodeGenTokenizerFast class.
         
         Args:
-        - vocab_file (str): The path to the vocabulary file. Default is None.
-        - merges_file (str): The path to the merges file. Default is None.
-        - tokenizer_file (str): The path to the tokenizer file. Default is None.
-        - unk_token (str): The unknown token to be used. Default is 'endoftext'.
-        - bos_token (str): The beginning of sequence token. Default is 'endoftext'.
-        - eos_token (str): The end of sequence token. Default is 'endoftext'.
-        - add_prefix_space (bool): Whether to add prefix space. Default is False.
-        - **kwargs: Additional keyword arguments.
+            vocab_file (str): The path to the vocabulary file. Default is None.
+            merges_file (str): The path to the merges file. Default is None.
+            tokenizer_file (str): The path to the tokenizer file. Default is None.
+            unk_token (str): The unknown token to be used. Default is 'endoftext'.
+            bos_token (str): The beginning of sequence token. Default is 'endoftext'.
+            eos_token (str): The end of sequence token. Default is 'endoftext'.
+            add_prefix_space (bool): Whether to add prefix space. Default is False.
+            **kwargs: Additional keyword arguments.
         
         Returns:
-        None
+            None
         
         Raises:
-        - ValueError: If attempting to add a BOS token using the fast tokenizer. Suggests using the slow tokenizer instead.
-        - JSONDecodeError: If the pre_tokenizer state cannot be decoded from JSON.
-        - AttributeError: If the pre_tokenizer class cannot be found.
+            - ValueError: If attempting to add a BOS token using the fast tokenizer. Suggests using the slow tokenizer instead.
+            - JSONDecodeError: If the pre_tokenizer state cannot be decoded from JSON.
+            - AttributeError: If the pre_tokenizer class cannot be found.
         """
         super().__init__(
             vocab_file,
@@ -186,7 +187,7 @@ class CodeGenTokenizerFast(PreTrainedTokenizerFast):
         
         Raises:
             AssertionError: If the 'add_prefix_space' attribute is not set to True and the 'is_split_into_words' argument is True. In such cases, the method requires the instantiation of 'CodeGenTokenizerFast'
-with 'add_prefix_space=True' for using it with pretokenized inputs.
+                with 'add_prefix_space=True' for using it with pretokenized inputs.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
         assert self.add_prefix_space or not is_split_into_words, (
@@ -250,9 +251,7 @@ with 'add_prefix_space=True' for using it with pretokenized inputs.
         **kwargs,
     ) -> str:
         """
-        Converts a sequence of ids in a string, using the tokenizer and vocabulary with options to remove special
-        tokens and clean up tokenization spaces.
-
+        Converts a sequence of ids in a string, using the tokenizer and vocabulary with options to remove special tokens and clean up tokenization spaces.
         Similar to doing `self.convert_tokens_to_string(self.convert_ids_to_tokens(token_ids))`.
 
         Args:
@@ -266,7 +265,7 @@ with 'add_prefix_space=True' for using it with pretokenized inputs.
             truncate_before_pattern (`List[str]`, *optional*, defaults to `None`):
                 A list of regular expression strings that will be used to truncate the returned string. This can be
                 used to remove extra pieces of code (e.g. truncate if observing a comment symbol "#" at the beginning
-                of a new line). An example pattern could be `["^#", re.escape("<|endoftext|>"), "^'''", "\n\n\n"]`.
+                of a new line).
             kwargs (additional keyword arguments, *optional*):
                 Will be passed to the underlying model specific decode method.
 

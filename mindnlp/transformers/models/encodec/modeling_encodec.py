@@ -393,14 +393,14 @@ class EncodecEncoder(nn.Cell):
         Args:
             self: The instance of the EncodecEncoder class.
             config (EncodecConfig): An instance of the EncodecConfig class containing configuration parameters for the encoder.
-                - audio_channels (int): The number of audio channels.
-                - num_filters (int): The number of filters to be used in the encoder.
-                - kernel_size (int): The size of the kernel for convolutional layers.
-                - upsampling_ratios (list): A list of integers representing the upsampling ratios for each layer.
-                - num_residual_layers (int): The number of residual layers to be used in the encoder.
-                - dilation_growth_rate (int): The growth rate for the dilation in the residual blocks.
-                - hidden_size (int): The size of the hidden layer.
-                - last_kernel_size (int): The size of the kernel for the final convolutional layer.
+                >   - audio_channels (int): The number of audio channels.
+                >   - num_filters (int): The number of filters to be used in the encoder.
+                >   - kernel_size (int): The size of the kernel for convolutional layers.
+                >   - upsampling_ratios (list): A list of integers representing the upsampling ratios for each layer.
+                >   - num_residual_layers (int): The number of residual layers to be used in the encoder.
+                >   - dilation_growth_rate (int): The growth rate for the dilation in the residual blocks.
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - last_kernel_size (int): The size of the kernel for the final convolutional layer.
         
         Returns:
             None. The method initializes the layers of the encoder and assigns them to the 'layers' attribute of the EncodecEncoder instance.
@@ -436,9 +436,9 @@ class EncodecEncoder(nn.Cell):
         Args:
             self (EncodecEncoder): An instance of the EncodecEncoder class.
             hidden_states (object): The input hidden states.
-                - Type: Any valid Python object
-                - Purpose: Represents the initial hidden states.
-                - Restrictions: None
+                >   - Type: Any valid Python object
+                >   - Purpose: Represents the initial hidden states.
+                >   - Restrictions: None
         
         Returns:
             None: This method does not return any value. It updates the hidden_states in place.
@@ -462,9 +462,9 @@ class EncodecDecoder(nn.Cell):
         Args:
             self: The instance of the class.
             config (EncodecConfig): An instance of the EncodecConfig class containing configuration parameters for the decoder.
-                - Type: EncodecConfig
-                - Purpose: Specifies the configuration settings for the decoder.
-                - Restrictions: Must be an instance of the EncodecConfig class.
+                >   - Type: EncodecConfig
+                >   - Purpose: Specifies the configuration settings for the decoder.
+                >   - Restrictions: Must be an instance of the EncodecConfig class.
         
         Returns:
             None. The method initializes the instance of the EncodecDecoder class and does not return any value.
@@ -573,7 +573,7 @@ class EncodecEuclideanCodebook(nn.Cell):
         
         Returns:
             ndarray: A numpy array containing the encoded indices. The shape of the array is the same as the input hidden_states, except for the last dimension which is reduced to represent the indices of the
-codebook.
+                codebook.
         
         Raises:
             None.
@@ -673,9 +673,9 @@ class EncodecResidualVectorQuantizer(nn.Cell):
         Args:
             self: The instance of the class.
             config (EncodecConfig): An object of the EncodecConfig class that holds configuration parameters.
-                - codebook_size (int): The size of the codebook.
-                - frame_rate (int): The frame rate.
-                - num_quantizers (int): The number of quantizers.
+                >   - codebook_size (int): The size of the codebook.
+                >   - frame_rate (int): The frame rate.
+                >   - num_quantizers (int): The number of quantizers.
                 
         Returns:
             None. This method does not return any value.
@@ -789,7 +789,7 @@ class EncodecModel(EncodecPreTrainedModel):
         decode(audio_codes, audio_scales, padding_mask, return_dict): Decodes the given frames into an output audio waveform.
         construct(input_values, padding_mask, bandwidth, audio_codes, audio_scales, return_dict): Constructs the model.
     
-    Examples:
+    Example:
         from datasets import load_dataset
         from transformers import AutoProcessor, EncodecModel
     
@@ -1114,26 +1114,27 @@ class EncodecModel(EncodecPreTrainedModel):
     ) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], EncodecOutput]:
         r"""
         Returns:
+            Union[Tuple[mindspore.Tensor, mindspore.Tensor], EncodecOutput]
 
-        Examples:
+        Example:
+            ```python
+            >>> from datasets import load_dataset
+            >>> from transformers import AutoProcessor, EncodecModel
 
-        ```python
-        >>> from datasets import load_dataset
-        >>> from transformers import AutoProcessor, EncodecModel
+            >>> dataset = load_dataset("ashraq/esc50")
+            >>> audio_sample = dataset["train"]["audio"][0]["array"]
 
-        >>> dataset = load_dataset("ashraq/esc50")
-        >>> audio_sample = dataset["train"]["audio"][0]["array"]
+            >>> model_id = "facebook/encodec_24khz"
+            >>> model = EncodecModel.from_pretrained(model_id)
+            >>> processor = AutoProcessor.from_pretrained(model_id)
 
-        >>> model_id = "facebook/encodec_24khz"
-        >>> model = EncodecModel.from_pretrained(model_id)
-        >>> processor = AutoProcessor.from_pretrained(model_id)
+            >>> inputs = processor(raw_audio=audio_sample, return_tensors="pt")
 
-        >>> inputs = processor(raw_audio=audio_sample, return_tensors="pt")
-
-        >>> outputs = model(**inputs)
-        >>> audio_codes = outputs.audio_codes
-        >>> audio_values = outputs.audio_values
-        ```"""
+            >>> outputs = model(**inputs)
+            >>> audio_codes = outputs.audio_codes
+            >>> audio_values = outputs.audio_values
+            ```
+        """
         return_dict = return_dict or self.config.return_dict
 
         if padding_mask is None:

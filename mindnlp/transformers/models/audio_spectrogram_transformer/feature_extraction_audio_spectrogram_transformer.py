@@ -202,10 +202,9 @@ class ASTFeatureExtractor(SequenceFeatureExtractor):
                 `sampling_rate` at the forward call to prevent silent errors.
             return_tensors (`str` or [`~utils.TensorType`], *optional*):
                 If set, will return tensors instead of list of python integers. Acceptable values are:
-
-                - `'tf'`: Return TensorFlow `tf.constant` objects.
-                - `'pt'`: Return PyTorch `torch.Tensor` objects.
-                - `'np'`: Return Numpy `np.ndarray` objects.
+                >   - `'tf'`: Return TensorFlow `tf.constant` objects.
+                >   - `'pt'`: Return PyTorch `torch.Tensor` objects.
+                >   - `'np'`: Return Numpy `np.ndarray` objects.
         """
         if sampling_rate is not None:
             if sampling_rate != self.sampling_rate:

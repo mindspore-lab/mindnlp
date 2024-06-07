@@ -70,17 +70,16 @@ class GPT2TokenizerFast(PreTrainedTokenizerFast):
 
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
+        ```python
+        >>> from transformers import GPT2TokenizerFast
 
-    ```python
-    >>> from transformers import GPT2TokenizerFast
+        >>> tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
+        >>> tokenizer("Hello world")["input_ids"]
+        [15496, 995]
 
-    >>> tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
-    >>> tokenizer("Hello world")["input_ids"]
-    [15496, 995]
-
-    >>> tokenizer(" Hello world")["input_ids"]
-    [18435, 995]
-    ```
+        >>> tokenizer(" Hello world")["input_ids"]
+        [18435, 995]
+        ```
 
     You can get around that behavior by passing `add_prefix_space=True` when instantiating this tokenizer, but since
     the model was not pretrained this way, it might yield a decrease in performance.
@@ -184,7 +183,7 @@ class GPT2TokenizerFast(PreTrainedTokenizerFast):
         
         Raises:
         - AssertionError: If the 'add_prefix_space' is False and the 'is_split_into_words' is also False, an assertion error is raised with the message 'You need to instantiate GPT2TokenizerFast with
-add_prefix_space=True to use it with pretokenized inputs'.
+            add_prefix_space=True to use it with pretokenized inputs'.
         - Any other exceptions raised by the 'super()._batch_encode_plus' method.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
@@ -210,7 +209,8 @@ add_prefix_space=True to use it with pretokenized inputs'.
         Note:
             This method is intended to be used with pretokenized inputs. If the 'is_split_into_words' parameter is set to True, make sure to instantiate the GPT2TokenizerFast class with 'add_prefix_space=True'.
         
-        Examples:
+        Example:
+            ```python
             >>> tokenizer = GPT2TokenizerFast()
             >>> encoded_inputs = tokenizer._encode_plus("Hello, world!")
             >>> print(encoded_inputs)
@@ -219,6 +219,7 @@ add_prefix_space=True to use it with pretokenized inputs'.
             >>> tokenizer = GPT2TokenizerFast(add_prefix_space=True)
             >>> encoded_inputs = tokenizer._encode_plus("Hello, world!", is_split_into_words=True)
             AssertionError: You need to instantiate GPT2TokenizerFast with add_prefix_space=True to use it with pretokenized inputs.
+            ```
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
 
@@ -251,10 +252,12 @@ add_prefix_space=True to use it with pretokenized inputs'.
             - The method returns a tuple containing the file path(s) where the vocabulary files were saved.
         
         Example:
+            ```python
             tokenizer = GPT2TokenizerFast()
             tokenizer.save_vocabulary("path/to/save", filename_prefix="vocab")
             # The vocabulary files will be saved with the prefix "vocab" in the specified directory.
             # The method will return a tuple containing the file paths.
+            ```
         """
         files = self._tokenizer.model.save(save_directory, name=filename_prefix)
         return tuple(files)

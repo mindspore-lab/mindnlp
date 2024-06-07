@@ -163,15 +163,14 @@ class LayoutLMSelfAttention(nn.Cell):
         
         Args:
             self: The instance of LayoutLMSelfAttention.
-            config: An object containing the configuration parameters for the self-attention layer.
-                Expected attributes:
-                    - hidden_size (int): The size of the hidden layer.
-                    - num_attention_heads (int): The number of attention heads.
-                    - embedding_size (int, optional): The size of the embedding layer.
-                    - attention_probs_dropout_prob (float): The dropout probability for attention probabilities.
-                    - position_embedding_type (str, optional): The type of position embedding to use ('absolute' by default).
-                    - max_position_embeddings (int): The maximum number of position embeddings.
-                    - is_decoder (bool): Indicates if the self-attention layer is part of a decoder.
+            config: An object containing the configuration parameters for the self-attention layer. Expected attributes:
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - num_attention_heads (int): The number of attention heads.
+                >   - embedding_size (int, optional): The size of the embedding layer.
+                >   - attention_probs_dropout_prob (float): The dropout probability for attention probabilities.
+                >   - position_embedding_type (str, optional): The type of position embedding to use ('absolute' by default).
+                >   - max_position_embeddings (int): The maximum number of position embeddings.
+                >   - is_decoder (bool): Indicates if the self-attention layer is part of a decoder.
             position_embedding_type (str, optional): The type of position embedding to use (default is None).
                 Accepted values: 'absolute', 'relative_key', 'relative_key_query'.
         
@@ -221,10 +220,10 @@ class LayoutLMSelfAttention(nn.Cell):
             None
         
         This method transposes the input tensor `x` to prepare it for calculating self-attention scores in the LayoutLMSelfAttention model. The transposition is performed by reshaping the tensor to include the
-number of attention heads and the size of each attention head. The resulting tensor is then permuted to match the desired shape `(batch_size, num_attention_heads, sequence_length, attention_head_size)`.
+        number of attention heads and the size of each attention head. The resulting tensor is then permuted to match the desired shape `(batch_size, num_attention_heads, sequence_length, attention_head_size)`.
         
         Note that this method assumes that the input tensor `x` has a rank of at least 3, where the last dimension represents the hidden size. The number of attention heads and the size of each attention head
-are obtained from the attributes `num_attention_heads` and `attention_head_size` of the LayoutLMSelfAttention instance, respectively.
+        are obtained from the attributes `num_attention_heads` and `attention_head_size` of the LayoutLMSelfAttention instance, respectively.
         """
         new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
         x = x.view(new_x_shape)
@@ -244,22 +243,22 @@ are obtained from the attributes `num_attention_heads` and `attention_head_size`
         This method constructs the self-attention mechanism for the LayoutLMSelfAttention class.
         
         Args:
-        - self: The instance of the LayoutLMSelfAttention class.
-        - hidden_states (mindspore.Tensor): The input hidden states tensor.
-        - attention_mask (Optional[mindspore.Tensor], optional): Mask tensor to prevent attention to certain positions. Defaults to None.
-        - head_mask (Optional[mindspore.Tensor], optional): Mask tensor to control the heads involved in the attention computation. Defaults to None.
-        - encoder_hidden_states (Optional[mindspore.Tensor], optional): Hidden states of the encoder in case of cross-attention. Defaults to None.
-        - encoder_attention_mask (Optional[mindspore.Tensor], optional): Mask tensor for encoder attention. Defaults to None.
-        - past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]], optional): Cached key and value tensors from previous attention calculations. Defaults to None.
-        - output_attentions (Optional[bool], optional): Flag to indicate whether to output attentions. Defaults to False.
+            self: The instance of the LayoutLMSelfAttention class.
+            hidden_states (mindspore.Tensor): The input hidden states tensor.
+            attention_mask (Optional[mindspore.Tensor], optional): Mask tensor to prevent attention to certain positions. Defaults to None.
+            head_mask (Optional[mindspore.Tensor], optional): Mask tensor to control the heads involved in the attention computation. Defaults to None.
+            encoder_hidden_states (Optional[mindspore.Tensor], optional): Hidden states of the encoder in case of cross-attention. Defaults to None.
+            encoder_attention_mask (Optional[mindspore.Tensor], optional): Mask tensor for encoder attention. Defaults to None.
+            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]], optional): Cached key and value tensors from previous attention calculations. Defaults to None.
+            output_attentions (Optional[bool], optional): Flag to indicate whether to output attentions. Defaults to False.
         
         Returns:
-        Tuple[mindspore.Tensor]: A tuple containing the context layer tensor and optionally attention probabilities tensor.
+            Tuple[mindspore.Tensor]: A tuple containing the context layer tensor and optionally attention probabilities tensor.
         
         Raises:
-        - ValueError: If the input tensor shapes are incompatible for matrix multiplication.
-        - RuntimeError: If there are runtime issues during tensor operations.
-        - TypeError: If the input types are not as expected.
+            - ValueError: If the input tensor shapes are incompatible for matrix multiplication.
+            - RuntimeError: If there are runtime issues during tensor operations.
+            - TypeError: If the input types are not as expected.
         """
         mixed_query_layer = self.query(hidden_states)
 
@@ -446,7 +445,7 @@ class LayoutLMAttention(nn.Cell):
         This method prunes the specified attention heads from the LayoutLMAttention instance. 
         First, it checks if the 'heads' list is empty. If so, the method returns without making any changes.
         Otherwise, it calls the 'find_pruneable_heads_and_indices' function to identify the attention heads and their corresponding indices that can be pruned based on the given 'heads' list, the number of
-attention heads, attention head size, and already pruned heads stored in the instance.
+            attention heads, attention head size, and already pruned heads stored in the instance.
         Next, it prunes the 'self.query', 'self.key', 'self.value', and 'self.output.dense' linear layers by calling the 'prune_linear_layer' function with the identified indices.
         After each linear layer is pruned, the number of attention heads is updated by subtracting the length of the 'heads' list from the current number of attention heads.
         The total size of all attention heads, 'self.all_head_size', is then recalculated as the product of the attention head size and the updated number of attention heads.
@@ -567,10 +566,10 @@ class LayoutLMOutput(nn.Cell):
             config (object): An object containing configuration parameters for the LayoutLMOutput.
                 This parameter is required to configure the dense layer, layer normalization, and dropout.
                 It should be an instance of a class that contains the following attributes:
-                    - intermediate_size (int): The size of the intermediate layer.
-                    - hidden_size (int): The size of the hidden layer.
-                    - layer_norm_eps (float): The epsilon value for layer normalization.
-                    - hidden_dropout_prob (float): The dropout probability for the hidden layer.
+                    >   - intermediate_size (int): The size of the intermediate layer.
+                    >   - hidden_size (int): The size of the hidden layer.
+                    >   - layer_norm_eps (float): The epsilon value for layer normalization.
+                    >   - hidden_dropout_prob (float): The dropout probability for the hidden layer.
         
         Returns:
             None. This method initializes the dense, LayerNorm, and dropout attributes of the LayoutLMOutput instance.
@@ -655,12 +654,12 @@ class LayoutLMLayer(nn.Cell):
             encoder_hidden_states (Optional[mindspore.Tensor]): The encoder hidden states tensor of shape (batch_size, seq_length, hidden_size). Defaults to None.
             encoder_attention_mask (Optional[mindspore.Tensor]): The encoder attention mask tensor of shape (batch_size, seq_length) or (batch_size, seq_length, seq_length). Defaults to None.
             past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): The past key-value tensor of shape (2, batch_size, num_heads, past_seq_length, head_dim), where past_seq_length is the length of past
-sequence. Defaults to None.
+                sequence. Defaults to None.
             output_attentions (Optional[bool]): Whether to output attentions. Defaults to False.
         
         Returns:
             Tuple[mindspore.Tensor]: A tuple containing the output tensor(s) of the layer. The first element is the layer output tensor of shape (batch_size, seq_length, hidden_size). If the layer is a
-decoder, the tuple also includes the present key-value tensor(s) of shape (2, batch_size, num_heads, seq_length, head_dim).
+                decoder, the tuple also includes the present key-value tensor(s) of shape (2, batch_size, num_heads, seq_length, head_dim).
         
         Raises:
             ValueError: If `encoder_hidden_states` are passed and the cross-attention layers are not instantiated by setting `config.add_cross_attention=True`.
@@ -726,22 +725,23 @@ decoder, the tuple also includes the present key-value tensor(s) of shape (2, ba
         Class: LayoutLMLayer
         
         Description:
-        This class represents a layer in a layout LM model.
+            This class represents a layer in a layout LM model.
         
-        Method: feed_forward_chunk
+        Method:
+            feed_forward_chunk
         
         Description:
-        This method applies a feed-forward operation to the given attention output.
+            This method applies a feed-forward operation to the given attention output.
         
         Args:
-        - self (LayoutLMLayer): The instance of the LayoutLMLayer class.
-        - attention_output (Tensor): The attention output tensor to be processed by the feed-forward operation.
+            self (LayoutLMLayer): The instance of the LayoutLMLayer class.
+            attention_output (Tensor): The attention output tensor to be processed by the feed-forward operation.
         
         Returns:
-        - layer_output (Tensor): The output tensor after applying the feed-forward operation.
+            layer_output (Tensor): The output tensor after applying the feed-forward operation.
         
         Raises:
-        - N/A
+            - N/A
         """
         intermediate_output = self.intermediate(attention_output)
         layer_output = self.output(intermediate_output, attention_output)
@@ -785,24 +785,24 @@ class LayoutLMEncoder(nn.Cell):
         This method constructs the LayoutLM encoder using the specified parameters.
         
         Args:
-        - self: The instance of the LayoutLMEncoder class.
-        - hidden_states (mindspore.Tensor): The input hidden states for encoding.
-        - attention_mask (Optional[mindspore.Tensor]): Mask to avoid attending to certain positions.
-        - head_mask (Optional[mindspore.Tensor]): Mask to specify which heads to disable in the attention computation.
-        - encoder_hidden_states (Optional[mindspore.Tensor]): Hidden states of the encoder to be used in cross-attention layers.
-        - encoder_attention_mask (Optional[mindspore.Tensor]): Mask for encoder attention mechanism.
-        - past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]]): Cached key/values for previous decoding steps.
-        - use_cache (Optional[bool]): Flag to indicate whether to use caching for decoding.
-        - output_attentions (Optional[bool]): Flag to output attention scores.
-        - output_hidden_states (Optional[bool]): Flag to output hidden states for each layer.
-        - return_dict (Optional[bool]): Flag to indicate returning the output as a dictionary.
+            self: The instance of the LayoutLMEncoder class.
+            hidden_states (mindspore.Tensor): The input hidden states for encoding.
+            attention_mask (Optional[mindspore.Tensor]): Mask to avoid attending to certain positions.
+            head_mask (Optional[mindspore.Tensor]): Mask to specify which heads to disable in the attention computation.
+            encoder_hidden_states (Optional[mindspore.Tensor]): Hidden states of the encoder to be used in cross-attention layers.
+            encoder_attention_mask (Optional[mindspore.Tensor]): Mask for encoder attention mechanism.
+            past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]]): Cached key/values for previous decoding steps.
+            use_cache (Optional[bool]): Flag to indicate whether to use caching for decoding.
+            output_attentions (Optional[bool]): Flag to output attention scores.
+            output_hidden_states (Optional[bool]): Flag to output hidden states for each layer.
+            return_dict (Optional[bool]): Flag to indicate returning the output as a dictionary.
         
         Returns:
-        - Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]: The output of the encoder, which is either a tuple of hidden states or a complex object containing past key values and
-attentions.
+            Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]: The output of the encoder, which is either a tuple of hidden states or a complex object containing past key values and
+            attentions.
         
         Raises:
-        - Warning: If `use_cache=True` is incompatible with gradient checkpointing, it will issue a warning and set `use_cache=False`.
+            - Warning: If `use_cache=True` is incompatible with gradient checkpointing, it will issue a warning and set `use_cache=False`.
         """
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
@@ -918,9 +918,9 @@ class LayoutLMPredictionHeadTransform(nn.Cell):
         Args:
             self: The instance of the class.
             config: An object containing configuration parameters for the head transformation.
-                Type: Custom configuration class
-                Purpose: Specifies the configuration settings for the head transformation.
-                Restrictions: Must be a valid configuration object.
+                >   - Type: Custom configuration class
+                >   - Purpose: Specifies the configuration settings for the head transformation.
+                >   - Restrictions: Must be a valid configuration object.
         
         Returns:
             None: This method does not return any value.
@@ -948,7 +948,7 @@ class LayoutLMPredictionHeadTransform(nn.Cell):
         
         Returns:
             mindspore.Tensor: A tensor containing the transformed hidden states after passing through dense layers, activation function, and layer normalization. The shape of the output tensor is the same as
-the input hidden_states.
+            the input hidden_states.
         
         Raises:
             This method does not explicitly raise any exceptions.
@@ -1159,38 +1159,39 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
     ) -> Union[Tuple, BaseModelOutputWithPoolingAndCrossAttentions]:
         r"""
         Returns:
+            Union[Tuple, BaseModelOutputWithPoolingAndCrossAttentions]
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import AutoTokenizer, LayoutLMModel
+            >>> import torch
 
-        ```python
-        >>> from transformers import AutoTokenizer, LayoutLMModel
-        >>> import torch
+            >>> tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutlm-base-uncased")
+            >>> model = LayoutLMModel.from_pretrained("microsoft/layoutlm-base-uncased")
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutlm-base-uncased")
-        >>> model = LayoutLMModel.from_pretrained("microsoft/layoutlm-base-uncased")
+            >>> words = ["Hello", "world"]
+            >>> normalized_word_boxes = [637, 773, 693, 782], [698, 773, 733, 782]
 
-        >>> words = ["Hello", "world"]
-        >>> normalized_word_boxes = [637, 773, 693, 782], [698, 773, 733, 782]
+            >>> token_boxes = []
+            >>> for word, box in zip(words, normalized_word_boxes):
+            ...     word_tokens = tokenizer.tokenize(word)
+            ...     token_boxes.extend([box] * len(word_tokens))
+            >>> # add bounding boxes of cls + sep tokens
+            >>> token_boxes = [[0, 0, 0, 0]] + token_boxes + [[1000, 1000, 1000, 1000]]
 
-        >>> token_boxes = []
-        >>> for word, box in zip(words, normalized_word_boxes):
-        ...     word_tokens = tokenizer.tokenize(word)
-        ...     token_boxes.extend([box] * len(word_tokens))
-        >>> # add bounding boxes of cls + sep tokens
-        >>> token_boxes = [[0, 0, 0, 0]] + token_boxes + [[1000, 1000, 1000, 1000]]
+            >>> encoding = tokenizer(" ".join(words), return_tensors="pt")
+            >>> input_ids = encoding["input_ids"]
+            >>> attention_mask = encoding["attention_mask"]
+            >>> token_type_ids = encoding["token_type_ids"]
+            >>> bbox = torch.tensor([token_boxes])
 
-        >>> encoding = tokenizer(" ".join(words), return_tensors="pt")
-        >>> input_ids = encoding["input_ids"]
-        >>> attention_mask = encoding["attention_mask"]
-        >>> token_type_ids = encoding["token_type_ids"]
-        >>> bbox = torch.tensor([token_boxes])
+            >>> outputs = model(
+            ...     input_ids=input_ids, bbox=bbox, attention_mask=attention_mask, token_type_ids=token_type_ids
+            ... )
 
-        >>> outputs = model(
-        ...     input_ids=input_ids, bbox=bbox, attention_mask=attention_mask, token_type_ids=token_type_ids
-        ... )
-
-        >>> last_hidden_states = outputs.last_hidden_state
-        ```"""
+            >>> last_hidden_states = outputs.last_hidden_state
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1357,44 +1358,45 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
             loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
 
         Returns:
+            Union[Tuple, MaskedLMOutput]
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import AutoTokenizer, LayoutLMForMaskedLM
+            >>> import torch
 
-        ```python
-        >>> from transformers import AutoTokenizer, LayoutLMForMaskedLM
-        >>> import torch
+            >>> tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutlm-base-uncased")
+            >>> model = LayoutLMForMaskedLM.from_pretrained("microsoft/layoutlm-base-uncased")
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutlm-base-uncased")
-        >>> model = LayoutLMForMaskedLM.from_pretrained("microsoft/layoutlm-base-uncased")
+            >>> words = ["Hello", "[MASK]"]
+            >>> normalized_word_boxes = [637, 773, 693, 782], [698, 773, 733, 782]
 
-        >>> words = ["Hello", "[MASK]"]
-        >>> normalized_word_boxes = [637, 773, 693, 782], [698, 773, 733, 782]
+            >>> token_boxes = []
+            >>> for word, box in zip(words, normalized_word_boxes):
+            ...     word_tokens = tokenizer.tokenize(word)
+            ...     token_boxes.extend([box] * len(word_tokens))
+            >>> # add bounding boxes of cls + sep tokens
+            >>> token_boxes = [[0, 0, 0, 0]] + token_boxes + [[1000, 1000, 1000, 1000]]
 
-        >>> token_boxes = []
-        >>> for word, box in zip(words, normalized_word_boxes):
-        ...     word_tokens = tokenizer.tokenize(word)
-        ...     token_boxes.extend([box] * len(word_tokens))
-        >>> # add bounding boxes of cls + sep tokens
-        >>> token_boxes = [[0, 0, 0, 0]] + token_boxes + [[1000, 1000, 1000, 1000]]
+            >>> encoding = tokenizer(" ".join(words), return_tensors="pt")
+            >>> input_ids = encoding["input_ids"]
+            >>> attention_mask = encoding["attention_mask"]
+            >>> token_type_ids = encoding["token_type_ids"]
+            >>> bbox = torch.tensor([token_boxes])
 
-        >>> encoding = tokenizer(" ".join(words), return_tensors="pt")
-        >>> input_ids = encoding["input_ids"]
-        >>> attention_mask = encoding["attention_mask"]
-        >>> token_type_ids = encoding["token_type_ids"]
-        >>> bbox = torch.tensor([token_boxes])
+            >>> labels = tokenizer("Hello world", return_tensors="pt")["input_ids"]
 
-        >>> labels = tokenizer("Hello world", return_tensors="pt")["input_ids"]
+            >>> outputs = model(
+            ...     input_ids=input_ids,
+            ...     bbox=bbox,
+            ...     attention_mask=attention_mask,
+            ...     token_type_ids=token_type_ids,
+            ...     labels=labels,
+            ... )
 
-        >>> outputs = model(
-        ...     input_ids=input_ids,
-        ...     bbox=bbox,
-        ...     attention_mask=attention_mask,
-        ...     token_type_ids=token_type_ids,
-        ...     labels=labels,
-        ... )
-
-        >>> loss = outputs.loss
-        ```"""
+            >>> loss = outputs.loss
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.layoutlm(
@@ -1496,50 +1498,52 @@ class LayoutLMForSequenceClassification(LayoutLMPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
 
         Returns:
+            Union[Tuple, SequenceClassifierOutput]
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import AutoTokenizer, LayoutLMForSequenceClassification
+            >>> import torch
 
-        ```python
-        >>> from transformers import AutoTokenizer, LayoutLMForSequenceClassification
-        >>> import torch
+            >>> tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutlm-base-uncased")
+            >>> model = LayoutLMForSequenceClassification.from_pretrained("microsoft/layoutlm-base-uncased")
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutlm-base-uncased")
-        >>> model = LayoutLMForSequenceClassification.from_pretrained("microsoft/layoutlm-base-uncased")
+            >>> words = ["Hello", "world"]
+            >>> normalized_word_boxes = [637, 773, 693, 782], [698, 773, 733, 782]
 
-        >>> words = ["Hello", "world"]
-        >>> normalized_word_boxes = [637, 773, 693, 782], [698, 773, 733, 782]
+            >>> token_boxes = []
+            >>> for word, box in zip(words, normalized_word_boxes):
+            ...     word_tokens = tokenizer.tokenize(word)
+            ...     token_boxes.extend([box] * len(word_tokens))
+            >>> # add bounding boxes of cls + sep tokens
+            >>> token_boxes = [[0, 0, 0, 0]] + token_boxes + [[1000, 1000, 1000, 1000]]
 
-        >>> token_boxes = []
-        >>> for word, box in zip(words, normalized_word_boxes):
-        ...     word_tokens = tokenizer.tokenize(word)
-        ...     token_boxes.extend([box] * len(word_tokens))
-        >>> # add bounding boxes of cls + sep tokens
-        >>> token_boxes = [[0, 0, 0, 0]] + token_boxes + [[1000, 1000, 1000, 1000]]
+            >>> encoding = tokenizer(" ".join(words), return_tensors="pt")
+            >>> input_ids = encoding["input_ids"]
+            >>> attention_mask = encoding["attention_mask"]
+            >>> token_type_ids = encoding["token_type_ids"]
+            >>> bbox = torch.tensor([token_boxes])
+            >>> sequence_label = torch.tensor([1])
 
-        >>> encoding = tokenizer(" ".join(words), return_tensors="pt")
-        >>> input_ids = encoding["input_ids"]
-        >>> attention_mask = encoding["attention_mask"]
-        >>> token_type_ids = encoding["token_type_ids"]
-        >>> bbox = torch.tensor([token_boxes])
-        >>> sequence_label = torch.tensor([1])
+            >>> outputs = model(
+            ...     input_ids=input_ids,
+            ...     bbox=bbox,
+            ...     attention_mask=attention_mask,
+            ...     token_type_ids=token_type_ids,
+            ...     labels=sequence_label,
+            ... )
 
-        >>> outputs = model(
-        ...     input_ids=input_ids,
-        ...     bbox=bbox,
-        ...     attention_mask=attention_mask,
-        ...     token_type_ids=token_type_ids,
-        ...     labels=sequence_label,
-        ... )
-
-        >>> loss = outputs.loss
-        >>> logits = outputs.logits
-        ```"""
+            >>> loss = outputs.loss
+            >>> logits = outputs.logits
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.layoutlm(
@@ -1600,9 +1604,9 @@ class LayoutLMForTokenClassification(LayoutLMPreTrainedModel):
         Args:
             self: The instance of the LayoutLMForTokenClassification class.
             config: An object of the LayoutLMConfig class containing the configuration parameters for the LayoutLM model.
-                - Type: LayoutLMConfig
-                - Purpose: Specifies the configuration parameters for the LayoutLM model.
-                - Restrictions: None
+                >   - Type: LayoutLMConfig
+                >   - Purpose: Specifies the configuration parameters for the LayoutLM model.
+                >   - Restrictions: None
         
         Returns:
             None
@@ -1653,44 +1657,45 @@ class LayoutLMForTokenClassification(LayoutLMPreTrainedModel):
             Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
 
         Returns:
+            Union[Tuple, TokenClassifierOutput]
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import AutoTokenizer, LayoutLMForTokenClassification
+            >>> import torch
 
-        ```python
-        >>> from transformers import AutoTokenizer, LayoutLMForTokenClassification
-        >>> import torch
+            >>> tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutlm-base-uncased")
+            >>> model = LayoutLMForTokenClassification.from_pretrained("microsoft/layoutlm-base-uncased")
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutlm-base-uncased")
-        >>> model = LayoutLMForTokenClassification.from_pretrained("microsoft/layoutlm-base-uncased")
+            >>> words = ["Hello", "world"]
+            >>> normalized_word_boxes = [637, 773, 693, 782], [698, 773, 733, 782]
 
-        >>> words = ["Hello", "world"]
-        >>> normalized_word_boxes = [637, 773, 693, 782], [698, 773, 733, 782]
+            >>> token_boxes = []
+            >>> for word, box in zip(words, normalized_word_boxes):
+            ...     word_tokens = tokenizer.tokenize(word)
+            ...     token_boxes.extend([box] * len(word_tokens))
+            >>> # add bounding boxes of cls + sep tokens
+            >>> token_boxes = [[0, 0, 0, 0]] + token_boxes + [[1000, 1000, 1000, 1000]]
 
-        >>> token_boxes = []
-        >>> for word, box in zip(words, normalized_word_boxes):
-        ...     word_tokens = tokenizer.tokenize(word)
-        ...     token_boxes.extend([box] * len(word_tokens))
-        >>> # add bounding boxes of cls + sep tokens
-        >>> token_boxes = [[0, 0, 0, 0]] + token_boxes + [[1000, 1000, 1000, 1000]]
+            >>> encoding = tokenizer(" ".join(words), return_tensors="pt")
+            >>> input_ids = encoding["input_ids"]
+            >>> attention_mask = encoding["attention_mask"]
+            >>> token_type_ids = encoding["token_type_ids"]
+            >>> bbox = torch.tensor([token_boxes])
+            >>> token_labels = torch.tensor([1, 1, 0, 0]).unsqueeze(0)  # batch size of 1
 
-        >>> encoding = tokenizer(" ".join(words), return_tensors="pt")
-        >>> input_ids = encoding["input_ids"]
-        >>> attention_mask = encoding["attention_mask"]
-        >>> token_type_ids = encoding["token_type_ids"]
-        >>> bbox = torch.tensor([token_boxes])
-        >>> token_labels = torch.tensor([1, 1, 0, 0]).unsqueeze(0)  # batch size of 1
+            >>> outputs = model(
+            ...     input_ids=input_ids,
+            ...     bbox=bbox,
+            ...     attention_mask=attention_mask,
+            ...     token_type_ids=token_type_ids,
+            ...     labels=token_labels,
+            ... )
 
-        >>> outputs = model(
-        ...     input_ids=input_ids,
-        ...     bbox=bbox,
-        ...     attention_mask=attention_mask,
-        ...     token_type_ids=token_type_ids,
-        ...     labels=token_labels,
-        ... )
-
-        >>> loss = outputs.loss
-        >>> logits = outputs.logits
-        ```"""
+            >>> loss = outputs.loss
+            >>> logits = outputs.logits
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.layoutlm(
@@ -1797,48 +1802,49 @@ class LayoutLMForQuestionAnswering(LayoutLMPreTrainedModel):
             are not taken into account for computing the loss.
 
         Returns:
-
-        Example:
+            Union[Tuple, QuestionAnsweringModelOutput]
 
         In the example below, we prepare a question + context pair for the LayoutLM model. It will give us a prediction
         of what it thinks the answer is (the span of the answer within the texts parsed from the image).
 
-        ```python
-        >>> from transformers import AutoTokenizer, LayoutLMForQuestionAnswering
-        >>> from datasets import load_dataset
-        >>> import torch
+        Example:
+            ```python
+            >>> from transformers import AutoTokenizer, LayoutLMForQuestionAnswering
+            >>> from datasets import load_dataset
+            >>> import torch
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("impira/layoutlm-document-qa", add_prefix_space=True)
-        >>> model = LayoutLMForQuestionAnswering.from_pretrained("impira/layoutlm-document-qa", revision="1e3ebac")
+            >>> tokenizer = AutoTokenizer.from_pretrained("impira/layoutlm-document-qa", add_prefix_space=True)
+            >>> model = LayoutLMForQuestionAnswering.from_pretrained("impira/layoutlm-document-qa", revision="1e3ebac")
 
-        >>> dataset = load_dataset("nielsr/funsd", split="train")
-        >>> example = dataset[0]
-        >>> question = "what's his name?"
-        >>> words = example["words"]
-        >>> boxes = example["bboxes"]
+            >>> dataset = load_dataset("nielsr/funsd", split="train")
+            >>> example = dataset[0]
+            >>> question = "what's his name?"
+            >>> words = example["words"]
+            >>> boxes = example["bboxes"]
 
-        >>> encoding = tokenizer(
-        ...     question.split(), words, is_split_into_words=True, return_token_type_ids=True, return_tensors="pt"
-        ... )
-        >>> bbox = []
-        >>> for i, s, w in zip(encoding.input_ids[0], encoding.sequence_ids(0), encoding.word_ids(0)):
-        ...     if s == 1:
-        ...         bbox.append(boxes[w])
-        ...     elif i == tokenizer.sep_token_id:
-        ...         bbox.append([1000] * 4)
-        ...     else:
-        ...         bbox.append([0] * 4)
-        >>> encoding["bbox"] = torch.tensor([bbox])
+            >>> encoding = tokenizer(
+            ...     question.split(), words, is_split_into_words=True, return_token_type_ids=True, return_tensors="pt"
+            ... )
+            >>> bbox = []
+            >>> for i, s, w in zip(encoding.input_ids[0], encoding.sequence_ids(0), encoding.word_ids(0)):
+            ...     if s == 1:
+            ...         bbox.append(boxes[w])
+            ...     elif i == tokenizer.sep_token_id:
+            ...         bbox.append([1000] * 4)
+            ...     else:
+            ...         bbox.append([0] * 4)
+            >>> encoding["bbox"] = torch.tensor([bbox])
 
-        >>> word_ids = encoding.word_ids(0)
-        >>> outputs = model(**encoding)
-        >>> loss = outputs.loss
-        >>> start_scores = outputs.start_logits
-        >>> end_scores = outputs.end_logits
-        >>> start, end = word_ids[start_scores.argmax(-1)], word_ids[end_scores.argmax(-1)]
-        >>> print(" ".join(words[start : end + 1]))
-        M. Hamann P. Harper, P. Martinez
-        ```"""
+            >>> word_ids = encoding.word_ids(0)
+            >>> outputs = model(**encoding)
+            >>> loss = outputs.loss
+            >>> start_scores = outputs.start_logits
+            >>> end_scores = outputs.end_logits
+            >>> start, end = word_ids[start_scores.argmax(-1)], word_ids[end_scores.argmax(-1)]
+            >>> print(" ".join(words[start : end + 1]))
+            M. Hamann P. Harper, P. Martinez
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.layoutlm(

@@ -76,13 +76,14 @@ class Starcoder2RotaryEmbedding(nn.Cell):
     The Starcoder2RotaryEmbedding class represents a rotary embedding module used for positional encoding in neural network models. This class inherits from the nn.Cell class.
     
     The class's constructor method initializes the Starcoder2RotaryEmbedding instance with the specified dimensions, maximum position embeddings, and base value for the rotary embedding. It computes the
-inverse frequency and sets the cosine and sine cache for positional encoding.
+        inverse frequency and sets the cosine and sine cache for positional encoding.
     
     The _set_cos_sin_cache method sets the cosine and sine cache based on the maximum sequence length and data type.
     
     The construct method applies the positional encoding to the input tensor based on the sequence length and returns the cosine and sine embeddings.
     
-    Note: This docstring is a detailed summary of the Starcoder2RotaryEmbedding class and its methods, providing an overview of its functionality and purpose within the context of neural network modeling.
+    Note:
+        This docstring is a detailed summary of the Starcoder2RotaryEmbedding class and its methods, providing an overview of its functionality and purpose within the context of neural network modeling.
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
         """
@@ -150,8 +151,8 @@ inverse frequency and sets the cosine and sine cache for positional encoding.
         
         Returns:
             Tuple[torch.Tensor, torch.Tensor]: A tuple containing the cosine and sine embeddings for the given sequence length.
-                - The cosine embedding is obtained by taking the first 'seq_len' elements from the cached cosine values.
-                - The sine embedding is obtained by taking the first 'seq_len' elements from the cached sine values.
+                >   - The cosine embedding is obtained by taking the first 'seq_len' elements from the cached cosine values.
+                >   - The sine embedding is obtained by taking the first 'seq_len' elements from the cached sine values.
                 Both embeddings are converted to the same data type as the input tensor 'x'.
         
         Raises:
@@ -218,10 +219,10 @@ class Starcoder2MLP(nn.Cell):
         config (Starcoder2Config): The configuration for the Starcoder2 model.
     
     Methods:
-        __init__(self, config: Starcoder2Config): 
+        __init__:
             Initializes the Starcoder2MLP with the given configuration.
     
-        construct(self, hidden_states: Optional[Tuple[mindspore.Tensor]]) -> mindspore.Tensor:
+        construct:
             Constructs the multi-layer perceptron using the provided hidden states.
     
     '''
@@ -295,7 +296,7 @@ class Starcoder2Attention(nn.Cell):
             self: The object instance.
             config (Starcoder2Config): The configuration object containing various model hyperparameters.
             layer_idx (Optional[int], default=None): The index of the layer. If None, a warning will be logged and it is not recommended to omit this parameter as it may cause errors during the forward call if
-caching is used.
+                caching is used.
         
         Returns:
             None
@@ -366,7 +367,7 @@ caching is used.
         
         Returns:
             Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing the attention output tensor with shape (batch_size, sequence_length, hidden_size),
-attention weights tensor (optional), and past key value tuple (optional).
+                attention weights tensor (optional), and past key value tuple (optional).
         
         Raises:
             ValueError: If the attention weights or attention mask shape does not match the expected shape.
@@ -464,7 +465,7 @@ class Starcoder2DecoderLayer(nn.Cell):
         post_attention_layernorm (nn.LayerNorm): The layer normalization applied after the attention mechanism.
     
     Methods:
-        construct(hidden_states, attention_mask, position_ids, past_key_value, output_attentions, use_cache, **kwargs) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
+        construct:
             Applies the operations of the decoder layer to the input hidden states and returns the output along with optional values based on the provided arguments.
     
     Args:
@@ -571,13 +572,14 @@ class Starcoder2PreTrainedModel(PreTrainedModel):
     This class represents a Starcoder2PreTrainedModel, which is a subclass of PreTrainedModel. 
     
     The Starcoder2PreTrainedModel class provides methods for initializing the weights of different types of cells. The initialization process depends on the type of the cell. If the cell is an instance of
-nn.Dense, the weights are initialized using a normal distribution with a mean of 0 and a standard deviation defined by the `initializer_range` attribute of the configuration. If the cell has a bias, the bias
-is initialized with zeros. 
+    nn.Dense, the weights are initialized using a normal distribution with a mean of 0 and a standard deviation defined by the `initializer_range` attribute of the configuration. If the cell has a bias, the bias
+    is initialized with zeros.
     
     If the cell is an instance of nn.Embedding, the weights are initialized using a normal distribution with a mean of 0 and a standard deviation defined by the `initializer_range` attribute of the
-configuration. If the cell has a padding index, the weight corresponding to the padding index is set to 0.
+    configuration. If the cell has a padding index, the weight corresponding to the padding index is set to 0.
     
-    Note: It is assumed that the `cell` parameter passed to the `_init_weights` method is an instance of either nn.Dense or nn.Embedding.
+    Note:
+        It is assumed that the `cell` parameter passed to the `_init_weights` method is an instance of either nn.Dense or nn.Embedding.
     
     Please refer to the source code for more details on the implementation.
     
@@ -618,12 +620,12 @@ class Starcoder2Model(Starcoder2PreTrainedModel):
         Args:
             self (Starcoder2Model): The current instance of the Starcoder2Model class.
             config (Starcoder2Config): An instance of Starcoder2Config containing the configuration parameters for the model.
-                - config.pad_token_id (int): The index of the padding token in the vocabulary.
-                - config.vocab_size (int): The size of the vocabulary.
-                - config.hidden_size (int): The size of the hidden layers.
-                - config.embedding_dropout (float): The dropout probability for the embedding layer.
-                - config.num_hidden_layers (int): The number of hidden layers in the model.
-                - config.norm_epsilon (float): The epsilon value for normalization.
+                >   - config.pad_token_id (int): The index of the padding token in the vocabulary.
+                >   - config.vocab_size (int): The size of the vocabulary.
+                >   - config.hidden_size (int): The size of the hidden layers.
+                >   - config.embedding_dropout (float): The dropout probability for the embedding layer.
+                >   - config.num_hidden_layers (int): The number of hidden layers in the model.
+                >   - config.norm_epsilon (float): The epsilon value for normalization.
         
         Returns:
             None. The method initializes the attributes of the Starcoder2Model instance.
@@ -826,28 +828,27 @@ class Starcoder2Model(Starcoder2PreTrainedModel):
 
 # Copied from transformers.models.mistral.modeling_mistral.MistralForCausalLM with MISTRAL->STARCODER2,Mistral-7B-v0.1->starcoder2-7b_16k,Mistral->Starcoder2,mistralai->bigcode
 class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
-
     """
     The Starcoder2ForCausalLM class represents a Starcoder2 model for causal language modeling. It inherits from the Starcoder2PreTrainedModel. 
     
     This class provides methods to initialize the model, get and set input embeddings, get and set output embeddings, set the decoder, get the decoder, construct the model with various optional inputs, prepare
-inputs for generation, and reorder the cache.
+    inputs for generation, and reorder the cache.
     
     Example usage:
-    
-    >>> from transformers import AutoTokenizer, Starcoder2ForCausalLM
-    
-    >>> model = Starcoder2ForCausalLM.from_pretrained("bigcode/starcoder2-7b_16k")
-    >>> tokenizer = AutoTokenizer.from_pretrained("bigcode/starcoder2-7b_16k")
-    
-    >>> prompt = "Hey, are you conscious? Can you talk to me?"
-    >>> inputs = tokenizer(prompt, return_tensors="pt")
-    
-    >>> # Generate
-    >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
-    >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-    "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
-    
+        ```python
+        >>> from transformers import AutoTokenizer, Starcoder2ForCausalLM
+
+        >>> model = Starcoder2ForCausalLM.from_pretrained("bigcode/starcoder2-7b_16k")
+        >>> tokenizer = AutoTokenizer.from_pretrained("bigcode/starcoder2-7b_16k")
+
+        >>> prompt = "Hey, are you conscious? Can you talk to me?"
+        >>> inputs = tokenizer(prompt, return_tensors="pt")
+
+        >>> # Generate
+        >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
+        >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
+        ```
     """
     _tied_weights_keys = ["lm_head.weight"]
 
@@ -911,14 +912,14 @@ inputs for generation, and reorder the cache.
         
         Args:
             self: Instance of the Starcoder2ForCausalLM class.
-                Type: Starcoder2ForCausalLM
-                Purpose: Represents the current instance of the class.
-                Restrictions: None
+                >   - Type: Starcoder2ForCausalLM
+                >   - Purpose: Represents the current instance of the class.
+                >   - Restrictions: None
         
         Returns:
             The output embeddings.
-                Type: None
-                Purpose: The method returns the output embeddings.
+                >   - Type: None
+                >   - Purpose: The method returns the output embeddings.
         
         Raises:
             None
@@ -995,23 +996,24 @@ inputs for generation, and reorder the cache.
                 (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
+            Union[Tuple, CausalLMOutputWithPast]
 
         Example:
+            ```python
+            >>> from transformers import AutoTokenizer, Starcoder2ForCausalLM
 
-        ```python
-        >>> from transformers import AutoTokenizer, Starcoder2ForCausalLM
+            >>> model = Starcoder2ForCausalLM.from_pretrained("bigcode/starcoder2-7b_16k")
+            >>> tokenizer = AutoTokenizer.from_pretrained("bigcode/starcoder2-7b_16k")
 
-        >>> model = Starcoder2ForCausalLM.from_pretrained("bigcode/starcoder2-7b_16k")
-        >>> tokenizer = AutoTokenizer.from_pretrained("bigcode/starcoder2-7b_16k")
+            >>> prompt = "Hey, are you conscious? Can you talk to me?"
+            >>> inputs = tokenizer(prompt, return_tensors="pt")
 
-        >>> prompt = "Hey, are you conscious? Can you talk to me?"
-        >>> inputs = tokenizer(prompt, return_tensors="pt")
-
-        >>> # Generate
-        >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
-        >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-        "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
-        ```"""
+            >>> # Generate
+            >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
+            >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+            "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1068,22 +1070,22 @@ inputs for generation, and reorder the cache.
             self: An instance of the Starcoder2ForCausalLM class.
             input_ids (torch.Tensor): Tensor of shape (batch_size, sequence_length) containing the input IDs.
             past_key_values (Cache, tuple, or None): Cache object or tuple of tensors containing the past key values. If Cache object is provided, the cache_length, past_length, and max_cache_length are
-extracted. If tuple is provided, cache_length and past_length are extracted from the first element. If None, cache_length and past_length are calculated based on input_ids.
+                extracted. If tuple is provided, cache_length and past_length are extracted from the first element. If None, cache_length and past_length are calculated based on input_ids.
             attention_mask (torch.Tensor or None): Tensor of shape (batch_size, sequence_length) containing the attention mask. If not None and attention_mask.shape[1] is greater than input_ids.shape[1], the
-input_ids are truncated accordingly. If attention_mask is not None and past_length is less than input_ids.shape[1], the input_ids are sliced accordingly. If max_cache_length is not None and attention_mask is
-not None and cache_length + input_ids.shape[1] is greater than max_cache_length, the attention_mask is truncated accordingly.
+                input_ids are truncated accordingly. If attention_mask is not None and past_length is less than input_ids.shape[1], the input_ids are sliced accordingly.
+                If max_cache_length is not None and attention_mask is not None and cache_length + input_ids.shape[1] is greater than max_cache_length, the attention_mask is truncated accordingly.
             inputs_embeds (torch.Tensor or None): Tensor of shape (batch_size, sequence_length, embedding_size) containing the input embeddings. If not None and past_key_values is None, the model_inputs
-dictionary is updated with 'inputs_embeds' key.
+                dictionary is updated with 'inputs_embeds' key.
             **kwargs: Additional keyword arguments.
         
         Returns:
             dict: A dictionary containing the model inputs. The dictionary includes the following keys:
-                - 'input_ids': Tensor of shape (batch_size, sequence_length) containing the input IDs.
-                - 'position_ids': Tensor of shape (batch_size, sequence_length) containing the position IDs. If attention_mask is not None and position_ids is None, the position_ids are calculated based on the
-attention_mask.
-                - 'past_key_values': Cache object or tuple of tensors containing the past key values.
-                - 'use_cache': Boolean indicating whether to use cache or not.
-                - 'attention_mask': Tensor of shape (batch_size, sequence_length) containing the attention mask.
+                >   - 'input_ids': Tensor of shape (batch_size, sequence_length) containing the input IDs.
+                >   - 'position_ids': Tensor of shape (batch_size, sequence_length) containing the position IDs. If attention_mask is not None and position_ids is None, the position_ids are calculated based on the
+                    attention_mask.
+                >   - 'past_key_values': Cache object or tuple of tensors containing the past key values.
+                >   - 'use_cache': Boolean indicating whether to use cache or not.
+                >   - 'attention_mask': Tensor of shape (batch_size, sequence_length) containing the attention mask.
         
         Raises:
             None.
@@ -1244,10 +1246,11 @@ class Starcoder2ForSequenceClassification(Starcoder2PreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

@@ -47,8 +47,7 @@ def verify_out_features_out_indices(
             raise ValueError(f"out_features must be a subset of stage_names: {stage_names} got {out_features}")
         if len(out_features) != len(set(out_features)):
             raise ValueError(f"out_features must not contain any duplicates, got {out_features}")
-        sorted_feats = [feat for feat in stage_names if feat in out_features]
-        if out_features != sorted_feats:
+        if out_features != (sorted_feats := [feat for feat in stage_names if feat in out_features]):
             raise ValueError(
                 f"out_features must be in the same order as stage_names, expected {sorted_feats} got {out_features}"
             )
@@ -86,12 +85,12 @@ def _align_output_features_output_indices(
     Finds the corresponding `out_features` and `out_indices` for the given `stage_names`.
 
     The logic is as follows:
-        - `out_features` not set, `out_indices` set: `out_features` is set to the `out_features` corresponding to the
+        >- `out_features` not set, `out_indices` set: `out_features` is set to the `out_features` corresponding to the
         `out_indices`.
-        - `out_indices` not set, `out_features` set: `out_indices` is set to the `out_indices` corresponding to the
+        >- `out_indices` not set, `out_features` set: `out_indices` is set to the `out_indices` corresponding to the
         `out_features`.
-        - `out_indices` and `out_features` not set: `out_indices` and `out_features` are set to the last stage.
-        - `out_indices` and `out_features` set: input `out_indices` and `out_features` are returned.
+        >- `out_indices` and `out_features` not set: `out_indices` and `out_features` are set to the last stage.
+        >- `out_indices` and `out_features` set: input `out_indices` and `out_features` are returned.
 
     Args:
         out_features (`List[str]`): The names of the features for the backbone to output.
@@ -117,12 +116,12 @@ def get_aligned_output_features_output_indices(
     Get the `out_features` and `out_indices` so that they are aligned.
 
     The logic is as follows:
-        - `out_features` not set, `out_indices` set: `out_features` is set to the `out_features` corresponding to the
+        >- `out_features` not set, `out_indices` set: `out_features` is set to the `out_features` corresponding to the
         `out_indices`.
-        - `out_indices` not set, `out_features` set: `out_indices` is set to the `out_indices` corresponding to the
+        >- `out_indices` not set, `out_features` set: `out_indices` is set to the `out_indices` corresponding to the
         `out_features`.
-        - `out_indices` and `out_features` not set: `out_indices` and `out_features` are set to the last stage.
-        - `out_indices` and `out_features` set: they are verified to be aligned.
+        >- `out_indices` and `out_features` not set: `out_indices` and `out_features` are set to the last stage.
+        >- `out_indices` and `out_features` set: they are verified to be aligned.
 
     Args:
         out_features (`List[str]`): The names of the features for the backbone to output.
@@ -142,7 +141,7 @@ def get_aligned_output_features_output_indices(
 class BackboneMixin:
 
     r"""The `BackboneMixin` class represents a mixin for initializing backbone models used in computer vision and natural language processing tasks. It provides methods for initializing the backbone, setting
-output features and indices, accessing feature channels, and serializing the instance to a Python dictionary.
+    output features and indices, accessing feature channels, and serializing the instance to a Python dictionary.
     
     Attributes:
         stage_names: A list of stage names in the backbone model.
@@ -196,9 +195,9 @@ output features and indices, accessing feature channels, and serializing the ins
         Args:
             self (BackboneMixin): The instance of the BackboneMixin class.
             config (object): The configuration object containing the following attributes:
-                - stage_names (list): A list of stage names for the transformers backbone.
-                - out_features (list, optional): A list of output features. Defaults to None.
-                - out_indices (list, optional): A list of output indices. Defaults to None.
+                >- stage_names (list): A list of stage names for the transformers backbone.
+                >- out_features (list, optional): A list of output features. Defaults to None.
+                >- out_indices (list, optional): A list of output indices. Defaults to None.
         
         Returns:
             None: This method does not return any value.
@@ -300,9 +299,11 @@ output features and indices, accessing feature channels, and serializing the ins
             None.
         
         Example:
+            ```python
             >>> backbone = BackboneMixin()
             >>> backbone.out_feature_channels()
             {'stage1': 64, 'stage2': 128, 'stage3': 256, 'stage4': 512}
+            ```
         """
         # the current backbones will output the number of channels for each stage
         # even if that stage is not in the out_features list.

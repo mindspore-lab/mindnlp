@@ -89,9 +89,9 @@ class ContextPooler(nn.Cell):
         Args:
             self: The instance of the ContextPooler class.
             config: An object of type 'config' that contains the configuration parameters for the ContextPooler.
-                - Type: 'config'
-                - Purpose: Specifies the configuration parameters for the ContextPooler.
-                - Restrictions: None.
+                >   - Type: 'config'
+                >   - Purpose: Specifies the configuration parameters for the ContextPooler.
+                >   - Restrictions: None.
         
         Returns:
             None
@@ -156,22 +156,22 @@ class XSoftmax(nn.Cell):
         dim (int): The dimension that will apply softmax
 
     Example:
+        ```python
+        >>> import torch
+        >>> from transformers.models.deberta.modeling_deberta import XSoftmax
 
-    ```python
-    >>> import torch
-    >>> from transformers.models.deberta.modeling_deberta import XSoftmax
+        >>> # Make a tensor
+        >>> x = torch.randn([4, 20, 100])
 
-    >>> # Make a tensor
-    >>> x = torch.randn([4, 20, 100])
+        >>> # Create a mask
+        >>> mask = (x > 0).int()
 
-    >>> # Create a mask
-    >>> mask = (x > 0).int()
+        >>> # Specify the dimension to apply softmax
+        >>> dim = -1
 
-    >>> # Specify the dimension to apply softmax
-    >>> dim = -1
-
-    >>> y = XSoftmax.apply(x, mask, dim)
-    ```"""
+        >>> y = XSoftmax.apply(x, mask, dim)
+        ```
+    """
     def __init__(self, dim=-1):
         """
         Initializes an instance of the XSoftmax class.
@@ -248,7 +248,7 @@ class DropoutContext:
     Represents a context for managing dropout operations within a neural network.
     
     This class defines a context for managing dropout operations, including setting the dropout rate, mask, scaling factor, and reusing masks across iterations. It is designed to be used within a neural
-network framework to control dropout behavior during training.
+    network framework to control dropout behavior during training.
     
     Attributes:
         dropout (float): The dropout rate to be applied.
@@ -281,8 +281,8 @@ def get_mask(input, local_context):
     Args:
         input (Tensor): The input tensor for which the dropout mask is generated.
         local_context (DropoutContext or float): The local context containing information about dropout parameters.
-            If a DropoutContext object is provided, the dropout mask will be generated based on its parameters.
-            If a float value is provided, it will be used as the dropout rate.
+            >   - If a DropoutContext object is provided, the dropout mask will be generated based on its parameters.
+            >   - If a float value is provided, it will be used as the dropout rate.
     
     Returns:
         None: The function returns the generated dropout mask, or None if no mask is generated.
@@ -549,21 +549,21 @@ class DebertaSelfOutput(nn.Cell):
         
         Args:
             self: Instance of the DebertaSelfOutput class.
-                - Type: DebertaSelfOutput
-                - Purpose: Represents the current instance of the class.
+                >   - Type: DebertaSelfOutput
+                >   - Purpose: Represents the current instance of the class.
             
             hidden_states: Hidden states that need to be processed.
-                - Type: tensor
-                - Purpose: Represents the input hidden states that will undergo transformation.
+                >   - Type: tensor
+                >   - Purpose: Represents the input hidden states that will undergo transformation.
             
             input_tensor: Input tensor to be added to the processed hidden states.
-                - Type: tensor
-                - Purpose: Represents the input tensor to be added to the processed hidden states.
+                >   - Type: tensor
+                >   - Purpose: Represents the input tensor to be added to the processed hidden states.
         
         Returns:
-            None
-                - Type: None
-                - Purpose: The method does not return any value.
+            None:
+                >   - Type: None
+                >   - Purpose: The method does not return any value.
         
         Raises:
             None
@@ -580,7 +580,7 @@ class DebertaAttention(nn.Cell):
     This class represents the DebertaAttention module, which is a component of the DeBERTa model. It inherits from the nn.Cell class.
     
     DebertaAttention applies self-attention mechanism on the input hidden states, allowing the model to focus on different parts of the input sequence. It consists of a DisentangledSelfAttention layer and a
-DebertaSelfOutput layer.
+    DebertaSelfOutput layer.
     
     Args:
         config (dict): A dictionary containing the configuration parameters for the DebertaAttention module.
@@ -588,24 +588,21 @@ DebertaSelfOutput layer.
     Methods:
         __init__(self, config):
             Initializes a new instance of DebertaAttention.
-            
-            Args:
-                config (dict): A dictionary containing the configuration parameters for the DebertaAttention module.
+            >   - Args:
+            >       - config (dict): A dictionary containing the configuration parameters for the DebertaAttention module.
                 
         construct(self, hidden_states, attention_mask, output_attentions=False, query_states=None, relative_pos=None, rel_embeddings=None):
             Applies the DebertaAttention mechanism on the input hidden states.
-            
-            Args:
-                hidden_states (Tensor): The input hidden states of shape (batch_size, sequence_length, hidden_size).
-                attention_mask (Tensor): The attention mask of shape (batch_size, sequence_length, sequence_length) where 1 indicates tokens to attend to and 0 indicates tokens to ignore.
-                output_attentions (bool, optional): Whether to output the attention matrix. Defaults to False.
-                query_states (Tensor, optional): The query states of shape (batch_size, sequence_length, hidden_size). If not provided, defaults to using the input hidden states.
-                relative_pos (Tensor, optional): The relative positions of the tokens of shape (batch_size, sequence_length, sequence_length).
-                rel_embeddings (Tensor, optional): The relative embeddings of shape (batch_size, sequence_length, hidden_size).
-                
-            Returns:
-                Tensor or Tuple: The attention output tensor of shape (batch_size, sequence_length, hidden_size) or a tuple containing the attention output tensor and the attention matrix if output_attentions
-is True.
+            >   - Args:
+            >       - hidden_states (Tensor): The input hidden states of shape (batch_size, sequence_length, hidden_size).
+            >       - attention_mask (Tensor): The attention mask of shape (batch_size, sequence_length, sequence_length) where 1 indicates tokens to attend to and 0 indicates tokens to ignore.
+            >       - output_attentions (bool, optional): Whether to output the attention matrix. Defaults to False.
+            >       - query_states (Tensor, optional): The query states of shape (batch_size, sequence_length, hidden_size). If not provided, defaults to using the input hidden states.
+            >       - relative_pos (Tensor, optional): The relative positions of the tokens of shape (batch_size, sequence_length, sequence_length).
+            >       - rel_embeddings (Tensor, optional): The relative embeddings of shape (batch_size, sequence_length, hidden_size).
+            >   - Returns:
+            >       - Tensor or Tuple: The attention output tensor of shape (batch_size, sequence_length, hidden_size) or a tuple containing the attention output tensor and the attention matrix if output_attentions
+                        is True.
     """
     def __init__(self, config):
         """
@@ -614,7 +611,7 @@ is True.
         Args:
             self (DebertaAttention): The current instance of the DebertaAttention class.
             config (object): The configuration object containing the settings for the attention module. It should provide the necessary parameters for initializing the DisentangledSelfAttention and
-DebertaSelfOutput instances.
+                DebertaSelfOutput instances.
         
         Returns:
             None. This method does not return anything.
@@ -682,12 +679,12 @@ class DebertaIntermediate(nn.Cell):
     The layer consists of a dense transformation followed by an activation function specified in the configuration. 
     
     Attributes:
-        - dense (nn.Dense): A dense layer with hidden size and intermediate size specified in the configuration.
-        - intermediate_act_fn (function): The activation function applied to the hidden states.
+        dense (nn.Dense): A dense layer with hidden size and intermediate size specified in the configuration.
+        intermediate_act_fn (function): The activation function applied to the hidden states.
     
     Methods:
-        - __init__(config): Initializes the DebertaIntermediate layer with the provided configuration.
-        - construct(hidden_states: mindspore.Tensor) -> mindspore.Tensor: Applies the dense transformation and activation function to the input hidden states.
+        __init__(config): Initializes the DebertaIntermediate layer with the provided configuration.
+        construct(hidden_states: mindspore.Tensor) -> mindspore.Tensor: Applies the dense transformation and activation function to the input hidden states.
     
     """
     def __init__(self, config):
@@ -697,10 +694,10 @@ class DebertaIntermediate(nn.Cell):
         Args:
             self: The object itself.
             config (object): An object containing the configuration parameters for the DebertaIntermediate class. It should have the following properties:
-                - hidden_size (int): The size of the hidden layer in the intermediate module.
-                - intermediate_size (int): The size of the intermediate layer.
-                - hidden_act (str or object): The activation function for the hidden layer. If it is a string, it should be one of the supported activation functions. If it is an object, it should be a
-callable that takes a single argument.
+                >   - hidden_size (int): The size of the hidden layer in the intermediate module.
+                >   - intermediate_size (int): The size of the intermediate layer.
+                >   - hidden_act (str or object): The activation function for the hidden layer. If it is a string, it should be one of the supported activation functions. If it is an object, it should be a
+                    callable that takes a single argument.
         
         Returns:
             None. The method does not return any value.
@@ -730,15 +727,17 @@ callable that takes a single argument.
             None.
         
         This method takes in the hidden states tensor and applies a series of transformations to it in order to construct the intermediate layer of the Deberta model. The hidden states tensor is first passed
-through a dense layer, followed by an activation function specified by 'intermediate_act_fn'. The resulting tensor represents the intermediate hidden states and is returned as the output of this method.
+        through a dense layer, followed by an activation function specified by 'intermediate_act_fn'. The resulting tensor represents the intermediate hidden states and is returned as the output of this method.
         
         Note:
             The 'intermediate_act_fn' attribute should be set prior to calling this method to specify the desired activation function.
         
         Example:
+            ```python
             >>> intermediate_layer = DebertaIntermediate()
             >>> hidden_states = mindspore.Tensor([0.1, 0.2, 0.3])
             >>> output = intermediate_layer.construct(hidden_states)
+            ```
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
@@ -759,19 +758,17 @@ class DebertaOutput(nn.Cell):
     Methods:
         __init__(self, config):
             Initializes the DebertaOutput instance.
-            
-            Args:
-                config: The configuration object for the Deberta model.
+            >   - Args:
+            >       - config: The configuration object for the Deberta model.
         
         construct(self, hidden_states, input_tensor):
             Applies the final transformations to the hidden states.
+            >   - Args:
+            >       - hidden_states: The input hidden states.
+            >       - input_tensor: The original input tensor.
             
-            Args:
-                hidden_states: The input hidden states.
-                input_tensor: The original input tensor.
-            
-            Returns:
-                The transformed hidden states after applying the intermediate dense layer, dropout, and layer normalization.
+            >   - Returns:
+            >       - The transformed hidden states after applying the intermediate dense layer, dropout, and layer normalization.
     """
     def __init__(self, config):
         """
@@ -780,9 +777,9 @@ class DebertaOutput(nn.Cell):
         Args:
             self: The instance of the DebertaOutput class.
             config: An instance of the configuration class containing the parameters for the DebertaOutput layer.
-                Type: object
-                Purpose: Specifies the configuration settings for the DebertaOutput layer.
-                Restrictions: Must be a valid instance of the configuration class.
+                >   - Type: object
+                >   - Purpose: Specifies the configuration settings for the DebertaOutput layer.
+                >   - Restrictions: Must be a valid instance of the configuration class.
         
         Returns:
             None. This method does not return any value.
@@ -823,7 +820,7 @@ class DebertaLayer(nn.Cell):
     Represents a single layer in the DeBERTa model, containing modules for attention, intermediate processing, and output computation.
     
     This class inherits from nn.Cell and is responsible for processing input hidden states through attention mechanisms, intermediate processing, and final output computation. It provides a 'construct' method
-to perform these operations and return the final layer output.
+    to perform these operations and return the final layer output.
     
     Attributes:
         attention (DebertaAttention): Module for performing attention mechanism computation.
@@ -833,18 +830,16 @@ to perform these operations and return the final layer output.
     Methods:
         construct(hidden_states, attention_mask, query_states=None, relative_pos=None, rel_embeddings=None, output_attentions=False):
             Process the input hidden states through attention, intermediate, and output modules to compute the final layer output.
-    
-            Args:
-                hidden_states (Tensor): Input hidden states to be processed.
-                attention_mask (Tensor): Mask for attention calculation.
-                query_states (Tensor, optional): Query states for attention mechanism. Default is None.
-                relative_pos (Tensor, optional): Relative position information for attention computation. Default is None.
-                rel_embeddings (Tensor, optional): Relative embeddings for attention computation. Default is None.
-                output_attentions (bool, optional): Flag indicating whether to output attention matrices. Default is False.
-    
-            Returns:
-                layer_output (Tensor): Final computed output of the layer.
-                att_matrix (Tensor, optional): Attention matrix if 'output_attentions' is True. Otherwise, None.
+            >   - Args:
+            >       - hidden_states (Tensor): Input hidden states to be processed.
+            >       - attention_mask (Tensor): Mask for attention calculation.
+            >       - query_states (Tensor, optional): Query states for attention mechanism. Default is None.
+            >       - relative_pos (Tensor, optional): Relative position information for attention computation. Default is None.
+            >       - rel_embeddings (Tensor, optional): Relative embeddings for attention computation. Default is None.
+            >       - output_attentions (bool, optional): Flag indicating whether to output attention matrices. Default is False.
+            >   - Returns:
+            >       - layer_output (Tensor): Final computed output of the layer.
+            >       - att_matrix (Tensor, optional): Attention matrix if 'output_attentions' is True. Otherwise, None.
     
     Note:
         If 'output_attentions' is set to True, the 'construct' method will return both the final layer output and the attention matrix.
@@ -923,13 +918,13 @@ class DebertaEncoder(nn.Cell):
         Args:
             self (DebertaEncoder): The instance of the DebertaEncoder class.
             config (object): An object containing configuration settings for the DebertaEncoder.
-                The configuration should include the following attributes:
-                    - num_hidden_layers (int): Number of hidden layers.
-                    - relative_attention (bool): Flag indicating whether relative attention is used.
-                    - max_relative_positions (int): Maximum number of relative positions.
+                >   - The configuration should include the following attributes:
+                >       - num_hidden_layers (int): Number of hidden layers.
+                >       - relative_attention (bool): Flag indicating whether relative attention is used.
+                >       - max_relative_positions (int): Maximum number of relative positions.
                         If not provided or less than 1, defaults to config.max_position_embeddings.
-                    - hidden_size (int): Size of the hidden layer.
-                    - max_position_embeddings (int): Maximum number of position embeddings.
+                >       - hidden_size (int): Size of the hidden layer.
+                >       - max_position_embeddings (int): Maximum number of position embeddings.
         
         Returns:
             None. This method initializes the DebertaEncoder class.
@@ -970,8 +965,8 @@ class DebertaEncoder(nn.Cell):
         Args:
             self (object): The instance of the DebertaEncoder class.
             attention_mask (tensor): The attention mask tensor. It can be of dimension 2 or 3. For a 2-dimensional tensor, it is expected to be of shape (batch_size, sequence_length) representing the attention
-mask for each token in the input sequence. For a 3-dimensional tensor, it is expected to be of shape (batch_size, num_heads, sequence_length) representing the attention mask for each head in the multi-head
-attention mechanism.
+                mask for each token in the input sequence. For a 3-dimensional tensor, it is expected to be of shape (batch_size, num_heads, sequence_length) representing the attention mask
+                for each head in the multi-head attention mechanism.
         
         Returns:
             None: This method does not return any value. The attention_mask parameter is modified in place.
@@ -990,10 +985,11 @@ attention mechanism.
 
     def get_rel_pos(self, hidden_states, query_states=None, relative_pos=None):
         """
-        Method: get_rel_pos
+        Method:
+            get_rel_pos
         
         Description:
-        This method calculates and returns the relative position tensor used for relative attention in the DebertaEncoder class.
+            This method calculates and returns the relative position tensor used for relative attention in the DebertaEncoder class.
         
         Args:
             self (DebertaEncoder): The instance of the DebertaEncoder class.
@@ -1012,11 +1008,13 @@ attention mechanism.
             this method will automatically build the relative position tensor using 'query_states' or 'hidden_states' shape.
         
         Example:
+            ```python
             # Create an instance of DebertaEncoder class
             encoder = DebertaEncoder()
         
             # Call the get_rel_pos method
             encoder.get_rel_pos(hidden_states, query_states, relative_pos)
+            ```
         """
         if self.relative_attention and relative_pos is None:
             q = query_states.shape[-2] if query_states is not None else hidden_states.shape[-2]
@@ -1037,22 +1035,22 @@ attention mechanism.
         This method constructs the DebertaEncoder by processing the input hidden states and attention mask.
         
         Args:
-        - self (object): The instance of the DebertaEncoder class.
-        - hidden_states (Sequence or object): The input hidden states for the encoder. It can be a Sequence of hidden states or a single hidden state object.
-        - attention_mask (Tensor): The attention mask to be applied to the input hidden states.
-        - output_hidden_states (bool, optional): Indicates whether to return all hidden states. Defaults to True.
-        - output_attentions (bool, optional): Indicates whether to return attentions. Defaults to False.
-        - query_states (object, optional): The query states for the encoder. Defaults to None.
-        - relative_pos (object, optional): The relative position information. Defaults to None.
-        - return_dict (bool, optional): Indicates whether to return the output as a BaseModelOutput instance. Defaults to True.
-        
+            self (object): The instance of the DebertaEncoder class.
+            hidden_states (Sequence or object): The input hidden states for the encoder. It can be a Sequence of hidden states or a single hidden state object.
+            attention_mask (Tensor): The attention mask to be applied to the input hidden states.
+            output_hidden_states (bool, optional): Indicates whether to return all hidden states. Defaults to True.
+            output_attentions (bool, optional): Indicates whether to return attentions. Defaults to False.
+            query_states (object, optional): The query states for the encoder. Defaults to None.
+            relative_pos (object, optional): The relative position information. Defaults to None.
+            return_dict (bool, optional): Indicates whether to return the output as a BaseModelOutput instance. Defaults to True.
+
         Returns:
-        - None: This method does not return any explicit value.
+            None: This method does not return any explicit value.
         
         Raises:
-        - ValueError: If the input parameters are invalid or incompatible.
-        - RuntimeError: If there is a runtime error during the execution of the method.
-        - TypeError: If the input types are incorrect or incompatible.
+            - ValueError: If the input parameters are invalid or incompatible.
+            - RuntimeError: If there is a runtime error during the execution of the method.
+            - TypeError: If the input types are incorrect or incompatible.
         """
         attention_mask = self.get_attention_mask(attention_mask)
         relative_pos = self.get_rel_pos(hidden_states, query_states, relative_pos)
@@ -1165,7 +1163,7 @@ def p2c_dynamic_expand(c2p_pos, query_layer, key_layer):
     
     Returns:
         torch.Tensor: The dynamic expanded tensor obtained by expanding the c2p_pos tensor. The shape of the returned tensor is [query_layer.shape[0], query_layer.shape[1], key_layer.shape[-2],
-key_layer.shape[-2]].
+            key_layer.shape[-2]].
     
     Raises:
         None.
@@ -1684,22 +1682,22 @@ class DebertaModel(DebertaPreTrainedModel):
         This method constructs a DebertaModel based on the provided input parameters.
         
         Args:
-        - self (object): The instance of the DebertaModel class.
-        - input_ids (Optional[mindspore.Tensor]): The input tensor containing token indices. Default is None.
-        - attention_mask (Optional[mindspore.Tensor]): The attention mask tensor to specify which tokens should be attended to. Default is None.
-        - token_type_ids (Optional[mindspore.Tensor]): The tensor specifying the type of each token. Default is None.
-        - position_ids (Optional[mindspore.Tensor]): The tensor containing position indices of tokens. Default is None.
-        - inputs_embeds (Optional[mindspore.Tensor]): The tensor containing precomputed embeddings for input tokens. Default is None.
-        - output_attentions (Optional[bool]): Flag to indicate whether to output attentions. Default is None.
-        - output_hidden_states (Optional[bool]): Flag to indicate whether to output hidden states. Default is None.
-        - return_dict (Optional[bool]): Flag to indicate whether to return output as a dictionary. Default is None.
-        
+            self (object): The instance of the DebertaModel class.
+            input_ids (Optional[mindspore.Tensor]): The input tensor containing token indices. Default is None.
+            attention_mask (Optional[mindspore.Tensor]): The attention mask tensor to specify which tokens should be attended to. Default is None.
+            token_type_ids (Optional[mindspore.Tensor]): The tensor specifying the type of each token. Default is None.
+            position_ids (Optional[mindspore.Tensor]): The tensor containing position indices of tokens. Default is None.
+            inputs_embeds (Optional[mindspore.Tensor]): The tensor containing precomputed embeddings for input tokens. Default is None.
+            output_attentions (Optional[bool]): Flag to indicate whether to output attentions. Default is None.
+            output_hidden_states (Optional[bool]): Flag to indicate whether to output hidden states. Default is None.
+            return_dict (Optional[bool]): Flag to indicate whether to return output as a dictionary. Default is None.
+
         Returns:
-        Union[Tuple, BaseModelOutput]: The output value, which can either be a tuple or a BaseModelOutput object, containing the constructed DebertaModel.
+            Union[Tuple, BaseModelOutput]: The output value, which can either be a tuple or a BaseModelOutput object, containing the constructed DebertaModel.
         
         Raises:
-        - ValueError: Raised if both input_ids and inputs_embeds are specified simultaneously.
-        - ValueError: Raised if neither input_ids nor inputs_embeds are specified.
+            - ValueError: Raised if both input_ids and inputs_embeds are specified simultaneously.
+            - ValueError: Raised if neither input_ids nor inputs_embeds are specified.
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1773,22 +1771,23 @@ class DebertaForMaskedLM(DebertaPreTrainedModel):
 
     """
     DebertaForMaskedLM is a class that represents a DeBERTa model for masked language modeling. This class is designed to be used for generating predictions and computing loss in a masked language modeling
-task. It inherits from DebertaPreTrainedModel, providing additional functionality specific to masked language modeling tasks.
+    task. It inherits from DebertaPreTrainedModel, providing additional functionality specific to masked language modeling tasks.
     
     Attributes:
-        - deberta: A DebertaModel instance used for processing input sequences.
-        - cls: A DebertaOnlyMLMHead instance responsible for generating prediction scores for masked tokens.
+        deberta: A DebertaModel instance used for processing input sequences.
+        cls: A DebertaOnlyMLMHead instance responsible for generating prediction scores for masked tokens.
     
     Methods:
-        - get_output_embeddings(): Retrieves the decoder embeddings used for output predictions.
-        - set_output_embeddings(new_embeddings): Sets new decoder embeddings for output predictions.
-        - construct(input_ids, attention_mask, token_type_ids, position_ids, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Constructs the DeBERTa model for masked language
-modeling, including processing input data, generating predictions, and computing the masked language modeling loss.
+        get_output_embeddings(): Retrieves the decoder embeddings used for output predictions.
+        set_output_embeddings(new_embeddings): Sets new decoder embeddings for output predictions.
+        construct(input_ids, attention_mask, token_type_ids, position_ids, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Constructs the DeBERTa model for masked language
+            modeling, including processing input data, generating predictions, and computing the masked language modeling loss.
     
     The 'construct' method takes various input parameters such as input_ids, attention_mask, labels, etc., and returns a MaskedLMOutput object containing the loss, prediction scores, hidden states, and
-attentions. It also allows for customization of return types based on the 'return_dict' parameter.
+    attentions. It also allows for customization of return types based on the 'return_dict' parameter.
     
-    Note: Ensure proper input data formatting as described in the docstring of the 'construct' method for accurate predictions and loss computation.
+    Note:
+        Ensure proper input data formatting as described in the docstring of the 'construct' method for accurate predictions and loss computation.
     """
     _tied_weights_keys = ["cls.predictions.decoder.weight", "cls.predictions.decoder.bias"]
 
@@ -1859,10 +1858,11 @@ attentions. It also allows for customization of return types based on the 'retur
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, MaskedLMOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
-            config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
-            loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
+                config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
+                loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1925,11 +1925,11 @@ class DebertaPredictionHeadTransform(nn.Cell):
             self (DebertaPredictionHeadTransform): The instance of the DebertaPredictionHeadTransform class.
             config (object): The configuration object containing parameters for the prediction head.
                 It should include the following attributes:
-                    - embedding_size (int, optional): The size of the embedding. Defaults to config.hidden_size.
-                    - hidden_size (int): The size of the hidden layer.
-                    - hidden_act (str or object): The activation function for the hidden layer.
-                        If a string, it should be a key in the ACT2FN dictionary.
-                    - layer_norm_eps (float): The epsilon value for LayerNorm.
+                    >   - embedding_size (int, optional): The size of the embedding. Defaults to config.hidden_size.
+                    >   - hidden_size (int): The size of the hidden layer.
+                    >   - hidden_act (str or object): The activation function for the hidden layer.
+                            If a string, it should be a key in the ACT2FN dictionary.
+                    >   - layer_norm_eps (float): The epsilon value for LayerNorm.
         
         Returns:
             None. This method initializes the DebertaPredictionHeadTransform object with the specified configuration.
@@ -1993,9 +1993,9 @@ class DebertaLMPredictionHead(nn.Cell):
         Args:
             self: The current object instance.
             config (obj): An object containing configuration parameters for the DebertaLMPredictionHead.
-                - Type: object
-                - Purpose: Specifies the configuration settings for the DebertaLMPredictionHead.
-                - Restrictions: None
+                >   - Type: object
+                >   - Purpose: Specifies the configuration settings for the DebertaLMPredictionHead.
+                >   - Restrictions: None
         
         Returns:
             None
@@ -2068,22 +2068,24 @@ class DebertaOnlyMLMHead(nn.Cell):
 
     def construct(self, sequence_output):
         """
-        Class: DebertaOnlyMLMHead
+        Class:
+            DebertaOnlyMLMHead
         
-        Method: construct
+        Method:
+            construct
         
         Description:
-        This method constructs prediction scores based on the given sequence output.
+            This method constructs prediction scores based on the given sequence output.
         
         Args:
-        - self: (object) The instance of the DebertaOnlyMLMHead class.
-        - sequence_output: (object) The sequence output from the model for which prediction scores need to be generated.
+            self: (object) The instance of the DebertaOnlyMLMHead class.
+            sequence_output: (object) The sequence output from the model for which prediction scores need to be generated.
         
         Returns:
-        - None: The method returns None.
+            None: The method returns None.
         
         Raises:
-        - N/A
+            - N/A
         """
         prediction_scores = self.predictions(sequence_output)
         return prediction_scores
@@ -2093,14 +2095,14 @@ class DebertaForSequenceClassification(DebertaPreTrainedModel):
 
     """
     DebertaForSequenceClassification is a class that represents a DeBERTa model for sequence classification tasks. It inherits from DebertaPreTrainedModel and provides functionalities for sequence
-classification using the DeBERTa model architecture.
+    classification using the DeBERTa model architecture.
     
     The class includes methods for initializing the model, getting and setting input embeddings, and constructing the model for sequence classification tasks. The 'construct' method takes input tensors such as
-input_ids, attention_mask, token_type_ids, position_ids, inputs_embeds, and labels to perform sequence classification. It utilizes the DeBERTa model, a context pooler, and a classifier to generate logits for
-the input sequences and compute the loss based on the specified problem type.
+    input_ids, attention_mask, token_type_ids, position_ids, inputs_embeds, and labels to perform sequence classification. It utilizes the DeBERTa model, a context pooler, and a classifier to generate logits for
+    the input sequences and compute the loss based on the specified problem type.
     
     The 'construct' method also handles different problem types such as regression, single-label classification, and multi-label classification by adjusting the loss computation accordingly. The class provides
-flexibility in handling various types of sequence classification tasks and supports configurable return options.
+    flexibility in handling various types of sequence classification tasks and supports configurable return options.
     
     For more detailed information on the methods and parameters of DebertaForSequenceClassification, refer to the class implementation and the DeBERTa documentation.
     """
@@ -2182,10 +2184,10 @@ flexibility in handling various types of sequence classification tasks and suppo
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        >    labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -2252,35 +2254,34 @@ class DebertaForTokenClassification(DebertaPreTrainedModel):
     The `DebertaForTokenClassification` class extends the `DebertaPreTrainedModel` class and inherits its functionality and attributes.
     
     Attributes:
-        - `num_labels`: The number of labels for token classification.
-        - `deberta`: The DeBERTa model used for feature extraction.
-        - `dropout`: A dropout layer for regularization.
-        - `classifier`: A fully connected layer for classification.
+        `num_labels`: The number of labels for token classification.
+        `deberta`: The DeBERTa model used for feature extraction.
+        `dropout`: A dropout layer for regularization.
+        `classifier`: A fully connected layer for classification.
         
     Methods:
-        - `__init__(self, config)`: Initializes the `DebertaForTokenClassification` instance.
-        - `construct(self, input_ids, attention_mask, token_type_ids, position_ids, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict)`: 
+        `__init__(self, config)`: Initializes the `DebertaForTokenClassification` instance.
+        `construct(self, input_ids, attention_mask, token_type_ids, position_ids, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict)`:
             Performs the forward pass of the model and returns the output.
-            Args:
-                - `input_ids`: An optional tensor representing the input token IDs.
-                - `attention_mask`: An optional tensor representing the attention mask.
-                - `token_type_ids`: An optional tensor representing the token type IDs.
-                - `position_ids`: An optional tensor representing the position IDs.
-                - `inputs_embeds`: An optional tensor representing the input embeddings.
-                - `labels`: An optional tensor representing the labels for computing the token classification loss.
-                - `output_attentions`: An optional boolean indicating whether to output attentions.
-                - `output_hidden_states`: An optional boolean indicating whether to output hidden states.
-                - `return_dict`: An optional boolean indicating whether to return the output as a dictionary.
-            Returns:
-                - If `return_dict` is False, returns a tuple containing the loss, logits, and other outputs.
-                - If `return_dict` is True, returns a `TokenClassifierOutput` object containing the loss, logits, hidden states, and attentions.
+            >   - Args:
+            >       - `input_ids`: An optional tensor representing the input token IDs.
+            >       - `attention_mask`: An optional tensor representing the attention mask.
+            >       - `token_type_ids`: An optional tensor representing the token type IDs.
+            >       - `position_ids`: An optional tensor representing the position IDs.
+            >       - `inputs_embeds`: An optional tensor representing the input embeddings.
+            >       - `labels`: An optional tensor representing the labels for computing the token classification loss.
+            >       - `output_attentions`: An optional boolean indicating whether to output attentions.
+            >       - `output_hidden_states`: An optional boolean indicating whether to output hidden states.
+            >       - `return_dict`: An optional boolean indicating whether to return the output as a dictionary.
+            >   - Returns:
+            >       - If `return_dict` is False, returns a tuple containing the loss, logits, and other outputs.
+            >       - If `return_dict` is True, returns a `TokenClassifierOutput` object containing the loss, logits, hidden states, and attentions.
     """
     def __init__(self, config):
         """
         __init__
         
         Initializes an instance of the DebertaForTokenClassification class.
-        
         Args:
             self: DebertaForTokenClassification
                 The instance of the DebertaForTokenClassification class.
@@ -2294,7 +2295,7 @@ class DebertaForTokenClassification(DebertaPreTrainedModel):
                 This method does not return any value.
         
         Raises:
-            None
+            None:
                 This method does not raise any exceptions.
         """
         super().__init__(config)
@@ -2358,10 +2359,10 @@ class DebertaForQuestionAnswering(DebertaPreTrainedModel):
 
     """
     This class represents a Deberta model for question answering tasks. It inherits functionality from the DebertaPreTrainedModel class. The DebertaForQuestionAnswering class includes methods for initializing
-the model with configuration, and for constructing the model by processing input data and producing question answering model outputs. The construct method takes various input tensors such as input_ids,
-attention_mask, token_type_ids, position_ids, and inputs_embeds, and returns QuestionAnsweringModelOutput. It also supports optional parameters for controlling the output format and behavior. The class
-provides detailed documentation for the construct method, including explanations of the input and output parameters and their respective shapes and types. Additionally, the class handles the computation of
-total loss for question answering tasks based on start and end positions, and returns the final model outputs as a QuestionAnsweringModelOutput object.
+    the model with configuration, and for constructing the model by processing input data and producing question answering model outputs. The construct method takes various input tensors such as input_ids,
+    attention_mask, token_type_ids, position_ids, and inputs_embeds, and returns QuestionAnsweringModelOutput. It also supports optional parameters for controlling the output format and behavior. The class
+    provides detailed documentation for the construct method, including explanations of the input and output parameters and their respective shapes and types. Additionally, the class handles the computation of
+    total loss for question answering tasks based on start and end positions, and returns the final model outputs as a QuestionAnsweringModelOutput object.
     """
     def __init__(self, config):
         """

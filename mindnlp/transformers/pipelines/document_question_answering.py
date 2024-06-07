@@ -48,15 +48,15 @@ def normalize_box(box, width, height):
     This function normalizes the coordinates of a bounding box relative to a given width and height.
     
     Args:
-    - box (list): A list containing the coordinates of the bounding box in the format [x_min, y_min, x_max, y_max].
-    - width (int): The width of the image or area to which the bounding box coordinates are relative.
-    - height (int): The height of the image or area to which the bounding box coordinates are relative.
+        box (list): A list containing the coordinates of the bounding box in the format [x_min, y_min, x_max, y_max].
+        width (int): The width of the image or area to which the bounding box coordinates are relative.
+        height (int): The height of the image or area to which the bounding box coordinates are relative.
     
     Returns:
-    - list: A normalized bounding box coordinates in the format [x_min_norm, y_min_norm, x_max_norm, y_max_norm]. The values are scaled by 1000 and rounded to integers.
+        list: A normalized bounding box coordinates in the format [x_min_norm, y_min_norm, x_max_norm, y_max_norm]. The values are scaled by 1000 and rounded to integers.
     
     Raises:
-    - None
+        None
     """
     return [
         int(1000 * (box[0] / width)),
@@ -120,6 +120,7 @@ def decode_spans(
     In addition, it filters out some unwanted/impossible cases like answer len being greater than max_answer_len or
     answer end position being before the starting position. The method supports output the k-best answer through the
     topk argument.
+
     Args:
         start (`np.ndarray`): Individual start probabilities for each token.
         end (`np.ndarray`): Individual end probabilities for each token.
@@ -172,6 +173,7 @@ def select_starts_ends(
     """
     Takes the raw output of any `ModelForQuestionAnswering` and first normalizes its outputs and then uses
     `decode_spans()` to generate probabilities for each span to be the actual answer.
+
     Args:
         start (`np.ndarray`): Individual start logits for each token.
         end (`np.ndarray`): Individual end logits for each token.
@@ -217,16 +219,17 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
     Document Question Answering pipeline using any `AutoModelForDocumentQuestionAnswering`. The inputs/outputs are
     similar to the (extractive) question answering pipeline; however, the pipeline takes an image (and optional OCR'd
     words/boxes) as input instead of text context.
+
     Example:
-    ```python
-    >>> from transformers import pipeline
-    >>> document_qa = pipeline(model="impira/layoutlm-document-qa")
-    >>> document_qa(
-    ...     image="https://hf.co/spaces/impira/docquery/resolve/2359223c1837a7587402bda0f2643382a6eefeab/invoice.png",
-    ...     question="What is the invoice number?",
-    ... )
-    [{'score': 0.425, 'answer': 'us-001', 'start': 16, 'end': 16}]
-    ```
+        ```python
+        >>> from transformers import pipeline
+        >>> document_qa = pipeline(model="impira/layoutlm-document-qa")
+        >>> document_qa(
+        ...     image="https://hf.co/spaces/impira/docquery/resolve/2359223c1837a7587402bda0f2643382a6eefeab/invoice.png",
+        ...     question="What is the invoice number?",
+        ... )
+        [{'score': 0.425, 'answer': 'us-001', 'start': 16, 'end': 16}]
+        ```
     Learn more about the basics of using a pipeline in the [pipeline tutorial](../pipeline_tutorial)
     This document question answering pipeline can currently be loaded from [`pipeline`] using the following task
     identifier: `"document-question-answering"`.
@@ -286,26 +289,26 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
         This method '_sanitize_parameters' is a part of the 'DocumentQuestionAnsweringPipeline' class and is used to sanitize and validate the input parameters for the document question answering pipeline.
         
         Args:
-        - self: The instance of the class.
-        - padding (int): The padding value to be used during preprocessing. Default is None.
-        - doc_stride (int): The document stride value to be used during preprocessing. Default is None.
-        - max_question_len (int): The maximum length allowed for the question input. Default is None.
-        - lang (Optional[str]): The language of the input text. Default is None.
-        - tesseract_config (Optional[str]): The Tesseract OCR configuration to be used. Default is None.
-        - max_answer_len (int): The maximum length allowed for the answer output. Default is None.
-        - max_seq_len (int): The maximum sequence length for input text processing. Default is None.
-        - top_k (int): The top-k value for post-processing. Must be >= 1.
-        - handle_impossible_answer: The flag to handle impossible answers. Default is None.
-        - timeout: The timeout value for processing. Default is None.
+            self: The instance of the class.
+            padding (int): The padding value to be used during preprocessing. Default is None.
+            doc_stride (int): The document stride value to be used during preprocessing. Default is None.
+            max_question_len (int): The maximum length allowed for the question input. Default is None.
+            lang (Optional[str]): The language of the input text. Default is None.
+            tesseract_config (Optional[str]): The Tesseract OCR configuration to be used. Default is None.
+            max_answer_len (int): The maximum length allowed for the answer output. Default is None.
+            max_seq_len (int): The maximum sequence length for input text processing. Default is None.
+            top_k (int): The top-k value for post-processing. Must be >= 1.
+            handle_impossible_answer: The flag to handle impossible answers. Default is None.
+            timeout: The timeout value for processing. Default is None.
         
         Returns:
-        - preprocess_params (dict): Dictionary containing sanitized preprocessing parameters.
-        - postprocess_params (dict): Dictionary containing sanitized postprocessing parameters.
-        - postprocess_params may include 'top_k', 'max_answer_len', and 'handle_impossible_answer' based on input values.
+            preprocess_params (dict): Dictionary containing sanitized preprocessing parameters.
+            postprocess_params (dict): Dictionary containing sanitized postprocessing parameters.
+            postprocess_params may include 'top_k', 'max_answer_len', and 'handle_impossible_answer' based on input values.
         
         Raises:
-        - ValueError: If 'top_k' is less than 1.
-        - ValueError: If 'max_answer_len' is less than 1.
+            - ValueError: If 'top_k' is less than 1.
+            - ValueError: If 'max_answer_len' is less than 1.
         """
         preprocess_params, postprocess_params = {}, {}
         if padding is not None:
@@ -349,16 +352,17 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
         provided, it will use the Tesseract OCR engine (if available) to extract the words and boxes automatically for
         LayoutLM-like models which require them as input. For Donut, no OCR is run.
         You can invoke the pipeline several ways:
-        - `pipeline(image=image, question=question)`
-        - `pipeline(image=image, question=question, word_boxes=word_boxes)`
-        - `pipeline([{"image": image, "question": question}])`
-        - `pipeline([{"image": image, "question": question, "word_boxes": word_boxes}])`
+        >- `pipeline(image=image, question=question)`
+        >- `pipeline(image=image, question=question, word_boxes=word_boxes)`
+        >- `pipeline([{"image": image, "question": question}])`
+        >- `pipeline([{"image": image, "question": question, "word_boxes": word_boxes}])`
+
         Args:
             image (`str` or `PIL.Image`):
                 The pipeline handles three types of images:
-                - A string containing a http link pointing to an image
-                - A string containing a local path to an image
-                - An image loaded in PIL directly
+                    >- A string containing a http link pointing to an image
+                    >-  A string containing a local path to an image
+                    >- An image loaded in PIL directly
                 The pipeline accepts either a single image or a batch of images. If given a single image, it can be
                 broadcasted to multiple questions.
             question (`str`):
@@ -390,15 +394,16 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
             timeout (`float`, *optional*, defaults to None):
                 The maximum time in seconds to wait for fetching images from the web. If None, no timeout is set and
                 the call may block forever.
+
         Return:
-            A `dict` or a list of `dict`: Each result comes as a dictionary with the following keys:
-            - **score** (`float`) -- The probability associated to the answer.
-            - **start** (`int`) -- The start word index of the answer (in the OCR'd version of the input or provided
+            A `dict` or a list of `dict` with the following keys:
+            >- **score** (`float`) -- The probability associated to the answer.
+            >- **start** (`int`) -- The start word index of the answer (in the OCR'd version of the input or provided
               `word_boxes`).
-            - **end** (`int`) -- The end word index of the answer (in the OCR'd version of the input or provided
+            >- **end** (`int`) -- The end word index of the answer (in the OCR'd version of the input or provided
               `word_boxes`).
-            - **answer** (`str`) -- The answer to the question.
-            - **words** (`list[int]`) -- The index of each word/box pair that is in the answer
+            >- **answer** (`str`) -- The answer to the question.
+            >- **words** (`list[int]`) -- The index of each word/box pair that is in the answer
         """
         if isinstance(question, str):
             inputs = {"question": question, "image": image}
@@ -581,20 +586,24 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
         
         Args:
             self: An instance of the 'DocumentQuestionAnsweringPipeline' class.
-            model_inputs (dict): A dictionary containing the model inputs with the following possible keys:
-                - 'p_mask' (array, optional): A mask to indicate which tokens should be attended to.
-                - 'word_ids' (array, optional): The word IDs for input tokens.
-                - 'words' (array, optional): The input words.
-                - 'is_last' (bool, optional): A flag indicating if it is the last input.
-                - 'attention_mask' (array, optional): A mask to indicate which tokens should be attended to.
+            model_inputs (dict):
+                A dictionary containing the model inputs with the following possible keys:
+
+                >- 'p_mask' (array, optional): A mask to indicate which tokens should be attended to.
+                >- 'word_ids' (array, optional): The word IDs for input tokens.
+                >- 'words' (array, optional): The input words.
+                >- 'is_last' (bool, optional): A flag indicating if it is the last input.
+                >- 'attention_mask' (array, optional): A mask to indicate which tokens should be attended to.
         
         Returns:
-            dict or None: Returns a dictionary containing the model outputs with the following possible keys:
-                - 'p_mask' (array): The input mask.
-                - 'word_ids' (array): The word IDs for output tokens.
-                - 'words' (array): The generated words.
-                - 'attention_mask' (array, optional): The attention mask for the outputs.
-                - 'is_last' (bool): A flag indicating if it is the last output.
+            dict or None:
+                Returns a dictionary containing the model outputs with the following possible keys:
+
+                >   - 'p_mask' (array): The input mask.
+                >   - 'word_ids' (array): The word IDs for output tokens.
+                >   - 'words' (array): The generated words.
+                >   - 'attention_mask' (array, optional): The attention mask for the outputs.
+                >   - 'is_last' (bool): A flag indicating if it is the last output.
         
         Raises:
             None

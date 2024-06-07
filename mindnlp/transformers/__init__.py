@@ -19,12 +19,11 @@ from .pipelines import *
 from .generation import *
 from .configuration_utils import PretrainedConfig
 from .modeling_utils import PreTrainedModel
-from .image_processing_utils import ImageProcessingMixin
 from .tokenization_utils_base import PreTrainedTokenizerBase, SpecialTokensMixin
 from .tokenization_utils import PreTrainedTokenizer
 from .tokenization_utils_fast import PreTrainedTokenizerFast
 
-__all__ = ['PretrainedConfig', 'PreTrainedModel', 'PreTrainedTokenizerBase', 'ImageProcessingMixin',
+__all__ = ['PretrainedConfig', 'PreTrainedModel', 'PreTrainedTokenizerBase',
            'SpecialTokensMixin', 'PreTrainedTokenizer', 'PreTrainedTokenizerFast']
 __all__.extend(models.__all__)
 __all__.extend(pipelines.__all__)

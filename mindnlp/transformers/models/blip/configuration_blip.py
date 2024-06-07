@@ -81,19 +81,19 @@ class BlipTextConfig(PretrainedConfig):
             `Rethinking the Inception Architecture for Computer Vision <https://arxiv.org/abs/1512.00567>`__. Default: :math:`0.0`.
 
     Example:
+        ```python
+        >>> from transformers import BlipTextConfig, BlipTextModel
 
-    ```python
-    >>> from transformers import BlipTextConfig, BlipTextModel
+        >>> # Initializing a BlipTextConfig with Salesforce/blip-vqa-base style configuration
+        >>> configuration = BlipTextConfig()
 
-    >>> # Initializing a BlipTextConfig with Salesforce/blip-vqa-base style configuration
-    >>> configuration = BlipTextConfig()
+        >>> # Initializing a BlipTextModel (with random weights) from the Salesforce/blip-vqa-base style configuration
+        >>> model = BlipTextModel(configuration)
 
-    >>> # Initializing a BlipTextModel (with random weights) from the Salesforce/blip-vqa-base style configuration
-    >>> model = BlipTextModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "blip_text_model"
 
     def __init__(
@@ -185,11 +185,11 @@ class BlipTextConfig(PretrainedConfig):
         Args:
             cls (class): The class object itself.
             pretrained_model_name_or_path (Union[str, os.PathLike]): A string representing the name of a pretrained model or a valid path to a pretrained model configuration file. This parameter is mandatory
-and required for initializing the configuration object.
+                and required for initializing the configuration object.
         
         Returns:
             PretrainedConfig: An instance of 'PretrainedConfig' class representing the configuration settings of the pretrained model. The method returns the configuration object based on the provided
-pretrained model name or path.
+                pretrained model name or path.
         
         Raises:
             - TypeError: If the provided 'pretrained_model_name_or_path' is not a string or a valid path-like object.
@@ -246,19 +246,19 @@ class BlipVisionConfig(PretrainedConfig):
             The standard deviation of the truncated_normal_initializer for initializing all weight matrices.
 
     Example:
+        ```python
+        >>> from transformers import BlipVisionConfig, BlipVisionModel
 
-    ```python
-    >>> from transformers import BlipVisionConfig, BlipVisionModel
+        >>> # Initializing a BlipVisionConfig with Salesforce/blip-vqa-base style configuration
+        >>> configuration = BlipVisionConfig()
 
-    >>> # Initializing a BlipVisionConfig with Salesforce/blip-vqa-base style configuration
-    >>> configuration = BlipVisionConfig()
+        >>> # Initializing a BlipVisionModel (with random weights) from the Salesforce/blip-vqa-base style configuration
+        >>> model = BlipVisionModel(configuration)
 
-    >>> # Initializing a BlipVisionModel (with random weights) from the Salesforce/blip-vqa-base style configuration
-    >>> model = BlipVisionModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "blip_vision_model"
 
     def __init__(
@@ -321,16 +321,16 @@ class BlipVisionConfig(PretrainedConfig):
         Args:
             cls (class): The class object itself, automatically passed as the first argument.
             pretrained_model_name_or_path (Union[str, os.PathLike]): A string representing the name or path of the pretrained model. It can be either a string or a PathLike object. This parameter is used to
-fetch the configuration dictionary for the pretrained model.
+                fetch the configuration dictionary for the pretrained model.
         
         Returns:
             PretrainedConfig: An instance of the 'PretrainedConfig' class representing the configuration of the pretrained model. The method returns this configuration for further use.
         
         Raises:
             No specific exceptions are documented to be raised by this method based on the provided code snippet. However, potential exceptions might include:
-            - KeyError: If the 'model_type' key is missing in the configuration dictionary.
-            - AttributeError: If the 'model_type' attribute is not present in the class.
-            - Warning: If the model type being used is different from the expected model type, a warning message is logged.
+            >   - KeyError: If the 'model_type' key is missing in the configuration dictionary.
+            >   - AttributeError: If the 'model_type' attribute is not present in the class.
+            >   - Warning: If the model type being used is different from the expected model type, a warning message is logged.
         
         Note: It is recommended to handle exceptions that may occur during the execution of this method to ensure proper error handling and flow control.
         """
@@ -378,27 +378,27 @@ class BlipConfig(PretrainedConfig):
             Dictionary of keyword arguments.
 
     Example:
+        ```python
+        >>> from transformers import BlipConfig, BlipModel
 
-    ```python
-    >>> from transformers import BlipConfig, BlipModel
+        >>> # Initializing a BlipConfig with Salesforce/blip-vqa-base style configuration
+        >>> configuration = BlipConfig()
 
-    >>> # Initializing a BlipConfig with Salesforce/blip-vqa-base style configuration
-    >>> configuration = BlipConfig()
+        >>> # Initializing a BlipPModel (with random weights) from the Salesforce/blip-vqa-base style configuration
+        >>> model = BlipModel(configuration)
 
-    >>> # Initializing a BlipPModel (with random weights) from the Salesforce/blip-vqa-base style configuration
-    >>> model = BlipModel(configuration)
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
 
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
+        >>> # We can also initialize a BlipConfig from a BlipTextConfig and a BlipVisionConfig
 
-    >>> # We can also initialize a BlipConfig from a BlipTextConfig and a BlipVisionConfig
+        >>> # Initializing a BLIPText and BLIPVision configuration
+        >>> config_text = BlipTextConfig()
+        >>> config_vision = BlipVisionConfig()
 
-    >>> # Initializing a BLIPText and BLIPVision configuration
-    >>> config_text = BlipTextConfig()
-    >>> config_vision = BlipVisionConfig()
-
-    >>> config = BlipConfig.from_text_vision_configs(config_text, config_vision)
-    ```"""
+        >>> config = BlipConfig.from_text_vision_configs(config_text, config_vision)
+        ```
+    """
     model_type = "blip"
 
     def __init__(

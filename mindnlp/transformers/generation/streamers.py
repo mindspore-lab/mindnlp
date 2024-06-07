@@ -53,8 +53,7 @@ class TextStreamer(BaseStreamer):
         decode_kwargs (`dict`, *optional*):
             Additional keyword arguments to pass to the tokenizer's `decode` method.
 
-    Examples:
-
+    Example:
         ```python
         >>> from transformers import AutoModelForCausalLM, AutoTokenizer, TextStreamer
 
@@ -193,8 +192,7 @@ class TextIteratorStreamer(TextStreamer):
         decode_kwargs (`dict`, *optional*):
             Additional keyword arguments to pass to the tokenizer's `decode` method.
 
-    Examples:
-
+    Example:
         ```python
         >>> from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
         >>> from threading import Thread

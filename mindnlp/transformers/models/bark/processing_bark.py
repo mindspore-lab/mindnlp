@@ -84,15 +84,14 @@ class BarkProcessor(ProcessorMixin):
         Args:
             pretrained_model_name_or_path (`str` or `os.PathLike`):
                 This can be either:
-
-                - a string, the *model id* of a pretrained [`BarkProcessor`] hosted inside a model repo on
+                >   - a string, the *model id* of a pretrained [`BarkProcessor`] hosted inside a model repo on
                   hf-mirror.com.
-                - a path to a *directory* containing a processor saved using the [`~BarkProcessor.save_pretrained`]
+                >   - a path to a *directory* containing a processor saved using the [`~BarkProcessor.save_pretrained`]
                   method, e.g., `./my_model_directory/`.
             speaker_embeddings_dict_path (`str`, *optional*, defaults to `"speaker_embeddings_path.json"`):
                 The name of the `.json` file containing the speaker_embeddings dictionnary located in
                 `pretrained_model_name_or_path`. If `None`, no speaker_embeddings is loaded.
-            **kwargs
+            **kwargs:
                 Additional keyword arguments passed along to both
                 [`~tokenization_utils_base.PreTrainedTokenizer.from_pretrained`].
         """
@@ -233,24 +232,25 @@ class BarkProcessor(ProcessorMixin):
         
         Args:
             self (BarkProcessor): An instance of the BarkProcessor class.
-            voice_preset (Optional[dict]): A dictionary representing the voice preset. This dictionary should contain the following keys: 
-                - 'semantic_prompt' (numpy.ndarray): A 2D ndarray representing the semantic prompt.
-                - 'coarse_prompt' (numpy.ndarray): A 2D ndarray representing the coarse prompt.
-                - 'fine_prompt' (numpy.ndarray): A 2D ndarray representing the fine prompt.
+            voice_preset (Optional[dict]): A dictionary representing the voice preset. This dictionary should contain the following keys:
+                >   - 'semantic_prompt' (numpy.ndarray): A 2D ndarray representing the semantic prompt.
+                >   - 'coarse_prompt' (numpy.ndarray): A 2D ndarray representing the coarse prompt.
+                >   - 'fine_prompt' (numpy.ndarray): A 2D ndarray representing the fine prompt.
         
         Returns:
             None. This method does not return any value.
         
         Raises:
             ValueError: If any of the following conditions are not met:
-                - The 'semantic_prompt', 'coarse_prompt', and 'fine_prompt' keys are missing in the voice_preset dictionary.
-                - The 'semantic_prompt', 'coarse_prompt', or 'fine_prompt' values are not of type numpy.ndarray.
-                - The shape of 'semantic_prompt', 'coarse_prompt', or 'fine_prompt' is not equal to the expected preset shape.
+                >   - The 'semantic_prompt', 'coarse_prompt', and 'fine_prompt' keys are missing in the voice_preset dictionary.
+                >   - The 'semantic_prompt', 'coarse_prompt', or 'fine_prompt' values are not of type numpy.ndarray.
+                >   - The shape of 'semantic_prompt', 'coarse_prompt', or 'fine_prompt' is not equal to the expected preset shape.
         
         Note:
             - The expected preset shape is determined by the preset_shape attribute of the BarkProcessor class.
         
         Example:
+            ```python
             bp = BarkProcessor()
             voice_preset = {
                 'semantic_prompt': np.array([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]),
@@ -258,6 +258,7 @@ class BarkProcessor(ProcessorMixin):
                 'fine_prompt': np.array([[1.3, 1.4, 1.5], [1.6, 1.7, 1.8]])
             }
             bp._validate_voice_preset_dict(voice_preset)
+            ```
         """
         for key in ["semantic_prompt", "coarse_prompt", "fine_prompt"]:
             if key not in voice_preset:
@@ -297,9 +298,8 @@ class BarkProcessor(ProcessorMixin):
                 it can be a valid file name of a local `.npz` single voice preset.
             return_tensors (`str` or [`~utils.TensorType`], *optional*):
                 If set, will return tensors of a particular framework. Acceptable values are:
-
-                - `'pt'`: Return PyTorch `torch.Tensor` objects.
-                - `'np'`: Return NumPy `np.ndarray` objects.
+                >   - `'pt'`: Return PyTorch `torch.Tensor` objects.
+                >   - `'np'`: Return NumPy `np.ndarray` objects.
 
         Returns:
             Tuple([`BatchEncoding`], [`BatchFeature`]): A tuple composed of a [`BatchEncoding`], i.e the output of the

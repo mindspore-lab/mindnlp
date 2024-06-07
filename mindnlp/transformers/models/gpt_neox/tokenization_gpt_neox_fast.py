@@ -35,16 +35,17 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
 
-    ```python
-    >>> from transformers import GPTNeoXTokenizerFast
+    Example:
+        ```python
+        >>> from transformers import GPTNeoXTokenizerFast
 
-    >>> tokenizer = GPTNeoXTokenizerFast.from_pretrained("openai-community/gpt2")
-    >>> tokenizer("Hello world")["input_ids"]
-    [15496, 995]
+        >>> tokenizer = GPTNeoXTokenizerFast.from_pretrained("openai-community/gpt2")
+        >>> tokenizer("Hello world")["input_ids"]
+        [15496, 995]
 
-    >>> tokenizer(" Hello world")["input_ids"]
-    [18435, 995]
-    ```
+        >>> tokenizer(" Hello world")["input_ids"]
+        [18435, 995]
+        ```
 
     You can get around that behavior by passing `add_prefix_space=True` when instantiating this tokenizer, but since
     the model was not pretrained this way, it might yield a decrease in performance.
@@ -225,20 +226,21 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
         
         Description:
             This method is a setter for the 'add_bos_token' attribute of the GPTNeoXTokenizerFast class. It allows setting a new value for the attribute and automatically triggers the update_post_processor
-method.
+            method.
         
             The 'add_bos_token' attribute determines whether to add a beginning of sentence (BOS) token during tokenization. When 'add_bos_token' is set to True, a BOS token will be added at the beginning of
-each tokenized sequence. When 'add_bos_token' is set to False, no BOS token will be added.
+            each tokenized sequence. When 'add_bos_token' is set to False, no BOS token will be added.
         
             After setting the new value for 'add_bos_token', the update_post_processor method is called to update the post-processor based on the new value. The update_post_processor method handles any
-necessary adjustments to the post-processing logic, if required.
+            necessary adjustments to the post-processing logic, if required.
         
             Note that changing the 'add_bos_token' attribute value will impact the tokenization process and the resulting tokenized sequences.
         
         Example usage:
+            ```python
             >>> tokenizer = GPTNeoXTokenizerFast()
             >>> tokenizer.add_bos_token = True
-        
+            ```
             In the above example, the 'add_bos_token' attribute of the 'tokenizer' instance is set to True, which enables the addition of BOS tokens during tokenization.
         """
         self._add_bos_token = value

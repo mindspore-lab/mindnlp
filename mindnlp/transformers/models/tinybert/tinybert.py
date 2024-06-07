@@ -214,8 +214,8 @@ class TinyBertSelfOutput(nn.Cell):
         Args:
             self (object): The instance of the TinyBertSelfOutput class.
             config (object): An object containing configuration parameters for the model.
-                - hidden_size (int): The size of the hidden layer.
-                - hidden_dropout_prob (float): The dropout probability for the hidden layer.
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - hidden_dropout_prob (float): The dropout probability for the hidden layer.
                 
         Returns:
             None. This method initializes the TinyBertSelfOutput class and does not return any value.
@@ -399,7 +399,7 @@ class TinyBertLayer(nn.Cell):
             self (object): The instance of the TinyBertLayer class.
             hidden_states (object): The input hidden states for the layer, typically a tensor of shape (batch_size, sequence_length, hidden_size).
             attention_mask (object): The attention mask for the input hidden states, typically a tensor of shape (batch_size, 1, sequence_length, sequence_length) with 0s for padding tokens and 1s for
-non-padding tokens.
+                non-padding tokens.
         
         Returns:
             tuple: A tuple containing the layer output (typically a tensor of shape (batch_size, sequence_length, hidden_size)) and the attention scores (layer_att) generated during the attention computation.
@@ -429,8 +429,8 @@ class TinyBertEncoder(nn.Cell):
             self (TinyBertEncoder): The instance of the TinyBertEncoder class.
             config (object): The configuration object containing parameters for the TinyBertEncoder.
                 This object must have the following attributes:
-                - num_hidden_layers (int): The number of hidden layers for the encoder.
-                - Other attributes required by the TinyBertLayer constructor.
+                >   - num_hidden_layers (int): The number of hidden layers for the encoder.
+                >   - Other attributes required by the TinyBertLayer constructor.
         
         Returns:
             None. This method initializes the TinyBertEncoder object.
@@ -447,17 +447,17 @@ class TinyBertEncoder(nn.Cell):
         Method 'construct' in the class 'TinyBertEncoder'.
         
         Args:
-        - self (object): The instance of the 'TinyBertEncoder' class.
-        - hidden_states (object): The hidden states to be processed by the encoder.
-        - attention_mask (object): The attention mask to apply during encoding.
+            self (object): The instance of the 'TinyBertEncoder' class.
+            hidden_states (object): The hidden states to be processed by the encoder.
+            attention_mask (object): The attention mask to apply during encoding.
         
         Returns:
-        - Tuple: Two lists containing the encoder layers and their respective attentions.
-          - List: 'all_encoder_layers' - List of all encoder layers processed during encoding.
-          - List: 'all_encoder_atts' - List of attention values for each encoder layer.
+            Tuple: Two lists containing the encoder layers and their respective attentions.
+                >   - List: 'all_encoder_layers' - List of all encoder layers processed during encoding.
+                >   - List: 'all_encoder_atts' - List of attention values for each encoder layer.
         
         Raises:
-        None.
+            None.
         """
         all_encoder_layers = []
         all_encoder_atts = []
@@ -532,9 +532,9 @@ class TinyBertPredictionHeadTransform(nn.Cell):
         Args:
             self (object): The instance of the class.
             config (object): An object containing configuration parameters for the TinyBertPredictionHeadTransform.
-                - hidden_size (int): The size of the hidden layer.
-                - hidden_act (str or function): The activation function to be used for the hidden layer. If it's a string, it should correspond to a key in ACT2FN dictionary.
-                - epsilon (float): A small value added to the variance in LayerNorm to prevent division by zero.
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - hidden_act (str or function): The activation function to be used for the hidden layer. If it's a string, it should correspond to a key in ACT2FN dictionary.
+                >   - epsilon (float): A small value added to the variance in LayerNorm to prevent division by zero.
         
         Returns:
             None. This method initializes the TinyBertPredictionHeadTransform object with the specified configuration parameters.
@@ -696,17 +696,17 @@ class TinyBertOnlyNSPHead(nn.Cell):
         Method: construct
         
         Description:
-        This method calculates the sequence relationship score using the provided pooled_output.
+            This method calculates the sequence relationship score using the provided pooled_output.
         
         Args:
-        - self: (object) The instance of the class TinyBertOnlyNSPHead.
-        - pooled_output: (object) The pooled output from the TinyBERT model.
+            self: (object) The instance of the class TinyBertOnlyNSPHead.
+            pooled_output: (object) The pooled output from the TinyBERT model.
         
         Returns:
-        - seq_relationship_score: (object) The calculated sequence relationship score based on the provided pooled_output.
+            seq_relationship_score: (object) The calculated sequence relationship score based on the provided pooled_output.
         
         Raises:
-        - None
+            None
         """
         seq_relationship_score = self.seq_relationship(pooled_output)
         return seq_relationship_score
@@ -747,9 +747,9 @@ class TinyBertPreTrainingHeads(nn.Cell):
             pooled_output (object): The output at the pooled layer of the TinyBert model, representing the aggregated representation of the entire input sequence.
         
         Returns:
-            tuple: A tuple containing the prediction scores and sequence relationship score. 
-            - prediction_scores (object): The prediction scores for the pre-training task based on the sequence_output.
-            - seq_relationship_score (object): The sequence relationship score for the pre-training task based on the pooled_output.
+            tuple: A tuple containing the prediction scores and sequence relationship score.
+            >   - prediction_scores (object): The prediction scores for the pre-training task based on the sequence_output.
+            >   - seq_relationship_score (object): The sequence relationship score for the pre-training task based on the pooled_output.
         
         Raises:
             None
@@ -777,7 +777,7 @@ class TinyBertPreTrainedModel(PreTrainedModel):
                                     It should be an instance of TinyBertConfig.
             
         Returns:
-            None. This method initializes the TinyBertPreTrainedModel instance with the provided configuration.
+            None: This method initializes the TinyBertPreTrainedModel instance with the provided configuration.
         
         Raises:
             ValueError: If the config parameter is not an instance of TinyBertConfig, a ValueError is raised
@@ -853,9 +853,9 @@ class TinyBertModel(TinyBertPreTrainedModel):
         Args:
             self: The instance of the TinyBertModel class.
             config: A dictionary containing configuration parameters for the model.
-                - Type: dict
-                - Purpose: Specifies the configuration settings for the model.
-                - Restrictions: Must be a valid dictionary object.
+                >   - Type: dict
+                >   - Purpose: Specifies the configuration settings for the model.
+                >   - Restrictions: Must be a valid dictionary object.
         
         Returns:
             None. This method does not return any value explicitly.
@@ -914,8 +914,8 @@ class TinyBertForPreTraining(TinyBertPreTrainedModel):
     """
     BERT model with pre-training heads.
     This module comprises the BERT model followed by the two pre-training heads:
-        - the masked language modeling head, and
-        - the next sentence classification head.
+        >   - the masked language modeling head, and
+        >   - the next sentence classification head.
     """
     def __init__(self, config):
         """
@@ -1061,9 +1061,9 @@ class TinyBertForNextSentencePrediction(TinyBertPreTrainedModel):
         Args:
             self: An instance of the TinyBertForNextSentencePrediction class.
             config: A configuration object containing various hyperparameters and settings for the model.
-                - Type: Any valid configuration object
-                - Purpose: Specifies the configuration settings for the model.
-                - Restrictions: Must be a valid configuration object.
+                >   - Type: Any valid configuration object
+                >   - Purpose: Specifies the configuration settings for the model.
+                >   - Restrictions: Must be a valid configuration object.
         
         Returns:
             None

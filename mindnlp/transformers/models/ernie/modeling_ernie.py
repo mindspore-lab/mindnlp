@@ -75,16 +75,16 @@ class ErnieEmbeddings(nn.Cell):
         Args:
             self: The instance of the ErnieEmbeddings class.
             config: An object containing configuration parameters for the ErnieEmbeddings class. The config object should have the following attributes:
-                - vocab_size (int): The size of the vocabulary.
-                - hidden_size (int): The size of the hidden layers.
-                - pad_token_id (int): The ID of the padding token.
-                - max_position_embeddings (int): The maximum number of position embeddings.
-                - type_vocab_size (int): The size of the token type vocabulary.
-                - use_task_id (bool): Whether to use task IDs.
-                - task_type_vocab_size (int): The size of the task type vocabulary.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
-                - hidden_dropout_prob (float): The dropout probability for hidden layers.
-                - position_embedding_type (str): The type of position embedding to use. Default is 'absolute'.
+                >   - vocab_size (int): The size of the vocabulary.
+                >   - hidden_size (int): The size of the hidden layers.
+                >   - pad_token_id (int): The ID of the padding token.
+                >   - max_position_embeddings (int): The maximum number of position embeddings.
+                >   - type_vocab_size (int): The size of the token type vocabulary.
+                >   - use_task_id (bool): Whether to use task IDs.
+                >   - task_type_vocab_size (int): The size of the task type vocabulary.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - hidden_dropout_prob (float): The dropout probability for hidden layers.
+                >   - position_embedding_type (str): The type of position embedding to use. Default is 'absolute'.
             
         Returns:
             None
@@ -193,13 +193,13 @@ class ErnieSelfAttention(nn.Cell):
         Args:
             self: The instance of the class.
             config: An instance of the configuration class containing the following attributes:
-                - hidden_size (int): The size of the hidden layers.
-                - num_attention_heads (int): The number of attention heads.
-                - embedding_size (int, optional): The size of the embedding layer. If not provided, it is expected to be an attribute of the config.
-                - attention_probs_dropout_prob (float): The dropout probability for attention probabilities.
-                - position_embedding_type (str, optional): The type of position embedding. If not provided, it defaults to 'absolute'.
-                - max_position_embeddings (int): The maximum number of position embeddings.
-                - is_decoder (bool): Indicates if the model is a decoder.
+                >   - hidden_size (int): The size of the hidden layers.
+                >   - num_attention_heads (int): The number of attention heads.
+                >   - embedding_size (int, optional): The size of the embedding layer. If not provided, it is expected to be an attribute of the config.
+                >   - attention_probs_dropout_prob (float): The dropout probability for attention probabilities.
+                >   - position_embedding_type (str, optional): The type of position embedding. If not provided, it defaults to 'absolute'.
+                >   - max_position_embeddings (int): The maximum number of position embeddings.
+                >   - is_decoder (bool): Indicates if the model is a decoder.
         
             position_embedding_type (str, optional): The type of position embedding. Defaults to None.
         
@@ -270,7 +270,7 @@ class ErnieSelfAttention(nn.Cell):
             self (ErnieSelfAttention): The instance of the ErnieSelfAttention class.
             hidden_states (mindspore.Tensor): The input hidden states of the model. Shape: (batch_size, sequence_length, hidden_size).
             attention_mask (Optional[mindspore.Tensor]): The attention mask tensor. It is a binary tensor of shape (batch_size, sequence_length) where 1 indicates a valid token and 0 indicates a padded token.
-Defaults to None.
+                Defaults to None.
             head_mask (Optional[mindspore.Tensor]): The head mask tensor. It is a binary tensor of shape (num_attention_heads,) indicating which heads to mask. Defaults to None.
             encoder_hidden_states (Optional[mindspore.Tensor]): The hidden states of the encoder. Shape: (batch_size, encoder_sequence_length, hidden_size). Defaults to None.
             encoder_attention_mask (Optional[mindspore.Tensor]): The attention mask tensor for the encoder. Shape: (batch_size, encoder_sequence_length). Defaults to None.
@@ -279,7 +279,7 @@ Defaults to None.
         
         Returns:
             Tuple[mindspore.Tensor]: A tuple containing the context layer tensor and optionally the attention probabilities tensor. The context layer tensor has shape (batch_size, sequence_length, hidden_size)
-and represents the output of the self-attention mechanism.
+                and represents the output of the self-attention mechanism.
         
         Raises:
             None: This method does not raise any exceptions.
@@ -390,7 +390,7 @@ class ErnieSelfOutput(nn.Cell):
         dropout (nn.Dropout): A dropout module to apply dropout to the hidden states.
     
     Methods:
-        construct(hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+        construct:
             Applies dense, dropout, and layer normalization operations to the input tensor's hidden states and returns the output tensor.
     """
     def __init__(self, config):
@@ -555,8 +555,8 @@ class ErnieIntermediate(nn.Cell):
         intermediate_act_fn (function): The activation function applied to the intermediate hidden states.
     
     Methods:
-        __init__(self, config): Initializes the ERNIE intermediate layer with the provided configuration.
-        construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor: Constructs the intermediate layer by applying dense and activation functions to the input hidden states.
+        __init__: Initializes the ERNIE intermediate layer with the provided configuration.
+        construct: Constructs the intermediate layer by applying dense and activation functions to the input hidden states.
     '''
     def __init__(self, config):
         """
@@ -623,9 +623,9 @@ class ErnieOutput(nn.Cell):
         Args:
             self (ErnieOutput): The instance of the ErnieOutput class.
             config: An object containing configuration parameters.
-                - Type: Any
-                - Purpose: Configuration object specifying model settings.
-                - Restrictions: Must be compatible with the specified configuration format.
+                >   - Type: Any
+                >   - Purpose: Configuration object specifying model settings.
+                >   - Restrictions: Must be compatible with the specified configuration format.
         
         Returns:
             None: This method does not return any value.
@@ -696,13 +696,13 @@ class ErnieLayer(nn.Cell):
         Args:
             self: The instance of the ErnieLayer class.
             config: A configuration object containing various settings for the ErnieLayer.
-                Type: object
-                Purpose: Configures the behavior of the ErnieLayer.
-                Restrictions: Must contain the following attributes:
-                    - chunk_size_feed_forward: Chunk size for feed-forward operations.
-                    - is_decoder: Boolean indicating whether the layer is used as a decoder model.
-                    - add_cross_attention: Boolean indicating whether cross attention is added.
-                    - position_embedding_type: Optional parameter specifying the position embedding type for cross attention.
+                >   - Type: object
+                >   - Purpose: Configures the behavior of the ErnieLayer.
+                >   - Restrictions: Must contain the following attributes:
+                >       - chunk_size_feed_forward: Chunk size for feed-forward operations.
+                >       - is_decoder: Boolean indicating whether the layer is used as a decoder model.
+                >       - add_cross_attention: Boolean indicating whether cross attention is added.
+                >       - position_embedding_type: Optional parameter specifying the position embedding type for cross attention.
                     
         Returns:
             None. This method initializes various attributes of the ErnieLayer instance.
@@ -981,15 +981,15 @@ class ErniePooler(nn.Cell):
     ErniePooler class represents a pooler layer for an ERNIE model. 
     
     This class inherits from nn.Cell and implements a pooler layer that takes hidden states as input, processes the first token tensor through a dense layer and activation function, and returns the pooled
-output.
+    output.
     
     Attributes:
         dense (nn.Dense): A dense layer with the specified hidden size.
         activation (nn.Tanh): A hyperbolic tangent activation function.
     
     Methods:
-        __init__(self, config): Initializes the ErniePooler object with the provided configuration.
-        construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor: Constructs the pooled output from the hidden states input.
+        __init__: Initializes the ErniePooler object with the provided configuration.
+        construct: Constructs the pooled output from the hidden states input.
     """
     def __init__(self, config):
         """
@@ -998,9 +998,9 @@ output.
         Args:
             self: The instance of the class.
             config: An object of type 'config' which contains the configuration parameters.
-                - Type: Any valid object.
-                - Purpose: Specifies the configuration parameters for the ErniePooler instance.
-                - Restrictions: None.
+                >   - Type: Any valid object.
+                >   - Purpose: Specifies the configuration parameters for the ErniePooler instance.
+                >   - Restrictions: None.
         
         Returns:
             None. This method does not return any value.
@@ -1041,7 +1041,7 @@ class ErniePredictionHeadTransform(nn.Cell):
 
     """
     This class represents the transformation head for the ERNIE prediction model. It performs various operations such as dense transformation, activation function application, and layer normalization on the
-input hidden states.
+    input hidden states.
     
     Inherits from:
         nn.Cell
@@ -1052,8 +1052,8 @@ input hidden states.
         LayerNorm (nn.LayerNorm): A layer normalization module applied to the hidden states.
     
     Methods:
-        __init__(self, config): Initializes the class instance with the provided configuration.
-        construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor: Applies the transformation operations on the input hidden states and returns the transformed states.
+        __init__: Initializes the class instance with the provided configuration.
+        construct: Applies the transformation operations on the input hidden states and returns the transformed states.
     
     """
     def __init__(self, config):
@@ -1107,19 +1107,21 @@ class ErnieLMPredictionHead(nn.Cell):
     This class inherits from nn.Cell and provides methods for initializing the prediction head and constructing predictions based on the input hidden states. 
     
     Attributes:
-        - transform: ErniePredictionHeadTransform object for transforming hidden states.
-        - decoder: nn.Dense object for decoding hidden states into output predictions.
-        - bias: Parameter object for bias initialization.
+        transform: ErniePredictionHeadTransform object for transforming hidden states.
+        decoder: nn.Dense object for decoding hidden states into output predictions.
+        bias: Parameter object for bias initialization.
         
     Methods:
-        - __init__(self, config): Initializes the prediction head with the given configuration.
-        - construct(self, hidden_states): Constructs predictions based on the input hidden states by applying transformation and decoding operations.
+        __init__(self, config): Initializes the prediction head with the given configuration.
+        construct(self, hidden_states): Constructs predictions based on the input hidden states by applying transformation and decoding operations.
     
     Example Usage:
+        ```python
         config = get_config()
         prediction_head = ErnieLMPredictionHead(config)
         hidden_states = get_hidden_states()
         predictions = prediction_head.construct(hidden_states)
+        ```
     """
     def __init__(self, config):
         """
@@ -1228,11 +1230,11 @@ class ErnieOnlyNSPHead(nn.Cell):
     on the pooled output of the model.
     
     Methods:
-    - __init__(self, config): Initializes the NSP head with a Dense layer for sequence relationship prediction.
-    - construct(self, pooled_output): Constructs the NSP score by passing the pooled output through the Dense layer.
+        __init__(self, config): Initializes the NSP head with a Dense layer for sequence relationship prediction.
+        construct(self, pooled_output): Constructs the NSP score by passing the pooled output through the Dense layer.
     
     Attributes:
-    - seq_relationship: A Dense layer with hidden_size neurons for predicting the relationship between sequences.
+        seq_relationship: A Dense layer with hidden_size neurons for predicting the relationship between sequences.
     """
     def __init__(self, config):
         """
@@ -1241,9 +1243,9 @@ class ErnieOnlyNSPHead(nn.Cell):
         Args:
             self: The instance of the class.
             config: An object containing configuration settings.
-                - Type: Any
-                - Purpose: Specifies the configuration settings for the head.
-                - Restrictions: Must be compatible with the nn.Dense module.
+                >   - Type: Any
+                >   - Purpose: Specifies the configuration settings for the head.
+                >   - Restrictions: Must be compatible with the nn.Dense module.
         
         Returns:
             None. This method does not return any value.
@@ -1262,14 +1264,14 @@ class ErnieOnlyNSPHead(nn.Cell):
         Args:
             self: Instance of the ErnieOnlyNSPHead class.
             pooled_output: Tensor containing the pooled output from the model.
-                Type: Tensor
-                Purpose: Represents the output features obtained after pooling.
-                Restrictions: Must be a valid tensor object.
+                >   - Type: Tensor
+                >   - Purpose: Represents the output features obtained after pooling.
+                >   - Restrictions: Must be a valid tensor object.
         
         Returns:
             seq_relationship_score: The calculated sequence relationship score based on the pooled output.
-                Type: None
-                Purpose: Represents the score indicating the relationship between two sequences.
+                >   -Type: None
+                >   - Purpose: Represents the score indicating the relationship between two sequences.
         
         Raises:
             None
@@ -1286,12 +1288,12 @@ class ErniePreTrainingHeads(nn.Cell):
 initializing the prediction heads and making predictions.
     
     Methods:
-    - __init__(self, config): Initializes the ErniePreTrainingHeads instance with the given configuration.
-    - construct(self, sequence_output, pooled_output): Constructs the pre-training heads using the sequence output and pooled output, and returns the prediction scores and sequence relationship score.
+        __init__(self, config): Initializes the ErniePreTrainingHeads instance with the given configuration.
+        construct(self, sequence_output, pooled_output): Constructs the pre-training heads using the sequence output and pooled output, and returns the prediction scores and sequence relationship score.
     
     Attributes:
-    - predictions: Instance of ErnieLMPredictionHead for predicting masked tokens.
-    - seq_relationship: Dense layer for predicting sequence relationships.
+        predictions: Instance of ErnieLMPredictionHead for predicting masked tokens.
+        seq_relationship: Dense layer for predicting sequence relationships.
     """
     def __init__(self, config):
         """
@@ -1327,10 +1329,10 @@ initializing the prediction heads and making predictions.
         
         Returns:
             Tuple[Tensor, Tensor]: A tuple of prediction scores and sequence relationship scores.
-                - prediction_scores (Tensor): The prediction scores for each token in the input sequence.
+                >   - prediction_scores (Tensor): The prediction scores for each token in the input sequence.
                     Each score represents the probability of the token being masked in pre-training.
                     Shape: (batch_size, sequence_length, vocab_size)
-                - seq_relationship_score (Tensor): The sequence relationship score.
+                >   - seq_relationship_score (Tensor): The sequence relationship score.
                     This score represents the probability of the input sequence being a continuation of another sequence.
                     Shape: (batch_size, num_labels)
         
@@ -1510,12 +1512,10 @@ class ErnieModel(ErniePreTrainedModel):
         encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
             the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
-
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
+            >   - 1 for tokens that are **not masked**,
+            >   - 0 for tokens that are **masked**.
         past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
             Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
-
             If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
             don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
             `decoder_input_ids` of shape `(batch_size, sequence_length)`.
@@ -1624,10 +1624,10 @@ class ErnieForPreTraining(ErniePreTrainedModel):
     This class represents an Ernie model for pre-training tasks. It inherits from the ErniePreTrainedModel. 
     
     The class includes methods for initializing the model, getting and setting output embeddings, and constructing the model for pre-training tasks. The `construct` method takes various input tensors and
-optional arguments, and returns the output of the model for pre-training. It also includes detailed information about the expected input parameters, optional arguments, and return values.
+    optional arguments, and returns the output of the model for pre-training. It also includes detailed information about the expected input parameters, optional arguments, and return values.
     
     The class also provides an example of how to use the model for pre-training tasks using the AutoTokenizer and example inputs. The example demonstrates how to tokenize input text, generate model outputs,
-and access specific logits from the model.
+    and access specific logits from the model.
     
     For more details on the usage and functionality of the ErnieForPreTraining class, refer to the provided code and docstring examples.
     """
@@ -1704,37 +1704,36 @@ and access specific logits from the model.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], ErnieForPreTrainingOutput]:
         r"""
-            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
-                config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked),
-                the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
-            next_sentence_label (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-                Labels for computing the next sequence prediction (classification) loss. Input should be a sequence
-                pair (see `input_ids` docstring) Indices should be in `[0, 1]`:
-
-                - 0 indicates sequence B is a continuation of sequence A,
-                - 1 indicates sequence B is a random sequence.
-            kwargs (`Dict[str, any]`, optional, defaults to *{}*):
-                Used to hide legacy arguments that have been deprecated.
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
+            config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked),
+            the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
+        next_sentence_label (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the next sequence prediction (classification) loss. Input should be a sequence
+            pair (see `input_ids` docstring) Indices should be in `[0, 1]`:
+            >- 0 indicates sequence B is a continuation of sequence A,
+            >- 1 indicates sequence B is a random sequence.
+        kwargs (`Dict[str, any]`, optional, defaults to *{}*):
+            Used to hide legacy arguments that have been deprecated.
 
         Returns:
+            Union[Tuple[mindspore.Tensor], ErnieForPreTrainingOutput]
 
         Example:
+            ```python
+            >>> from transformers import AutoTokenizer, ErnieForPreTraining
 
-        ```python
-        >>> from transformers import AutoTokenizer, ErnieForPreTraining
 
+            >>> tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
+            >>> model = ErnieForPreTraining.from_pretrained("nghuyong/ernie-1.0-base-zh")
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
-        >>> model = ErnieForPreTraining.from_pretrained("nghuyong/ernie-1.0-base-zh")
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> outputs = model(**inputs)
 
-        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
-        >>> outputs = model(**inputs)
-
-        >>> prediction_logits = outputs.prediction_logits
-        >>> seq_relationship_logits = outputs.seq_relationship_logits
-        ```
-        """
+            >>> prediction_logits = outputs.prediction_logits
+            >>> seq_relationship_logits = outputs.seq_relationship_logits
+            ```
+            """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.ernie(
@@ -1780,13 +1779,13 @@ class ErnieForCausalLM(ErniePreTrainedModel):
     The model includes functionality for constructing the model, setting and getting output embeddings, preparing inputs for text generation, and reordering cache during generation.
     
     The class includes methods for initializing the model, constructing the model for inference or training, setting and getting output embeddings, preparing inputs for text generation, and reordering cache
-during generation.
+    during generation.
     
     The 'construct' method constructs the model for inference or training, taking various input tensors such as input ids, attention masks, token type ids, and more. It returns the model outputs including the
-language modeling loss and predictions.
+    language modeling loss and predictions.
     
     The 'prepare_inputs_for_generation' method prepares input tensors for text generation, including handling past key values and attention masks. It returns a dictionary containing the input ids, attention
-mask, past key values, and use_cache flag.
+    mask, past key values, and use_cache flag.
     
     The '_reorder_cache' method reorders the past key values during generation based on the beam index used for parallel decoding.
     
@@ -1802,9 +1801,9 @@ mask, past key values, and use_cache flag.
         Args:
             self: The instance of the class.
             config (object): The configuration object containing various settings for the model.
-                - Type: object
-                - Purpose: Specifies the configuration settings for the model.
-                - Restrictions: None
+                >   - Type: object
+                >   - Purpose: Specifies the configuration settings for the model.
+                >   - Restrictions: None
         
         Returns:
             None
@@ -1858,9 +1857,11 @@ mask, past key values, and use_cache flag.
             This method updates the output embeddings of the ErnieForCausalLM model to the provided new_embeddings. The new_embeddings should be of the same shape as the existing embeddings.
         
         Example:
+            ···python
             >>> model = ErnieForCausalLM()
             >>> new_embeddings = torch.Tensor([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]])
             >>> model.set_output_embeddings(new_embeddings)
+            ```
         """
         self.cls.predictions.decoder = new_embeddings
 
@@ -1889,16 +1890,14 @@ mask, past key values, and use_cache flag.
         encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
             the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
-
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
+            >   - 1 for tokens that are **not masked**,
+            >   - 0 for tokens that are **masked**.
         labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the left-to-right language modeling loss (next word prediction). Indices should be in
             `[-100, 0, ..., config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are
             ignored (masked), the loss is only computed for the tokens with labels n `[0, ..., config.vocab_size]`
         past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
             Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
-
             If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
             don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
             `decoder_input_ids` of shape `(batch_size, sequence_length)`.
@@ -2024,20 +2023,21 @@ class ErnieForMaskedLM(ErniePreTrainedModel):
 
     """
     This class represents a model for Masked Language Modeling using the ERNIE (Enhanced Representation through kNowledge Integration) architecture. It is designed for generating predictions for masked tokens
-within a sequence of text.
+    within a sequence of text.
     
     The class inherits from ErniePreTrainedModel and implements methods for initializing the model, getting and setting output embeddings, constructing the model for training or inference, and preparing inputs
-for text generation.
+    for text generation.
     
     Methods:
-    - __init__(self, config): Initializes the ErnieForMaskedLM model with the given configuration.
-    - get_output_embeddings(self): Retrieves the output embeddings from the model.
-    - set_output_embeddings(self, new_embeddings): Sets new output embeddings for the model.
-    - construct(self, input_ids, attention_mask, token_type_ids, task_type_ids, position_ids, head_mask, inputs_embeds, encoder_hidden_states, encoder_attention_mask, labels, output_attentions,
-output_hidden_states, return_dict): Constructs the model for training or inference, computing the masked language modeling loss and prediction scores.
-    - prepare_inputs_for_generation(self, input_ids, attention_mask, **model_kwargs): Prepares inputs for text generation, including handling padding and dummy tokens.
+        __init__(self, config): Initializes the ErnieForMaskedLM model with the given configuration.
+        get_output_embeddings(self): Retrieves the output embeddings from the model.
+        set_output_embeddings(self, new_embeddings): Sets new output embeddings for the model.
+        construct(self, input_ids, attention_mask, token_type_ids, task_type_ids, position_ids, head_mask, inputs_embeds, encoder_hidden_states, encoder_attention_mask, labels, output_attentions,
+            output_hidden_states, return_dict): Constructs the model for training or inference, computing the masked language modeling loss and prediction scores.
+        prepare_inputs_for_generation(self, input_ids, attention_mask, **model_kwargs): Prepares inputs for text generation, including handling padding and dummy tokens.
     
-    Note: This class assumes the existence of the ErnieModel and ErnieOnlyMLMHead classes for the ERNIE architecture.
+    Note:
+        This class assumes the existence of the ErnieModel and ErnieOnlyMLMHead classes for the ERNIE architecture.
     """
     _tied_weights_keys = ["cls.predictions.decoder.bias", "cls.predictions.decoder.weight"]
 
@@ -2131,10 +2131,10 @@ output_hidden_states, return_dict): Constructs the model for training or inferen
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], MaskedLMOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
-            config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
-            loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
+        >    labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
+                config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
+                loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -2210,38 +2210,38 @@ class ErnieForNextSentencePrediction(ErniePreTrainedModel):
 
     """
     ErnieForNextSentencePrediction is a class that represents a model for next sentence prediction using the ERNIE (Enhanced Representation through kNowledge IntEgration) architecture. This class inherits from
-the ErniePreTrainedModel class.
+    the ErniePreTrainedModel class.
     
     The ERNIE model is designed for various natural language processing tasks, including next sentence prediction. It takes input sequences and predicts whether the second sequence follows the first sequence
-in a given pair.
+    in a given pair.
     
     The class's code initializes an instance of the ErnieForNextSentencePrediction class with the provided configuration. It creates an ERNIE model and a next sentence prediction head. The post_init() method
-is called to perform additional setup after the initialization.
+    is called to perform additional setup after the initialization.
     
     The construct() method constructs the model using the provided input tensors and other optional arguments. It returns the predicted next sentence relationship scores. The method also supports computing the
-next sequence prediction loss if labels are provided.
+    next sequence prediction loss if labels are provided.
     
     The labels parameter is used to compute the next sequence prediction loss. It should be a tensor of shape (batch_size,) where each value indicates the relationship between the input sequences:
-    - 0 indicates sequence B is a continuation of sequence A.
-    - 1 indicates sequence B is a random sequence.
+    >   - 0 indicates sequence B is a continuation of sequence A.
+    >   - 1 indicates sequence B is a random sequence.
     
     The method returns a tuple of the next sentence prediction loss, the next sentence relationship scores, and other optional outputs such as hidden states and attentions.
     
     Example usage:
-    
-    from transformers import AutoTokenizer, ErnieForNextSentencePrediction
-    
-    tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
-    model = ErnieForNextSentencePrediction.from_pretrained("nghuyong/ernie-1.0-base-zh")
-    
-    prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
-    next_sentence = "The sky is blue due to the shorter wavelength of blue light."
-    encoding = tokenizer(prompt, next_sentence, return_tensors="pt")
-    
-    outputs = model(**encoding, labels=mindspore.Tensor([1]))
-    logits = outputs.logits
-    assert logits[0, 0] < logits[0, 1]  # next sentence was random
-    
+    ```python
+        from transformers import AutoTokenizer, ErnieForNextSentencePrediction
+
+        tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
+        model = ErnieForNextSentencePrediction.from_pretrained("nghuyong/ernie-1.0-base-zh")
+
+        prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
+        next_sentence = "The sky is blue due to the shorter wavelength of blue light."
+        encoding = tokenizer(prompt, next_sentence, return_tensors="pt")
+
+        outputs = model(**encoding, labels=mindspore.Tensor([1]))
+        logits = outputs.logits
+        assert logits[0, 0] < logits[0, 1]  # next sentence was random
+    ```
     """
     # Copied from transformers.models.bert.modeling_bert.BertForNextSentencePrediction.__init__ with Bert->Ernie,bert->ernie
     def __init__(self, config):
@@ -2286,29 +2286,28 @@ next sequence prediction loss if labels are provided.
         labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the next sequence prediction (classification) loss. Input should be a sequence pair
             (see `input_ids` docstring). Indices should be in `[0, 1]`:
-
-            - 0 indicates sequence B is a continuation of sequence A,
-            - 1 indicates sequence B is a random sequence.
+            >   - 0 indicates sequence B is a continuation of sequence A,
+            >   - 1 indicates sequence B is a random sequence.
 
         Returns:
+            Union[Tuple[mindspore.Tensor], NextSentencePredictorOutput]
 
         Example:
+            ```python
+            >>> from transformers import AutoTokenizer, ErnieForNextSentencePrediction
 
-        ```python
-        >>> from transformers import AutoTokenizer, ErnieForNextSentencePrediction
 
+            >>> tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
+            >>> model = ErnieForNextSentencePrediction.from_pretrained("nghuyong/ernie-1.0-base-zh")
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
-        >>> model = ErnieForNextSentencePrediction.from_pretrained("nghuyong/ernie-1.0-base-zh")
+            >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
+            >>> next_sentence = "The sky is blue due to the shorter wavelength of blue light."
+            >>> encoding = tokenizer(prompt, next_sentence, return_tensors="pt")
 
-        >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
-        >>> next_sentence = "The sky is blue due to the shorter wavelength of blue light."
-        >>> encoding = tokenizer(prompt, next_sentence, return_tensors="pt")
-
-        >>> outputs = model(**encoding, labels=mindspore.Tensor([1]))
-        >>> logits = outputs.logits
-        >>> assert logits[0, 0] < logits[0, 1]  # next sentence was random
-        ```
+            >>> outputs = model(**encoding, labels=mindspore.Tensor([1]))
+            >>> logits = outputs.logits
+            >>> assert logits[0, 0] < logits[0, 1]  # next sentence was random
+            ```
         """
         if "next_sentence_label" in kwargs:
             warnings.warn(
@@ -2359,27 +2358,28 @@ class ErnieForSequenceClassification(ErniePreTrainedModel):
     This class represents an ERNIE model for sequence classification tasks. It is a subclass of the `ErniePreTrainedModel` class.
     
     The `ErnieForSequenceClassification` class has an initialization method and a `construct` method. The initialization method initializes the ERNIE model and sets up the classifier layers. The `construct`
-method performs the forward pass of the model and returns the output.
+    method performs the forward pass of the model and returns the output.
     
     Attributes:
-        - num_labels (int): The number of labels for the sequence classification task.
-        - config (ErnieConfig): The configuration object for the ERNIE model.
-        - ernie (ErnieModel): The ERNIE model instance.
-        - dropout (nn.Dropout): Dropout layer for regularization.
-        - classifier (nn.Dense): Dense layer for classification.
+        num_labels (int): The number of labels for the sequence classification task.
+        config (ErnieConfig): The configuration object for the ERNIE model.
+        ernie (ErnieModel): The ERNIE model instance.
+        dropout (nn.Dropout): Dropout layer for regularization.
+        classifier (nn.Dense): Dense layer for classification.
         
     Methods:
-        - __init__(self, config): Initializes the `ErnieForSequenceClassification` instance.
-        - construct(self, input_ids, attention_mask, token_type_ids, task_type_ids, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Performs the forward
-pass of the ERNIE model and returns the output.
+        __init__(self, config): Initializes the `ErnieForSequenceClassification` instance.
+        construct(self, input_ids, attention_mask, token_type_ids, task_type_ids, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict): Performs the forward
+            pass of the ERNIE model and returns the output.
     
     Example usage:
-    
+        ```python
         # Initialize the model
         model = ErnieForSequenceClassification(config)
     
         # Perform forward pass
         output = model.construct(input_ids, attention_mask, token_type_ids, task_type_ids, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict)
+        ```
     """
     # Copied from transformers.models.bert.modeling_bert.BertForSequenceClassification.__init__ with Bert->Ernie,bert->ernie
     def __init__(self, config):
@@ -2425,10 +2425,10 @@ pass of the ERNIE model and returns the output.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        >    labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -2487,21 +2487,22 @@ class ErnieForMultipleChoice(ErniePreTrainedModel):
     This class represents an Ernie model for multiple choice tasks. It inherits from the ErniePreTrainedModel class.
     
     The ErnieForMultipleChoice class initializes an Ernie model with the given configuration. It constructs the model by passing input tensors through the Ernie model layers and applies dropout and
-classification layers to generate the logits for multiple choice classification.
+    classification layers to generate the logits for multiple choice classification.
     
     Usage:
+        ```python
         model = ErnieForMultipleChoice(config)
         outputs = model.construct(input_ids, attention_mask, token_type_ids, task_type_ids, position_ids, head_mask, inputs_embeds, labels, output_attentions, output_hidden_states, return_dict)
-    
+        ```
     Args:
         config (ErnieConfig): The configuration for the Ernie model.
     
     Methods:
-        __init__(self, config)
+        __init__(self, config):
             Initializes the ErnieForMultipleChoice class with the given configuration.
     
         construct(self, input_ids=None, attention_mask=None, token_type_ids=None, task_type_ids=None, position_ids=None, head_mask=None, inputs_embeds=None, labels=None, output_attentions=None,
-output_hidden_states=None, return_dict=None)
+            output_hidden_states=None, return_dict=None):
             Constructs the Ernie model for multiple choice tasks and returns the model outputs.
     
     Returns:
@@ -2509,7 +2510,7 @@ output_hidden_states=None, return_dict=None)
     
     Note:
         The labels argument should be provided for computing the multiple choice classification loss. Indices in labels should be in the range [0, num_choices-1], where num_choices is the size of the second
-dimension of the input tensors (input_ids).
+        dimension of the input tensors (input_ids).
     
     """
     # Copied from transformers.models.bert.modeling_bert.BertForMultipleChoice.__init__ with Bert->Ernie,bert->ernie
@@ -2556,10 +2557,10 @@ dimension of the input tensors (input_ids).
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], MultipleChoiceModelOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
-            num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
-            `input_ids` above)
+        >    labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
+                num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
+                `input_ids` above)
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
@@ -2613,16 +2614,17 @@ class ErnieForTokenClassification(ErniePreTrainedModel):
 
     """
     This class represents a token classification model based on the Ernie architecture. It is used for token-level classification tasks such as Named Entity Recognition (NER) and part-of-speech tagging. The
-model inherits from the ErniePreTrainedModel class and utilizes the ErnieModel for token embeddings and hidden representations. It includes methods for model initialization and forward propagation to compute
-token classification logits and loss.
+    model inherits from the ErniePreTrainedModel class and utilizes the ErnieModel for token embeddings and hidden representations. It includes methods for model initialization and forward propagation to compute
+    token classification logits and loss.
     
     The class's constructor initializes the model with the provided configuration, sets the number of classification labels, and configures the ErnieModel with the specified parameters. Additionally, it sets
-up the dropout and classifier layers.
+    up the dropout and classifier layers.
     
     The construct method takes input tensors and optional arguments for token classification, and returns the token classification output. It also computes the token classification loss if labels are provided.
-The method supports various optional parameters for controlling the model's behavior during inference.
+    The method supports various optional parameters for controlling the model's behavior during inference.
     
-    Note: The docstring is based on the provided information and does not include specific code signatures.
+    Note:
+        The docstring is based on the provided information and does not include specific code signatures.
     """
     # Copied from transformers.models.bert.modeling_bert.BertForTokenClassification.__init__ with Bert->Ernie,bert->ernie
     def __init__(self, config):
@@ -2633,10 +2635,10 @@ The method supports various optional parameters for controlling the model's beha
             self: The instance of the class.
             config (object): The configuration object containing the settings for the model.
                 This object must have the following attributes:
-                - num_labels (int): The number of labels for token classification.
-                - classifier_dropout (float or None): The dropout rate for the classifier layer. 
-                  If None, it defaults to the hidden dropout probability from the configuration.
-                - hidden_dropout_prob (float): The dropout probability for the hidden layers.
+                >   - num_labels (int): The number of labels for token classification.
+                >   - classifier_dropout (float or None): The dropout rate for the classifier layer.
+                    If None, it defaults to the hidden dropout probability from the configuration.
+                >   - hidden_dropout_prob (float): The dropout probability for the hidden layers.
         
         Returns:
             None. This method initializes the instance attributes and does not return a value.
@@ -2674,8 +2676,8 @@ The method supports various optional parameters for controlling the model's beha
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], TokenClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        >    labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -2717,19 +2719,19 @@ class ErnieForQuestionAnswering(ErniePreTrainedModel):
 
     """
     ErnieForQuestionAnswering is a class that represents a model for question answering tasks using the ERNIE (Enhanced Representation through kNowledge Integration) architecture. This class inherits from
-ErniePreTrainedModel and provides methods for constructing the model and performing question answering inference.
+    ErniePreTrainedModel and provides methods for constructing the model and performing question answering inference.
     
     The class constructor initializes the model with the provided configuration. The model architecture includes an ERNIE model with the option to add a pooling layer. Additionally, it includes a dense layer
-for question answering outputs.
+    for question answering outputs.
     
     The construct method takes various input tensors and performs the question answering computation. It supports optional inputs for start and end positions, attention masks, token type IDs, task type IDs,
-position IDs, head masks, and input embeddings. The method returns the question-answering model output, which includes the start and end logits for the predicted answer spans.
+    position IDs, head masks, and input embeddings. The method returns the question-answering model output, which includes the start and end logits for the predicted answer spans.
     
     The method also allows for customizing the return of outputs by specifying the return_dict parameter. If the return_dict parameter is not provided, the method uses the default value from the model's
-configuration.
+    configuration.
     
     Overall, the ErnieForQuestionAnswering class encapsulates the functionality for performing question answering tasks using the ERNIE model and provides a high-level interface for constructing the model and
-performing inference.
+    performing inference.
     """
     # Copied from transformers.models.bert.modeling_bert.BertForQuestionAnswering.__init__ with Bert->Ernie,bert->ernie
     def __init__(self, config):
@@ -2741,9 +2743,9 @@ performing inference.
             config (object): An object containing configuration settings for the Ernie model.
                 This parameter is required for initializing the ErnieForQuestionAnswering instance.
                 It should include the following attributes:
-                    - num_labels (int): The number of labels for the classification task.
-                    - hidden_size (int): The size of the hidden layers in the model.
-                    - add_pooling_layer (bool): Flag indicating whether to add a pooling layer in the Ernie model.
+                    >   - num_labels (int): The number of labels for the classification task.
+                    >   - hidden_size (int): The size of the hidden layers in the model.
+                    >   - add_pooling_layer (bool): Flag indicating whether to add a pooling layer in the Ernie model.
         
         Returns:
             None. This method initializes the ErnieForQuestionAnswering instance with the provided configuration settings.
@@ -2921,14 +2923,15 @@ class UIE(ErniePreTrainedModel):
             attention_mask (Tensor, optional):
                 See :class:`ErnieModel`.
         Example:
-            .. code-block::
-                import paddle
-                from paddlenlp.transformers import UIE, ErnieTokenizer
-                tokenizer = ErnieTokenizer.from_pretrained('uie-base')
-                model = UIE.from_pretrained('uie-base')
-                inputs = tokenizer("Welcome to use PaddlePaddle and PaddleNLP!")
-                inputs = {k:paddle.to_tensor([v]) for (k, v) in inputs.items()}
-                start_prob, end_prob = model(**inputs)
+            ```python
+            import paddle
+            from paddlenlp.transformers import UIE, ErnieTokenizer
+            tokenizer = ErnieTokenizer.from_pretrained('uie-base')
+            model = UIE.from_pretrained('uie-base')
+            inputs = tokenizer("Welcome to use PaddlePaddle and PaddleNLP!")
+            inputs = {k:paddle.to_tensor([v]) for (k, v) in inputs.items()}
+            start_prob, end_prob = model(**inputs)
+            ```
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         outputs = self.ernie(

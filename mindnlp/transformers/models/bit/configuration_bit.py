@@ -70,18 +70,18 @@ class BitConfig(BackboneConfigMixin, PretrainedConfig):
             same order as defined in the `stage_names` attribute.
 
     Example:
-    ```python
-    >>> from transformers import BitConfig, BitModel
+        ```python
+        >>> from transformers import BitConfig, BitModel
 
-    >>> # Initializing a BiT bit-50 style configuration
-    >>> configuration = BitConfig()
+        >>> # Initializing a BiT bit-50 style configuration
+        >>> configuration = BitConfig()
 
-    >>> # Initializing a model (with random weights) from the bit-50 style configuration
-    >>> model = BitModel(configuration)
+        >>> # Initializing a model (with random weights) from the bit-50 style configuration
+        >>> model = BitModel(configuration)
 
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
     """
     model_type = "bit"
     layer_types = ["preactivation", "bottleneck"]
