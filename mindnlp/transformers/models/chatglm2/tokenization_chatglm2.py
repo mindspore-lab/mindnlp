@@ -71,15 +71,17 @@ class SPTokenizer:
             None.
         
         This method takes in a string 's' and tokenizes it using the SentencePiece model associated with the SPTokenizer instance. The tokenization process splits the input string into smaller units, such as
-words or subwords, based on the language or model-specific rules.
+        words or subwords, based on the language or model-specific rules.
         
         Note that the tokenization is performed in-place, meaning the original string object is modified. Therefore, the method does not return any value, but updates the internal state of the SPTokenizer
-instance with the tokenized result.
+        instance with the tokenized result.
         
         Example:
+            ```python
             sp_tokenizer = SPTokenizer()
             sp_tokenizer.tokenize("Hello, world!")
             # After tokenization, the internal state of 'sp_tokenizer' will be modified.
+            ```
         """
         return self.sp_model.EncodeAsPieces(s)
 
@@ -100,10 +102,12 @@ instance with the tokenized result.
             AssertionError: If the input parameter 's' is not of type str.
         
         Example:
+            ```python
             tokenizer = SPTokenizer()
             encoded_sequence = tokenizer.encode("Hello, world!", bos=True, eos=True)
             print(encoded_sequence)
             # Output: [1, 123, 456, 789, 2]
+            ```
         """
         assert isinstance(s, str)
         t = self.sp_model.encode(s)
@@ -210,7 +214,7 @@ class ChatGLM2Tokenizer(PreTrainedTokenizer):
         
         Raises:
             AssertionError: If the provided token is not present in the special tokens of the ChatGLM2Tokenizer instance, an AssertionError is raised with a message indicating that the token is not a special
-token for the instance.
+            token for the instance.
         """
         if token in self.special_tokens:
             return self.special_tokens[token]
@@ -362,12 +366,14 @@ token for the instance.
         
         Note:
             The 'tokens' parameter should only contain valid tokens that are supported by the ChatGLM2Tokenizer. Any invalid tokens may result in unexpected behavior.
-        
+
         Example:
+            ```python
             tokenizer = ChatGLM2Tokenizer()
             tokens = ['Hello', ',', 'how', 'are', 'you', '?']
             string_representation = tokenizer.convert_tokens_to_string(tokens)
             # string_representation will be 'Hello, how are you?'
+            ```
         """
         return self.tokenizer.decode_tokens(tokens)
 
@@ -405,9 +411,9 @@ token for the instance.
             self: The instance of the ChatGLM2Tokenizer class.
         
         Returns:
-            list: A list of prefix tokens used in the ChatGLM2Tokenizer class. The list contains two elements: 
-                  1. The result of the self.get_command('[gMASK]') method.
-                  2. The result of the self.get_command('sop') method.
+            list: A list of prefix tokens used in the ChatGLM2Tokenizer class. The list contains two elements:
+                >   1. The result of the self.get_command('[gMASK]') method.
+                >   2. The result of the self.get_command('sop') method.
         
         Raises:
             None.
@@ -444,8 +450,8 @@ token for the instance.
         """
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A BERT sequence has the following format:
-        - single sequence: `[CLS] X [SEP]`
-        - pair of sequences: `[CLS] A [SEP] B [SEP]`
+        >   - single sequence: `[CLS] X [SEP]`
+        >   - pair of sequences: `[CLS] A [SEP] B [SEP]`
         Args:
             token_ids_0 (`List[int]`):
                 List of IDs to which the special tokens will be added.
@@ -476,12 +482,12 @@ token for the instance.
             max_length: maximum length of the returned list and optionally padding length (see below).
                 Will truncate by taking into account the special tokens.
             padding_strategy: PaddingStrategy to use for padding.
-                - PaddingStrategy.LONGEST Pad to the longest sequence in the batch
-                - PaddingStrategy.MAX_LENGTH: Pad to the max length (default)
-                - PaddingStrategy.DO_NOT_PAD: Do not pad
-                The tokenizer padding sides are defined in self.padding_side:
-                    - 'left': pads on the left of the sequences
-                    - 'right': pads on the right of the sequences
+                >   - PaddingStrategy.LONGEST Pad to the longest sequence in the batch
+                >   - PaddingStrategy.MAX_LENGTH: Pad to the max length (default)
+                >   - PaddingStrategy.DO_NOT_PAD: Do not pad
+                >   - The tokenizer padding sides are defined in self.padding_side:
+                >       - 'left': pads on the left of the sequences
+                >       - 'right': pads on the right of the sequences
             pad_to_multiple_of: (optional) Integer if set will pad the sequence to a multiple of the provided value.
                 This is especially useful to enable the use of Tensor Core on NVIDIA hardware with compute capability
                 `>= 7.5` (Volta).

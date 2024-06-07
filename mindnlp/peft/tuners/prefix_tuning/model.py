@@ -25,7 +25,7 @@ class PrefixEncoder(nn.Cell):
     Args:
         config ([`PrefixTuningConfig`]): The configuration of the prefix encoder.
 
-    Example:
+    Examples:
 
     ```py
     >>> from peft import PrefixEncoder, PrefixTuningConfig

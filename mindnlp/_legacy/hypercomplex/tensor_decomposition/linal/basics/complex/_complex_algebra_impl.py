@@ -50,7 +50,7 @@ class _ComplexAlgebraImpl(_MatrixImpl, _VectorImpl, _ScalarImpl):
         Note:
             The method assumes that both a_x and a_y have the same shape, and b_x and b_y also have the same shape. If b_x or b_y is a float, it will be broadcasted to match the shape of a_x and a_y.
         
-        Example:
+        Examples:
             obj = _ComplexAlgebraImpl()
             result_real, result_imag = obj.mul(a_x, a_y, b_x, b_y)
         """

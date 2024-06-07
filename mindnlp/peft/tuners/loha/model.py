@@ -37,7 +37,7 @@ class LoHaModel(LycorisTuner):
     Returns:
         `torch.nn.Module`: The LoHa model.
 
-    Example:
+    Examples:
         ```py
         >>> from diffusers import StableDiffusionPipeline
         >>> from peft import LoHaModel, LoHaConfig

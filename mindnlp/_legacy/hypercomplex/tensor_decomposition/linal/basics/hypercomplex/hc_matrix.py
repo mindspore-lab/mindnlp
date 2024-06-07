@@ -208,7 +208,7 @@ type are allowed for addition.
         This method takes no additional parameters besides 'self'. It returns a new Matrix object that has the same elements as the current matrix, but with its rows and columns interchanged. The transposed
 matrix will have dimensions 'width' x 'height', where 'width' is the number of columns in the original matrix and 'height' is the number of rows.
         
-        Example:
+        Examples:
             # Create a 2x3 matrix
             matrix = Matrix([[1, 2, 3], [4, 5, 6]])
             
@@ -528,7 +528,7 @@ same data type.
             The matrix multiplication operation can only be performed between Matrix objects of the same data type. 
             If the data types of self and that do not match, a TypeError is raised.
         
-        Example:
+        Examples:
             >>> m1 = Matrix(alg_factory, height, width, items)
             >>> m2 = Matrix(alg_factory, height, width, items)
             >>> result = m1._matmul(m2)
@@ -586,7 +586,7 @@ same data type.
             This method is useful when you need to create a new 'Matrix' instance with the same shape as the provided 
             'items', without altering the original matrix data.
         
-        Example:
+        Examples:
             >>> m = Matrix(alg_factory)
             >>> m.set_data([[1, 2, 3], [4, 5, 6]])
             >>> m2 = m._full_like((2, 3))
@@ -634,7 +634,7 @@ same data type.
             - The grid is constructed using list comprehension to create a list of Vectors, and then multiplying this list by the height of the current Matrix object.
             - The resulting list of Vectors is used to initialize the items parameter of the new Matrix object.
         
-        Example:
+        Examples:
             >>> matrix = Matrix(alg_factory, items=[[1, 2], [3, 4]])
             >>> zeros_matrix = matrix._zeros_like()
             >>> zeros_matrix

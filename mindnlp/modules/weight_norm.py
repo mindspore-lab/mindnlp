@@ -202,7 +202,7 @@ def weight_norm(module: T_module, name: str = 'weight', dim: int = 0) -> T_modul
     Returns:
         The original module with the weight norm hook
 
-    Example::
+    Examples::
 
         >>> m = weight_norm(nn.Linear(20, 40), name='weight')
         >>> m
@@ -224,7 +224,7 @@ def remove_weight_norm(module: T_module, name: str = 'weight') -> T_module:
         module (Module): containing module
         name (str, optional): name of weight parameter
 
-    Example:
+    Examples:
         >>> m = weight_norm(nn.Linear(20, 40))
         >>> remove_weight_norm(m)
     """

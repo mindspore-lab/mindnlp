@@ -234,7 +234,7 @@ size is greater than 6, it returns a string containing the first 3 elements, fol
             This method is useful when you need to create a new Vector object with the same shape as an existing Vector object, but with all elements initialized to zero.
             It is particularly helpful in scenarios where you want to allocate memory for a new Vector object and initialize it to zero without explicitly specifying the shape of the new Vector object.
         
-        Example:
+        Examples:
             m = Vector([1, 2, 3])
             zeros_vector = Vector.zeros_like(m)
             # zeros_vector is a new Vector object with the same shape as m, but with all elements initialized to zero.
@@ -334,7 +334,7 @@ size is greater than 6, it returns a string containing the first 3 elements, fol
             The add_scalar method performs element-wise addition of the scalar value to each element of the vector. If the scalar value is of a different type than the vector elements, it will be automatically
 converted to the appropriate type before the addition takes place.
         
-        Example:
+        Examples:
             >>> v = Vector([1, 2, 3])
             >>> v.add_scalar(2)
             Vector([3, 4, 5])
@@ -666,7 +666,7 @@ the corresponding elements of the two vectors and summing the results.
         
         Note that both self and that must be instances of the Vector class. If either parameter is not of the correct type, a TypeError will be raised.
         
-        Example:
+        Examples:
             v1 = Vector([1, 2, 3])
             v2 = Vector([4, 5, 6])
             dot_product = v1._dot_product(v2)

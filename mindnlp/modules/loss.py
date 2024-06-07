@@ -160,7 +160,7 @@ class CMRC2018Loss(nn.Cell):
         Raises:
             ValueError: if 'reduction' is not 'sum' or 'mean'.
 
-        Example:
+        Examples:
             >>> cmrc_loss = CMRC2018Loss()
             >>> tensor_a = mindspore.Tensor(np.array([1, 2, 1]), mindspore.int32)
             >>> tensor_b = mindspore.Tensor(np.array([2, 1, 2]), mindspore.int32)

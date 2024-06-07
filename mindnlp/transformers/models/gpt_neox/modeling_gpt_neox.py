@@ -120,8 +120,8 @@ class GPTNeoXPreTrainedModel(PreTrainedModel):
             None.
         
         This method sets the gradient checkpointing flag to the specified value for the given module. The gradient checkpointing flag determines whether gradient checkpointing is used during the forward pass
-of the module. Gradient checkpointing can be used to trade compute for memory, as it reduces the memory usage at the expense of additional compute. The flag is only set if the module is an instance of the
-GPTNeoXModel class.
+        of the module. Gradient checkpointing can be used to trade compute for memory, as it reduces the memory usage at the expense of additional compute. The flag is only set if the module is an instance of the
+        GPTNeoXModel class.
         """
         if isinstance(module, GPTNeoXModel):
             module.gradient_checkpointing = value
@@ -156,9 +156,9 @@ class GPTNeoXAttention(nn.Cell):
         Args:
             self: The object instance itself.
             config: A configuration object containing various hyperparameters for the GPTNeoXAttention model.
-                Type: Any
-                Purpose: To store the configuration settings for the GPTNeoXAttention model.
-                Restrictions: Must be a valid configuration object.
+                >   - Type: Any
+                >   - Purpose: To store the configuration settings for the GPTNeoXAttention model.
+                >   - Restrictions: Must be a valid configuration object.
         
         Returns:
             None
@@ -541,32 +541,32 @@ class GPTNeoXLinearScalingRotaryEmbedding(GPTNeoXRotaryEmbedding):
             None.
         
         Description:
-        This method sets the cosine and sine caches for the GPTNeoXLinearScalingRotaryEmbedding instance based on the given sequence length and data type. The cosine and sine caches are used to store
-precalculated values for efficient computation during the forward pass of the GPTNeoX model.
+            This method sets the cosine and sine caches for the GPTNeoXLinearScalingRotaryEmbedding instance based on the given sequence length and data type. The cosine and sine caches are used to store
+            precalculated values for efficient computation during the forward pass of the GPTNeoX model.
+
+            The parameters for this method are as follows:
+
+            >   - self: This parameter refers to the instance of the GPTNeoXLinearScalingRotaryEmbedding class on which the method is called.
+
+            >   - seq_len: This parameter specifies the length of the sequence. It is an integer value.
+
+            >   - dtype: This parameter denotes the data type of the elements in the cache. The data type can be any valid data type supported by the underlying framework.
+
+            The method first sets the maximum sequence length cached by assigning the value of seq_len to self.max_seq_len_cached.
         
-        The parameters for this method are as follows:
-        
-        - self: This parameter refers to the instance of the GPTNeoXLinearScalingRotaryEmbedding class on which the method is called.
-        
-        - seq_len: This parameter specifies the length of the sequence. It is an integer value.
-        
-        - dtype: This parameter denotes the data type of the elements in the cache. The data type can be any valid data type supported by the underlying framework.
-        
-        The method first sets the maximum sequence length cached by assigning the value of seq_len to self.max_seq_len_cached.
-        
-        Next, it creates a tensor 't' using the 'ops.arange' function with the length of self.max_seq_len_cached and the specified data type. The 'type_as' method is used to ensure that 't' has the same data
-type as self.inv_freq. 
-        
-        Then, 't' is divided by self.scaling_factor to scale the values.
-        
-        The 'ops.outer' function is used to calculate the outer product of 't' and self.inv_freq, resulting in a tensor 'freqs'.
-        
-        The 'ops.cat' function is called to concatenate 'freqs' with itself along the last dimension, creating a tensor 'emb'.
-        
-        Finally, 'emb.cos()' and 'emb.sin()' are called to compute the cosine and sine values of 'emb', respectively. The resulting cosine values are stored in self.cos_cached and sine values are stored in
-self.sin_cached.
-        
-        This method does not return any value but modifies the state of the GPTNeoXLinearScalingRotaryEmbedding instance.
+            Next, it creates a tensor 't' using the 'ops.arange' function with the length of self.max_seq_len_cached and the specified data type. The 'type_as' method is used to ensure that 't' has the same data
+            type as self.inv_freq.
+
+            Then, 't' is divided by self.scaling_factor to scale the values.
+
+            The 'ops.outer' function is used to calculate the outer product of 't' and self.inv_freq, resulting in a tensor 'freqs'.
+
+            The 'ops.cat' function is called to concatenate 'freqs' with itself along the last dimension, creating a tensor 'emb'.
+
+            Finally, 'emb.cos()' and 'emb.sin()' are called to compute the cosine and sine values of 'emb', respectively. The resulting cosine values are stored in self.cos_cached and sine values are stored in
+            self.sin_cached.
+
+            This method does not return any value but modifies the state of the GPTNeoXLinearScalingRotaryEmbedding instance.
         """
         self.max_seq_len_cached = seq_len
         t = ops.arange(self.max_seq_len_cached, dtype=mindspore.float32).type_as(self.inv_freq)
@@ -714,10 +714,10 @@ class GPTNeoXLayer(nn.Cell):
         Args:
             self: The object instance itself.
             config: An instance of a configuration class containing the following attributes:
-                - use_parallel_residual: A boolean flag indicating whether to use parallel residual connections.
-                - hidden_size: An integer specifying the size of the hidden layers.
-                - layer_norm_eps: A float representing the epsilon value for layer normalization.
-                - hidden_dropout: A float indicating the dropout probability for hidden layers.
+                >   - use_parallel_residual: A boolean flag indicating whether to use parallel residual connections.
+                >   - hidden_size: An integer specifying the size of the hidden layers.
+                >   - layer_norm_eps: A float representing the epsilon value for layer normalization.
+                >   - hidden_dropout: A float indicating the dropout probability for hidden layers.
         
         Returns:
             None. This method initializes various components of the GPTNeoXLayer class including layer normalization,
@@ -881,14 +881,15 @@ class GPTNeoXModel(GPTNeoXPreTrainedModel):
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         r"""
-        past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
-            Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
-            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-        use_cache (`bool`, *optional*):
-            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-            `past_key_values`).
+        Args:
+            past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
+                Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
+                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
+                don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
+                `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+            use_cache (`bool`, *optional*):
+                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
+                `past_key_values`).
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1046,13 +1047,13 @@ class GPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
         Returns the output embeddings for the GPTNeoXForCausalLM model.
         
         Args:
-        - self (GPTNeoXForCausalLM): The instance of the GPTNeoXForCausalLM class.
+            self (GPTNeoXForCausalLM): The instance of the GPTNeoXForCausalLM class.
         
         Returns:
-        - None: This method returns None, representing the output embeddings.
+            None: This method returns None, representing the output embeddings.
         
         Raises:
-        - None
+            None
         """
         return self.embed_out
 
@@ -1087,25 +1088,26 @@ class GPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         r"""
-        past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
-            Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of shape
-            `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of shape
-            `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`. The two additional tensors are
-            only required when the model is used as a decoder in a Sequence to Sequence model.
+        Args:
+            past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+                Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of shape
+                `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of shape
+                `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`. The two additional tensors are
+                only required when the model is used as a decoder in a Sequence to Sequence model.
 
-            Contains pre-computed hidden-states (key and values in the self-attention blocks that can be used (see
-            `past_key_values` input) to speed up sequential decoding.
+                Contains pre-computed hidden-states (key and values in the self-attention blocks that can be used (see
+                `past_key_values` input) to speed up sequential decoding.
 
-            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the left-to-right language modeling loss (next word prediction). Indices should be in
-            `[-100, 0, ..., config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are
-            ignored (masked), the loss is only computed for the tokens with labels n `[0, ..., config.vocab_size]`.
-        use_cache (`bool`, *optional*):
-            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-            `past_key_values`).
+                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
+                don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
+                `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the left-to-right language modeling loss (next word prediction). Indices should be in
+                `[-100, 0, ..., config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are
+                ignored (masked), the loss is only computed for the tokens with labels n `[0, ..., config.vocab_size]`.
+            use_cache (`bool`, *optional*):
+                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
+                `past_key_values`).
 
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -1368,9 +1370,9 @@ class GPTNeoXForTokenClassification(GPTNeoXPreTrainedModel):
             None
         
         Description:
-        This method initializes the GPTNeoXForTokenClassification model with the provided configuration. It sets the number of labels for token classification based on the configuration. The GPTNeoXModel is
-instantiated with the provided configuration. Additionally, a dropout layer with a specified dropout rate is added, and a fully connected layer (classifier) is initialized with the hidden size and the number
-of labels from the configuration. Finally, the post_init() method is called for any post-initialization tasks.
+            This method initializes the GPTNeoXForTokenClassification model with the provided configuration. It sets the number of labels for token classification based on the configuration. The GPTNeoXModel is
+            instantiated with the provided configuration. Additionally, a dropout layer with a specified dropout rate is added, and a fully connected layer (classifier) is initialized with the hidden size and the number
+            of labels from the configuration. Finally, the post_init() method is called for any post-initialization tasks.
         """
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -1397,10 +1399,11 @@ of labels from the configuration. Finally, the post_init() method is called for 
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, TokenClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

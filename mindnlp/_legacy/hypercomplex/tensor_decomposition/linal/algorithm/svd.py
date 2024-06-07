@@ -175,7 +175,7 @@ analysis and decomposition.
             The singular values are then extracted from the updated matrix by taking the square root of the diagonal elements.
             If any NaN or infinite values are encountered during the calculation, the corresponding singular value is removed.
         
-        Example:
+        Examples:
             m = Matrix([[1, 2], [3, 4]])
             iterations = 10
             qr_alg = qr_decomposition  # Example QR algorithm function

@@ -24,7 +24,7 @@ def convert_file_size_to_int(size: Union[int, str]):
     Args:
         size (`int` or `str`): The size to convert. Will be directly returned if an `int`.
 
-    Example:
+    Examples:
     ```py
     >>> convert_file_size_to_int("1MiB")
     1048576

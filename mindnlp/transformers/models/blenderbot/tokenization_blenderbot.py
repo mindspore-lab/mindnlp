@@ -83,17 +83,18 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
 
-    ```python
-    >>> from transformers import BlenderbotTokenizer
+    Example:
+        ```python
+        >>> from transformers import BlenderbotTokenizer
 
-    >>> tokenizer = BlenderbotTokenizer.from_pretrained("facebook/blenderbot-3B")
-    >>> tokenizer.add_prefix_space = False
-    >>> tokenizer("Hello world")["input_ids"]
-    [47, 921, 86, 1085, 2]
+        >>> tokenizer = BlenderbotTokenizer.from_pretrained("facebook/blenderbot-3B")
+        >>> tokenizer.add_prefix_space = False
+        >>> tokenizer("Hello world")["input_ids"]
+        [47, 921, 86, 1085, 2]
 
-    >>> tokenizer(" Hello world")["input_ids"]
-    [6950, 1085, 2]
-    ```
+        >>> tokenizer(" Hello world")["input_ids"]
+        [6950, 1085, 2]
+        ```
 
     You can get around that behavior by passing `add_prefix_space=True` when instantiating this tokenizer or when you
     call it on some text, but since the model was not pretrained this way, it might yield a decrease in performance.
@@ -249,19 +250,20 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
     # Copied from transformers.models.roberta.tokenization_roberta.RobertaTokenizer.vocab_size with Roberta->Blenderbot, RoBERTa->Blenderbot
     def vocab_size(self):
         """
-        Method: vocab_size
+        Method:
+            vocab_size
         
         Description:
-        Returns the size of the vocabulary used by the BlenderbotTokenizer instance.
+            Returns the size of the vocabulary used by the BlenderbotTokenizer instance.
         
         Args:
-        - self (BlenderbotTokenizer): The instance of BlenderbotTokenizer.
+            self (BlenderbotTokenizer): The instance of BlenderbotTokenizer.
         
         Returns:
-        - int: The size of the vocabulary used by the BlenderbotTokenizer.
+            int: The size of the vocabulary used by the BlenderbotTokenizer.
         
         Raises:
-        - None
+            None
         """
         return len(self.encoder)
 
@@ -386,15 +388,17 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
             FileNotFoundError: If the `save_directory` does not exist or is not a directory.
         
         The `save_vocabulary` method saves the vocabulary files for the tokenizer. It takes the `save_directory` as input, which is the directory where the vocabulary files will be saved. The optional
-`filename_prefix` parameter can be used to add a prefix to the vocabulary file names.
+        `filename_prefix` parameter can be used to add a prefix to the vocabulary file names.
         
         The method saves two files: the vocabulary file and the merges file. The vocabulary file contains the encoding dictionary of the tokenizer, while the merges file contains the BPE merge indices.
         
         If the `save_directory` does not exist or is not a directory, a `FileNotFoundError` is raised.
         
         Example usage:
+            ```python
             tokenizer = BlenderbotTokenizer()
             tokenizer.save_vocabulary('/path/to/save', filename_prefix='my-prefix')
+            ```
         """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")

@@ -78,19 +78,19 @@ class BlenderbotSmallConfig(PretrainedConfig):
             `eos_token_id`.
 
     Example:
+        ```python
+        >>> from transformers import BlenderbotSmallConfig, BlenderbotSmallModel
 
-    ```python
-    >>> from transformers import BlenderbotSmallConfig, BlenderbotSmallModel
+        >>> # Initializing a BlenderbotSmall facebook/blenderbot_small-90M style configuration
+        >>> configuration = BlenderbotSmallConfig()
 
-    >>> # Initializing a BlenderbotSmall facebook/blenderbot_small-90M style configuration
-    >>> configuration = BlenderbotSmallConfig()
+        >>> # Initializing a model (with random weights) from the facebook/blenderbot_small-90M style configuration
+        >>> model = BlenderbotSmallModel(configuration)
 
-    >>> # Initializing a model (with random weights) from the facebook/blenderbot_small-90M style configuration
-    >>> model = BlenderbotSmallModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "blenderbot-small"
     keys_to_ignore_at_inference = ["past_key_values"]
     attribute_map = {"num_attention_heads": "encoder_attention_heads", "hidden_size": "d_model"}

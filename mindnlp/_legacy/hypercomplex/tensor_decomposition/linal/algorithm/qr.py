@@ -139,7 +139,7 @@ class QR:
         - The method does not modify the input matrix 'm' directly, but instead returns two transformed matrices 'q' and 'r'.
         - The matrices 'q' and 'r' represent the orthogonal and upper triangular forms respectively.
         
-        Example:
+        Examples:
             m = Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
             qr = QR()
             q, r = qr._householder(m)

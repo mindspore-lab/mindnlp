@@ -100,19 +100,19 @@ class LayoutLMv2Config(PretrainedConfig):
             for details regarding default values.
 
     Example:
+        ```python
+        >>> from transformers import LayoutLMv2Config, LayoutLMv2Model
 
-    ```python
-    >>> from transformers import LayoutLMv2Config, LayoutLMv2Model
+        >>> # Initializing a LayoutLMv2 microsoft/layoutlmv2-base-uncased style configuration
+        >>> configuration = LayoutLMv2Config()
 
-    >>> # Initializing a LayoutLMv2 microsoft/layoutlmv2-base-uncased style configuration
-    >>> configuration = LayoutLMv2Config()
+        >>> # Initializing a model (with random weights) from the microsoft/layoutlmv2-base-uncased style configuration
+        >>> model = LayoutLMv2Model(configuration)
 
-    >>> # Initializing a model (with random weights) from the microsoft/layoutlmv2-base-uncased style configuration
-    >>> model = LayoutLMv2Model(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "layoutlmv2"
 
     def __init__(
@@ -221,7 +221,7 @@ class LayoutLMv2Config(PretrainedConfig):
     def get_default_detectron2_config(cls):
         '''
         This method returns a dictionary containing the default configuration for the Detectron2 model. The configuration includes various settings related to the model's architecture, backbone, region of
-interest (ROI) heads, and other parameters.
+        interest (ROI) heads, and other parameters.
         
         Args:
             cls (class): The class object.

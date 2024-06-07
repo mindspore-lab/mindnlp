@@ -77,16 +77,17 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
 
-    ```python
-    >>> from transformers import BartTokenizerFast
+    Example:
+        ```python
+        >>> from transformers import BartTokenizerFast
 
-    >>> tokenizer = BartTokenizerFast.from_pretrained("facebook/bart-base")
-    >>> tokenizer("Hello world")["input_ids"]
-    [0, 31414, 232, 2]
+        >>> tokenizer = BartTokenizerFast.from_pretrained("facebook/bart-base")
+        >>> tokenizer("Hello world")["input_ids"]
+        [0, 31414, 232, 2]
 
-    >>> tokenizer(" Hello world")["input_ids"]
-    [0, 20920, 232, 2]
-    ```
+        >>> tokenizer(" Hello world")["input_ids"]
+        [0, 20920, 232, 2]
+        ```
 
     You can get around that behavior by passing `add_prefix_space=True` when instantiating this tokenizer or when you
     call it on some text, but since the model was not pretrained this way, it might yield a decrease in performance.
@@ -288,14 +289,14 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
         This method '_batch_encode_plus' is defined in the class 'BartTokenizerFast' and is responsible for batch encoding input sequences.
         
         Args:
-        - self: An instance of the 'BartTokenizerFast' class.
+            self: An instance of the 'BartTokenizerFast' class.
         
         Returns:
-        - BatchEncoding: A dictionary-like object containing the encoded inputs.
+            BatchEncoding: A dictionary-like object containing the encoded inputs.
         
         Raises:
-        - ValueError: Raised if the parameter 'is_split_into_words' is set to True but 'add_prefix_space' is False. In such cases, it indicates that the tokenizer needs to be instantiated with
-'add_prefix_space=True' to work with pretokenized inputs.
+            - ValueError: Raised if the parameter 'is_split_into_words' is set to True but 'add_prefix_space' is False. In such cases, it indicates that the tokenizer needs to be instantiated with
+            'add_prefix_space=True' to work with pretokenized inputs.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
 
@@ -359,15 +360,15 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
         This method builds inputs with special tokens for the BartTokenizerFast class.
         
         Args:
-        - self: The instance of the BartTokenizerFast class.
-        - token_ids_0: A list of token IDs representing the first sequence.
-        - token_ids_1: A list of token IDs representing the second sequence. This parameter is optional and defaults to None.
+            self: The instance of the BartTokenizerFast class.
+            token_ids_0: A list of token IDs representing the first sequence.
+            token_ids_1: A list of token IDs representing the second sequence. This parameter is optional and defaults to None.
         
         Returns:
-        None. The method modifies the input token lists in place.
+            None: The method modifies the input token lists in place.
         
         Raises:
-        No specific exceptions are raised by this method.
+            No specific exceptions are raised by this method.
         """
         output = [self.bos_token_id] + token_ids_0 + [self.eos_token_id]
         if token_ids_1 is None:

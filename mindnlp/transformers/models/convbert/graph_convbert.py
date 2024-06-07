@@ -47,9 +47,9 @@ class MSConvBertEmbeddings(nn.Cell):
         Args:
             self: The instance of the MSConvBertEmbeddings class.
             config: An object containing configuration parameters for the embeddings.
-                - Type: Custom configuration object.
-                - Purpose: Specifies various settings for initializing embeddings.
-                - Restrictions: Must be properly configured with required parameters.
+                >   - Type: Custom configuration object.
+                >   - Purpose: Specifies various settings for initializing embeddings.
+                >   - Restrictions: Must be properly configured with required parameters.
         
         Returns:
             None: This method does not return any value.
@@ -241,19 +241,19 @@ class MSConvBertSelfAttention(nn.Cell):
         Args:
             self: The instance of the MSConvBertSelfAttention class.
             config: An object containing configuration parameters for the self-attention mechanism. It should have the following attributes:
-                - hidden_size (int): The size of the hidden state.
-                - num_attention_heads (int): The number of attention heads.
-                - head_ratio (int): The ratio to reduce the number of attention heads.
-                - conv_kernel_size (int): The size of the convolutional kernel.
-                - embedding_size (optional, int): The size of the embedding. If not provided, the hidden_size should be divisible by num_attention_heads.
+                >   - hidden_size (int): The size of the hidden state.
+                >   - num_attention_heads (int): The number of attention heads.
+                >   - head_ratio (int): The ratio to reduce the number of attention heads.
+                >   - conv_kernel_size (int): The size of the convolutional kernel.
+                >   - embedding_size (optional, int): The size of the embedding. If not provided, the hidden_size should be divisible by num_attention_heads.
         
         Returns:
             None. This method initializes the MSConvBertSelfAttention instance with the provided configuration.
         
         Raises:
-            ValueError: 
-                - If the hidden size is not a multiple of the number of attention heads and the config does not have the attribute 'embedding_size'.
-                - If the hidden_size is not divisible by num_attention_heads.
+            ValueError:
+                >   - If the hidden size is not a multiple of the number of attention heads and the config does not have the attribute 'embedding_size'.
+                >   - If the hidden_size is not divisible by num_attention_heads.
         """
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(
@@ -324,10 +324,9 @@ class MSConvBertSelfAttention(nn.Cell):
                 0s in positions corresponding to padding tokens and 1s elsewhere. Defaults to None.
         
         Returns:
-            Tuple[ms.Tensor, Optional[ms.Tensor]]: A tuple containing the context layer and an optional attention mask.
-                - context_layer: The output context layer of shape [batch_size, sequence_length, hidden_size].
-                - attention_mask: An optional attention mask of shape [batch_size, sequence_length] with 0s in positions
-                    corresponding to padding tokens and 1s elsewhere. This is returned only if attention_mask is not None.
+            context_layer: The output context layer of shape [batch_size, sequence_length, hidden_size].
+            attention_mask: An optional attention mask of shape [batch_size, sequence_length] with 0s in positions
+                corresponding to padding tokens and 1s elsewhere. This is returned only if attention_mask is not None.
         
         Raises:
             None.
@@ -424,9 +423,9 @@ class MSConvBertSelfOutput(nn.Cell):
         Args:
             self (MSConvBertSelfOutput): The current instance of the MSConvBertSelfOutput class.
             config: An object containing the configuration parameters for the MSConvBertSelfOutput class.
-                - hidden_size (int): The size of the hidden state.
-                - layer_norm_eps (float): The epsilon value used in layer normalization.
-                - hidden_dropout_prob (float): The dropout probability for the hidden state.
+                >   - hidden_size (int): The size of the hidden state.
+                >   - layer_norm_eps (float): The epsilon value used in layer normalization.
+                >   - hidden_dropout_prob (float): The dropout probability for the hidden state.
         
         Returns:
             None
@@ -553,9 +552,9 @@ class MSConvBertIntermediate(nn.Cell):
         Args:
             self: The instance of the class.
             config (object): An object containing configuration settings.
-                - Type: Any object.
-                - Purpose: Configuration settings for the intermediate layer.
-                - Restrictions: Must contain 'hidden_size' and 'intermediate_size' attributes.
+                >   - Type: Any object.
+                >   - Purpose: Configuration settings for the intermediate layer.
+                >   - Restrictions: Must contain 'hidden_size' and 'intermediate_size' attributes.
         
         Returns:
             None: This method does not return any value.
@@ -598,10 +597,10 @@ class MSConvBertOutput(nn.Cell):
             self (MSConvBertOutput): The instance of the MSConvBertOutput class.
             config (object): The configuration object containing parameters for initialization.
                 This object should have the following attributes:
-                    - intermediate_size (int): The size of the intermediate layer.
-                    - hidden_size (int): The size of the hidden layer.
-                    - layer_norm_eps (float): The epsilon value for LayerNorm.
-                    - hidden_dropout_prob (float): The dropout probability for the hidden layer.
+                    >   - intermediate_size (int): The size of the intermediate layer.
+                    >   - hidden_size (int): The size of the hidden layer.
+                    >   - layer_norm_eps (float): The epsilon value for LayerNorm.
+                    >   - hidden_dropout_prob (float): The dropout probability for the hidden layer.
             
         Returns:
             None. This method does not return any value.
@@ -683,9 +682,8 @@ class MSConvBertLayer(nn.Cell):
             attention_mask (ms.Tensor): The attention mask to avoid performing attention on padding tokens. Shape: [batch_size, sequence_length].
         
         Returns:
-            Tuple[ms.Tensor, Optional[ms.Tensor]]: A tuple containing the layer outputs. 
-            - layer_output (ms.Tensor): The output of the convolutional BERT layer. Shape: [batch_size, sequence_length, hidden_size].
-            - outputs (Optional[ms.Tensor]): Additional outputs from the attention mechanism.
+            layer_output (ms.Tensor): The output of the convolutional BERT layer. Shape: [batch_size, sequence_length, hidden_size].
+            outputs (Optional[ms.Tensor]): Additional outputs from the attention mechanism.
         
         Raises:
             None
@@ -812,12 +810,12 @@ class MSConvBertModel(ConvBertPreTrainedModel):
             None.
         
         Description:
-        This method allows for the setting of new word embeddings for the MSConvBertModel. The new_embeddings parameter should be a tensor containing the new word embeddings. The method updates the
-self.embeddings.word_embeddings attribute of the MSConvBertModel instance with the provided new_embeddings.
+            This method allows for the setting of new word embeddings for the MSConvBertModel. The new_embeddings parameter should be a tensor containing the new word embeddings. The method updates the
+            self.embeddings.word_embeddings attribute of the MSConvBertModel instance with the provided new_embeddings.
         
         Note:
-        The new_embeddings tensor should have the same shape as the existing word_embeddings tensor. It is important to ensure that the dimensions of the new_embeddings tensor match the word_embeddings tensor
-of the model, otherwise unexpected behavior may occur.
+            The new_embeddings tensor should have the same shape as the existing word_embeddings tensor. It is important to ensure that the dimensions of the new_embeddings tensor match the word_embeddings tensor
+            of the model, otherwise unexpected behavior may occur.
         """
         self.embeddings.word_embeddings = new_embeddings
 

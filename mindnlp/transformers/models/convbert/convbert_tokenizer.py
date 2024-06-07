@@ -247,11 +247,13 @@ class ConvBertTokenizer(PreTrainedTokenizer):
             is applied to the entire text in case do_basic_tokenize is set to False.
         
         Example:
+            ```python
             >>> tokenizer = ConvBertTokenizer()
             >>> text = "Hello world!"
             >>> tokens = tokenizer._tokenize(text)
             >>> print(tokens)
             ['Hello', 'world', '!']
+            ```
         """
         split_tokens = []
         if self.do_basic_tokenize:
@@ -287,8 +289,8 @@ class ConvBertTokenizer(PreTrainedTokenizer):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A ConvBERT sequence has the following format:
 
-        - single sequence: `[CLS] X [SEP]`
-        - pair of sequences: `[CLS] A [SEP] B [SEP]`
+        >   - single sequence: `[CLS] X [SEP]`
+        >   - pair of sequences: `[CLS] A [SEP] B [SEP]`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -456,7 +458,7 @@ class BasicTokenizer():
         Basic Tokenization of a piece of text. For sub-word tokenization, see WordPieceTokenizer.
 
         Args:
-            never_split (`List[str]`, *optional*)
+            never_split (`List[str]`, *optional*):
                 Kept for backward compatibility purposes. Now implemented directly at the base class level (see
                 [`PreTrainedTokenizer.tokenize`]) List of token not to split.
         """

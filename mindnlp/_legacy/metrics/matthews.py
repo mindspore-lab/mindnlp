@@ -49,7 +49,7 @@ def matthews_correlation_fn(preds, labels):
     Returns:
         - **m_c_c** (float) - The computed result.
 
-    Example:
+    Examples:
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
@@ -118,7 +118,7 @@ class MatthewsCorrelation(Metric):
     Args:
         name (str): Name of the metric.
 
-    Example:
+    Examples:
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor

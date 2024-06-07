@@ -575,7 +575,7 @@ dimensions.
         Note:
             The division is only possible when the dimensions of both matrices are the same.
         
-        Example:
+        Examples:
             >>> matrix1 = Matrix([[1, 2], [3, 4]])
             >>> matrix2 = Matrix([[2, 2], [2, 2]])
             >>> result = matrix1.div(matrix2)
@@ -608,7 +608,7 @@ dimensions.
             The division operation is performed element-wise between the current matrix and the scalar value. If the scalar value is of type Scalar, it will be divided by each element of the matrix. If the
 scalar value is of any other data type, it will be divided by each corresponding element of the matrix based on their positions.
         
-        Example:
+        Examples:
             Consider a matrix 'A' with the following elements:
                 A = [[1, 2],
                      [3, 4]]
@@ -708,7 +708,7 @@ scalar value is of any other data type, it will be divided by each corresponding
         This method transposes the matrix by switching its rows with columns. The transpose of a matrix is obtained by reflecting the elements along the main diagonal. The resulting matrix will have the rows
 of the original matrix as its columns and the columns of the original matrix as its rows.
         
-        Example:
+        Examples:
             Given a matrix object 'matrix' with the following elements:
             [[1, 2],
              [3, 4],
@@ -820,7 +820,7 @@ of the original matrix as its columns and the columns of the original matrix as 
         Note:
             This method does not modify the original Matrix object. It creates a new NumPy array that is a copy of the Matrix data.
         
-        Example:
+        Examples:
             >>> matrix = Matrix([[1, 2], [3, 4]])
             >>> array = matrix.as_array()
             >>> print(array)

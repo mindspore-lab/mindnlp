@@ -200,7 +200,7 @@ Initializer object, or a number.
             The 'padding', 'stride', and 'dilation' parameters specify the respective values for each dimension of the tensors.
             The 'group' parameter defines the group size for group convolution operation.
         
-        Example:
+        Examples:
             >>> conv_fn = torch.nn.functional.conv2d
             >>> real_tensor = torch.randn(1, 3, 32, 32)
             >>> dual_tensor = torch.randn(1, 3, 32, 32)

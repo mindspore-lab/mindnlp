@@ -529,14 +529,14 @@ class XLMTokenizer(PreTrainedTokenizer):
     """
     Construct an XLM tokenizer. Based on Byte-Pair Encoding. The tokenization process is the following:
 
-    - Moses preprocessing and tokenization for most supported languages.
-    - Language specific tokenization for Chinese (Jieba), Japanese (KyTea) and Thai (PyThaiNLP).
-    - Optionally lowercases and normalizes all inputs text.
-    - The arguments `special_tokens` and the function `set_special_tokens`, can be used to add additional symbols (like
-      "__classify__") to a vocabulary.
-    - The `lang2id` attribute maps the languages supported by the model with their IDs if provided (automatically set
-      for pretrained vocabularies).
-    - The `id2lang` attributes does reverse mapping if provided (automatically set for pretrained vocabularies).
+    >   - Moses preprocessing and tokenization for most supported languages.
+    >   - Language specific tokenization for Chinese (Jieba), Japanese (KyTea) and Thai (PyThaiNLP).
+    >   - Optionally lowercases and normalizes all inputs text.
+    >   - The arguments `special_tokens` and the function `set_special_tokens`, can be used to add additional symbols (like
+            "__classify__") to a vocabulary.
+    >   - The `lang2id` attribute maps the languages supported by the model with their IDs if provided (automatically set
+            for pretrained vocabularies).
+    >   - The `id2lang` attributes does reverse mapping if provided (automatically set for pretrained vocabularies).
 
     This tokenizer inherits from [`PreTrainedTokenizer`] which contains most of the main methods. Users should refer to
     this superclass for more information regarding those methods.
@@ -572,7 +572,7 @@ class XLMTokenizer(PreTrainedTokenizer):
             The token used for masking values. This is the token used when training this model with masked language
             modeling. This is the token which the model will try to predict.
         additional_special_tokens (`List[str]`, *optional*, defaults to `['<special0>', '<special1>', '<special2>', '<special3>', '<special4>', '<special5>', '<special6>', '<special7>', '<special8>',
-'<special9>']`):
+            '<special9>']`):
             List of additional special tokens.
         lang2id (`Dict[str, int]`, *optional*):
             Dictionary mapping languages string identifiers to their IDs.
@@ -627,7 +627,7 @@ class XLMTokenizer(PreTrainedTokenizer):
             cls_token (str): The classification token (default: '</s>').
             mask_token (str): The masking token (default: '<special1>').
             additional_special_tokens (list): List of additional special tokens (default: ['<special0>', '<special1>', '<special2>', '<special3>', '<special4>', '<special5>', '<special6>', '<special7>',
-'<special8>', '<special9>']).
+                '<special8>', '<special9>']).
             lang2id (dict): A dictionary mapping languages to IDs.
             id2lang (dict): A dictionary mapping IDs to languages.
             do_lowercase_and_remove_accent (bool): A flag indicating whether to lowercase and remove accents (default: True).
@@ -742,27 +742,30 @@ class XLMTokenizer(PreTrainedTokenizer):
         
         Description:
             This method tokenizes the input text using the MosesTokenizer from the SentencePiece library. It is specifically designed for the XLMTokenizer class. The tokenization process splits the text into
-individual tokens based on language-specific rules and returns the tokenized output.
+                individual tokens based on language-specific rules and returns the tokenized output.
         
-            - The 'self' parameter is used to access the instance variables and methods of the XLMTokenizer class.
-            - The 'text' parameter represents the text that needs to be tokenized.
-            - The 'lang' parameter specifies the language of the text, which is used to determine the appropriate tokenizer.
+            >   - The 'self' parameter is used to access the instance variables and methods of the XLMTokenizer class.
+            >   - The 'text' parameter represents the text that needs to be tokenized.
+            >   - The 'lang' parameter specifies the language of the text, which is used to determine the appropriate tokenizer.
         
             If the MosesTokenizer for the specified language is not already cached, it is instantiated and stored in the cache_moses_tokenizer dictionary of the XLMTokenizer instance. Subsequent invocations of
-the method with the same language will reuse the cached tokenizer. This caching mechanism optimizes performance by avoiding repeated instantiation of tokenizers.
+            the method with the same language will reuse the cached tokenizer. This caching mechanism optimizes performance by avoiding repeated instantiation of tokenizers.
         
             The method calls the 'tokenize' function of the MosesTokenizer object to perform the actual tokenization. The 'return_str' parameter is set to False, indicating that the method should return a list
-of tokens rather than a single string. The 'escape' parameter is set to False, indicating that no escaping of special characters should be performed during tokenization.
+            of tokens rather than a single string. The 'escape' parameter is set to False, indicating that no escaping of special characters should be performed during tokenization.
         
             Note: The MosesTokenizer relies on pre-trained language-specific models for accurate tokenization. Make sure to have these models available for the desired languages.
         
         Example:
+            ```python
             tokenizer = XLMTokenizer()
             tokenized_text = tokenizer.moses_tokenize("Hello world!", "en")
-        
+            ```
+
             The above example tokenizes the input text "Hello world!" using the MosesTokenizer for English language. The resulting tokenized text is stored in the 'tokenized_text' variable.
         
-            Note: The actual tokenization behavior may vary based on the language and the specific language models used by the MosesTokenizer.
+            Note:
+                The actual tokenization behavior may vary based on the language and the specific language models used by the MosesTokenizer.
         """
         if lang not in self.cache_moses_tokenizer:
             moses_tokenizer = self.sm.MosesTokenizer(lang=lang)
@@ -846,9 +849,11 @@ of tokens rather than a single string. The 'escape' parameter is set to False, i
             The encoder is responsible for encoding and decoding the tokens used by the tokenizer.
         
         Example:
+            ```python
             >>> tokenizer = XLMTokenizer()
             >>> tokenizer.vocab_size
             50000
+            ```
         """
         return len(self.encoder)
 
@@ -865,9 +870,11 @@ of tokens rather than a single string. The 'escape' parameter is set to False, i
             None.
         
         Example:
+            ```python
             >>> tokenizer = XLMTokenizer()
             >>> tokenizer.get_vocab()
             {'<s>': 0, '<pad>': 1, '</s>': 2, '<unk>': 3, '<mask>': 4, 'hello': 5, 'world': 6}
+            ```
             
         Note:
             This method combines the encoder and added_tokens_encoder dictionaries to form the complete vocabulary.
@@ -938,21 +945,20 @@ of tokens rather than a single string. The 'escape' parameter is set to False, i
 
         Details of tokenization:
 
-            - [sacremoses](https://github.com/alvations/sacremoses): port of Moses
-            - Install with `pip install sacremoses`
-            - [pythainlp](https://github.com/PyThaiNLP/pythainlp): Thai tokenizer
-            - Install with `pip install pythainlp`
-            - [kytea](https://github.com/chezou/Mykytea-python): Japanese tokenizer, wrapper of
+        >   - [sacremoses](https://github.com/alvations/sacremoses): port of Moses
+        >   - Install with `pip install sacremoses`
+        >   - [pythainlp](https://github.com/PyThaiNLP/pythainlp): Thai tokenizer
+        >   - Install with `pip install pythainlp`
+        >   - [kytea](https://github.com/chezou/Mykytea-python): Japanese tokenizer, wrapper of
               [KyTea](https://github.com/neubig/kytea)
-            - Install with the following steps:
-
-            ::
-
+        >   - Install with the following steps:
+                ```
                 git clone git@github.com:neubig/kytea.git && cd kytea autoreconf -i ./configure --prefix=$HOME/local
                 make && make install pip install kytea
+                ```
 
-            - [jieba](https://github.com/fxsjy/jieba): Chinese tokenizer (*)
-            - Install with `pip install jieba`
+        >    - [jieba](https://github.com/fxsjy/jieba): Chinese tokenizer (*)
+        >    - Install with `pip install jieba`
 
         (*) The original XLM used [Stanford
         Segmenter](https://nlp.stanford.edu/software/stanford-segmenter-2018-10-16.zip). However, the wrapper
@@ -963,9 +969,9 @@ of tokens rather than a single string. The 'escape' parameter is set to False, i
         externally, and set `bypass_tokenizer=True` to bypass the tokenizer.
 
         Args:
-            - lang: ISO language code (default = 'en') (string). Languages should belong of the model supported
+        >    - lang: ISO language code (default = 'en') (string). Languages should belong of the model supported
               languages. However, we don't enforce it.
-            - bypass_tokenizer: Allow users to preprocess and tokenize the sentences externally (default = False)
+        >    - bypass_tokenizer: Allow users to preprocess and tokenize the sentences externally (default = False)
               (bool). If True, we only apply BPE.
 
         Returns:
@@ -1047,8 +1053,8 @@ of tokens rather than a single string. The 'escape' parameter is set to False, i
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. An XLM sequence has the following format:
 
-        - single sequence: `<s> X </s>`
-        - pair of sequences: `<s> A </s> B </s>`
+        >   - single sequence: `<s> X </s>`
+        >   - pair of sequences: `<s> A </s> B </s>`
 
         Args:
             token_ids_0 (`List[int]`):

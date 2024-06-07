@@ -70,19 +70,19 @@ class MiniCPMRMSNorm(nn.Cell):
     It performs RMS-based layer normalization on the input hidden states using the provided weight and epsilon value.
     
     Parameters:
-    - hidden_size (int): The size of the hidden states being normalized.
-    - eps (float, optional): A small value added to the variance to prevent division by zero. Default is 1e-06.
+        hidden_size (int): The size of the hidden states being normalized.
+        eps (float, optional): A small value added to the variance to prevent division by zero. Default is 1e-06.
     
     Inherits From:
         nn.Cell
     
     Attributes:
-    - weight (Parameter): The weight parameter used for normalization.
-    - variance_epsilon (float): The epsilon value added to the variance.
+        weight (Parameter): The weight parameter used for normalization.
+        variance_epsilon (float): The epsilon value added to the variance.
     
     Methods:
-    - __init__(hidden_size, eps=1e-06): Initializes the MiniCPMRMSNorm instance with the given hidden size and epsilon.
-    - construct(hidden_states): Applies RMS-based layer normalization on the input hidden states using the weight and epsilon.
+        __init__(hidden_size, eps=1e-06): Initializes the MiniCPMRMSNorm instance with the given hidden size and epsilon.
+        construct(hidden_states): Applies RMS-based layer normalization on the input hidden states using the weight and epsilon.
     """
     def __init__(self, hidden_size, eps=1e-6):
         """
@@ -453,26 +453,26 @@ class MiniCPMAttention(nn.Cell):
         Args:
             self: The instance of the class.
             config (MiniCPMConfig): The configuration object for MiniCPMAttention.
-                - `config` contains various attributes that define the behavior of the attention mechanism.
-                - It is an instance of the MiniCPMConfig class.
+                >   - `config` contains various attributes that define the behavior of the attention mechanism.
+                >   - It is an instance of the MiniCPMConfig class.
             layer_idx (Optional[int], default=None): The index of the layer.
-                - This parameter is optional and can be omitted.
-                - If provided, it helps in caching during the forward call.
-                - Not providing `layer_idx` is not recommended, as it may lead to errors if caching is used.
-                - Please make sure to provide a valid `layer_idx` when creating an instance of this class.
+                >   - This parameter is optional and can be omitted.
+                >   - If provided, it helps in caching during the forward call.
+                >   - Not providing `layer_idx` is not recommended, as it may lead to errors if caching is used.
+                >   - Please make sure to provide a valid `layer_idx` when creating an instance of this class.
         
         Returns:
             None. This method does not return any value.
         
         Raises:
             ValueError: If `hidden_size` is not divisible by `num_heads`.
-                - This exception is raised when the condition `hidden_size % num_heads != 0` is not satisfied.
-                - `hidden_size` must be divisible by `num_heads` for the attention mechanism to work correctly.
+                >   - This exception is raised when the condition `hidden_size % num_heads != 0` is not satisfied.
+                >   - `hidden_size` must be divisible by `num_heads` for the attention mechanism to work correctly.
         
             Warning: If `layer_idx` is not provided, a warning is issued.
-                - The warning message suggests that not providing `layer_idx` is not recommended.
-                - It also highlights that errors may occur during the forward call if caching is used.
-                - The user is advised to provide a valid `layer_idx` when creating an instance of this class.
+                >   - The warning message suggests that not providing `layer_idx` is not recommended.
+                >   - It also highlights that errors may occur during the forward call if caching is used.
+                >   - The user is advised to provide a valid `layer_idx` when creating an instance of this class.
         
         Note:
             The method initializes the MiniCPMAttention instance by assigning values to various attributes.
@@ -596,7 +596,7 @@ class MiniCPMAttention(nn.Cell):
         
         Returns:
             Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing the output tensor of shape (batch_size, sequence_length, hidden_size), optional attention
-weights tensor, and optional updated past key-value pairs.
+            weights tensor, and optional updated past key-value pairs.
         
         Raises:
             ValueError: If the attention weights or attention mask have invalid shapes.
@@ -720,19 +720,18 @@ class MiniCPMDecoderLayer(nn.Cell):
     
     Methods:
         construct(hidden_states, attention_mask=None, position_ids=None, past_key_value=None, output_attentions=False, use_cache=False, **kwargs) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor,
-mindspore.Tensor]]]:
+        mindspore.Tensor]]]:
             Processes the input hidden states through the layer.
-            Args:
-                hidden_states (mindspore.Tensor): Input to the layer of shape (batch, seq_len, embed_dim).
-                attention_mask (mindspore.Tensor, optional): Attention mask used for masking certain positions in the input.
-                position_ids (mindspore.Tensor, optional): Tensor representing the position ids of each token.
-                past_key_value (Tuple[mindspore.Tensor], optional): Cached past key and value projection states.
-                output_attentions (bool, optional): Whether to return attention tensors of all attention layers.
-                use_cache (bool, optional): If True, past key-value states are returned for speeding up decoding.
-                kwargs: Additional keyword arguments.
-    
-            Returns:
-                Tuple containing the processed hidden states and optionally attentions and present key values.
+            >   - Args:
+            >       - hidden_states (mindspore.Tensor): Input to the layer of shape (batch, seq_len, embed_dim).
+            >       - attention_mask (mindspore.Tensor, optional): Attention mask used for masking certain positions in the input.
+            >       - position_ids (mindspore.Tensor, optional): Tensor representing the position ids of each token.
+            >       - past_key_value (Tuple[mindspore.Tensor], optional): Cached past key and value projection states.
+            >       - output_attentions (bool, optional): Whether to return attention tensors of all attention layers.
+            >       - use_cache (bool, optional): If True, past key-value states are returned for speeding up decoding.
+            >       - kwargs: Additional keyword arguments.
+            >   - Returns:
+            >       - Tuple containing the processed hidden states and optionally attentions and present key values.
     
     Note:
         If 'padding_mask' is passed as a keyword argument in kwargs, a deprecation warning will be issued. It is recommended to use 'attention_mask' instead.
@@ -838,10 +837,10 @@ class MiniCPMPreTrainedModel(PreTrainedModel):
     it initializes weights with random values and sets a specific padding index to zero if provided.
     
     Parameters:
-    - cell: The cell for which weights need to be initialized.
+        cell: The cell for which weights need to be initialized.
     
     Returns:
-    None
+        None
     """
     config_class = MiniCPMConfig
     base_model_prefix = "model"
@@ -891,11 +890,11 @@ class MiniCPMModel(MiniCPMPreTrainedModel):
         Args:
             self (MiniCPMModel): The instance of MiniCPMModel.
             config (MiniCPMConfig): The configuration object containing various settings for the model.
-                - config.pad_token_id (int): The token ID used for padding sequences.
-                - config.vocab_size (int): The size of the vocabulary.
-                - config.hidden_size (int): The dimension of the hidden layers.
-                - config.num_hidden_layers (int): The number of hidden layers in the model.
-                - config.rms_norm_eps (float): The epsilon value for RMS normalization.
+                >   - config.pad_token_id (int): The token ID used for padding sequences.
+                >   - config.vocab_size (int): The size of the vocabulary.
+                >   - config.hidden_size (int): The dimension of the hidden layers.
+                >   - config.num_hidden_layers (int): The number of hidden layers in the model.
+                >   - config.rms_norm_eps (float): The epsilon value for RMS normalization.
         
         Returns:
             None: This method does not return any value.
@@ -950,7 +949,7 @@ class MiniCPMModel(MiniCPMPreTrainedModel):
             None.
         
         This method allows the user to set the input embeddings for the MiniCPMModel by replacing the current embeddings with the provided new_embeddings. The new_embeddings can be of any type or format, as
-long as it is compatible with the self.embed_tokens attribute. After calling this method, the MiniCPMModel instance will use the new embeddings for further processing.
+        long as it is compatible with the self.embed_tokens attribute. After calling this method, the MiniCPMModel instance will use the new embeddings for further processing.
         
         Note:
             The new_embeddings should be compatible with the existing self.embed_tokens attribute to ensure proper functioning of the MiniCPMModel.
@@ -1079,31 +1078,31 @@ long as it is compatible with the self.embed_tokens attribute. After calling thi
 
 
 class MiniCPMForCausalLM(MiniCPMPreTrainedModel):
-
     """
     This class represents the MiniCPM model for causal language modeling. It is specifically designed for generating text based on given input prompts. The model is initialized with a configuration and
-consists of a MiniCPM model, an embedding layer, and a linear layer for predicting the next token in the sequence.
+    consists of a MiniCPM model, an embedding layer, and a linear layer for predicting the next token in the sequence.
     
     Attributes:
-        - model (MiniCPMModel): The underlying MiniCPM model.
-        - vocab_size (int): The size of the vocabulary.
-        - lm_head (nn.Dense): The linear layer for predicting the next token.
+        model (MiniCPMModel): The underlying MiniCPM model.
+        vocab_size (int): The size of the vocabulary.
+        lm_head (nn.Dense): The linear layer for predicting the next token.
     
     Methods:
-        - __init__(self, config): Initializes the MiniCPMForCausalLM model.
-        - get_input_embeddings(self): Returns the input embeddings of the model.
-        - set_input_embeddings(self, new_embeddings): Sets the input embeddings of the model.
-        - get_output_embeddings(self): Returns the output embeddings of the model.
-        - set_output_embeddings(self, new_embeddings): Sets the output embeddings of the model.
-        - set_decoder(self, decoder): Sets the decoder of the model.
-        - get_decoder(self): Returns the decoder of the model.
-        - construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the MiniCPM model and
-computes the language modeling loss.
-        - prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, **kwargs): Prepares the inputs for text generation.
-        - _reorder_cache(past_key_values, beam_idx): Reorders the cache for beam search.
-        - chat(self, tokenizer, query, history, role, max_length, num_beams, do_sample, top_p, temperature, logits_processor, **kwargs): Generates a response to a given query using the MiniCPM model.
+        __init__(self, config): Initializes the MiniCPMForCausalLM model.
+        get_input_embeddings(self): Returns the input embeddings of the model.
+        set_input_embeddings(self, new_embeddings): Sets the input embeddings of the model.
+        get_output_embeddings(self): Returns the output embeddings of the model.
+        set_output_embeddings(self, new_embeddings): Sets the output embeddings of the model.
+        set_decoder(self, decoder): Sets the decoder of the model.
+        get_decoder(self): Returns the decoder of the model.
+        construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the MiniCPM model and
+            computes the language modeling loss.
+        prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, **kwargs): Prepares the inputs for text generation.
+        _reorder_cache(past_key_values, beam_idx): Reorders the cache for beam search.
+        chat(self, tokenizer, query, history, role, max_length, num_beams, do_sample, top_p, temperature, logits_processor, **kwargs): Generates a response to a given query using the MiniCPM model.
     
     Example:
+        ```python
         >>> from transformers import AutoTokenizer, MiniCPMForCausalLM
     
         >>> model = MiniCPMForCausalLM.from_pretrained(PATH_TO_CONVERTED_WEIGHTS)
@@ -1116,6 +1115,7 @@ computes the language modeling loss.
         >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
         >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
+        ```
     """
     _tied_weights_keys = ["lm_head.weight"]
 
@@ -1190,11 +1190,13 @@ computes the language modeling loss.
         
         Note:
             The 'lm_head' layer is a linear transformation layer that maps the final hidden states of the model to the vocabulary size. It is responsible for generating the output probabilities for each token
-in the sequence.
+            in the sequence.
         
         Example usage:
+            ```python
             >>> model = MiniCPMForCausalLM()
             >>> embeddings = model.get_output_embeddings()
+            ```
         """
         return self.lm_head
 
@@ -1247,7 +1249,7 @@ in the sequence.
             None.
         
         This method returns the decoder model object associated with the MiniCPMForCausalLM instance. The decoder model is an essential component of the MiniCPMForCausalLM class and is used for generating
-predictions based on the input data. The decoder model object is returned as the result of this method.
+        predictions based on the input data. The decoder model object is returned as the result of this method.
         """
         return self.model
 
@@ -1274,21 +1276,21 @@ predictions based on the input data. The decoder model object is returned as the
         Returns:
 
         Example:
+            ```python
+            >>> from transformers import AutoTokenizer, MiniCPMForCausalLM
 
-        ```python
-        >>> from transformers import AutoTokenizer, MiniCPMForCausalLM
+            >>> model = MiniCPMForCausalLM.from_pretrained(PATH_TO_CONVERTED_WEIGHTS)
+            >>> tokenizer = AutoTokenizer.from_pretrained(PATH_TO_CONVERTED_TOKENIZER)
 
-        >>> model = MiniCPMForCausalLM.from_pretrained(PATH_TO_CONVERTED_WEIGHTS)
-        >>> tokenizer = AutoTokenizer.from_pretrained(PATH_TO_CONVERTED_TOKENIZER)
+            >>> prompt = "Hey, are you conscious? Can you talk to me?"
+            >>> inputs = tokenizer(prompt, return_tensors="pt")
 
-        >>> prompt = "Hey, are you conscious? Can you talk to me?"
-        >>> inputs = tokenizer(prompt, return_tensors="pt")
-
-        >>> # Generate
-        >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
-        >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-        "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
-        ```"""
+            >>> # Generate
+            >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
+            >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+            "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1350,7 +1352,7 @@ predictions based on the input data. The decoder model object is returned as the
             self (MiniCPMForCausalLM): The instance of the MiniCPMForCausalLM class.
             input_ids (torch.Tensor): The input tensor of token indices. Shape: [batch_size, sequence_length].
             past_key_values (Cache or Tuple[torch.Tensor, torch.Tensor] or None): The past key values used for efficient generation. If Cache object or Tuple is provided, it contains the cached key and value
-tensors. If None, no past key values are used.
+                tensors. If None, no past key values are used.
             attention_mask (torch.Tensor or None): The attention mask tensor to mask padded tokens. Shape: [batch_size, sequence_length].
             inputs_embeds (torch.Tensor or None): The tensor of embeddings for input tokens. Shape: [batch_size, sequence_length, embedding_dim].
         
@@ -1449,7 +1451,7 @@ tensors. If None, no past key values are used.
             tokenizer: The tokenizer object used to tokenize the input text.
             query (str): The user's query as a string.
             history (List[Dict], optional): A list of dictionaries representing the conversation history. Each dictionary contains the role (e.g., 'user' or 'assistant') and the content of the message.
-Defaults to None.
+                Defaults to None.
             role (str, optional): The role of the current message. Defaults to 'user'.
             max_length (int, optional): The maximum length of the generated response. Defaults to 4096.
             num_beams (int, optional): The number of beams to be used during generation. Defaults to 1.
@@ -1492,7 +1494,7 @@ class MiniCPMForSequenceClassification(MiniCPMPreTrainedModel):
 
     """
     MiniCPMForSequenceClassification is a Python class that represents a fine-tuning model for sequence classification tasks based on the MiniCPM architecture. It inherits from the MiniCPMPreTrainedModel class
-and provides methods for initializing the model, getting and setting input embeddings, and constructing the sequence classification model.
+    and provides methods for initializing the model, getting and setting input embeddings, and constructing the sequence classification model.
     
     Attributes:
         num_labels (int): The number of labels for sequence classification.
@@ -1504,7 +1506,7 @@ and provides methods for initializing the model, getting and setting input embed
         get_input_embeddings(): Returns the input embeddings from the MiniCPM model.
         set_input_embeddings(new_embeddings): Sets new input embeddings for the MiniCPM model.
         construct(input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the sequence classification model
-based on the provided input arguments.
+            based on the provided input arguments.
     
     Args:
         input_ids (mindspore.Tensor, optional): The input token IDs for the sequence.
@@ -1595,10 +1597,11 @@ based on the provided input arguments.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

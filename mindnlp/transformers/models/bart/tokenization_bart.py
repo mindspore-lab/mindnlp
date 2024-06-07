@@ -106,16 +106,17 @@ class BartTokenizer(PreTrainedTokenizer):
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
 
-    ```python
-    >>> from transformers import BartTokenizer
+    Example:
+        ```python
+        >>> from transformers import BartTokenizer
 
-    >>> tokenizer = BartTokenizer.from_pretrained("facebook/bart-base")
-    >>> tokenizer("Hello world")["input_ids"]
-    [0, 31414, 232, 2]
+        >>> tokenizer = BartTokenizer.from_pretrained("facebook/bart-base")
+        >>> tokenizer("Hello world")["input_ids"]
+        [0, 31414, 232, 2]
 
-    >>> tokenizer(" Hello world")["input_ids"]
-    [0, 20920, 232, 2]
-    ```
+        >>> tokenizer(" Hello world")["input_ids"]
+        [0, 20920, 232, 2]
+        ```
 
     You can get around that behavior by passing `add_prefix_space=True` when instantiating this tokenizer or when you
     call it on some text, but since the model was not pretrained this way, it might yield a decrease in performance.
@@ -200,26 +201,26 @@ class BartTokenizer(PreTrainedTokenizer):
         This method initializes an instance of the BartTokenizer class.
         
         Args:
-        - self: The instance of the class.
-        - vocab_file (str): The path to the vocabulary file containing token mappings.
-        - merges_file (str): The path to the merges file for byte pair encoding.
-        - errors (str): Controls error handling during tokenization (default is 'replace').
-        - bos_token (str): Beginning of sentence token (default is '<s>').
-        - eos_token (str): End of sentence token (default is '</s>').
-        - sep_token (str): Separation token (default is '</s>').
-        - cls_token (str): Classification token (default is '<s>').
-        - unk_token (str): Token for unknown tokens (default is '<unk>').
-        - pad_token (str): Token for padding sequences (default is '<pad>').
-        - mask_token (str): Token for masking sequences (default is '<mask>').
-        - add_prefix_space (bool): Whether to add space to the beginning of the token (default is False).
+            self: The instance of the class.
+            vocab_file (str): The path to the vocabulary file containing token mappings.
+            merges_file (str): The path to the merges file for byte pair encoding.
+            errors (str): Controls error handling during tokenization (default is 'replace').
+            bos_token (str): Beginning of sentence token (default is '<s>').
+            eos_token (str): End of sentence token (default is '</s>').
+            sep_token (str): Separation token (default is '</s>').
+            cls_token (str): Classification token (default is '<s>').
+            unk_token (str): Token for unknown tokens (default is '<unk>').
+            pad_token (str): Token for padding sequences (default is '<pad>').
+            mask_token (str): Token for masking sequences (default is '<mask>').
+            add_prefix_space (bool): Whether to add space to the beginning of the token (default is False).
           
         Returns:
-        - None: This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
-        - FileNotFoundError: If the vocab_file or merges_file is not found.
-        - UnicodeDecodeError: If an error occurs during decoding the files.
-        - ValueError: If an error occurs during tokenization.
+            - FileNotFoundError: If the vocab_file or merges_file is not found.
+            - UnicodeDecodeError: If an error occurs during decoding the files.
+            - ValueError: If an error occurs during tokenization.
         """
         bos_token = AddedToken(bos_token, lstrip=False, rstrip=False) if isinstance(bos_token, str) else bos_token
         eos_token = AddedToken(eos_token, lstrip=False, rstrip=False) if isinstance(eos_token, str) else eos_token
@@ -300,19 +301,19 @@ class BartTokenizer(PreTrainedTokenizer):
         
         Args:
             self: Represents the instance of the class 'BartTokenizer'.
-                Type: BartTokenizer
-                Purpose: Allows access to class attributes and methods.
-                Restrictions: N/A
+                >   - Type: BartTokenizer
+                >   - Purpose: Allows access to class attributes and methods.
+                >   - Restrictions: N/A
         
             token: The input token to be processed using Byte Pair Encoding.
-                Type: str
-                Purpose: Represents the token to be encoded.
-                Restrictions: Must be a valid string input.
+                >   - Type: str
+                >   - Purpose: Represents the token to be encoded.
+                >   - Restrictions: Must be a valid string input.
         
         Returns:
             The method returns the processed token after applying Byte Pair Encoding.
-            Type: str
-            Purpose: Represents the token after encoding.
+            >   - Type: str
+            >   - Purpose: Represents the token after encoding.
             
         Raises:
             N/A
@@ -433,8 +434,8 @@ class BartTokenizer(PreTrainedTokenizer):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A BART sequence has the following format:
 
-        - single sequence: `<s> X </s>`
-        - pair of sequences: `<s> A </s></s> B </s>`
+        >    - single sequence: `<s> X </s>`
+        >    - pair of sequences: `<s> A </s></s> B </s>`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -509,12 +510,12 @@ class BartTokenizer(PreTrainedTokenizer):
             self: The instance of the BartTokenizer class.
             text (str): The input text to be prepared for tokenization.
             is_split_into_words (bool): Flag indicating whether the text is already split into words. Default is False.
-                If True, the text is assumed to be split into words and no further processing is done.
-                If False, the text is assumed to be a continuous string and additional processing may be applied.
+                >   - If True, the text is assumed to be split into words and no further processing is done.
+                >   - If False, the text is assumed to be a continuous string and additional processing may be applied.
             **kwargs: Additional keyword arguments.
                 add_prefix_space (bool): Flag indicating whether a space should be added to the beginning of the text.
-                    If True, and if the text is not empty and does not start with a space, a space is added before the text.
-                    If False, no space is added. Default is the value of self.add_prefix_space.
+                    >   - If True, and if the text is not empty and does not start with a space, a space is added before the text.
+                    >   - If False, no space is added. Default is the value of self.add_prefix_space.
         
         Returns:
             str: The prepared text for tokenization.
@@ -527,8 +528,10 @@ class BartTokenizer(PreTrainedTokenizer):
             If 'is_split_into_words' is set to True, the 'add_prefix_space' parameter is ignored.
         
         Example:
+            ```python
             tokenizer = BartTokenizer()
             prepared_text = tokenizer.prepare_for_tokenization("Hello, world!")
+            ```
         """
         add_prefix_space = kwargs.pop("add_prefix_space", self.add_prefix_space)
         if (is_split_into_words or add_prefix_space) and (len(text) > 0 and not text[0].isspace()):

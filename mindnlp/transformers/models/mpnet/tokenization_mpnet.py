@@ -154,27 +154,27 @@ class MPNetTokenizer(PreTrainedTokenizer):
         This method initializes an instance of the MPNetTokenizer class.
         
         Args:
-        - self: The instance of the class.
-        - vocab_file (str): Path to the vocabulary file.
-        - do_lower_case (bool, optional): Whether to convert tokens to lowercase. Defaults to True.
-        - do_basic_tokenize (bool, optional): Whether to perform basic tokenization. Defaults to True.
-        - never_split (list, optional): List of tokens that should not be split. Defaults to None.
-        - bos_token (str, optional): Beginning of sequence token. Defaults to '<s>'.
-        - eos_token (str, optional): End of sequence token. Defaults to '</s>'.
-        - sep_token (str, optional): Separator token. Defaults to '</s>'.
-        - cls_token (str, optional): Classification token. Defaults to '<s>'.
-        - unk_token (str, optional): Token for unknown words. Defaults to '[UNK]'.
-        - pad_token (str, optional): Padding token. Defaults to '<pad>'.
-        - mask_token (str, optional): Mask token. Defaults to '<mask>'.
-        - tokenize_chinese_chars (bool, optional): Whether to tokenize Chinese characters. Defaults to True.
-        - strip_accents (str, optional): Method for stripping accents. Defaults to None.
-        - **kwargs: Additional keyword arguments.
+            self: The instance of the class.
+            vocab_file (str): Path to the vocabulary file.
+            do_lower_case (bool, optional): Whether to convert tokens to lowercase. Defaults to True.
+            do_basic_tokenize (bool, optional): Whether to perform basic tokenization. Defaults to True.
+            never_split (list, optional): List of tokens that should not be split. Defaults to None.
+            bos_token (str, optional): Beginning of sequence token. Defaults to '<s>'.
+            eos_token (str, optional): End of sequence token. Defaults to '</s>'.
+            sep_token (str, optional): Separator token. Defaults to '</s>'.
+            cls_token (str, optional): Classification token. Defaults to '<s>'.
+            unk_token (str, optional): Token for unknown words. Defaults to '[UNK]'.
+            pad_token (str, optional): Padding token. Defaults to '<pad>'.
+            mask_token (str, optional): Mask token. Defaults to '<mask>'.
+            tokenize_chinese_chars (bool, optional): Whether to tokenize Chinese characters. Defaults to True.
+            strip_accents (str, optional): Method for stripping accents. Defaults to None.
+            **kwargs: Additional keyword arguments.
         
         Returns:
-        - None. This method does not return any value.
+            None. This method does not return any value.
         
         Raises:
-        - ValueError: If the vocabulary file specified by 'vocab_file' cannot be found.
+            - ValueError: If the vocabulary file specified by 'vocab_file' cannot be found.
         """
         bos_token = AddedToken(bos_token, special=True) if isinstance(bos_token, str) else bos_token
         eos_token = AddedToken(eos_token, special=True) if isinstance(eos_token, str) else eos_token
@@ -317,8 +317,8 @@ class MPNetTokenizer(PreTrainedTokenizer):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A MPNet sequence has the following format:
 
-        - single sequence: `<s> X </s>`
-        - pair of sequences: `<s> A </s></s> B </s>`
+        >   - single sequence: `<s> X </s>`
+        >   - pair of sequences: `<s> A </s></s> B </s>`
 
         Args:
             token_ids_0 (`List[int]`):

@@ -29,7 +29,7 @@ class PromptEncoder(nn.Cell):
     Args:
         config ([`PromptEncoderConfig`]): The configuration of the prompt encoder.
 
-    Example:
+    Examples:
 
     ```py
     >>> from peft import PromptEncoder, PromptEncoderConfig

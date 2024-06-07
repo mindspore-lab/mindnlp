@@ -923,7 +923,7 @@ class Conv2d(LoKrLayer):
         Raises:
             None
         
-        Example:
+        Examples:
             >>> conv = Conv2d()
             >>> repr(conv)
             'lokr.Conv2d()'
@@ -946,7 +946,7 @@ def factorization(dimension: int, factor: int = -1) -> Tuple[int, int]:
         Tuple[`int`, `int`]: A tuple of two numbers, whose product is equal to the provided number. The first number is
         always less than or equal to the second.
 
-    Example:
+    Examples:
         ```py
         >>> factorization(256, factor=-1)
         (16, 16)

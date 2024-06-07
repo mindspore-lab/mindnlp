@@ -114,16 +114,17 @@ class DebertaTokenizer(PreTrainedTokenizer):
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
 
-    ```python
-    >>> from transformers import DebertaTokenizer
+    Example:
+        ```python
+        >>> from transformers import DebertaTokenizer
 
-    >>> tokenizer = DebertaTokenizer.from_pretrained("microsoft/deberta-base")
-    >>> tokenizer("Hello world")["input_ids"]
-    [1, 31414, 232, 2]
+        >>> tokenizer = DebertaTokenizer.from_pretrained("microsoft/deberta-base")
+        >>> tokenizer("Hello world")["input_ids"]
+        [1, 31414, 232, 2]
 
-    >>> tokenizer(" Hello world")["input_ids"]
-    [1, 20920, 232, 2]
-    ```
+        >>> tokenizer(" Hello world")["input_ids"]
+        [1, 20920, 232, 2]
+        ```
 
     You can get around that behavior by passing `add_prefix_space=True` when instantiating this tokenizer or when you
     call it on some text, but since the model was not pretrained this way, it might yield a decrease in performance.
@@ -196,26 +197,26 @@ class DebertaTokenizer(PreTrainedTokenizer):
         Initialize a DebertaTokenizer object.
         
         Args:
-        - self: The instance of the class.
-        - vocab_file (str): The path to the vocabulary file.
-        - merges_file (str): The path to the merges file.
-        - errors (str, optional): The error handling strategy. Default is 'replace'.
-        - bos_token (str, optional): Beginning of sentence token. Default is '[CLS]'.
-        - eos_token (str, optional): End of sentence token. Default is '[SEP]'.
-        - sep_token (str, optional): Separator token. Default is '[SEP]'.
-        - cls_token (str, optional): Classification token. Default is '[CLS]'.
-        - unk_token (str, optional): Token for unknown words. Default is '[UNK]'.
-        - pad_token (str, optional): Token for padding. Default is '[PAD]'.
-        - mask_token (str, optional): Token for masking. Default is '[MASK]'.
-        - add_prefix_space (bool, optional): Whether to add prefix space. Default is False.
-        - add_bos_token (bool, optional): Whether to add beginning of sentence token. Default is False.
-        
+            self: The instance of the class.
+            vocab_file (str): The path to the vocabulary file.
+            merges_file (str): The path to the merges file.
+            errors (str, optional): The error handling strategy. Default is 'replace'.
+            bos_token (str, optional): Beginning of sentence token. Default is '[CLS]'.
+            eos_token (str, optional): End of sentence token. Default is '[SEP]'.
+            sep_token (str, optional): Separator token. Default is '[SEP]'.
+            cls_token (str, optional): Classification token. Default is '[CLS]'.
+            unk_token (str, optional): Token for unknown words. Default is '[UNK]'.
+            pad_token (str, optional): Token for padding. Default is '[PAD]'.
+            mask_token (str, optional): Token for masking. Default is '[MASK]'.
+            add_prefix_space (bool, optional): Whether to add prefix space. Default is False.
+            add_bos_token (bool, optional): Whether to add beginning of sentence token. Default is False.
+
         Returns:
-        - None: This method does not return any value.
+            - None: This method does not return any value.
         
         Raises:
-        - IOError: If there is an issue with opening the vocab_file or merges_file.
-        - Exception: Any other unexpected error that may occur during initialization.
+            - IOError: If there is an issue with opening the vocab_file or merges_file.
+            - Exception: Any other unexpected error that may occur during initialization.
         """
         bos_token = AddedToken(bos_token, special=True) if isinstance(bos_token, str) else bos_token
         eos_token = AddedToken(eos_token, special=True) if isinstance(eos_token, str) else eos_token
@@ -307,23 +308,23 @@ class DebertaTokenizer(PreTrainedTokenizer):
             None.
         
         This method applies BPE to the given token by iteratively replacing the most frequent pairs of characters in the token with a single character. If the token is already present in the cache, the cached
-value is returned. Otherwise, the token is converted to a tuple of characters. Pairs of characters in the tuple are obtained using the 'get_pairs' function. If no pairs are found, the original token is
-returned. 
+        value is returned. Otherwise, the token is converted to a tuple of characters. Pairs of characters in the tuple are obtained using the 'get_pairs' function. If no pairs are found, the original token is
+        returned.
         
         The method then enters a loop where it selects the most frequent pair from the pairs obtained. If the selected pair is not present in the 'bpe_ranks' dictionary, the loop is terminated. Otherwise, the
-first and second characters of the pair are extracted. 
+        first and second characters of the pair are extracted.
         
         A new word list, 'new_word', is created to store the modified characters of the token. The method iterates over the characters of the token and checks if the current character matches the first
-character of the selected pair. If it does, and the next character is the second character of the pair, the pair is replaced with a single character by appending it to 'new_word' and incrementing the index by
-2. Otherwise, the current character is appended to 'new_word' and the index is incremented by 1. 
+        character of the selected pair. If it does, and the next character is the second character of the pair, the pair is replaced with a single character by appending it to 'new_word' and incrementing the index by
+        2. Otherwise, the current character is appended to 'new_word' and the index is incremented by 1.
         
         The modified 'new_word' is converted back to a tuple and assigned to 'word'. If the length of 'word' becomes 1, indicating that the BPE process is complete, the loop is terminated. Otherwise, new pairs
-are obtained from 'word' and the process is repeated until 'word' is of length 1. 
+        are obtained from 'word' and the process is repeated until 'word' is of length 1.
         
         Finally, 'word' is converted to a string by joining the characters with spaces. The encoded token is stored in the cache for future use and returned.
         
         Note:
-        - This method assumes the presence of the 'get_pairs' function and the 'bpe_ranks' dictionary.
+            - This method assumes the presence of the 'get_pairs' function and the 'bpe_ranks' dictionary.
         
         """
         if token in self.cache:
@@ -373,8 +374,8 @@ are obtained from 'word' and the process is repeated until 'word' is of length 1
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A DeBERTa sequence has the following format:
 
-        - single sequence: [CLS] X [SEP]
-        - pair of sequences: [CLS] A [SEP] B [SEP]
+        >   - single sequence: [CLS] X [SEP]
+        >   - pair of sequences: [CLS] A [SEP] B [SEP]
 
         Args:
             token_ids_0 (`List[int]`):
@@ -527,15 +528,15 @@ are obtained from 'word' and the process is repeated until 'word' is of length 1
         This method prepares the input text for tokenization by potentially adding a prefix space based on the provided parameters.
         
         Args:
-        - self: The instance of the DebertaTokenizer class.
-        - text (str): The input text to be tokenized.
-        - is_split_into_words (bool): A flag indicating whether the text is already split into words. Default is False.
+            self: The instance of the DebertaTokenizer class.
+            text (str): The input text to be tokenized.
+            is_split_into_words (bool): A flag indicating whether the text is already split into words. Default is False.
         
         Returns:
-        - None: This method modifies the input text in place and does not return any value.
+            None: This method modifies the input text in place and does not return any value.
         
         Raises:
-        - No specific exceptions are raised within this method.
+            - No specific exceptions are raised within this method.
         """
         add_prefix_space = kwargs.pop("add_prefix_space", self.add_prefix_space)
         if (is_split_into_words or add_prefix_space) and (len(text) > 0 and not text[0].isspace()):

@@ -167,9 +167,9 @@ def _get_unpad_data(attention_mask):
     
     Returns:
         tuple: A tuple containing the following elements:
-            - indices (Tensor): 1D tensor containing the indices of non-zero elements in the flattened attention_mask.
-            - cu_seqlens (Tensor): 1D tensor representing the cumulative sum of sequence lengths in the batch.
-            - max_seqlen_in_batch (int): The maximum sequence length in the batch.
+            >   - indices (Tensor): 1D tensor containing the indices of non-zero elements in the flattened attention_mask.
+            >   - cu_seqlens (Tensor): 1D tensor representing the cumulative sum of sequence lengths in the batch.
+            >   - max_seqlen_in_batch (int): The maximum sequence length in the batch.
     
     Raises:
         None
@@ -189,18 +189,18 @@ class JetMoERMSNorm(nn.Cell):
 
     """
     The 'JetMoERMSNorm' class is a custom implementation of the root mean square normalization (RMSNorm) module, specifically designed for the JetMoE model. It inherits from the 'nn.Cell' class, which is a
-base class for all neural network modules in MindSpore.
+    base class for all neural network modules in MindSpore.
     
     This class provides a trainable normalization layer that performs RMS normalization on the input hidden states. The normalization is applied along the last dimension of the input tensor, reducing the
-variance across that dimension.
+    variance across that dimension.
     
     The constructor '__init__' initializes the 'JetMoERMSNorm' module. It takes two parameters: 'hidden_size' specifies the size of the hidden states, and 'eps' (default value 1e-06) is the epsilon value used
-for numerical stability in the normalization calculation.
+    for numerical stability in the normalization calculation.
     
     The 'construct' method is the main functionality of the 'JetMoERMSNorm' module. It performs the RMS normalization on the input 'hidden_states' tensor. The method first converts the input tensor to
-'mindspore.float32' to ensure consistent data type for the calculations. It then computes the variance along the last dimension of the tensor using the 'pow' and 'mean' operations. Afterward, the input tensor
-is multiplied element-wise by the reciprocal square root of the variance plus epsilon, using the 'rsqrt' and 'ops' operations. Finally, the normalized tensor is multiplied element-wise by the weight tensor and
-converted back to the original input data type.
+    'mindspore.float32' to ensure consistent data type for the calculations. It then computes the variance along the last dimension of the tensor using the 'pow' and 'mean' operations. Afterward, the input tensor
+    is multiplied element-wise by the reciprocal square root of the variance plus epsilon, using the 'rsqrt' and 'ops' operations. Finally, the normalized tensor is multiplied element-wise by the weight tensor and
+    converted back to the original input data type.
     
     Note that the 'JetMoERMSNorm' module is intended to be used as a part of the JetMoE model and can be applied to the hidden states of the model's components.
     
@@ -242,7 +242,7 @@ class JetMoERotaryEmbedding(nn.Cell):
 
     """
     The JetMoERotaryEmbedding class represents a rotary position embedding module that can be used in neural network models. It inherits from the nn.Cell class and provides functionality for generating rotary
-position embeddings based on the input sequence length.
+    position embeddings based on the input sequence length.
     
     Attributes:
         dim (int): The dimension of the position embeddings.
@@ -324,13 +324,13 @@ position embeddings based on the input sequence length.
         Args:
             self (JetMoERotaryEmbedding): The instance of the JetMoERotaryEmbedding class.
             x: The input tensor.
-                Type: Any
-                Purpose: The input tensor for which the cos and sin cached values need to be constructed.
+                >   - Type: Any
+                >   - Purpose: The input tensor for which the cos and sin cached values need to be constructed.
                         It is expected to be a tensor.
             seq_len: The length of the sequence for which the cached values need to be constructed.
-                Type: int
-                Purpose: Determines the length of the sequence for which the cos and sin cached values need to be constructed.
-                Restrictions: Should be a positive integer.
+                >   - Type: int
+                >   - Purpose: Determines the length of the sequence for which the cos and sin cached values need to be constructed.
+                >   - Restrictions: Should be a positive integer.
         
         Returns:
             None: This method returns None.
@@ -456,7 +456,7 @@ class JetMoEAttention(nn.Cell):
         
         Returns:
             Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing the attention output tensor with shape (batch_size, sequence_length, hidden_size), the
-attention weights tensor (if output_attentions is True), and the updated past key-value cache.
+            attention weights tensor (if output_attentions is True), and the updated past key-value cache.
         
         Raises:
             ValueError: If the attention weights or mask have invalid shapes.
@@ -557,7 +557,7 @@ class JetMoEBlock(nn.Cell):
     
     The class provides methods for initialization and forward pass computation. 
     During initialization, it sets up the necessary components including input layer normalization, self-attention mechanism, post-attention layer normalization, and the MLP with MoE architecture based on the
-provided configuration.
+    provided configuration.
     
     The 'construct' method performs the forward pass computation of the JetMoEBlock module. 
     It takes input hidden states, optional position IDs, past key-value states, attention mask, and other optional arguments. 
@@ -565,7 +565,7 @@ provided configuration.
     Optional outputs such as attention weights and cached states can also be returned based on the method arguments.
     
     Overall, the 'JetMoEBlock' class encapsulates the functionality of a JetMoE block within a neural network model, providing the necessary components for attention-based computations and expert-based
-transformations.
+    transformations.
     """
     def __init__(self, config: JetMoEConfig, layer_idx: Optional[int] = None):
         """
@@ -698,8 +698,8 @@ class JetMoEModel(JetMoEPreTrainedModel):
         Args:
             self: The object itself.
             config (JetMoEConfig): The configuration object that contains various settings for the model.
-                - 'config' must be an instance of JetMoEConfig.
-                - It specifies the configuration parameters for the model.
+                >- 'config' must be an instance of JetMoEConfig.
+                >- It specifies the configuration parameters for the model.
         
         Returns:
             None
@@ -769,24 +769,24 @@ class JetMoEModel(JetMoEPreTrainedModel):
         This method constructs the JetMoEModel by processing input data and generating the model output.
         
         Args:
-        - self: The instance of the JetMoEModel class.
-        - input_ids (mindspore.Tensor): The input tensor containing token IDs. Default is None.
-        - attention_mask (Optional[mindspore.Tensor]): Optional tensor representing the attention mask. Default is None.
-        - position_ids (Optional[mindspore.Tensor]): Optional tensor containing position IDs. Default is None.
-        - past_key_values (Optional[List[mindspore.Tensor]]): Optional list of tensors representing past key values. Default is None.
-        - inputs_embeds (Optional[mindspore.Tensor]): Optional tensor containing input embeddings. Default is None.
-        - use_cache (Optional[bool]): Optional flag indicating whether to use cache. Default is None.
-        - output_attentions (Optional[bool]): Optional flag indicating whether to output attentions. Default is None.
-        - output_hidden_states (Optional[bool]): Optional flag indicating whether to output hidden states. Default is None.
-        - return_dict (Optional[bool]): Optional flag indicating whether to return a dictionary. Default is None.
+            self: The instance of the JetMoEModel class.
+            input_ids (mindspore.Tensor): The input tensor containing token IDs. Default is None.
+            attention_mask (Optional[mindspore.Tensor]): Optional tensor representing the attention mask. Default is None.
+            position_ids (Optional[mindspore.Tensor]): Optional tensor containing position IDs. Default is None.
+            past_key_values (Optional[List[mindspore.Tensor]]): Optional list of tensors representing past key values. Default is None.
+            inputs_embeds (Optional[mindspore.Tensor]): Optional tensor containing input embeddings. Default is None.
+            use_cache (Optional[bool]): Optional flag indicating whether to use cache. Default is None.
+            output_attentions (Optional[bool]): Optional flag indicating whether to output attentions. Default is None.
+            output_hidden_states (Optional[bool]): Optional flag indicating whether to output hidden states. Default is None.
+            return_dict (Optional[bool]): Optional flag indicating whether to return a dictionary. Default is None.
         
         Returns:
-        - Union[Tuple, BaseModelOutputWithPast]: The return value is a tuple or an instance of BaseModelOutputWithPast, which contains the model output.
+            Union[Tuple, BaseModelOutputWithPast]: The return value is a tuple or an instance of BaseModelOutputWithPast, which contains the model output.
         
         Raises:
-        - ValueError: Raised if both input_ids and inputs_embeds are specified, or if neither is specified, or if incompatible combinations are provided.
-        - Warning: Raised if `use_cache=True` is incompatible with gradient checkpointing.
-        - ValueError: Raised if attempting to perform batched generation with certain settings that may lead to unexpected behavior.
+            - ValueError: Raised if both input_ids and inputs_embeds are specified, or if neither is specified, or if incompatible combinations are provided.
+            - Warning: Raised if `use_cache=True` is incompatible with gradient checkpointing.
+            - ValueError: Raised if attempting to perform batched generation with certain settings that may lead to unexpected behavior.
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -927,8 +927,8 @@ class JetMoEForCausalLM(JetMoEPreTrainedModel):
     The JetMoEForCausalLM class represents a JetMoE model for causal language modeling. It inherits from the JetMoEPreTrainedModel.
     
     This class includes methods for initializing the model, getting and setting input and output embeddings, setting and getting the decoder, constructing the model, preparing inputs for generation, and
-reordering cache. The construct method handles the generation of outputs based on input and model configuration, while the prepare_inputs_for_generation method prepares inputs for the generation process.
-Additionally, the _reorder_cache method is a static method for reordering past key values based on beam index.
+    reordering cache. The construct method handles the generation of outputs based on input and model configuration, while the prepare_inputs_for_generation method prepares inputs for the generation process.
+    Additionally, the _reorder_cache method is a static method for reordering past key values based on beam index.
     
     The class also includes attributes for model configuration, vocabulary size, auxiliary loss coefficient, LM head, and tie_word_embeddings.
     
@@ -943,9 +943,9 @@ Additionally, the _reorder_cache method is a static method for reordering past k
         Args:
             self: Instance of the JetMoEForCausalLM class.
             config: An object containing configuration parameters for the model.
-                Type: Any
-                Purpose: Contains settings and hyperparameters for the model.
-                Restrictions: None
+                >   - Type: Any
+                >   - Purpose: Contains settings and hyperparameters for the model.
+                >   - Restrictions: None
         
         Returns:
             None
@@ -969,14 +969,14 @@ Additionally, the _reorder_cache method is a static method for reordering past k
         
         Args:
             self: The instance of the JetMoEForCausalLM class.
-                Type: JetMoEForCausalLM
-                Purpose: Represents the current instance of the JetMoEForCausalLM class.
-                Restrictions: None
+                >   - Type: JetMoEForCausalLM
+                >   - Purpose: Represents the current instance of the JetMoEForCausalLM class.
+                >   - Restrictions: None
         
         Returns:
             The input embeddings from the model.
-                Type: None
-                Purpose: Represents the embedding tokens used as input for the model.
+                >   - Type: None
+                >   - Purpose: Represents the embedding tokens used as input for the model.
         
         Raises:
             None
@@ -1090,6 +1090,7 @@ Additionally, the _reorder_cache method is a static method for reordering past k
                 (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
+            Union[Tuple, CausalLMOutputWithPast]
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1148,25 +1149,25 @@ Additionally, the _reorder_cache method is a static method for reordering past k
         Prepare inputs for generation.
         
         Args:
-        - self (JetMoEForCausalLM): The instance of the JetMoEForCausalLM class.
-        - input_ids (torch.Tensor): The input tensor with token IDs.
-        - past_key_values (Union[Cache, Tuple[torch.Tensor]]): The past key values for caching.
-          If Cache instance is provided, information about cache length, past length, and max cache length are extracted.
-          If Tuple is provided, the past length is determined as the shape of the first dimension of the first element.
-        - attention_mask (torch.Tensor): The attention mask tensor to mask certain tokens.
-        - inputs_embeds (torch.Tensor): The embeddings tensor for input tokens.
+            self (JetMoEForCausalLM): The instance of the JetMoEForCausalLM class.
+            input_ids (torch.Tensor): The input tensor with token IDs.
+            past_key_values (Union[Cache, Tuple[torch.Tensor]]): The past key values for caching.
+                >   - If Cache instance is provided, information about cache length, past length, and max cache length are extracted.
+                >   - If Tuple is provided, the past length is determined as the shape of the first dimension of the first element.
+            attention_mask (torch.Tensor): The attention mask tensor to mask certain tokens.
+            inputs_embeds (torch.Tensor): The embeddings tensor for input tokens.
         
         Returns:
-        - model_inputs (Dict[str, Any]): A dictionary containing model inputs for generation.
-          It includes 'inputs_embeds' if inputs_embeds is provided, otherwise 'input_ids'.
-          Additionally, 'position_ids', 'past_key_values', 'use_cache', and 'attention_mask' are included.
+            model_inputs (Dict[str, Any]): A dictionary containing model inputs for generation.
+              It includes 'inputs_embeds' if inputs_embeds is provided, otherwise 'input_ids'.
+              Additionally, 'position_ids', 'past_key_values', 'use_cache', and 'attention_mask' are included.
         
         Raises:
-        - TypeError: If past_key_values is not of type Cache or Tuple.
-        - IndexError: If attention_mask shape is inconsistent with input_ids shape.
-        - ValueError: If cache_length + input_ids length exceeds max_cache_length.
-        - AttributeError: If position_ids calculation encounters errors.
-        - RuntimeError: If there are issues with masked_fill operation.
+            TypeError: If past_key_values is not of type Cache or Tuple.
+            IndexError: If attention_mask shape is inconsistent with input_ids shape.
+            ValueError: If cache_length + input_ids length exceeds max_cache_length.
+            AttributeError: If position_ids calculation encounters errors.
+            RuntimeError: If there are issues with masked_fill operation.
         """
         # Omit tokens covered by past_key_values
         if past_key_values is not None:
@@ -1250,23 +1251,24 @@ class JetMoEForSequenceClassification(JetMoEPreTrainedModel):
 
     """
     JetMoEForSequenceClassification is a class that represents a sequence classification model based on the JetMoE architecture. It is designed to handle tasks such as sentiment analysis, text classification,
-and natural language inference.
+    and natural language inference.
     
     This class inherits from the JetMoEPreTrainedModel class, which provides a set of pre-trained parameters and methods for fine-tuning the model on specific downstream tasks.
     
     The JetMoEForSequenceClassification class provides the following methods:
     
-    - __init__(self, config): Initializes the JetMoEForSequenceClassification instance with the given configuration.
-    - get_input_embeddings(self): Returns the input embeddings used by the model.
-    - set_input_embeddings(self, value): Sets the input embeddings of the model to the given value.
-    - construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the sequence classification
-model and computes the output logits. It takes several optional arguments such as input_ids, attention_mask, and labels, and returns a tuple containing the loss, logits, and other outputs.
+    >   - __init__(self, config): Initializes the JetMoEForSequenceClassification instance with the given configuration.
+    >   - get_input_embeddings(self): Returns the input embeddings used by the model.
+    >   - set_input_embeddings(self, value): Sets the input embeddings of the model to the given value.
+    >   - construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the sequence classification
+        model and computes the output logits. It takes several optional arguments such as input_ids, attention_mask, and labels, and returns a tuple containing the loss, logits, and other outputs.
     
     The JetMoEForSequenceClassification class follows the configuration provided to initialize the model, including the number of labels for the classification task. It utilizes the JetMoEModel for the main
-transformer architecture and applies a score layer to compute the logits. The construct method handles the computation of the model's output based on the given inputs and labels, including handling different
-problem types (regression, single-label classification, or multi-label classification) and computing the loss.
+    transformer architecture and applies a score layer to compute the logits. The construct method handles the computation of the model's output based on the given inputs and labels, including handling different
+    problem types (regression, single-label classification, or multi-label classification) and computing the loss.
     
-    Note: This docstring does not include the method signatures or any other code for clarity and readability.
+    Note:
+        This docstring does not include the method signatures or any other code for clarity and readability.
     """
     def __init__(self, config):
         """
@@ -1274,10 +1276,9 @@ problem types (regression, single-label classification, or multi-label classific
         
         Args:
             self: The object instance itself.
-            config (object): An object containing configuration settings for the model.
-                It should include the following attributes:
-                    - num_labels (int): The number of labels for classification.
-                    - hidden_size (int): The size of the hidden layers in the model.
+            config (object): An object containing configuration settings for the model. It should include the following attributes:
+                >   - num_labels (int): The number of labels for classification.
+                >   - hidden_size (int): The size of the hidden layers in the model.
                 This parameter is used to configure the model and its components.
         
         Returns:
@@ -1324,10 +1325,10 @@ problem types (regression, single-label classification, or multi-label classific
             None.
         
         This method allows you to set the input embeddings for the JetMoEForSequenceClassification model. The input embeddings should be provided as an object that provides the embedding functionality. By
-setting the input embeddings, you can customize the way the model represents the input data.
+        setting the input embeddings, you can customize the way the model represents the input data.
         
         Note:
-        The 'embed_tokens' attribute of the 'model' instance is updated with the provided 'value' to set the input embeddings.
+            The 'embed_tokens' attribute of the 'model' instance is updated with the provided 'value' to set the input embeddings.
         """
         self.model.embed_tokens = value
 
@@ -1345,10 +1346,11 @@ setting the input embeddings, you can customize the way the model represents the
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

@@ -123,7 +123,7 @@ def remove_weight_norm(cell:nn.Cell) -> nn.Cell:
     Note:
         This function assumes that the input cell has weight normalization applied. If the cell does not have any weight normalization, it returns the cell as is.
     
-    Example:
+    Examples:
         >>> cell = MyNeuralNetworkCell()
         >>> cell = remove_weight_norm(cell)
     """

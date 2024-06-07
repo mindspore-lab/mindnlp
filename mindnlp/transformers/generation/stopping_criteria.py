@@ -206,15 +206,15 @@ class StoppingCriteriaList(list):
         This method '__call__' in the class 'StoppingCriteriaList' evaluates a list of stopping criteria against the input data.
         
         Args:
-        - self: Represents the instance of the StoppingCriteriaList class.
-        - input_ids (mindspore.Tensor): Tensor containing input IDs for evaluation.
-        - scores (mindspore.Tensor): Tensor containing scores for evaluation.
+            self: Represents the instance of the StoppingCriteriaList class.
+            input_ids (mindspore.Tensor): Tensor containing input IDs for evaluation.
+            scores (mindspore.Tensor): Tensor containing scores for evaluation.
         
         Returns:
-        - bool: Returns a boolean value indicating whether any of the stopping criteria have been met.
+            bool: Returns a boolean value indicating whether any of the stopping criteria have been met.
         
         Raises:
-        - None. This method does not raise any exceptions.
+            None: This method does not raise any exceptions.
         """
         return any(criteria(input_ids, scores) for criteria in self)
 

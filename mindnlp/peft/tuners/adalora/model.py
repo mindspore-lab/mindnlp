@@ -48,7 +48,7 @@ class AdaLoraModel(LoraModel):
     Returns:
         AdaLoraModel ([`mindspore.nn.Cell`]): The AdaLora model.
 
-    Example::
+    Examples::
 
         >>> from transformers import AutoModelForSeq2SeqLM, LoraConfig >>> from peft import AdaLoraModel, AdaLoraConfig
         >>> config = AdaLoraConfig(
@@ -460,7 +460,7 @@ TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING.
         Args:
             global_step (`int`): The current training step, it is used to calculate adalora budget.
 
-        Example:
+        Examples:
 
         ```python
         >>> loss = model(**input).loss

@@ -54,9 +54,9 @@ def _get_unpad_data(attention_mask):
     
     Returns:
         tuple: A tuple containing the following elements:
-            - indices (Tensor): A 1D tensor containing the indices of non-zero elements in the flattened attention mask.
-            - cu_seqlens (Tensor): A 1D tensor representing the cumulative sum of sequence lengths in the batch.
-            - max_seqlen_in_batch (int): The maximum sequence length in the batch.
+            >   - indices (Tensor): A 1D tensor containing the indices of non-zero elements in the flattened attention mask.
+            >   - cu_seqlens (Tensor): A 1D tensor representing the cumulative sum of sequence lengths in the batch.
+            >   - max_seqlen_in_batch (int): The maximum sequence length in the batch.
     
     Raises:
         None
@@ -115,9 +115,11 @@ class OlmoLayerNorm(nn.Cell):
             - The hidden states are expected to be of a specific data type.
         
         Example:
+            ```python
             >>> norm = OlmoLayerNorm()
             >>> input_states = mindspore.Tensor([1, 2, 3], mindspore.float32)
             >>> output_states = norm.construct(input_states)
+            ```
         """
         orig_dtype = hidden_states.dtype
         y, _, _ = self.layer_norm(hidden_states.to(dtype=mindspore.float32),
@@ -347,19 +349,20 @@ class OlmoMLP(nn.Cell):
     The 'OlmoMLP' class represents a multi-layer perceptron (MLP) with customized operations for gating, projection, and activation functions. This class inherits from the 'nn.Cell' class.
     
     Attributes:
-    - config (object): The configuration object that stores the parameters for the MLP.
-    - hidden_size (int): The size of the hidden layer in the MLP.
-    - intermediate_size (int): The size of the intermediate layer in the MLP.
-    - gate_proj (nn.Dense): The dense layer used for projecting the input into the intermediate size for gating.
-    - up_proj (nn.Dense): The dense layer used for projecting the input into the intermediate size for the up projection.
-    - down_proj (nn.Dense): The dense layer used for projecting the intermediate size back to the hidden size.
-    - act_fn (function): The activation function applied to the output of the gating and up projection.
+        config (object): The configuration object that stores the parameters for the MLP.
+        hidden_size (int): The size of the hidden layer in the MLP.
+        intermediate_size (int): The size of the intermediate layer in the MLP.
+        gate_proj (nn.Dense): The dense layer used for projecting the input into the intermediate size for gating.
+        up_proj (nn.Dense): The dense layer used for projecting the input into the intermediate size for the up projection.
+        down_proj (nn.Dense): The dense layer used for projecting the intermediate size back to the hidden size.
+        act_fn (function): The activation function applied to the output of the gating and up projection.
     
     Methods:
-    - __init__(self, config): Initializes the 'OlmoMLP' class with the given configuration object.
-    - construct(self, x): Constructs the MLP by applying the necessary operations to the input 'x' and returning the result.
+        __init__(self, config): Initializes the 'OlmoMLP' class with the given configuration object.
+        construct(self, x): Constructs the MLP by applying the necessary operations to the input 'x' and returning the result.
     
     Example usage:
+        ```python
         # Create a configuration object
         config = MLPConfig(hidden_size=128, intermediate_size=64, hidden_act='relu')
     
@@ -368,9 +371,10 @@ class OlmoMLP(nn.Cell):
     
         # Construct the MLP
         output = mlp.construct(input_data)
+        ```
     
     Note:
-    The 'OlmoMLP' class assumes that the 'ACT2FN' dictionary is defined, which maps the activation function names to their corresponding functions.
+        The 'OlmoMLP' class assumes that the 'ACT2FN' dictionary is defined, which maps the activation function names to their corresponding functions.
     """
     def __init__(self, config):
         """
@@ -379,9 +383,9 @@ class OlmoMLP(nn.Cell):
         Args:
             self: The instance of the OlmoMLP class.
             config: An object of type 'Config' that contains the configuration settings for the OlmoMLP model. It must have the following attributes:
-                - hidden_size: An integer representing the size of the hidden layers.
-                - intermediate_size: An integer representing the size of the intermediate layers.
-                - hidden_act: A string representing the activation function to be used in the hidden layers.
+                >   - hidden_size: An integer representing the size of the hidden layers.
+                >   - intermediate_size: An integer representing the size of the intermediate layers.
+                >   - hidden_act: A string representing the activation function to be used in the hidden layers.
         
         Returns:
             None.
@@ -501,24 +505,26 @@ class OlmoAttention(nn.Cell):
         If the 'rope_scaling' configuration parameter is not specified, the RoPE is initialized with the OlmoRotaryEmbedding class using the default parameters.
         
         If the 'rope_scaling' configuration parameter is specified, the RoPE is initialized with a specific scaling type and factor. The 'scaling_type' parameter determines the type of scaling to be used, and
-the 'scaling_factor' parameter determines the scaling factor to be applied. The available scaling types are 'linear' and 'dynamic'.
+            the 'scaling_factor' parameter determines the scaling factor to be applied. The available scaling types are 'linear' and 'dynamic'.
+            >   - For 'linear' scaling type, the RoPE is initialized with the OlmoLinearScalingRotaryEmbedding class using the specified scaling factor.
+            >   - For 'dynamic' scaling type, the RoPE is initialized with the OlmoDynamicNTKScalingRotaryEmbedding class using the specified scaling factor.
         
-            - For 'linear' scaling type, the RoPE is initialized with the OlmoLinearScalingRotaryEmbedding class using the specified scaling factor.
-            - For 'dynamic' scaling type, the RoPE is initialized with the OlmoDynamicNTKScalingRotaryEmbedding class using the specified scaling factor.
-        
-        Note: The 'scaling_factor' parameter is used to adjust the scale of the RoPE embeddings. A higher scaling factor results in more distinct embeddings for different positions.
+        Note:
+            The 'scaling_factor' parameter is used to adjust the scale of the RoPE embeddings. A higher scaling factor results in more distinct embeddings for different positions.
         
         If the 'scaling_type' provided is not one of the available options, a ValueError is raised.
         
         Example usage:
+            ```python
             >>> olmo_attention = OlmoAttention()
             >>> olmo_attention._init_rope()
-        
+            ```
             or
-        
+            ``` python
             >>> config = {'rope_scaling': {'type': 'linear', 'factor': 2.0}}
             >>> olmo_attention = OlmoAttention(config)
             >>> olmo_attention._init_rope()
+            ```
         """
         if self.config.rope_scaling is None:
             self.rotary_emb = OlmoRotaryEmbedding(
@@ -572,7 +578,7 @@ the 'scaling_factor' parameter determines the scaling factor to be applied. The 
         
         Returns:
             Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing the attention output tensor of shape (batch_size, sequence_length, hidden_size), the
-attention weights tensor of shape (batch_size, num_heads, sequence_length, sequence_length), and the updated past key-value cache.
+            attention weights tensor of shape (batch_size, num_heads, sequence_length, sequence_length), and the updated past key-value cache.
         
         Raises:
             ValueError: If the shape of the attention output tensor is not (batch_size, num_heads, sequence_length, hidden_size).
@@ -775,19 +781,19 @@ class OlmoPreTrainedModel(PreTrainedModel):
     OlmoPreTrainedModel provides methods for initializing weights, setting up cache, and resetting cache. 
     
     Methods:
-    - _init_weights(self, cell): Initializes the weights of the given cell. If the cell is of type nn.Dense, the weight is initialized using a normal distribution with a standard deviation of
-self.config.initializer_range. If the cell has a bias, the bias is initialized to zeros. If the cell is of type nn.Embedding, the weight is initialized using a normal distribution with a standard deviation of
-self.config.initializer_range. If the cell has a padding index, the weight at the padding index is set to 0.
+        _init_weights(self, cell): Initializes the weights of the given cell. If the cell is of type nn.Dense, the weight is initialized using a normal distribution with a standard deviation of
+            self.config.initializer_range. If the cell has a bias, the bias is initialized to zeros. If the cell is of type nn.Embedding, the weight is initialized using a normal distribution with a standard deviation of
+            self.config.initializer_range. If the cell has a padding index, the weight at the padding index is set to 0.
     
-    - _setup_cache(self, cache_cls, max_batch_size, max_cache_len: Optional[int] = None): Sets up the cache for the model. If the attention implementation is 'flash_attention_2' and the cache class is
-StaticCache, a ValueError is raised. For each layer in the model, the cache is set to an instance of the cache class, with the specified maximum batch size, maximum cache length, and data type.
+        _setup_cache(self, cache_cls, max_batch_size, max_cache_len: Optional[int] = None): Sets up the cache for the model. If the attention implementation is 'flash_attention_2' and the cache class is
+            StaticCache, a ValueError is raised. For each layer in the model, the cache is set to an instance of the cache class, with the specified maximum batch size, maximum cache length, and data type.
     
-    - _reset_cache(self): Resets the cache for the model. For each layer in the model, the cache is set to None.
+        _reset_cache(self): Resets the cache for the model. For each layer in the model, the cache is set to None.
     
-    Note: The OlmoPreTrainedModel class assumes the existence of a model attribute, which is expected to have a layers attribute. Additionally, it checks for the existence of a _pre_quantization_dtype
-attribute in the config attribute.
-    
-    For more information on Olmo, refer to the documentation at https://github.com/huggingface/transformers.
+    Note:
+        The OlmoPreTrainedModel class assumes the existence of a model attribute, which is expected to have a layers attribute. Additionally, it checks for the existence of a _pre_quantization_dtype
+        attribute in the config attribute.
+        For more information on Olmo, refer to the documentation at https://github.com/huggingface/transformers.
     """
     config_class = OlmoConfig
     base_model_prefix = "model"
@@ -885,10 +891,10 @@ class OlmoModel(OlmoPreTrainedModel):
         Args:
             self: The instance of the class.
             config (OlmoConfig): An object containing the configuration parameters for the model.
-                - `pad_token_id` (int): The token ID used for padding sequences.
-                - `vocab_size` (int): The size of the vocabulary.
-                - `hidden_size` (int): The hidden size of the model.
-                - `num_hidden_layers` (int): The number of hidden layers in the model.
+                >   - `pad_token_id` (int): The token ID used for padding sequences.
+                >   - `vocab_size` (int): The size of the vocabulary.
+                >   - `hidden_size` (int): The hidden size of the model.
+                >   - `num_hidden_layers` (int): The number of hidden layers in the model.
         
         Returns:
             None
@@ -1154,35 +1160,34 @@ class OlmoForCausalLM(OlmoPreTrainedModel):
     
     The class contains the following methods:
     
-    - `__init__(self, config)`: Initializes the class instance with a given configuration.
-    - `get_input_embeddings(self)`: Returns the input embeddings of the model.
-    - `set_input_embeddings(self, value)`: Sets the input embeddings of the model.
-    - `get_output_embeddings(self)`: Returns the output embeddings of the model.
-    - `set_output_embeddings(self, new_embeddings)`: Sets the output embeddings of the model.
-    - `set_decoder(self, decoder)`: Sets the decoder of the model.
-    - `get_decoder(self)`: Returns the decoder of the model.
-    - `construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict, cache_position)`: Constructs the model
-and returns the output.
-    - `prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, cache_position, **kwargs)`: Prepares the inputs for generation.
+    >   - `__init__(self, config)`: Initializes the class instance with a given configuration.
+    >   - `get_input_embeddings(self)`: Returns the input embeddings of the model.
+    >   - `set_input_embeddings(self, value)`: Sets the input embeddings of the model.
+    >   - `get_output_embeddings(self)`: Returns the output embeddings of the model.
+    >   - `set_output_embeddings(self, new_embeddings)`: Sets the output embeddings of the model.
+    >   - `set_decoder(self, decoder)`: Sets the decoder of the model.
+    >   - `get_decoder(self)`: Returns the decoder of the model.
+    >   - `construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict, cache_position)`: Constructs the model
+            and returns the output.
+    >   - `prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, cache_position, **kwargs)`: Prepares the inputs for generation.
     
     The class also includes a private static method `_reorder_cache(past_key_values, beam_idx)`.
     
     Example usage:
-    
-    
-    from transformers import AutoTokenizer, OlmoForCausalLM
-    
-    model = OlmoForCausalLM.from_pretrained("allenai/OLMo-1B-hf")
-    tokenizer = AutoTokenizer.from_pretrained("allenai/OLMo-1B-hf")
-    
-    prompt = "Hey, are you conscious? Can you talk to me?"
-    inputs = tokenizer(prompt, return_tensors="pt")
-    
-    # Generate
-    generate_ids = model.generate(inputs.input_ids, max_length=30)
-    generated_text = tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-    print(generated_text)
-    
+        ```python
+        from transformers import AutoTokenizer, OlmoForCausalLM
+
+        model = OlmoForCausalLM.from_pretrained("allenai/OLMo-1B-hf")
+        tokenizer = AutoTokenizer.from_pretrained("allenai/OLMo-1B-hf")
+
+        prompt = "Hey, are you conscious? Can you talk to me?"
+        inputs = tokenizer(prompt, return_tensors="pt")
+
+        # Generate
+        generate_ids = model.generate(inputs.input_ids, max_length=30)
+        generated_text = tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        print(generated_text)
+        ```
     """
     _tied_weights_keys = ["lm_head.weight"]
 
@@ -1193,9 +1198,9 @@ and returns the output.
         Args:
             self: The current instance of the class.
             config: An instance of the configuration class for OlmoForCausalLM. It contains various parameters and settings used for model initialization.
-                - Type: config object
-                - Purpose: To customize the behavior of the model.
-                - Restrictions: None
+                >   - Type: config object
+                >   - Purpose: To customize the behavior of the model.
+                >   - Restrictions: None
         
         Returns:
             None
@@ -1264,7 +1269,7 @@ and returns the output.
         Args:
             self (OlmoForCausalLM): The instance of the OlmoForCausalLM class.
             new_embeddings: The new embeddings to be set for the output layer of the model. This can be a tensor or any object that can be assigned to `self.lm_head`. The shape of the embeddings should match
-the expected shape of the output layer.
+            the expected shape of the output layer.
             
         Returns:
             None. This method does not return any value.
@@ -1328,23 +1333,23 @@ the expected shape of the output layer.
                 (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
+            Union[Tuple, CausalLMOutputWithPast]
 
         Example:
+            ```python
+            >>> from transformers import AutoTokenizer, OlmoForCausalLM
 
-        ```python
-        >>> from transformers import AutoTokenizer, OlmoForCausalLM
+            >>> model = OlmoForCausalLM.from_pretrained("allenai/OLMo-1B-hf")
+            >>> tokenizer = AutoTokenizer.from_pretrained("allenai/OLMo-1B-hf")
 
-        >>> model = OlmoForCausalLM.from_pretrained("allenai/OLMo-1B-hf")
-        >>> tokenizer = AutoTokenizer.from_pretrained("allenai/OLMo-1B-hf")
+            >>> prompt = "Hey, are you conscious? Can you talk to me?"
+            >>> inputs = tokenizer(prompt, return_tensors="pt")
 
-        >>> prompt = "Hey, are you conscious? Can you talk to me?"
-        >>> inputs = tokenizer(prompt, return_tensors="pt")
-
-        >>> # Generate
-        >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
-        >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-        'Hey, are you conscious? Can you talk to me?\nI’m not sure if you’re conscious of this, but I’m'
-        ```
+            >>> # Generate
+            >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
+            >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+            'Hey, are you conscious? Can you talk to me?\nI’m not sure if you’re conscious of this, but I’m'
+            ```
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (

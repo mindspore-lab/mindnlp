@@ -557,7 +557,7 @@ class CaptureLogger:
      Returns:
          The captured output is available via `self.out`
 
-     Example:
+     Examples:
 
      ```python
      >>> from transformers import logging
@@ -645,7 +645,7 @@ def LoggingLevel(level):
     This is a context manager to temporarily change transformers modules logging level to the desired value and have it
     restored to the original setting at the end of the scope.
 
-    Example:
+    Examples:
 
     ```python
     with LoggingLevel(logging.INFO):
@@ -1133,7 +1133,7 @@ the tests directory.
         Requirements:
             this helper needs `/usr/bin/time` to be installed (`apt install time`)
 
-        Example:
+        Examples:
 
         ```
         one_liner_str = 'from transformers import AutoModel; AutoModel.from_pretrained("t5-large")'

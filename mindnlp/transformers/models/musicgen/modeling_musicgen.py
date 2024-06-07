@@ -393,13 +393,14 @@ class MusicgenDecoderLayer(nn.Cell):
         
         Args:
             self (object): The instance of the MusicgenDecoderLayer class.
-            config (MusicgenDecoderConfig): An instance of MusicgenDecoderConfig containing configuration parameters for the decoder layer.
-                - hidden_size (int): The size of the hidden layer.
-                - num_attention_heads (int): The number of attention heads.
-                - attention_dropout (float): The dropout rate for attention layers.
-                - dropout (float): The dropout rate.
-                - activation_function (str): The activation function for the layer.
-                - activation_dropout (float): The dropout rate for activation function.
+            config (MusicgenDecoderConfig):
+                An instance of MusicgenDecoderConfig containing configuration parameters for the decoder layer.
+                    >   - hidden_size (int): The size of the hidden layer.
+                    >   - num_attention_heads (int): The number of attention heads.
+                    >   - attention_dropout (float): The dropout rate for attention layers.
+                    >   - dropout (float): The dropout rate.
+                    >   - activation_function (str): The activation function for the layer.
+                    >   - activation_dropout (float): The dropout rate for activation function.
         
         Returns:
             None. This method initializes various attributes and does not return any value.
@@ -595,14 +596,15 @@ class MusicgenDecoder(MusicgenPreTrainedModel):
         
         Args:
             self: The instance of the MusicgenDecoder class.
-            config (MusicgenDecoderConfig): An object containing the configuration parameters for the decoder.
-                - dropout (float): The dropout probability for regularization.
-                - layerdrop (float): The probability of dropping entire layers.
-                - max_position_embeddings (int): The maximum number of positions in the input sequence.
-                - hidden_size (int): The size of the hidden layers.
-                - num_codebooks (int): The number of codebooks used for encoding.
-                - scale_embedding (bool): A flag indicating whether to scale the embedding.
-                - vocab_size (int): The size of the vocabulary.
+            config (MusicgenDecoderConfig):
+                An object containing the configuration parameters for the decoder.
+                >- dropout (float): The dropout probability for regularization.
+                >- layerdrop (float): The probability of dropping entire layers.
+                >- max_position_embeddings (int): The maximum number of positions in the input sequence.
+                >- hidden_size (int): The size of the hidden layers.
+                >- num_codebooks (int): The number of codebooks used for encoding.
+                >- scale_embedding (bool): A flag indicating whether to scale the embedding.
+                >- vocab_size (int): The size of the vocabulary.
         
         Returns:
             None. The method initializes various attributes of the MusicgenDecoder object.
@@ -703,7 +705,7 @@ class MusicgenDecoder(MusicgenPreTrainedModel):
         
         Returns:
             Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]: The return value is either a tuple containing the hidden states, next cache, all hidden states, all self attentions, and all cross
-attentions, or an instance of BaseModelOutputWithPastAndCrossAttentions. 
+            attentions, or an instance of BaseModelOutputWithPastAndCrossAttentions.
         
         Raises:
             ValueError: If both `input_ids` and `inputs_embeds` are specified.
@@ -843,27 +845,6 @@ class MusicgenModel(MusicgenPreTrainedModel):
 
     """
     This class represents a Musicgen model, a subclass of MusicgenPreTrainedModel. It provides functionality for generating music sequences based on given input.
-    
-    The class includes the following methods:
-    
-    __init__(self, config: MusicgenDecoderConfig):
-        Initializes a MusicgenModel instance with the provided configuration object.
-        
-    get_input_embeddings(self):
-        Retrieves the input embeddings used by the model's decoder.
-        
-    set_input_embeddings(self, value):
-        Sets the input embeddings of the model's decoder to the provided value.
-        
-    get_decoder(self):
-        Retrieves the decoder component of the model.
-        
-    construct(self, input_ids: mindspore.Tensor = None, attention_mask: Optional[mindspore.Tensor] = None, encoder_hidden_states: Optional[mindspore.Tensor] = None, encoder_attention_mask:
-Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, cross_attn_head_mask: Optional[mindspore.Tensor] = None, past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
-inputs_embeds: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) ->
-Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]:
-        Constructs the Musicgen model with the provided inputs and returns the model outputs.
-        The method allows customization of various parameters such as attention masks, head masks, and caching.
         
     Please note that this class inherits from MusicgenPreTrainedModel and extends its functionality.
     
@@ -884,7 +865,7 @@ Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]:
             None.
         
         This method initializes the MusicgenModel by calling the superclass's __init__ method with the provided config parameter. It then creates a new instance of the MusicgenDecoder class using the same
-config object and assigns it to the 'decoder' attribute of the MusicgenModel instance. Finally, it calls the 'post_init' method to perform any additional initialization tasks.
+        config object and assigns it to the 'decoder' attribute of the MusicgenModel instance. Finally, it calls the 'post_init' method to perform any additional initialization tasks.
         """
         super().__init__(config)
         self.decoder = MusicgenDecoder(config)
@@ -1019,27 +1000,10 @@ class MusicgenForCausalLM(MusicgenPreTrainedModel):
     """
     The MusicgenForCausalLM class represents a model for causal language modeling in the context of music generation. 
     It is designed to handle decoding tasks using a MusicgenDecoderConfig configuration. The class includes methods for setting and getting input/output embeddings, setting the decoder, constructing the model
-for generation, preparing inputs for generation, building delay pattern masks, applying delay pattern masks, and generating sequences of token ids.
+    for generation, preparing inputs for generation, building delay pattern masks, applying delay pattern masks, and generating sequences of token ids.
     
     Inherits from:
         MusicgenPreTrainedModel
-    
-    Methods:
-        - __init__(self, config: MusicgenDecoderConfig): Initializes the MusicgenForCausalLM model with the provided configuration.
-        - get_input_embeddings(self): Retrieves the input embeddings from the model.
-        - set_input_embeddings(self, value): Sets the input embeddings for the model.
-        - get_output_embeddings(self): Retrieves the output embeddings from the model.
-        - set_output_embeddings(self, new_embeddings): Sets the output embeddings for the model.
-        - set_decoder(self, decoder): Sets the decoder for the model.
-        - get_decoder(self): Retrieves the decoder from the model.
-        - construct(self, input_ids, attention_mask, encoder_hidden_states, encoder_attention_mask, head_mask, cross_attn_head_mask, past_key_values, inputs_embeds, labels, use_cache, output_attentions,
-output_hidden_states, return_dict): Constructs the model for generation and performs the language modeling task.
-        - prepare_inputs_for_generation(self, input_ids, attention_mask, encoder_hidden_states, encoder_attention_mask, head_mask, cross_attn_head_mask, past_key_values, use_cache, delay_pattern_mask,
-guidance_scale, **kwargs): Prepares inputs for the generation process, including applying delay pattern masks.
-        - build_delay_pattern_mask(self, input_ids, pad_token_id, max_length): Builds a delayed pattern mask to the input_ids for generation.
-        - apply_delay_pattern_mask(self, input_ids, decoder_pad_token_mask): Applies a delay pattern mask to the decoder input ids.
-        - generate(self, inputs, generation_config, logits_processor, stopping_criteria, synced_gpus, streamer, **kwargs): Generates sequences of token ids for language modeling tasks using the specified
-generation configuration.
     
     The MusicgenForCausalLM class provides a comprehensive set of methods for handling causal language modeling tasks in the domain of music generation.
     """
@@ -1084,7 +1048,7 @@ generation configuration.
             None.
         
         This method retrieves the input embeddings used by the model's decoder. The input embeddings are obtained from the embed_tokens attribute of the model's decoder. The embed_tokens attribute represents
-the token embeddings used to transform input tokens into dense vectors.
+        the token embeddings used to transform input tokens into dense vectors.
         
         Note that the input embeddings are not modified or processed in any way by this method. They are simply retrieved and returned as they are.
         """
@@ -1105,7 +1069,7 @@ the token embeddings used to transform input tokens into dense vectors.
             None.
         
         This method sets the input embeddings of the decoder in the MusicgenForCausalLM model to the provided value. The input embeddings are responsible for converting input tokens into continuous
-representations that can be processed by the model.
+        representations that can be processed by the model.
         """
         self.model.decoder.embed_tokens = value
 
@@ -1253,24 +1217,24 @@ representations that can be processed by the model.
         This method prepares inputs for generation in the MusicgenForCausalLM class.
         
         Args:
-        - self: The instance of the class.
-        - input_ids (torch.Tensor): The input tensor containing token ids.
-        - attention_mask (torch.Tensor, optional): The attention mask tensor. Defaults to None.
-        - encoder_hidden_states (torch.Tensor, optional): The hidden states from the encoder. Defaults to None.
-        - encoder_attention_mask (torch.Tensor, optional): The attention mask for the encoder. Defaults to None.
-        - head_mask (torch.Tensor, optional): The mask for specific attention heads. Defaults to None.
-        - cross_attn_head_mask (torch.Tensor, optional): The mask for cross-attention heads. Defaults to None.
-        - past_key_values (torch.Tensor, optional): The cached key values from previous computations. Defaults to None.
-        - use_cache (bool): Flag indicating whether to use cache. Defaults to True.
-        - delay_pattern_mask (torch.Tensor, optional): The mask for introducing delays in the input. Defaults to None.
-        - guidance_scale (int, optional): The scale factor for guidance. Defaults to None.
+            self: The instance of the class.
+            input_ids (torch.Tensor): The input tensor containing token ids.
+            attention_mask (torch.Tensor, optional): The attention mask tensor. Defaults to None.
+            encoder_hidden_states (torch.Tensor, optional): The hidden states from the encoder. Defaults to None.
+            encoder_attention_mask (torch.Tensor, optional): The attention mask for the encoder. Defaults to None.
+            head_mask (torch.Tensor, optional): The mask for specific attention heads. Defaults to None.
+            cross_attn_head_mask (torch.Tensor, optional): The mask for cross-attention heads. Defaults to None.
+            past_key_values (torch.Tensor, optional): The cached key values from previous computations. Defaults to None.
+            use_cache (bool): Flag indicating whether to use cache. Defaults to True.
+            delay_pattern_mask (torch.Tensor, optional): The mask for introducing delays in the input. Defaults to None.
+            guidance_scale (int, optional): The scale factor for guidance. Defaults to None.
         
         Returns:
-        - dict: A dictionary containing the prepared input tensors and masks.
+            dict: A dictionary containing the prepared input tensors and masks.
         
         Raises:
-        - ValueError: If guidance_scale is provided but is not a positive integer.
-        - IndexError: If past_key_values are provided but not in the expected format.
+            - ValueError: If guidance_scale is provided but is not a positive integer.
+            - IndexError: If past_key_values are provided but not in the expected format.
         """
         if delay_pattern_mask is None:
             input_ids, delay_pattern_mask = self.build_delay_pattern_mask(
@@ -1308,17 +1272,17 @@ representations that can be processed by the model.
         one, giving a delayed pattern mask at the start of sequence and end of sequence. Take the example where there
         are 4 codebooks and a max sequence length of 8, we have the delayed pattern mask of shape `(codebooks,
         seq_len)`:
-        - [P, -1, -1, -1, -1, P, P, P]
-        - [P, P, -1, -1, -1, -1, P, P]
-        - [P, P, P, -1, -1, -1, -1, P]
-        - [P, P, P, P, -1, -1, -1, -1]
+        >- [P, -1, -1, -1, -1, P, P, P]
+        >- [P, P, -1, -1, -1, -1, P, P]
+        >- [P, P, P, -1, -1, -1, -1, P]
+        >- [P, P, P, P, -1, -1, -1, -1]
         where P is the special padding token id and -1 indicates that the token is valid for prediction. If we include
         a prompt (decoder input ids), the -1 positions indicate where new tokens should be predicted. Otherwise, the
         mask is set to the value in the prompt:
-        - [P, a, b, -1, -1, P, P, P]
-        - [P, P, c, d, -1, -1, P, P]
-        - [P, P, P, e, f, -1, -1, P]
-        - [P, P, P, P, g, h, -1, -1]
+        >- [P, a, b, -1, -1, P, P, P]
+        >- [P, P, c, d, -1, -1, P, P]
+        >- [P, P, P, e, f, -1, -1, P]
+        >- [P, P, P, P, g, h, -1, -1]
         where a-h indicate the input prompt (decoder input ids) that are offset by 1. Now, we only override the -1
         tokens in our prediction.
         """
@@ -1449,14 +1413,14 @@ representations that can be processed by the model.
                 If the model is *not* an encoder-decoder model (`model.config.is_encoder_decoder=False`), the possible
                 [`~utils.ModelOutput`] types are:
 
-                    - [`~generation.GenerateDecoderOnlyOutput`],
-                    - [`~generation.GenerateBeamDecoderOnlyOutput`]
+                    >- [`~generation.GenerateDecoderOnlyOutput`],
+                    >- [`~generation.GenerateBeamDecoderOnlyOutput`]
 
                 If the model is an encoder-decoder model (`model.config.is_encoder_decoder=True`), the possible
                 [`~utils.ModelOutput`] types are:
 
-                    - [`~generation.GenerateEncoderDecoderOutput`],
-                    - [`~generation.GenerateBeamEncoderDecoderOutput`]
+                    >- [`~generation.GenerateEncoderDecoderOutput`],
+                    >- [`~generation.GenerateBeamEncoderDecoderOutput`]
         """
         # 1. Handle `generation_config` and kwargs that might update it, and validate the resulting objects
         if generation_config is None:
@@ -1659,13 +1623,13 @@ class MusicgenForConditionalGeneration(PreTrainedModel):
     Class representing a Music Generation model for Conditional Generation.
     
     This class provides methods for generating sequences of token ids for models with a language modeling head. It supports both encoder-decoder and decoder-only models for conditional generation tasks. The
-generation process can be customized using various generation configurations, logits processors, stopping criteria, and other parameters.
+    generation process can be customized using various generation configurations, logits processors, stopping criteria, and other parameters.
     
     The class includes methods for preparing inputs for generation, tying weights between encoder and decoder, getting audio and text encoders, getting the encoder, decoder, input embeddings, and output
-embeddings. It also provides methods for setting and getting output embeddings, loading models from pretrained checkpoints, and instantiating models from pretrained sub-models.
+    embeddings. It also provides methods for setting and getting output embeddings, loading models from pretrained checkpoints, and instantiating models from pretrained sub-models.
     
     Additionally, it includes methods for constructing the model, tying encoder-decoder weights, and resizing token embeddings. The class supports generating audio samples unconditionally and provides methods
-for preparing inputs for generation, generating audio samples using greedy search or sampling, and handling guidance scales.
+    for preparing inputs for generation, generating audio samples using greedy search or sampling, and handling guidance scales.
     
     For more detailed usage examples and information on the class methods and functionalities, please refer to the class documentation and the Hugging Face Transformers documentation.
     """
@@ -1870,9 +1834,10 @@ for preparing inputs for generation, generating audio samples using greedy searc
         
         Note:
             This method is a getter method used to retrieve the decoder model that is associated with the current instance of the MusicgenForConditionalGeneration class. The decoder model is responsible for
-decoding encoded data into a readable format.
+            decoding encoded data into a readable format.
         
         Example:
+            ```python
             # Create an instance of the MusicgenForConditionalGeneration class
             music_generator = MusicgenForConditionalGeneration()
             
@@ -1884,6 +1849,7 @@ decoding encoded data into a readable format.
                 decoded_data = decoder_model.decode(encoded_data)
             else:
                 print("Decoder model is not available.")
+            ```
         """
         return self.decoder
 
@@ -1908,14 +1874,14 @@ decoding encoded data into a readable format.
         
         Args:
             self: An instance of the MusicgenForConditionalGeneration class.
-                Type: MusicgenForConditionalGeneration
-                Purpose: Represents the current instance of the class.
-                Restrictions: Must be a valid instance of the MusicgenForConditionalGeneration class.
+                >- Type: MusicgenForConditionalGeneration
+                >- Purpose: Represents the current instance of the class.
+                >- Restrictions: Must be a valid instance of the MusicgenForConditionalGeneration class.
         
         Returns:
-            None.
-            Type: None
-            Purpose: The output embeddings from the decoder.
+            None:
+                >- Type: None
+                >- Purpose: The output embeddings from the decoder.
             
         Raises:
             None.
@@ -1942,12 +1908,11 @@ decoding encoded data into a readable format.
     def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
         r"""
         Example:
+            ```python
+            >>> from transformers import MusicgenForConditionalGeneration
 
-        ```python
-        >>> from transformers import MusicgenForConditionalGeneration
-
-        >>> model = MusicgenForConditionalGeneration.from_pretrained("facebook/musicgen-small")
-        ```"""
+            >>> model = MusicgenForConditionalGeneration.from_pretrained("facebook/musicgen-small")
+            ```"""
         # At the moment fast initialization is not supported for composite models
         if kwargs.get("_fast_init", False):
             logger.warning(
@@ -1970,65 +1935,58 @@ decoding encoded data into a readable format.
         r"""
         Instantiate a text encoder, an audio encoder, and a MusicGen decoder from one, two or three base classes of the
         library from pretrained model checkpoints.
-
-
         The model is set in evaluation mode by default using `model.eval()` (Dropout modules are deactivated). To train
         the model, you need to first set it back in training mode with `model.train()`.
 
         Params:
             text_encoder_pretrained_model_name_or_path (`str`, *optional*):
-                Information necessary to initiate the text encoder. Can be either:
-
-                    - A string, the *model id* of a pretrained model hosted inside a model repo on hf-mirror.com.
-                    - A path to a *directory* containing model weights saved using
-                      [`~PreTrainedModel.save_pretrained`], e.g., `./my_model_directory/`.
+                >- Information necessary to initiate the text encoder. Can be either:
+                >   - A string, the *model id* of a pretrained model hosted inside a model repo on hf-mirror.com.
+                >   - A path to a *directory* containing model weights saved using
+                        [`~PreTrainedModel.save_pretrained`], e.g., `./my_model_directory/`.
 
             audio_encoder_pretrained_model_name_or_path (`str`, *optional*):
-                Information necessary to initiate the audio encoder. Can be either:
-
-                    - A string, the *model id* of a pretrained model hosted inside a model repo on hf-mirror.com.
-                    - A path to a *directory* containing model weights saved using
-                      [`~PreTrainedModel.save_pretrained`], e.g., `./my_model_directory/`.
+                >- Information necessary to initiate the audio encoder. Can be either:
+                >   - A string, the *model id* of a pretrained model hosted inside a model repo on hf-mirror.com.
+                >   - A path to a *directory* containing model weights saved using
+                  [`~PreTrainedModel.save_pretrained`], e.g., `./my_model_directory/`.
 
             decoder_pretrained_model_name_or_path (`str`, *optional*, defaults to `None`):
-                Information necessary to initiate the decoder. Can be either:
-
-                    - A string, the *model id* of a pretrained model hosted inside a model repo on hf-mirror.com.
-                    - A path to a *directory* containing model weights saved using
-                      [`~PreTrainedModel.save_pretrained`], e.g., `./my_model_directory/`.
+                >- Information necessary to initiate the decoder. Can be either:
+                >   - A string, the *model id* of a pretrained model hosted inside a model repo on hf-mirror.com.
+                >   - A path to a *directory* containing model weights saved using
+                        [`~PreTrainedModel.save_pretrained`], e.g., `./my_model_directory/`.
 
             model_args (remaining positional arguments, *optional*):
                 All remaining positional arguments will be passed to the underlying model's `__init__` method.
 
             kwargs (remaining dictionary of keyword arguments, *optional*):
-                Can be used to update the configuration object (after it being loaded) and initiate the model (e.g.,
-                `output_attentions=True`).
-
-                - To update the text encoder configuration, use the prefix *text_encoder_* for each configuration
-                  parameter.
-                - To update the audio encoder configuration, use the prefix *audio_encoder_* for each configuration
-                  parameter.
-                - To update the decoder configuration, use the prefix *decoder_* for each configuration parameter.
-                - To update the parent model configuration, do not use a prefix for each configuration parameter.
+                >- Can be used to update the configuration object (after it being loaded) and initiate the model (e.g.,
+                    `output_attentions=True`).
+                >   - To update the text encoder configuration, use the prefix *text_encoder_* for each configuration
+                        parameter.
+                >   - To update the audio encoder configuration, use the prefix *audio_encoder_* for each configuration
+                        parameter.
+                >   - To update the decoder configuration, use the prefix *decoder_* for each configuration parameter.
+                >   - To update the parent model configuration, do not use a prefix for each configuration parameter.
 
                 Behaves differently depending on whether a `config` is provided or automatically loaded.
 
         Example:
+            ```python
+            >>> from transformers import MusicgenForConditionalGeneration
 
-        ```python
-        >>> from transformers import MusicgenForConditionalGeneration
-
-        >>> # initialize a musicgen model from a t5 text encoder, encodec audio encoder, and musicgen decoder
-        >>> model = MusicgenForConditionalGeneration.from_sub_models_pretrained(
-        ...     text_encoder_pretrained_model_name_or_path="google-t5/t5-base",
-        ...     audio_encoder_pretrained_model_name_or_path="facebook/encodec_24khz",
-        ...     decoder_pretrained_model_name_or_path="facebook/musicgen-small",
-        ... )
-        >>> # saving model after fine-tuning
-        >>> model.save_pretrained("./musicgen-ft")
-        >>> # load fine-tuned model
-        >>> model = MusicgenForConditionalGeneration.from_pretrained("./musicgen-ft")
-        ```"""
+            >>> # initialize a musicgen model from a t5 text encoder, encodec audio encoder, and musicgen decoder
+            >>> model = MusicgenForConditionalGeneration.from_sub_models_pretrained(
+            ...     text_encoder_pretrained_model_name_or_path="google-t5/t5-base",
+            ...     audio_encoder_pretrained_model_name_or_path="facebook/encodec_24khz",
+            ...     decoder_pretrained_model_name_or_path="facebook/musicgen-small",
+            ... )
+            >>> # saving model after fine-tuning
+            >>> model.save_pretrained("./musicgen-ft")
+            >>> # load fine-tuned model
+            >>> model = MusicgenForConditionalGeneration.from_pretrained("./musicgen-ft")
+            ```"""
         kwargs_text_encoder = {
             argument[len("text_encoder_") :]: value
             for argument, value in kwargs.items()
@@ -2175,31 +2133,32 @@ decoding encoded data into a readable format.
     ) -> Union[Tuple, Seq2SeqLMOutput]:
         r"""
         Returns:
+            `Union[Tuple, Seq2SeqLMOutput]`
 
-        Examples:
-        ```python
-        >>> from transformers import AutoProcessor, MusicgenForConditionalGeneration
-        >>> import torch
+        Example:
+            ```python
+            >>> from transformers import AutoProcessor, MusicgenForConditionalGeneration
+            >>> import torch
 
-        >>> processor = AutoProcessor.from_pretrained("facebook/musicgen-small")
-        >>> model = MusicgenForConditionalGeneration.from_pretrained("facebook/musicgen-small")
+            >>> processor = AutoProcessor.from_pretrained("facebook/musicgen-small")
+            >>> model = MusicgenForConditionalGeneration.from_pretrained("facebook/musicgen-small")
 
-        >>> inputs = processor(
-        ...     text=["80s pop track with bassy drums and synth", "90s rock song with loud guitars and heavy drums"],
-        ...     padding=True,
-        ...     return_tensors="pt",
-        ... )
+            >>> inputs = processor(
+            ...     text=["80s pop track with bassy drums and synth", "90s rock song with loud guitars and heavy drums"],
+            ...     padding=True,
+            ...     return_tensors="pt",
+            ... )
 
-        >>> pad_token_id = model.generation_config.pad_token_id
-        >>> decoder_input_ids = (
-        ...     torch.ones((inputs.input_ids.shape[0] * model.decoder.num_codebooks, 1), dtype=torch.long)
-        ...     * pad_token_id
-        ... )
+            >>> pad_token_id = model.generation_config.pad_token_id
+            >>> decoder_input_ids = (
+            ...     torch.ones((inputs.input_ids.shape[0] * model.decoder.num_codebooks, 1), dtype=torch.long)
+            ...     * pad_token_id
+            ... )
 
-        >>> logits = model(**inputs, decoder_input_ids=decoder_input_ids).logits
-        >>> logits.shape  # (bsz * num_codebooks, tgt_len, vocab_size)
-        torch.Size([8, 1, 2048])
-        ```"""
+            >>> logits = model(**inputs, decoder_input_ids=decoder_input_ids).logits
+            >>> logits.shape  # (bsz * num_codebooks, tgt_len, vocab_size)
+            torch.Size([8, 1, 2048])
+            ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         kwargs_text_encoder = {
@@ -2342,16 +2301,16 @@ decoding encoded data into a readable format.
         
         Returns:
             dict: A dictionary containing the prepared input tensors for generation. The keys are as follows:
-                - 'input_ids': None (no input ids are returned)
-                - 'encoder_outputs': The encoder outputs tensor
-                - 'past_key_values': The list of past key values for the decoder
-                - 'decoder_input_ids': The prepared decoder input ids tensor
-                - 'attention_mask': The attention mask tensor
-                - 'decoder_attention_mask': The decoder attention mask tensor
-                - 'head_mask': The head mask tensor
-                - 'decoder_head_mask': The decoder head mask tensor
-                - 'cross_attn_head_mask': The cross-attention head mask tensor
-                - 'use_cache': The value indicating whether to use cache
+                >- 'input_ids': None (no input ids are returned)
+                >- 'encoder_outputs': The encoder outputs tensor
+                >- 'past_key_values': The list of past key values for the decoder
+                >- 'decoder_input_ids': The prepared decoder input ids tensor
+                >- 'attention_mask': The attention mask tensor
+                >- 'decoder_attention_mask': The decoder attention mask tensor
+                >- 'head_mask': The head mask tensor
+                >- 'decoder_head_mask': The decoder head mask tensor
+                >- 'cross_attn_head_mask': The cross-attention head mask tensor
+                >- 'use_cache': The value indicating whether to use cache
         
         Raises:
             None.
@@ -2632,7 +2591,7 @@ decoding encoded data into a readable format.
         
         Raises:
             NotImplementedError: This exception is raised when attempting to resize the embedding layers directly via the EncoderDecoderModel. It is recommended to use the respective methods of the wrapped
-objects (model.encoder.resize_token_embeddings(...) or model.decoder.resize_token_embeddings(...)).
+            objects (model.encoder.resize_token_embeddings(...) or model.decoder.resize_token_embeddings(...)).
         """
         raise NotImplementedError(
             "Resizing the embedding layers via the EncoderDecoderModel directly is not supported. Please use the"
@@ -2731,14 +2690,14 @@ objects (model.encoder.resize_token_embeddings(...) or model.decoder.resize_toke
                 If the model is *not* an encoder-decoder model (`model.config.is_encoder_decoder=False`), the possible
                 [`~utils.ModelOutput`] types are:
 
-                    - [`~generation.GenerateDecoderOnlyOutput`],
-                    - [`~generation.GenerateBeamDecoderOnlyOutput`]
+                    >- [`~generation.GenerateDecoderOnlyOutput`],
+                    >- [`~generation.GenerateBeamDecoderOnlyOutput`]
 
                 If the model is an encoder-decoder model (`model.config.is_encoder_decoder=True`), the possible
                 [`~utils.ModelOutput`] types are:
 
-                    - [`~generation.GenerateEncoderDecoderOutput`],
-                    - [`~generation.GenerateBeamEncoderDecoderOutput`]
+                    >- [`~generation.GenerateEncoderDecoderOutput`],
+                    >- [`~generation.GenerateBeamEncoderDecoderOutput`]
         """
         # 1. Handle `generation_config` and kwargs that might update it, and validate the resulting objects
         if generation_config is None:
@@ -2997,15 +2956,15 @@ objects (model.encoder.resize_token_embeddings(...) or model.decoder.resize_toke
                 longer inference (since more audio tokens need to be generated per sample).
 
         Example:
-        ```python
-        >>> from transformers import MusicgenForConditionalGeneration
+            ```python
+            >>> from transformers import MusicgenForConditionalGeneration
 
-        >>> model = MusicgenForConditionalGeneration.from_pretrained("facebook/musicgen-small")
+            >>> model = MusicgenForConditionalGeneration.from_pretrained("facebook/musicgen-small")
 
-        >>> # get the unconditional (or 'null') inputs for the model
-        >>> unconditional_inputs = model.get_unconditional_inputs(num_samples=1)
-        >>> audio_samples = model.generate(**unconditional_inputs, max_new_tokens=256)
-        ```"""
+            >>> # get the unconditional (or 'null') inputs for the model
+            >>> unconditional_inputs = model.get_unconditional_inputs(num_samples=1)
+            >>> audio_samples = model.generate(**unconditional_inputs, max_new_tokens=256)
+            ```"""
         last_hidden_state = ops.zeros(
             (num_samples, 1, self.config.text_encoder.hidden_size), dtype=self.dtype
         )

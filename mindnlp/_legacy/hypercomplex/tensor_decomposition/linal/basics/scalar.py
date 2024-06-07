@@ -257,7 +257,7 @@ if the scalar is zero, and getting the real value as a NumPy float64.
         Raises:
             None.
         
-        Example:
+        Examples:
             >>> scalar = Scalar()
             >>> scalar.value = 5
             >>> scalar.as_array()

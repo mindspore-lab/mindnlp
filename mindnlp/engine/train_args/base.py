@@ -1425,7 +1425,7 @@ class TrainingArguments:
             recompute (`bool`, *optional*, defaults to `False`):
                 If True, use gradient checkpointing to save memory at the expense of slower backward pass.
 
-        Example:
+        Examples:
 
         ```py
         >>> from transformers import TrainingArguments
@@ -1485,7 +1485,7 @@ class TrainingArguments:
             jit_mode (`bool`, *optional*):
                 Whether or not to use MindSpore jit trace for inference.
 
-        Example:
+        Examples:
 
         ```py
         >>> from transformers import TrainingArguments
@@ -1531,7 +1531,7 @@ class TrainingArguments:
             jit_mode (`bool`, *optional*):
                 Whether or not to use MindSpore jit trace for inference.
 
-        Example:
+        Examples:
 
         ```py
         >>> from transformers import TrainingArguments
@@ -1578,7 +1578,7 @@ class TrainingArguments:
                 This should not be activated when the different nodes use the same storage as the files will be saved
                 with the same names for each node.
 
-        Example:
+        Examples:
 
         ```py
         >>> from transformers import TrainingArguments
@@ -1649,7 +1649,7 @@ class TrainingArguments:
             replica_level (`str`, *optional*, defaults to `"passive"`):
                 Logger log level to use on replicas. Same choices as `log_level`
 
-        Example:
+        Examples:
 
         ```py
         >>> from transformers import TrainingArguments
@@ -1702,7 +1702,7 @@ class TrainingArguments:
                 Optional arguments that are supplied to AnyPrecisionAdamW (only useful when
                 `optim="adamw_anyprecision"`).
 
-        Example:
+        Examples:
 
         ```py
         >>> from transformers import TrainingArguments
@@ -1749,7 +1749,7 @@ class TrainingArguments:
                 Number of steps used for a linear warmup from 0 to `learning_rate`. Overrides any effect of
                 `warmup_ratio`.
 
-        Example:
+        Examples:
 
         ```py
         >>> from transformers import TrainingArguments
@@ -1812,7 +1812,7 @@ class TrainingArguments:
                 same seed as `self.seed`. This can be used to ensure reproducibility of data sampling, independent of
                 the model seed.
 
-        Example:
+        Examples:
 
         ```py
         >>> from transformers import TrainingArguments

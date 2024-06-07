@@ -110,14 +110,14 @@ class BertEmbeddings(nn.Cell):
         Args:
             self: The instance of the BertEmbeddings class.
             config: An object containing configuration parameters for the embeddings. It should have the following attributes:
-                - vocab_size (int): The size of the vocabulary.
-                - hidden_size (int): The size of the hidden layer.
-                - pad_token_id (int): The index of the padding token.
-                - max_position_embeddings (int): The maximum number of positional embeddings.
-                - type_vocab_size (int): The size of the token type vocabulary.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
-                - hidden_dropout_prob (float): The dropout probability for the hidden layer.
-                - position_embedding_type (str, optional): The type of positional embedding, defaults to 'absolute'.
+                >   - vocab_size (int): The size of the vocabulary.
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - pad_token_id (int): The index of the padding token.
+                >   - max_position_embeddings (int): The maximum number of positional embeddings.
+                >   - type_vocab_size (int): The size of the token type vocabulary.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - hidden_dropout_prob (float): The dropout probability for the hidden layer.
+                >   - position_embedding_type (str, optional): The type of positional embedding, defaults to 'absolute'.
         
         Returns:
             None: This method does not return any value.
@@ -271,16 +271,16 @@ class BertSelfAttention(nn.Cell):
             hidden_states (mindspore.Tensor): The input hidden states of the model. It has shape (batch_size, sequence_length, hidden_size).
             attention_mask (Optional[mindspore.Tensor]): The attention mask tensor to mask certain positions in the input. It has shape (batch_size, sequence_length) or (batch_size, 1, 1, sequence_length).
             head_mask (Optional[mindspore.Tensor]): The head mask tensor to mask certain heads of the attention mechanism. It has shape (num_attention_heads,) or (batch_size, num_attention_heads) or
-(batch_size, num_attention_heads, sequence_length, sequence_length).
+                (batch_size, num_attention_heads, sequence_length, sequence_length).
             encoder_hidden_states (Optional[mindspore.Tensor]): The hidden states of the encoder. It has shape (batch_size, encoder_sequence_length, hidden_size).
             encoder_attention_mask (Optional[mindspore.Tensor]): The attention mask tensor for the encoder. It has shape (batch_size, 1, 1, encoder_sequence_length).
             past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): The cached key and value tensors from previous steps. It is a tuple containing two tensors of shape (batch_size, num_attention_heads,
-sequence_length, head_size).
+                sequence_length, head_size).
             output_attentions (Optional[bool]): Whether to output attention probabilities.
         
         Returns:
             Tuple[mindspore.Tensor]: A tuple containing the computed context layer and the attention probabilities. The context layer has shape (batch_size, sequence_length, hidden_size) and the attention
-probabilities have shape (batch_size, num_attention_heads, sequence_length, sequence_length).
+                probabilities have shape (batch_size, num_attention_heads, sequence_length, sequence_length).
         
         Raises:
             None
@@ -383,9 +383,9 @@ class BertSelfOutput(nn.Cell):
         Args:
             self: The instance of the class.
             config: An object that holds configuration parameters for the self-attention mechanism.
-                Type: object
-                Purpose: Specifies the configuration settings for the self-attention mechanism.
-                Restrictions: Must be a valid configuration object.
+                >   - Type: object
+                >   - Purpose: Specifies the configuration settings for the self-attention mechanism.
+                >   - Restrictions: Must be a valid configuration object.
         
         Returns:
             None. This method does not return any value.
@@ -405,19 +405,19 @@ class BertSelfOutput(nn.Cell):
         
         Args:
             self: The instance of the class.
-                Type: BertSelfOutput.
-                Purpose: Represents the current instance of the class.
-                Restrictions: None.
+                >   - Type: BertSelfOutput.
+                >   - Purpose: Represents the current instance of the class.
+                >   - Restrictions: None.
         
             hidden_states: The hidden states obtained from the previous layer.
-                Type: Tensor.
-                Purpose: Represents the input hidden states to be processed.
-                Restrictions: Should be a valid Tensor object.
+                >   - Type: Tensor.
+                >   - Purpose: Represents the input hidden states to be processed.
+                >   - Restrictions: Should be a valid Tensor object.
         
             input_tensor: The input tensor that needs to be added to the processed hidden states.
-                Type: Tensor.
-                Purpose: Represents the additional input tensor to be combined with the processed hidden states.
-                Restrictions: Should be a valid Tensor object.
+                >   - Type: Tensor.
+                >   - Purpose: Represents the additional input tensor to be combined with the processed hidden states.
+                >   - Restrictions: Should be a valid Tensor object.
         
         Returns:
             None: This method does not return any value but directly modifies the hidden states.
@@ -491,14 +491,14 @@ class BertAttention(nn.Cell):
             self (BertAttention): The instance of the BertAttention class.
             hidden_states (mindspore.Tensor): The input tensor containing the hidden states of the model. The shape should be [batch_size, sequence_length, hidden_size].
             attention_mask (Optional[mindspore.Tensor]): An optional tensor containing the attention mask for the input. If provided, the shape should be [batch_size, 1, sequence_length, sequence_length] and
-the values should be 0 or 1. Default is None.
+                the values should be 0 or 1. Default is None.
             head_mask (Optional[mindspore.Tensor]): An optional tensor containing the head mask for the input. If provided, the shape should be [num_heads] and the values should be 0 or 1. Default is None.
             encoder_hidden_states (Optional[mindspore.Tensor]): An optional tensor containing the hidden states of the encoder. If provided, the shape should be [batch_size, sequence_length, hidden_size].
-Default is None.
+                Default is None.
             encoder_attention_mask (Optional[mindspore.Tensor]): An optional tensor containing the attention mask for the encoder input. If provided, the shape should be [batch_size, 1, sequence_length,
-sequence_length] and the values should be 0 or 1. Default is None.
+                sequence_length] and the values should be 0 or 1. Default is None.
             past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): An optional tuple containing the past key and value tensors. If provided, the shape should be [(batch_size, num_heads, sequence_length,
-head_size), (batch_size, num_heads, sequence_length, head_size)]. Default is None.
+                head_size), (batch_size, num_heads, sequence_length, head_size)]. Default is None.
             output_attentions (Optional[bool]): An optional boolean value indicating whether to output attentions. Default is False.
         
         Returns:
@@ -576,12 +576,12 @@ class BertOutput(nn.Cell):
         
         Args:
             self: The object itself.
-            config: An instance of a configuration class containing various hyperparameters and settings. 
-                    It is expected to have the following attributes:
-                    - intermediate_size: An integer representing the size of the intermediate layer.
-                    - hidden_size: An integer representing the size of the hidden layer.
-                    - layer_norm_eps: A floating-point number representing the epsilon value for layer normalization.
-                    - hidden_dropout_prob: A floating-point number representing the dropout probability for the hidden layer.
+            config:
+                >- An instance of a configuration class containing various hyperparameters and settings. It is expected to have the following attributes:
+                >   - intermediate_size: An integer representing the size of the intermediate layer.
+                >   - hidden_size: An integer representing the size of the hidden layer.
+                >   - layer_norm_eps: A floating-point number representing the epsilon value for layer normalization.
+                >   - hidden_dropout_prob: A floating-point number representing the dropout probability for the hidden layer.
         
         Returns:
             None.
@@ -629,11 +629,12 @@ class BertLayer(nn.Cell):
         
         Args:
             self (BertLayer): The instance of the BertLayer class.
-            config (object): A configuration object containing various settings for the BertLayer.
-                - chunk_size_feed_forward (int): The chunk size used for feed-forward operations.
-                - is_decoder (bool): Indicates whether the model is designed as a decoder.
-                - add_cross_attention (bool): Specifies if cross attention is to be added.
-                - position_embedding_type (str): The type of position embedding to be used if cross attention is added.
+            config (object):
+                >- A configuration object containing various settings for the BertLayer.
+                >   - chunk_size_feed_forward (int): The chunk size used for feed-forward operations.
+                >   - is_decoder (bool): Indicates whether the model is designed as a decoder.
+                >   - add_cross_attention (bool): Specifies if cross attention is to be added.
+                >   - position_embedding_type (str): The type of position embedding to be used if cross attention is added.
                 
         Returns:
             None. This method does not return any value.
@@ -757,10 +758,11 @@ class BertEncoder(nn.Cell):
         
         Args:
             self (object): The instance of the BertEncoder class.
-            config (object): The configuration object containing settings for the BertEncoder.
-                This parameter is required to initialize the BertEncoder object.
-                It should be an instance of the configuration class containing the necessary settings.
-                Example: config = BertConfig(num_hidden_layers=12, ...)
+            config (object):
+                >- The configuration object containing settings for the BertEncoder.
+                    This parameter is required to initialize the BertEncoder object.
+                    It should be an instance of the configuration class containing the necessary settings.
+                >   - Example: config = BertConfig(num_hidden_layers=12, ...)
         
         Returns:
             None. This method does not return any value.
@@ -789,23 +791,23 @@ class BertEncoder(nn.Cell):
         This method 'construct' is a part of the class 'BertEncoder' and is responsible for processing hidden states through the encoder layers.
         
         Args:
-        - self: The instance of the class.
-        - hidden_states (mindspore.Tensor): The input hidden states to be processed through the encoder layers.
-        - attention_mask (Optional[mindspore.Tensor]): Mask to avoid attention on padding tokens, defaults to None.
-        - head_mask (Optional[mindspore.Tensor]): Mask for attention heads in the encoder layers, defaults to None.
-        - encoder_hidden_states (Optional[mindspore.Tensor]): Hidden states of the encoder, defaults to None.
-        - encoder_attention_mask (Optional[mindspore.Tensor]): Mask to avoid attention on padding tokens in the encoder, defaults to None.
-        - past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]]): Past key values for caching, defaults to None.
-        - use_cache (Optional[bool]): Indicates whether to use cache for the next decoder step, defaults to None.
-        - output_attentions (Optional[bool]): Flag to output attention weights, defaults to False.
-        - output_hidden_states (Optional[bool]): Flag to output hidden states, defaults to False.
-        - return_dict (Optional[bool]): Flag to return the output as a dictionary, defaults to True.
+            self: The instance of the class.
+            hidden_states (mindspore.Tensor): The input hidden states to be processed through the encoder layers.
+            attention_mask (Optional[mindspore.Tensor]): Mask to avoid attention on padding tokens, defaults to None.
+            head_mask (Optional[mindspore.Tensor]): Mask for attention heads in the encoder layers, defaults to None.
+            encoder_hidden_states (Optional[mindspore.Tensor]): Hidden states of the encoder, defaults to None.
+            encoder_attention_mask (Optional[mindspore.Tensor]): Mask to avoid attention on padding tokens in the encoder, defaults to None.
+            past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]]): Past key values for caching, defaults to None.
+            use_cache (Optional[bool]): Indicates whether to use cache for the next decoder step, defaults to None.
+            output_attentions (Optional[bool]): Flag to output attention weights, defaults to False.
+            output_hidden_states (Optional[bool]): Flag to output hidden states, defaults to False.
+            return_dict (Optional[bool]): Flag to return the output as a dictionary, defaults to True.
         
         Returns:
-        - None: This method does not return any value directly. It processes the input hidden states through the encoder layers and updates the states internally.
+            None: This method does not return any value directly. It processes the input hidden states through the encoder layers and updates the states internally.
         
         Raises:
-        - None: This method does not raise any exceptions explicitly.
+            None: This method does not raise any exceptions explicitly.
         """
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
@@ -869,10 +871,11 @@ class BertPooler(nn.Cell):
         
         Args:
             self: The instance of the BertPooler class.
-            config: An instance of the configuration class containing the hidden size parameter.
-                Type: object
-                Purpose: To configure the BertPooler with specified hidden size.
-                Restrictions: Must be a valid configuration object.
+            config:
+                >- An instance of the configuration class containing the hidden size parameter.
+                >   - Type: object
+                >   - Purpose: To configure the BertPooler with specified hidden size.
+                >   - Restrictions: Must be a valid configuration object.
         
         Returns:
             None. The method initializes the BertPooler class and does not return any value.
@@ -962,7 +965,7 @@ class BertLMPredictionHead(nn.Cell):
         Args:
             self: The object instance of the BertLMPredictionHead class.
             config: A configuration object containing settings for the prediction head. It is of type dict or a custom configuration class. The config parameter is used to configure the prediction head's
-behavior and settings.
+                behavior and settings.
         
         Returns:
             None. This method does not return any value.
@@ -1062,10 +1065,12 @@ class BertOnlyMLMHead(nn.Cell):
             The prediction scores are computed by passing the sequence output through the predictions layer.
             The predictions layer maps the hidden states of each token to the vocabulary size, representing the probabilities
             of each token being the correct masked token.
-        
+
         Example:
+            ```python
             >>> head = BertOnlyMLMHead()
             >>> output = head.construct(sequence_output)
+            ```
         """
         prediction_scores = self.predictions(sequence_output)
         return prediction_scores
@@ -1146,9 +1151,9 @@ class BertPreTrainingHeads(nn.Cell):
         
         Returns:
             tuple: A tuple containing two elements:
-                - prediction_scores (Tensor): The prediction scores tensor of shape (batch_size, sequence_length, vocab_size).
+                >   - prediction_scores (Tensor): The prediction scores tensor of shape (batch_size, sequence_length, vocab_size).
                     It represents the scores for predicting the masked tokens in the input sequence.
-                - seq_relationship_score (Tensor): The sequence relationship score tensor of shape (batch_size, 2).
+                >   - seq_relationship_score (Tensor): The sequence relationship score tensor of shape (batch_size, 2).
                     It represents the scores for predicting the next sentence relationship.
         
         Raises:
@@ -1270,29 +1275,29 @@ class BertModel(BertPreTrainedModel):
         This method constructs a BERT model with the specified input parameters.
         
         Args:
-        - self: The instance of the class.
-        - input_ids (Optional[mindspore.Tensor]): The input tensor containing token indices.
-        - attention_mask (Optional[mindspore.Tensor]): Mask tensor indicating which tokens should be attended to.
-        - token_type_ids (Optional[mindspore.Tensor]): Tensor indicating token types for different sequences in the input.
-        - position_ids (Optional[mindspore.Tensor]): Tensor containing position indices.
-        - head_mask (Optional[mindspore.Tensor]): Mask tensor specifying which heads to prune in the attention layers.
-        - inputs_embeds (Optional[mindspore.Tensor]): The embedded input tensor.
-        - encoder_hidden_states (Optional[mindspore.Tensor]): Tensor containing hidden states from the encoder.
-        - encoder_attention_mask (Optional[mindspore.Tensor]): Mask tensor for encoder attention.
-        - past_key_values (Optional[List[mindspore.Tensor]]): List of tensors containing past key values.
-        - use_cache (Optional[bool]): Flag indicating whether to use cache in the decoder.
-        - output_attentions (Optional[bool]): Flag indicating whether to output attentions.
-        - output_hidden_states (Optional[bool]): Flag indicating whether to output hidden states.
-        - return_dict (Optional[bool]): Flag indicating whether to return a dictionary.
+            self: The instance of the class.
+            input_ids (Optional[mindspore.Tensor]): The input tensor containing token indices.
+            attention_mask (Optional[mindspore.Tensor]): Mask tensor indicating which tokens should be attended to.
+            token_type_ids (Optional[mindspore.Tensor]): Tensor indicating token types for different sequences in the input.
+            position_ids (Optional[mindspore.Tensor]): Tensor containing position indices.
+            head_mask (Optional[mindspore.Tensor]): Mask tensor specifying which heads to prune in the attention layers.
+            inputs_embeds (Optional[mindspore.Tensor]): The embedded input tensor.
+            encoder_hidden_states (Optional[mindspore.Tensor]): Tensor containing hidden states from the encoder.
+            encoder_attention_mask (Optional[mindspore.Tensor]): Mask tensor for encoder attention.
+            past_key_values (Optional[List[mindspore.Tensor]]): List of tensors containing past key values.
+            use_cache (Optional[bool]): Flag indicating whether to use cache in the decoder.
+            output_attentions (Optional[bool]): Flag indicating whether to output attentions.
+            output_hidden_states (Optional[bool]): Flag indicating whether to output hidden states.
+            return_dict (Optional[bool]): Flag indicating whether to return a dictionary.
         
         Returns:
-        - None: This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
-        - ValueError: If both input_ids and inputs_embeds are specified simultaneously.
-        - ValueError: If neither input_ids nor inputs_embeds are specified.
-        - ValueError: If padding is present without an attention mask.
-        - ValueError: If the function encounters any other invalid input configuration.
+            ValueError: If both input_ids and inputs_embeds are specified simultaneously.
+            ValueError: If neither input_ids nor inputs_embeds are specified.
+            ValueError: If padding is present without an attention mask.
+            ValueError: If the function encounters any other invalid input configuration.
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1532,12 +1537,12 @@ class BertLMHeadModel(BertPreTrainedModel):
         
         Args:
             self: The instance of the class.
-            config: A dictionary containing the configuration parameters for the model.
-                    It should include the following keys:
-                    - is_decoder (bool): Indicates whether the model is used as a decoder.
-                                         If False, a warning will be logged.
-                                         If True, the model will be initialized with is_decoder set to True.
-                                         Default is False.
+            config:
+                >- A dictionary containing the configuration parameters for the model. It should include the following keys:
+                >   - is_decoder (bool): Indicates whether the model is used as a decoder.
+                >       - If False, a warning will be logged.
+                >       - If True, the model will be initialized with is_decoder set to True.
+                >       - Default is False.
             
         Returns:
             None. This method does not return any value.
@@ -1695,10 +1700,10 @@ class BertLMHeadModel(BertPreTrainedModel):
         
         Returns:
             dict: A dictionary containing the prepared inputs for generation with the following keys:
-                - 'input_ids' (torch.Tensor): The input tensor of shape (batch_size, sequence_length) containing the updated input ids.
-                - 'attention_mask' (torch.Tensor): The attention mask tensor of shape (batch_size, sequence_length) containing the updated attention masks.
-                - 'past_key_values' (tuple): The tuple of past key values used for generation.
-                - 'use_cache' (bool): Whether to use cache for generation.
+                >   - 'input_ids' (torch.Tensor): The input tensor of shape (batch_size, sequence_length) containing the updated input ids.
+                >   - 'attention_mask' (torch.Tensor): The attention mask tensor of shape (batch_size, sequence_length) containing the updated attention masks.
+                >   - 'past_key_values' (tuple): The tuple of past key values used for generation.
+                >   - 'use_cache' (bool): Whether to use cache for generation.
         
         Raises:
             None.
@@ -1775,7 +1780,7 @@ class BertForMaskedLM(BertPreTrainedModel):
         The 'config' parameter is an instance of the BertConfig class, which contains various settings and hyperparameters for the model. It is used to configure the model architecture and behavior. 
         
         Note that if the 'is_decoder' attribute of the 'config' parameter is set to True, a warning message is logged, reminding the user to set 'is_decoder' to False when using the 'BertForMaskedLM' model
-with bi-directional self-attention.
+        with bi-directional self-attention.
         
         The method initializes two attributes of the instance:
         - 'bert': An instance of the 'BertModel' class, which represents the BERT model without the MLM head. The 'config' parameter is passed to the 'BertModel' constructor to configure the model architecture.
@@ -1888,18 +1893,18 @@ with bi-directional self-attention.
         Method: prepare_inputs_for_generation
         
         Description:
-        This method prepares inputs for generation by adding a dummy token at the end of the input_ids and updating the attention_mask accordingly.
+            This method prepares inputs for generation by adding a dummy token at the end of the input_ids and updating the attention_mask accordingly.
         
         Args:
-        - self: The instance of the BertForMaskedLM class.
-        - input_ids (Tensor): The input token IDs for generation.
-        - attention_mask (Tensor, optional): The attention mask tensor. Defaults to None.
-        
+            self: The instance of the BertForMaskedLM class.
+            input_ids (Tensor): The input token IDs for generation.
+            attention_mask (Tensor, optional): The attention mask tensor. Defaults to None.
+
         Returns:
-        - dict: A dictionary containing the updated 'input_ids' and 'attention_mask'.
+            dict: A dictionary containing the updated 'input_ids' and 'attention_mask'.
         
         Raises:
-        - ValueError: If the PAD token is not defined in the configuration.
+            - ValueError: If the PAD token is not defined in the configuration.
         """
         input_shape = input_ids.shape
         effective_batch_size = input_shape[0]
@@ -2313,10 +2318,11 @@ class BertForQuestionAnswering(BertPreTrainedModel):
         
         Args:
             self: The object itself.
-            config (BertConfig): The configuration for the Bert model. It contains various hyperparameters and settings.
-                - Type: BertConfig
-                - Purpose: Specifies the configuration for the Bert model.
-                - Restrictions: None
+            config (BertConfig):
+                >- The configuration for the Bert model. It contains various hyperparameters and settings.
+                >   - Type: BertConfig
+                >   - Purpose: Specifies the configuration for the Bert model.
+                >   - Restrictions: None
         
         Returns:
             None
@@ -2517,7 +2523,7 @@ class BertForPreTraining(BertPreTrainedModel):
         
         Returns:
             Union[Tuple[mindspore.Tensor], BertForPreTrainingOutput]: A tuple containing the prediction scores for masked language modeling and next sentence prediction tasks, and additional outputs if
-specified.
+            specified.
         
         Raises:
             None
@@ -2561,7 +2567,7 @@ class BertDualSelfAttention(nn.Cell):
 
     """
     The BertDualSelfAttention class represents the dual self-attention mechanism used in the BERT model. This class implements the mechanism for both real and imaginary parts of the self-attention mechanism.
-It inherits from the nn.Cell class and provides methods for attention score computation and context layer generation.
+    It inherits from the nn.Cell class and provides methods for attention score computation and context layer generation.
     
     Attributes:
         config: A configuration object containing the model's hyperparameters.
@@ -2578,7 +2584,7 @@ It inherits from the nn.Cell class and provides methods for attention score comp
     Methods:
         transpose_for_scores(input_x): Transposes the input tensor for computing attention scores.
         construct(hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_value, output_attentions): Constructs the dual self-attention mechanism using the provided
-input tensors.
+            input tensors.
     
     Note:
         The construct method raises a NotImplementedError for cross-attention and past_key_value arguments, as these functionalities are not implemented yet.
@@ -2653,7 +2659,7 @@ input tensors.
         
         Returns:
             Tuple[mindspore.Tensor, Optional[mindspore.Tensor]]: A tuple containing the context layer tensor with shape (batch_size, sequence_length, hidden_size) and optionally the attention scores tensor
-with shape (batch_size, num_attention_heads, sequence_length, sequence_length).
+            with shape (batch_size, num_attention_heads, sequence_length, sequence_length).
         
         Raises:
             NotImplementedError: If the functionality for cross-attention or incremental decoding is not implemented.
@@ -2779,7 +2785,7 @@ class BertDualAttention(nn.Cell):
 
     """
     This class represents a BertDualAttention module that inherits from nn.Cell. It contains methods for initializing the module, pruning attention heads, and constructing the attention mechanism for BERT
-models.
+    models.
     
     Attributes:
         config: Configuration for the BertDualAttention module.
@@ -2889,7 +2895,7 @@ class BertDualIntermediate(nn.Cell):
     This class represents a dual intermediate layer in a BERT model.
     
     The BertDualIntermediate class is a subclass of nn.Cell and is used to construct the dual intermediate layer in a BERT model. It takes in a configuration object as input, which specifies the hidden size
-and intermediate size. The class initializes the hidden size and intermediate size attributes based on the provided configuration.
+    and intermediate size. The class initializes the hidden size and intermediate size attributes based on the provided configuration.
     
     Attributes:
         hidden_size (int): The size of the hidden state in the dual intermediate layer.
@@ -3004,10 +3010,10 @@ class BertDualOutput(nn.Cell):
         Args:
             self: The instance of the BertDualOutput class.
             config: A configuration object containing the following attributes:
-                - intermediate_size (int): The size of the intermediate layer.
-                - hidden_size (int): The size of the hidden layer.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
-                - hidden_dropout_prob (float): The dropout probability for the hidden layer.
+                >- intermediate_size (int): The size of the intermediate layer.
+                >- hidden_size (int): The size of the hidden layer.
+                >- layer_norm_eps (float): The epsilon value for layer normalization.
+                >- hidden_dropout_prob (float): The dropout probability for the hidden layer.
         
         Returns:
             None. This method does not return any value.
@@ -3056,21 +3062,21 @@ class BertDualLayer(nn.Cell):
     This class represents a layer in a dual-attention BERT model. It is a subclass of nn.Cell and is responsible for performing attention and feed-forward operations.
     
     Attributes:
-    - chunk_size_feed_forward (int): The size of chunks for feed-forward operation.
-    - seq_len_dim (int): The dimension of the sequence length.
-    - attention (BertDualAttention): The attention module used for self-attention.
-    - is_decoder (bool): Indicates whether the layer is used as a decoder model.
-    - add_cross_attention (bool): Indicates whether cross-attention is added.
-    - crossattention (BertAttention): The attention module used for cross-attention (if add_cross_attention is True).
-    - intermediate (BertDualIntermediate): The intermediate module used in the feed-forward operation.
-    - output (BertDualOutput): The output module used in the feed-forward operation.
+        chunk_size_feed_forward (int): The size of chunks for feed-forward operation.
+        seq_len_dim (int): The dimension of the sequence length.
+        attention (BertDualAttention): The attention module used for self-attention.
+        is_decoder (bool): Indicates whether the layer is used as a decoder model.
+        add_cross_attention (bool): Indicates whether cross-attention is added.
+        crossattention (BertAttention): The attention module used for cross-attention (if add_cross_attention is True).
+        intermediate (BertDualIntermediate): The intermediate module used in the feed-forward operation.
+        output (BertDualOutput): The output module used in the feed-forward operation.
     
     Methods:
-    - construct(hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_value, output_attentions):
-        Constructs the layer by performing attention and feed-forward operations.
+        construct(hidden_states, attention_mask, head_mask, encoder_hidden_states, encoder_attention_mask, past_key_value, output_attentions):
+            Constructs the layer by performing attention and feed-forward operations.
     
-    - feed_forward_chunk(attention_output):
-        Performs the feed-forward operation on a chunk of attention output.
+        feed_forward_chunk(attention_output):
+            Performs the feed-forward operation on a chunk of attention output.
     
     Note: The class assumes that the imported modules (BertDualAttention, BertAttention, BertDualIntermediate, BertDualOutput) are available and properly implemented.
     """
@@ -3080,13 +3086,14 @@ class BertDualLayer(nn.Cell):
         
         Args:
             self: The object instance.
-            config (object): The configuration object that contains the settings for the BertDualLayer.
-                - chunk_size_feed_forward (int): The chunk size for feed-forward attention.
-                - is_decoder (bool): Indicates whether the model is a decoder.
-                - add_cross_attention (bool): Indicates whether cross attention is added.
-                    Raises a ValueError if cross attention is added and the model is not a decoder.
-                - position_embedding_type (str): The type of position embedding for cross attention.
-        
+            config (object):
+                >- The configuration object that contains the settings for the BertDualLayer.
+                >   - chunk_size_feed_forward (int): The chunk size for feed-forward attention.
+                >   - is_decoder (bool): Indicates whether the model is a decoder.
+                >   - add_cross_attention (bool): Indicates whether cross attention is added.
+                        Raises a ValueError if cross attention is added and the model is not a decoder.
+                >   - position_embedding_type (str): The type of position embedding for cross attention.
+
         Returns:
             None
         
@@ -3120,20 +3127,20 @@ class BertDualLayer(nn.Cell):
         This method constructs a BertDualLayer by performing self-attention and potentially cross-attention operations.
         
         Args:
-        - self: The instance of the BertDualLayer class.
-        - hidden_states (mindspore.Tensor): The input hidden states to be processed.
-        - attention_mask (Optional[mindspore.Tensor]): An optional tensor specifying which elements should be attended to.
-        - head_mask (Optional[mindspore.Tensor]): An optional tensor providing a mask for the attention heads.
-        - encoder_hidden_states (Optional[mindspore.Tensor]): Optional hidden states from an encoder layer for cross-attention.
-        - encoder_attention_mask (Optional[mindspore.Tensor]): Optional attention mask for the encoder hidden states.
-        - past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): Optional tuple containing the past key and value tensors.
-        - output_attentions (Optional[bool]): Flag indicating whether to output attention weights.
+            self: The instance of the BertDualLayer class.
+            hidden_states (mindspore.Tensor): The input hidden states to be processed.
+            attention_mask (Optional[mindspore.Tensor]): An optional tensor specifying which elements should be attended to.
+            head_mask (Optional[mindspore.Tensor]): An optional tensor providing a mask for the attention heads.
+            encoder_hidden_states (Optional[mindspore.Tensor]): Optional hidden states from an encoder layer for cross-attention.
+            encoder_attention_mask (Optional[mindspore.Tensor]): Optional attention mask for the encoder hidden states.
+            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): Optional tuple containing the past key and value tensors.
+            output_attentions (Optional[bool]): Flag indicating whether to output attention weights.
         
         Returns:
-        - None: This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
-        - ValueError: Raised if `encoder_hidden_states` are provided but cross-attention layers are not instantiated in the BertDualLayer instance.
+            ValueError: Raised if `encoder_hidden_states` are provided but cross-attention layers are not instantiated in the BertDualLayer instance.
         """
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
         self_attn_past_key_value = past_key_value[:2] if past_key_value is not None else None
@@ -3257,23 +3264,23 @@ class BertDualEncoder(nn.Cell):
         This method constructs the BertDualEncoder model.
         
         Args:
-        - self: The object instance.
-        - hidden_states (mindspore.Tensor): The input hidden states tensor.
-        - attention_mask (Optional[mindspore.Tensor]): Mask indicating which elements in the input should be attended to.
-        - head_mask (Optional[mindspore.Tensor]): Mask for attention heads.
-        - encoder_hidden_states (Optional[mindspore.Tensor]): Hidden states from the encoder.
-        - encoder_attention_mask (Optional[mindspore.Tensor]): Mask for encoder attention.
-        - past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]]): Past key values for caching.
-        - use_cache (Optional[bool]): Flag indicating whether to use caching.
-        - output_attentions (Optional[bool]): Flag indicating whether to output attentions.
-        - output_hidden_states (Optional[bool]): Flag indicating whether to output hidden states.
-        - return_dict (Optional[bool]): Flag indicating whether to return a dictionary.
+            self: The object instance.
+            hidden_states (mindspore.Tensor): The input hidden states tensor.
+            attention_mask (Optional[mindspore.Tensor]): Mask indicating which elements in the input should be attended to.
+            head_mask (Optional[mindspore.Tensor]): Mask for attention heads.
+            encoder_hidden_states (Optional[mindspore.Tensor]): Hidden states from the encoder.
+            encoder_attention_mask (Optional[mindspore.Tensor]): Mask for encoder attention.
+            past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]]): Past key values for caching.
+            use_cache (Optional[bool]): Flag indicating whether to use caching.
+            output_attentions (Optional[bool]): Flag indicating whether to output attentions.
+            output_hidden_states (Optional[bool]): Flag indicating whether to output hidden states.
+            return_dict (Optional[bool]): Flag indicating whether to return a dictionary.
         
         Returns:
-        - None: This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
-        - None
+            None
         """
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
@@ -3379,7 +3386,7 @@ class BertDualModel(BertPreTrainedModel):
             None.
         
         This method retrieves the input embeddings, represented by the 'word_embeddings' attribute of the BertDualModel instance. The embeddings are used to encode the input data into numerical representations
-suitable for processing by the model.
+        suitable for processing by the model.
         
         Note that this method does not modify any attributes or perform any calculations. It simply returns the existing input embeddings.
         
@@ -3401,7 +3408,7 @@ suitable for processing by the model.
             None. This method updates the input embeddings for the BertDualModel in-place.
         
         Raises:
-            - TypeError: If the provided 'value' is not of type WordEmbeddings.
+            TypeError: If the provided 'value' is not of type WordEmbeddings.
         """
         self.embeddings.word_embeddings = value
 
@@ -3434,14 +3441,12 @@ suitable for processing by the model.
             Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
             the model is configured as a decoder.
         encoder_attention_mask (`torch.FloatTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
-            the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
-
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
+            >- Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
+                the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
+            >   - 1 for tokens that are **not masked**,
+            >   - 0 for tokens that are **masked**.
         past_key_values (`tuple(tuple(torch.FloatTensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
             Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
-
             If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
             don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
             `decoder_input_ids` of shape `(batch_size, sequence_length)`.
@@ -3548,12 +3553,12 @@ class BertDualForSequenceClassification(BertPreTrainedModel):
 
     """
     The BertDualForSequenceClassification class represents a dual BERT model for sequence classification tasks. This class inherits from BertPreTrainedModel and provides methods for initializing the model and
-processing input data for sequence classification.
+    processing input data for sequence classification.
     
     The __init__ method initializes the BertDualForSequenceClassification instance by setting the number of labels, BERT model configuration, dropout, and classifier layers.
     
     The construct method processes input data for sequence classification using the BERT model. It accepts input tensors such as input_ids, attention_mask, token_type_ids, position_ids, head_mask,
-inputs_embeds, labels, and additional parameters for controlling the output format. The method returns the classification logits and can also calculate the loss based on the problem type and labels provided.
+    inputs_embeds, labels, and additional parameters for controlling the output format. The method returns the classification logits and can also calculate the loss based on the problem type and labels provided.
     
     Note: This docstring is based on the provided code and may need to be updated with additional information about the class attributes, methods, and usage.
     """
@@ -3564,18 +3569,18 @@ inputs_embeds, labels, and additional parameters for controlling the output form
         Args:
             self: The instance of the class.
             config: An instance of the configuration class containing the model configuration parameters.
-                - Type: config class
-                - Purpose: Specifies the configuration parameters for the model.
-                - Restrictions: Must be a valid instance of the configuration class.
+                >- Type: config class
+                >- Purpose: Specifies the configuration parameters for the model.
+                >- Restrictions: Must be a valid instance of the configuration class.
         
         Returns:
             None. This method does not return any value.
         
         Raises:
-            - TypeError: If the config parameter is not of the expected type.
-            - ValueError: If the config.num_labels is not provided or is invalid.
-            - AttributeError: If the required attributes are not found in the config object.
-            - RuntimeError: If an error occurs during model initialization or post-initialization.
+            TypeError: If the config parameter is not of the expected type.
+            ValueError: If the config.num_labels is not provided or is invalid.
+            AttributeError: If the required attributes are not found in the config object.
+            RuntimeError: If an error occurs during model initialization or post-initialization.
         """
         super().__init__(config)
         self.num_labels = config.num_labels

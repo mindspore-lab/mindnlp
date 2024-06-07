@@ -49,7 +49,7 @@ class BleuScore(Metric):
         ValueError: If the value range of `n_size` is not from 1 to 4.
         ValueError: If the lengths of `weights` is not equal to `n_size`.
 
-    Example:
+    Examples:
         >>> from mindnlp.common.metrics import BleuScore
         >>> cand = [["The", "cat", "The", "cat", "on", "the", "mat"]]
         >>> ref_list = [[["The", "cat", "is", "on", "the", "mat"],
@@ -237,7 +237,7 @@ def bleu_fn(cand, ref_list, n_size=4, weights=None):
         ValueError: If the lengths of `cand` and `ref_list` are not equal.
         ValueError: If the lengths of `weights` is not equal to `n_size`.
 
-    Example:
+    Examples:
         >>> from mindnlp.common.metrics import bleu
         >>> cand = [["The", "cat", "The", "cat", "on", "the", "mat"]]
         >>> ref_list = [[["The", "cat", "is", "on", "the", "mat"],

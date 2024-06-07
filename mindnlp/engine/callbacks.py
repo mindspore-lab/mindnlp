@@ -223,7 +223,7 @@ class TrainerCallback:
     You can unpack the ones you need in the signature of the event using them. As an example, see the code of the
     simple [`~transformers.PrinterCallback`].
 
-    Example:
+    Examples:
 
     ```python
     class PrinterCallback(TrainerCallback):

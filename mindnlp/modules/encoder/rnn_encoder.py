@@ -75,7 +75,7 @@ class RNNEncoder(EncoderBase):
             - The 'static' attribute of the object is set to False initially.
             - If the 'rnn' object is an instance of the '_RNNBase' class or its subclass, the 'static' attribute is set to True.
         
-        Example:
+        Examples:
             embedding = SomeEmbedding()
             rnn = SomeRNN()
             encoder = RNNEncoder(embedding, rnn)

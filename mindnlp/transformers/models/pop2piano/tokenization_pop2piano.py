@@ -416,9 +416,9 @@ class Pop2PianoTokenizer(PreTrainedTokenizer):
         Args:
             notes (`numpy.ndarray` of shape `[sequence_length, 4]` or `list` of `pretty_midi.Note` objects):
                 This represents the midi notes. If `notes` is a `numpy.ndarray`:
-                    - Each sequence must have 4 values, they are `onset idx`, `offset idx`, `pitch` and `velocity`.
+                    >   - Each sequence must have 4 values, they are `onset idx`, `offset idx`, `pitch` and `velocity`.
                 If `notes` is a `list` containing `pretty_midi.Note` objects:
-                    - Each sequence must have 4 attributes, they are `start`, `end`, `pitch` and `velocity`.
+                    >   - Each sequence must have 4 attributes, they are `start`, `end`, `pitch` and `velocity`.
             truncation_strategy ([`~tokenization_utils_base.TruncationStrategy`], *optional*):
                 Indicates the truncation strategy that is going to be used during truncation.
             max_length (`int`, *optional*):
@@ -485,9 +485,9 @@ class Pop2PianoTokenizer(PreTrainedTokenizer):
         Args:
             notes (`numpy.ndarray` of shape `[batch_size, sequence_length, 4]` or `list` of `pretty_midi.Note` objects):
                 This represents the midi notes. If `notes` is a `numpy.ndarray`:
-                    - Each sequence must have 4 values, they are `onset idx`, `offset idx`, `pitch` and `velocity`.
+                    >   - Each sequence must have 4 values, they are `onset idx`, `offset idx`, `pitch` and `velocity`.
                 If `notes` is a `list` containing `pretty_midi.Note` objects:
-                    - Each sequence must have 4 attributes, they are `start`, `end`, `pitch` and `velocity`.
+                    >   - Each sequence must have 4 attributes, they are `start`, `end`, `pitch` and `velocity`.
             truncation_strategy ([`~tokenization_utils_base.TruncationStrategy`], *optional*):
                 Indicates the truncation strategy that is going to be used during truncation.
             max_length (`int`, *optional*):
@@ -534,33 +534,31 @@ class Pop2PianoTokenizer(PreTrainedTokenizer):
                 This represents the midi notes.
 
                 If `notes` is a `numpy.ndarray`:
-                    - Each sequence must have 4 values, they are `onset idx`, `offset idx`, `pitch` and `velocity`.
+                    >   - Each sequence must have 4 values, they are `onset idx`, `offset idx`, `pitch` and `velocity`.
                 If `notes` is a `list` containing `pretty_midi.Note` objects:
-                    - Each sequence must have 4 attributes, they are `start`, `end`, `pitch` and `velocity`.
+                    >   - Each sequence must have 4 attributes, they are `start`, `end`, `pitch` and `velocity`.
             padding (`bool`, `str` or [`~file_utils.PaddingStrategy`], *optional*, defaults to `False`):
                 Activates and controls padding. Accepts the following values:
-
-                - `True` or `'longest'`: Pad to the longest sequence in the batch (or no padding if only a single
-                  sequence if provided).
-                - `'max_length'`: Pad to a maximum length specified with the argument `max_length` or to the maximum
-                  acceptable input length for the model if that argument is not provided.
-                - `False` or `'do_not_pad'` (default): No padding (i.e., can output a batch with sequences of different
-                  lengths).
+                >   - `True` or `'longest'`: Pad to the longest sequence in the batch (or no padding if only a single
+                        sequence if provided).
+                >   - `'max_length'`: Pad to a maximum length specified with the argument `max_length` or to the maximum
+                        acceptable input length for the model if that argument is not provided.
+                >   - `False` or `'do_not_pad'` (default): No padding (i.e., can output a batch with sequences of different
+                        lengths).
             truncation (`bool`, `str` or [`~tokenization_utils_base.TruncationStrategy`], *optional*, defaults to `False`):
                 Activates and controls truncation. Accepts the following values:
-
-                - `True` or `'longest_first'`: Truncate to a maximum length specified with the argument `max_length` or
-                  to the maximum acceptable input length for the model if that argument is not provided. This will
-                  truncate token by token, removing a token from the longest sequence in the pair if a pair of
-                  sequences (or a batch of pairs) is provided.
-                - `'only_first'`: Truncate to a maximum length specified with the argument `max_length` or to the
-                  maximum acceptable input length for the model if that argument is not provided. This will only
-                  truncate the first sequence of a pair if a pair of sequences (or a batch of pairs) is provided.
-                - `'only_second'`: Truncate to a maximum length specified with the argument `max_length` or to the
-                  maximum acceptable input length for the model if that argument is not provided. This will only
-                  truncate the second sequence of a pair if a pair of sequences (or a batch of pairs) is provided.
-                - `False` or `'do_not_truncate'` (default): No truncation (i.e., can output batch with sequence lengths
-                  greater than the model maximum admissible input size).
+                >   - `True` or `'longest_first'`: Truncate to a maximum length specified with the argument `max_length` or
+                      to the maximum acceptable input length for the model if that argument is not provided. This will
+                      truncate token by token, removing a token from the longest sequence in the pair if a pair of
+                      sequences (or a batch of pairs) is provided.
+                >   - `'only_first'`: Truncate to a maximum length specified with the argument `max_length` or to the
+                      maximum acceptable input length for the model if that argument is not provided. This will only
+                      truncate the first sequence of a pair if a pair of sequences (or a batch of pairs) is provided.
+                >   - `'only_second'`: Truncate to a maximum length specified with the argument `max_length` or to the
+                      maximum acceptable input length for the model if that argument is not provided. This will only
+                      truncate the second sequence of a pair if a pair of sequences (or a batch of pairs) is provided.
+                >   - `False` or `'do_not_truncate'` (default): No truncation (i.e., can output batch with sequence lengths
+                      greater than the model maximum admissible input size).
             max_length (`int`, *optional*):
                 Controls the maximum length to use by one of the truncation/padding parameters. If left unset or set to
                 `None`, this will use the predefined model maximum length if a maximum length is required by one of the
@@ -576,10 +574,9 @@ class Pop2PianoTokenizer(PreTrainedTokenizer):
                 [What are attention masks?](../glossary#attention-mask)
             return_tensors (`str` or [`~file_utils.TensorType`], *optional*):
                 If set, will return tensors instead of list of python integers. Acceptable values are:
-
-                - `'tf'`: Return TensorFlow `tf.constant` objects.
-                - `'pt'`: Return PyTorch `torch.Tensor` objects.
-                - `'np'`: Return Numpy `np.ndarray` objects.
+                >   - `'tf'`: Return TensorFlow `tf.constant` objects.
+                >   - `'pt'`: Return PyTorch `torch.Tensor` objects.
+                >   - `'np'`: Return Numpy `np.ndarray` objects.
             verbose (`bool`, *optional*, defaults to `True`):
                 Whether or not to print more information and warnings.
 
@@ -652,11 +649,11 @@ class Pop2PianoTokenizer(PreTrainedTokenizer):
                  should be present if they were returned by the feature extractor.
             return_midi (`bool`, *optional*, defaults to `True`):
                 Whether to return midi object or not.
-        Returns:
+        Returns: Conditional Return:
             If `return_midi` is True:
-                - `BatchEncoding` containing both `notes` and `pretty_midi.pretty_midi.PrettyMIDI` objects.
+                >   - `BatchEncoding` containing both `notes` and `pretty_midi.pretty_midi.PrettyMIDI` objects.
             If `return_midi` is False:
-                - `BatchEncoding` containing `notes`.
+                >   - `BatchEncoding` containing `notes`.
         """
         # check if they have attention_masks(attention_mask, attention_mask_beatsteps, attention_mask_extrapolated_beatstep) or not
         attention_masks_present = bool(

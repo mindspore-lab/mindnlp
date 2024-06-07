@@ -49,7 +49,7 @@ class LoKrModel(BaseTuner):
     Returns:
         LoKrModel ([`mindspore.nn.Cell`]): The LoKr model.
 
-    Example:
+    Examples:
         ```py
         >>> from diffusers import StableDiffusionPipeline
         >>> from peft import LoKrModel, LoKrConfig

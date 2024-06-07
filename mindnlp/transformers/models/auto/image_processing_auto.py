@@ -181,10 +181,9 @@ def get_image_processor_config(
     Args:
         pretrained_model_name_or_path (`str` or `os.PathLike`):
             This can be either:
-
-            - a string, the *model id* of a pretrained model configuration hosted inside a model repo on
+            >   - a string, the *model id* of a pretrained model configuration hosted inside a model repo on
               hf-mirror.com.
-            - a path to a *directory* containing a configuration file saved using the
+            >   - a path to a *directory* containing a configuration file saved using the
               [`~PreTrainedTokenizer.save_pretrained`] method, e.g., `./my_model_directory/`.
 
         cache_dir (`str` or `os.PathLike`, *optional*):
@@ -217,21 +216,21 @@ def get_image_processor_config(
     Returns:
         `Dict`: The configuration of the image processor.
 
-    Examples:
+    Example:
+        ```python
+        # Download configuration from hf-mirror.com and cache.
+        image_processor_config = get_image_processor_config("google-bert/bert-base-uncased")
+        # This model does not have a image processor config so the result will be an empty dict.
+        image_processor_config = get_image_processor_config("FacebookAI/xlm-roberta-base")
 
-    ```python
-    # Download configuration from hf-mirror.com and cache.
-    image_processor_config = get_image_processor_config("google-bert/bert-base-uncased")
-    # This model does not have a image processor config so the result will be an empty dict.
-    image_processor_config = get_image_processor_config("FacebookAI/xlm-roberta-base")
+        # Save a pretrained image processor locally and you can reload its config
+        from transformers import AutoTokenizer
 
-    # Save a pretrained image processor locally and you can reload its config
-    from transformers import AutoTokenizer
-
-    image_processor = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
-    image_processor.save_pretrained("image-processor-test")
-    image_processor_config = get_image_processor_config("image-processor-test")
-    ```"""
+        image_processor = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
+        image_processor.save_pretrained("image-processor-test")
+        image_processor_config = get_image_processor_config("image-processor-test")
+        ```
+    """
     use_auth_token = kwargs.pop("use_auth_token", None)
     if use_auth_token is not None:
         warnings.warn(
@@ -282,7 +281,7 @@ class AutoImageProcessor:
         
         Raises:
             EnvironmentError: Raised when attempting to directly instantiate an AutoImageProcessor object. AutoImageProcessor is designed to be instantiated using the
-`AutoImageProcessor.from_pretrained(pretrained_model_name_or_path)` method.
+            `AutoImageProcessor.from_pretrained(pretrained_model_name_or_path)` method.
         """
         raise EnvironmentError(
             "AutoImageProcessor is designed to be instantiated "
@@ -304,13 +303,12 @@ class AutoImageProcessor:
         Params:
             pretrained_model_name_or_path (`str` or `os.PathLike`):
                 This can be either:
-
-                - a string, the *model id* of a pretrained image_processor hosted inside a model repo on
+                >   - a string, the *model id* of a pretrained image_processor hosted inside a model repo on
                   hf-mirror.com.
-                - a path to a *directory* containing a image processor file saved using the
+                >   - a path to a *directory* containing a image processor file saved using the
                   [`~image_processing_utils.ImageProcessingMixin.save_pretrained`] method, e.g.,
                   `./my_model_directory/`.
-                - a path or url to a saved image processor JSON *file*, e.g.,
+                >   - a path or url to a saved image processor JSON *file*, e.g.,
                   `./my_model_directory/preprocessor_config.json`.
             cache_dir (`str` or `os.PathLike`, *optional*):
                 Path to a directory in which a downloaded pretrained model image processor should be cached if the
@@ -351,17 +349,17 @@ class AutoImageProcessor:
 
         </Tip>
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import AutoImageProcessor
 
-        ```python
-        >>> from transformers import AutoImageProcessor
+            >>> # Download image processor from hf-mirror.com and cache.
+            >>> image_processor = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
 
-        >>> # Download image processor from hf-mirror.com and cache.
-        >>> image_processor = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
-
-        >>> # If image processor files are in a directory (e.g. image processor was saved using *save_pretrained('./test/saved_model/')*)
-        >>> # image_processor = AutoImageProcessor.from_pretrained("./test/saved_model/")
-        ```"""
+            >>> # If image processor files are in a directory (e.g. image processor was saved using *save_pretrained('./test/saved_model/')*)
+            >>> # image_processor = AutoImageProcessor.from_pretrained("./test/saved_model/")
+            ```
+        """
         use_auth_token = kwargs.pop("use_auth_token", None)
         if use_auth_token is not None:
             warnings.warn(

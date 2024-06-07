@@ -236,8 +236,8 @@ class CpmTokenizer(PreTrainedTokenizer):
             None.
         
         This method updates the '__dict__' attribute of the 'self' object with the attributes from the serialized state dictionary 'd'. If the 'sp_model_kwargs' attribute doesn't exist in the object, it is
-initialized as an empty dictionary. Then, a SentencePieceProcessor object 'sp_model' is created with the keyword arguments provided in 'self.sp_model_kwargs'. Finally, the 'vocab_file' is loaded into the
-'sp_model'.
+        initialized as an empty dictionary. Then, a SentencePieceProcessor object 'sp_model' is created with the keyword arguments provided in 'self.sp_model_kwargs'. Finally, the 'vocab_file' is loaded into the
+        'sp_model'.
         """
         self.__dict__ = d
 
@@ -262,7 +262,7 @@ initialized as an empty dictionary. Then, a SentencePieceProcessor object 'sp_mo
         
         Raises:
             None: This method does not raise any exceptions explicitly. However, potential exceptions may arise from the use of external functions within the method such as unicodedata.normalize() and
-unicodedata.combining().
+            unicodedata.combining().
         """
         if self.remove_space:
             outputs = " ".join(inputs.strip().split())
@@ -323,8 +323,8 @@ unicodedata.combining().
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. An XLNet sequence has the following format:
 
-        - single sequence: `X <sep> <cls>`
-        - pair of sequences: `A <sep> B <sep> <cls>`
+        >   - single sequence: `X <sep> <cls>`
+        >   - pair of sequences: `A <sep> B <sep> <cls>`
 
         Args:
             token_ids_0 (`List[int]`):

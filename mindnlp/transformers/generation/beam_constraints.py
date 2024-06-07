@@ -26,11 +26,12 @@ class Constraint(ABC):
 
     All classes that inherit Constraint must follow the requirement that
 
-    ```py
-    completed = False
-    while not completed:
-        _, completed = constraint.update(constraint.advance())
-    ```
+    Example:
+        ```py
+        completed = False
+        while not completed:
+            _, completed = constraint.update(constraint.advance())
+        ```
 
     will always terminate (halt).
     """
@@ -250,7 +251,8 @@ class PhrasalConstraint(Constraint):
         
         If the `token_id` is not an integer, a ValueError is raised with a descriptive error message.
         
-        Note: The method modifies the state of the PhrasalConstraint object by updating the fulfillment index, completion status, and potentially resetting the state.
+        Note:
+            The method modifies the state of the PhrasalConstraint object by updating the fulfillment index, completion status, and potentially resetting the state.
         """
         if not isinstance(token_id, int):
             raise ValueError(f"`token_id` has to be an `int`, but is {token_id} of type {type(token_id)}")
@@ -374,7 +376,7 @@ class DisjunctiveTrie:
         Args:
             self: The instance of the DisjunctiveTrie class.
             current_seq: A sequence representing the current state within the trie. It is of type str and is used to navigate through the trie structure. There are no specific restrictions on the content of
-the sequence.
+                the sequence.
         
         Returns:
             None: This method returns a value of type None, indicating that there are no more tokens to traverse in the trie, and the current sequence has reached a leaf node.
@@ -498,7 +500,7 @@ class DisjunctiveConstraint(Constraint):
         
         Note:
             The `does_advance` method checks if the given `token_id` can be advanced in the DisjunctiveConstraint. It first validates that the `token_id` is of type int. Then, it retrieves the next possible
-tokens from the trie associated with the current sequence. Finally, it returns whether the `token_id` is present in the next tokens or not.
+            tokens from the trie associated with the current sequence. Finally, it returns whether the `token_id` is present in the next tokens or not.
         """
         if not isinstance(token_id, int):
             raise ValueError(f"`token_id` is supposed to be type `int`, but is {token_id} of type {type(token_id)}")
@@ -589,10 +591,11 @@ tokens from the trie associated with the current sequence. Finally, it returns w
             None.
         
         Note:
-            - If stateful is set to True, the new instance will have the same values for seq_len, current_seq, and completed as the current instance.
-            - If stateful is set to False, the new instance will have default values for seq_len, current_seq, and completed.
+            >- If stateful is set to True, the new instance will have the same values for seq_len, current_seq, and completed as the current instance.
+            >- If stateful is set to False, the new instance will have default values for seq_len, current_seq, and completed.
         
         Example:
+            ```python
             constraint = DisjunctiveConstraint(['A', 'B', 'C'])
             constraint.seq_len = 10
             constraint.current_seq = ['A', 'B']
@@ -609,6 +612,7 @@ tokens from the trie associated with the current sequence. Finally, it returns w
             # new_constraint.seq_len = default value
             # new_constraint.current_seq = default value
             # new_constraint.completed = default value
+            ```
         """
         new_constraint = DisjunctiveConstraint(self.token_ids)
 
@@ -759,8 +763,8 @@ class ConstraintListState:
             The method returns a tuple containing two boolean values, 'complete' and 'stepped'.
                 Type: Tuple (bool, bool)
                 Purpose: 
-                    - 'complete': Indicates whether the state update operation is complete.
-                    - 'stepped': Indicates whether any incremental progress was made during the update.
+                    >- 'complete': Indicates whether the state update operation is complete.
+                    >- 'stepped': Indicates whether any incremental progress was made during the update.
                 Restrictions: None
         
         Raises:

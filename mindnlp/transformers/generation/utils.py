@@ -176,7 +176,6 @@ class SampleDecoderOnlyOutput(ModelOutput):
     """
     Base class for outputs of decoder-only generation models using sampling.
 
-
     Args:
         sequences (`mindspore.Tensor` of shape `(batch_size*num_return_sequences, sequence_length)`):
             The generated sequences. The second dimension (sequence_length) is either equal to `max_length` or shorter
@@ -205,7 +204,6 @@ class SampleEncoderDecoderOutput(ModelOutput):
     Base class for outputs of encoder-decoder generation models using sampling. Hidden states and attention weights of
     the decoder (respectively the encoder) can be accessed via the encoder_attentions and the encoder_hidden_states
     attributes (respectively the decoder_attentions and the decoder_hidden_states attributes)
-
 
     Args:
         sequences (`mindspore.Tensor` of shape `(batch_size*num_return_sequences, sequence_length)`):
@@ -436,7 +434,6 @@ class GreedySearchEncoderDecoderOutput(ModelOutput):
     Base class for outputs of encoder-decoder generation models using greedy search. Hidden states and attention
     weights of the decoder (respectively the encoder) can be accessed via the encoder_attentions and the
     encoder_hidden_states attributes (respectively the decoder_attentions and the decoder_hidden_states attributes)
-
 
     Args:
         sequences (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
@@ -862,13 +859,13 @@ class GenerationMixin:
         This method, '_get_decoder_start_token_id', is defined in the 'GenerationMixin' class. It takes three parameters: self, decoder_start_token_id, and bos_token_id. The method returns an integer value.
         
         Args:
-            - self: The instance of the class.
-            - decoder_start_token_id (int, optional): The ID of the decoder start token. If provided, it overrides the value set in 'generation_config.decoder_start_token_id'. Default is None.
-            - bos_token_id (int, optional): The ID of the beginning-of-sentence token. If provided, it overrides the value set in 'generation_config.bos_token_id'. Default is None.
+            self: The instance of the class.
+            decoder_start_token_id (int, optional): The ID of the decoder start token. If provided, it overrides the value set in 'generation_config.decoder_start_token_id'. Default is None.
+            bos_token_id (int, optional): The ID of the beginning-of-sentence token. If provided, it overrides the value set in 'generation_config.bos_token_id'. Default is None.
         
         Returns:
             int: The selected decoder start token ID. If 'decoder_start_token_id' is not None, it is returned. Otherwise, if 'bos_token_id' is not None, it is returned. If neither is defined, a ValueError is
-raised.
+            raised.
         
         Raises:
             ValueError: If neither 'decoder_start_token_id' nor 'bos_token_id' is defined, this exception is raised to indicate that at least one of them must be defined for encoder-decoder generation.
@@ -1213,7 +1210,7 @@ raised.
         
         Returns:
             StoppingCriteriaList: The generated list of stopping criteria based on the provided generation configuration and additional stopping criteria.
-            Each stopping criterion in the list is an instance of a specific stopping criteria class, such as MaxLengthCriteria or MaxTimeCriteria.
+                Each stopping criterion in the list is an instance of a specific stopping criteria class, such as MaxLengthCriteria or MaxTimeCriteria.
         
         Raises:
             None
@@ -1244,7 +1241,7 @@ raised.
         
         Raises:
             ValueError: If a custom stopping criteria or logits processor of the same type as the default already exists, with detailed information about the conflicting objects and a suggestion for resolving
-the conflict.
+            the conflict.
         """
         if len(custom_list) == 0:
             return default_list
@@ -1425,7 +1422,7 @@ the conflict.
         
         Returns:
             Dict[str, Any]: A modified dictionary of model keyword arguments after extending the token type IDs.
-            If the 'token_type_ids' key is not present in model_kwargs or is None, the method returns the original model_kwargs.
+                If the 'token_type_ids' key is not present in model_kwargs or is None, the method returns the original model_kwargs.
         
         Raises:
             N/A
@@ -1526,25 +1523,22 @@ the conflict.
                 forwarded to the `forward` function of the model. If the model is an encoder-decoder model, encoder
                 specific kwargs should not be prefixed and decoder specific kwargs should be prefixed with *decoder_*.
 
-        Return:
-            [`~utils.ModelOutput`] or `mindspore.Tensor`: A [`~utils.ModelOutput`] (if `return_dict_in_generate=True`
-            or when `config.return_dict_in_generate=True`) or a `mindspore.Tensor`.
-
-                If the model is *not* an encoder-decoder model (`model.config.is_encoder_decoder=False`), the possible
-                [`~utils.ModelOutput`] types are:
-
-                    - [`~generation.GreedySearchDecoderOnlyOutput`],
-                    - [`~generation.SampleDecoderOnlyOutput`],
-                    - [`~generation.BeamSearchDecoderOnlyOutput`],
-                    - [`~generation.BeamSampleDecoderOnlyOutput`]
-
-                If the model is an encoder-decoder model (`model.config.is_encoder_decoder=True`), the possible
-                [`~utils.ModelOutput`] types are:
-
-                    - [`~generation.GreedySearchEncoderDecoderOutput`],
-                    - [`~generation.SampleEncoderDecoderOutput`],
-                    - [`~generation.BeamSearchEncoderDecoderOutput`],
-                    - [`~generation.BeamSampleEncoderDecoderOutput`]
+        Returns:
+            [`~utils.ModelOutput`] or `mindspore.Tensor`:
+                >- A [`~utils.ModelOutput`] (if `return_dict_in_generate=True`
+                    or when `config.return_dict_in_generate=True`) or a `mindspore.Tensor`.
+                >= If the model is *not* an encoder-decoder model (`model.config.is_encoder_decoder=False`), the possible
+                        [`~utils.ModelOutput`] types are:
+                >   - [`~generation.GreedySearchDecoderOnlyOutput`],
+                >   - [`~generation.SampleDecoderOnlyOutput`],
+                >   - [`~generation.BeamSearchDecoderOnlyOutput`],
+                >   - [`~generation.BeamSampleDecoderOnlyOutput`]
+                >- If the model is an encoder-decoder model (`model.config.is_encoder_decoder=True`), the possible
+                        [`~utils.ModelOutput`] types are:
+                >   - [`~generation.GreedySearchEncoderDecoderOutput`],
+                >   - [`~generation.SampleEncoderDecoderOutput`],
+                >   - [`~generation.BeamSearchEncoderDecoderOutput`],
+                >   - [`~generation.BeamSampleEncoderDecoderOutput`]
         """
         # 1. Handle `generation_config` and kwargs that might update it, and validate the `.generate()` call
         self._validate_model_class()
@@ -2072,34 +2066,36 @@ the conflict.
                 Additional model specific keyword arguments will be forwarded to the `forward` function of the model.
                 If model is an encoder-decoder model the kwargs should include `encoder_outputs`.
 
-        Return:
-            [`~generation.ContrastiveSearchDecoderOnlyOutput`], [`~generation.ContrastiveSearchEncoderDecoderOutput`]
-            or `mindspore.Tensor`: A `mindspore.Tensor` containing the generated tokens (default behaviour) or a
-            [`~generation.ContrastiveSearchDecoderOnlyOutput`] if `model.config.is_encoder_decoder=False` and
-            `return_dict_in_generate=True` or a [`~generation.ContrastiveSearchEncoderDecoderOutput`] if
-            `model.config.is_encoder_decoder=True`.
+        Returns:
+            [`~generation.ContrastiveSearchDecoderOnlyOutput`], [`~generation.ContrastiveSearchEncoderDecoderOutput`] or `mindspore.Tensor`:
+                >- if `model.config.is_encoder_decoder=False` and `return_dict_in_generate=True`:
+                >   - A `mindspore.Tensor` containing the generated tokens (default behaviour) or a
+                    [`~generation.ContrastiveSearchDecoderOnlyOutput`]
+                >- if `model.config.is_encoder_decoder=True`.
+                >   - a [`~generation.ContrastiveSearchEncoderDecoderOutput`]
 
-        Examples:
-        ```python
-        >>> from transformers import (
-        ...     AutoTokenizer,
-        ...     AutoModelForCausalLM,
-        ...     StoppingCriteriaList,
-        ...     MaxLengthCriteria,
-        ... )
+        Example:
+            ```python
+            >>> from transformers import (
+            ...     AutoTokenizer,
+            ...     AutoModelForCausalLM,
+            ...     StoppingCriteriaList,
+            ...     MaxLengthCriteria,
+            ... )
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("facebook/opt-125m")
-        >>> model = AutoModelForCausalLM.from_pretrained("facebook/opt-125m")
-        >>> # set pad_token_id to eos_token_id because OPT does not have a PAD token
-        >>> model.config.pad_token_id = model.config.eos_token_id
-        >>> input_prompt = "DeepMind Company is"
-        >>> input_ids = tokenizer(input_prompt, return_tensors="pt")
-        >>> stopping_criteria = StoppingCriteriaList([MaxLengthCriteria(max_length=64)])
-        >>> outputs = model.contrastive_search(
-        ...     **input_ids, penalty_alpha=0.6, top_k=4, stopping_criteria=stopping_criteria
-        ... )
-        >>> tokenizer.batch_decode(outputs, skip_special_tokens=True)
-        ```"""
+            >>> tokenizer = AutoTokenizer.from_pretrained("facebook/opt-125m")
+            >>> model = AutoModelForCausalLM.from_pretrained("facebook/opt-125m")
+            >>> # set pad_token_id to eos_token_id because OPT does not have a PAD token
+            >>> model.config.pad_token_id = model.config.eos_token_id
+            >>> input_prompt = "DeepMind Company is"
+            >>> input_ids = tokenizer(input_prompt, return_tensors="pt")
+            >>> stopping_criteria = StoppingCriteriaList([MaxLengthCriteria(max_length=64)])
+            >>> outputs = model.contrastive_search(
+            ...     **input_ids, penalty_alpha=0.6, top_k=4, stopping_criteria=stopping_criteria
+            ... )
+            >>> tokenizer.batch_decode(outputs, skip_special_tokens=True)
+            ```
+        """
         # init values
         logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
         logits_warper = logits_warper if logits_warper is not None else LogitsProcessorList()
@@ -2459,7 +2455,6 @@ the conflict.
 
         </Tip>
 
-
         Parameters:
             input_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
                 The sequence used as a prompt for the generation.
@@ -2496,49 +2491,49 @@ the conflict.
                 Additional model specific keyword arguments will be forwarded to the `forward` function of the model.
                 If model is an encoder-decoder model the kwargs should include `encoder_outputs`.
 
-        Return:
-            [`~generation.GreedySearchDecoderOnlyOutput`], [`~generation.GreedySearchEncoderDecoderOutput`] or
-            `mindspore.Tensor`: A `mindspore.Tensor` containing the generated tokens (default behaviour) or a
-            [`~generation.GreedySearchDecoderOnlyOutput`] if `model.config.is_encoder_decoder=False` and
-            `return_dict_in_generate=True` or a [`~generation.GreedySearchEncoderDecoderOutput`] if
-            `model.config.is_encoder_decoder=True`.
+        Returns:
+            [`~generation.GreedySearchDecoderOnlyOutput`], [`~generation.GreedySearchEncoderDecoderOutput`] or `mindspore.Tensor`:
+                >- A `mindspore.Tensor` containing the generated tokens (default behaviour) or a
+                    [`~generation.GreedySearchDecoderOnlyOutput`] if `model.config.is_encoder_decoder=False` and
+                    `return_dict_in_generate=True`
+                >- or a [`~generation.GreedySearchEncoderDecoderOutput`] if `model.config.is_encoder_decoder=True`.
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import (
+            ...     AutoTokenizer,
+            ...     AutoModelForCausalLM,
+            ...     LogitsProcessorList,
+            ...     MinLengthLogitsProcessor,
+            ...     StoppingCriteriaList,
+            ...     MaxLengthCriteria,
+            ... )
 
-        ```python
-        >>> from transformers import (
-        ...     AutoTokenizer,
-        ...     AutoModelForCausalLM,
-        ...     LogitsProcessorList,
-        ...     MinLengthLogitsProcessor,
-        ...     StoppingCriteriaList,
-        ...     MaxLengthCriteria,
-        ... )
+            >>> tokenizer = AutoTokenizer.from_pretrained("gpt2")
+            >>> model = AutoModelForCausalLM.from_pretrained("gpt2")
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("gpt2")
-        >>> model = AutoModelForCausalLM.from_pretrained("gpt2")
+            >>> # set pad_token_id to eos_token_id because GPT2 does not have a PAD token
+            >>> model.generation_config.pad_token_id = model.generation_config.eos_token_id
 
-        >>> # set pad_token_id to eos_token_id because GPT2 does not have a PAD token
-        >>> model.generation_config.pad_token_id = model.generation_config.eos_token_id
+            >>> input_prompt = "It might be possible to"
+            >>> input_ids = tokenizer(input_prompt, return_tensors="pt").input_ids
 
-        >>> input_prompt = "It might be possible to"
-        >>> input_ids = tokenizer(input_prompt, return_tensors="pt").input_ids
+            >>> # instantiate logits processors
+            >>> logits_processor = LogitsProcessorList(
+            ...     [
+            ...         MinLengthLogitsProcessor(10, eos_token_id=model.generation_config.eos_token_id),
+            ...     ]
+            ... )
+            >>> stopping_criteria = StoppingCriteriaList([MaxLengthCriteria(max_length=20)])
 
-        >>> # instantiate logits processors
-        >>> logits_processor = LogitsProcessorList(
-        ...     [
-        ...         MinLengthLogitsProcessor(10, eos_token_id=model.generation_config.eos_token_id),
-        ...     ]
-        ... )
-        >>> stopping_criteria = StoppingCriteriaList([MaxLengthCriteria(max_length=20)])
+            >>> outputs = model.greedy_search(
+            ...     input_ids, logits_processor=logits_processor, stopping_criteria=stopping_criteria
+            ... )
 
-        >>> outputs = model.greedy_search(
-        ...     input_ids, logits_processor=logits_processor, stopping_criteria=stopping_criteria
-        ... )
-
-        >>> tokenizer.batch_decode(outputs, skip_special_tokens=True)
-        ["It might be possible to get a better understanding of the nature of the problem, but it's not"]
-        ```"""
+            >>> tokenizer.batch_decode(outputs, skip_special_tokens=True)
+            ["It might be possible to get a better understanding of the nature of the problem, but it's not"]
+            ```
+        """
         # init values
         logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
         stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
@@ -2745,65 +2740,65 @@ the conflict.
                 Additional model specific kwargs will be forwarded to the `forward` function of the model. If model is
                 an encoder-decoder model the kwargs should include `encoder_outputs`.
 
-        Return:
+        Returns:
             [`~generation.SampleDecoderOnlyOutput`], [`~generation.SampleEncoderDecoderOutput`] or `mindspore.Tensor`:
-            A `mindspore.Tensor` containing the generated tokens (default behaviour) or a
-            [`~generation.SampleDecoderOnlyOutput`] if `model.config.is_encoder_decoder=False` and
-            `return_dict_in_generate=True` or a [`~generation.SampleEncoderDecoderOutput`] if
-            `model.config.is_encoder_decoder=True`.
+                >- A `mindspore.Tensor` containing the generated tokens (default behaviour) or a
+                    [`~generation.SampleDecoderOnlyOutput`] if `model.config.is_encoder_decoder=False` and
+                    `return_dict_in_generate=True`
+                >- or a [`~generation.SampleEncoderDecoderOutput`] if `model.config.is_encoder_decoder=True`.
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import (
+            ...     AutoTokenizer,
+            ...     AutoModelForCausalLM,
+            ...     LogitsProcessorList,
+            ...     MinLengthLogitsProcessor,
+            ...     TopKLogitsWarper,
+            ...     TemperatureLogitsWarper,
+            ...     StoppingCriteriaList,
+            ...     MaxLengthCriteria,
+            ... )
 
-        ```python
-        >>> from transformers import (
-        ...     AutoTokenizer,
-        ...     AutoModelForCausalLM,
-        ...     LogitsProcessorList,
-        ...     MinLengthLogitsProcessor,
-        ...     TopKLogitsWarper,
-        ...     TemperatureLogitsWarper,
-        ...     StoppingCriteriaList,
-        ...     MaxLengthCriteria,
-        ... )
 
+            >>> tokenizer = AutoTokenizer.from_pretrained("gpt2")
+            >>> model = AutoModelForCausalLM.from_pretrained("gpt2")
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("gpt2")
-        >>> model = AutoModelForCausalLM.from_pretrained("gpt2")
+            >>> # set pad_token_id to eos_token_id because GPT2 does not have a EOS token
+            >>> model.config.pad_token_id = model.config.eos_token_id
+            >>> model.generation_config.pad_token_id = model.config.eos_token_id
 
-        >>> # set pad_token_id to eos_token_id because GPT2 does not have a EOS token
-        >>> model.config.pad_token_id = model.config.eos_token_id
-        >>> model.generation_config.pad_token_id = model.config.eos_token_id
+            >>> input_prompt = "Today is a beautiful day, and"
+            >>> input_ids = tokenizer(input_prompt, return_tensors="pt").input_ids
 
-        >>> input_prompt = "Today is a beautiful day, and"
-        >>> input_ids = tokenizer(input_prompt, return_tensors="pt").input_ids
+            >>> # instantiate logits processors
+            >>> logits_processor = LogitsProcessorList(
+            ...     [
+            ...         MinLengthLogitsProcessor(15, eos_token_id=model.generation_config.eos_token_id),
+            ...     ]
+            ... )
+            >>> # instantiate logits processors
+            >>> logits_warper = LogitsProcessorList(
+            ...     [
+            ...         TopKLogitsWarper(50),
+            ...         TemperatureLogitsWarper(0.7),
+            ...     ]
+            ... )
 
-        >>> # instantiate logits processors
-        >>> logits_processor = LogitsProcessorList(
-        ...     [
-        ...         MinLengthLogitsProcessor(15, eos_token_id=model.generation_config.eos_token_id),
-        ...     ]
-        ... )
-        >>> # instantiate logits processors
-        >>> logits_warper = LogitsProcessorList(
-        ...     [
-        ...         TopKLogitsWarper(50),
-        ...         TemperatureLogitsWarper(0.7),
-        ...     ]
-        ... )
+            >>> stopping_criteria = StoppingCriteriaList([MaxLengthCriteria(max_length=20)])
 
-        >>> stopping_criteria = StoppingCriteriaList([MaxLengthCriteria(max_length=20)])
+            >>> torch.manual_seed(0)  # doctest: +IGNORE_RESULT
+            >>> outputs = model.sample(
+            ...     input_ids,
+            ...     logits_processor=logits_processor,
+            ...     logits_warper=logits_warper,
+            ...     stopping_criteria=stopping_criteria,
+            ... )
 
-        >>> torch.manual_seed(0)  # doctest: +IGNORE_RESULT
-        >>> outputs = model.sample(
-        ...     input_ids,
-        ...     logits_processor=logits_processor,
-        ...     logits_warper=logits_warper,
-        ...     stopping_criteria=stopping_criteria,
-        ... )
-
-        >>> tokenizer.batch_decode(outputs, skip_special_tokens=True)
-        ['Today is a beautiful day, and we must do everything possible to make it a day of celebration.']
-        ```"""
+            >>> tokenizer.batch_decode(outputs, skip_special_tokens=True)
+            ['Today is a beautiful day, and we must do everything possible to make it a day of celebration.']
+            ```
+        """
         # init values
         logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
         stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
@@ -3011,65 +3006,64 @@ the conflict.
                 Additional model specific kwargs will be forwarded to the `forward` function of the model. If model is
                 an encoder-decoder model the kwargs should include `encoder_outputs`.
 
-        Return:
-            [`generation.BeamSearchDecoderOnlyOutput`], [`~generation.BeamSearchEncoderDecoderOutput`] or
-            `mindspore.Tensor`: A `mindspore.Tensor` containing the generated tokens (default behaviour) or a
-            [`~generation.BeamSearchDecoderOnlyOutput`] if `model.config.is_encoder_decoder=False` and
-            `return_dict_in_generate=True` or a [`~generation.BeamSearchEncoderDecoderOutput`] if
-            `model.config.is_encoder_decoder=True`.
+        Returns:
+            [`generation.BeamSearchDecoderOnlyOutput`], [`~generation.BeamSearchEncoderDecoderOutput`] or `mindspore.Tensor`:
+            >- A `mindspore.Tensor` containing the generated tokens (default behaviour) or a
+                [`~generation.BeamSearchDecoderOnlyOutput`] if `model.config.is_encoder_decoder=False` and
+                `return_dict_in_generate=True`
+            >- or a [`~generation.BeamSearchEncoderDecoderOutput`] if `model.config.is_encoder_decoder=True`.
+
+        Example:
+            ```python
+            >>> from transformers import (
+            ...     AutoTokenizer,
+            ...     AutoModelForSeq2SeqLM,
+            ...     LogitsProcessorList,
+            ...     MinLengthLogitsProcessor,
+            ...     BeamSearchScorer,
+            ... )
 
 
-        Examples:
+            >>> tokenizer = AutoTokenizer.from_pretrained("t5-base")
+            >>> model = AutoModelForSeq2SeqLM.from_pretrained("t5-base")
 
-        ```python
-        >>> from transformers import (
-        ...     AutoTokenizer,
-        ...     AutoModelForSeq2SeqLM,
-        ...     LogitsProcessorList,
-        ...     MinLengthLogitsProcessor,
-        ...     BeamSearchScorer,
-        ... )
+            >>> encoder_input_str = "translate English to German: How old are you?"
+            >>> encoder_input_ids = tokenizer(encoder_input_str, return_tensors="pt").input_ids
 
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("t5-base")
-        >>> model = AutoModelForSeq2SeqLM.from_pretrained("t5-base")
+            >>> # lets run beam search using 3 beams
+            >>> num_beams = 3
+            >>> # define decoder start token ids
+            >>> input_ids = torch.ones((num_beams, 1), device=model.device, dtype=torch.long)
+            >>> input_ids = input_ids * model.config.decoder_start_token_id
 
-        >>> encoder_input_str = "translate English to German: How old are you?"
-        >>> encoder_input_ids = tokenizer(encoder_input_str, return_tensors="pt").input_ids
+            >>> # add encoder_outputs to model keyword arguments
+            >>> model_kwargs = {
+            ...     "encoder_outputs": model.get_encoder()(
+            ...         encoder_input_ids.repeat_interleave(num_beams, dim=0), return_dict=True
+            ...     )
+            ... }
 
+            >>> # instantiate beam scorer
+            >>> beam_scorer = BeamSearchScorer(
+            ...     batch_size=1,
+            ...     num_beams=num_beams,
+            ...     device=model.device,
+            ... )
 
-        >>> # lets run beam search using 3 beams
-        >>> num_beams = 3
-        >>> # define decoder start token ids
-        >>> input_ids = torch.ones((num_beams, 1), device=model.device, dtype=torch.long)
-        >>> input_ids = input_ids * model.config.decoder_start_token_id
+            >>> # instantiate logits processors
+            >>> logits_processor = LogitsProcessorList(
+            ...     [
+            ...         MinLengthLogitsProcessor(5, eos_token_id=model.config.eos_token_id),
+            ...     ]
+            ... )
 
-        >>> # add encoder_outputs to model keyword arguments
-        >>> model_kwargs = {
-        ...     "encoder_outputs": model.get_encoder()(
-        ...         encoder_input_ids.repeat_interleave(num_beams, dim=0), return_dict=True
-        ...     )
-        ... }
+            >>> outputs = model.beam_search(input_ids, beam_scorer, logits_processor=logits_processor, **model_kwargs)
 
-        >>> # instantiate beam scorer
-        >>> beam_scorer = BeamSearchScorer(
-        ...     batch_size=1,
-        ...     num_beams=num_beams,
-        ...     device=model.device,
-        ... )
-
-        >>> # instantiate logits processors
-        >>> logits_processor = LogitsProcessorList(
-        ...     [
-        ...         MinLengthLogitsProcessor(5, eos_token_id=model.config.eos_token_id),
-        ...     ]
-        ... )
-
-        >>> outputs = model.beam_search(input_ids, beam_scorer, logits_processor=logits_processor, **model_kwargs)
-
-        >>> tokenizer.batch_decode(outputs, skip_special_tokens=True)
-        ['Wie alt bist du?']
-        ```"""
+            >>> tokenizer.batch_decode(outputs, skip_special_tokens=True)
+            ['Wie alt bist du?']
+            ```
+        """
         # init values
         logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
         stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
@@ -3329,73 +3323,73 @@ the conflict.
                 Additional model specific kwargs will be forwarded to the `forward` function of the model. If model is
                 an encoder-decoder model the kwargs should include `encoder_outputs`.
 
-        Return:
-            [`~generation.BeamSampleDecoderOnlyOutput`], [`~generation.BeamSampleEncoderDecoderOutput`] or
-            `mindspore.Tensor`: A `mindspore.Tensor` containing the generated tokens (default behaviour) or a
-            [`~generation.BeamSampleDecoderOnlyOutput`] if `model.config.is_encoder_decoder=False` and
-            `return_dict_in_generate=True` or a [`~generation.BeamSampleEncoderDecoderOutput`] if
-            `model.config.is_encoder_decoder=True`.
+        Returns:
+            [`~generation.BeamSampleDecoderOnlyOutput`], [`~generation.BeamSampleEncoderDecoderOutput`] or `mindspore.Tensor`:
+                >- A `mindspore.Tensor` containing the generated tokens (default behaviour) or a
+                    [`~generation.BeamSampleDecoderOnlyOutput`] if `model.config.is_encoder_decoder=False` and
+                    `return_dict_in_generate=True`
+                >- or a [`~generation.BeamSampleEncoderDecoderOutput`] if `model.config.is_encoder_decoder=True`.
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import (
+            ...     AutoTokenizer,
+            ...     AutoModelForSeq2SeqLM,
+            ...     LogitsProcessorList,
+            ...     MinLengthLogitsProcessor,
+            ...     TopKLogitsWarper,
+            ...     TemperatureLogitsWarper,
+            ...     BeamSearchScorer,
+            ... )
 
-        ```python
-        >>> from transformers import (
-        ...     AutoTokenizer,
-        ...     AutoModelForSeq2SeqLM,
-        ...     LogitsProcessorList,
-        ...     MinLengthLogitsProcessor,
-        ...     TopKLogitsWarper,
-        ...     TemperatureLogitsWarper,
-        ...     BeamSearchScorer,
-        ... )
 
+            >>> tokenizer = AutoTokenizer.from_pretrained("t5-base")
+            >>> model = AutoModelForSeq2SeqLM.from_pretrained("t5-base")
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("t5-base")
-        >>> model = AutoModelForSeq2SeqLM.from_pretrained("t5-base")
+            >>> encoder_input_str = "translate English to German: How old are you?"
+            >>> encoder_input_ids = tokenizer(encoder_input_str, return_tensors="pt").input_ids
 
-        >>> encoder_input_str = "translate English to German: How old are you?"
-        >>> encoder_input_ids = tokenizer(encoder_input_str, return_tensors="pt").input_ids
+            >>> # lets run beam search using 3 beams
+            >>> num_beams = 3
+            >>> # define decoder start token ids
+            >>> input_ids = torch.ones((num_beams, 1), device=model.device, dtype=torch.long)
+            >>> input_ids = input_ids * model.config.decoder_start_token_id
 
-        >>> # lets run beam search using 3 beams
-        >>> num_beams = 3
-        >>> # define decoder start token ids
-        >>> input_ids = torch.ones((num_beams, 1), device=model.device, dtype=torch.long)
-        >>> input_ids = input_ids * model.config.decoder_start_token_id
+            >>> # add encoder_outputs to model keyword arguments
+            >>> model_kwargs = {
+            ...     "encoder_outputs": model.get_encoder()(
+            ...         encoder_input_ids.repeat_interleave(num_beams, dim=0), return_dict=True
+            ...     )
+            ... }
 
-        >>> # add encoder_outputs to model keyword arguments
-        >>> model_kwargs = {
-        ...     "encoder_outputs": model.get_encoder()(
-        ...         encoder_input_ids.repeat_interleave(num_beams, dim=0), return_dict=True
-        ...     )
-        ... }
+            >>> # instantiate beam scorer
+            >>> beam_scorer = BeamSearchScorer(
+            ...     batch_size=1,
+            ...     max_length=model.config.max_length,
+            ...     num_beams=num_beams,
+            ...     device=model.device,
+            ... )
 
-        >>> # instantiate beam scorer
-        >>> beam_scorer = BeamSearchScorer(
-        ...     batch_size=1,
-        ...     max_length=model.config.max_length,
-        ...     num_beams=num_beams,
-        ...     device=model.device,
-        ... )
+            >>> # instantiate logits processors
+            >>> logits_processor = LogitsProcessorList(
+            ...     [MinLengthLogitsProcessor(5, eos_token_id=model.config.eos_token_id)]
+            ... )
+            >>> # instantiate logits processors
+            >>> logits_warper = LogitsProcessorList(
+            ...     [
+            ...         TopKLogitsWarper(50),
+            ...         TemperatureLogitsWarper(0.7),
+            ...     ]
+            ... )
 
-        >>> # instantiate logits processors
-        >>> logits_processor = LogitsProcessorList(
-        ...     [MinLengthLogitsProcessor(5, eos_token_id=model.config.eos_token_id)]
-        ... )
-        >>> # instantiate logits processors
-        >>> logits_warper = LogitsProcessorList(
-        ...     [
-        ...         TopKLogitsWarper(50),
-        ...         TemperatureLogitsWarper(0.7),
-        ...     ]
-        ... )
+            >>> outputs = model.beam_sample(
+            ...     input_ids, beam_scorer, logits_processor=logits_processor, logits_warper=logits_warper, **model_kwargs
+            ... )
 
-        >>> outputs = model.beam_sample(
-        ...     input_ids, beam_scorer, logits_processor=logits_processor, logits_warper=logits_warper, **model_kwargs
-        ... )
-
-        >>> tokenizer.batch_decode(outputs, skip_special_tokens=True)
-        ['Wie alt bist du?']
-        ```"""
+            >>> tokenizer.batch_decode(outputs, skip_special_tokens=True)
+            ['Wie alt bist du?']
+            ```
+        """
         # init values
         logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
         stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
@@ -3642,70 +3636,70 @@ the conflict.
                 Additional model specific kwargs that will be forwarded to the `forward` function of the model. If
                 model is an encoder-decoder model the kwargs should include `encoder_outputs`.
 
-        Return:
-            [`~generation.BeamSearchDecoderOnlyOutput`], [`~generation.BeamSearchEncoderDecoderOutput`] or
-            `mindspore.Tensor`: A `mindspore.Tensor` containing the generated tokens (default behaviour) or a
-            [`~generation.BeamSearchDecoderOnlyOutput`] if [`~generation.BeamSearchDecoderOnlyOutput`] if
-            `model.config.is_encoder_decoder=False` and `return_dict_in_generate=True` or a
-            [`~generation.BeamSearchEncoderDecoderOutput`] if `model.config.is_encoder_decoder=True`.
+        Returns:
+            [`~generation.BeamSearchDecoderOnlyOutput`], [`~generation.BeamSearchEncoderDecoderOutput`] or `mindspore.Tensor`:
+                >- A `mindspore.Tensor` containing the generated tokens (default behaviour) or a
+                    [`~generation.BeamSearchDecoderOnlyOutput`] if [`~generation.BeamSearchDecoderOnlyOutput`] if
+                    `model.config.is_encoder_decoder=False` and `return_dict_in_generate=True`
+                >- or a [`~generation.BeamSearchEncoderDecoderOutput`] if `model.config.is_encoder_decoder=True`.
 
-        Examples:
-
-        ```python
-        >>> from transformers import (
-        ...     AutoTokenizer,
-        ...     AutoModelForSeq2SeqLM,
-        ...     LogitsProcessorList,
-        ...     MinLengthLogitsProcessor,
-        ...     HammingDiversityLogitsProcessor,
-        ...     BeamSearchScorer,
-        ... )
-
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("t5-base")
-        >>> model = AutoModelForSeq2SeqLM.from_pretrained("t5-base")
-
-        >>> encoder_input_str = "translate English to German: How old are you?"
-        >>> encoder_input_ids = tokenizer(encoder_input_str, return_tensors="pt").input_ids
+        Example:
+            ```python
+            >>> from transformers import (
+            ...     AutoTokenizer,
+            ...     AutoModelForSeq2SeqLM,
+            ...     LogitsProcessorList,
+            ...     MinLengthLogitsProcessor,
+            ...     HammingDiversityLogitsProcessor,
+            ...     BeamSearchScorer,
+            ... )
 
 
-        >>> # lets run diverse beam search using 6 beams
-        >>> num_beams = 6
-        >>> # define decoder start token ids
-        >>> input_ids = torch.ones((num_beams, 1), device=model.device, dtype=torch.long)
-        >>> input_ids = input_ids * model.config.decoder_start_token_id
+            >>> tokenizer = AutoTokenizer.from_pretrained("t5-base")
+            >>> model = AutoModelForSeq2SeqLM.from_pretrained("t5-base")
 
-        >>> # add encoder_outputs to model keyword arguments
-        >>> model_kwargs = {
-        ...     "encoder_outputs": model.get_encoder()(
-        ...         encoder_input_ids.repeat_interleave(num_beams, dim=0), return_dict=True
-        ...     )
-        ... }
+            >>> encoder_input_str = "translate English to German: How old are you?"
+            >>> encoder_input_ids = tokenizer(encoder_input_str, return_tensors="pt").input_ids
 
-        >>> # instantiate beam scorer
-        >>> beam_scorer = BeamSearchScorer(
-        ...     batch_size=1,
-        ...     max_length=model.config.max_length,
-        ...     num_beams=num_beams,
-        ...     device=model.device,
-        ...     num_beam_groups=3,
-        ... )
 
-        >>> # instantiate logits processors
-        >>> logits_processor = LogitsProcessorList(
-        ...     [
-        ...         HammingDiversityLogitsProcessor(5.5, num_beams=6, num_beam_groups=3),
-        ...         MinLengthLogitsProcessor(5, eos_token_id=model.config.eos_token_id),
-        ...     ]
-        ... )
+            >>> # lets run diverse beam search using 6 beams
+            >>> num_beams = 6
+            >>> # define decoder start token ids
+            >>> input_ids = torch.ones((num_beams, 1), device=model.device, dtype=torch.long)
+            >>> input_ids = input_ids * model.config.decoder_start_token_id
 
-        >>> outputs = model.group_beam_search(
-        ...     input_ids, beam_scorer, logits_processor=logits_processor, **model_kwargs
-        ... )
+            >>> # add encoder_outputs to model keyword arguments
+            >>> model_kwargs = {
+            ...     "encoder_outputs": model.get_encoder()(
+            ...         encoder_input_ids.repeat_interleave(num_beams, dim=0), return_dict=True
+            ...     )
+            ... }
 
-        >>> tokenizer.batch_decode(outputs, skip_special_tokens=True)
-        ['Wie alt bist du?']
-        ```"""
+            >>> # instantiate beam scorer
+            >>> beam_scorer = BeamSearchScorer(
+            ...     batch_size=1,
+            ...     max_length=model.config.max_length,
+            ...     num_beams=num_beams,
+            ...     device=model.device,
+            ...     num_beam_groups=3,
+            ... )
+
+            >>> # instantiate logits processors
+            >>> logits_processor = LogitsProcessorList(
+            ...     [
+            ...         HammingDiversityLogitsProcessor(5.5, num_beams=6, num_beam_groups=3),
+            ...         MinLengthLogitsProcessor(5, eos_token_id=model.config.eos_token_id),
+            ...     ]
+            ... )
+
+            >>> outputs = model.group_beam_search(
+            ...     input_ids, beam_scorer, logits_processor=logits_processor, **model_kwargs
+            ... )
+
+            >>> tokenizer.batch_decode(outputs, skip_special_tokens=True)
+            ['Wie alt bist du?']
+            ```
+        """
         # init values
         logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
         stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
@@ -4013,71 +4007,72 @@ the conflict.
                 Additional model specific kwargs will be forwarded to the `forward` function of the model. If model is
                 an encoder-decoder model the kwargs should include `encoder_outputs`.
 
-        Return:
+        Returns:
             [`generation.BeamSearchDecoderOnlyOutput`], [`~generation.BeamSearchEncoderDecoderOutput`] or
-            `mindspore.Tensor`: A `mindspore.Tensor` containing the generated tokens (default behaviour) or a
-            [`~generation.BeamSearchDecoderOnlyOutput`] if `model.config.is_encoder_decoder=False` and
-            `return_dict_in_generate=True` or a [`~generation.BeamSearchEncoderDecoderOutput`] if
-            `model.config.is_encoder_decoder=True`.
+            `mindspore.Tensor`:
+                >- A `mindspore.Tensor` containing the generated tokens (default behaviour) or a
+                    [`~generation.BeamSearchDecoderOnlyOutput`] if `model.config.is_encoder_decoder=False` and
+                    `return_dict_in_generate=True`
+                >- or a [`~generation.BeamSearchEncoderDecoderOutput`] if `model.config.is_encoder_decoder=True`.
 
 
-        Examples:
-
-        ```python
-        >>> from transformers import (
-        ...     AutoTokenizer,
-        ...     AutoModelForSeq2SeqLM,
-        ...     LogitsProcessorList,
-        ...     MinLengthLogitsProcessor,
-        ...     ConstrainedBeamSearchScorer,
-        ...     PhrasalConstraint,
-        ... )
-
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("t5-base")
-        >>> model = AutoModelForSeq2SeqLM.from_pretrained("t5-base")
-
-        >>> encoder_input_str = "translate English to German: How old are you?"
-        >>> encoder_input_ids = tokenizer(encoder_input_str, return_tensors="pt").input_ids
+        Example:
+            ```python
+            >>> from transformers import (
+            ...     AutoTokenizer,
+            ...     AutoModelForSeq2SeqLM,
+            ...     LogitsProcessorList,
+            ...     MinLengthLogitsProcessor,
+            ...     ConstrainedBeamSearchScorer,
+            ...     PhrasalConstraint,
+            ... )
 
 
-        >>> # lets run beam search using 3 beams
-        >>> num_beams = 3
-        >>> # define decoder start token ids
-        >>> input_ids = torch.ones((num_beams, 1), device=model.device, dtype=torch.long)
-        >>> input_ids = input_ids * model.config.decoder_start_token_id
+            >>> tokenizer = AutoTokenizer.from_pretrained("t5-base")
+            >>> model = AutoModelForSeq2SeqLM.from_pretrained("t5-base")
 
-        >>> # add encoder_outputs to model keyword arguments
-        >>> model_kwargs = {
-        ...     "encoder_outputs": model.get_encoder()(
-        ...         encoder_input_ids.repeat_interleave(num_beams, dim=0), return_dict=True
-        ...     )
-        ... }
-
-        >>> constraint_str = "Sie"
-        >>> constraint_token_ids = tokenizer.encode(constraint_str)[:-1]  # slice to remove eos token
-        >>> constraints = [PhrasalConstraint(token_ids=constraint_token_ids)]
+            >>> encoder_input_str = "translate English to German: How old are you?"
+            >>> encoder_input_ids = tokenizer(encoder_input_str, return_tensors="pt").input_ids
 
 
-        >>> # instantiate beam scorer
-        >>> beam_scorer = ConstrainedBeamSearchScorer(
-        ...     batch_size=1, num_beams=num_beams, device=model.device, constraints=constraints
-        ... )
+            >>> # lets run beam search using 3 beams
+            >>> num_beams = 3
+            >>> # define decoder start token ids
+            >>> input_ids = torch.ones((num_beams, 1), device=model.device, dtype=torch.long)
+            >>> input_ids = input_ids * model.config.decoder_start_token_id
 
-        >>> # instantiate logits processors
-        >>> logits_processor = LogitsProcessorList(
-        ...     [
-        ...         MinLengthLogitsProcessor(5, eos_token_id=model.config.eos_token_id),
-        ...     ]
-        ... )
+            >>> # add encoder_outputs to model keyword arguments
+            >>> model_kwargs = {
+            ...     "encoder_outputs": model.get_encoder()(
+            ...         encoder_input_ids.repeat_interleave(num_beams, dim=0), return_dict=True
+            ...     )
+            ... }
 
-        >>> outputs = model.constrained_beam_search(
-        ...     input_ids, beam_scorer, constraints=constraints, logits_processor=logits_processor, **model_kwargs
-        ... )
+            >>> constraint_str = "Sie"
+            >>> constraint_token_ids = tokenizer.encode(constraint_str)[:-1]  # slice to remove eos token
+            >>> constraints = [PhrasalConstraint(token_ids=constraint_token_ids)]
 
-        >>> tokenizer.batch_decode(outputs, skip_special_tokens=True)
-        ['Wie alt sind Sie?']
-        ```"""
+
+            >>> # instantiate beam scorer
+            >>> beam_scorer = ConstrainedBeamSearchScorer(
+            ...     batch_size=1, num_beams=num_beams, device=model.device, constraints=constraints
+            ... )
+
+            >>> # instantiate logits processors
+            >>> logits_processor = LogitsProcessorList(
+            ...     [
+            ...         MinLengthLogitsProcessor(5, eos_token_id=model.config.eos_token_id),
+            ...     ]
+            ... )
+
+            >>> outputs = model.constrained_beam_search(
+            ...     input_ids, beam_scorer, constraints=constraints, logits_processor=logits_processor, **model_kwargs
+            ... )
+
+            >>> tokenizer.batch_decode(outputs, skip_special_tokens=True)
+            ['Wie alt sind Sie?']
+            ```
+        """
         # init values
         logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
         stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
@@ -4344,48 +4339,50 @@ the conflict.
                 Additional model specific keyword arguments will be forwarded to the `forward` function of the model.
                 If model is an encoder-decoder model the kwargs should include `encoder_outputs`.
 
-        Return:
+        Returns:
             [`~generation.GreedySearchDecoderOnlyOutput`], [`~generation.GreedySearchEncoderDecoderOutput`] or
-            `mindspore.Tensor`: A `mindspore.Tensor` containing the generated tokens (default behaviour) or a
-            [`~generation.GreedySearchDecoderOnlyOutput`] if `model.config.is_encoder_decoder=False` and
-            `return_dict_in_generate=True` or a [`~generation.GreedySearchEncoderDecoderOutput`] if
-            `model.config.is_encoder_decoder=True`.
+            `mindspore.Tensor`:
+                >- A `mindspore.Tensor` containing the generated tokens (default behaviour) or a
+                    [`~generation.GreedySearchDecoderOnlyOutput`] if `model.config.is_encoder_decoder=False` and
+                    `return_dict_in_generate=True`
+                >- or a [`~generation.GreedySearchEncoderDecoderOutput`] if
+                    `model.config.is_encoder_decoder=True`.
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import (
+            ...     AutoTokenizer,
+            ...     AutoModelForCausalLM,
+            ...     LogitsProcessorList,
+            ...     MinLengthLogitsProcessor,
+            ...     StoppingCriteriaList,
+            ...     MaxLengthCriteria,
+            ... )
 
-        ```python
-        >>> from transformers import (
-        ...     AutoTokenizer,
-        ...     AutoModelForCausalLM,
-        ...     LogitsProcessorList,
-        ...     MinLengthLogitsProcessor,
-        ...     StoppingCriteriaList,
-        ...     MaxLengthCriteria,
-        ... )
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("gpt2")
-        >>> model = AutoModelForCausalLM.from_pretrained("gpt2")
-        >>> assistant_model = AutoModelForCausalLM.from_pretrained("distilgpt2")
-        >>> # set pad_token_id to eos_token_id because GPT2 does not have a PAD token
-        >>> model.generation_config.pad_token_id = model.generation_config.eos_token_id
-        >>> input_prompt = "It might be possible to"
-        >>> input_ids = tokenizer(input_prompt, return_tensors="pt").input_ids
-        >>> # instantiate logits processors
-        >>> logits_processor = LogitsProcessorList(
-        ...     [
-        ...         MinLengthLogitsProcessor(10, eos_token_id=model.generation_config.eos_token_id),
-        ...     ]
-        ... )
-        >>> stopping_criteria = StoppingCriteriaList([MaxLengthCriteria(max_length=20)])
-        >>> outputs = model.assisted_decoding(
-        ...     input_ids,
-        ...     assistant_model=assistant_model,
-        ...     logits_processor=logits_processor,
-        ...     stopping_criteria=stopping_criteria,
-        ... )
-        >>> tokenizer.batch_decode(outputs, skip_special_tokens=True)
-        ["It might be possible to get a better understanding of the nature of the problem, but it's not"]
-        ```"""
+            >>> tokenizer = AutoTokenizer.from_pretrained("gpt2")
+            >>> model = AutoModelForCausalLM.from_pretrained("gpt2")
+            >>> assistant_model = AutoModelForCausalLM.from_pretrained("distilgpt2")
+            >>> # set pad_token_id to eos_token_id because GPT2 does not have a PAD token
+            >>> model.generation_config.pad_token_id = model.generation_config.eos_token_id
+            >>> input_prompt = "It might be possible to"
+            >>> input_ids = tokenizer(input_prompt, return_tensors="pt").input_ids
+            >>> # instantiate logits processors
+            >>> logits_processor = LogitsProcessorList(
+            ...     [
+            ...         MinLengthLogitsProcessor(10, eos_token_id=model.generation_config.eos_token_id),
+            ...     ]
+            ... )
+            >>> stopping_criteria = StoppingCriteriaList([MaxLengthCriteria(max_length=20)])
+            >>> outputs = model.assisted_decoding(
+            ...     input_ids,
+            ...     assistant_model=assistant_model,
+            ...     logits_processor=logits_processor,
+            ...     stopping_criteria=stopping_criteria,
+            ... )
+            >>> tokenizer.batch_decode(outputs, skip_special_tokens=True)
+            ["It might be possible to get a better understanding of the nature of the problem, but it's not"]
+            ```
+        """
         # Assistant: initialize assistant-related variables
         if hasattr(assistant_model, "num_assistant_tokens"):
             warnings.warn(

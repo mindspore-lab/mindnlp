@@ -190,9 +190,9 @@ class SegformerOverlapPatchEmbeddings(nn.Cell):
         
         Returns:
             tuple: A tuple containing the following elements:
-                - embeddings (torch.Tensor): A tensor representing the constructed embeddings. The shape of the tensor will be (batch_size, num_patches, embedding_dim).
-                - height (int): The height of the embeddings tensor.
-                - width (int): The width of the embeddings tensor.
+                >   - embeddings (torch.Tensor): A tensor representing the constructed embeddings. The shape of the tensor will be (batch_size, num_patches, embedding_dim).
+                >   - height (int): The height of the embeddings tensor.
+                >   - width (int): The width of the embeddings tensor.
         
         Raises:
             None.
@@ -371,15 +371,15 @@ class SegformerSelfOutput(nn.Cell):
         This method is called when a new instance of the SegformerSelfOutput class is created. It initializes the instance by setting up the necessary components for self-attention and output computation.
         
         The 'config' parameter is an object that stores various settings and configurations for the model. It is used to access the hidden dropout probability, which is used in the dropout layer. The
-'hidden_size' parameter specifies the size of the hidden layer in the model.
-        
+        'hidden_size' parameter specifies the size of the hidden layer in the model.
+
         Inside the method, the 'super().__init__()' statement calls the __init__() method of the parent class to ensure proper initialization.
         
         The 'self.dense' attribute is an instance of the nn.Dense class, which represents a fully connected layer. It takes the 'hidden_size' as both the input and output size. This layer is used for
-self-attention computation.
+        self-attention computation.
         
         The 'self.dropout' attribute is an instance of the nn.Dropout class. It takes the 'config.hidden_dropout_prob' as the dropout probability. This layer is used for regularization during training to
-prevent overfitting.
+        prevent overfitting.
         
         Note that this method does not perform any computations and is solely responsible for setting up the necessary components for the SegformerSelfOutput class.
         """
@@ -420,30 +420,26 @@ class SegformerAttention(nn.Cell):
     Methods:
         __init__(self, config, hidden_size, num_attention_heads, sequence_reduction_ratio):
             Initializes the SegformerAttention class.
-            
-            Args:
-                config (object): The configuration object.
-                hidden_size (int): The size of the hidden layers.
-                num_attention_heads (int): The number of attention heads.
-                sequence_reduction_ratio (float): The sequence reduction ratio.
+            >   - Args:
+            >       - config (object): The configuration object.
+            >       - hidden_size (int): The size of the hidden layers.
+            >       - num_attention_heads (int): The number of attention heads.
+            >       - sequence_reduction_ratio (float): The sequence reduction ratio.
         
         prune_heads(self, heads):
             Prunes the specified attention heads from the model.
-            
-            Args:
-                heads (list): A list of attention heads to be pruned.
+            >   - Args:
+            >       - heads (list): A list of attention heads to be pruned.
         
         construct(self, hidden_states, height, width, output_attentions=False):
             Constructs the attention mechanism.
-            
-            Args:
-                hidden_states (object): The input hidden states.
-                height (int): The height of the input.
-                width (int): The width of the input.
-                output_attentions (bool, optional): Whether to output the attention weights. Defaults to False.
-            
-            Returns:
-                tuple: A tuple containing the attention output and any additional outputs.
+            >   - Args:
+            >       - hidden_states (object): The input hidden states.
+            >       - height (int): The height of the input.
+            >       - width (int): The width of the input.
+            >       - output_attentions (bool, optional): Whether to output the attention weights. Defaults to False.
+            >   - Returns:
+            >       - tuple: A tuple containing the attention output and any additional outputs.
     """
     def __init__(self, config, hidden_size, num_attention_heads, sequence_reduction_ratio):
         """
@@ -452,21 +448,21 @@ class SegformerAttention(nn.Cell):
         Args:
             self: The instance of the class.
             config: A configuration object containing various parameters for the attention mechanism.
-                    Type: object
-                    Purpose: It provides the configuration settings for the attention mechanism.
-                    Restrictions: Must be a valid configuration object.
+                >   - Type: object
+                >   - Purpose: It provides the configuration settings for the attention mechanism.
+                >   - Restrictions: Must be a valid configuration object.
             hidden_size: The size of the hidden layers in the attention mechanism.
-                         Type: int
-                         Purpose: It defines the dimensionality of the hidden layers.
-                         Restrictions: Must be a positive integer.
+                >   - Type: int
+                >   - Purpose: It defines the dimensionality of the hidden layers.
+                >   - Restrictions: Must be a positive integer.
             num_attention_heads: The number of attention heads to be used in the attention mechanism.
-                                 Type: int
-                                 Purpose: It determines the parallel attention computations.
-                                 Restrictions: Must be a positive integer.
+                >   - Type: int
+                >   - Purpose: It determines the parallel attention computations.
+                >   - Restrictions: Must be a positive integer.
             sequence_reduction_ratio: The ratio by which the input sequence length is reduced in the attention mechanism.
-                                      Type: int
-                                      Purpose: It controls the reduction of the input sequence length.
-                                      Restrictions: Must be a positive integer.
+                >   - Type: int
+                >   - Purpose: It controls the reduction of the input sequence length.
+                >   - Restrictions: Must be a positive integer.
         
         Returns:
             None: This method does not return any value.
@@ -556,11 +552,13 @@ class SegformerDWConv(nn.Cell):
         construct: Applies the depthwise separable convolution to the input hidden_states and returns the processed output.
     
     Example:
+        ```python
         # Create a SegformerDWConv object with default dimensionality
         seg_dwconv = SegformerDWConv()
     
         # Apply the depthwise separable convolution to a set of hidden states
         output = seg_dwconv.construct(hidden_states, height, width)
+        ```
     """
     def __init__(self, dim=768):
         """
@@ -627,7 +625,8 @@ class SegformerMixFFN(nn.Cell):
     
     The construction of the computation graph involves passing the input through dense layers, depthwise convolution, activation functions, and dropout layers to generate the output hidden states.
     
-    Note: This docstring is a representation of the class attributes and methods. Please refer to the source code for the most accurate and up-to-date information.
+    Note:
+        This docstring is a representation of the class attributes and methods. Please refer to the source code for the most accurate and up-to-date information.
     """
     def __init__(self, config, in_features, hidden_features=None, out_features=None):
         """
@@ -762,7 +761,7 @@ class SegformerEncoder(nn.Cell):
 
     """
     SegformerEncoder is a neural network module that represents the encoder of the Segformer model. It takes input pixel values and produces a sequence of hidden states that can be used for various downstream
-tasks.
+    tasks.
     
     Inherits from:
         nn.Cell
@@ -773,12 +772,13 @@ tasks.
     Raises:
         ValueError: If the input config is not an instance of SegformerConfig.
     
-    Examples:
+    Example:
+        ```python
         >>> config = SegformerConfig()
         >>> encoder = SegformerEncoder(config)
         >>> pixel_values = mindspore.Tensor(np.zeros((1, 3, 224, 224)), mindspore.float32)
         >>> outputs = encoder(pixel_values)
-    
+        ```
     """
     def __init__(self, config):
         """
@@ -787,16 +787,16 @@ tasks.
         Args:
             self (SegformerEncoder): The SegformerEncoder instance.
             config (object): A configuration object containing various parameters for the SegformerEncoder. It should include the following attributes:
-                - depths (List[int]): The number of layers in each encoder block.
-                - drop_path_rate (float): The drop path rate for the network.
-                - num_encoder_blocks (int): The number of encoder blocks.
-                - patch_sizes (List[int]): The patch sizes for each encoder block.
-                - strides (List[int]): The strides for each encoder block.
-                - num_channels (int): The number of input channels.
-                - hidden_sizes (List[int]): The hidden sizes for each encoder block.
-                - num_attention_heads (List[int]): The number of attention heads for each encoder block.
-                - sr_ratios (List[float]): The sequence reduction ratios for each encoder block.
-                - mlp_ratios (List[float]): The MLP ratios for each encoder block.
+                >   - depths (List[int]): The number of layers in each encoder block.
+                >   - drop_path_rate (float): The drop path rate for the network.
+                >   - num_encoder_blocks (int): The number of encoder blocks.
+                >   - patch_sizes (List[int]): The patch sizes for each encoder block.
+                >   - strides (List[int]): The strides for each encoder block.
+                >   - num_channels (int): The number of input channels.
+                >   - hidden_sizes (List[int]): The hidden sizes for each encoder block.
+                >   - num_attention_heads (List[int]): The number of attention heads for each encoder block.
+                >   - sr_ratios (List[float]): The sequence reduction ratios for each encoder block.
+                >   - mlp_ratios (List[float]): The MLP ratios for each encoder block.
         
         Returns:
             None. This method initializes the SegformerEncoder instance with the provided configuration parameters.
@@ -947,14 +947,15 @@ class SegformerModel(SegformerPreTrainedModel):
     This class is a SegformerModel that inherits from SegformerPreTrainedModel. It is used for performing semantic segmentation tasks using the Segformer architecture.
     
     The SegformerModel class provides methods for initializing the model, pruning model heads, and constructing the model with input pixel values. It also allows for customization of the output, including
-attention maps and hidden states.
+    attention maps and hidden states.
     
     Methods:
-    - __init__(self, config): Initializes the SegformerModel instance with the provided configuration.
-    - _prune_heads(self, heads_to_prune): Prunes specific heads of the model based on the provided dictionary.
-    - construct(self, pixel_values, output_attentions, output_hidden_states, return_dict): Constructs the model with the given pixel values and returns the output. Customization of output options is available.
+        __init__: Initializes the SegformerModel instance with the provided configuration.
+        _prune_heads: Prunes specific heads of the model based on the provided dictionary.
+        construct: Constructs the model with the given pixel values and returns the output. Customization of output options is available.
     
-    Note: This class assumes the presence of the SegformerPreTrainedModel class.
+    Note:
+        This class assumes the presence of the SegformerPreTrainedModel class.
     
     """
     def __init__(self, config):
@@ -963,22 +964,23 @@ attention maps and hidden states.
         
         Args:
             self: The instance of the SegformerModel class.
-            config (dict): A dictionary containing configuration parameters for initializing the SegformerModel.
-                           It should include the necessary configuration settings for the model.
-                           Required keys and their datatypes:
-                               - key1 (datatype): Description.
-                               - key2 (datatype): Description.
-                               ...
-                           (Add more keys and descriptions as needed)
-        
+            config (dict):
+                > A dictionary containing configuration parameters for initializing the SegformerModel.
+                    It should include the necessary configuration settings for the model.
+                    Required keys and their datatypes:
+                >   - key1 (datatype): Description.
+                >   - key2 (datatype): Description.
+                >   - ...
+                >   - (Add more keys and descriptions as needed)
+
         Returns:
             None. This method doesn't return any value.
         
         Raises:
-            Any exceptions that may be raised during the initialization process should be documented here.
-            - ExampleException: Description of the example exception that may be raised.
-            - AnotherException: Description of another exception that may be raised.
-            (Add more exceptions and descriptions as needed)
+            Any exceptions that may be raised during the initialization process should be documented here:
+                >- ExampleException: Description of the example exception that may be raised.
+                >- AnotherException: Description of another exception that may be raised.
+                > (Add more exceptions and descriptions as needed)
         """
         super().__init__(config)
         self.config = config
@@ -1025,12 +1027,12 @@ attention maps and hidden states.
             Union[Tuple, BaseModelOutput]: The output of the SegformerModel. If `return_dict` is False, 
             it returns a tuple containing the sequence output and the encoder outputs. 
             If `return_dict` is True, it returns a BaseModelOutput object with the following attributes:
-                - last_hidden_state (mindspore.Tensor): The sequence output of the model. 
-                  Shape: (batch_size, sequence_length, hidden_size).
-                - hidden_states (Tuple[mindspore.Tensor]): The hidden states of all layers. 
-                  Each tensor has shape (batch_size, sequence_length, hidden_size).
-                - attentions (Tuple[mindspore.Tensor]): The attention weights of all layers. 
-                  Each tensor has shape (batch_size, num_attention_heads, sequence_length, sequence_length).
+                >   - last_hidden_state (mindspore.Tensor): The sequence output of the model.
+                        Shape: (batch_size, sequence_length, hidden_size).
+                >   - hidden_states (Tuple[mindspore.Tensor]): The hidden states of all layers.
+                        Each tensor has shape (batch_size, sequence_length, hidden_size).
+                >   - attentions (Tuple[mindspore.Tensor]): The attention weights of all layers.
+                        Each tensor has shape (batch_size, num_attention_heads, sequence_length, sequence_length).
         
         Raises:
             None
@@ -1065,35 +1067,36 @@ class SegformerForImageClassification(SegformerPreTrainedModel):
     This class represents a Segformer model for image classification. It is a subclass of SegformerPreTrainedModel.
     
     The SegformerForImageClassification class initializes and constructs a Segformer model for image classification. It takes in a configuration object as a parameter, which includes the number of labels for
-classification.
+    classification.
     
     The constructor (__init__) initializes the SegformerForImageClassification object by calling the superclass's constructor with the provided configuration. It sets the number of labels and creates instances
-of the SegformerModel and nn.Dense classes. The post_init method is then called.
+    of the SegformerModel and nn.Dense classes. The post_init method is then called.
     
     The construct method constructs the Segformer model for image classification. It takes in several optional parameters, including pixel_values (input image tensor), labels (classification labels),
-output_attentions (whether to output attention weights), output_hidden_states (whether to output hidden states), and return_dict (whether to return results as a dictionary). It returns a tuple or a
-SegFormerImageClassifierOutput object.
+    output_attentions (whether to output attention weights), output_hidden_states (whether to output hidden states), and return_dict (whether to return results as a dictionary). It returns a tuple or a
+    SegFormerImageClassifierOutput object.
     
     The labels parameter is an optional tensor that represents the classification labels for computing the image classification/regression loss. The indices in the labels tensor should be in the range of [0,
-..., config.num_labels - 1]. If config.num_labels == 1, a regression loss (Mean-Square loss) is computed. If config.num_labels > 1, a classification loss (Cross-Entropy) is computed.
+    ..., config.num_labels - 1]. If config.num_labels == 1, a regression loss (Mean-Square loss) is computed. If config.num_labels > 1, a classification loss (Cross-Entropy) is computed.
     
     The method first calls the SegformerModel's forward method with the provided inputs and optional parameters. The output of the forward pass is stored in the sequence_output variable. If the
-reshape_last_stage configuration option is enabled, the sequence_output tensor is permuted and reshaped. Then, the mean of the sequence_output tensor is calculated along the second axis.
+    reshape_last_stage configuration option is enabled, the sequence_output tensor is permuted and reshaped. Then, the mean of the sequence_output tensor is calculated along the second axis.
     
     The logits tensor is obtained by passing the sequence_output tensor through the classifier module. The loss variable is initially set to None.
     
     If the labels tensor is provided, the problem_type configuration option is checked to determine the type of loss calculation. If the problem_type is not set, it is inferred based on the number of labels
-and the data type of the labels tensor. For regression problems with a single label, the problem_type is set to 'regression'. For single-label classification problems, the problem_type is set to
-'single_label_classification'. For multi-label classification problems, the problem_type is set to 'multi_label_classification'.
+    and the data type of the labels tensor. For regression problems with a single label, the problem_type is set to 'regression'. For single-label classification problems, the problem_type is set to
+    'single_label_classification'. For multi-label classification problems, the problem_type is set to 'multi_label_classification'.
     
     The loss is calculated based on the problem_type. For regression problems with a single label, the mean squared error (MSE) loss is computed. For single-label classification problems, the cross-entropy
-loss is computed. For multi-label classification problems, the binary cross-entropy with logits loss is computed.
+    loss is computed. For multi-label classification problems, the binary cross-entropy with logits loss is computed.
     
     Finally, the method returns the computed loss and other outputs depending on the value of the return_dict parameter. If return_dict is False, the method returns a tuple containing the logits and other
-outputs. If loss is None, the output tuple does not include the loss. If return_dict is True, the method returns a SegFormerImageClassifierOutput object containing the loss, logits, hidden states, and
-attentions.
+    outputs. If loss is None, the output tuple does not include the loss. If return_dict is True, the method returns a SegFormerImageClassifierOutput object containing the loss, logits, hidden states, and
+    attentions.
     
-    Note: This docstring does not include the function signatures or any other code.
+    Note:
+        This docstring does not include the function signatures or any other code.
     """
     def __init__(self, config):
         """
@@ -1102,8 +1105,8 @@ attentions.
         Args:
             self: The instance of the SegformerForImageClassification class.
             config: An object containing configuration settings for the model. It should include the following attributes:
-                - num_labels (int): The number of labels for classification.
-                - hidden_sizes (list of int): A list of sizes for the hidden layers.
+                >   - num_labels (int): The number of labels for classification.
+                >   - hidden_sizes (list of int): A list of sizes for the hidden layers.
         
         Returns:
             None. This method initializes the instance with the provided configuration.
@@ -1133,10 +1136,11 @@ attentions.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SegFormerImageClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1254,16 +1258,16 @@ class SegformerDecodeHead(SegformerPreTrainedModel):
     Methods:
         construct(encoder_hidden_states: mindspore.Tensor) -> mindspore.Tensor:
             Constructs the decoding head and generates logits for semantic segmentation based on the given encoder hidden states.
-            Args:
-                encoder_hidden_states (mindspore.Tensor): A tensor containing the hidden states of the encoder blocks.
-            Returns:
-                mindspore.Tensor: The logits for semantic segmentation.
+            >   - Args:
+            >       - encoder_hidden_states (mindspore.Tensor): A tensor containing the hidden states of the encoder blocks.
+            >   - Returns:
+            >       - mindspore.Tensor: The logits for semantic segmentation.
     
     Note:
-        - The `SegformerDecodeHead` class requires an instance of `SegformerPreTrainedModel` as its parent class.
-        - The decoding head consists of multiple MLP modules, a fusion layer, batch normalization, activation, dropout, and a final classifier.
-        - The `construct` method takes the encoder hidden states as input and performs the necessary computations to generate the logits.
-        - The `SegformerDecodeHead` class is designed to be used in conjunction with the Segformer model for semantic segmentation tasks.
+        >   - The `SegformerDecodeHead` class requires an instance of `SegformerPreTrainedModel` as its parent class.
+        >   - The decoding head consists of multiple MLP modules, a fusion layer, batch normalization, activation, dropout, and a final classifier.
+        >   - The `construct` method takes the encoder hidden states as input and performs the necessary computations to generate the logits.
+        >   - The `SegformerDecodeHead` class is designed to be used in conjunction with the Segformer model for semantic segmentation tasks.
     """
     def __init__(self, config):
         """
@@ -1272,11 +1276,11 @@ class SegformerDecodeHead(SegformerPreTrainedModel):
         Args:
             self: The instance of the SegformerDecodeHead class.
             config: A dictionary containing the configuration parameters for the SegformerDecodeHead, including the following keys:
-                - num_encoder_blocks (int): The number of encoder blocks.
-                - hidden_sizes (list of int): The list of hidden sizes for each encoder block.
-                - decoder_hidden_size (int): The size of the hidden layer in the decoder.
-                - classifier_dropout_prob (float): The dropout probability for the classifier.
-                - num_labels (int): The number of output labels.
+                >   - num_encoder_blocks (int): The number of encoder blocks.
+                >   - hidden_sizes (list of int): The list of hidden sizes for each encoder block.
+                >   - decoder_hidden_size (int): The size of the hidden layer in the decoder.
+                >   - classifier_dropout_prob (float): The dropout probability for the classifier.
+                >   - num_labels (int): The number of output labels.
                 
         Returns:
             None. This method initializes the SegformerDecodeHead class and does not return any value.
@@ -1370,34 +1374,34 @@ class SegformerForSemanticSegmentation(SegformerPreTrainedModel):
     The SegformerForSemanticSegmentation class includes methods for model initialization and construction. It utilizes the SegformerModel and SegformerDecodeHead classes for the main processing steps.
     
     Initialization:
-        - `__init__(self, config)`: Initializes the SegformerForSemanticSegmentation instance with a given configuration.
-            - Parameters:
-                - `config`: The configuration object for the model.
+            > `__init__(self, config)`: Initializes the SegformerForSemanticSegmentation instance with a given configuration.
+            >   - Parameters:
+            >       - `config`: The configuration object for the model.
     
     Construction:
-        - `construct(self, pixel_values, labels=None, output_attentions=None, output_hidden_states=None, return_dict=None)`: Constructs the semantic segmentation output based on the input pixel values.
-            - Parameters:
-                - `pixel_values`: A tensor containing the input pixel values for the image.
-                - `labels` (Optional): Ground truth semantic segmentation maps for computing the loss. Indices should be in the range [0, config.num_labels - 1]. If config.num_labels > 1, a classification loss
-is computed (Cross-Entropy).
-                - `output_attentions` (Optional): Boolean flag indicating whether to output attention weights.
-                - `output_hidden_states` (Optional): Boolean flag indicating whether to output hidden states.
-                - `return_dict` (Optional): Boolean flag indicating whether to return the output as a dictionary.
-            - Returns:
-                - If return_dict is False:
-                    - If output_hidden_states is True:
-                        - A tuple containing the logits and hidden states (logits, hidden_states).
-                    - If output_hidden_states is False:
-                        - A tuple containing the logits and attentions (logits, attentions).
-                - If return_dict is True:
-                    - An instance of SemanticSegmenterOutput containing the loss, logits, hidden states (if output_hidden_states is True), and attentions.
+            > `construct(self, pixel_values, labels=None, output_attentions=None, output_hidden_states=None, return_dict=None)`: Constructs the semantic segmentation output based on the input pixel values.
+            >   - Parameters:
+            >       - `pixel_values`: A tensor containing the input pixel values for the image.
+            >       - `labels` (Optional): Ground truth semantic segmentation maps for computing the loss. Indices should be in the range [0, config.num_labels - 1]. If config.num_labels > 1, a classification loss
+                        is computed (Cross-Entropy).
+            >       - `output_attentions` (Optional): Boolean flag indicating whether to output attention weights.
+            >       - `output_hidden_states` (Optional): Boolean flag indicating whether to output hidden states.
+            >       - `return_dict` (Optional): Boolean flag indicating whether to return the output as a dictionary.
+            >   - Returns:
+            >       - If return_dict is False:
+            >           - If output_hidden_states is True:
+            >               - A tuple containing the logits and hidden states (logits, hidden_states).
+            >           - If output_hidden_states is False:
+            >               - A tuple containing the logits and attentions (logits, attentions).
+            >       - If return_dict is True:
+            >           - An instance of SemanticSegmenterOutput containing the loss, logits, hidden states (if output_hidden_states is True), and attentions.
     
     Example usage:
-        
+        ```python
         from transformers import AutoImageProcessor, SegformerForSemanticSegmentation
         from PIL import Image
         import requests
-    
+
         image_processor = AutoImageProcessor.from_pretrained("nvidia/segformer-b0-finetuned-ade-512-512")
         model = SegformerForSemanticSegmentation.from_pretrained("nvidia/segformer-b0-finetuned-ade-512-512")
     
@@ -1409,6 +1413,7 @@ is computed (Cross-Entropy).
         logits = outputs.logits  # shape (batch_size, num_labels, height/4, width/4)
         list(logits.shape)
         [1, 150, 128, 128]
+        ```
         
     """
     def __init__(self, config):
@@ -1447,26 +1452,27 @@ is computed (Cross-Entropy).
             config.num_labels - 1]`. If `config.num_labels > 1`, a classification loss is computed (Cross-Entropy).
 
         Returns:
+            Union[Tuple, SemanticSegmenterOutput]
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import AutoImageProcessor, SegformerForSemanticSegmentation
+            >>> from PIL import Image
+            >>> import requests
 
-        ```python
-        >>> from transformers import AutoImageProcessor, SegformerForSemanticSegmentation
-        >>> from PIL import Image
-        >>> import requests
+            >>> image_processor = AutoImageProcessor.from_pretrained("nvidia/segformer-b0-finetuned-ade-512-512")
+            >>> model = SegformerForSemanticSegmentation.from_pretrained("nvidia/segformer-b0-finetuned-ade-512-512")
 
-        >>> image_processor = AutoImageProcessor.from_pretrained("nvidia/segformer-b0-finetuned-ade-512-512")
-        >>> model = SegformerForSemanticSegmentation.from_pretrained("nvidia/segformer-b0-finetuned-ade-512-512")
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> inputs = image_processor(images=image, return_tensors="pt")
-        >>> outputs = model(**inputs)
-        >>> logits = outputs.logits  # shape (batch_size, num_labels, height/4, width/4)
-        >>> list(logits.shape)
-        [1, 150, 128, 128]
-        ```"""
+            >>> inputs = image_processor(images=image, return_tensors="pt")
+            >>> outputs = model(**inputs)
+            >>> logits = outputs.logits  # shape (batch_size, num_labels, height/4, width/4)
+            >>> list(logits.shape)
+            [1, 150, 128, 128]
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states

@@ -63,7 +63,7 @@ class _UniformOperator(Cell):
             to the instance attributes 'op' and 'hc_impl' respectively. These attributes can be accessed
             throughout the class to perform the desired high-level operation.
         
-        Example:
+        Examples:
             hc_op = HighLevelOperation()  # Create a high-level operation object
             hc_impl = HighLevelImplementation()  # Create a high-level implementation object
             

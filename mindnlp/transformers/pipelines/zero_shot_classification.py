@@ -57,21 +57,21 @@ class ZeroShotClassificationArgumentHandler(ArgumentHandler):
         Method: __call__
         
         Description:
-        This method processes the input sequences, labels, and hypothesis template to generate sequence pairs for zero-shot classification.
+            This method processes the input sequences, labels, and hypothesis template to generate sequence pairs for zero-shot classification.
         
         Args:
-        - self (object): The instance of the class.
-        - sequences (str or list): The input sequences to be classified. If a string is provided, it will be converted to a list with the string as the only element.
-        - labels (list): The list of target labels for classification.
-        - hypothesis_template (str): The template string used to format the hypothesis for each label.
+            self (object): The instance of the class.
+            sequences (str or list): The input sequences to be classified. If a string is provided, it will be converted to a list with the string as the only element.
+            labels (list): The list of target labels for classification.
+            hypothesis_template (str): The template string used to format the hypothesis for each label.
         
         Returns:
-        None: This method does not return any value. It updates the instance with the generated sequence pairs.
+            None: This method does not return any value. It updates the instance with the generated sequence pairs.
         
         Raises:
-        - ValueError: Raised if either the 'labels' or 'sequences' parameter is empty.
-        - ValueError: Raised if the 'hypothesis_template' cannot be formatted with the target labels.
-        - TypeError: Raised if the 'sequences' parameter is not a string or a list.
+            - ValueError: Raised if either the 'labels' or 'sequences' parameter is empty.
+            - ValueError: Raised if the 'hypothesis_template' cannot be formatted with the target labels.
+            - TypeError: Raised if the 'sequences' parameter is not a string or a list.
         """
         if len(labels) == 0 or len(sequences) == 0:
             raise ValueError("You must include at least one label and at least one sequence.")
@@ -106,23 +106,22 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
     config's :attr:*~transformers.PretrainedConfig.label2id*.
 
     Example:
+        ```python
+        >>> from transformers import pipeline
 
-    ```python
-    >>> from transformers import pipeline
+        >>> oracle = pipeline(model="facebook/bart-large-mnli")
+        >>> oracle(
+        ...     "I have a problem with my iphone that needs to be resolved asap!!",
+        ...     candidate_labels=["urgent", "not urgent", "phone", "tablet", "computer"],
+        ... )
+        {'sequence': 'I have a problem with my iphone that needs to be resolved asap!!', 'labels': ['urgent', 'phone', 'computer', 'not urgent', 'tablet'], 'scores': [0.504, 0.479, 0.013, 0.003, 0.002]}
 
-    >>> oracle = pipeline(model="facebook/bart-large-mnli")
-    >>> oracle(
-    ...     "I have a problem with my iphone that needs to be resolved asap!!",
-    ...     candidate_labels=["urgent", "not urgent", "phone", "tablet", "computer"],
-    ... )
-    {'sequence': 'I have a problem with my iphone that needs to be resolved asap!!', 'labels': ['urgent', 'phone', 'computer', 'not urgent', 'tablet'], 'scores': [0.504, 0.479, 0.013, 0.003, 0.002]}
-
-    >>> oracle(
-    ...     "I have a problem with my iphone that needs to be resolved asap!!",
-    ...     candidate_labels=["english", "german"],
-    ... )
-    {'sequence': 'I have a problem with my iphone that needs to be resolved asap!!', 'labels': ['english', 'german'], 'scores': [0.814, 0.186]}
-    ```
+        >>> oracle(
+        ...     "I have a problem with my iphone that needs to be resolved asap!!",
+        ...     candidate_labels=["english", "german"],
+        ... )
+        {'sequence': 'I have a problem with my iphone that needs to be resolved asap!!', 'labels': ['english', 'german'], 'scores': [0.814, 0.186]}
+        ```
 
     Learn more about the basics of using a pipeline in the [pipeline tutorial](../pipeline_tutorial)
 
@@ -234,22 +233,22 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
             None.
         
         This method performs the following tasks:
-        - Renames the deprecated 'multi_class' argument to 'multi_label' if provided and logs a warning.
-        - Parses and sanitizes the 'candidate_labels' parameter if provided.
-        - Retrieves the 'hypothesis_template' parameter if provided.
-        - Collects the 'multi_label' parameter if provided.
+        >- Renames the deprecated 'multi_class' argument to 'multi_label' if provided and logs a warning.
+        >- Parses and sanitizes the 'candidate_labels' parameter if provided.
+        >- Retrieves the 'hypothesis_template' parameter if provided.
+        >- Collects the 'multi_label' parameter if provided.
         
         Note:
-        - The 'multi_class' argument has been deprecated and renamed to 'multi_label'. 'multi_class' will be removed in a future version of Transformers.
-        - The 'candidate_labels' parameter should be a list of strings representing the labels.
-        - The 'hypothesis_template' parameter should be a string representing the template for the hypothesis.
-        - The 'multi_label' parameter should be a boolean indicating whether multi-label classification should be used.
+            >- The 'multi_class' argument has been deprecated and renamed to 'multi_label'. 'multi_class' will be removed in a future version of Transformers.
+            >- The 'candidate_labels' parameter should be a list of strings representing the labels.
+            >- The 'hypothesis_template' parameter should be a string representing the template for the hypothesis.
+            >- The 'multi_label' parameter should be a boolean indicating whether multi-label classification should be used.
         
         Example Usage:
-        
-        pipeline = ZeroShotClassificationPipeline()
-        pipeline._sanitize_parameters(multi_class=True, candidate_labels=['label1', 'label2'], hypothesis_template='This text is about {}.')
-        
+            ```python
+            pipeline = ZeroShotClassificationPipeline()
+            pipeline._sanitize_parameters(multi_class=True, candidate_labels=['label1', 'label2'], hypothesis_template='This text is about {}.')
+            ```
         """
         if kwargs.get("multi_class", None) is not None:
             kwargs["multi_label"] = kwargs["multi_class"]
@@ -302,9 +301,9 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
         Return:
             A `dict` or a list of `dict`: Each result comes as a dictionary with the following keys:
 
-            - **sequence** (`str`) -- The sequence for which this is the output.
-            - **labels** (`List[str]`) -- The labels sorted by order of likelihood.
-            - **scores** (`List[float]`) -- The probabilities for each of the labels.
+            >- **sequence** (`str`) -- The sequence for which this is the output.
+            >- **labels** (`List[str]`) -- The labels sorted by order of likelihood.
+            >- **scores** (`List[float]`) -- The probabilities for each of the labels.
         """
         if len(args) == 0:
             pass
@@ -320,16 +319,16 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
         This method preprocesses inputs for zero-shot classification and generates model inputs for each candidate label.
         
         Args:
-        - self: The instance of the ZeroShotClassificationPipeline class.
-        - inputs: The input sequences to be classified.
-        - candidate_labels: The list of candidate labels for classification. Defaults to None.
-        - hypothesis_template: The template string for the hypothesis. Defaults to 'This example is {}'.
+            self: The instance of the ZeroShotClassificationPipeline class.
+            inputs: The input sequences to be classified.
+            candidate_labels: The list of candidate labels for classification. Defaults to None.
+            hypothesis_template: The template string for the hypothesis. Defaults to 'This example is {}'.
         
         Returns:
-        None. This method yields dictionaries with model inputs for each candidate label.
+            None. This method yields dictionaries with model inputs for each candidate label.
         
         Raises:
-        None.
+            None.
         """
         sequence_pairs, sequences = self._args_parser(inputs, candidate_labels, hypothesis_template)
         for i, (candidate_label, sequence_pair) in enumerate(zip(candidate_labels, sequence_pairs)):
@@ -348,8 +347,8 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
         Args:
             self (ZeroShotClassificationPipeline): The instance of the ZeroShotClassificationPipeline class.
             inputs (dict): A dictionary containing the input data for the forward pass.
-                - candidate_label (str): The candidate label for classification.
-                - sequence (str): The sequence to classify.
+                >- candidate_label (str): The candidate label for classification.
+                >- sequence (str): The sequence to classify.
             
         Returns:
             None
@@ -381,12 +380,12 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
         Args:
             self (object): The instance of the ZeroShotClassificationPipeline class.
             model_outputs (list): A list of dictionaries containing the model outputs. Each dictionary must have the keys 'candidate_label', 'sequence', and 'logits'. The 'candidate_label' key represents the
-candidate label, 'sequence' key represents the sequence, and 'logits' key holds the logits values.
+                candidate label, 'sequence' key represents the sequence, and 'logits' key holds the logits values.
             multi_label (bool): A flag indicating whether the classification is multi-label or not. If set to True, the method processes the outputs accordingly.
         
         Returns:
             dict: A dictionary containing the processed information of the model outputs. It includes the 'sequence' key with the sequence value, 'labels' key with the list of candidate labels in descending
-order of their scores, and 'scores' key with the corresponding scores of the candidate labels.
+                order of their scores, and 'scores' key with the corresponding scores of the candidate labels.
         
         Raises:
             IndexError: If the indices accessed during processing are out of bounds.

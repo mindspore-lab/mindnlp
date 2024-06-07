@@ -58,12 +58,12 @@ class MT5LayerNorm(nn.Cell):
     If the weight data type is float16 or bfloat16, the hidden states are converted to the weight data type before returning the weighted normalized hidden states.
     
     Attributes:
-    - hidden_size (int): The size of the hidden states.
-    - eps (float): The epsilon value for numerical stability.
+        hidden_size (int): The size of the hidden states.
+        eps (float): The epsilon value for numerical stability.
     
     Methods:
-    - __init__(self, hidden_size, eps=1e-06): Constructs a MT5LayerNorm module with the given hidden size and epsilon value.
-    - construct(self, hidden_states): Applies layer normalization to the input hidden states and returns the normalized output.
+        __init__(self, hidden_size, eps=1e-06): Constructs a MT5LayerNorm module with the given hidden size and epsilon value.
+        construct(self, hidden_states): Applies layer normalization to the input hidden states and returns the normalized output.
     """
     def __init__(self, hidden_size, eps=1e-6):
         """
@@ -127,13 +127,13 @@ class MT5DenseActDense(nn.Cell):
         Args:
             self: The instance of the class.
             config (MT5Config): An object of type MT5Config containing configuration parameters.
-                - MT5Config.d_model (int): The model dimension.
-                - MT5Config.d_ff (int): The feed-forward dimension.
-                - MT5Config.dropout_rate (float): The dropout rate.
-                - MT5Config.dense_act_fn (str): The activation function to be used.
+                >   - MT5Config.d_model (int): The model dimension.
+                >   - MT5Config.d_ff (int): The feed-forward dimension.
+                >   - MT5Config.dropout_rate (float): The dropout rate.
+                >   - MT5Config.dense_act_fn (str): The activation function to be used.
                 
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
             - KeyError: If the specified dense activation function in the config is not found in ACT2FN.
@@ -183,23 +183,23 @@ class MT5DenseGatedActDense(nn.Cell):
     The MT5DenseGatedActDense class contains methods to initialize and construct the dense gated activation module.
     
     Methods:
-    - __init__(self, config: MT5Config): Initializes the MT5DenseGatedActDense module with the given configuration.
-    - construct(self, hidden_states): Constructs the dense gated activation module using the provided hidden states.
+        __init__: Initializes the MT5DenseGatedActDense module with the given configuration.
+        construct: Constructs the dense gated activation module using the provided hidden states.
     
     Attributes:
-    - wi_0: A dense layer that transforms the input hidden states.
-    - wi_1: A dense layer that transforms the input hidden states.
-    - wo: A dense layer that transforms the gated hidden states.
-    - dropout: A dropout layer to apply dropout to the transformed hidden states.
-    - act: The activation function to be applied to the transformed hidden states.
+        wi_0: A dense layer that transforms the input hidden states.
+        wi_1: A dense layer that transforms the input hidden states.
+        wo: A dense layer that transforms the gated hidden states.
+        dropout: A dropout layer to apply dropout to the transformed hidden states.
+        act: The activation function to be applied to the transformed hidden states.
     
     Example usage:
-    
-    config = MT5Config(d_model=512, d_ff=2048, dropout_rate=0.1, dense_act_fn='gelu')
-    dense_gated_act_dense = MT5DenseGatedActDense(config)
-    hidden_states = ...
-    output = dense_gated_act_dense.construct(hidden_states)
-    
+        ```python
+        config = MT5Config(d_model=512, d_ff=2048, dropout_rate=0.1, dense_act_fn='gelu')
+        dense_gated_act_dense = MT5DenseGatedActDense(config)
+        hidden_states = ...
+        output = dense_gated_act_dense.construct(hidden_states)
+        ```
     """
     def __init__(self, config: MT5Config):
         """
@@ -208,8 +208,8 @@ class MT5DenseGatedActDense(nn.Cell):
         Args:
             self: The instance of the class.
             config (MT5Config): An object of type MT5Config containing configuration parameters for the model.
-                - The 'config' parameter is required and must be of type MT5Config.
-                - It is used to configure the dimensions and settings for the dense layers in the model.
+                >   - The 'config' parameter is required and must be of type MT5Config.
+                >   - It is used to configure the dimensions and settings for the dense layers in the model.
         
         Returns:
             None
@@ -265,7 +265,7 @@ class MT5LayerFF(nn.Cell):
     MT5LayerFF is a Python class representing a feed-forward layer for the MT5 model. It inherits from nn.Cell and contains methods for initialization and forward propagation.
     
     The __init__ method initializes the MT5LayerFF instance with the provided configuration. It checks if the configuration includes gated activation and assigns the appropriate DenseReluDense module
-accordingly. Additionally, it sets up layer normalization and dropout.
+    accordingly. Additionally, it sets up layer normalization and dropout.
     
     The construct method applies layer normalization to the input hidden_states, passes it through the DenseReluDense module, applies dropout, and returns the updated hidden_states.
     
@@ -279,7 +279,7 @@ accordingly. Additionally, it sets up layer normalization and dropout.
             config (MT5Config): An instance of the MT5Config class containing configuration settings for the MT5 model.
         
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
             - TypeError: If the config parameter is not of type MT5Config.
@@ -310,21 +310,22 @@ accordingly. Additionally, it sets up layer normalization and dropout.
             None: This method does not raise any exceptions.
         
         Description:
-        This method constructs the forward pass for the feed-forward layer in the MT5 model. It takes the input hidden states tensor and applies a series of operations to transform it. The steps involved in
-the forward pass are as follows:
+            This method constructs the forward pass for the feed-forward layer in the MT5 model. It takes the input hidden states tensor and applies a series of operations to transform it. The steps involved in
+            the forward pass are as follows:
         
-        1. Layer Normalization: The input hidden states tensor is first passed through a layer normalization operation using self.layer_norm. This operation normalizes the hidden states, making them more
-robust to variations in scale and distribution.
+            >  - 1. Layer Normalization: The input hidden states tensor is first passed through a layer normalization operation using self.layer_norm. This operation normalizes the hidden states, making them more
+                robust to variations in scale and distribution.
+
+            >  - 2. Feed-Forward Transformation: The normalized hidden states tensor is then passed through a feed-forward transformation using self.DenseReluDense. This transformation consists of a linear layer
+                followed by a ReLU activation function, followed by another linear layer. This operation helps the model learn complex non-linear relationships within the hidden states.
+
+            >   - 3. Dropout: The output of the feed-forward transformation is then added to the original hidden states tensor after applying dropout. Dropout is a regularization technique that randomly sets a fraction
+                of the hidden states to zero during training, which helps prevent overfitting and improves generalization.
+
+            >   The final output hidden states tensor is returned by this method, which has the same shape as the input tensor.
         
-        2. Feed-Forward Transformation: The normalized hidden states tensor is then passed through a feed-forward transformation using self.DenseReluDense. This transformation consists of a linear layer
-followed by a ReLU activation function, followed by another linear layer. This operation helps the model learn complex non-linear relationships within the hidden states.
-        
-        3. Dropout: The output of the feed-forward transformation is then added to the original hidden states tensor after applying dropout. Dropout is a regularization technique that randomly sets a fraction
-of the hidden states to zero during training, which helps prevent overfitting and improves generalization.
-        
-        The final output hidden states tensor is returned by this method, which has the same shape as the input tensor.
-        
-        Note: This method does not modify the input hidden states tensor in-place, but instead returns a new tensor.
+        Note:
+            This method does not modify the input hidden states tensor in-place, but instead returns a new tensor.
         """
         forwarded_states = self.layer_norm(hidden_states)
         forwarded_states = self.DenseReluDense(forwarded_states)
@@ -341,21 +342,21 @@ class MT5Attention(nn.Cell):
     This class inherits from the `nn.Cell` class, which is the base class for all neural network modules in MindSpore.
     
     The main purpose of this class is to compute the attention weights and output of the attention mechanism. It takes in the hidden states, mask, key-value states, position bias, past key-value states, layer
-head mask, query length, use cache flag, and output attentions flag as inputs.
+    head mask, query length, use cache flag, and output attentions flag as inputs.
     
     The class provides the following methods:
     
-    - `__init__(self, config: MT5Config, has_relative_attention_bias=False)`: Initializes the `MT5Attention` instance with the given configuration and relative attention bias flag.
+    >   - `__init__(self, config: MT5Config, has_relative_attention_bias=False)`: Initializes the `MT5Attention` instance with the given configuration and relative attention bias flag.
     
-    - `prune_heads(self, heads)`: Prunes the specified attention heads from the model.
+    >   - `prune_heads(self, heads)`: Prunes the specified attention heads from the model.
     
-    - `_relative_position_bucket(relative_position, bidirectional=True, num_buckets=32, max_distance=128)`: Translates the relative position to a bucket number for relative attention. This method is adapted
-from Mesh Tensorflow.
+    >   - `_relative_position_bucket(relative_position, bidirectional=True, num_buckets=32, max_distance=128)`: Translates the relative position to a bucket number for relative attention. This method is adapted
+            from Mesh Tensorflow.
     
-    - `compute_bias(self, query_length, key_length)`: Computes the binned relative position bias for the attention mechanism.
+    >   - `compute_bias(self, query_length, key_length)`: Computes the binned relative position bias for the attention mechanism.
     
-    - `construct(self, hidden_states, mask=None, key_value_states=None, position_bias=None, past_key_value=None, layer_head_mask=None, query_length=None, use_cache=False, output_attentions=False)`: Constructs
-the attention mechanism by applying self-attention (if `key_value_states` is None) or attention over source sentence (provided by `key_value_states`).
+    >   - `construct(self, hidden_states, mask=None, key_value_states=None, position_bias=None, past_key_value=None, layer_head_mask=None, query_length=None, use_cache=False, output_attentions=False)`: Constructs
+        the attention mechanism by applying self-attention (if `key_value_states` is None) or attention over source sentence (provided by `key_value_states`).
     
     Please refer to the method docstrings for more detailed information on each method and its parameters.
     """
@@ -367,17 +368,17 @@ the attention mechanism by applying self-attention (if `key_value_states` is Non
             self: The instance of the class.
             config (MT5Config): An object containing configuration parameters for the attention mechanism.
                 The configuration object must have the following attributes:
-                    - is_decoder (bool): Indicates if the attention mechanism is used in a decoder.
-                    - relative_attention_num_buckets (int): Number of buckets for relative attention calculations.
-                    - relative_attention_max_distance (int): Maximum distance for relative attention calculations.
-                    - d_model (int): Dimensionality of the model.
-                    - d_kv (int): Dimensionality of the key and value projections.
-                    - num_heads (int): Number of attention heads.
-                    - dropout_rate (float): Dropout rate to apply.
+                    >   - is_decoder (bool): Indicates if the attention mechanism is used in a decoder.
+                    >   - relative_attention_num_buckets (int): Number of buckets for relative attention calculations.
+                    >   - relative_attention_max_distance (int): Maximum distance for relative attention calculations.
+                    >   - d_model (int): Dimensionality of the model.
+                    >   - d_kv (int): Dimensionality of the key and value projections.
+                    >   - num_heads (int): Number of attention heads.
+                    >   - dropout_rate (float): Dropout rate to apply.
             has_relative_attention_bias (bool, optional): Indicates whether relative attention bias is used. Default is False.
         
         Returns:
-            None. The method initializes the MT5Attention instance with the provided configuration parameters.
+            None: The method initializes the MT5Attention instance with the provided configuration parameters.
         
         Raises:
             None.
@@ -419,7 +420,7 @@ the attention mechanism by applying self-attention (if `key_value_states` is Non
         Raises:
             No specific exceptions are documented to be raised by this method.
             However, potential exceptions may arise if the input 'heads' list contains indices that are out of bounds of the existing heads or if any of the helper functions called within this method encounter
-errors.
+            errors.
         """
         if len(heads) == 0:
             return
@@ -643,21 +644,21 @@ class MT5LayerSelfAttention(nn.Cell):
     Methods:
         construct(hidden_states, attention_mask=None, position_bias=None, layer_head_mask=None, past_key_value=None, use_cache=False, output_attentions=False):
             This method applies the self-attention mechanism to the input hidden states, optionally using additional inputs such as attention mask, position bias, layer head mask, and past key-value states.
-            Args:
-                hidden_states (Tensor): The input hidden states to be processed by the self-attention mechanism.
-                attention_mask (Tensor, optional): An attention mask specifying which positions should be attended to and which should be ignored. Defaults to None.
-                position_bias (Tensor, optional): A tensor containing position bias values. Defaults to None.
-                layer_head_mask (Tensor, optional): A tensor containing layer and head mask values. Defaults to None.
-                past_key_value (Tuple[Tensor], optional): A tuple containing past key and value tensors. Defaults to None.
-                use_cache (bool, optional): Whether to use caching for the key-value states. Defaults to False.
-                output_attentions (bool, optional): Whether to output the attention values. Defaults to False.
-            Returns:
-                Tuple[Tensor]: A tuple containing the updated hidden states and additional outputs depending on the configuration.
+            >   - Args:
+            >       - hidden_states (Tensor): The input hidden states to be processed by the self-attention mechanism.
+            >       - attention_mask (Tensor, optional): An attention mask specifying which positions should be attended to and which should be ignored. Defaults to None.
+            >       - position_bias (Tensor, optional): A tensor containing position bias values. Defaults to None.
+            >       - layer_head_mask (Tensor, optional): A tensor containing layer and head mask values. Defaults to None.
+            >       - past_key_value (Tuple[Tensor], optional): A tuple containing past key and value tensors. Defaults to None.
+            >       - use_cache (bool, optional): Whether to use caching for the key-value states. Defaults to False.
+            >       - output_attentions (bool, optional): Whether to output the attention values. Defaults to False.
+            >   - Returns:
+            >       - Tuple[Tensor]: A tuple containing the updated hidden states and additional outputs depending on the configuration.
     
     Note:
-        - The self-attention mechanism is applied to the input hidden states after they are layer-normalized.
-        - The attention output is added to the input hidden states after applying dropout regularization.
-        - The method returns a tuple containing the updated hidden states and additional outputs depending on the configuration.
+        >   - The self-attention mechanism is applied to the input hidden states after they are layer-normalized.
+        >   - The attention output is added to the input hidden states after applying dropout regularization.
+        >   - The method returns a tuple containing the updated hidden states and additional outputs depending on the configuration.
     """
     def __init__(self, config, has_relative_attention_bias=False):
         """
@@ -668,7 +669,7 @@ class MT5LayerSelfAttention(nn.Cell):
                 Defaults to False.
         
         Returns:
-            None. This method initializes the MT5LayerSelfAttention object with the specified configuration settings.
+            None: This method initializes the MT5LayerSelfAttention object with the specified configuration settings.
         
         Raises:
             N/A
@@ -715,12 +716,12 @@ class MT5LayerSelfAttention(nn.Cell):
         Returns:
             Tuple[Tensor]: The outputs of the self-attention layer.
             The tuple contains:
-                - hidden_states (Tensor): The updated hidden states after passing through the self-attention layer.
-                  It has the same shape as the input tensor.
-                - attention_scores (Tensor, optional): The attention scores if 'output_attentions' is set to True.
-                  It has the shape (batch_size, num_heads, sequence_length, sequence_length).
-                - position_bias (Tensor, optional): The updated position bias tensor if 'use_cache' is set to True.
-                  It has the same shape as the input position bias tensor.
+                >   - hidden_states (Tensor): The updated hidden states after passing through the self-attention layer.
+                    It has the same shape as the input tensor.
+                >   - attention_scores (Tensor, optional): The attention scores if 'output_attentions' is set to True.
+                    It has the shape (batch_size, num_heads, sequence_length, sequence_length).
+                >   - position_bias (Tensor, optional): The updated position bias tensor if 'use_cache' is set to True.
+                    It has the same shape as the input position bias tensor.
         
         Raises:
             None.
@@ -756,7 +757,7 @@ class MT5LayerCrossAttention(nn.Cell):
     Methods:
         __init__(self, config): Initializes the MT5LayerCrossAttention instance with the given configuration.
         construct(self, hidden_states, key_value_states, attention_mask=None, position_bias=None, layer_head_mask=None, past_key_value=None, use_cache=False, query_length=None, output_attentions=False):
-Constructs the cross-attention mechanism using the given parameters and returns the outputs.
+        Constructs the cross-attention mechanism using the given parameters and returns the outputs.
     
     """
     def __init__(self, config):
@@ -768,7 +769,7 @@ Constructs the cross-attention mechanism using the given parameters and returns 
             config (dict): The configuration dictionary containing the settings for the cross-attention layer.
             
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
             - ValueError: If the configuration dictionary 'config' is missing required keys or has invalid values.
@@ -836,33 +837,34 @@ class MT5Block(nn.Cell):
 
     """
     This class represents a block of the MT5 model, which is a Transformer-based neural network architecture for sequence-to-sequence tasks. It consists of a self-attention layer, an optional cross-attention
-layer, and a feed-forward layer.
+    layer, and a feed-forward layer.
     
     Attributes:
-        - `is_decoder` (bool): Indicates whether the block is used in the decoder part of the model.
-        - `layer` (nn.CellList): A list of layers in the block, including the self-attention, cross-attention, and feed-forward layers.
+        `is_decoder` (bool): Indicates whether the block is used in the decoder part of the model.
+        `layer` (nn.CellList): A list of layers in the block, including the self-attention, cross-attention, and feed-forward layers.
     
     Methods:
-        - `construct`: Performs the forward pass of the block, processing the input hidden states and generating the outputs.
+        `construct`: Performs the forward pass of the block, processing the input hidden states and generating the outputs.
     
     Details:
-    The `MT5Block` class inherits from the `nn.Cell` class and overrides the `construct` method. The `__init__` method initializes the block's attributes, including the `is_decoder` flag and the list of layers.
+        The `MT5Block` class inherits from the `nn.Cell` class and overrides the `construct` method. The `__init__` method initializes the block's attributes, including the `is_decoder` flag and the list of layers.
+
+        The `construct` method takes various input parameters, including the hidden states, attention masks, position biases, and layer head masks. It also accepts optional parameters for encoder hidden states and
+        attention masks, as well as past key-value states used for caching.
+
+        The method first checks if past key-value states are provided and validates their correctness. It then retrieves the self-attention and cross-attention past key-value states from the input if present.
+
+        Next, the method passes the hidden states through the self-attention layer, using the provided attention mask, position bias, and layer head mask. The output includes the updated hidden states and the
+        present key-value state.
+
+        If the block is a decoder and encoder hidden states are provided, the method performs cross-attention. It retrieves the query length and passes the hidden states, encoder hidden states, and other
+        parameters to the cross-attention layer. The output includes the updated hidden states and the present key-value state.
+
+        Finally, the method passes the hidden states through the feed-forward layer. It then clamps the hidden states to prevent any numerical issues and returns the final hidden states along with any additional
+        outputs, such as present key-value states and attention outputs, depending on the value of the `use_cache` parameter.
     
-    The `construct` method takes various input parameters, including the hidden states, attention masks, position biases, and layer head masks. It also accepts optional parameters for encoder hidden states and
-attention masks, as well as past key-value states used for caching.
-    
-    The method first checks if past key-value states are provided and validates their correctness. It then retrieves the self-attention and cross-attention past key-value states from the input if present.
-    
-    Next, the method passes the hidden states through the self-attention layer, using the provided attention mask, position bias, and layer head mask. The output includes the updated hidden states and the
-present key-value state.
-    
-    If the block is a decoder and encoder hidden states are provided, the method performs cross-attention. It retrieves the query length and passes the hidden states, encoder hidden states, and other
-parameters to the cross-attention layer. The output includes the updated hidden states and the present key-value state.
-    
-    Finally, the method passes the hidden states through the feed-forward layer. It then clamps the hidden states to prevent any numerical issues and returns the final hidden states along with any additional
-outputs, such as present key-value states and attention outputs, depending on the value of the `use_cache` parameter.
-    
-    Note: This class assumes the usage of the MindSpore deep learning framework.
+    Note:
+        This class assumes the usage of the MindSpore deep learning framework.
     
     """
     def __init__(self, config, has_relative_attention_bias=False):
@@ -1041,12 +1043,12 @@ class MT5ClassificationHead(nn.Cell):
         Args:
             self (MT5ClassificationHead): The instance of the MT5ClassificationHead class.
             config (MT5Config): An object containing configuration parameters for the MT5 model.
-                - config.d_model (int): The dimension of the model.
-                - config.classifier_dropout (float): The dropout rate for the classifier.
-                - config.num_labels (int): The number of output labels.
+                >   - config.d_model (int): The dimension of the model.
+                >   - config.classifier_dropout (float): The dropout rate for the classifier.
+                >   - config.num_labels (int): The number of output labels.
         
         Returns:
-            None. This method initializes the MT5ClassificationHead instance with the specified configuration.
+            None: This method initializes the MT5ClassificationHead instance with the specified configuration.
         
         Raises:
             - TypeError: If the config parameter is not of type MT5Config.
@@ -1237,32 +1239,32 @@ class MT5Stack(MT5PreTrainedModel):
     The `MT5Stack` class represents a stack of MT5 blocks in the MT5 model. It is a subclass of `MT5PreTrainedModel` and is used for both encoding and decoding tasks.
     
     Attributes:
-        - `config`: The configuration of the model.
-        - `embed_tokens`: The token embeddings for the model.
-        - `is_decoder`: A boolean indicating whether the model is used as a decoder.
-        - `block`: A list of `MT5Block` instances representing the stack of MT5 blocks.
-        - `final_layer_norm`: An instance of `MT5LayerNorm` for layer normalization.
-        - `dropout`: An instance of `nn.Dropout` for dropout regularization.
+        `config`: The configuration of the model.
+        `embed_tokens`: The token embeddings for the model.
+        `is_decoder`: A boolean indicating whether the model is used as a decoder.
+        `block`: A list of `MT5Block` instances representing the stack of MT5 blocks.
+        `final_layer_norm`: An instance of `MT5LayerNorm` for layer normalization.
+        `dropout`: An instance of `nn.Dropout` for dropout regularization.
     
     Methods:
-        - `__init__(self, config, embed_tokens=None)`: Initializes the `MT5Stack` instance.
-        - `get_input_embeddings(self)`: Returns the token embeddings of the model.
-        - `set_input_embeddings(self, new_embeddings)`: Sets new token embeddings for the model.
-        - `construct(self, input_ids=None, attention_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, inputs_embeds=None, head_mask=None, cross_attn_head_mask=None, past_key_values=None,
-use_cache=None, output_attentions=None, output_hidden_states=None, return_dict=None)`: Constructs the model by performing the forward pass.
+        `__init__(self, config, embed_tokens=None)`: Initializes the `MT5Stack` instance.
+        `get_input_embeddings(self)`: Returns the token embeddings of the model.
+        `set_input_embeddings(self, new_embeddings)`: Sets new token embeddings for the model.
+        `construct(self, input_ids=None, attention_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, inputs_embeds=None, head_mask=None, cross_attn_head_mask=None, past_key_values=None,
+                use_cache=None, output_attentions=None, output_hidden_states=None, return_dict=None)`: Constructs the model by performing the forward pass.
     
     Note:
         - The `construct` method is the main method of the class that performs the forward pass through the stack of MT5 blocks.
     
     Usage Example:
-        
+        ```python
         config = MT5Config(...)
         embed_tokens = nn.Embedding(...)
         stack = MT5Stack(config, embed_tokens)
         input_ids = torch.tensor([...])
         attention_mask = torch.tensor([...])
         output = stack.construct(input_ids=input_ids, attention_mask=attention_mask)
-        
+        ```
     """
     def __init__(self, config, embed_tokens=None):
         """
@@ -1298,16 +1300,16 @@ use_cache=None, output_attentions=None, output_hidden_states=None, return_dict=N
         Method: get_input_embeddings
         
         Description:
-        Returns the input embeddings for the MT5Stack model.
+            Returns the input embeddings for the MT5Stack model.
         
         Args:
-        - self (MT5Stack): The instance of the MT5Stack class.
+            self (MT5Stack): The instance of the MT5Stack class.
           
         Returns:
-        - None: The method returns None, indicating that it does not have a specific return value.
+            None: The method returns None, indicating that it does not have a specific return value.
         
         Raises:
-        - None
+            - None
         """
         return self.embed_tokens
 
@@ -1324,7 +1326,7 @@ use_cache=None, output_attentions=None, output_hidden_states=None, return_dict=N
                 Restrictions: None.
         
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
             None.
@@ -1350,33 +1352,33 @@ use_cache=None, output_attentions=None, output_hidden_states=None, return_dict=N
         This method constructs the MT5 model by processing the input data through multiple transformer layers.
         
         Args:
-        - self: Reference to the current instance of the class.
-        - input_ids (optional): Tensor containing the input token IDs. Default is None.
-        - attention_mask (optional): Tensor containing the attention mask for the input sequence. Default is None.
-        - encoder_hidden_states (optional): Tensor containing hidden states from the encoder. Default is None.
-        - encoder_attention_mask (optional): Tensor containing the attention mask for the encoder hidden states. Default is None.
-        - inputs_embeds (optional): Tensor containing the input embeddings. Default is None.
-        - head_mask (optional): Tensor containing the head mask for the self-attention mechanism. Default is None.
-        - cross_attn_head_mask (optional): Tensor containing the head mask for cross-attention mechanism. Default is None.
-        - past_key_values (optional): List of past key-value states. Default is None.
-        - use_cache (optional): Boolean flag indicating whether to use caching. Default is None.
-        - output_attentions (optional): Boolean flag indicating whether to output attentions. Default is None.
-        - output_hidden_states (optional): Boolean flag indicating whether to output hidden states. Default is None.
-        - return_dict (optional): Boolean flag indicating whether to return a dictionary. Default is None.
+            self: Reference to the current instance of the class.
+            input_ids (optional): Tensor containing the input token IDs. Default is None.
+            attention_mask (optional): Tensor containing the attention mask for the input sequence. Default is None.
+            encoder_hidden_states (optional): Tensor containing hidden states from the encoder. Default is None.
+            encoder_attention_mask (optional): Tensor containing the attention mask for the encoder hidden states. Default is None.
+            inputs_embeds (optional): Tensor containing the input embeddings. Default is None.
+            head_mask (optional): Tensor containing the head mask for the self-attention mechanism. Default is None.
+            cross_attn_head_mask (optional): Tensor containing the head mask for cross-attention mechanism. Default is None.
+            past_key_values (optional): List of past key-value states. Default is None.
+            use_cache (optional): Boolean flag indicating whether to use caching. Default is None.
+            output_attentions (optional): Boolean flag indicating whether to output attentions. Default is None.
+            output_hidden_states (optional): Boolean flag indicating whether to output hidden states. Default is None.
+            return_dict (optional): Boolean flag indicating whether to return a dictionary. Default is None.
         
         Returns:
-        - None
+            None
         
         Raises:
-        - ValueError: If both input_ids and inputs_embeds are provided simultaneously or if neither of them is specified.
-        - ValueError: If the model is not initialized with valid token embeddings.
-        - ValueError: If use_cache is set to True and the model is not used as a decoder.
-        - ValueError: If attention_mask is not provided.
-        - ValueError: If the model is used as a decoder and encoder_hidden_states is not None but encoder_attention_mask is not provided.
-        - ValueError: If the head masks have incorrect dimensions.
-        - ValueError: If past_key_values have incorrect dimensions.
-        - ValueError: If the output of the method is not in the expected format.
-        - Other possible exceptions raised by internal method calls.
+            - ValueError: If both input_ids and inputs_embeds are provided simultaneously or if neither of them is specified.
+            - ValueError: If the model is not initialized with valid token embeddings.
+            - ValueError: If use_cache is set to True and the model is not used as a decoder.
+            - ValueError: If attention_mask is not provided.
+            - ValueError: If the model is used as a decoder and encoder_hidden_states is not None but encoder_attention_mask is not provided.
+            - ValueError: If the head masks have incorrect dimensions.
+            - ValueError: If past_key_values have incorrect dimensions.
+            - ValueError: If the output of the method is not in the expected format.
+            - Other possible exceptions raised by internal method calls.
         """
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
@@ -1529,21 +1531,21 @@ num_heads)`.
 
 class MT5Model(MT5PreTrainedModel):
     r"""
-    Examples:
+    Example:
+        ```python
+        >>> from transformers import MT5Model, AutoTokenizer
 
-    ```python
-    >>> from transformers import MT5Model, AutoTokenizer
+        >>> model = MT5Model.from_pretrained("google/mt5-small")
+        >>> tokenizer = AutoTokenizer.from_pretrained("google/mt5-small")
+        >>> article = "UN Offizier sagt, dass weiter verhandelt werden muss in Syrien."
+        >>> summary = "Weiter Verhandlung in Syrien."
+        >>> inputs = tokenizer(article, return_tensors="pt")
+        >>> labels = tokenizer(text_target=summary, return_tensors="pt")
 
-    >>> model = MT5Model.from_pretrained("google/mt5-small")
-    >>> tokenizer = AutoTokenizer.from_pretrained("google/mt5-small")
-    >>> article = "UN Offizier sagt, dass weiter verhandelt werden muss in Syrien."
-    >>> summary = "Weiter Verhandlung in Syrien."
-    >>> inputs = tokenizer(article, return_tensors="pt")
-    >>> labels = tokenizer(text_target=summary, return_tensors="pt")
-
-    >>> outputs = model(input_ids=inputs["input_ids"], decoder_input_ids=labels["input_ids"])
-    >>> hidden_states = outputs.last_hidden_state
-    ```"""
+        >>> outputs = model(input_ids=inputs["input_ids"], decoder_input_ids=labels["input_ids"])
+        >>> hidden_states = outputs.last_hidden_state
+        ```
+    """
     model_type = "mt5"
     config_class = MT5Config
     _keys_to_ignore_on_load_missing = ["decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.weight"]
@@ -1560,7 +1562,7 @@ class MT5Model(MT5PreTrainedModel):
             config (MT5Config): An object of type MT5Config that holds the configuration parameters for the MT5 model.
         
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
             N/A
@@ -1628,7 +1630,7 @@ class MT5Model(MT5PreTrainedModel):
             self: An instance of the MT5Model class.
         
         Returns:
-            None. This method returns the encoder of the MT5Model.
+            None: This method returns the encoder of the MT5Model.
         
         Raises:
             None.
@@ -1681,28 +1683,29 @@ class MT5Model(MT5PreTrainedModel):
     ) -> Union[Tuple[mindspore.Tensor], Seq2SeqModelOutput]:
         r"""
         Returns:
+            Union[Tuple[mindspore.Tensor], Seq2SeqModelOutput]
 
         Example:
+            ```python
+            >>> from transformers import AutoTokenizer, MT5Model
 
-        ```python
-        >>> from transformers import AutoTokenizer, MT5Model
+            >>> tokenizer = AutoTokenizer.from_pretrained("mt5-small")
+            >>> model = MT5Model.from_pretrained("mt5-small")
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("mt5-small")
-        >>> model = MT5Model.from_pretrained("mt5-small")
+            >>> input_ids = tokenizer(
+            ...     "Studies have been shown that owning a dog is good for you", return_tensors="pt"
+            ... ).input_ids  # Batch size 1
+            >>> decoder_input_ids = tokenizer("Studies show that", return_tensors="pt").input_ids  # Batch size 1
 
-        >>> input_ids = tokenizer(
-        ...     "Studies have been shown that owning a dog is good for you", return_tensors="pt"
-        ... ).input_ids  # Batch size 1
-        >>> decoder_input_ids = tokenizer("Studies show that", return_tensors="pt").input_ids  # Batch size 1
+            >>> # preprocess: Prepend decoder_input_ids with start token which is pad token for MT5Model.
+            >>> # This is not needed for torch's MT5ForConditionalGeneration as it does this internally using labels arg.
+            >>> decoder_input_ids = model._shift_right(decoder_input_ids)
 
-        >>> # preprocess: Prepend decoder_input_ids with start token which is pad token for MT5Model.
-        >>> # This is not needed for torch's MT5ForConditionalGeneration as it does this internally using labels arg.
-        >>> decoder_input_ids = model._shift_right(decoder_input_ids)
-
-        >>> # forward pass
-        >>> outputs = model(input_ids=input_ids, decoder_input_ids=decoder_input_ids)
-        >>> last_hidden_states = outputs.last_hidden_state
-        ```"""
+            >>> # forward pass
+            >>> outputs = model(input_ids=input_ids, decoder_input_ids=decoder_input_ids)
+            >>> last_hidden_states = outputs.last_hidden_state
+            ```
+        """
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1765,20 +1768,20 @@ class MT5Model(MT5PreTrainedModel):
 
 class MT5ForConditionalGeneration(MT5PreTrainedModel):
     r"""
-    Examples:
+    Example:
+        ```python
+        >>> from transformers import MT5ForConditionalGeneration, AutoTokenizer
 
-    ```python
-    >>> from transformers import MT5ForConditionalGeneration, AutoTokenizer
+        >>> model = MT5ForConditionalGeneration.from_pretrained("google/mt5-small")
+        >>> tokenizer = AutoTokenizer.from_pretrained("google/mt5-small")
+        >>> article = "UN Offizier sagt, dass weiter verhandelt werden muss in Syrien."
+        >>> summary = "Weiter Verhandlung in Syrien."
+        >>> inputs = tokenizer(article, text_target=summary, return_tensors="pt")
 
-    >>> model = MT5ForConditionalGeneration.from_pretrained("google/mt5-small")
-    >>> tokenizer = AutoTokenizer.from_pretrained("google/mt5-small")
-    >>> article = "UN Offizier sagt, dass weiter verhandelt werden muss in Syrien."
-    >>> summary = "Weiter Verhandlung in Syrien."
-    >>> inputs = tokenizer(article, text_target=summary, return_tensors="pt")
-
-    >>> outputs = model(**inputs)
-    >>> loss = outputs.loss
-    ```"""
+        >>> outputs = model(**inputs)
+        >>> loss = outputs.loss
+        ```
+    """
     model_type = "mt5"
     config_class = MT5Config
     _keys_to_ignore_on_load_unexpected = ["decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.weight"]
@@ -1792,12 +1795,12 @@ class MT5ForConditionalGeneration(MT5PreTrainedModel):
         Args:
             self: The object instance.
             config (MT5Config): The configuration object containing various parameters for the model.
-                - `d_model` (int): The dimensionality of the model.
-                - `vocab_size` (int): The size of the vocabulary.
-                - `num_decoder_layers` (int): The number of layers in the decoder.
-                - `is_decoder` (bool): Indicates whether the instance is a decoder.
-                - `use_cache` (bool): Indicates whether to use cache during encoding.
-                - `is_encoder_decoder` (bool): Indicates whether the instance is an encoder-decoder.
+                >   - `d_model` (int): The dimensionality of the model.
+                >   - `vocab_size` (int): The size of the vocabulary.
+                >   - `num_decoder_layers` (int): The number of layers in the decoder.
+                >   - `is_decoder` (bool): Indicates whether the instance is a decoder.
+                >   - `use_cache` (bool): Indicates whether to use cache during encoding.
+                >   - `is_encoder_decoder` (bool): Indicates whether the instance is an encoder-decoder.
             
         Returns:
             None
@@ -1852,12 +1855,12 @@ class MT5ForConditionalGeneration(MT5PreTrainedModel):
             self (MT5ForConditionalGeneration): The instance of the MT5ForConditionalGeneration class.
             new_embeddings (Tensor): New input embeddings to be set for the model.
                 Should be a tensor of shape [vocab_size, embedding_size] where:
-                    - vocab_size: Number of tokens in the vocabulary.
-                    - embedding_size: Dimension of the token embeddings.
+                    >   - vocab_size: Number of tokens in the vocabulary.
+                    >   - embedding_size: Dimension of the token embeddings.
                 The new_embeddings should match the token embedding requirements of the model.
                 
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
             - TypeError: If the new_embeddings provided is not a tensor.
@@ -1893,7 +1896,7 @@ class MT5ForConditionalGeneration(MT5PreTrainedModel):
             self: An instance of the MT5ForConditionalGeneration class.
         
         Returns:
-            None. The method returns the output embeddings of the MT5 model.
+            None: The method returns the output embeddings of the MT5 model.
         
         Raises:
             This method does not raise any exceptions.
@@ -1960,30 +1963,31 @@ class MT5ForConditionalGeneration(MT5PreTrainedModel):
             labels in `[0, ..., config.vocab_size]`
 
         Returns:
+            `Union[Tuple[mindspore.Tensor], Seq2SeqLMOutput]`
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import AutoTokenizer, MT5ForConditionalGeneration
 
-        ```python
-        >>> from transformers import AutoTokenizer, MT5ForConditionalGeneration
+            >>> tokenizer = AutoTokenizer.from_pretrained("mt5-small")
+            >>> model = MT5ForConditionalGeneration.from_pretrained("mt5-small")
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("mt5-small")
-        >>> model = MT5ForConditionalGeneration.from_pretrained("mt5-small")
+            >>> # training
+            >>> input_ids = tokenizer("The <extra_id_0> walks in <extra_id_1> park", return_tensors="pt").input_ids
+            >>> labels = tokenizer("<extra_id_0> cute dog <extra_id_1> the <extra_id_2>", return_tensors="pt").input_ids
+            >>> outputs = model(input_ids=input_ids, labels=labels)
+            >>> loss = outputs.loss
+            >>> logits = outputs.logits
 
-        >>> # training
-        >>> input_ids = tokenizer("The <extra_id_0> walks in <extra_id_1> park", return_tensors="pt").input_ids
-        >>> labels = tokenizer("<extra_id_0> cute dog <extra_id_1> the <extra_id_2>", return_tensors="pt").input_ids
-        >>> outputs = model(input_ids=input_ids, labels=labels)
-        >>> loss = outputs.loss
-        >>> logits = outputs.logits
-
-        >>> # inference
-        >>> input_ids = tokenizer(
-        ...     "summarize: studies have shown that owning a dog is good for you", return_tensors="pt"
-        ... ).input_ids  # Batch size 1
-        >>> outputs = model.generate(input_ids)
-        >>> print(tokenizer.decode(outputs[0], skip_special_tokens=True))
-        >>> # studies have shown that owning a dog is good for you.
-        ```"""
+            >>> # inference
+            >>> input_ids = tokenizer(
+            ...     "summarize: studies have shown that owning a dog is good for you", return_tensors="pt"
+            ... ).input_ids  # Batch size 1
+            >>> outputs = model.generate(input_ids)
+            >>> print(tokenizer.decode(outputs[0], skip_special_tokens=True))
+            >>> # studies have shown that owning a dog is good for you.
+            ```
+        """
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -2136,7 +2140,7 @@ class MT5ForConditionalGeneration(MT5PreTrainedModel):
             labels (mindspore.Tensor): The labels tensor containing the target sequence to be shifted right.
         
         Returns:
-            None. This method returns None as it directly modifies the input labels tensor.
+            None: This method returns None as it directly modifies the input labels tensor.
         
         Raises:
             N/A.
@@ -2151,7 +2155,7 @@ class MT5ForConditionalGeneration(MT5PreTrainedModel):
         Args:
             self (MT5ForConditionalGeneration): An instance of the MT5ForConditionalGeneration class.
             past_key_values (Tuple): A tuple containing the past key values for the decoder. Each element in the tuple represents the past key values for a specific layer. Each layer's past key values is a
-tuple containing the past key values for each attention head in that layer.
+                tuple containing the past key values for each attention head in that layer.
             beam_idx (Tensor): The index of the beam to reorder the cache for.
         
         Returns:
@@ -2193,18 +2197,18 @@ tuple containing the past key values for each attention head in that layer.
 
 class MT5EncoderModel(MT5PreTrainedModel):
     r"""
-    Examples:
+    Example:
+        ```python
+        >>> from transformers import MT5EncoderModel, AutoTokenizer
 
-    ```python
-    >>> from transformers import MT5EncoderModel, AutoTokenizer
-
-    >>> model = MT5EncoderModel.from_pretrained("google/mt5-small")
-    >>> tokenizer = AutoTokenizer.from_pretrained("google/mt5-small")
-    >>> article = "UN Offizier sagt, dass weiter verhandelt werden muss in Syrien."
-    >>> input_ids = tokenizer(article, return_tensors="pt").input_ids
-    >>> outputs = model(input_ids)
-    >>> hidden_state = outputs.last_hidden_state
-    ```"""
+        >>> model = MT5EncoderModel.from_pretrained("google/mt5-small")
+        >>> tokenizer = AutoTokenizer.from_pretrained("google/mt5-small")
+        >>> article = "UN Offizier sagt, dass weiter verhandelt werden muss in Syrien."
+        >>> input_ids = tokenizer(article, return_tensors="pt").input_ids
+        >>> outputs = model(input_ids)
+        >>> hidden_state = outputs.last_hidden_state
+        ```
+    """
     model_type = "mt5"
     config_class = MT5Config
     _tied_weights_keys = ["encoder.embed_tokens.weight"]
@@ -2221,7 +2225,7 @@ class MT5EncoderModel(MT5PreTrainedModel):
                 It must be an instance of the MT5Config class.
         
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
             - TypeError: If the config parameter is not of type MT5Config.
@@ -2247,7 +2251,7 @@ class MT5EncoderModel(MT5PreTrainedModel):
             self: An instance of the MT5EncoderModel class.
         
         Returns:
-            None. This method returns the shared input embeddings for the MT5EncoderModel.
+            None: This method returns the shared input embeddings for the MT5EncoderModel.
         
         Raises:
             This method does not raise any exceptions.
@@ -2264,7 +2268,7 @@ class MT5EncoderModel(MT5PreTrainedModel):
             new_embeddings (object): The new embeddings to be set for the input.
             
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
             - TypeError: If the new_embeddings parameter is not of the correct type.
@@ -2282,7 +2286,7 @@ class MT5EncoderModel(MT5PreTrainedModel):
             self: An instance of the MT5EncoderModel class.
         
         Returns:
-            None. The method returns the encoder of the MT5EncoderModel.
+            None: The method returns the encoder of the MT5EncoderModel.
         
         Raises:
             No exceptions are raised by this method.
@@ -2311,20 +2315,21 @@ class MT5EncoderModel(MT5PreTrainedModel):
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutput]:
         r"""
         Returns:
+            Union[Tuple[mindspore.Tensor], BaseModelOutput]
 
         Example:
+            ```python
+            >>> from transformers import AutoTokenizer, MT5EncoderModel
 
-        ```python
-        >>> from transformers import AutoTokenizer, MT5EncoderModel
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("mt5-small")
-        >>> model = MT5EncoderModel.from_pretrained("mt5-small")
-        >>> input_ids = tokenizer(
-        ...     "Studies have been shown that owning a dog is good for you", return_tensors="pt"
-        ... ).input_ids  # Batch size 1
-        >>> outputs = model(input_ids=input_ids)
-        >>> last_hidden_states = outputs.last_hidden_state
-        ```"""
+            >>> tokenizer = AutoTokenizer.from_pretrained("mt5-small")
+            >>> model = MT5EncoderModel.from_pretrained("mt5-small")
+            >>> input_ids = tokenizer(
+            ...     "Studies have been shown that owning a dog is good for you", return_tensors="pt"
+            ... ).input_ids  # Batch size 1
+            >>> outputs = model(input_ids=input_ids)
+            >>> last_hidden_states = outputs.last_hidden_state
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         encoder_outputs = self.encoder(
@@ -2351,19 +2356,20 @@ class MT5ForSequenceClassification(MT5PreTrainedModel):
     
     The `MT5ForSequenceClassification` class has the following attributes:
     
-    - `transformer`: An instance of the `MT5Model` class, which represents the main transformer model.
-    - `classification_head`: An instance of the `MT5ClassificationHead` class, which represents the classification head of the model.
+    >   - `transformer`: An instance of the `MT5Model` class, which represents the main transformer model.
+    >   - `classification_head`: An instance of the `MT5ClassificationHead` class, which represents the classification head of the model.
     
     The `construct` method is used to process the input and generate the outputs of the model. It takes several input tensors as parameters, such as `input_ids`, `attention_mask`, `decoder_input_ids`, etc. The
-method returns a tuple of outputs, including the predicted logits for classification, and other intermediate outputs if requested.
+    method returns a tuple of outputs, including the predicted logits for classification, and other intermediate outputs if requested.
     
     If labels are provided, the method also calculates the loss based on the predicted logits and the provided labels. The loss calculation depends on the `problem_type` specified in the configuration. The
-supported problem types are regression, single-label classification, and multi-label classification.
+    supported problem types are regression, single-label classification, and multi-label classification.
     
-    Note: The `MT5ForSequenceClassification` class does not currently support passing input embeddings instead of input IDs.
+    Note:
+        The `MT5ForSequenceClassification` class does not currently support passing input embeddings instead of input IDs.
     
     The `MT5ForSequenceClassification` class is designed to be used with the MT5 model for fine-tuning on sequence classification tasks. It provides a convenient interface for processing input sequences and
-generating predictions.
+    generating predictions.
     
     Please refer to the documentation of the `MT5PreTrainedModel` class for more details on loading and saving pre-trained MT5 models.
     """
@@ -2380,7 +2386,7 @@ generating predictions.
             config (MT5Config): An object of type MT5Config containing configuration parameters for the model.
             
         Returns:
-            None. This method initializes the MT5ForSequenceClassification instance with the provided configuration.
+            None: This method initializes the MT5ForSequenceClassification instance with the provided configuration.
         
         Raises:
             - TypeError: If the config parameter is not of type MT5Config.
@@ -2413,10 +2419,12 @@ generating predictions.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Seq2SeqSequenceClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         Returns:
+            Union[Tuple, Seq2SeqSequenceClassifierOutput]
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if labels is not None:
@@ -2507,13 +2515,13 @@ class MT5ForQuestionAnswering(MT5PreTrainedModel):
     
     The class includes the following methods:
     
-    - __init__(self, config: MT5Config): Initializes an instance of the class with the given configuration.
-    - get_input_embeddings(self): Returns the shared input embeddings.
-    - set_input_embeddings(self, new_embeddings): Sets the shared input embeddings to the provided new embeddings.
-    - get_encoder(self): Returns the encoder module of the model.
-    - get_decoder(self): Returns the decoder module of the model.
-    - construct(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask, cross_attn_head_mask, encoder_outputs, start_positions, end_positions, inputs_embeds,
-decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model and returns the outputs.
+    >   - __init__(self, config: MT5Config): Initializes an instance of the class with the given configuration.
+    >   - get_input_embeddings(self): Returns the shared input embeddings.
+    >   - set_input_embeddings(self, new_embeddings): Sets the shared input embeddings to the provided new embeddings.
+    >   - get_encoder(self): Returns the encoder module of the model.
+    >   - get_decoder(self): Returns the decoder module of the model.
+    >   - construct(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, head_mask, decoder_head_mask, cross_attn_head_mask, encoder_outputs, start_positions, end_positions, inputs_embeds,
+            decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model and returns the outputs.
     
     The 'construct' method takes various input tensors and returns either a tuple of tensors or an instance of Seq2SeqQuestionAnsweringModelOutput.
     
@@ -2570,7 +2578,7 @@ decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, retur
             self: An instance of the MT5ForQuestionAnswering class.
         
         Returns:
-            None. The method returns the shared input embeddings.
+            None: The method returns the shared input embeddings.
         
         Raises:
             This method does not raise any exceptions.
@@ -2588,7 +2596,7 @@ decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, retur
                 Should be a tensor of the same shape as the current input embeddings.
         
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
             - ValueError: If the shape of the new embeddings does not match the current input embeddings.
@@ -2607,7 +2615,7 @@ decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, retur
             self: An instance of MT5ForQuestionAnswering.
         
         Returns:
-            None. The method returns the encoder object, which is an instance of a specific encoder used in the MT5ForQuestionAnswering class.
+            None: The method returns the encoder object, which is an instance of a specific encoder used in the MT5ForQuestionAnswering class.
         
         Raises:
             None.
@@ -2661,6 +2669,7 @@ decoder_inputs_embeds, use_cache, output_attentions, output_hidden_states, retur
             Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
             are not taken into account for computing the loss.
         Returns:
+            Union[Tuple[mindspore.Tensor], Seq2SeqQuestionAnsweringModelOutput]
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         use_cache = use_cache if use_cache is not None else self.config.use_cache

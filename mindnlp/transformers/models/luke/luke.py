@@ -43,13 +43,13 @@ class LukeEmbeddings(nn.Cell):
         Args:
             self: The instance of the class itself.
             config (LukeConfig): An object of the LukeConfig class containing configuration parameters.
-                - vocab_size (int): The size of the vocabulary.
-                - hidden_size (int): The size of the hidden state.
-                - pad_token_id (int): The index of the padding token in the vocabulary.
-                - max_position_embeddings (int): The maximum number of positions for positional embeddings.
-                - type_vocab_size (int): The size of the token type vocabulary.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
-                - hidden_dropout_prob (float): The dropout probability for the hidden layers.
+                >   - vocab_size (int): The size of the vocabulary.
+                >   - hidden_size (int): The size of the hidden state.
+                >   - pad_token_id (int): The index of the padding token in the vocabulary.
+                >   - max_position_embeddings (int): The maximum number of positions for positional embeddings.
+                >   - type_vocab_size (int): The size of the token type vocabulary.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - hidden_dropout_prob (float): The dropout probability for the hidden layers.
         
         Returns:
             None
@@ -173,19 +173,19 @@ class LukeEntityEmbeddings(nn.Cell):
         This method constructs entity embeddings by combining entity, position, and token type embeddings.
         
         Args:
-        - self: The instance of the LukeEntityEmbeddings class.
-        - entity_ids (Tensor): A tensor containing the entity IDs for which embeddings need to be constructed.
-        - position_ids (Tensor): A tensor containing the position IDs representing the position of each entity.
-        - token_type_ids (Tensor, optional): A tensor containing the token type IDs. Defaults to None. If not provided, it is initialized as zeros_like(entity_ids).
+            self: The instance of the LukeEntityEmbeddings class.
+            entity_ids (Tensor): A tensor containing the entity IDs for which embeddings need to be constructed.
+            position_ids (Tensor): A tensor containing the position IDs representing the position of each entity.
+            token_type_ids (Tensor, optional): A tensor containing the token type IDs. Defaults to None. If not provided, it is initialized as zeros_like(entity_ids).
         
         Returns:
-        - embeddings (Tensor): The combined embeddings of entities, positions, and token types after normalization and dropout.
+            embeddings (Tensor): The combined embeddings of entities, positions, and token types after normalization and dropout.
         
         Raises:
-        - ValueError: If the dimensions of entity_embeddings and hidden_size do not match.
-        - TypeError: If entity_ids, position_ids, or token_type_ids are not of type Tensor.
-        - ValueError: If the position_ids contain values less than -1.
-        - RuntimeError: If any runtime error occurs during the computation process.
+            - ValueError: If the dimensions of entity_embeddings and hidden_size do not match.
+            - TypeError: If entity_ids, position_ids, or token_type_ids are not of type Tensor.
+            - ValueError: If the position_ids contain values less than -1.
+            - RuntimeError: If any runtime error occurs during the computation process.
         """
         if token_type_ids is None:
             token_type_ids = ops.zeros_like(entity_ids)
@@ -219,12 +219,12 @@ class LukeSelfAttention(nn.Cell):
         
         Args:
             self: The instance of the class.
-            config: An object containing the configuration parameters for the LukeSelfAttention model.
-                    It should have the following attributes:
-                    - hidden_size (int): The hidden size of the model.
-                    - num_attention_heads (int): The number of attention heads.
-                    - embedding_size (int, optional): The embedding size. (default: None)
-                    - use_entity_aware_attention (bool): Whether to use entity-aware attention or not.
+            config:
+                >- An object containing the configuration parameters for the LukeSelfAttention model. It should have the following attributes:
+                >   - hidden_size (int): The hidden size of the model.
+                >   - num_attention_heads (int): The number of attention heads.
+                >   - embedding_size (int, optional): The embedding size. (default: None)
+                >   - use_entity_aware_attention (bool): Whether to use entity-aware attention or not.
         
         Returns:
             None
@@ -286,16 +286,16 @@ class LukeSelfAttention(nn.Cell):
             word_hidden_states (Tensor): The hidden states of the word input sequence. Shape: (batch_size, sequence_length, hidden_size).
             entity_hidden_states (Tensor): The hidden states of the entity input sequence. Shape: (batch_size, entity_length, hidden_size).
             attention_mask (Tensor, optional): An optional mask tensor indicating which positions should be attended to and which should be ignored. Shape: (batch_size, sequence_length, sequence_length) or
-(batch_size, 1, 1, sequence_length).
+                (batch_size, 1, 1, sequence_length).
             head_mask (Tensor, optional): An optional mask tensor indicating which heads should be masked out of the attention calculation. Shape: (num_attention_heads, sequence_length, sequence_length) or
-(batch_size, num_attention_heads, sequence_length, sequence_length).
+                (batch_size, num_attention_heads, sequence_length, sequence_length).
             output_attentions (bool, optional): Whether to include attention probabilities in the output. Defaults to False.
         
         Returns:
-            Tuple[Tensor or None, Tensor or None, Tensor or None]: A tuple containing the output word hidden states, output entity hidden states, and attention probabilities (optional). 
-                - output_word_hidden_states (Tensor or None): The output hidden states of the word input sequence. Shape: (batch_size, sequence_length, hidden_size).
-                - output_entity_hidden_states (Tensor or None): The output hidden states of the entity input sequence. Shape: (batch_size, entity_length, hidden_size).
-                - attention_probs (Tensor or None): The attention probabilities. Only included if output_attentions is set to True. Shape: (batch_size, num_attention_heads, sequence_length, sequence_length).
+            Tuple[Tensor or None, Tensor or None, Tensor or None]: A tuple containing the output word hidden states, output entity hidden states, and attention probabilities (optional).
+                >   - output_word_hidden_states (Tensor or None): The output hidden states of the word input sequence. Shape: (batch_size, sequence_length, hidden_size).
+                >   - output_entity_hidden_states (Tensor or None): The output hidden states of the entity input sequence. Shape: (batch_size, entity_length, hidden_size).
+                >   - attention_probs (Tensor or None): The attention probabilities. Only included if output_attentions is set to True. Shape: (batch_size, num_attention_heads, sequence_length, sequence_length).
         
         Raises:
             ValueError: If the shape of word_hidden_states and entity_hidden_states are incompatible.
@@ -388,9 +388,9 @@ class LukeSelfOutput(nn.Cell):
         Args:
             self (object): The instance of the class.
             config (object): An object containing configuration parameters.
-                - hidden_size (int): The size of the hidden layer.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
-                - hidden_dropout_prob (float): The dropout probability for hidden layers.
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - hidden_dropout_prob (float): The dropout probability for hidden layers.
         
         Returns:
             None. This method does not return any value.
@@ -477,9 +477,9 @@ class LukeAttention(nn.Cell):
         
         Returns:
             tuple: A tuple containing word_attention_output and entity_attention_output if entity_hidden_states is not None, else None.
-            - word_attention_output (tensor): The attention output for word hidden states. Shape: (batch_size, word_seq_len, hidden_size).
-            - entity_attention_output (tensor or None): The attention output for entity hidden states if entity_hidden_states is not None, else None.
-            - additional outputs: Additional outputs returned by the attention mechanism.
+            >   - word_attention_output (tensor): The attention output for word hidden states. Shape: (batch_size, word_seq_len, hidden_size).
+            >   - entity_attention_output (tensor or None): The attention output for entity hidden states if entity_hidden_states is not None, else None.
+            >   - additional outputs: Additional outputs returned by the attention mechanism.
         
         Raises:
             ValueError: If the shapes of word_hidden_states and entity_hidden_states are incompatible.
@@ -559,7 +559,7 @@ class LukeIntermediate(nn.Cell):
             None.
         
         This method takes in the instance of the LukeIntermediate class and the input hidden states. It applies a dense layer to the hidden states and then applies the intermediate activation function. The
-resulting intermediate hidden states are returned as a Tensor.
+        resulting intermediate hidden states are returned as a Tensor.
         
         No exceptions are raised by this method.
         """
@@ -580,17 +580,17 @@ class LukeOutput(nn.Cell):
             self (object): The instance of the LukeOutput class.
             config (object): An object containing configuration parameters for the LukeOutput instance.
                 The config object is expected to have the following attributes:
-                - intermediate_size (int): The size of the intermediate layer.
-                - hidden_size (int): The size of the hidden layer.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
-                - hidden_dropout_prob (float): The dropout probability for hidden layers.
+                >   - intermediate_size (int): The size of the intermediate layer.
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - hidden_dropout_prob (float): The dropout probability for hidden layers.
         
         Returns:
             None. This method initializes the 'dense', 'layer_norm', and 'dropout' attributes of the LukeOutput instance.
         
         Raises:
-            - TypeError: If the config parameter is not provided.
-            - ValueError: If any of the required attributes in the config object are missing or have invalid values.
+            TypeError: If the config parameter is not provided.
+            ValueError: If any of the required attributes in the config object are missing or have invalid values.
         """
         super().__init__()
         self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
@@ -641,8 +641,8 @@ class LukeLayer(nn.Cell):
         Args:
             self: The object itself.
             config: An instance of the configuration class containing the following attributes:
-                - chunk_size_feed_forward (int): The size of chunks to feed forward through the layer.
-                - seq_len_dim (int): The dimension of the sequence length.
+                >   - chunk_size_feed_forward (int): The size of chunks to feed forward through the layer.
+                >   - seq_len_dim (int): The dimension of the sequence length.
             
         Returns:
             None
@@ -678,9 +678,9 @@ class LukeLayer(nn.Cell):
         
         Returns:
             Tuple[Tensor, Tensor, Tuple]: A tuple containing:
-                - word_layer_output (Tensor): The layer output for word inputs. It has shape [batch_size, word_size, hidden_size].
-                - entity_layer_output (Tensor): The layer output for entity inputs. It has shape [batch_size, entity_size, hidden_size].
-                - outputs (Tuple): Additional outputs from the attention layer.
+                >   - word_layer_output (Tensor): The layer output for word inputs. It has shape [batch_size, word_size, hidden_size].
+                >   - entity_layer_output (Tensor): The layer output for entity inputs. It has shape [batch_size, entity_size, hidden_size].
+                >   - outputs (Tuple): Additional outputs from the attention layer.
         
         Raises:
             None.
@@ -760,22 +760,22 @@ class LukeEncoder(nn.Cell):
         This method constructs the hidden states and attentions for a LukeEncoder model.
         
         Args:
-        - self: The instance of the LukeEncoder class.
-        - word_hidden_states: The hidden states of words, of shape (batch_size, sequence_length, hidden_size).
-        - entity_hidden_states: The hidden states of entities, of shape (batch_size, num_entities, hidden_size).
-        - attention_mask: An optional tensor of shape (batch_size, sequence_length) containing attention mask values.
-        - head_mask: An optional tensor of shape (num_layers, num_attention_heads) providing a mask for attention heads.
-        - output_attentions: A boolean flag indicating whether to output attention weights.
-        - output_hidden_states: A boolean flag indicating whether to output hidden states.
-        - return_dict: A boolean flag indicating whether to return the output as a dictionary.
+            self: The instance of the LukeEncoder class.
+            word_hidden_states: The hidden states of words, of shape (batch_size, sequence_length, hidden_size).
+            entity_hidden_states: The hidden states of entities, of shape (batch_size, num_entities, hidden_size).
+            attention_mask: An optional tensor of shape (batch_size, sequence_length) containing attention mask values.
+            head_mask: An optional tensor of shape (num_layers, num_attention_heads) providing a mask for attention heads.
+            output_attentions: A boolean flag indicating whether to output attention weights.
+            output_hidden_states: A boolean flag indicating whether to output hidden states.
+            return_dict: A boolean flag indicating whether to return the output as a dictionary.
         
         Returns:
-        - None
+            None
         
         Raises:
-        - ValueError: If the dimensions of input tensors are not valid.
-        - TypeError: If the input parameters are not of the expected types.
-        - IndexError: If the head mask dimensions do not match the expected shape.
+            - ValueError: If the dimensions of input tensors are not valid.
+            - TypeError: If the input parameters are not of the expected types.
+            - IndexError: If the head mask dimensions do not match the expected shape.
         """
         all_word_hidden_states = () if output_hidden_states else None
         all_entity_hidden_states = () if output_hidden_states else None
@@ -1303,18 +1303,18 @@ class LukeModel(LukePreTrainedModel):
         This method 'get_extended_attention_mask' in the class 'LukeModel' takes 4 parameters:
         
         Args:
-        - self: Represents the instance of the class.
-        - attention_mask (Tensor): A 2D or 3D tensor representing the attention mask. 
-                                   This tensor is concatenated with 'input_shape' if provided.
-        - input_shape (Tuple[int]): A tuple containing the shape information to be concatenated with 'attention_mask'.
-                                   Set to None if not provided.
-        - dtype: Data type for the extended attention mask. Default is None.
+            self: Represents the instance of the class.
+            attention_mask (Tensor): A 2D or 3D tensor representing the attention mask.
+                                       This tensor is concatenated with 'input_shape' if provided.
+            input_shape (Tuple[int]): A tuple containing the shape information to be concatenated with 'attention_mask'.
+                                       Set to None if not provided.
+            dtype: Data type for the extended attention mask. Default is None.
         
         Returns:
-        - None: This method returns None.
+            None: This method returns None.
         
         Raises:
-        - ValueError: Raised when the shape of the 'attention_mask' is incorrect.
+            - ValueError: Raised when the shape of the 'attention_mask' is incorrect.
         """
         if input_shape is not None:
             attention_mask = ops.cat([attention_mask, input_shape], axis=-1)
@@ -1352,9 +1352,9 @@ class LukeLMHead(nn.Cell):
         Args:
             self (object): The instance of the LukeLMHead class.
             config (object): An instance of the configuration class containing the following attributes:
-                - hidden_size (int): The size of the hidden layers.
-                - vocab_size (int): The size of the vocabulary.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - hidden_size (int): The size of the hidden layers.
+                >   - vocab_size (int): The size of the vocabulary.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
         
         Returns:
             None. This method initializes the LukeLMHead class with the specified configuration settings.
@@ -1509,14 +1509,14 @@ class LukeForMaskedLM(LukePreTrainedModel):
         
         Returns:
             Tuple of (loss, mlm_loss, mep_loss, logits, entity_logits, hidden_states, entity_hidden_states, attentions):
-            - loss (Tensor or None): The total loss. None if no loss is calculated.
-            - mlm_loss (Tensor or None): The loss for masked language modeling. None if no loss is calculated.
-            - mep_loss (Tensor or None): The loss for entity prediction. None if no loss is calculated.
-            - logits (Tensor or None): The logits for masked language modeling.
-            - entity_logits (Tensor or None): The logits for entity prediction.
-            - hidden_states (Tuple[Tensor] or None): The hidden states of the model. None if not returned.
-            - entity_hidden_states (Tuple[Tensor] or None): The hidden states for entity prediction. None if not returned.
-            - attentions (Tuple[Tensor] or None): The attentions of the model. None if not returned.
+                >   - loss (Tensor or None): The total loss. None if no loss is calculated.
+                >   - mlm_loss (Tensor or None): The loss for masked language modeling. None if no loss is calculated.
+                >   - mep_loss (Tensor or None): The loss for entity prediction. None if no loss is calculated.
+                >   - logits (Tensor or None): The logits for masked language modeling.
+                >   - entity_logits (Tensor or None): The logits for entity prediction.
+                >   - hidden_states (Tuple[Tensor] or None): The hidden states of the model. None if not returned.
+                >   - entity_hidden_states (Tuple[Tensor] or None): The hidden states for entity prediction. None if not returned.
+                >   - attentions (Tuple[Tensor] or None): The attentions of the model. None if not returned.
         
         Raises:
             None.
@@ -1582,9 +1582,9 @@ class LukeForEntityClassification(LukePreTrainedModel):
         Args:
             self: The instance of the class.
             config: A configuration object containing the settings for the LukeForEntityClassification model.
-                Type: object
-                Purpose: Specifies the configuration settings for the model.
-                Restrictions: Must be a valid configuration object.
+                >   - Type: object
+                >   - Purpose: Specifies the configuration settings for the model.
+                >   - Restrictions: Must be a valid configuration object.
         
         Returns:
             None. This method does not return any value.
@@ -1731,29 +1731,29 @@ class LukeForEntityPairClassification(LukePreTrainedModel):
         This method 'construct' in the class 'LukeForEntityPairClassification' is responsible for constructing the model and performing entity pair classification.
         
         Args:
-        - self: The instance of the class.
-        - input_ids (Optional[Tensor]): Input tensor containing token indices. Default is None.
-        - attention_mask (Optional[Tensor]): Mask tensor for the input, indicating which tokens should be attended to. Default is None.
-        - token_type_ids (Optional[Tensor]): Tensor specifying the type of token (e.g., segment A or B). Default is None.
-        - position_ids (Optional[Tensor]): Tensor specifying the position of tokens. Default is None.
-        - entity_ids (Optional[Tensor]): Tensor containing entity indices.
-        - entity_attention_mask (Optional[Tensor]): Mask tensor for entity inputs. Default is None.
-        - entity_token_type_ids (Optional[Tensor]): Tensor specifying the type of entity token. Default is None.
-        - entity_position_ids (Optional[Tensor]): Tensor specifying the position of entity tokens. Default is None.
-        - head_mask (Optional[Tensor]): Mask tensor for attention heads. Default is None.
-        - inputs_embeds (Optional[Tensor]): Additional embeddings to be added to the model input embeddings. Default is None.
-        - labels (Optional[Tensor]): Tensor containing the classification labels. Default is None.
-        - output_attentions (Optional[bool]): Whether to output attentions. Default is None.
-        - output_hidden_states (Optional[bool]): Whether to output hidden states. Default is None.
-        - return_dict (Optional[bool]): Whether to return a dictionary as output. Default is None.
+            self: The instance of the class.
+            input_ids (Optional[Tensor]): Input tensor containing token indices. Default is None.
+            attention_mask (Optional[Tensor]): Mask tensor for the input, indicating which tokens should be attended to. Default is None.
+            token_type_ids (Optional[Tensor]): Tensor specifying the type of token (e.g., segment A or B). Default is None.
+            position_ids (Optional[Tensor]): Tensor specifying the position of tokens. Default is None.
+            entity_ids (Optional[Tensor]): Tensor containing entity indices.
+            entity_attention_mask (Optional[Tensor]): Mask tensor for entity inputs. Default is None.
+            entity_token_type_ids (Optional[Tensor]): Tensor specifying the type of entity token. Default is None.
+            entity_position_ids (Optional[Tensor]): Tensor specifying the position of entity tokens. Default is None.
+            head_mask (Optional[Tensor]): Mask tensor for attention heads. Default is None.
+            inputs_embeds (Optional[Tensor]): Additional embeddings to be added to the model input embeddings. Default is None.
+            labels (Optional[Tensor]): Tensor containing the classification labels. Default is None.
+            output_attentions (Optional[bool]): Whether to output attentions. Default is None.
+            output_hidden_states (Optional[bool]): Whether to output hidden states. Default is None.
+            return_dict (Optional[bool]): Whether to return a dictionary as output. Default is None.
         
         Returns:
-        - Tuple: A tuple containing elements that are not None among loss (if labels provided), logits, hidden states, entity hidden states, and attentions. Returns None if all elements are None.
+            Tuple: A tuple containing elements that are not None among loss (if labels provided), logits, hidden states, entity hidden states, and attentions. Returns None if all elements are None.
         
         Raises:
-        - ValueError: If labels are provided but have an incorrect shape for cross-entropy computation.
-        - TypeError: If the input types are not as expected by the method.
-        - RuntimeError: If there are runtime issues during the execution of the method.
+            - ValueError: If labels are provided but have an incorrect shape for cross-entropy computation.
+            - TypeError: If the input types are not as expected by the method.
+            - RuntimeError: If there are runtime issues during the execution of the method.
         """
         return_dict = True
         outputs = self.luke(
@@ -1962,29 +1962,29 @@ class LukeForSequenceClassification(LukePreTrainedModel):
         Method 'construct' in the class 'LukeForSequenceClassification'.
         
         Args:
-        - self: The object instance.
-        - input_ids (Optional[Tensor]): Input IDs for the model. Default is None.
-        - attention_mask (Optional[Tensor]): Mask to avoid performing attention on padding tokens. Default is None.
-        - token_type_ids (Optional[Tensor]): Segment token indices to differentiate between two sequences. Default is None.
-        - position_ids (Optional[Tensor]): Position indices for the input tokens. Default is None.
-        - entity_ids (Optional[Tensor]): Entity IDs for the input. Default is None.
-        - entity_attention_mask (Optional[Tensor]): Mask for entity attention. Default is None.
-        - entity_token_type_ids (Optional[Tensor]): Segment token indices for entities. Default is None.
-        - entity_position_ids (Optional[Tensor]): Position indices for entity tokens. Default is None.
-        - head_mask (Optional[Tensor]): Mask to nullify specific heads of the model. Default is None.
-        - inputs_embeds (Optional[Tensor]): Optional input embeddings. Default is None.
-        - labels (Optional[Tensor]): Labels for the input. Default is None.
-        - output_attentions (Optional[bool]): Whether to output attentions. Default is None.
-        - output_hidden_states (Optional[bool]): Whether to output hidden states. Default is None.
-        - return_dict (Optional[bool]): Whether to return as a dictionary. Default is None.
+            self: The object instance.
+            input_ids (Optional[Tensor]): Input IDs for the model. Default is None.
+            attention_mask (Optional[Tensor]): Mask to avoid performing attention on padding tokens. Default is None.
+            token_type_ids (Optional[Tensor]): Segment token indices to differentiate between two sequences. Default is None.
+            position_ids (Optional[Tensor]): Position indices for the input tokens. Default is None.
+            entity_ids (Optional[Tensor]): Entity IDs for the input. Default is None.
+            entity_attention_mask (Optional[Tensor]): Mask for entity attention. Default is None.
+            entity_token_type_ids (Optional[Tensor]): Segment token indices for entities. Default is None.
+            entity_position_ids (Optional[Tensor]): Position indices for entity tokens. Default is None.
+            head_mask (Optional[Tensor]): Mask to nullify specific heads of the model. Default is None.
+            inputs_embeds (Optional[Tensor]): Optional input embeddings. Default is None.
+            labels (Optional[Tensor]): Labels for the input. Default is None.
+            output_attentions (Optional[bool]): Whether to output attentions. Default is None.
+            output_hidden_states (Optional[bool]): Whether to output hidden states. Default is None.
+            return_dict (Optional[bool]): Whether to return as a dictionary. Default is None.
         
         Returns:
-        - tuple: A tuple containing loss, logits, hidden states, entity hidden states, and attentions if they are not None. Otherwise, returns None.
+            tuple: A tuple containing loss, logits, hidden states, entity hidden states, and attentions if they are not None. Otherwise, returns None.
         
         Raises:
-        - ValueError: If the configuration problem type is not recognized.
-        - RuntimeError: If an unexpected error occurs during the computation.
-        - TypeError: If the input types are incorrect.
+            - ValueError: If the configuration problem type is not recognized.
+            - RuntimeError: If an unexpected error occurs during the computation.
+            - TypeError: If the input types are incorrect.
         """
         return_dict = True
         outputs = self.luke(
@@ -2050,9 +2050,9 @@ class LukeForTokenClassification(LukePreTrainedModel):
         Args:
             self: The object itself.
             config: An instance of class 'LukeConfig' containing the configuration parameters for the LukeForTokenClassification model.
-                - Type: LukeConfig
-                - Purpose: This parameter specifies the configuration settings for the model.
-                - Restrictions: None
+                >   - Type: LukeConfig
+                >   - Purpose: This parameter specifies the configuration settings for the model.
+                >   - Restrictions: None
         
         Returns:
             None
@@ -2110,7 +2110,7 @@ class LukeForTokenClassification(LukePreTrainedModel):
         
         Returns:
             Tuple[Optional[Tensor], Tensor, Optional[Tensor], Optional[Tensor], Optional[Tensor]]: A tuple containing the loss, logits, hidden states, entity hidden states, and attentions. Any element that is
-not None is included in the tuple.
+            not None is included in the tuple.
         
         Raises:
             None
@@ -2159,7 +2159,7 @@ class LukeForQuestionAnswering(LukePreTrainedModel):
             config: The configuration object containing the settings for the Luke model.
                 This parameter is required and should be an instance of the configuration class for Luke models.
                 It must include the following attributes:
-                    - num_labels (int): The number of labels for the question answering task.
+                    >   - num_labels (int): The number of labels for the question answering task.
             
         Returns:
             None. This method does not return any value.
@@ -2216,12 +2216,12 @@ class LukeForQuestionAnswering(LukePreTrainedModel):
         
         Returns:
             tuple: A tuple containing the following elements:
-                - total_loss (Optional[Tensor]): The total loss if start_positions and end_positions are provided. None otherwise.
-                - start_logits (Optional[Tensor]): Tensor of shape (batch_size, sequence_length) containing the predicted start logits.
-                - end_logits (Optional[Tensor]): Tensor of shape (batch_size, sequence_length) containing the predicted end logits.
-                - hidden_states (Optional[List[Tensor]]): List of tensors containing the hidden states of the model at each layer.
-                - entity_hidden_states (Optional[List[Tensor]]): List of tensors containing the hidden states of the entity encoder at each layer.
-                - attentions (Optional[List[Tensor]]): List of tensors containing the attention weights of the model at each layer.
+                >   - total_loss (Optional[Tensor]): The total loss if start_positions and end_positions are provided. None otherwise.
+                >   - start_logits (Optional[Tensor]): Tensor of shape (batch_size, sequence_length) containing the predicted start logits.
+                >   - end_logits (Optional[Tensor]): Tensor of shape (batch_size, sequence_length) containing the predicted end logits.
+                >   - hidden_states (Optional[List[Tensor]]): List of tensors containing the hidden states of the model at each layer.
+                >   - entity_hidden_states (Optional[List[Tensor]]): List of tensors containing the hidden states of the entity encoder at each layer.
+                >   - attentions (Optional[List[Tensor]]): List of tensors containing the attention weights of the model at each layer.
         
         Raises:
             None.
@@ -2348,12 +2348,12 @@ class LukeForMultipleChoice(LukePreTrainedModel):
         
         Returns:
             Tuple of (loss, reshaped_logits, hidden_states, entity_hidden_states, attentions):
-                - loss (Optional[Tensor]): The training loss tensor. Returns None if labels are not provided.
-                - reshaped_logits (Tensor): The reshaped logits tensor of shape [batch_size * num_choices, num_choices].
-                - hidden_states (Optional[List[Tensor]]): The hidden states of the model at the output of each layer. Returns None if output_hidden_states is set to False.
-                - entity_hidden_states (Optional[List[Tensor]]): The hidden states of the model for the entity embeddings at the output of each layer. Returns None if output_hidden_states is set to False or
-entity embeddings are not provided.
-                - attentions (Optional[List[Tensor]]): The attention weights of the model at the output of each layer. Returns None if output_attentions is set to False.
+                >   - loss (Optional[Tensor]): The training loss tensor. Returns None if labels are not provided.
+                >   - reshaped_logits (Tensor): The reshaped logits tensor of shape [batch_size * num_choices, num_choices].
+                >   - hidden_states (Optional[List[Tensor]]): The hidden states of the model at the output of each layer. Returns None if output_hidden_states is set to False.
+                >   - entity_hidden_states (Optional[List[Tensor]]): The hidden states of the model for the entity embeddings at the output of each layer. Returns None if output_hidden_states is set to False or
+                        entity embeddings are not provided.
+               >    - attentions (Optional[List[Tensor]]): The attention weights of the model at the output of each layer. Returns None if output_attentions is set to False.
         
         Raises:
             None.

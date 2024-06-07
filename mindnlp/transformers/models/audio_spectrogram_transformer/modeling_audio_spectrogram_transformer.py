@@ -89,11 +89,11 @@ class ASTEmbeddings(nn.Cell):
         Args:
             self (ASTEmbeddings): The instance of the ASTEmbeddings class.
             config (object): The configuration object containing the following attributes:
-                - num_mel_bins (int): The number of Mel bins.
-                - patch_size (int): The size of the patch.
-                - frequency_stride (int): The frequency stride.
-                - max_length (int): The maximum length.
-                - time_stride (int): The time stride.
+                >   - num_mel_bins (int): The number of Mel bins.
+                >   - patch_size (int): The size of the patch.
+                >   - frequency_stride (int): The frequency stride.
+                >   - max_length (int): The maximum length.
+                >   - time_stride (int): The time stride.
         
         Returns:
             tuple: A tuple containing the frequency_out_dimension and time_out_dimension calculated based on the provided configuration.
@@ -120,9 +120,9 @@ class ASTEmbeddings(nn.Cell):
         
         Returns:
             mindspore.Tensor: The constructed AST embeddings tensor.
-                Shape: (batch_size, sequence_length + 2, hidden_size). Type: float32.
-                The tensor includes embeddings for special tokens (CLS token, distillation token),
-                position embeddings, and input token embeddings with positional encodings applied.
+                >   - Shape: (batch_size, sequence_length + 2, hidden_size). Type: float32.
+                >   - The tensor includes embeddings for special tokens (CLS token, distillation token),
+                >   - position embeddings, and input token embeddings with positional encodings applied.
         
         Raises:
             None.
@@ -151,9 +151,9 @@ class ASTPatchEmbeddings(nn.Cell):
         Args:
             self: An instance of the ASTRPatchEmbeddings class.
             config (object): An object containing configuration parameters for the patch embeddings.
-                - patch_size (int): The size of the patch in both the frequency and time dimensions.
-                - frequency_stride (int): The stride to use in the frequency dimension when extracting patches.
-                - time_stride (int): The stride to use in the time dimension when extracting patches.
+                >   - patch_size (int): The size of the patch in both the frequency and time dimensions.
+                >   - frequency_stride (int): The stride to use in the frequency dimension when extracting patches.
+                >   - time_stride (int): The stride to use in the time dimension when extracting patches.
         
         Returns:
             None
@@ -203,18 +203,19 @@ class ASTSelfAttention(nn.Cell):
 
     """
     This class represents a self-attention mechanism for the AST (Abstract Syntax Tree) model. It calculates attention scores and performs attention operations on input hidden states to generate context
-layers. The class includes methods for initializing the self-attention mechanism, reshaping tensors for attention scores calculation, and constructing the attention mechanism output.
+    layers. The class includes methods for initializing the self-attention mechanism, reshaping tensors for attention scores calculation, and constructing the attention mechanism output.
     
     The class inherits from nn.Cell and contains the following methods:
-    - __init__(self, config: ASTConfig): Initializes the self-attention mechanism with the provided configuration.
-    - swapaxes_for_scores(self, x: mindspore.Tensor): Reshapes the input tensor for calculating attention scores.
-    - construct(self, hidden_states, head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False): Constructs the self-attention mechanism output by performing attention operations on the
-input hidden states.
+    >   - __init__(self, config: ASTConfig): Initializes the self-attention mechanism with the provided configuration.
+    >   - swapaxes_for_scores(self, x: mindspore.Tensor): Reshapes the input tensor for calculating attention scores.
+    >   - construct(self, hidden_states, head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False): Constructs the self-attention mechanism output by performing attention operations on the
+        input hidden states.
     
     The self-attention mechanism involves calculating attention scores, applying softmax to obtain attention probabilities, applying dropout, and calculating the context layer. Optionally, the method can
-output attention probabilities along with the context layer.
+    output attention probabilities along with the context layer.
     
-    Note: Ensure that the hidden size is a multiple of the number of attention heads to avoid a ValueError during initialization.
+    Note:
+        Ensure that the hidden size is a multiple of the number of attention heads to avoid a ValueError during initialization.
     """
     def __init__(self, config: ASTConfig) -> None:
         """
@@ -263,8 +264,8 @@ output attention probabilities along with the context layer.
             None.
         
         Note:
-            - The 'num_attention_heads' and 'attention_head_size' attributes of the ASTSelfAttention class must be set before calling this method.
-            - The input tensor should have a shape compatible with the required dimensions for self-attention scoring.
+            >   - The 'num_attention_heads' and 'attention_head_size' attributes of the ASTSelfAttention class must be set before calling this method.
+            >   - The input tensor should have a shape compatible with the required dimensions for self-attention scoring.
         """
         new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
         x = x.view(new_x_shape)
@@ -336,9 +337,9 @@ class ASTSelfOutput(nn.Cell):
         Args:
             self: The instance of the class.
             config (ASTConfig): The configuration object containing the hidden size and dropout probability.
-                - Type: ASTConfig
-                - Purpose: Specifies the configuration for the self output layer.
-                - Restrictions: Must be an instance of ASTConfig.
+                >   - Type: ASTConfig
+                >   - Purpose: Specifies the configuration for the self output layer.
+                >   - Restrictions: Must be an instance of ASTConfig.
         
         Returns:
             None: This method does not return any value.
@@ -390,13 +391,13 @@ class ASTAttention(nn.Cell):
         pruned_heads (set): A set containing the indices of pruned attention heads.
     
     Methods:
-        __init__(config: ASTConfig) -> None:
+        __init__:
             Initializes the ASTAttention class with the provided configuration.
     
-        prune_heads(heads: Set[int]) -> None:
+        prune_heads:
             Prunes specified attention heads from the model.
     
-        construct(hidden_states: mindspore.Tensor, head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]:
+        construct:
             Constructs attention outputs based on the provided inputs.
     
     Returns:
@@ -468,13 +469,12 @@ class ASTAttention(nn.Cell):
         Args:
             self (ASTAttention): An instance of the ASTAttention class.
             hidden_states (mindspore.Tensor): The input hidden states. It should be a tensor of shape (batch_size, sequence_length, hidden_size).
-            head_mask (Optional[mindspore.Tensor], optional): The mask indicating the heads to be masked. It should be a tensor of shape (num_heads,) or (num_layers, num_heads) with boolean values. Defaults to
-None.
+            head_mask (Optional[mindspore.Tensor], optional): The mask indicating the heads to be masked. It should be a tensor of shape (num_heads,) or (num_layers, num_heads) with boolean values. Defaults to None.
             output_attentions (bool, optional): Whether to output attentions. If True, the attentions are returned as well. Defaults to False.
         
         Returns:
             Tuple[mindspore.Tensor, mindspore.Tensor] or Tuple[mindspore.Tensor]: The attention output. If output_attentions is True, it returns a tuple containing the attention output tensor and the attention
-weights tensor. Otherwise, it returns a tuple with only the attention output tensor.
+            weights tensor. Otherwise, it returns a tuple with only the attention output tensor.
         
         Raises:
             None
@@ -501,8 +501,8 @@ class ASTIntermediate(nn.Cell):
         intermediate_act_fn (function): The activation function used for intermediate transformations.
     
     Methods:
-        __init__(self, config: ASTConfig): Initializes the ASTIntermediate cell with the given configuration.
-        construct(self, hidden_states: mindspore.Tensor): Applies intermediate transformations on the input hidden states and returns the transformed tensor.
+        __init__: Initializes the ASTIntermediate cell with the given configuration.
+        construct: Applies intermediate transformations on the input hidden states and returns the transformed tensor.
     """
     def __init__(self, config: ASTConfig) -> None:
         """
@@ -521,23 +521,25 @@ class ASTIntermediate(nn.Cell):
         Description:
             This method initializes the ASTIntermediate instance by setting up the necessary attributes and configurations. It takes in the following parameters:
         
-            - self: This parameter represents the instance of the class and is automatically passed when calling the method.
-            - config (ASTConfig): An object of the ASTConfig class that contains the configuration settings for the ASTIntermediate. It is used to customize the behavior of the instance.
+            >   - self: This parameter represents the instance of the class and is automatically passed when calling the method.
+            >   - config (ASTConfig): An object of the ASTConfig class that contains the configuration settings for the ASTIntermediate. It is used to customize the behavior of the instance.
         
             The method performs the following operations:
-            - Calls the __init__ method of the superclass.
-            - Initializes the 'dense' attribute of the instance with an instance of the nn.Dense class, using the 'hidden_size' and 'intermediate_size' values from the 'config' object.
-            - Checks if the 'hidden_act' attribute of the 'config' object is a string. If it is, it sets the 'intermediate_act_fn' attribute of the instance to the corresponding activation function from the
-ACT2FN dictionary. Otherwise, it sets it to the value of the 'hidden_act' attribute.
+            >   - Calls the __init__ method of the superclass.
+            >   - Initializes the 'dense' attribute of the instance with an instance of the nn.Dense class, using the 'hidden_size' and 'intermediate_size' values from the 'config' object.
+            >   - Checks if the 'hidden_act' attribute of the 'config' object is a string. If it is, it sets the 'intermediate_act_fn' attribute of the instance to the corresponding activation function from the
+                ACT2FN dictionary. Otherwise, it sets it to the value of the 'hidden_act' attribute.
         
             Note: The ACT2FN dictionary is assumed to be defined and accessible within the scope of this class.
         
         Example usage:
+            ```python
             config = ASTConfig(hidden_size=256, intermediate_size=128, hidden_act='relu')
             intermediate = ASTIntermediate(config)
+            ```
         
             In the example above, a new instance of the ASTIntermediate class is created with the provided 'config' object. The 'dense' attribute is initialized with a nn.Dense instance, and the
-'intermediate_act_fn' attribute is set to the 'relu' activation function.
+            'intermediate_act_fn' attribute is set to the 'relu' activation function.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
@@ -582,17 +584,18 @@ class ASTOutput(nn.Cell):
         dropout (nn.Dropout): A dropout layer that applies dropout regularization to the hidden states.
         
     Methods:
-        __init__(self, config: ASTConfig) -> None:
+        __init__:
             Initializes the ASTOutput instance.
             
             Args:
                 config (ASTConfig): The configuration object that contains the model's hyperparameters.
             
-        construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+        construct:
             Constructs the output of the AST model.
             
             Args:
                 hidden_states (mindspore.Tensor): The hidden states from the previous layer.
+
                 input_tensor (mindspore.Tensor): The input tensor to the ASTOutput layer.
                 
             Returns:
@@ -684,9 +687,9 @@ class ASTLayer(nn.Cell):
         
         Returns:
             Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]: 
-            A tuple containing the layer output tensor(s). When `output_attentions` is True,
-            it returns a tuple with the attention output tensor and the layer output tensor. 
-            Otherwise, it returns a tuple with only the layer output tensor.
+                A tuple containing the layer output tensor(s). When `output_attentions` is True,
+                it returns a tuple with the attention output tensor and the layer output tensor.
+                Otherwise, it returns a tuple with only the layer output tensor.
         
         Raises:
             None.
@@ -721,7 +724,7 @@ class ASTEncoder(nn.Cell):
     This class represents an AST (Abstract Syntax Tree) Encoder for a neural network model. 
     
     The ASTEncoder class is a subclass of nn.Cell and is responsible for encoding hidden states using multiple layers of ASTLayer. It supports optional gradient checkpointing and can output hidden states,
-self-attentions, or both.
+    self-attentions, or both.
     
     Attributes:
         config (ASTConfig): The configuration object for the ASTEncoder.
@@ -729,11 +732,10 @@ self-attentions, or both.
         gradient_checkpointing (bool): A flag indicating whether gradient checkpointing is enabled.
     
     Methods:
-        __init__(self, config: ASTConfig) -> None:
+        __init__:
             Initializes the ASTEncoder instance with the given configuration object.
             
-        construct(self, hidden_states: mindspore.Tensor, head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False, output_hidden_states: bool = False, return_dict: bool = True) ->
-Union[tuple, BaseModelOutput]:
+        construct:
             Constructs the encoder by applying multiple layers of ASTLayer to the input hidden states.
             Optionally, it can apply head masks, output attentions and/or hidden states, and return the results as a tuple or a BaseModelOutput object.
     
@@ -741,9 +743,9 @@ Union[tuple, BaseModelOutput]:
         Union[tuple, BaseModelOutput]: The output of the encoder, which can include hidden states, self-attentions, or both.
     
     Note:
-        - If output_hidden_states is set to True, all_hidden_states will contain all intermediate hidden states.
-        - If output_attentions is set to True, all_self_attentions will contain the self-attention scores for each layer.
-        - If return_dict is set to False, the output will be returned as a tuple instead of a BaseModelOutput object.
+        >   - If output_hidden_states is set to True, all_hidden_states will contain all intermediate hidden states.
+        >   - If output_attentions is set to True, all_self_attentions will contain the self-attention scores for each layer.
+        >   - If return_dict is set to False, the output will be returned as a tuple instead of a BaseModelOutput object.
     """
     def __init__(self, config: ASTConfig) -> None:
         """
@@ -778,21 +780,22 @@ Union[tuple, BaseModelOutput]:
         This method constructs the AST encoder using the provided parameters and returns the hidden states, hidden layers, and self-attentions.
         
         Args:
-        - self: The instance of the class.
-        - hidden_states (mindspore.Tensor): The input hidden states to be processed by the encoder.
-        - head_mask (Optional[mindspore.Tensor]): Optional mask to be applied to the heads of the encoder.
-        - output_attentions (bool): Flag indicating whether to output the attentions.
-        - output_hidden_states (bool): Flag indicating whether to output hidden states.
-        - return_dict (bool): Flag indicating whether to return the outputs as a dictionary.
+            self: The instance of the class.
+            hidden_states (mindspore.Tensor): The input hidden states to be processed by the encoder.
+            head_mask (Optional[mindspore.Tensor]): Optional mask to be applied to the heads of the encoder.
+            output_attentions (bool): Flag indicating whether to output the attentions.
+            output_hidden_states (bool): Flag indicating whether to output hidden states.
+            return_dict (bool): Flag indicating whether to return the outputs as a dictionary.
         
         Returns:
-        Union[tuple, BaseModelOutput]: The return value could be either a tuple containing the hidden states, hidden layers, and self-attentions, or a BaseModelOutput object containing the last hidden state,
-hidden states, and attentions.
+            Union[tuple, BaseModelOutput]:
+                The return value could be either a tuple containing the hidden states, hidden layers, and self-attentions, or a BaseModelOutput object containing the last hidden state,
+                hidden states, and attentions.
         
         Raises:
-        - TypeError: If the input types are not as expected.
-        - IndexError: If the head mask index is out of range.
-        - RuntimeError: If there is a runtime error during the encoding process.
+            - TypeError: If the input types are not as expected.
+            - IndexError: If the head mask index is out of range.
+            - RuntimeError: If there is a runtime error during the encoding process.
         """
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
@@ -857,23 +860,22 @@ class ASTModel(ASTPreTrainedModel):
 
     """
     ASTModel is a class representing a model for Abstract Syntax Trees (AST) processing. This class inherits from ASTPreTrainedModel and includes methods for initializing the model, getting input embeddings,
-pruning heads, and constructing the model's output.
+    pruning heads, and constructing the model's output.
     
     Attributes:
-        - config: An instance of ASTConfig containing configuration parameters for the model.
-        - embeddings: An instance of ASTEmbeddings for handling AST embeddings.
-        - encoder: An instance of ASTEncoder for encoding AST inputs.
-        - layernorm: A layer normalization module with specified hidden size and epsilon.
+        config: An instance of ASTConfig containing configuration parameters for the model.
+        embeddings: An instance of ASTEmbeddings for handling AST embeddings.
+        encoder: An instance of ASTEncoder for encoding AST inputs.
+        layernorm: A layer normalization module with specified hidden size and epsilon.
         
     Methods:
-        - __init__(self, config: ASTConfig) -> None: Initializes the ASTModel with the given configuration.
-        - get_input_embeddings(self) -> ASTPatchEmbeddings: Returns the patch embeddings used by the model.
-        - _prune_heads(self, heads_to_prune: Dict[int, List[int]]) -> None: Prunes specified attention heads in the model.
-        - construct(self, input_values: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None,
-return_dict: Optional[bool] = None) -> Union[Tuple, BaseModelOutputWithPooling]: Constructs the model output based on input values and optional arguments.
+        __init__: Initializes the ASTModel with the given configuration.
+        get_input_embeddings: Returns the patch embeddings used by the model.
+        _prune_heads: Prunes specified attention heads in the model.
+        construct: Constructs the model output based on input values and optional arguments.
     
     The construct method handles input processing, encoding, and output generation based on the specified parameters. Pruning heads allows for fine-tuning the attention mechanism of the model. Overall,
-ASTModel provides a comprehensive solution for AST-based tasks.
+    ASTModel provides a comprehensive solution for AST-based tasks.
     """
     def __init__(self, config: ASTConfig) -> None:
         """
@@ -996,15 +998,15 @@ class ASTMLPHead(nn.Cell):
 
     """
     ASTMLPHead is a Python class that represents a multi-layer perceptron (MLP) head for an Abstract Syntax Tree (AST) model. This class inherits from nn.Cell and contains methods for initializing and
-constructing the MLP head.
+    constructing the MLP head.
     
     Attributes:
         layernorm: A LayerNorm module for normalizing the input hidden state.
         dense: A Dense module for applying a linear transformation to the input hidden state.
     
     Methods:
-        __init__(config: ASTConfig): Initializes the ASTMLPHead instance with the provided configuration.
-        construct(hidden_state): Constructs the output hidden state by applying layer normalization and linear transformation.
+        __init__: Initializes the ASTMLPHead instance with the provided configuration.
+        construct: Constructs the output hidden state by applying layer normalization and linear transformation.
     
     Note:
         The ASTMLPHead class is designed to be used in conjunction with an AST model for processing abstract syntax trees in natural language processing tasks.
@@ -1016,9 +1018,9 @@ constructing the MLP head.
         Args:
             self: The instance of the class.
             config (ASTConfig): The configuration object for the ASTMLPHead. It contains the following attributes:
-                - hidden_size (int): The size of the hidden layers.
-                - layer_norm_eps (float): The epsilon value for LayerNorm.
-                - num_labels (int): The number of labels for the dense layer. If zero, an identity layer is used instead.
+                >   - hidden_size (int): The size of the hidden layers.
+                >   - layer_norm_eps (float): The epsilon value for LayerNorm.
+                >   - num_labels (int): The number of labels for the dense layer. If zero, an identity layer is used instead.
         
         Returns:
             None
@@ -1056,26 +1058,9 @@ class ASTForAudioClassification(ASTPreTrainedModel):
     This class inherits from ASTPreTrainedModel and provides methods for initializing the model with a configuration, and constructing the model for audio classification tasks.
     
     Attributes:
-        - num_labels: Number of labels for the audio classification task.
-        - audio_spectrogram_transformer: Instance of ASTModel for processing audio input.
-        - classifier: Instance of ASTMLPHead for classification using the model's pooled output.
-    
-    Methods:
-        - __init__(self, config: ASTConfig) -> None: Initializes the ASTForAudioClassification instance with the given configuration.
-        - construct(self, input_values: Optional[mindspore.Tensor], head_mask: Optional[mindspore.Tensor], labels: Optional[mindspore.Tensor], output_attentions: Optional[bool], output_hidden_states:
-Optional[bool], return_dict: Optional[bool]) -> Union[tuple, SequenceClassifierOutput]: 
-            Constructs the model for audio classification tasks, computing loss based on the specified labels and problem type.
-            Parameters:
-                - input_values: Input tensor for the audio data.
-                - head_mask: Mask tensor for controlling the attention mechanism.
-                - labels: Tensor containing the ground truth labels.
-                - output_attentions: Flag indicating whether to output attention weights.
-                - output_hidden_states: Flag indicating whether to output hidden states.
-                - return_dict: Flag indicating whether to return the output as a dictionary.
-            Returns:
-                - Union[tuple, SequenceClassifierOutput]: Tuple containing loss and other model outputs.
-    
-        - post_init(self): Additional initialization method to be called after the main initialization.
+        num_labels: Number of labels for the audio classification task.
+        audio_spectrogram_transformer: Instance of ASTModel for processing audio input.
+        classifier: Instance of ASTMLPHead for classification using the model's pooled output.
     """
     def __init__(self, config: ASTConfig) -> None:
         """
@@ -1084,7 +1069,7 @@ Optional[bool], return_dict: Optional[bool]) -> Union[tuple, SequenceClassifierO
         Args:
             self: The instance of the class.
             config (ASTConfig): The configuration object containing the necessary parameters for ASTForAudioClassification initialization.
-                - num_labels (int): The number of labels/classes for audio classification.
+                >- num_labels (int): The number of labels/classes for audio classification.
             
         Returns:
             None. This method does not return any value.
@@ -1115,9 +1100,9 @@ Optional[bool], return_dict: Optional[bool]) -> Union[tuple, SequenceClassifierO
     ) -> Union[tuple, SequenceClassifierOutput]:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the audio classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+            >   Labels for computing the audio classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 

@@ -182,10 +182,10 @@ class MPNetSelfAttention(nn.Cell):
         Args:
             self: The instance of the MPNetSelfAttention class.
             config (object): An object containing configuration parameters for the self-attention mechanism.
-                - hidden_size (int): The size of the hidden layers.
-                - num_attention_heads (int): The number of attention heads.
-                - embedding_size (int): The size of the embeddings.
-                - attention_probs_dropout_prob (float): The dropout probability for attention probabilities.
+                >   - hidden_size (int): The size of the hidden layers.
+                >   - num_attention_heads (int): The number of attention heads.
+                >   - embedding_size (int): The size of the embeddings.
+                >   - attention_probs_dropout_prob (float): The dropout probability for attention probabilities.
         
         Returns:
             None. This method does not return any value.
@@ -233,20 +233,20 @@ class MPNetSelfAttention(nn.Cell):
         This method constructs self-attention mechanism for MPNetSelfAttention.
         
         Args:
-        - self: The instance of the class.
-        - hidden_states: Tensor containing the input hidden states. Shape: (batch_size, sequence_length, hidden_size).
-        - attention_mask: Optional tensor to mask out attention scores. Shape: (batch_size, sequence_length, sequence_length).
-        - head_mask: Optional tensor to mask out attention heads. Shape: (num_attention_heads, sequence_length, sequence_length).
-        - position_bias: Optional tensor containing positional bias. Shape: (batch_size, num_attention_heads, sequence_length, sequence_length).
-        - output_attentions: Boolean indicating whether to output attention probabilities.
+            self: The instance of the class.
+            hidden_states: Tensor containing the input hidden states. Shape: (batch_size, sequence_length, hidden_size).
+            attention_mask: Optional tensor to mask out attention scores. Shape: (batch_size, sequence_length, sequence_length).
+            head_mask: Optional tensor to mask out attention heads. Shape: (num_attention_heads, sequence_length, sequence_length).
+            position_bias: Optional tensor containing positional bias. Shape: (batch_size, num_attention_heads, sequence_length, sequence_length).
+            output_attentions: Boolean indicating whether to output attention probabilities.
         
         Returns:
-        - Tuple containing output tensor 'o' and attention probabilities tensor. If output_attentions is False, returns tuple with only 'o'.
+            Tuple containing output tensor 'o' and attention probabilities tensor. If output_attentions is False, returns tuple with only 'o'.
         
         Raises:
-        - ValueError: If the dimensions of input tensors are incompatible for matrix operations.
-        - TypeError: If the input parameters are not of expected types.
-        - RuntimeError: If any runtime error occurs during the execution of the method.
+            - ValueError: If the dimensions of input tensors are incompatible for matrix operations.
+            - TypeError: If the input parameters are not of expected types.
+            - RuntimeError: If any runtime error occurs during the execution of the method.
         """
         q = self.q(hidden_states)
         k = self.k(hidden_states)
@@ -351,8 +351,7 @@ class MPNetAttention(nn.Cell):
             **kwargs: Additional keyword arguments.
         
         Returns:
-            Tuple[Union[Tensor, Tuple[Tensor]], ...]: A tuple containing the attention output tensor of shape (batch_size, sequence_length, hidden_size) and any additional outputs returned by the attention
-layer.
+            Tuple[Union[Tensor, Tuple[Tensor]], ...]: A tuple containing the attention output tensor of shape (batch_size, sequence_length, hidden_size) and any additional outputs returned by the attention layer.
         
         Raises:
             None.
@@ -378,9 +377,9 @@ class MPNetIntermediate(nn.Cell):
         Args:
             self: The instance of the MPNetIntermediate class.
             config: An object containing configuration parameters for the MPNetIntermediate instance.
-                Type: Any
-                Purpose: Contains configuration settings for the MPNetIntermediate instance.
-                Restrictions: None
+                >   - Type: Any
+                >   - Purpose: Contains configuration settings for the MPNetIntermediate instance.
+                >   - Restrictions: None
         
         Returns:
             None
@@ -425,9 +424,9 @@ class MPNetOutput(nn.Cell):
         Args:
             self: The instance of the MPNetOutput class.
             config: An object containing configuration parameters.
-                - Type: Any
-                - Purpose: The configuration object specifying model settings.
-                - Restrictions: Must be a valid configuration object.
+                >   - Type: Any
+                >   - Purpose: The configuration object specifying model settings.
+                >   - Restrictions: Must be a valid configuration object.
         
         Returns:
             None. This method does not return any value.
@@ -544,9 +543,9 @@ class MPNetEncoder(nn.Cell):
         Args:
             self: The current object instance.
             config (object): The configuration object containing the settings for the MPNetEncoder.
-                - Type: object
-                - Purpose: Specifies the configuration settings for the MPNetEncoder.
-                - Restrictions: None
+                >   - Type: object
+                >   - Purpose: Specifies the configuration settings for the MPNetEncoder.
+                >   - Restrictions: None
         
         Returns:
             None
@@ -713,7 +712,7 @@ class MPNetPooler(nn.Cell):
         Args:
             self: The instance of the MPNetPooler class.
             hidden_states (mindspore.Tensor): A tensor containing the hidden states of the MPNet model. It is expected to have a shape of (batch_size, sequence_length, hidden_size), where batch_size is the
-batch size, sequence_length is the length of the input sequence, and hidden_size is the size of the hidden state.
+                batch size, sequence_length is the length of the input sequence, and hidden_size is the size of the hidden state.
         
         Returns:
             mindspore.Tensor: The pooled output tensor generated from the hidden states. It has a shape of (batch_size, hidden_size).
@@ -822,18 +821,18 @@ class MPNetModel(MPNetPreTrainedModel):
             output_hidden_states (Optional[bool]): Whether to return the hidden states.
             return_dict (Optional[bool]): Whether to return the output as a dictionary.
         
-        Returns:
-            Union[Tuple[mindspore.Tensor], BaseModelOutputWithPooling]: The output of the MPNet model. If `return_dict` is `False`, a tuple containing the following elements is returned:
-                - sequence_output (mindspore.Tensor): The output tensor of the encoder.
-                - pooled_output (mindspore.Tensor): The pooled output tensor.
-                - hidden_states (Tuple[mindspore.Tensor]): The hidden states of all layers.
-                - attentions (Tuple[mindspore.Tensor]): The attentions of all layers.
-                
-            If `return_dict` is `True`, an instance of BaseModelOutputWithPooling is returned, which contains the following attributes:
-                - last_hidden_state (mindspore.Tensor): The output tensor of the encoder.
-                - pooler_output (mindspore.Tensor): The pooled output tensor.
-                - hidden_states (Tuple[mindspore.Tensor]): The hidden states of all layers.
-                - attentions (Tuple[mindspore.Tensor]): The attentions of all layers.
+        Returns: Union[Tuple[mindspore.Tensor], BaseModelOutputWithPooling]:
+            The output of the MPNet model.
+                >   - If `return_dict` is `False`, a tuple containing the following elements is returned:
+                >       - sequence_output (mindspore.Tensor): The output tensor of the encoder.
+                >       - pooled_output (mindspore.Tensor): The pooled output tensor.
+                >       - hidden_states (Tuple[mindspore.Tensor]): The hidden states of all layers.
+                >       - attentions (Tuple[mindspore.Tensor]): The attentions of all layers.
+                >   - If `return_dict` is `True`, an instance of BaseModelOutputWithPooling is returned, which contains the following attributes:
+                >       - last_hidden_state (mindspore.Tensor): The output tensor of the encoder.
+                >       - pooler_output (mindspore.Tensor): The pooled output tensor.
+                >       - hidden_states (Tuple[mindspore.Tensor]): The hidden states of all layers.
+                >       - attentions (Tuple[mindspore.Tensor]): The attentions of all layers.
         
         Raises:
             ValueError: If both `input_ids` and `inputs_embeds` are provided simultaneously.
@@ -955,10 +954,11 @@ class MPNetForMaskedLM(MPNetPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], MaskedLMOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
-            config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
-            loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
+                config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
+                loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1001,9 +1001,9 @@ class MPNetLMHead(nn.Cell):
         Args:
             self: The instance of the MPNetLMHead class.
             config: An object containing configuration parameters for the MPNetLMHead model.
-                    Type: Config object
-                    Purpose: Specifies the configuration settings for the MPNetLMHead model.
-                    Restrictions: Must be a valid configuration object.
+                >   - Type: Config object
+                >   - Purpose: Specifies the configuration settings for the MPNetLMHead model.
+                >   - Restrictions: Must be a valid configuration object.
         
         Returns:
             None
@@ -1085,10 +1085,11 @@ class MPNetForSequenceClassification(MPNetPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1176,10 +1177,11 @@ class MPNetForMultipleChoice(MPNetPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], MultipleChoiceModelOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
-            num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
-            `input_ids` above)
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
+                num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
+                `input_ids` above)
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
@@ -1264,8 +1266,9 @@ class MPNetForTokenClassification(MPNetPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], TokenClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1310,9 +1313,9 @@ class MPNetClassificationHead(nn.Cell):
         Args:
             self: The instance of the class itself.
             config: An object containing configuration parameters for the head, including:
-                - hidden_size (int): The size of the hidden layer.
-                - hidden_dropout_prob (float): The dropout probability for the hidden layer.
-                - num_labels (int): The number of output labels.
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - hidden_dropout_prob (float): The dropout probability for the hidden layer.
+                >   - num_labels (int): The number of output labels.
         
         Returns:
             None. This method initializes the dense, dropout, and output projection layers within the MPNetClassificationHead instance.
@@ -1358,9 +1361,9 @@ class MPNetForQuestionAnswering(MPNetPreTrainedModel):
         Args:
             self (object): The instance of the MPNetForQuestionAnswering class.
             config (object): An object containing configuration settings for the model.
-                - Type: Custom class object
-                - Purpose: Specifies the configuration parameters for the model initialization.
-                - Restrictions: Must contain the 'num_labels' attribute.
+                >   - Type: Custom class object
+                >   - Purpose: Specifies the configuration parameters for the model initialization.
+                >   - Restrictions: Must contain the 'num_labels' attribute.
         
         Returns:
             None: This method does not return any value.

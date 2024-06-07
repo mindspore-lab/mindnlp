@@ -54,7 +54,7 @@ class _PrevExtTableStates(TypedDict):
     Represents the state of a previous external table.
     
     This class inherits from TypedDict and provides a structured way to store the state information of a previous external table. The class '_PrevExtTableStates' can be used to store and retrieve various
-attributes related to the state of the table.
+    attributes related to the state of the table.
     
     Attributes:
         <attribute1>: <description of attribute1>
@@ -66,7 +66,7 @@ attributes related to the state of the table.
         The '_PrevExtTableStates' class is intended to be used in conjunction with external tables and provides a convenient way to manage and retrieve the state information associated with them.
     
     Example:
-        
+        ```python
         # Create an instance of '_PrevExtTableStates'
         table_state = _PrevExtTableStates()
     
@@ -79,7 +79,7 @@ attributes related to the state of the table.
         table_name = table_state['name']
         last_modified = table_state['last_modified']
         column_count = table_state['column_count']
-        
+        ```
     
     Inheritance:
         TypedDict
@@ -120,7 +120,7 @@ class _DictTree(TypedDict):
     """A Python class representing a dictionary-like tree structure.
     
     The _DictTree class is a subclass of TypedDict, which allows for the creation of dictionary-like objects that have a fixed set of keys and specific value types for each key. The _DictTree class provides
-additional functionality to represent a hierarchical tree structure.
+    additional functionality to represent a hierarchical tree structure.
     
     Attributes:
         None
@@ -138,6 +138,7 @@ additional functionality to represent a hierarchical tree structure.
         To create a custom tree structure using the _DictTree class, simply inherit from it and define the desired tree structure by specifying the keys and value types using the TypedDict syntax.
     
     Example:
+        ```python
         class MyTree(_DictTree):
             name: str
             children: List[MyTree]
@@ -154,9 +155,9 @@ additional functionality to represent a hierarchical tree structure.
     
             def get_children(self) -> List[MyTree]:
                 return self.children
-    
-    In the above example, a custom tree structure is defined with two keys: 'name' of type str and 'children' of type List[MyTree]. The class provides methods to add and remove children, as well as retrieve
-the list of children.
+        ```
+        In the above example, a custom tree structure is defined with two keys: 'name' of type str and 'children' of type List[MyTree]. The class provides methods to add and remove children, as well as retrieve
+        the list of children.
     
     """
     value: str
@@ -221,27 +222,27 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
         **kwargs,
     ):
         """
-            Initialize a CpmBeeTokenizer object.
-        
-            Args:
-                vocab_file (str): The path to the file containing the vocabulary.
-                bos_token (str, optional): The beginning of sentence token. Defaults to '<s>'.
-                eos_token (str, optional): The end of sentence token. Defaults to '</s>'.
-                line_token (str, optional): The token used to represent a new line. Defaults to '\n'.
-                space_token (str, optional): The token used to represent a space. Defaults to ' '.
-                unk_token (str, optional): The token used to represent unknown words. Defaults to '<unk>'.
-                mask_token (str, optional): The token used for masking. Defaults to '<mask>'.
-                pad_token (str, optional): The token used for padding. Defaults to '<pad>'.
-                padding_side (str, optional): The side to apply padding. Defaults to 'left'.
-                **kwargs: Additional keyword arguments.
-        
-            Returns:
-                None
-        
-            Raises:
-                FileNotFoundError: If the vocab_file does not exist.
-                TypeError: If any of the arguments are of incorrect type.
-            """
+        Initialize a CpmBeeTokenizer object.
+
+        Args:
+            vocab_file (str): The path to the file containing the vocabulary.
+            bos_token (str, optional): The beginning of sentence token.
+            eos_token (str, optional): The end of sentence token.
+            line_token (str, optional): The token used to represent a new line.
+            space_token (str, optional): The token used to represent a space.
+            unk_token (str, optional): The token used to represent unknown words.
+            mask_token (str, optional): The token used for masking.
+            pad_token (str, optional): The token used for padding.
+            padding_side (str, optional): The side to apply padding.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            None.
+
+        Raises:
+            FileNotFoundError: If the vocab_file does not exist.
+            TypeError: If any of the arguments are of incorrect type.
+        """
         self.encoder: Dict[str, int] = {}
         super().__init__(
             bos_token=bos_token,
@@ -359,9 +360,11 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
             None.
         
         Example:
+            ```python
             >>> tokenizer = CpmBeeTokenizer()
             >>> tokenizer.vocab_size()
             5000
+            ```
         """
         return len(self.encoder)
 
@@ -402,10 +405,10 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
     def tokenize(self, text: TextInput, **kwargs) -> List[str]:
         r"""
         Override the `tokenize` to meet the needs of CPMBee:
-        1. Mark the special token with `<` and `>`. The `<>` will be ignored.
-        2. Split sentences by the marked special tokens.
-        3. Record the marked special token by `ext_table` and `ext_table_rev`.
-        4. Tokenize the sentence without special tokens.
+        >   1. Mark the special token with `<` and `>`. The `<>` will be ignored.
+        >   2. Split sentences by the marked special tokens.
+        >   3. Record the marked special token by `ext_table` and `ext_table_rev`.
+        >   4. Tokenize the sentence without special tokens.
         """
         for_cpmbee = kwargs.get("for_cpmbee", False)
         all_special_tokens_extended = {
@@ -549,7 +552,7 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
             None.
         
         This method takes in two parameters, self and tokens. The self parameter is an instance of the CpmBeeTokenizer class and is used to access the class's attributes and methods. The tokens parameter is a
-list of strings representing individual tokens.
+        list of strings representing individual tokens.
         
         The function returns a string that is obtained by concatenating all the tokens together using the ''.join() method. This method does not modify the original list of tokens.
         
@@ -817,8 +820,8 @@ list of strings representing individual tokens.
     ):
         """
         Parse a dict to data ids. Exclusive for CPMBee. It will
-        1. parse the dict to segments and get segment_rel, which for calculating of position_bias.
-        2. tokenize every segment.
+        >   1. parse the dict to segments and get segment_rel, which for calculating of position_bias.
+        >   2. tokenize every segment.
         """
         root: _DictTree = {
             "value": "<root>",

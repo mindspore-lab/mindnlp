@@ -30,7 +30,7 @@ class PromptEmbedding(nn.Cell):
     **Attributes**:
         - **embedding** (`nn.Embedding`) -- The embedding layer of the prompt embedding.
 
-    Example:
+    Examples:
 
     ```py
     >>> from peft import PromptEmbedding, PromptTuningConfig

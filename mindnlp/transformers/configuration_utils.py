@@ -176,7 +176,7 @@ class PretrainedConfig:
             None. This method does not return any value.
         
         Raises:
-            - AttributeError: If the key is not found in the attribute map of the parent class.
+            AttributeError: If the key is not found in the attribute map of the parent class.
         """
         if key in super().__getattribute__("attribute_map"):
             key = super().__getattribute__("attribute_map")[key]
@@ -305,13 +305,12 @@ class PretrainedConfig:
         Args:
             pretrained_model_name_or_path (`str` or `os.PathLike`):
                 This can be either:
-
-                - a string, the *model id* of a pretrained model configuration hosted inside a model repo on
+                >- a string, the *model id* of a pretrained model configuration hosted inside a model repo on
                   hf-mirror.com. Valid model ids can be located at the root-level, like `bert-base-uncased`, or
                   namespaced under a user or organization name, like `dbmdz/bert-base-german-cased`.
-                - a path to a *directory* containing a configuration file saved using the
+                >- a path to a *directory* containing a configuration file saved using the
                   [`~PretrainedConfig.save_pretrained`] method, e.g., `./my_model_directory/`.
-                - a path or url to a saved configuration JSON *file*, e.g., `./my_model_directory/configuration.json`.
+                >- a path or url to a saved configuration JSON *file*, e.g., `./my_model_directory/configuration.json`.
             cache_dir (`str` or `os.PathLike`, *optional*):
                 Path to a directory in which a downloaded pretrained model configuration should be cached if the
                 standard cache should not be used.
@@ -355,26 +354,26 @@ class PretrainedConfig:
         Returns:
             [`PretrainedConfig`]: The configuration object instantiated from this pretrained model.
 
-        Examples:
-
-        ```python
-        # We can't instantiate directly the base class *PretrainedConfig* so let's show the examples on a
-        # derived class: BertConfig
-        config = BertConfig.from_pretrained(
-            "bert-base-uncased"
-        )  # Download configuration from hf-mirror.com and cache.
-        config = BertConfig.from_pretrained(
-            "./test/saved_model/"
-        )  # E.g. config (or model) was saved using *save_pretrained('./test/saved_model/')*
-        config = BertConfig.from_pretrained("./test/saved_model/my_configuration.json")
-        config = BertConfig.from_pretrained("bert-base-uncased", output_attentions=True, foo=False)
-        assert config.output_attentions == True
-        config, unused_kwargs = BertConfig.from_pretrained(
-            "bert-base-uncased", output_attentions=True, foo=False, return_unused_kwargs=True
-        )
-        assert config.output_attentions == True
-        assert unused_kwargs == {"foo": False}
-        ```"""
+        Example:
+            ```python
+            # We can't instantiate directly the base class *PretrainedConfig* so let's show the examples on a
+            # derived class: BertConfig
+            config = BertConfig.from_pretrained(
+                "bert-base-uncased"
+            )  # Download configuration from hf-mirror.com and cache.
+            config = BertConfig.from_pretrained(
+                "./test/saved_model/"
+            )  # E.g. config (or model) was saved using *save_pretrained('./test/saved_model/')*
+            config = BertConfig.from_pretrained("./test/saved_model/my_configuration.json")
+            config = BertConfig.from_pretrained("bert-base-uncased", output_attentions=True, foo=False)
+            assert config.output_attentions == True
+            config, unused_kwargs = BertConfig.from_pretrained(
+                "bert-base-uncased", output_attentions=True, foo=False, return_unused_kwargs=True
+            )
+            assert config.output_attentions == True
+            assert unused_kwargs == {"foo": False}
+            ```
+        """
         kwargs["cache_dir"] = cache_dir
         kwargs["force_download"] = force_download
         kwargs["local_files_only"] = local_files_only
@@ -696,10 +695,10 @@ class PretrainedConfig:
             None. This method does not return any value.
         
         Raises:
-            - TypeError: If the num_labels parameter is not of type int.
-            - ValueError: If the num_labels parameter is a negative integer.
-            - AttributeError: If the id2label attribute is not present in the instance or is None.
-            - ValueError: If the length of the id2label attribute is not equal to the specified num_labels.
+            TypeError: If the num_labels parameter is not of type int.
+            ValueError: If the num_labels parameter is a negative integer.
+            AttributeError: If the id2label attribute is not present in the instance or is None.
+            ValueError: If the length of the id2label attribute is not equal to the specified num_labels.
         """
         if not hasattr(self, "id2label") or self.id2label is None or len(self.id2label) != num_labels:
             self.id2label = {i: f"LABEL_{i}" for i in range(num_labels)}
@@ -763,39 +762,39 @@ class EncoderDecoderConfig(PretrainedConfig):
         kwargs (*optional*):
             Dictionary of keyword arguments. Notably:
 
-                - **encoder** ([`PretrainedConfig`], *optional*) -- An instance of a configuration object that defines
+                >- **encoder** ([`PretrainedConfig`], *optional*) -- An instance of a configuration object that defines
                   the encoder config.
-                - **decoder** ([`PretrainedConfig`], *optional*) -- An instance of a configuration object that defines
+                >- **decoder** ([`PretrainedConfig`], *optional*) -- An instance of a configuration object that defines
                   the decoder config.
 
-    Examples:
+    Example:
+        ```python
+        >>> from transformers import BertConfig, EncoderDecoderConfig, EncoderDecoderModel
 
-    ```python
-    >>> from transformers import BertConfig, EncoderDecoderConfig, EncoderDecoderModel
+        >>> # Initializing a BERT bert-base-uncased style configuration
+        >>> config_encoder = BertConfig()
+        >>> config_decoder = BertConfig()
 
-    >>> # Initializing a BERT bert-base-uncased style configuration
-    >>> config_encoder = BertConfig()
-    >>> config_decoder = BertConfig()
+        >>> config = EncoderDecoderConfig.from_encoder_decoder_configs(config_encoder, config_decoder)
 
-    >>> config = EncoderDecoderConfig.from_encoder_decoder_configs(config_encoder, config_decoder)
+        >>> # Initializing a Bert2Bert model (with random weights) from the bert-base-uncased style configurations
+        >>> model = EncoderDecoderModel(config=config)
 
-    >>> # Initializing a Bert2Bert model (with random weights) from the bert-base-uncased style configurations
-    >>> model = EncoderDecoderModel(config=config)
+        >>> # Accessing the model configuration
+        >>> config_encoder = model.config.encoder
+        >>> config_decoder = model.config.decoder
+        >>> # set decoder config to causal lm
+        >>> config_decoder.is_decoder = True
+        >>> config_decoder.add_cross_attention = True
 
-    >>> # Accessing the model configuration
-    >>> config_encoder = model.config.encoder
-    >>> config_decoder = model.config.decoder
-    >>> # set decoder config to causal lm
-    >>> config_decoder.is_decoder = True
-    >>> config_decoder.add_cross_attention = True
+        >>> # Saving the model, including its configuration
+        >>> model.save_pretrained("my-model")
 
-    >>> # Saving the model, including its configuration
-    >>> model.save_pretrained("my-model")
-
-    >>> # loading model and config from pretrained folder
-    >>> encoder_decoder_config = EncoderDecoderConfig.from_pretrained("my-model")
-    >>> model = EncoderDecoderModel.from_pretrained("my-model", config=encoder_decoder_config)
-    ```"""
+        >>> # loading model and config from pretrained folder
+        >>> encoder_decoder_config = EncoderDecoderConfig.from_pretrained("my-model")
+        >>> model = EncoderDecoderModel.from_pretrained("my-model", config=encoder_decoder_config)
+        ```
+    """
     model_type = "encoder-decoder"
     is_composition = True
 
@@ -819,9 +818,9 @@ class EncoderDecoderConfig(PretrainedConfig):
         Note:
             This method is used to initialize a configuration object for an encoder-decoder model. It expects the following
             parameters to be passed as keyword arguments:
-            - encoder: A dictionary containing the configuration settings for the encoder model. It should include the
+            >- encoder: A dictionary containing the configuration settings for the encoder model. It should include the
               'model_type' parameter specifying the type of the encoder model.
-            - decoder: A dictionary containing the configuration settings for the decoder model. It should include the
+            >- decoder: A dictionary containing the configuration settings for the decoder model. It should include the
               'model_type' parameter specifying the type of the decoder model.
         
             The 'encoder' and 'decoder' dictionaries are popped from the kwargs parameter to remove them from further processing.

@@ -254,31 +254,31 @@ class LayoutLMv2Tokenizer(PreTrainedTokenizer):
         Initializes a LayoutLMv2Tokenizer object.
         
         Args:
-        - self: The instance of the class.
-        - vocab_file (str): The path to the vocabulary file.
-        - do_lower_case (bool, optional): Whether to lowercase the input text. Defaults to True.
-        - do_basic_tokenize (bool, optional): Whether to perform basic tokenization. Defaults to True.
-        - never_split (list, optional): List of tokens that should not be split. Defaults to None.
-        - unk_token (str, optional): The unknown token. Defaults to '[UNK]'.
-        - sep_token (str, optional): The separator token. Defaults to '[SEP]'.
-        - pad_token (str, optional): The padding token. Defaults to '[PAD]'.
-        - cls_token (str, optional): The classification token. Defaults to '[CLS]'.
-        - mask_token (str, optional): The masking token. Defaults to '[MASK]'.
-        - cls_token_box (list, optional): The bounding box coordinates for the classification token. Defaults to [0, 0, 0, 0].
-        - sep_token_box (list, optional): The bounding box coordinates for the separator token. Defaults to [1000, 1000, 1000, 1000].
-        - pad_token_box (list, optional): The bounding box coordinates for the padding token. Defaults to [0, 0, 0, 0].
-        - pad_token_label (int, optional): The label for the padding token. Defaults to -100.
-        - only_label_first_subword (bool, optional): Whether to only label the first subword. Defaults to True.
-        - tokenize_chinese_chars (bool, optional): Whether to tokenize Chinese characters. Defaults to True.
-        - strip_accents (str, optional): The accents to strip. Defaults to None.
-        - model_max_length (int, optional): The maximum length of the model. Defaults to 512.
-        - additional_special_tokens (list, optional): Additional special tokens. Defaults to None.
+            self: The instance of the class.
+            vocab_file (str): The path to the vocabulary file.
+            do_lower_case (bool, optional): Whether to lowercase the input text. Defaults to True.
+            do_basic_tokenize (bool, optional): Whether to perform basic tokenization. Defaults to True.
+            never_split (list, optional): List of tokens that should not be split. Defaults to None.
+            unk_token (str, optional): The unknown token. Defaults to '[UNK]'.
+            sep_token (str, optional): The separator token. Defaults to '[SEP]'.
+            pad_token (str, optional): The padding token. Defaults to '[PAD]'.
+            cls_token (str, optional): The classification token. Defaults to '[CLS]'.
+            mask_token (str, optional): The masking token. Defaults to '[MASK]'.
+            cls_token_box (list, optional): The bounding box coordinates for the classification token. Defaults to [0, 0, 0, 0].
+            sep_token_box (list, optional): The bounding box coordinates for the separator token. Defaults to [1000, 1000, 1000, 1000].
+            pad_token_box (list, optional): The bounding box coordinates for the padding token. Defaults to [0, 0, 0, 0].
+            pad_token_label (int, optional): The label for the padding token. Defaults to -100.
+            only_label_first_subword (bool, optional): Whether to only label the first subword. Defaults to True.
+            tokenize_chinese_chars (bool, optional): Whether to tokenize Chinese characters. Defaults to True.
+            strip_accents (str, optional): The accents to strip. Defaults to None.
+            model_max_length (int, optional): The maximum length of the model. Defaults to 512.
+            additional_special_tokens (list, optional): Additional special tokens. Defaults to None.
         
         Returns:
-        - None
+            None
         
         Raises:
-        - ValueError: If the vocabulary file cannot be found at the specified path.
+            - ValueError: If the vocabulary file cannot be found at the specified path.
         """
         sep_token = AddedToken(sep_token, special=True) if isinstance(sep_token, str) else sep_token
         unk_token = AddedToken(unk_token, special=True) if isinstance(unk_token, str) else unk_token
@@ -414,8 +414,8 @@ class LayoutLMv2Tokenizer(PreTrainedTokenizer):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A BERT sequence has the following format:
 
-        - single sequence: `[CLS] X [SEP]`
-        - pair of sequences: `[CLS] A [SEP] B [SEP]`
+        >   - single sequence: `[CLS] X [SEP]`
+        >   - pair of sequences: `[CLS] A [SEP] B [SEP]`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -695,7 +695,7 @@ class LayoutLMv2Tokenizer(PreTrainedTokenizer):
         Args:
             self (LayoutLMv2Tokenizer): An instance of the LayoutLMv2Tokenizer class.
             batch_text_or_text_pairs (Union[List[TextInput], List[TextInputPair], List[PreTokenizedInput]]): A list of input texts or text pairs to be encoded. The input can be either a single text, a text
-pair, or a pre-tokenized input.
+                pair, or a pre-tokenized input.
             is_pair (bool, optional): Indicates whether the input is a text pair. Defaults to None.
             boxes (Optional[List[List[List[int]]]], optional): A list of bounding boxes for each token in the input. Defaults to None.
             word_labels (Optional[Union[List[int], List[List[int]]]], optional): A list of word labels for each token in the input. Defaults to None.
@@ -717,13 +717,13 @@ pair, or a pre-tokenized input.
         
         Returns:
             BatchEncoding: A dictionary-like object containing the encoded batch, with the following keys:
-                - 'input_ids': The input token IDs.
-                - 'attention_mask': The attention mask indicating which tokens to attend to.
-                - 'token_type_ids': The token type IDs indicating the segment type of each token.
-                - 'overflowing_tokens': The list of overflowing tokens if return_overflowing_tokens=True.
-                - 'special_tokens_mask': The mask indicating the special tokens if return_special_tokens_mask=True.
-                - 'offset_mapping': The mapping of tokens to their corresponding positions in the original text if return_offsets_mapping=True.
-                - 'length': The length of each encoded sequence if return_length=True.
+                >   - 'input_ids': The input token IDs.
+                >   - 'attention_mask': The attention mask indicating which tokens to attend to.
+                >   - 'token_type_ids': The token type IDs indicating the segment type of each token.
+                >   - 'overflowing_tokens': The list of overflowing tokens if return_overflowing_tokens=True.
+                >   - 'special_tokens_mask': The mask indicating the special tokens if return_special_tokens_mask=True.
+                >   - 'offset_mapping': The mapping of tokens to their corresponding positions in the original text if return_offsets_mapping=True.
+                >   - 'length': The length of each encoded sequence if return_length=True.
         
         Raises:
             None.
@@ -1109,7 +1109,7 @@ pair, or a pre-tokenized input.
         
         Raises:
             NotImplementedError: If return_offsets_mapping is set to True. This feature is not available when using Python tokenizers. To use this feature, change your tokenizer to one deriving from
-transformers.PreTrainedTokenizerFast. More information on available tokenizers can be found at https://github.com/huggingface/transformers/pull/2674.
+            transformers.PreTrainedTokenizerFast. More information on available tokenizers can be found at https://github.com/huggingface/transformers/pull/2674.
         """
         if return_offsets_mapping:
             raise NotImplementedError(
@@ -1381,19 +1381,18 @@ transformers.PreTrainedTokenizerFast. More information on available tokenizers c
                 Number of tokens to remove using the truncation strategy.
             truncation_strategy (`str` or [`~tokenization_utils_base.TruncationStrategy`], *optional*, defaults to `False`):
                 The strategy to follow for truncation. Can be:
-
-                - `'longest_first'`: Truncate to a maximum length specified with the argument `max_length` or to the
-                  maximum acceptable input length for the model if that argument is not provided. This will truncate
-                  token by token, removing a token from the longest sequence in the pair if a pair of sequences (or a
-                  batch of pairs) is provided.
-                - `'only_first'`: Truncate to a maximum length specified with the argument `max_length` or to the
-                  maximum acceptable input length for the model if that argument is not provided. This will only
-                  truncate the first sequence of a pair if a pair of sequences (or a batch of pairs) is provided.
-                - `'only_second'`: Truncate to a maximum length specified with the argument `max_length` or to the
-                  maximum acceptable input length for the model if that argument is not provided. This will only
-                  truncate the second sequence of a pair if a pair of sequences (or a batch of pairs) is provided.
-                - `'do_not_truncate'` (default): No truncation (i.e., can output batch with sequence lengths greater
-                  than the model maximum admissible input size).
+                >   - `'longest_first'`: Truncate to a maximum length specified with the argument `max_length` or to the
+                      maximum acceptable input length for the model if that argument is not provided. This will truncate
+                      token by token, removing a token from the longest sequence in the pair if a pair of sequences (or a
+                      batch of pairs) is provided.
+                >   - `'only_first'`: Truncate to a maximum length specified with the argument `max_length` or to the
+                      maximum acceptable input length for the model if that argument is not provided. This will only
+                      truncate the first sequence of a pair if a pair of sequences (or a batch of pairs) is provided.
+                >   - `'only_second'`: Truncate to a maximum length specified with the argument `max_length` or to the
+                      maximum acceptable input length for the model if that argument is not provided. This will only
+                      truncate the second sequence of a pair if a pair of sequences (or a batch of pairs) is provided.
+                >   - `'do_not_truncate'` (default): No truncation (i.e., can output batch with sequence lengths greater
+                      than the model maximum admissible input size).
             stride (`int`, *optional*, defaults to 0):
                 If set to a positive number, the overflowing tokens returned will contain some tokens from the main
                 sequence returned. The value of this argument defines the number of additional tokens.
@@ -1492,13 +1491,16 @@ transformers.PreTrainedTokenizerFast. More information on available tokenizers c
             max_length: maximum length of the returned list and optionally padding length (see below).
                 Will truncate by taking into account the special tokens.
             padding_strategy: PaddingStrategy to use for padding.
-
+                <br>&emsp;
                 - PaddingStrategy.LONGEST Pad to the longest sequence in the batch
+                <br>&emsp;
                 - PaddingStrategy.MAX_LENGTH: Pad to the max length (default)
+                <br>&emsp;
                 - PaddingStrategy.DO_NOT_PAD: Do not pad
                 The tokenizer padding sides are defined in self.padding_side:
-
+                    <br>&emsp;&emsp;
                     - 'left': pads on the left of the sequences
+                    <br>&emsp;&emsp;
                     - 'right': pads on the right of the sequences
             pad_to_multiple_of: (optional) Integer if set will pad the sequence to a multiple of the provided value.
                 This is especially useful to enable the use of Tensor Core on NVIDIA hardware with compute capability

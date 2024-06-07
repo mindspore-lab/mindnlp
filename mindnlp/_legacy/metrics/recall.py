@@ -47,7 +47,7 @@ def recall_fn(preds, labels):
     Raises:
         ValueError: If `preds` doesn't have the same classes number as `labels`.
 
-    Example:
+    Examples:
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
@@ -97,7 +97,7 @@ class Recall(Metric):
     Args:
         name (str): Name of the metric.
 
-    Example:
+    Examples:
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor

@@ -127,21 +127,17 @@ class VipLlavaMultiModalProjector(nn.Cell):
 
     def construct(self, hidden_states):
         """
-        
-        construct(self, hidden_states)
-            
-            Constructs the multi-modal projector for the VipLlava model.
-        
-            Args:
-                self (VipLlavaMultiModalProjector): An instance of the VipLlavaMultiModalProjector class.
-                hidden_states (Tensor): The input hidden states to be projected. Should be of shape (batch_size, hidden_size).
-        
-            Returns:
-                None
-        
-            Raises:
-                None
-        
+        Constructs the multi-modal projector for the VipLlava model.
+
+        Args:
+            self (VipLlavaMultiModalProjector): An instance of the VipLlavaMultiModalProjector class.
+            hidden_states (Tensor): The input hidden states to be projected. Should be of shape (batch_size, hidden_size).
+
+        Returns:
+            None
+
+        Raises:
+            None
         """
         hidden_states = self.projector_layernorm(hidden_states)
         hidden_states = self.linear_1(hidden_states)
@@ -176,12 +172,16 @@ class VipLlavaPreTrainedModel(PreTrainedModel):
     The VipLlavaPreTrainedModel class provides methods for initializing the weights of the model and checking whether the model supports SDPA (Semi-Definite Programming Algorithm).
     
     Methods:
-    - _init_weights(module): Initializes the weights of the given module using random normal distribution with a standard deviation determined by the configuration. If the module has a class_embedding
-attribute, it sets the data of the class_embedding tensor with random values. If the module is an instance of nn.Dense or nn.Conv2d, it sets the data of the weight tensor with random values and initializes the
-bias tensor with zeros. If the module is an instance of nn.Embedding, it sets the data of the weight tensor with random values and initializes the padding_idx tensor with zeros.
-    - _supports_sdpa: Retrieves the language_model attribute of the class to check whether the model supports SDPA or not.
+        _init_weights:
+            Initializes the weights of the given module using random normal distribution with a standard deviation determined by the configuration. If the module has a class_embedding
+            attribute, it sets the data of the class_embedding tensor with random values. If the module is an instance of nn.Dense or nn.Conv2d,
+            it sets the data of the weight tensor with random values and initializes the bias tensor with zeros.
+            If the module is an instance of nn.Embedding, it sets the data of the weight tensor with random values and initializes the padding_idx tensor with zeros.
+         _supports_sdpa:
+            Retrieves the language_model attribute of the class to check whether the model supports SDPA or not.
     
-    Note: Please refer to the PreTrainedModel class for additional inherited methods and attributes.
+    Note:
+        Please refer to the PreTrainedModel class for additional inherited methods and attributes.
     """
     config_class = VipLlavaConfig
     base_model_prefix = "model"
@@ -316,12 +316,12 @@ class VipLlavaForConditionalGeneration(VipLlavaPreTrainedModel):
 
     """
     This class represents a model for conditional generation using the VipLlava architecture. It inherits from VipLlavaPreTrainedModel and provides methods for preparing inputs for generation, constructing the
-model, and reordering cache. 
+    model, and reordering cache.
     
     Methods:
-        - construct: Generates output based on input tokens, image features, attention mask, and other optional parameters. It returns a tuple or VipLlavaCausalLMOutputWithPast object.
-        - prepare_inputs_for_generation: Prepares model inputs for generation, considering past key values, inputs embeds, pixel values, attention mask, and position ids.
-        - _reorder_cache: Reorders the cache for the model.
+        construct: Generates output based on input tokens, image features, attention mask, and other optional parameters. It returns a tuple or VipLlavaCausalLMOutputWithPast object.
+        prepare_inputs_for_generation: Prepares model inputs for generation, considering past key values, inputs embeds, pixel values, attention mask, and position ids.
+        _reorder_cache: Reorders the cache for the model.
     
     The class also includes methods for handling input and output embeddings, decoder settings, tying weights, and resizing token embeddings.
     """
@@ -362,7 +362,7 @@ model, and reordering cache.
         
         Returns:
             None. This method returns the input embeddings of the language model used for conditional generation. The embeddings are obtained by calling the 'get_input_embeddings()' method of the language
-model.
+                model.
         
         Raises:
             None. This method does not raise any exceptions.
@@ -481,8 +481,8 @@ model.
             None.
         
         This method resizes the token embeddings of the VipLlavaForConditionalGeneration model based on the provided parameters. It first resizes the token embeddings of the underlying language model using the
-'resize_token_embeddings' method. It then updates the 'vocab_size' configuration parameter and the 'vocab_size' attribute of the model to reflect the new size of the embeddings. Finally, it returns the resized
-token embeddings as an instance of nn.Embedding.
+        'resize_token_embeddings' method. It then updates the 'vocab_size' configuration parameter and the 'vocab_size' attribute of the model to reflect the new size of the embeddings. Finally, it returns the resized
+        token embeddings as an instance of nn.Embedding.
         """
         model_embeds = self.language_model.resize_token_embeddings(
             new_num_tokens, pad_to_multiple_of)
@@ -496,21 +496,21 @@ token embeddings as an instance of nn.Embedding.
         This method '_merge_input_ids_with_image_features' in the class 'VipLlavaForConditionalGeneration' merges input ids with image features to create final embeddings for conditional generation.
         
         Args:
-        - self: The instance of the class.
-        - image_features: Tensor containing image features with shape (num_images, num_image_patches, embed_dim).
-        - inputs_embeds: Tensor containing embeddings for input tokens.
-        - input_ids: Tensor containing input token IDs with shape (batch_size, sequence_length).
-        - attention_mask: Tensor containing attention mask for input tokens.
-        - labels: Optional tensor containing labels for tokens.
+            self: The instance of the class.
+            image_features: Tensor containing image features with shape (num_images, num_image_patches, embed_dim).
+            inputs_embeds: Tensor containing embeddings for input tokens.
+            input_ids: Tensor containing input token IDs with shape (batch_size, sequence_length).
+            attention_mask: Tensor containing attention mask for input tokens.
+            labels: Optional tensor containing labels for tokens.
         
         Returns:
-        - final_embedding: Tensor containing final embeddings with shape (batch_size, max_embed_dim, embed_dim).
-        - final_attention_mask: Tensor containing final attention mask with shape (batch_size, max_embed_dim).
-        - final_labels: Tensor containing final labels with shape (batch_size, max_embed_dim). Returns None if labels is None.
-        - position_ids: Tensor containing position IDs.
+            final_embedding: Tensor containing final embeddings with shape (batch_size, max_embed_dim, embed_dim).
+            final_attention_mask: Tensor containing final attention mask with shape (batch_size, max_embed_dim).
+            final_labels: Tensor containing final labels with shape (batch_size, max_embed_dim). Returns None if labels is None.
+            position_ids: Tensor containing position IDs.
         
         Raises:
-        - ValueError: If the input provided to the model is incorrect, raising an exception with details on the mismatch of image tokens and images given.
+            ValueError: If the input provided to the model is incorrect, raising an exception with details on the mismatch of image tokens and images given.
         """
         num_images, num_image_patches, embed_dim = image_features.shape
         batch_size, sequence_length = input_ids.shape
@@ -617,32 +617,32 @@ token embeddings as an instance of nn.Embedding.
                 (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
+            Union[Tuple, VipLlavaCausalLMOutputWithPast]
 
         Example:
+            ```python
+            >>> import torch
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, VipLlavaForConditionalGeneration
 
-        ```python
-        >>> import torch
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, VipLlavaForConditionalGeneration
+            >>> model = VipLlavaForConditionalGeneration.from_pretrained("llava-hf/vip-llava-7b-hf", device_map="auto", torch_dtype=torch.float16)
+            >>> processor = AutoProcessor.from_pretrained("llava-hf/vip-llava-7b-hf")
 
-        >>> model = VipLlavaForConditionalGeneration.from_pretrained("llava-hf/vip-llava-7b-hf", device_map="auto", torch_dtype=torch.float16)
-        >>> processor = AutoProcessor.from_pretrained("llava-hf/vip-llava-7b-hf")
+            >>> prompt = "A chat between a curious human and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the human's questions.###Human:<image>\n{}###Assistant:"
+            >>> question = "Can you please describe this image?"
+            >>> prompt = prompt.format(question)
+            >>> url = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/diffusers/compel-neg.png"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> prompt = "A chat between a curious human and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the human's questions.###Human:
-<image>\n{}###Assistant:"
-        >>> question = "Can you please describe this image?"
-        >>> prompt = prompt.format(question)
-        >>> url = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/diffusers/compel-neg.png"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> inputs = processor(text=text, images=image, return_tensors="pt").to(0, torch.float16)
 
-        >>> inputs = processor(text=text, images=image, return_tensors="pt").to(0, torch.float16)
-
-        >>> # Generate
-        >>> generate_ids = model.generate(**inputs, max_new_tokens=20)
-        >>> processor.decode(generate_ids[0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
-        The image features a brown and white cat sitting on a green surface, with a red ball in its
-        ```"""
+            >>> # Generate
+            >>> generate_ids = model.generate(**inputs, max_new_tokens=20)
+            >>> processor.decode(generate_ids[0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
+            The image features a brown and white cat sitting on a green surface, with a red ball in its
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -758,21 +758,21 @@ token embeddings as an instance of nn.Embedding.
         Method to prepare inputs for generation in the VipLlavaForConditionalGeneration class.
         
         Args:
-        - self: The instance of the class.
-        - input_ids (Tensor): The input tensor containing token ids of the input sequence.
-        - past_key_values (Cache or tuple): The cache of key values from previous computations or tuple representing past and cache length.
-        - inputs_embeds (Tensor): An optional tensor containing embeddings for input tokens.
-        - pixel_values (Tensor): An optional tensor containing pixel values for image inputs.
-        - attention_mask (Tensor): An optional tensor indicating the attention mask for the input sequence.
+            self: The instance of the class.
+            input_ids (Tensor): The input tensor containing token ids of the input sequence.
+            past_key_values (Cache or tuple): The cache of key values from previous computations or tuple representing past and cache length.
+            inputs_embeds (Tensor): An optional tensor containing embeddings for input tokens.
+            pixel_values (Tensor): An optional tensor containing pixel values for image inputs.
+            attention_mask (Tensor): An optional tensor indicating the attention mask for the input sequence.
         
         Returns:
-        - dict: A dictionary containing model inputs for generation, including inputs_embeds, input_ids, position_ids, past_key_values, use_cache, attention_mask, and pixel_values.
+            dict: A dictionary containing model inputs for generation, including inputs_embeds, input_ids, position_ids, past_key_values, use_cache, attention_mask, and pixel_values.
         
         Raises:
-        - TypeError: If past_key_values is not of type Cache or tuple.
-        - IndexError: If the attention_mask shape is incompatible with input_ids.
-        - ValueError: If the pixel_values tensor is missing.
-        - RuntimeError: If there is an issue with calculating position_ids based on attention_mask.
+            TypeError: If past_key_values is not of type Cache or tuple.
+            IndexError: If the attention_mask shape is incompatible with input_ids.
+            ValueError: If the pixel_values tensor is missing.
+            RuntimeError: If there is an issue with calculating position_ids based on attention_mask.
         """
         if past_key_values is not None:
             if isinstance(past_key_values, Cache):

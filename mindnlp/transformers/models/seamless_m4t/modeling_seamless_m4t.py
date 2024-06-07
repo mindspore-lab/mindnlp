@@ -145,14 +145,11 @@ def format_speech_generation_kwargs(kwargs):
     speech generation models.
 
     Args:
-        kwargs (`dict`)`:
-             Keyword arguments are of two types:
-
-                - Without a prefix, they will be entered as `**kwargs` for the `generate` method of each sub-model,
+        kwargs (`dict`)`: Keyword arguments are of two types:
+            >   - Without a prefix, they will be entered as `**kwargs` for the `generate` method of each sub-model,
                 except for `decoder_input_ids` which will only be passed through the text components.
-                - With a *text_* or *speech_* prefix, they will be input for the `generate` method of the
+            >   - With a *text_* or *speech_* prefix, they will be input for the `generate` method of the
                 text model and speech model respectively. It has the priority over the keywords without a prefix.
-
                 This means you can, for example, specify a generation strategy for one generation but not for the
                 other.
     """
@@ -187,20 +184,20 @@ class SeamlessM4TConformerPositionalConvEmbedding(nn.Cell):
     This class inherits from nn.Cell and includes functionality for applying convolution operations with specific configurations for padding and grouping.
     
     Attributes:
-        - conv: nn.Conv1d
+        conv: nn.Conv1d
             A 1D convolutional layer with configurable kernel size, padding, and group settings.
         
-        - padding: SeamlessM4TConformerSamePadLayer
+        padding: SeamlessM4TConformerSamePadLayer
             A layer for applying padding to the convolutional output based on specified parameters.
         
-        - activation: function
+        activation: function
             Activation function to be applied to the output of the convolutional layer.
     
     Methods:
-        - __init__(self, config)
+        __init__(self, config)
             Constructor method for initializing the SeamlessM4TConformerPositionalConvEmbedding instance.
         
-        - construct(self, hidden_states)
+        construct(self, hidden_states)
             Method to perform the sequence of operations on the input hidden states, including convolution, padding, activation, and axis swapping.
     
     Usage:
@@ -213,10 +210,10 @@ class SeamlessM4TConformerPositionalConvEmbedding(nn.Cell):
         Args:
             self (object): The instance of the class.
             config (object): Configuration object containing parameters for initializing the positional convolutional embedding.
-                - hidden_size (int): The size of hidden units.
-                - num_conv_pos_embeddings (int): The number of convolutional positional embeddings.
-                - num_conv_pos_embedding_groups (int): The number of groups for the convolutional positional embeddings.
-                - speech_encoder_hidden_act (str): The activation function for the speech encoder hidden layer.
+                >   - hidden_size (int): The size of hidden units.
+                >   - num_conv_pos_embeddings (int): The number of convolutional positional embeddings.
+                >   - num_conv_pos_embedding_groups (int): The number of groups for the convolutional positional embeddings.
+                >   - speech_encoder_hidden_act (str): The activation function for the speech encoder hidden layer.
         
         Returns:
             None. This method initializes the SeamlessM4TConformerPositionalConvEmbedding class.
@@ -278,7 +275,7 @@ class SeamlessM4TConformerRotaryPositionalEmbedding(nn.Cell):
         Args:
             self: The instance of the SeamlessM4TConformerRotaryPositionalEmbedding class.
             config: A configuration object containing the parameters for the rotary positional embedding, including hidden_size and speech_encoder_attention_heads. It also includes the rotary_embedding_base
-used for calculating the inverse frequency. It is expected to be a valid configuration object.
+                used for calculating the inverse frequency. It is expected to be a valid configuration object.
         
         Returns:
             None. This method does not return any value.
@@ -365,12 +362,12 @@ class SeamlessM4TConformerRelPositionalEmbedding(nn.Cell):
             None.
         
         Description:
-        This method extends the positional embeddings of the SeamlessM4TConformerRelPositionalEmbedding class based on the shape of the input tensor, 'x'. If the existing positional embeddings (pe) are already
-larger than or equal to twice the width of 'x', no modifications are made. If the data type of the positional embeddings is different from 'x', the positional embeddings are converted to the data type of 'x'. 
+            This method extends the positional embeddings of the SeamlessM4TConformerRelPositionalEmbedding class based on the shape of the input tensor, 'x'. If the existing positional embeddings (pe) are already
+            larger than or equal to twice the width of 'x', no modifications are made. If the data type of the positional embeddings is different from 'x', the positional embeddings are converted to the data type of 'x'.
         
-        The method then calculates positive and negative positional encodings based on the shape of 'x'. The positional encodings are calculated using sine and cosine functions with a positional encoding
-matrix. The calculated positional encodings are flipped and concatenated to form the final positional embeddings, which are then assigned to the 'pe' attribute of the SeamlessM4TConformerRelPositionalEmbedding
-instance.
+            The method then calculates positive and negative positional encodings based on the shape of 'x'. The positional encodings are calculated using sine and cosine functions with a positional encoding
+            matrix. The calculated positional encodings are flipped and concatenated to form the final positional embeddings,
+            which are then assigned to the 'pe' attribute of the SeamlessM4TConformerRelPositionalEmbedding instance.
         """
         # Reset the positional encodings
         if self.pe is not None:
@@ -417,20 +414,22 @@ instance.
             None.
         
         Description:
-        This method takes the hidden states of the model and constructs the relative position embeddings. It first extends the positional encodings (pe) using the extend_pe() method. Then, it calculates the
-start and end indices for selecting the relevant portion of the positional encodings based on the length of the hidden states. Finally, it returns the relative position embeddings for the given hidden states.
-        
-        The positional encodings are extended to ensure that there are sufficient embeddings to cover the entire sequence of hidden states. The start and end indices are calculated to select the relevant
-portion of the positional encodings that corresponds to the hidden states. This ensures that the relative position embeddings are aligned with the hidden states.
-        
+            This method takes the hidden states of the model and constructs the relative position embeddings. It first extends the positional encodings (pe) using the extend_pe() method. Then, it calculates the
+            start and end indices for selecting the relevant portion of the positional encodings based on the length of the hidden states. Finally, it returns the relative position embeddings for the given hidden states.
+
+            The positional encodings are extended to ensure that there are sufficient embeddings to cover the entire sequence of hidden states. The start and end indices are calculated to select the relevant
+            portion of the positional encodings that corresponds to the hidden states. This ensures that the relative position embeddings are aligned with the hidden states.
+
         Note:
-        The relative position embeddings are used to capture the positional information between different elements in the hidden states. They help the model understand the relative positions of tokens in the
-input sequence, which is important for tasks such as machine translation.
+            The relative position embeddings are used to capture the positional information between different elements in the hidden states. They help the model understand the relative positions of tokens in the
+            input sequence, which is important for tasks such as machine translation.
         
         Example:
+            ```python
             >>> rel_pos_emb = SeamlessM4TConformerRelPositionalEmbedding()
             >>> hidden_states = mindspore.Tensor(...)
             >>> relative_position_embeddings = rel_pos_emb.construct(hidden_states)
+            ```
         """
         self.extend_pe(hidden_states)
         start_idx = self.pe.shape[1] // 2 - hidden_states.shape[1] + 1
@@ -513,10 +512,10 @@ class SeamlessM4TConformerFeatureProjection(nn.Cell):
     Methods:
         construct(hidden_states):
             Applies the feature projection to the input hidden states.
-            Args:
-                hidden_states (Tensor): Input hidden states to be projected.
-            Returns:
-                Tensor: The projected hidden states after applying layer normalization, projection, and dropout.
+            >   - Args:
+            >       - hidden_states (Tensor): Input hidden states to be projected.
+            >   - Returns:
+            >       - Tensor: The projected hidden states after applying layer normalization, projection, and dropout.
     """
     def __init__(self, config):
         """
@@ -525,10 +524,10 @@ class SeamlessM4TConformerFeatureProjection(nn.Cell):
         Args:
             self (SeamlessM4TConformerFeatureProjection): The current instance of the class.
             config: The configuration parameters for the feature projection.
-                - feature_projection_input_dim (int): The input dimension for the feature projection.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
-                - hidden_size (int): The hidden size for the projection layer.
-                - speech_encoder_dropout (float): The dropout probability for the speech encoder.
+                >   - feature_projection_input_dim (int): The input dimension for the feature projection.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
+                >   - hidden_size (int): The hidden size for the projection layer.
+                >   - speech_encoder_dropout (float): The dropout probability for the speech encoder.
         
         Returns:
             None. This method does not return any value.
@@ -574,10 +573,10 @@ class SeamlessM4TConformerFeedForward(nn.Cell):
         dropout: The dropout probability for the network.
     
     Methods:
-        __init__(self, config, act_fn=None, dropout=None): 
+        __init__:
             Initializes the SeamlessM4TConformerFeedForward module with the given configuration, activation function, and dropout probability.
     
-        construct(self, hidden_states):
+        construct:
             Constructs the feed-forward operations on the given hidden states, applying intermediate dense layers, activation functions, and dropout. 
             Returns the processed hidden states.
     """
@@ -651,10 +650,10 @@ class SeamlessM4TConformerConvolutionModule(nn.Cell):
         Args:
             self (object): The instance of the class.
             config (object): An object containing configuration parameters for the module.
-                - conv_depthwise_kernel_size (int): The kernel size for depthwise convolution.
-                - hidden_size (int): The size of the hidden layer.
-                - speech_encoder_hidden_act (str): The activation function for the hidden layer.
-                - speech_encoder_dropout (float): The dropout rate.
+                >   - conv_depthwise_kernel_size (int): The kernel size for depthwise convolution.
+                >   - hidden_size (int): The size of the hidden layer.
+                >   - speech_encoder_hidden_act (str): The activation function for the hidden layer.
+                >   - speech_encoder_dropout (float): The dropout rate.
             
         Returns:
             None. This method does not return any value.
@@ -797,17 +796,17 @@ class SeamlessM4TConformerSelfAttention(nn.Cell):
             self (SeamlessM4TConformerSelfAttention): An instance of the SeamlessM4TConformerSelfAttention class.
             hidden_states (mindspore.Tensor): The input hidden states tensor of shape (batch_size, sequence_length, hidden_size).
             attention_mask (Optional[mindspore.Tensor]): An optional attention mask tensor of shape (batch_size, sequence_length, sequence_length), where each value is either 0 or 1. It is used to mask
-positions in the attention scores that should be ignored.
+                positions in the attention scores that should be ignored.
             relative_position_embeddings (Optional[mindspore.Tensor]): An optional tensor of shape (sequence_length, sequence_length, hidden_size) used for relative position embeddings. Required when
-self.position_embeddings_type is 'rotary' or 'relative'.
+                self.position_embeddings_type is 'rotary' or 'relative'.
             output_attentions (bool): A flag indicating whether to output attention probabilities. Defaults to False.
         
         Returns:
             Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing:
-                - hidden_states (mindspore.Tensor): The output hidden states tensor of shape (batch_size, sequence_length, hidden_size).
-                - probs (Optional[mindspore.Tensor]): An optional tensor of shape (batch_size, num_heads, sequence_length, sequence_length) containing the attention probabilities.
-                - None (Optional[Tuple[mindspore.Tensor]]): An optional tuple of attention weights tensors, each of shape (batch_size, num_heads, sequence_length, sequence_length). Only returned when
-output_attentions is True.
+                >   - hidden_states (mindspore.Tensor): The output hidden states tensor of shape (batch_size, sequence_length, hidden_size).
+                >   - probs (Optional[mindspore.Tensor]): An optional tensor of shape (batch_size, num_heads, sequence_length, sequence_length) containing the attention probabilities.
+                >   - None (Optional[Tuple[mindspore.Tensor]]): An optional tuple of attention weights tensors, each of shape (batch_size, num_heads, sequence_length, sequence_length). Only returned when
+                        output_attentions is True.
         
         Raises:
             ValueError: If self.position_embeddings_type is 'rotary' but relative_position_embeddings is not defined.
@@ -970,8 +969,8 @@ class SeamlessM4TConformerEncoderLayer(nn.Cell):
             self (SeamlessM4TConformerEncoderLayer): The instance of the class itself.
             config (object): A configuration object containing parameters for the encoder layer.
                 It must have the following attributes:
-                    hidden_size (int): The dimension of the hidden layers.
-                    speech_encoder_dropout (float): The dropout probability for the speech encoder.
+                    >   - hidden_size (int): The dimension of the hidden layers.
+                    >   - speech_encoder_dropout (float): The dropout probability for the speech encoder.
         
         Returns:
             None. This method doesn't return any value.
@@ -1065,22 +1064,22 @@ class SeamlessM4TConformerEncoder(nn.Cell):
     The encoder consists of multiple ConformerEncoderLayer instances stacked on top of each other. It handles positional embeddings, dropout, layer normalization, and gradient checkpointing.
     
     Parameters:
-    - config: An object containing configuration parameters for the encoder.
-    - Inherits from: nn.Cell
+        config: An object containing configuration parameters for the encoder.
+        Inherits from: nn.Cell
     
     Methods:
-    - __init__(self, config): Initializes the SeamlessM4TConformerEncoder with the provided configuration. Sets up positional embeddings based on the specified type, dropout, encoder layers, layer
-normalization, and gradient checkpointing.
-    - construct(self, hidden_states, attention_mask=None, output_attentions=False, output_hidden_states=False, return_dict=True): Constructs the encoder by processing the input hidden states through each
-encoder layer. It applies dropout, handles attention masks, and computes relative position embeddings. Returns the encoded hidden states, hidden states history if enabled, and attention weights if requested.
+        __init__: Initializes the SeamlessM4TConformerEncoder with the provided configuration. Sets up positional embeddings based on the specified type, dropout, encoder layers, layer
+            normalization, and gradient checkpointing.
+        construct: Constructs the encoder by processing the input hidden states through each
+            encoder layer. It applies dropout, handles attention masks, and computes relative position embeddings. Returns the encoded hidden states, hidden states history if enabled, and attention weights if requested.
     
     Attributes:
-    - config: Configuration parameters for the encoder.
-    - embed_positions: Positional embedding module based on the specified type ('relative' or 'rotary').
-    - dropout: Dropout module for regularization.
-    - layers: List of ConformerEncoderLayer instances representing the stacked encoder layers.
-    - layer_norm: Layer normalization module to normalize the hidden states.
-    - gradient_checkpointing: Flag indicating whether gradient checkpointing is enabled.
+        config: Configuration parameters for the encoder.
+        embed_positions: Positional embedding module based on the specified type ('relative' or 'rotary').
+        dropout: Dropout module for regularization.
+        layers: List of ConformerEncoderLayer instances representing the stacked encoder layers.
+        layer_norm: Layer normalization module to normalize the hidden states.
+        gradient_checkpointing: Flag indicating whether gradient checkpointing is enabled.
     
     For detailed usage instructions and examples, refer to the official documentation.
     """
@@ -1218,26 +1217,26 @@ class SeamlessM4TConformerAdapterLayer(nn.Cell):
 
     """
     The `SeamlessM4TConformerAdapterLayer` class is a Python class that represents a layer in the SeamlessM4TConformer adapter model. This layer is used to adapt the input hidden states using self-attention
-and feed-forward networks.
+    and feed-forward networks.
     
     This class inherits from the `nn.Cell` class.
     
     Attributes:
-    - `kernel_size` (int): The size of the kernel used in the convolutional layers.
-    - `stride` (int): The stride used in the convolutional layers.
-    - `residual_layer_norm` (nn.LayerNorm): A layer normalization module applied to the residual hidden states.
-    - `residual_conv` (nn.Conv1d): A 1D convolutional layer used to transform the residual hidden states.
-    - `activation` (nn.GLU): The activation function applied to the transformed residual hidden states.
-    - `self_attn_layer_norm` (nn.LayerNorm): A layer normalization module applied to the self-attention hidden states.
-    - `self_attn_conv` (nn.Conv1d): A 1D convolutional layer used to transform the self-attention hidden states.
-    - `self_attn` (SeamlessM4TConformerSelfAttention): The self-attention module used to compute attention weights.
-    - `self_attn_dropout` (nn.Dropout): A dropout layer applied to the self-attention hidden states.
-    - `ffn_layer_norm` (nn.LayerNorm): A layer normalization module applied to the feed-forward hidden states.
-    - `ffn` (SeamlessM4TConformerFeedForward): The feed-forward module used to transform the feed-forward hidden states.
+        `kernel_size` (int): The size of the kernel used in the convolutional layers.
+        `stride` (int): The stride used in the convolutional layers.
+        `residual_layer_norm` (nn.LayerNorm): A layer normalization module applied to the residual hidden states.
+        `residual_conv` (nn.Conv1d): A 1D convolutional layer used to transform the residual hidden states.
+        `activation` (nn.GLU): The activation function applied to the transformed residual hidden states.
+        `self_attn_layer_norm` (nn.LayerNorm): A layer normalization module applied to the self-attention hidden states.
+        `self_attn_conv` (nn.Conv1d): A 1D convolutional layer used to transform the self-attention hidden states.
+        `self_attn` (SeamlessM4TConformerSelfAttention): The self-attention module used to compute attention weights.
+        `self_attn_dropout` (nn.Dropout): A dropout layer applied to the self-attention hidden states.
+        `ffn_layer_norm` (nn.LayerNorm): A layer normalization module applied to the feed-forward hidden states.
+        `ffn` (SeamlessM4TConformerFeedForward): The feed-forward module used to transform the feed-forward hidden states.
     
     Methods:
-    - `_compute_sub_sample_lengths_from_attention_mask(attention_mask)`: Computes the sub-sampled lengths of the hidden states based on the attention mask.
-    - `construct(hidden_states, attention_mask=None, output_attentions=False)`: Constructs the output hidden states by applying the adapter layer transformations to the input hidden states.
+        `_compute_sub_sample_lengths_from_attention_mask`: Computes the sub-sampled lengths of the hidden states based on the attention mask.
+        `construct`: Constructs the output hidden states by applying the adapter layer transformations to the input hidden states.
     
     Note: This class assumes the existence of the following helper functions: `_compute_new_attention_mask`, `_prepare_4d_attention_mask`.
     
@@ -1248,10 +1247,10 @@ and feed-forward networks.
         Args:
             self: The instance of the class.
             config: An object of the configuration class containing the following attributes:
-                - hidden_size: An integer representing the size of the hidden dimension.
-                - adaptor_dropout: A float representing the dropout probability for adapter layers.
-                - adaptor_kernel_size: An integer representing the kernel size for the convolutional layer.
-                - adaptor_stride: An integer representing the stride for the convolutional layer.
+                >   - hidden_size: An integer representing the size of the hidden dimension.
+                >   - adaptor_dropout: A float representing the dropout probability for adapter layers.
+                >   - adaptor_kernel_size: An integer representing the kernel size for the convolutional layer.
+                >   - adaptor_stride: An integer representing the stride for the convolutional layer.
         
         Returns:
             None.
@@ -1313,21 +1312,21 @@ and feed-forward networks.
             None.
         
         This method calculates the lengths of sub-samples based on the attention mask provided. It applies the following steps:
-        
-            - Calculate the padding value based on the kernel size.
-            - Calculate the sequence lengths by subtracting the sum of all non-masked positions (indicated by 1 in the mask)
-              from the total sequence length.
-            - Adjust the sequence lengths by considering the padding and kernel size, and divide it by the stride length.
-            - Add 1 to the adjusted sequence lengths.
-            - Convert the sequence lengths to the float32 data type.
-            - Round down the sequence lengths to the nearest integer.
+            >   - Calculate the padding value based on the kernel size.
+            >   - Calculate the sequence lengths by subtracting the sum of all non-masked positions (indicated by 1 in the mask)
+                    from the total sequence length.
+            >   - Adjust the sequence lengths by considering the padding and kernel size, and divide it by the stride length.
+            >   - Add 1 to the adjusted sequence lengths.
+            >   - Convert the sequence lengths to the float32 data type.
+            >   - Round down the sequence lengths to the nearest integer.
         
         Note:
-            - The padding value is determined by dividing the kernel size by 2 and taking the integer division.
-            - The stride length is assumed to be a pre-defined value.
-            - The method assumes that the attention mask is a binary tensor with values 0 and 1.
+            >   - The padding value is determined by dividing the kernel size by 2 and taking the integer division.
+            >   - The stride length is assumed to be a pre-defined value.
+            >   - The method assumes that the attention mask is a binary tensor with values 0 and 1.
         
         Example:
+            ```python
             # Create an instance of SeamlessM4TConformerAdapterLayer
             adapter_layer = SeamlessM4TConformerAdapterLayer()
             
@@ -1336,6 +1335,7 @@ and feed-forward networks.
             
             # Compute the sub-sample lengths from the attention mask
             adapter_layer._compute_sub_sample_lengths_from_attention_mask(attention_mask)
+            ```
         """
         pad = self.kernel_size // 2
         seq_lens = attention_mask.shape[1] - (1 - attention_mask.int()).sum(1)
@@ -1417,7 +1417,7 @@ class SeamlessM4TConformerAdapter(nn.Cell):
 
     """
     This class represents a seamless multi-task (M4T) Conformer adapter, designed for adapting transformer-based models for multi-task learning. The adapter consists of multiple adapter layers that can be
-stacked on top of each other to adapt the model's hidden states for different tasks.
+    stacked on top of each other to adapt the model's hidden states for different tasks.
     
     Attributes:
         layers (nn.CellList): A list of SeamlessM4TConformerAdapterLayer instances, each representing an adapter layer in the adapter stack.
@@ -1425,19 +1425,16 @@ stacked on top of each other to adapt the model's hidden states for different ta
     Methods:
         __init__(config):
             Initializes the SeamlessM4TConformerAdapter instance with the specified configuration.
-            
-            Args:
-                config (dict): A dictionary containing configuration parameters for the adapter.
+            >   - Args:
+            >       - config (dict): A dictionary containing configuration parameters for the adapter.
             
         construct(hidden_states, attention_mask):
             Constructs the adapter by applying each adapter layer in the stack to the input hidden states.
-            
-            Args:
-                hidden_states (Tensor): The input hidden states to be adapted by the adapter.
-                attention_mask (Tensor): The attention mask to be applied during adaptation.
-            
-            Returns:
-                Tensor: The adapted hidden states after passing through all adapter layers.
+            >   - Args:
+            >       - hidden_states (Tensor): The input hidden states to be adapted by the adapter.
+            >       - attention_mask (Tensor): The attention mask to be applied during adaptation.
+            >   - Returns:
+            >       - Tensor: The adapted hidden states after passing through all adapter layers.
     """
     def __init__(self, config):
         """
@@ -1527,7 +1524,7 @@ class SeamlessM4TSinusoidalPositionalEmbedding(nn.Cell):
             None.
         
         This method generates embedding weights for the SeamlessM4TSinusoidalPositionalEmbedding instance by calling the get_embedding method. If the instance already has a weights attribute, the dtype of the
-generated weights is converted to match the existing weights. Finally, the generated weights are assigned to the weights attribute of the instance.
+        generated weights is converted to match the existing weights. Finally, the generated weights are assigned to the weights attribute of the instance.
         """
         emb_weights = self.get_embedding(num_embeddings, embedding_dim, padding_idx)
         if hasattr(self, "weights"):
@@ -1864,24 +1861,24 @@ class SeamlessM4TEncoderLayer(nn.Cell):
     The SeamlessM4TEncoderLayer class represents a single layer of the SeamlessM4T model encoder. It includes self-attention and feed-forward network components.
     
     This class inherits from the nn.Cell class and is initialized with a SeamlessM4TConfig object, encoder_ffn_dim, and encoder_attention_heads. The class also features a 'construct' method that takes
-hidden_states and attention_mask as input and returns the output tensor.
+    hidden_states and attention_mask as input and returns the output tensor.
     
     Attributes:
-        - embed_dim (int): The dimension of the input embeddings.
-        - self_attn (SeamlessM4TAttention): The self-attention mechanism.
-        - attn_dropout (nn.Dropout): The dropout layer for attention.
-        - self_attn_layer_norm (nn.LayerNorm): The layer normalization for self-attention.
-        - ffn (SeamlessM4TFeedForwardNetwork): The feed-forward network.
-        - ffn_layer_norm (nn.LayerNorm): The layer normalization for the feed-forward network.
-        - ffn_dropout (nn.Dropout): The dropout layer for the feed-forward network.
+        embed_dim (int): The dimension of the input embeddings.
+        self_attn (SeamlessM4TAttention): The self-attention mechanism.
+        attn_dropout (nn.Dropout): The dropout layer for attention.
+        self_attn_layer_norm (nn.LayerNorm): The layer normalization for self-attention.
+        ffn (SeamlessM4TFeedForwardNetwork): The feed-forward network.
+        ffn_layer_norm (nn.LayerNorm): The layer normalization for the feed-forward network.
+        ffn_dropout (nn.Dropout): The dropout layer for the feed-forward network.
     
     Methods:
-        - construct(hidden_states, attention_mask, output_attentions=False): Applies self-attention and feed-forward operations to the input hidden_states and returns the output tensor.
+        construct: Applies self-attention and feed-forward operations to the input hidden_states and returns the output tensor.
     
     Args:
-        - hidden_states (mindspore.Tensor): The input to the layer of shape (batch, seq_len, embed_dim).
-        - attention_mask (mindspore.Tensor): The attention mask of size (batch, 1, tgt_len, src_len) where padding elements are indicated by very large negative values.
-        - output_attentions (bool, optional): Determines whether to return attention weights. Defaults to False.
+        hidden_states (mindspore.Tensor): The input to the layer of shape (batch, seq_len, embed_dim).
+        attention_mask (mindspore.Tensor): The attention mask of size (batch, 1, tgt_len, src_len) where padding elements are indicated by very large negative values.
+        output_attentions (bool, optional): Determines whether to return attention weights. Defaults to False.
     """
     def __init__(self, config: SeamlessM4TConfig, encoder_ffn_dim=None, encoder_attention_heads=None):
         """Initializes a new instance of the SeamlessM4TEncoderLayer class.
@@ -1899,9 +1896,9 @@ hidden_states and attention_mask as input and returns the output tensor.
             None
         
         This method initializes the SeamlessM4TEncoderLayer with the given configuration and optional parameters. It sets the embed_dim attribute to the hidden size specified in the config object. The
-self-attention mechanism is initialized with the embed_dim, number of attention heads, and dropout rate specified in the config object. The attention dropout is set using the dropout rate specified in the
-config object. The self-attention layer normalization is initialized with the embed_dim. The feed-forward network is initialized with the config object and the encoder_ffn_dim parameter. The feed-forward
-network layer normalization is initialized with the hidden size specified in the config object. The feed-forward network dropout is set using the activation dropout rate specified in the config object.
+        self-attention mechanism is initialized with the embed_dim, number of attention heads, and dropout rate specified in the config object. The attention dropout is set using the dropout rate specified in the
+        config object. The self-attention layer normalization is initialized with the embed_dim. The feed-forward network is initialized with the config object and the encoder_ffn_dim parameter. The feed-forward
+        network layer normalization is initialized with the hidden size specified in the config object. The feed-forward network dropout is set using the activation dropout rate specified in the config object.
         """
         super().__init__()
         encoder_ffn_dim = config.encoder_ffn_dim if encoder_ffn_dim is None else encoder_ffn_dim
@@ -1972,25 +1969,25 @@ class SeamlessM4TDecoderLayer(nn.Cell):
     It inherits from nn.Cell and is designed to be used within a larger Transformer model for translation tasks.
     
     Attributes:
-        - config (SeamlessM4TConfig): Configuration object containing parameters for the decoder layer.
-        - decoder_ffn_dim (int, optional): Dimension of the feed-forward network in the decoder layer.
-        - decoder_attention_heads (int, optional): Number of attention heads in the decoder layer.
+        config (SeamlessM4TConfig): Configuration object containing parameters for the decoder layer.
+        decoder_ffn_dim (int, optional): Dimension of the feed-forward network in the decoder layer.
+        decoder_attention_heads (int, optional): Number of attention heads in the decoder layer.
     
     Methods:
-        - __init__: Initializes the decoder layer with the specified configuration and optional parameters for the feed-forward network and attention heads.
-        - construct: Executes the forward pass of the decoder layer, processing input hidden states and performing self-attention, 
+        __init__: Initializes the decoder layer with the specified configuration and optional parameters for the feed-forward network and attention heads.
+        construct: Executes the forward pass of the decoder layer, processing input hidden states and performing self-attention,
                      cross-attention with encoder hidden states, and feed-forward network operations.
     
     Args:
-        - hidden_states (mindspore.Tensor): Input tensor of shape (batch, seq_len, embed_dim) to the decoder layer.
-        - attention_mask (mindspore.Tensor, optional): Attention mask tensor of size (batch, 1, tgt_len, src_len) to mask padding elements.
-        - encoder_hidden_states (mindspore.Tensor, optional): Input tensor of shape (batch, seq_len, embed_dim) for cross-attention.
-        - encoder_attention_mask (mindspore.Tensor, optional): Attention mask tensor of size (batch, 1, tgt_len, src_len) for encoder attention.
-        - past_key_value (Tuple[mindspore.Tensor], optional): Cached past key and value projection states for optimization.
-        - output_attentions (bool, optional): Whether to return attention tensors of all attention layers.
+        hidden_states (mindspore.Tensor): Input tensor of shape (batch, seq_len, embed_dim) to the decoder layer.
+        attention_mask (mindspore.Tensor, optional): Attention mask tensor of size (batch, 1, tgt_len, src_len) to mask padding elements.
+        encoder_hidden_states (mindspore.Tensor, optional): Input tensor of shape (batch, seq_len, embed_dim) for cross-attention.
+        encoder_attention_mask (mindspore.Tensor, optional): Attention mask tensor of size (batch, 1, tgt_len, src_len) for encoder attention.
+        past_key_value (Tuple[mindspore.Tensor], optional): Cached past key and value projection states for optimization.
+        output_attentions (bool, optional): Whether to return attention tensors of all attention layers.
     
     Returns:
-        - outputs (Tuple[mindspore.Tensor]): Tuple containing the final hidden states and present key-value states.
+        outputs (Tuple[mindspore.Tensor]): Tuple containing the final hidden states and present key-value states.
           If output_attentions is True, also includes self-attention weights and cross-attention weights.
     """
     def __init__(self, config: SeamlessM4TConfig, decoder_ffn_dim=None, decoder_attention_heads=None):
@@ -2225,9 +2222,8 @@ class SeamlessM4TPreTrainedModel(PreTrainedModel):
 
         Return:
             `mindspore.Tensor`: A `mindspore.Tensor` of shape `(batch_size*num_return_sequences, sequence_length, hidden_size)`
-            containing
-                the last hidden states.
-        ```"""
+            containing the last hidden states.
+        """
         # 1. First, let's compute last_hidden_states from hidden_states.
         # For each generation step, takes the hidden state from the last layer.
         # shape: (batch_size*vocab_size*num_return_sequences, # generation_steps, hidden_dim)
@@ -2274,9 +2270,8 @@ class SeamlessM4TSpeechEncoder(SeamlessM4TPreTrainedModel):
         inner_layer_norm (nn.LayerNorm): A layer normalization module.
         
     Methods:
-        __init__(self, config: SeamlessM4TConfig): Initializes the SeamlessM4TSpeechEncoder class with the given configuration.
-        construct(self, input_features: Optional[mindspore.Tensor], attention_mask: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None,
-return_dict: Optional[bool] = None, **kwargs) -> Union[Tuple, Wav2Vec2BaseModelOutput]: Constructs the speech encoder.
+        __init__: Initializes the SeamlessM4TSpeechEncoder class with the given configuration.
+        construct: Constructs the speech encoder.
     
     Note:
         Make sure to provide either `input_features` or `inputs_embeds` as an argument when calling the `construct` method.
@@ -2393,25 +2388,25 @@ class SeamlessM4TEncoder(SeamlessM4TPreTrainedModel):
     This class inherits from the SeamlessM4TPreTrainedModel class and provides methods for initializing the encoder and performing the encoding process.
     
     Attributes:
-        - dropout (float): The dropout probability for the encoder.
-        - layerdrop (float): The layer dropout probability for the encoder.
-        - padding_idx (int): The index used for padding tokens.
-        - embed_dim (int): The dimensionality of the embedding vectors.
-        - is_t2u_encoder (bool): A flag indicating whether the encoder is used for text_to_units model.
-        - max_source_positions (int): The maximum number of source positions.
-        - embed_scale (float): The scale factor for the embedding vectors.
-        - embed_tokens (nn.Embedding): The embedding layer for the input tokens.
-        - embed_positions (SeamlessM4TSinusoidalPositionalEmbedding): The positional embedding layer.
-        - layers (nn.CellList): The list of encoder layers.
-        - layer_norm (nn.LayerNorm): The layer normalization layer.
-        - gradient_checkpointing (bool): A flag indicating whether to use gradient checkpointing during training.
+        dropout (float): The dropout probability for the encoder.
+        layerdrop (float): The layer dropout probability for the encoder.
+        padding_idx (int): The index used for padding tokens.
+        embed_dim (int): The dimensionality of the embedding vectors.
+        is_t2u_encoder (bool): A flag indicating whether the encoder is used for text_to_units model.
+        max_source_positions (int): The maximum number of source positions.
+        embed_scale (float): The scale factor for the embedding vectors.
+        embed_tokens (nn.Embedding): The embedding layer for the input tokens.
+        embed_positions (SeamlessM4TSinusoidalPositionalEmbedding): The positional embedding layer.
+        layers (nn.CellList): The list of encoder layers.
+        layer_norm (nn.LayerNorm): The layer normalization layer.
+        gradient_checkpointing (bool): A flag indicating whether to use gradient checkpointing during training.
         
     Methods:
-        - __init__(config: SeamlessM4TConfig, embed_tokens: Optional[nn.Embedding] = None, is_t2u_encoder: bool = False):
+        __init__(config: SeamlessM4TConfig, embed_tokens: Optional[nn.Embedding] = None, is_t2u_encoder: bool = False):
             Initializes the SeamlessM4TEncoder instance.
             
-        - construct(input_ids: mindspore.Tensor = None, attention_mask: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None,
-output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs) -> Union[Tuple, BaseModelOutput]:
+        construct(input_ids: mindspore.Tensor = None, attention_mask: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs) -> Union[Tuple, BaseModelOutput]:
             Constructs the encoder based on the input arguments and returns the encoded hidden states.
     """
     def __init__(
@@ -2499,9 +2494,8 @@ output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None,
                 [What are input IDs?](../glossary#input-ids)
             attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
             inputs_embeds (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
@@ -2610,7 +2604,7 @@ class SeamlessM4TDecoder(SeamlessM4TPreTrainedModel):
     SeamlessM4TDecoder
     
     This class represents a decoder module for the SeamlessM4T model. It inherits from SeamlessM4TPreTrainedModel and implements methods for initializing the decoder, constructing the decoder, and
-getting/setting input embeddings.
+    getting/setting input embeddings.
     
     Attributes:
         config: An instance of SeamlessM4TConfig containing the configuration settings for the decoder.
@@ -2665,34 +2659,34 @@ getting/setting input embeddings.
         
         This method initializes the 'SeamlessM4TDecoder' instance by setting various attributes and creating necessary objects. It takes the following parameters:
         
-        - self: An instance of the 'SeamlessM4TDecoder' class.
-        - config (SeamlessM4TConfig): An object that holds configuration options for the decoder. It provides access to various hyperparameters and settings.
-        - embed_tokens (Optional[nn.Embedding]): An optional embedding object that can be used for token embeddings. If provided, the 'embed_tokens' attribute of the decoder will be set to this object.
-Otherwise, a new embedding object will be created using the 'vocab_size' and 'hidden_size' from the 'config' object.
+        >   - self: An instance of the 'SeamlessM4TDecoder' class.
+        >   - config (SeamlessM4TConfig): An object that holds configuration options for the decoder. It provides access to various hyperparameters and settings.
+        >   - embed_tokens (Optional[nn.Embedding]): An optional embedding object that can be used for token embeddings. If provided, the 'embed_tokens' attribute of the decoder will be set to this object.
+            Otherwise, a new embedding object will be created using the 'vocab_size' and 'hidden_size' from the 'config' object.
         
         Note: The 'config' parameter is mandatory, while the 'embed_tokens' parameter is optional.
         
         The method performs the following actions:
-        1. Calls the superclass '__init__' method with the 'config' parameter.
-        2. Sets the 'dropout' attribute to the 'dropout' value from the 'config' object.
-        3. Sets the 'layerdrop' attribute to the 'decoder_layerdrop' value from the 'config' object.
-        4. Sets the 'padding_idx' attribute to the 'pad_token_id' value from the 'config' object.
-        5. Sets the 'vocab_size' attribute to the 'vocab_size' value from the 'config' object.
-        6. Sets the 'max_target_positions' attribute to the 'max_position_embeddings' value from the 'config' object.
-        7. Sets the 'embed_scale' attribute based on the 'scale_embedding' value from the 'config' object. If 'scale_embedding' is True, it sets 'embed_scale' to the square root of 'hidden_size'; otherwise, it
-sets 'embed_scale' to 1.0.
-        8. If 'embed_tokens' is not None:
-            - Creates a new 'nn.Embedding' object named 'self.embed_tokens' with 'embed_tokens.vocab_size', 'embed_tokens.embedding_size', and 'self.padding_idx' as arguments.
-            - Sets the weight of 'self.embed_tokens' to the weight of 'embed_tokens'.
-        9. If 'embed_tokens' is None:
-            - Creates a new 'nn.Embedding' object named 'self.embed_tokens' with 'self.vocab_size', 'config.hidden_size', and 'self.padding_idx' as arguments.
-        10. Creates a 'SeamlessM4TSinusoidalPositionalEmbedding' object named 'self.embed_positions' with 'self.max_target_positions', 'config.hidden_size', and 'self.padding_idx' as arguments.
-        11. Creates a list named 'layers'.
-        12. Iterates 'config.decoder_layers' times and appends a 'SeamlessM4TDecoderLayer' object to 'layers', using 'config', 'config.decoder_attention_heads', and 'config.decoder_ffn_dim' as arguments.
-        13. Sets the 'layers' attribute to a 'nn.CellList' containing the objects in 'layers'.
-        14. Creates a 'nn.LayerNorm' object named 'self.layer_norm' with a list containing 'config.hidden_size' as the argument.
-        15. Sets the 'gradient_checkpointing' attribute to False.
-        16. Calls the 'post_init' method.
+        >   1. Calls the superclass '__init__' method with the 'config' parameter.
+        >   2. Sets the 'dropout' attribute to the 'dropout' value from the 'config' object.
+        >   3. Sets the 'layerdrop' attribute to the 'decoder_layerdrop' value from the 'config' object.
+        >   4. Sets the 'padding_idx' attribute to the 'pad_token_id' value from the 'config' object.
+        >   5. Sets the 'vocab_size' attribute to the 'vocab_size' value from the 'config' object.
+        >   6. Sets the 'max_target_positions' attribute to the 'max_position_embeddings' value from the 'config' object.
+        >   7. Sets the 'embed_scale' attribute based on the 'scale_embedding' value from the 'config' object. If 'scale_embedding' is True, it sets 'embed_scale' to the square root of 'hidden_size'; otherwise, it
+                sets 'embed_scale' to 1.0.
+        >   8. If 'embed_tokens' is not None:
+        >       - Creates a new 'nn.Embedding' object named 'self.embed_tokens' with 'embed_tokens.vocab_size', 'embed_tokens.embedding_size', and 'self.padding_idx' as arguments.
+        >       - Sets the weight of 'self.embed_tokens' to the weight of 'embed_tokens'.
+        >   9. If 'embed_tokens' is None:
+        >       - Creates a new 'nn.Embedding' object named 'self.embed_tokens' with 'self.vocab_size', 'config.hidden_size', and 'self.padding_idx' as arguments.
+        >   10. Creates a 'SeamlessM4TSinusoidalPositionalEmbedding' object named 'self.embed_positions' with 'self.max_target_positions', 'config.hidden_size', and 'self.padding_idx' as arguments.
+        >   11. Creates a list named 'layers'.
+        >   12. Iterates 'config.decoder_layers' times and appends a 'SeamlessM4TDecoderLayer' object to 'layers', using 'config', 'config.decoder_attention_heads', and 'config.decoder_ffn_dim' as arguments.
+        >   13. Sets the 'layers' attribute to a 'nn.CellList' containing the objects in 'layers'.
+        >   14. Creates a 'nn.LayerNorm' object named 'self.layer_norm' with a list containing 'config.hidden_size' as the argument.
+        >   15. Sets the 'gradient_checkpointing' attribute to False.
+        >   16. Calls the 'post_init' method.
         
         Note: The 'post_init' method is not defined in the given code snippet.
         """
@@ -2789,9 +2783,8 @@ sets 'embed_scale' to 1.0.
                 [What are input IDs?](../glossary#input-ids)
             attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
             encoder_hidden_states (`mindspore.Tensor` of shape `(batch_size, encoder_sequence_length, hidden_size)`, *optional*):
@@ -2800,9 +2793,8 @@ sets 'embed_scale' to 1.0.
             encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, encoder_sequence_length)`, *optional*):
                 Mask to avoid performing cross-attention on padding tokens indices of encoder input_ids. Mask values
                 selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
             past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
@@ -2943,8 +2935,8 @@ class SeamlessM4TTextToUnitModel(SeamlessM4TPreTrainedModel):
 
     """
     This class represents a text-to-unit (T2U) model for seamless conversion and inference between natural language text and MindSpore tensor units. It inherits functionality from the
-SeamlessM4TPreTrainedModel class and provides methods for initializing the model and constructing the T2U conversion process using encoder and decoder components. The class includes configurable parameters for
-input, attention, and output settings, as well as the option to return a dictionary of model outputs. The model supports the use of cached values and the generation of hidden states and attentions. 
+    SeamlessM4TPreTrainedModel class and provides methods for initializing the model and constructing the T2U conversion process using encoder and decoder components. The class includes configurable parameters for
+    input, attention, and output settings, as well as the option to return a dictionary of model outputs. The model supports the use of cached values and the generation of hidden states and attentions.
     """
     def __init__(
         self,
@@ -2993,25 +2985,25 @@ input, attention, and output settings, as well as the option to return a diction
         This method 'construct' in the class 'SeamlessM4TTextToUnitModel' constructs the text-to-unit model and takes the following parameters:
         
         Args:
-        - self: Represents the instance of the class.
-        - input_ids (Optional[mindspore.Tensor]): The input tensor containing the indices of input sequence tokens in the vocabulary.
-        - attention_mask (Optional[mindspore.Tensor]): The attention mask tensor indicating which tokens should be attended to and which should not.
-        - decoder_input_ids (Optional[mindspore.Tensor]): The input tensor containing the indices of decoder input sequence tokens in the vocabulary.
-        - decoder_attention_mask (Optional[mindspore.Tensor]): The attention mask tensor for the decoder.
-        - encoder_outputs (Optional[Tuple[Tuple[mindspore.Tensor]]]): The output from the encoder model.
-        - past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]]): The past key values for the decoder.
-        - inputs_embeds (Optional[mindspore.Tensor]): The input embeddings for the encoder.
-        - decoder_inputs_embeds (Optional[mindspore.Tensor]): The input embeddings for the decoder.
-        - use_cache (Optional[bool]): Flag indicating whether to use caching.
-        - output_attentions (Optional[bool]): Flag indicating whether to output attentions.
-        - output_hidden_states (Optional[bool]): Flag indicating whether to output hidden states.
-        - return_dict (Optional[bool]): Flag indicating whether to use return dict.
+            self: Represents the instance of the class.
+            input_ids (Optional[mindspore.Tensor]): The input tensor containing the indices of input sequence tokens in the vocabulary.
+            attention_mask (Optional[mindspore.Tensor]): The attention mask tensor indicating which tokens should be attended to and which should not.
+            decoder_input_ids (Optional[mindspore.Tensor]): The input tensor containing the indices of decoder input sequence tokens in the vocabulary.
+            decoder_attention_mask (Optional[mindspore.Tensor]): The attention mask tensor for the decoder.
+            encoder_outputs (Optional[Tuple[Tuple[mindspore.Tensor]]]): The output from the encoder model.
+            past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]]): The past key values for the decoder.
+            inputs_embeds (Optional[mindspore.Tensor]): The input embeddings for the encoder.
+            decoder_inputs_embeds (Optional[mindspore.Tensor]): The input embeddings for the decoder.
+            use_cache (Optional[bool]): Flag indicating whether to use caching.
+            output_attentions (Optional[bool]): Flag indicating whether to output attentions.
+            output_hidden_states (Optional[bool]): Flag indicating whether to output hidden states.
+            return_dict (Optional[bool]): Flag indicating whether to use return dict.
         
         Returns:
-        - Union[Tuple[mindspore.Tensor], Seq2SeqModelOutput]: The return value can be a tuple of tensors or an instance of Seq2SeqModelOutput, representing the output of the text-to-unit model.
+            Union[Tuple[mindspore.Tensor], Seq2SeqModelOutput]: The return value can be a tuple of tensors or an instance of Seq2SeqModelOutput, representing the output of the text-to-unit model.
         
         Raises:
-        - None
+            None
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -3072,7 +3064,7 @@ class SeamlessM4TTextToUnitForConditionalGeneration(SeamlessM4TPreTrainedModel):
     This class represents a SeamlessM4TTextToUnitForConditionalGeneration model for conditional text generation. It is a subclass of SeamlessM4TPreTrainedModel.
     
     The class provides methods for initializing the model, getting the encoder and decoder, setting the output and input embeddings, constructing the model, preparing inputs for generation, preparing decoder
-input ids from labels, reordering cache, and tying weights.
+    input ids from labels, reordering cache, and tying weights.
     
     Attributes:
         config (SeamlessM4TConfig): The configuration object for the model.
@@ -3080,32 +3072,29 @@ input ids from labels, reordering cache, and tying weights.
         lm_head (nn.Dense): The linear layer for generating the language model output.
     
     Methods:
-        __init__(self, config: SeamlessM4TConfig, embed_tokens_decoder: Optional[nn.Embedding] = None): 
+        __init__:
             Initializes the SeamlessM4TTextToUnitForConditionalGeneration model.
-        get_encoder(self): 
+        get_encoder:
             Returns the encoder of the model.
-        get_decoder(self): 
+        get_decoder:
             Returns the decoder of the model.
-        get_output_embeddings(self): 
+        get_output_embeddings:
             Returns the output embeddings of the model.
-        set_output_embeddings(self, new_embeddings): 
+        set_output_embeddings:
             Sets the output embeddings of the model.
-        get_input_embeddings(self): 
+        get_input_embeddings:
             Returns the input embeddings of the model.
-        set_input_embeddings(self, value): 
+        set_input_embeddings:
             Sets the input embeddings of the model.
-        construct(self, input_ids: mindspore.Tensor = None, attention_mask: Optional[mindspore.Tensor] = None, decoder_input_ids: Optional[mindspore.Tensor] = None, decoder_attention_mask:
-Optional[mindspore.Tensor] = None, encoder_outputs: Optional[Tuple[Tuple[mindspore.Tensor]]] = None, past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None, inputs_embeds: Optional[mindspore.Tensor]
-= None, decoder_inputs_embeds: Optional[mindspore.Tensor] = None, labels: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states:
-Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Seq2SeqLMOutput, Tuple[mindspore.Tensor]]:
+        construct:
             Constructs the model for conditional text generation.
-        prepare_inputs_for_generation(self, decoder_input_ids, past_key_values=None, attention_mask=None, use_cache=None, encoder_outputs=None, **kwargs):
+        prepare_inputs_for_generation:
             Prepares the inputs for text generation.
-        prepare_decoder_input_ids_from_labels(self, labels: mindspore.Tensor):
+        prepare_decoder_input_ids_from_labels:
             Prepares the decoder input ids from labels.
-        _reorder_cache(past_key_values, beam_idx):
+        _reorder_cache:
             Reorders the cache based on the beam index.
-        _tie_weights(self) -> None:
+        _tie_weights:
             Ties the input and output embeddings weights if the configuration allows.
     
     Note:
@@ -3281,8 +3270,8 @@ Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Seq2SeqLMOut
         
         Returns:
             Union[Seq2SeqLMOutput, Tuple[mindspore.Tensor]]: The output of the model. If return_dict is False, it returns a tuple containing the masked language model loss (if labels is not None) and the model
-outputs. If return_dict is True, it returns a Seq2SeqLMOutput object containing the masked language model loss, logits, past key values, decoder hidden states, decoder attentions, cross attentions, encoder
-last hidden state, encoder hidden states, and encoder attentions.
+            outputs. If return_dict is True, it returns a Seq2SeqLMOutput object containing the masked language model loss, logits, past key values, decoder hidden states, decoder attentions, cross attentions, encoder
+            last hidden state, encoder hidden states, and encoder attentions.
         
         Raises:
             None.
@@ -3363,12 +3352,12 @@ last hidden state, encoder hidden states, and encoder attentions.
         
         Returns:
             dict: A dictionary containing the prepared inputs for generation with the following keys:
-                - 'input_ids' (None): Always set to None.
-                - 'encoder_outputs' (ModelOutput): The outputs of the encoder model.
-                - 'past_key_values' (Tuple, optional): The previously calculated key and value tensors for fast decoding.
-                - 'decoder_input_ids' (Tensor): The input ids for the decoder after processing.
-                - 'attention_mask' (Tensor, optional): The attention mask tensor.
-                - 'use_cache' (bool, optional): Whether to use the cache for fast decoding.
+                >   - 'input_ids' (None): Always set to None.
+                >   - 'encoder_outputs' (ModelOutput): The outputs of the encoder model.
+                >   - 'past_key_values' (Tuple, optional): The previously calculated key and value tensors for fast decoding.
+                >   - 'decoder_input_ids' (Tensor): The input ids for the decoder after processing.
+                >   - 'attention_mask' (Tensor, optional): The attention mask tensor.
+                >   - 'use_cache' (bool, optional): Whether to use the cache for fast decoding.
         
         Raises:
             ValueError: If the shape of decoder_input_ids is invalid.
@@ -3413,18 +3402,18 @@ last hidden state, encoder hidden states, and encoder attentions.
         
         Args:
             past_key_values (tuple): A tuple containing the cache of past key values. Each element of the tuple represents the past key values for a specific layer. Each layer's past key values is further
-represented as a tuple containing three elements: 
-                                    1. A tensor representing the past states for the current layer.
-                                    2. A tensor representing the past attentions for the current layer.
-                                    3. A tensor representing the past cross-attentions for the current layer.
+            represented as a tuple containing three elements:
+                >   1. A tensor representing the past states for the current layer.
+                >   2. A tensor representing the past attentions for the current layer.
+                >   3. A tensor representing the past cross-attentions for the current layer.
             beam_idx (tensor): A tensor containing the indices of the selected beams.
         
         Returns:
             tuple: A tuple containing the reordered cache of past key values. Each element of the tuple represents the reordered past key values for a specific layer. 
-                   Each layer's reordered past key values is further represented as a tuple containing three elements: 
-                   1. A tensor representing the reordered past states for the current layer.
-                   2. A tensor representing the reordered past attentions for the current layer.
-                   3. A tensor representing the reordered past cross-attentions for the current layer.
+                   Each layer's reordered past key values is further represented as a tuple containing three elements:
+                   >    - 1. A tensor representing the reordered past states for the current layer.
+                   >    - 2. A tensor representing the reordered past attentions for the current layer.
+                   >    - 3. A tensor representing the reordered past cross-attentions for the current layer.
         
         Raises:
             None.
@@ -3451,7 +3440,7 @@ represented as a tuple containing three elements:
             None.
         
         This method checks if the 'tie_word_embeddings' attribute is present in the 'config' object of the model. If it is present and set to True (default), it ties the weights of the output embeddings with
-the input embeddings. The 'tie_or_clone_weights' function is used to perform the weight tying operation.
+        the input embeddings. The 'tie_or_clone_weights' function is used to perform the weight tying operation.
         """
         if getattr(self.config, "tie_word_embeddings", True):
             output_embeddings = self.get_output_embeddings()
@@ -3577,7 +3566,7 @@ class HifiGanResidualBlock(nn.Cell):
             None.
         
         This method calculates the required padding size based on the given kernel size and dilation factor. The padding size is determined by the formula: (kernel_size * dilation - dilation) // 2. The method
-then returns the calculated padding size as an integer value.
+        then returns the calculated padding size as an integer value.
         """
         return (kernel_size * dilation - dilation) // 2
 
@@ -3648,16 +3637,16 @@ class SeamlessM4TVariancePredictor(nn.Cell):
     This class represents a variance predictor module used in the SeamlessM4T model. It is a subclass of the nn.Cell class.
     
     Attributes:
-        - conv1 (nn.Conv1d): A 1-dimensional convolutional layer that processes the input hidden states.
-        - activation_function (nn.ReLU): The activation function applied after the first convolutional layer.
-        - ln1 (nn.LayerNorm): Layer normalization applied to the output of the first convolutional layer.
-        - dropout_module (nn.Dropout): Dropout module that applies dropout to the normalized hidden states.
-        - conv2 (nn.Conv1d): A second 1-dimensional convolutional layer that further processes the hidden states.
-        - ln2 (nn.LayerNorm): Layer normalization applied to the output of the second convolutional layer.
-        - proj (nn.Dense): A fully connected layer that projects the hidden states to a single output dimension.
+        conv1 (nn.Conv1d): A 1-dimensional convolutional layer that processes the input hidden states.
+        activation_function (nn.ReLU): The activation function applied after the first convolutional layer.
+        ln1 (nn.LayerNorm): Layer normalization applied to the output of the first convolutional layer.
+        dropout_module (nn.Dropout): Dropout module that applies dropout to the normalized hidden states.
+        conv2 (nn.Conv1d): A second 1-dimensional convolutional layer that further processes the hidden states.
+        ln2 (nn.LayerNorm): Layer normalization applied to the output of the second convolutional layer.
+        proj (nn.Dense): A fully connected layer that projects the hidden states to a single output dimension.
     
     Methods:
-        - construct(hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+        construct:
             Applies the variance predictor module to the input hidden states.
     
     """
@@ -3668,9 +3657,9 @@ class SeamlessM4TVariancePredictor(nn.Cell):
         Args:
             self: The object instance.
             config: An object of type 'Config' that contains the configuration parameters for the variance predictor.
-                - unit_embed_dim (int): The dimension of the input embeddings.
-                - variance_predictor_kernel_size (int): The size of the kernel for the convolutional layers.
-                - var_pred_dropout (float): The dropout probability for the dropout layer.
+                >   - unit_embed_dim (int): The dimension of the input embeddings.
+                >   - variance_predictor_kernel_size (int): The size of the kernel for the convolutional layers.
+                >   - var_pred_dropout (float): The dropout probability for the dropout layer.
         
         Returns:
             None
@@ -3737,26 +3726,28 @@ class SeamlessM4THifiGan(nn.Cell):
     The class inherits from nn.Cell and contains methods for initializing the model and constructing the speech waveform from input log-mel spectrograms.
     
     Attributes:
-        - `config`: The configuration object containing various model parameters such as embedding dimensions, kernel sizes, and stride rates.
-        - `leaky_relu_slope`: The slope value for the leaky ReLU activation function.
-        - `num_kernels`: The number of kernels in the model's resblocks.
-        - `num_upsamples`: The number of upsampling layers in the model.
-        - `conv_pre`: The pre-convolution layer that takes in the input log-mel spectrograms.
-        - `upsampler`: A list of upsampling layers.
-        - `resblocks`: A list of HifiGanResidualBlock layers used in the model.
-        - `conv_post`: The post-convolution layer that transforms the hidden states into the speech waveform.
+        `config`: The configuration object containing various model parameters such as embedding dimensions, kernel sizes, and stride rates.
+        `leaky_relu_slope`: The slope value for the leaky ReLU activation function.
+        `num_kernels`: The number of kernels in the model's resblocks.
+        `num_upsamples`: The number of upsampling layers in the model.
+        `conv_pre`: The pre-convolution layer that takes in the input log-mel spectrograms.
+        `upsampler`: A list of upsampling layers.
+        `resblocks`: A list of HifiGanResidualBlock layers used in the model.
+        `conv_post`: The post-convolution layer that transforms the hidden states into the speech waveform.
     
     Methods:
-        - `__init__(self, config: SeamlessM4TConfig)`: Initializes the SeamlessM4THifiGan model with the given configuration.
-        - `construct(self, input_embeds: mindspore.Tensor) -> mindspore.Tensor`: Converts log-mel spectrograms into speech waveforms.
+        `__init__(self, config: SeamlessM4TConfig)`: Initializes the SeamlessM4THifiGan model with the given configuration.
+        `construct(self, input_embeds: mindspore.Tensor) -> mindspore.Tensor`: Converts log-mel spectrograms into speech waveforms.
     
     Usage:
         To use the SeamlessM4THifiGan model, create an instance of the class with a `config` object, then call the `construct` method passing in the input log-mel spectrograms.
     
         Example:
+            ```python
             config = SeamlessM4TConfig(...)
             model = SeamlessM4THifiGan(config)
             waveform = model.construct(input_embeds)
+            ```
     
         Note:
             - The input log-mel spectrograms can be batched or un-batched, and the resulting speech waveform will have the corresponding shape.
@@ -3770,15 +3761,15 @@ class SeamlessM4THifiGan(nn.Cell):
         Args:
             self: The object itself.
             config (SeamlessM4TConfig): The configuration object containing various parameters for the model initialization.
-                - unit_embed_dim (int): The dimension of the unit embedding.
-                - lang_embed_dim (int): The dimension of the language embedding.
-                - spkr_embed_dim (int): The dimension of the speaker embedding.
-                - leaky_relu_slope (float): The slope of the leaky ReLU activation function.
-                - resblock_kernel_sizes (list[int]): The list of kernel sizes for the residual blocks.
-                - upsample_rates (list[int]): The list of upsample rates for the transposed convolutions.
-                - upsample_kernel_sizes (list[int]): The list of kernel sizes for the transposed convolutions.
-                - upsample_initial_channel (int): The initial number of channels for the upsample convolutions.
-                - resblock_dilation_sizes (list[int]): The list of dilation sizes for the residual blocks.
+                >- unit_embed_dim (int): The dimension of the unit embedding.
+                >- lang_embed_dim (int): The dimension of the language embedding.
+                >- spkr_embed_dim (int): The dimension of the speaker embedding.
+                >- leaky_relu_slope (float): The slope of the leaky ReLU activation function.
+                >- resblock_kernel_sizes (list[int]): The list of kernel sizes for the residual blocks.
+                >- upsample_rates (list[int]): The list of upsample rates for the transposed convolutions.
+                >- upsample_kernel_sizes (list[int]): The list of kernel sizes for the transposed convolutions.
+                >- upsample_initial_channel (int): The initial number of channels for the upsample convolutions.
+                >- resblock_dilation_sizes (list[int]): The list of dilation sizes for the residual blocks.
         
         Returns:
             None
@@ -3860,13 +3851,13 @@ class SeamlessM4TCodeHifiGan(PreTrainedModel):
 
     """
     This class represents a high fidelity generative adversarial network (HiFi-GAN) model for seamless text-to-speech synthesis in the SeamlessM4T framework. The model includes components for duration
-prediction, unit embeddings, speaker embeddings, language embeddings, and the HiFi-GAN architecture.
+    prediction, unit embeddings, speaker embeddings, language embeddings, and the HiFi-GAN architecture.
     
     The class includes methods for computing output lengths after the duration layer and the HiFi-GAN convolutional layers. It also provides functionality for constructing the model using input sequences,
-speaker IDs, and language IDs, and initializing and applying weight normalization to the model's components.
+    speaker IDs, and language IDs, and initializing and applying weight normalization to the model's components.
     
     The class inherits from PreTrainedModel and contains methods for weight initialization, applying weight normalization, and removing weight normalization from the HiFi-GAN components. Additionally, it
-includes utility functions for weight normalization operations.
+    includes utility functions for weight normalization operations.
     
     For detailed information on each method and its parameters, please refer to the method docstrings within the class definition.
     """
@@ -4036,18 +4027,20 @@ includes utility functions for weight normalization operations.
             None.
         
         This method applies weight normalization to the layers of the HifiGan model within the SeamlessM4TCodeHifiGan class. It iterates through each layer and applies weight normalization using the
-nn.utils.weight_norm() function.
+        nn.utils.weight_norm() function.
         
         The layers that are subjected to weight normalization are:
-        - self.hifi_gan.conv_pre: Convolutional layer before upsampling.
-        - self.hifi_gan.upsampler: List of upsampling layers.
-        - self.hifi_gan.resblocks: List of residual blocks.
-        - self.hifi_gan.conv_post: Convolutional layer after upsampling.
+
+        >   - self.hifi_gan.conv_pre: Convolutional layer before upsampling.
+        >   - self.hifi_gan.upsampler: List of upsampling layers.
+        >   - self.hifi_gan.resblocks: List of residual blocks.
+        >   - self.hifi_gan.conv_post: Convolutional layer after upsampling.
         
         The weight normalization technique normalizes the weights of each layer, making the training process more stable and accelerating the convergence. It helps to reduce the internal covariate shift and
-improves the generalization performance of the model.
+        improves the generalization performance of the model.
         
-        Note: The method modifies the original model's layers and does not return any value.
+        Note:
+            The method modifies the original model's layers and does not return any value.
         """
         nn.utils.weight_norm(self.hifi_gan.conv_pre)
         for layer in self.hifi_gan.upsampler:
@@ -4102,28 +4095,29 @@ class SeamlessM4TForTextToText(SeamlessM4TPreTrainedModel):
     
     The class has the following attributes:
     
-    - `shared`: An embedding layer that is shared between the encoder and decoder.
-    - `text_encoder`: An instance of the `SeamlessM4TEncoder` class, which encodes the input text.
-    - `text_decoder`: An instance of the `SeamlessM4TDecoder` class, which decodes the input text.
-    - `lm_head`: A linear layer that maps the hidden state to the vocabulary size.
-    - Other inherited attributes from `SeamlessM4TPreTrainedModel`.
+    >   - `shared`: An embedding layer that is shared between the encoder and decoder.
+    >   - `text_encoder`: An instance of the `SeamlessM4TEncoder` class, which encodes the input text.
+    >   - `text_decoder`: An instance of the `SeamlessM4TDecoder` class, which decodes the input text.
+    >   - `lm_head`: A linear layer that maps the hidden state to the vocabulary size.
+    >   - Other inherited attributes from `SeamlessM4TPreTrainedModel`.
     
     The class provides the following methods:
     
-    - `get_encoder()`: Returns the text encoder.
-    - `get_decoder()`: Returns the text decoder.
-    - `get_output_embeddings()`: Returns the output embeddings.
-    - `set_output_embeddings(new_embeddings)`: Sets the output embeddings to the given `new_embeddings`.
-    - `get_input_embeddings()`: Returns the input embeddings.
-    - `set_input_embeddings(value)`: Sets the input embeddings to the given `value`.
-    - `_tie_weights()`: Ties the weights of the word embeddings if specified in the configuration.
-    - `construct()`: Constructs the model by encoding the input text and decoding it to generate output.
-    - `generate()`: Generates sequences of token ids based on the input text.
-    - `prepare_inputs_for_generation()`: Prepares the inputs for generation.
+    >   - `get_encoder()`: Returns the text encoder.
+    >   - `get_decoder()`: Returns the text decoder.
+    >   - `get_output_embeddings()`: Returns the output embeddings.
+    >   - `set_output_embeddings(new_embeddings)`: Sets the output embeddings to the given `new_embeddings`.
+    >   - `get_input_embeddings()`: Returns the input embeddings.
+    >   - `set_input_embeddings(value)`: Sets the input embeddings to the given `value`.
+    >   - `_tie_weights()`: Ties the weights of the word embeddings if specified in the configuration.
+    >   - `construct()`: Constructs the model by encoding the input text and decoding it to generate output.
+    >   - `generate()`: Generates sequences of token ids based on the input text.
+    >   - `prepare_inputs_for_generation()`: Prepares the inputs for generation.
     
     For more details on the parameters and return values of each method, please refer to the method docstrings.
     
-    Note: It is important to specify the target language (`tgt_lang`) or provide correct `text_decoder_input_ids` for correct generation.
+    Note:
+        It is important to specify the target language (`tgt_lang`) or provide correct `text_decoder_input_ids` for correct generation.
     """
     _keys_to_ignore_on_load_missing = ["speech_encoder", "t2u_model", "vocoder"]
     main_input_name = "input_ids"
@@ -4453,15 +4447,15 @@ class SeamlessM4TForTextToText(SeamlessM4TPreTrainedModel):
                 Ad hoc parametrization of `generate_config` and/or additional model-specific kwargs that will be
                 forwarded to the `forward` function of the model.
 
-        Return:
-            [`~utils.ModelOutput`] or `mindspore.Tensor`: A [`~utils.ModelOutput`] (if `return_dict_in_generate=True`
-            or when `config.return_dict_in_generate=True`) or a `mindspore.Tensor`. The possible
-            [`~utils.ModelOutput`] types are:
-
-                - [`~generation.GreedySearchEncoderDecoderOutput`],
-                - [`~generation.SampleEncoderDecoderOutput`],
-                - [`~generation.BeamSearchEncoderDecoderOutput`],
-                - [`~generation.BeamSampleEncoderDecoderOutput`]
+        Returns:
+            [`~utils.ModelOutput`] or `mindspore.Tensor`:
+                > A [`~utils.ModelOutput`] (if `return_dict_in_generate=True`
+                    or when `config.return_dict_in_generate=True`) or a `mindspore.Tensor`.
+                > The possible [`~utils.ModelOutput`] types are:
+                >   - [`~generation.GreedySearchEncoderDecoderOutput`],
+                >   - [`~generation.SampleEncoderDecoderOutput`],
+                >   - [`~generation.BeamSearchEncoderDecoderOutput`],
+                >   - [`~generation.BeamSampleEncoderDecoderOutput`]
         """
         # prepare text_decoder_input_ids
         text_decoder_input_ids = kwargs.pop("decoder_input_ids", None)
@@ -4526,12 +4520,12 @@ class SeamlessM4TForTextToText(SeamlessM4TPreTrainedModel):
         
         Returns:
             dict: A dictionary containing the prepared inputs for generation with the following keys:
-                - 'input_ids' (None): The input tensor IDs.
-                - 'encoder_outputs' (tensor): The output tensor from the encoder model.
-                - 'past_key_values' (tuple): The past key values for generation.
-                - 'decoder_input_ids' (tensor): The input tensor for the decoder model.
-                - 'attention_mask' (tensor): The attention mask tensor.
-                - 'use_cache' (bool): Whether to use cache for generation.
+                >   - 'input_ids' (None): The input tensor IDs.
+                >   - 'encoder_outputs' (tensor): The output tensor from the encoder model.
+                >   - 'past_key_values' (tuple): The past key values for generation.
+                >   - 'decoder_input_ids' (tensor): The input tensor for the decoder model.
+                >   - 'attention_mask' (tensor): The attention mask tensor.
+                >   - 'use_cache' (bool): Whether to use cache for generation.
         
         Raises:
             None.
@@ -4589,19 +4583,19 @@ class SeamlessM4TForSpeechToText(SeamlessM4TPreTrainedModel):
     
     The class includes the following methods:
     
-    - `__init__(self, config: SeamlessM4TConfig)`: Initializes the model with the given configuration.
-    - `get_encoder(self)`: Returns the speech encoder of the model.
-    - `get_decoder(self)`: Returns the text decoder of the model.
-    - `get_output_embeddings(self)`: Returns the output embeddings of the model.
-    - `set_output_embeddings(self, new_embeddings)`: Sets the output embeddings of the model with the given new embeddings.
-    - `get_input_embeddings(self)`: Returns the input embeddings of the model.
-    - `set_input_embeddings(self, value)`: Sets the input embeddings of the model with the given value.
-    - `_tie_weights(self)`: Ties the word embeddings if specified in the configuration.
-    - `construct(self, input_features, attention_mask, decoder_input_ids, decoder_attention_mask, encoder_outputs, past_key_values, inputs_embeds, decoder_inputs_embeds, labels, use_cache, output_attentions,
-output_hidden_states, return_dict, **kwargs)`: Constructs the model with the given inputs and returns the output.
-    - `generate(self, input_features, tgt_lang, generation_config, logits_processor, stopping_criteria, prefix_allowed_tokens_fn, synced_gpus, **kwargs)`: Generates sequences of token ids based on the given
-input features and target language.
-    - `prepare_inputs_for_generation(self, decoder_input_ids, past_key_values, attention_mask, use_cache, encoder_outputs, **kwargs)`: Prepares the inputs for generation.
+    >   - `__init__(self, config: SeamlessM4TConfig)`: Initializes the model with the given configuration.
+    >   - `get_encoder(self)`: Returns the speech encoder of the model.
+    >   - `get_decoder(self)`: Returns the text decoder of the model.
+    >   - `get_output_embeddings(self)`: Returns the output embeddings of the model.
+    >   - `set_output_embeddings(self, new_embeddings)`: Sets the output embeddings of the model with the given new embeddings.
+    >   - `get_input_embeddings(self)`: Returns the input embeddings of the model.
+    >   - `set_input_embeddings(self, value)`: Sets the input embeddings of the model with the given value.
+    >   - `_tie_weights(self)`: Ties the word embeddings if specified in the configuration.
+    >   - `construct(self, input_features, attention_mask, decoder_input_ids, decoder_attention_mask, encoder_outputs, past_key_values, inputs_embeds, decoder_inputs_embeds, labels, use_cache, output_attentions,
+        output_hidden_states, return_dict, **kwargs)`: Constructs the model with the given inputs and returns the output.
+    >   - `generate(self, input_features, tgt_lang, generation_config, logits_processor, stopping_criteria, prefix_allowed_tokens_fn, synced_gpus, **kwargs)`: Generates sequences of token ids based on the given
+        input features and target language.
+    >   - `prepare_inputs_for_generation(self, decoder_input_ids, past_key_values, attention_mask, use_cache, encoder_outputs, **kwargs)`: Prepares the inputs for generation.
     
     Please refer to the method docstrings for more detailed information on each method's parameters and return values.
     """
@@ -4685,17 +4679,17 @@ input features and target language.
             N/A
         
         Description:
-        This method is used to retrieve the output embeddings of the SeamlessM4TForSpeechToText model. The output embeddings represent the final layer of the model, which encodes the input speech into a
-fixed-length vector representation. The output embeddings can be used for various downstream tasks such as speech-to-text conversion, speaker identification, or speech similarity analysis.
-        
-        Note that the output embeddings are specific to the SeamlessM4TForSpeechToText model and may not be compatible with other models or applications. The embeddings are not modified by this method and are
-provided as-is.
+            This method is used to retrieve the output embeddings of the SeamlessM4TForSpeechToText model. The output embeddings represent the final layer of the model, which encodes the input speech into a
+            fixed-length vector representation. The output embeddings can be used for various downstream tasks such as speech-to-text conversion, speaker identification, or speech similarity analysis.
+
+            Note that the output embeddings are specific to the SeamlessM4TForSpeechToText model and may not be compatible with other models or applications. The embeddings are not modified by this method and are
+            provided as-is.
         
         Example usage:
-        
-        model = SeamlessM4TForSpeechToText()
-        output_embeddings = model.get_output_embeddings()
-        
+            ```python
+            model = SeamlessM4TForSpeechToText()
+            output_embeddings = model.get_output_embeddings()
+            ```
         """
         return self.lm_head
 
@@ -4717,19 +4711,20 @@ provided as-is.
 
     def get_input_embeddings(self):
         """
-        Method: get_input_embeddings
+        Method:
+            get_input_embeddings
         
         Description:
-        This method retrieves the input embeddings for the SeamlessM4TForSpeechToText class.
+            This method retrieves the input embeddings for the SeamlessM4TForSpeechToText class.
         
         Parameters:
-        - self: (SeamlessM4TForSpeechToText) The instance of the class.
+            self: (SeamlessM4TForSpeechToText) The instance of the class.
         
         Returns:
-        - None: This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
-        - None
+            None
         
         """
         return self.text_decoder.embed_tokens
@@ -4952,11 +4947,10 @@ provided as-is.
             [`~utils.ModelOutput`] or `mindspore.Tensor`: A [`~utils.ModelOutput`] (if `return_dict_in_generate=True`
             or when `config.return_dict_in_generate=True`) or a `mindspore.Tensor`. The possible
             [`~utils.ModelOutput`] types are:
-
-                - [`~generation.GreedySearchEncoderDecoderOutput`],
-                - [`~generation.SampleEncoderDecoderOutput`],
-                - [`~generation.BeamSearchEncoderDecoderOutput`],
-                - [`~generation.BeamSampleEncoderDecoderOutput`]
+                >   - [`~generation.GreedySearchEncoderDecoderOutput`],
+                >   - [`~generation.SampleEncoderDecoderOutput`],
+                >   - [`~generation.BeamSearchEncoderDecoderOutput`],
+                >   - [`~generation.BeamSampleEncoderDecoderOutput`]
         """
         text_decoder_input_ids = kwargs.pop("decoder_input_ids", None)
         # overwrite text_decoder_input_ids if tgt_lang is passed. The latter gets priority over decoder_input_ids.
@@ -5025,12 +5019,12 @@ provided as-is.
         
         Returns:
             dict: A dictionary containing the prepared inputs for generation with the following keys:
-                - 'input_ids' (None): The input ids, which are set to None.
-                - 'encoder_outputs' (Tensor): The encoder outputs to be used in the generation process.
-                - 'past_key_values' (tuple): The past key values for autoregressive generation.
-                - 'decoder_input_ids' (Tensor): The modified decoder input ids for the generation process.
-                - 'attention_mask' (Tensor, optional): The attention mask for the input.
-                - 'use_cache' (bool, optional): Whether to use caching for the computation.
+                >   - 'input_ids' (None): The input ids, which are set to None.
+                >   - 'encoder_outputs' (Tensor): The encoder outputs to be used in the generation process.
+                >   - 'past_key_values' (tuple): The past key values for autoregressive generation.
+                >   - 'decoder_input_ids' (Tensor): The modified decoder input ids for the generation process.
+                >   - 'attention_mask' (Tensor, optional): The attention mask for the input.
+                >   - 'use_cache' (bool, optional): Whether to use caching for the computation.
         
         Raises:
             None
@@ -5057,7 +5051,7 @@ provided as-is.
         
         Args:
             past_key_values (tuple): A tuple containing the past key values for each layer. Each element of the tuple is a tuple representing the past key values for a layer. The past key values are used for
-caching and are expected to be in the format (key, value, attention_mask). 
+                caching and are expected to be in the format (key, value, attention_mask).
             beam_idx (tensor): A tensor containing the indices of the beams to reorder the past key values. The tensor should be of type long and of shape (batch_size,).
         
         Returns:
@@ -5085,19 +5079,18 @@ class SeamlessM4TForTextToSpeech(SeamlessM4TPreTrainedModel):
     The class includes various methods for generating translated audio waveforms based on input text. It utilizes a text encoder, text decoder, and LM head to convert input text into speech.
     
     Methods:
-    - __init__(self, config: SeamlessM4TConfig): Initializes the SeamlessM4TForTextToSpeech model.
-    - get_encoder(self): Returns the text encoder.
-    - get_decoder(self): Returns the text decoder.
-    - get_output_embeddings(self): Returns the LM head for output embeddings.
-    - set_output_embeddings(self, new_embeddings): Sets the LM head for output embeddings to the provided new embeddings.
-    - get_input_embeddings(self): Returns the input embeddings for the text decoder.
-    - set_input_embeddings(self, value): Sets the input embeddings for the text encoder and decoder to the provided value.
-    - _tie_weights(self): Ties the weights of the text encoder, decoder, and LM head if specified in the configuration.
-    - construct(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask, encoder_outputs, past_key_values, inputs_embeds, decoder_inputs_embeds, labels, use_cache, output_attentions,
-output_hidden_states, return_dict): Constructs the SeamlessM4T model for text-to-speech conversion.
-    - generate(self, input_ids, return_intermediate_token_ids, tgt_lang, spkr_id, **kwargs): Generates translated audio waveforms based on input text.
-    - prepare_inputs_for_generation(self, decoder_input_ids, past_key_values, attention_mask, use_cache, encoder_outputs, **kwargs): Prepares inputs for generation during text-to-speech conversion.
-    - _reorder_cache(past_key_values, beam_idx): Reorders the cache for beam search during generation.
+        __init__: Initializes the SeamlessM4TForTextToSpeech model.
+        get_encoder: Returns the text encoder.
+        get_decoder: Returns the text decoder.
+        get_output_embeddings: Returns the LM head for output embeddings.
+        set_output_embeddings: Sets the LM head for output embeddings to the provided new embeddings.
+        get_input_embeddings: Returns the input embeddings for the text decoder.
+        set_input_embeddings: Sets the input embeddings for the text encoder and decoder to the provided value.
+        _tie_weights: Ties the weights of the text encoder, decoder, and LM head if specified in the configuration.
+        construct: Constructs the SeamlessM4T model for text-to-speech conversion.
+        generate: Generates translated audio waveforms based on input text.
+        prepare_inputs_for_generation: Prepares inputs for generation during text-to-speech conversion.
+        _reorder_cache: Reorders the cache for beam search during generation.
     
     Please refer to the method docstrings for more detailed information on each method's input and output parameters.
     """
@@ -5243,7 +5236,7 @@ output_hidden_states, return_dict): Constructs the SeamlessM4T model for text-to
         Tie word embeddings and language model head weights in the SeamlessM4TForTextToSpeech class.
         
         This method ties the weights of word embeddings and the language model head in the SeamlessM4TForTextToSpeech class if the 'tie_word_embeddings' flag is set to True. Tying weights means that the
-parameters of the specified modules will be shared, resulting in a reduced number of parameters in the model.
+        parameters of the specified modules will be shared, resulting in a reduced number of parameters in the model.
         
         Args:
             self (SeamlessM4TForTextToSpeech): An instance of the SeamlessM4TForTextToSpeech class.
@@ -5419,23 +5412,20 @@ parameters of the specified modules will be shared, resulting in a reduced numbe
             spkr_id (`int`, *optional*, defaults to 0):
                 The id of the speaker used for speech synthesis. Must be lower than `config.vocoder_num_spkrs`.
             kwargs (*optional*):
-                Remaining dictionary of keyword arguments that will be passed to [`GenerationMixin.generate`]. Keyword
-                arguments are of two types:
-
-                    - Without a prefix, they will be entered as `**kwargs` for the `generate` method of each sub-model,
-                    except for `decoder_input_ids` which will only be passed through the text components.
-                    - With a *text_* or *speech_* prefix, they will be input for the `generate` method of the
-                    text model and speech model respectively. It has the priority over the keywords without a prefix.
-
-                    This means you can, for example, specify a generation strategy for one generation but not for the
-                    other.
-
+                >- Remaining dictionary of keyword arguments that will be passed to [`GenerationMixin.generate`]. Keyword
+                    arguments are of two types:
+                >   - Without a prefix, they will be entered as `**kwargs` for the `generate` method of each sub-model,
+                        except for `decoder_input_ids` which will only be passed through the text components.
+                >   - With a *text_* or *speech_* prefix, they will be input for the `generate` method of the
+                        text model and speech model respectively. It has the priority over the keywords without a prefix.
+                        This means you can, for example, specify a generation strategy for one generation but not for the
+                        other.
 
         Returns:
             `Union[SeamlessM4TGenerationOutput, Tuple[Tensor]]`:
-            - If `return_intermediate_token_ids`, returns [`SeamlessM4TGenerationOutput`].
-            - If not `return_intermediate_token_ids`, returns a tuple composed of waveforms of shape `(batch_size,
-              sequence_length)`and and `waveform_lengths` which gives the length of each sample.
+                >- If `return_intermediate_token_ids`, returns [`SeamlessM4TGenerationOutput`].
+                >- If not `return_intermediate_token_ids`, returns a tuple composed of waveforms of shape `(batch_size,
+                        sequence_length)`and and `waveform_lengths` which gives the length of each sample.
         """
         batch_size = len(input_ids) if input_ids is not None else len(kwargs.get("inputs_embeds"))
 
@@ -5565,12 +5555,12 @@ parameters of the specified modules will be shared, resulting in a reduced numbe
         
         Returns:
             dict: A dictionary containing the prepared inputs for generation. The dictionary includes the following keys:
-                - 'input_ids' (None): Represents the input ids for the model.
-                - 'encoder_outputs' (Tensor): The output tensor from the encoder model.
-                - 'past_key_values' (tuple): The past key values for the model's self-attention layers.
-                - 'decoder_input_ids' (Tensor): The input tensor for the decoder.
-                - 'attention_mask' (Tensor): The attention mask tensor.
-                - 'use_cache' (bool): Indicates whether to use the cache for fast decoding.
+                >   - 'input_ids' (None): Represents the input ids for the model.
+                >   - 'encoder_outputs' (Tensor): The output tensor from the encoder model.
+                >   - 'past_key_values' (tuple): The past key values for the model's self-attention layers.
+                >   - 'decoder_input_ids' (Tensor): The input tensor for the decoder.
+                >   - 'attention_mask' (Tensor): The attention mask tensor.
+                >   - 'use_cache' (bool): Indicates whether to use the cache for fast decoding.
         
         Raises:
             None
@@ -5596,9 +5586,9 @@ parameters of the specified modules will be shared, resulting in a reduced numbe
         Args:
             past_key_values (tuple): A tuple containing the past key-value states for each layer.
                 Each layer's past key-value state is represented as a tuple containing:
-                    - past_state (Tensor): The past state tensor for the current layer.
-                    - present_state (Tensor): The present state tensor for the current layer.
-                    - additional_state (Any): Additional state information for the current layer.
+                    >   - past_state (Tensor): The past state tensor for the current layer.
+                    >   - present_state (Tensor): The present state tensor for the current layer.
+                    >   - additional_state (Any): Additional state information for the current layer.
                 The length of past_key_values corresponds to the number of layers in the model.
             beam_idx (Tensor): The beam index indicating the order in which to reorder the cache.
                 It is used to select the past state from each layer's past key-value state tensor.
@@ -5606,9 +5596,9 @@ parameters of the specified modules will be shared, resulting in a reduced numbe
         Returns:
             tuple: The reordered past key-value states for each layer.
                 The reordered past key-value state for each layer is represented as a tuple containing:
-                    - reordered_past_state (Tensor): The reordered past state tensor for the current layer.
-                    - reordered_present_state (Tensor): The reordered present state tensor for the current layer.
-                    - additional_state (Any): Additional state information for the current layer.
+                    >   - reordered_past_state (Tensor): The reordered past state tensor for the current layer.
+                    >   - reordered_present_state (Tensor): The reordered present state tensor for the current layer.
+                    >   - additional_state (Any): Additional state information for the current layer.
                 The length of the returned tuple corresponds to the number of layers in the model.
         
         Raises:
@@ -5627,21 +5617,20 @@ class SeamlessM4TForSpeechToSpeech(SeamlessM4TPreTrainedModel):
 
     """
     The `SeamlessM4TForSpeechToSpeech` class is a subclass of `SeamlessM4TPreTrainedModel` that represents a speech-to-speech translation model. It is designed to convert speech in one language to speech in
-another language.
+    another language.
     
     Methods:
-    - `__init__(self, config)`: Initializes the `SeamlessM4TForSpeechToSpeech` class.
-    - `get_encoder(self)`: Returns the speech encoder.
-    - `get_decoder(self)`: Returns the text decoder.
-    - `get_output_embeddings(self)`: Returns the output embeddings.
-    - `set_output_embeddings(self, new_embeddings)`: Sets the output embeddings to the given new embeddings.
-    - `get_input_embeddings(self)`: Returns the input embeddings.
-    - `set_input_embeddings(self, value)`: Sets the input embeddings to the given value.
-    - `_tie_weights(self)`: Ties the weights of the text decoder embeddings and the shared embeddings if `tie_word_embeddings` is set to `True` in the configuration.
-    - `construct(self, input_features, attention_mask, decoder_input_ids, decoder_attention_mask, encoder_outputs, past_key_values, inputs_embeds, decoder_inputs_embeds, labels, use_cache, output_attentions,
-output_hidden_states, return_dict, **kwargs)`: Constructs the speech-to-speech translation model and returns the output.
-    - `generate(self, input_features, return_intermediate_token_ids, tgt_lang, spkr_id, **kwargs)`: Generates translated audio waveforms.
-    - `_reorder_cache(past_key_values, beam_idx)`: Reorders the past key values for generation.
+        `__init__`: Initializes the `SeamlessM4TForSpeechToSpeech` class.
+        `get_encoder`: Returns the speech encoder.
+        `get_decoder`: Returns the text decoder.
+        `get_output_embeddings`: Returns the output embeddings.
+        `set_output_embeddings`: Sets the output embeddings to the given new embeddings.
+        `get_input_embeddings`: Returns the input embeddings.
+        `set_input_embeddings`: Sets the input embeddings to the given value.
+        `_tie_weights`: Ties the weights of the text decoder embeddings and the shared embeddings if `tie_word_embeddings` is set to `True` in the configuration.
+        `construct`: Constructs the speech-to-speech translation model and returns the output.
+        `generate`: Generates translated audio waveforms.
+        `_reorder_cache`: Reorders the past key values for generation.
     
     Please refer to the code for more detailed information on each method.
     """
@@ -5660,9 +5649,9 @@ output_hidden_states, return_dict, **kwargs)`: Constructs the speech-to-speech t
         Args:
             self: An instance of the SeamlessM4TForSpeechToSpeech class.
             config: A configuration object containing various settings for the model. It must have the following attributes:
-                - vocab_size (int): The size of the vocabulary.
-                - hidden_size (int): The size of the hidden state.
-                - pad_token_id (int): The ID of the padding token.
+                >- vocab_size (int): The size of the vocabulary.
+                >- hidden_size (int): The size of the hidden state.
+                >- pad_token_id (int): The ID of the padding token.
             
         Returns:
             None. This method does not return any value.
@@ -5816,26 +5805,26 @@ output_hidden_states, return_dict, **kwargs)`: Constructs the speech-to-speech t
         This method constructs a sequence-to-sequence model for speech-to-speech translation.
         
         Args:
-        - self: The object instance.
-        - input_features (mindspore.Tensor): Input features for the speech encoder.
-        - attention_mask (Optional[mindspore.Tensor]): Mask to avoid performing attention on padding tokens.
-        - decoder_input_ids (Optional[mindspore.Tensor]): Input IDs for the decoder.
-        - decoder_attention_mask (Optional[mindspore.Tensor]): Mask to avoid performing attention on padding tokens in the decoder.
-        - encoder_outputs (Optional[Tuple[Tuple[mindspore.Tensor]]]): Output states of the encoder.
-        - past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]]): Past key values for caching in the decoder.
-        - inputs_embeds (Optional[mindspore.Tensor]): Embedded inputs for the encoder.
-        - decoder_inputs_embeds (Optional[mindspore.Tensor]): Embedded inputs for the decoder.
-        - labels (Optional[mindspore.Tensor]): Labels for training.
-        - use_cache (Optional[bool]): Flag to indicate whether to use caching.
-        - output_attentions (Optional[bool]): Flag to indicate whether to output attentions.
-        - output_hidden_states (Optional[bool]): Flag to indicate whether to output hidden states.
-        - return_dict (Optional[bool]): Flag to indicate whether to return a dictionary of outputs.
+            self: The object instance.
+            input_features (mindspore.Tensor): Input features for the speech encoder.
+            attention_mask (Optional[mindspore.Tensor]): Mask to avoid performing attention on padding tokens.
+            decoder_input_ids (Optional[mindspore.Tensor]): Input IDs for the decoder.
+            decoder_attention_mask (Optional[mindspore.Tensor]): Mask to avoid performing attention on padding tokens in the decoder.
+            encoder_outputs (Optional[Tuple[Tuple[mindspore.Tensor]]]): Output states of the encoder.
+            past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]]): Past key values for caching in the decoder.
+            inputs_embeds (Optional[mindspore.Tensor]): Embedded inputs for the encoder.
+            decoder_inputs_embeds (Optional[mindspore.Tensor]): Embedded inputs for the decoder.
+            labels (Optional[mindspore.Tensor]): Labels for training.
+            use_cache (Optional[bool]): Flag to indicate whether to use caching.
+            output_attentions (Optional[bool]): Flag to indicate whether to output attentions.
+            output_hidden_states (Optional[bool]): Flag to indicate whether to output hidden states.
+            return_dict (Optional[bool]): Flag to indicate whether to return a dictionary of outputs.
         
         Returns:
-        - Union[Seq2SeqLMOutput, Tuple[mindspore.Tensor]]: The constructed sequence-to-sequence model output.
+            Union[Seq2SeqLMOutput, Tuple[mindspore.Tensor]]: The constructed sequence-to-sequence model output.
         
         Raises:
-        - None specified.
+            None specified.
         
         """
         if labels is not None:
@@ -5957,25 +5946,21 @@ output_hidden_states, return_dict, **kwargs)`: Constructs the speech-to-speech t
                 The language to use as target language for translation.
             spkr_id (`int`, *optional*, defaults to 0):
                 The id of the speaker used for speech synthesis. Must be lower than `config.vocoder_num_spkrs`.
-
             kwargs (*optional*):
                 Remaining dictionary of keyword arguments that will be passed to [`GenerationMixin.generate`]. Keyword
                 arguments are of two types:
-
-                    - Without a prefix, they will be entered as `**kwargs` for the `generate` method of each sub-model,
+                    >- Without a prefix, they will be entered as `**kwargs` for the `generate` method of each sub-model,
                     except for `decoder_input_ids` which will only be passed through the text components.
-                    - With a *text_* or *speech_* prefix, they will be input for the `generate` method of the
+                    >- With a *text_* or *speech_* prefix, they will be input for the `generate` method of the
                     text model and speech model respectively. It has the priority over the keywords without a prefix.
-
-                    This means you can, for example, specify a generation strategy for one generation but not for the
+                    > This means you can, for example, specify a generation strategy for one generation but not for the
                     other.
-
 
         Returns:
             `Union[SeamlessM4TGenerationOutput, Tuple[Tensor]]`:
-            - If `return_intermediate_token_ids`, returns [`SeamlessM4TGenerationOutput`].
-            - If not `return_intermediate_token_ids`, returns a tuple composed of waveforms of shape `(batch_size,
-              sequence_length)`and and `waveform_lengths` which gives the length of each sample.
+                >- If `return_intermediate_token_ids`, returns [`SeamlessM4TGenerationOutput`].
+                >- If not `return_intermediate_token_ids`, returns a tuple composed of waveforms of shape `(batch_size,
+                  sequence_length)`and and `waveform_lengths` which gives the length of each sample.
         """
         batch_size = len(input_features) if input_features is not None else len(kwargs.get("inputs_embeds"))
 
@@ -6134,12 +6119,12 @@ output_hidden_states, return_dict, **kwargs)`: Constructs the speech-to-speech t
         
         Returns:
             dict: A dictionary containing the prepared inputs for generation.
-                - 'input_ids' (None): Placeholder for input IDs.
-                - 'encoder_outputs' (tuple or None): The outputs of the encoder.
-                - 'past_key_values' (tuple or None): The cached key-value pairs of the past decoder states.
-                - 'decoder_input_ids' (torch.Tensor): The updated input tensor for the decoder.
-                - 'attention_mask' (torch.Tensor or None): The attention mask tensor.
-                - 'use_cache' (bool or None): Whether to use caching for the decoder.
+                >- 'input_ids' (None): Placeholder for input IDs.
+                >- 'encoder_outputs' (tuple or None): The outputs of the encoder.
+                >- 'past_key_values' (tuple or None): The cached key-value pairs of the past decoder states.
+                >- 'decoder_input_ids' (torch.Tensor): The updated input tensor for the decoder.
+                >- 'attention_mask' (torch.Tensor or None): The attention mask tensor.
+                >- 'use_cache' (bool or None): Whether to use caching for the decoder.
         
         Raises:
             None.
@@ -6163,25 +6148,24 @@ class SeamlessM4TModel(SeamlessM4TPreTrainedModel):
     """
     SeamlessM4TModel represents a model for seamless multimodal translation and synthesis tasks. 
     It provides methods for initializing the model, setting modality, retrieving encoders, handling embeddings, constructing the model, generating translations and audio waveforms, and preparing inputs for
-generation.
+    generation.
     
     Attributes:
         config: An object containing the configuration parameters for the model.
     
     Methods:
-        - __init__(self, config, current_modality='text'): Initializes an instance of the SeamlessM4TModel class.
-        - set_modality(self, modality='text'): Sets the modality for the SeamlessM4TModel instance.
-        - get_encoder(self): Returns the appropriate encoder based on the current modality.
-        - get_output_embeddings(self): Returns the output embeddings of the SeamlessM4TModel.
-        - set_output_embeddings(self, new_embeddings): Sets the output embeddings of the SeamlessM4TModel.
-        - get_input_embeddings(self): Get the input embeddings for the SeamlessM4TModel.
-        - set_input_embeddings(self, value): Sets the input embeddings for the SeamlessM4TModel.
-        - _tie_weights(self): Ties the weights of specified layers in the SeamlessM4TModel.
-        - construct(self, input_ids, input_features, attention_mask, decoder_input_ids, encoder_outputs, past_key_values, inputs_embeds, decoder_inputs_embeds, labels, use_cache, output_attentions,
-output_hidden_states, return_dict, **kwargs): Constructs the SeamlessM4TModel.
-        - generate(self, input_ids, input_features, return_intermediate_token_ids, tgt_lang, spkr_id, generate_speech, **kwargs): Generates translated token ids and/or translated audio waveforms.
-        - prepare_inputs_for_generation(self, decoder_input_ids, past_key_values, attention_mask, use_cache, encoder_outputs, **kwargs): Prepares inputs for generation.
-        - _reorder_cache(past_key_values, beam_idx): Reorders the cache of past key values for the SeamlessM4TModel.
+        __init__: Initializes an instance of the SeamlessM4TModel class.
+        set_modality: Sets the modality for the SeamlessM4TModel instance.
+        get_encoder: Returns the appropriate encoder based on the current modality.
+        get_output_embeddings: Returns the output embeddings of the SeamlessM4TModel.
+        set_output_embeddings: Sets the output embeddings of the SeamlessM4TModel.
+        get_input_embeddings: Get the input embeddings for the SeamlessM4TModel.
+        set_input_embeddings: Sets the input embeddings for the SeamlessM4TModel.
+        _tie_weights: Ties the weights of specified layers in the SeamlessM4TModel.
+        construct: Constructs the SeamlessM4TModel.
+        generate: Generates translated token ids and/or translated audio waveforms.
+        prepare_inputs_for_generation: Prepares inputs for generation.
+        _reorder_cache: Reorders the cache of past key values for the SeamlessM4TModel.
     """
     _tied_weights_keys = [
         "lm_head.weight",
@@ -6313,7 +6297,7 @@ output_hidden_states, return_dict, **kwargs): Constructs the SeamlessM4TModel.
             None.
         
         This method retrieves the input embeddings from the text decoder of the SeamlessM4TModel. The input embeddings are used as the initial input for the model's text decoding process. The embeddings are
-obtained by calling the 'embed_tokens' method of the text decoder. The 'embed_tokens' method maps the input tokens to their corresponding embeddings, which are then used as input for the model.
+        obtained by calling the 'embed_tokens' method of the text decoder. The 'embed_tokens' method maps the input tokens to their corresponding embeddings, which are then used as input for the model.
         
         No exceptions are raised by this method.
         """
@@ -6402,7 +6386,7 @@ obtained by calling the 'embed_tokens' method of the text decoder. The 'embed_to
             Warning: If `use_cache` is True and `labels` is provided, the `use_cache` argument is changed to False.
             Warning: If `decoder_input_ids` and `decoder_inputs_embeds` are None and `labels` is provided, the `decoder_input_ids` is set to shifted `labels`.
             Warning: If `input_features` is not None and `input_ids` is not None, `input_features` will be used in priority through the `speech_encoder`. Make sure that `input_features` and `input_ids` are
-mutually exclusive.
+                mutually exclusive.
             Warning: If `inputs_embeds` is not None and `input_features` is not None, `input_features` will be used in priority through `speech_encoder`. `inputs_embeds` will be ignored.
             Warning: If the current modality is 'speech' and `attention_mask` is not None, `sub_sampled_lengths` will be computed from `attention_mask`.
             Warning: If the current modality is 'speech' and `attention_mask` is not None, `encoder_attention_mask` will be computed using `hidden_states` and `seq_lens`.
@@ -6412,7 +6396,7 @@ mutually exclusive.
             Warning: If not `return_dict`, the `outputs` will be a combination of `decoder_outputs` and `encoder_outputs`.
             Warning: If `return_dict` is False and `masked_lm_loss` is not None, the `output` will be a combination of `lm_logits` and `outputs`.
             Warning: If `return_dict` is True, the `output` will be a Seq2SeqLMOutput including `masked_lm_loss`, `lm_logits`, `past_key_values`, `decoder_hidden_states`, `decoder_attentions`,
-`cross_attentions`, `encoder_last_hidden_state`, `encoder_hidden_states`, and `encoder_attentions`.
+                `cross_attentions`, `encoder_last_hidden_state`, `encoder_hidden_states`, and `encoder_attentions`.
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -6585,21 +6569,20 @@ mutually exclusive.
             kwargs (*optional*):
                 Remaining dictionary of keyword arguments that will be passed to [`GenerationMixin.generate`]. Keyword
                 arguments are of two types:
-
-                    - Without a prefix, they will be entered as `**kwargs` for the `generate` method of each sub-model,
-                    except for `decoder_input_ids` which will only be passed through the text components.
-                    - With a *text_* or *speech_* prefix, they will be input for the `generate` method of the
-                    text model and speech model respectively. It has the priority over the keywords without a prefix.
+                    >   - Without a prefix, they will be entered as `**kwargs` for the `generate` method of each sub-model,
+                        except for `decoder_input_ids` which will only be passed through the text components.
+                    >   - With a *text_* or *speech_* prefix, they will be input for the `generate` method of the
+                        text model and speech model respectively. It has the priority over the keywords without a prefix.
 
                     This means you can, for example, specify a generation strategy for one generation but not for the
                     other.
 
         Returns:
             `Union[SeamlessM4TGenerationOutput, Tuple[Tensor], ModelOutput]`:
-            - If `generate_speech` and `return_intermediate_token_ids`, returns [`SeamlessM4TGenerationOutput`].
-            - If `generate_speech` and not `return_intermediate_token_ids`, returns a tuple composed of waveforms of
-              shape `(batch_size, sequence_length)`and and `waveform_lengths` which gives the length of each sample.
-            - If `generate_speech=False`, it will returns `ModelOutput`.
+                >   - If `generate_speech` and `return_intermediate_token_ids`, returns [`SeamlessM4TGenerationOutput`].
+                >   - If `generate_speech` and not `return_intermediate_token_ids`, returns a tuple composed of waveforms of
+                    shape `(batch_size, sequence_length)`and and `waveform_lengths` which gives the length of each sample.
+                >   - If `generate_speech=False`, it will returns `ModelOutput`.
         """
         if input_ids is None and input_features is None and kwargs.get("inputs_embeds", None) is None:
             raise ValueError(

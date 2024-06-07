@@ -52,13 +52,14 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
 
     This uses notably ByteFallback and no normalization.
 
-    ```python
-    >>> from transformers import CodeLlamaTokenizerFast
+    Example:
+        ```python
+        >>> from transformers import CodeLlamaTokenizerFast
 
-    >>> tokenizer = CodeLlamaTokenizerFast.from_pretrained("hf-internal-testing/llama-tokenizer")
-    >>> tokenizer.encode("Hello this is a test")
-    [1, 15043, 445, 338, 263, 1243]
-    ```
+        >>> tokenizer = CodeLlamaTokenizerFast.from_pretrained("hf-internal-testing/llama-tokenizer")
+        >>> tokenizer.encode("Hello this is a test")
+        [1, 15043, 445, 338, 263, 1243]
+        ```
 
     If you want to change the `bos_token` or the `eos_token`, make sure to specify them when initializing the model, or
     call `tokenizer.update_post_processor()` to make sure that the post-processing is correctly done (otherwise the
@@ -309,7 +310,7 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
             None.
         
         This method retrieves the ID of the middle token in the CodeLlamaTokenizerFast instance. If the middle token is not set or is set to None, None is returned. Otherwise, the method calls the
-'convert_tokens_to_ids' function to convert the middle token into its corresponding ID and returns the ID value.
+        'convert_tokens_to_ids' function to convert the middle token into its corresponding ID and returns the ID value.
         """
         if self._middle_token is None:
             return None
@@ -338,21 +339,21 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
         This method is defined in the `CodeLlamaTokenizerFast` class and is named `suffix_id`. It takes one parameter, `self`, which refers to the instance of the class.
         
         Args:
-            - self: An instance of the `CodeLlamaTokenizerFast` class.
+            self: An instance of the `CodeLlamaTokenizerFast` class.
             
         Returns:
-            - None: If the `_suffix_token` attribute is `None`, the method returns `None`.
+            None: If the `_suffix_token` attribute is `None`, the method returns `None`.
             
         Raises:
-            - None: This method does not raise any exceptions.
+            None: This method does not raise any exceptions.
         
         Description:
-        This method retrieves the suffix ID associated with the `_suffix_token` attribute. If the `_suffix_token` is `None`, indicating the absence of a suffix token, the method returns `None`. Otherwise, it
-calls the `convert_tokens_to_ids` method to convert the `_suffix_token` to its corresponding ID and returns the result.
+            This method retrieves the suffix ID associated with the `_suffix_token` attribute. If the `_suffix_token` is `None`, indicating the absence of a suffix token, the method returns `None`. Otherwise, it
+            calls the `convert_tokens_to_ids` method to convert the `_suffix_token` to its corresponding ID and returns the result.
         
         Note:
-        - The `_suffix_token` attribute should be set before calling this method to ensure accurate results.
-        - The return value is of type `None`.
+            - The `_suffix_token` attribute should be set before calling this method to ensure accurate results.
+            - The return value is of type `None`.
         """
         if self._suffix_token is None:
             return None
@@ -374,7 +375,7 @@ calls the `convert_tokens_to_ids` method to convert the `_suffix_token` to its c
             None.
         
         This method retrieves the ID representation of the EOT token. If the EOT token is not set (None), it returns None. Otherwise, it uses the 'convert_tokens_to_ids' method to convert the EOT token to its
-corresponding ID representation and returns it.
+        corresponding ID representation and returns it.
         """
         if self._eot_token is None:
             return None
@@ -470,10 +471,12 @@ corresponding ID representation and returns it.
     def set_infilling_processor(self, reset, suffix_first=False, add_special_tokens=True):
         """
         Updates the normalizer to make sure the prompt format for `infilling` is respected. The infilling format is the
-        following: if suffix_first
-            " <PRE> <SUF>{suf} <MID> {pre}"
-        else:
-            " <PRE> {pre} <SUF>{suf} <MID>"
+        following:
+
+        >- if suffix_first
+        >   - " <PRE> <SUF>{suf} <MID> {pre}"
+        >- else:
+        >   - " <PRE> {pre} <SUF>{suf} <MID>"
 
         If `reset` is set to `True`, the `normalizer` and `post_processor` are reset to their "normal" behaviour, which
         is to add a prefix space for the normalizer, and add a `bos_token` to the input text for the `post_processor`.
@@ -661,8 +664,8 @@ corresponding ID representation and returns it.
 
         An NLLB sequence has the following format, where `X` represents the sequence:
 
-        - `input_ids` (for encoder) `X [eos, src_lang_code]`
-        - `decoder_input_ids`: (for decoder) `X [eos, tgt_lang_code]`
+        >   - `input_ids` (for encoder) `X [eos, src_lang_code]`
+        >   - `decoder_input_ids`: (for decoder) `X [eos, tgt_lang_code]`
 
         BOS is never used. Pairs of sequences are not the expected use case, but they will be handled without a
         separator.

@@ -285,18 +285,18 @@ class BioGptDecoderLayer(nn.Cell):
     This class represents a BioGptDecoderLayer, which is a component of a BioGptDecoder in a Transformer-based model. It performs the decoding operation on the input hidden states.
     
     Attributes:
-    - embed_dim (int): The dimension of the hidden states.
-    - self_attn (BioGptAttention): The self-attention mechanism.
-    - dropout (float): The dropout rate.
-    - activation_fn (function): The activation function.
-    - activation_dropout (float): The dropout rate for the activation function.
-    - self_attn_layer_norm (nn.LayerNorm): The layer normalization for the self-attention output.
-    - fc1 (nn.Dense): The first fully connected layer.
-    - fc2 (nn.Dense): The second fully connected layer.
-    - final_layer_norm (nn.LayerNorm): The final layer normalization.
+        embed_dim (int): The dimension of the hidden states.
+        self_attn (BioGptAttention): The self-attention mechanism.
+        dropout (float): The dropout rate.
+        activation_fn (function): The activation function.
+        activation_dropout (float): The dropout rate for the activation function.
+        self_attn_layer_norm (nn.LayerNorm): The layer normalization for the self-attention output.
+        fc1 (nn.Dense): The first fully connected layer.
+        fc2 (nn.Dense): The second fully connected layer.
+        final_layer_norm (nn.LayerNorm): The final layer normalization.
     
     Methods:
-    - construct(hidden_states, attention_mask, layer_head_mask, past_key_value, output_attentions, use_cache): Performs the decoding operation on the input hidden states.
+        construct(hidden_states, attention_mask, layer_head_mask, past_key_value, output_attentions, use_cache): Performs the decoding operation on the input hidden states.
     
     """
     def __init__(self, config: BioGptConfig):
@@ -306,12 +306,12 @@ class BioGptDecoderLayer(nn.Cell):
         Args:
             self (BioGptDecoderLayer): The instance of the BioGptDecoderLayer class.
             config (BioGptConfig): An instance of BioGptConfig containing configuration parameters.
-                - config.hidden_size (int): The size of the hidden layer.
-                - config.num_attention_heads (int): The number of attention heads.
-                - config.attention_probs_dropout_prob (float): Dropout probability for attention weights.
-                - config.hidden_dropout_prob (float): Dropout probability for hidden layers.
-                - config.hidden_act (str): The activation function for hidden layers.
-                - config.activation_dropout (float): Dropout probability for activation functions.
+                >   - config.hidden_size (int): The size of the hidden layer.
+                >   - config.num_attention_heads (int): The number of attention heads.
+                >   - config.attention_probs_dropout_prob (float): Dropout probability for attention weights.
+                >   - config.hidden_dropout_prob (float): Dropout probability for hidden layers.
+                >   - config.hidden_act (str): The activation function for hidden layers.
+                >   - config.activation_dropout (float): Dropout probability for activation functions.
         
         Returns:
             None. This method initializes the BioGptDecoderLayer object with the provided configuration.
@@ -451,9 +451,9 @@ class BioGptModel(BioGptPreTrainedModel):
         Args:
             self: The instance of the BioGptModel class.
             config (BioGptConfig): An instance of BioGptConfig containing the configuration parameters for the model.
-                - BioGptConfig is a data class that holds various settings for the BioGptModel.
-                - It must be provided to properly configure the model.
-                - The config parameter is required and should not be None.
+                >   - BioGptConfig is a data class that holds various settings for the BioGptModel.
+                >   - It must be provided to properly configure the model.
+                >   - The config parameter is required and should not be None.
         
         Returns:
             None: This method does not return any value.
@@ -675,7 +675,7 @@ class BioGptForCausalLM(BioGptPreTrainedModel):
 
     """
     BioGptForCausalLM represents a BioGpt model for Causal Language Modeling. This class inherits from BioGptPreTrainedModel and provides methods for initializing the model, constructing the model, and
-preparing inputs for generation.
+    preparing inputs for generation.
     
     Attributes:
         config: The configuration for the BioGptForCausalLM model.
@@ -685,7 +685,7 @@ preparing inputs for generation.
         get_output_embeddings(): Returns the output projection layer for the model.
         set_output_embeddings(new_embeddings): Sets the output projection layer to the new embeddings.
         construct(input_ids, attention_mask, head_mask, inputs_embeds, past_key_values, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the BioGptForCausalLM model with the
-given input parameters and returns the model output.
+            given input parameters and returns the model output.
         prepare_inputs_for_generation(input_ids, attention_mask, inputs_embeds, past_key_values, **kwargs): Prepares the inputs for generation based on the given parameters.
         _reorder_cache(past_key_values, beam_idx): Reorders the past key values based on the given beam index.
     
@@ -703,7 +703,7 @@ given input parameters and returns the model output.
             config: An object containing configuration settings for the model.
         
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
             - TypeError: If the config parameter is not provided or is not of the expected type.
@@ -764,10 +764,11 @@ given input parameters and returns the model output.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, CausalLMOutputWithCrossAttentions]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
-            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
-            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+                `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
+                are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -821,7 +822,7 @@ given input parameters and returns the model output.
         
         Returns:
             dict: A dictionary containing the model inputs, including 'input_ids', 'attention_mask', 'past_key_values', and 'use_cache' (if provided). Returns None if past_key_values is provided and the
-input_ids shape is greater than the past_length.
+                input_ids shape is greater than the past_length.
         
         Raises:
             ValueError: If the input_ids shape is less than or equal to zero.
@@ -884,8 +885,8 @@ class BioGptForTokenClassification(BioGptPreTrainedModel):
 
     """
     This class represents a BioGpt model for token classification, inheriting from BioGptPreTrainedModel. It includes methods for initializing the model and constructing token classification outputs based on
-input data. The model utilizes a transformer architecture for processing input sequences and generating classification predictions. The class provides functionality for computing loss based on predicted logits
-and actual labels, as well as handling optional parameters for caching, attention masks, and return dictionary configurations.
+    input data. The model utilizes a transformer architecture for processing input sequences and generating classification predictions. The class provides functionality for computing loss based on predicted logits
+    and actual labels, as well as handling optional parameters for caching, attention masks, and return dictionary configurations.
     """
     def __init__(self, config):
         """
@@ -934,10 +935,11 @@ and actual labels, as well as handling optional parameters for caching, attentio
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, TokenClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -986,18 +988,19 @@ class BioGptForSequenceClassification(BioGptPreTrainedModel):
 
     '''
     This class represents a BioGpt model for sequence classification tasks. It inherits from the BioGptPreTrainedModel and includes methods for initialization, constructing the model, getting input embeddings,
-and setting input embeddings.
+    and setting input embeddings.
     
     The __init__ method initializes the BioGptForSequenceClassification instance with a BioGptConfig and sets the number of labels, BioGptModel, and score.
     
     The construct method takes input tensors for the model and returns the sequence classifier output with past key values. It also handles labels for computing the sequence classification/regression loss and
-handles different problem types such as regression, single-label classification, and multi-label classification.
+    handles different problem types such as regression, single-label classification, and multi-label classification.
     
     The get_input_embeddings method returns the input embeddings of the BioGpt model.
     
     The set_input_embeddings method sets the input embeddings of the BioGpt model.
     
-    Note: The class inherits from BioGptPreTrainedModel and includes additional methods not provided in the given code snippet.
+    Note:
+        The class inherits from BioGptPreTrainedModel and includes additional methods not provided in the given code snippet.
     '''
     def __init__(self, config: BioGptConfig):
         """
@@ -1039,10 +1042,11 @@ handles different problem types such as regression, single-label classification,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
