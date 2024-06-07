@@ -23,7 +23,11 @@ from dataclasses import asdict, replace
 from enum import Enum
 from functools import partial, reduce
 from itertools import chain
-from typing import Literal, Optional
+from typing import Optional
+try:
+    from typing import Literal
+except:
+    from typing_extensions import Literal
 
 import mindspore
 from mindspore import nn, ops

@@ -3444,7 +3444,6 @@ class GenerationMixin:
         this_peer_finished = False  # used by synced_gpus only
         while True:
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
-
             outputs = self(
                 **model_inputs,
                 return_dict=True,
@@ -3519,6 +3518,7 @@ class GenerationMixin:
             model_kwargs = self._update_model_kwargs_for_generation(
                 outputs, model_kwargs, is_encoder_decoder=self.config.is_encoder_decoder
             )
+
             if model_kwargs["past_key_values"] is not None:
                 model_kwargs["past_key_values"] = self._reorder_cache(model_kwargs["past_key_values"], beam_idx)
 

@@ -38,8 +38,6 @@ from ...time_series_utils import NormalOutput, StudentTOutput
 
 from .configuration_autoformer import AutoformerConfig
 
-mindspore.set_context(pynative_synchronize=True)
-
 @dataclass
 class AutoFormerDecoderOutput(ModelOutput):
     """
@@ -821,11 +819,33 @@ class AutoformerAttention(nn.Cell):
             value_states = value_states[:, :queries_time_length, :]
             key_states = key_states[:, :queries_time_length, :]
 
-        query_states_fft = ops.rfft(query_states, n=tgt_len, dim=1) #todo
-        key_states_fft = ops.rfft(key_states, n=tgt_len, dim=1)
-        attn_weights = query_states_fft * ops.conj(key_states_fft)
-        attn_weights = ops.irfft(attn_weights, n=tgt_len, dim=1)  # Autocorrelation(Q,K)
-
+        try:
+            query_states_fft = ops.rfft(query_states, n=tgt_len, dim=1) #todo
+            key_states_fft = ops.rfft(key_states, n=tgt_len, dim=1)
+            attn_weights = query_states_fft * ops.conj(key_states_fft)
+            attn_weights = ops.irfft(attn_weights, n=tgt_len, dim=1)  # Autocorrelation(Q,K)
+        except:
+            rfft_net = ops.FFTWithSize(signal_ndim=3, inverse=False, real=True)
+            if query_states.shape[1] < tgt_len:
+                pad2d = nn.ConstantPad2d((0, 0, 0, tgt_len - query_states.shape[1]), 0)
+                query_states = pad2d(query_states)
+            else:
+                query_states = query_states[:,:tgt_len,:]
+            query_states_fft = rfft_net(query_states)
+            if key_states.shape[1] < tgt_len:
+                pad2d = nn.ConstantPad2d((0, 0, 0, tgt_len - key_states.shape[1]), 0)
+                key_states = pad2d(key_states)
+            else:
+                key_states = key_states[:,:tgt_len,:]
+            key_states_fft = rfft_net(key_states)
+            attn_weights = query_states_fft * ops.conj(key_states_fft)
+            irfft_net = ops.FFTWithSize(signal_ndim=3, inverse=True, real=True)
+            if attn_weights.shape[1] < tgt_len:
+                pad2d = nn.ConstantPad2d((0, 0, 0, tgt_len - attn_weights.shape[1]), 0)
+                attn_weights = pad2d(attn_weights)
+            else:
+                attn_weights = attn_weights[:, :tgt_len, :]
+            attn_weights = irfft_net(attn_weights)
         src_len = key_states.shape[1]
         channel = key_states.shape[2]
 

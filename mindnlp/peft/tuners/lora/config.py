@@ -15,7 +15,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal, Optional, Union
+from typing import Optional, Union
+try:
+    from typing import Literal
+except:
+    from typing_extensions import Literal
 
 from ...config import PeftConfig
 from ...utils import PeftType
