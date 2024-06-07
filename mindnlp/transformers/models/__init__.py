@@ -94,6 +94,7 @@ from . import (
     longformer,
     luke,
     mamba,
+    marian,
     mbart,
     megatron_bert,
     minicpm,
@@ -230,6 +231,7 @@ from .llava_next import *
 from .longformer import *
 from .luke import *
 from .mamba import *
+from .marian import *
 from .mbart import *
 from .megatron_bert import *
 from .minicpm import *
@@ -366,6 +368,7 @@ __all__.extend(llava_next.__all__)
 __all__.extend(longformer.__all__)
 __all__.extend(luke.__all__)
 __all__.extend(mamba.__all__)
+__all__.extend(marian.__all__)
 __all__.extend(mbart.__all__)
 __all__.extend(megatron_bert.__all__)
 __all__.extend(minicpm.__all__)
