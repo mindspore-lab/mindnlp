@@ -180,7 +180,8 @@ def length_regulator(encoded_embeddings, duration_labels, speaking_speed=1.0):
 
     # Loop through the batch and fill in the data
     for i, (encoded_embedding, target_duration) in enumerate(zip(encoded_embeddings, duration_labels)):
-        if target_duration.sum().item() == 0: continue
+        if target_duration.sum().item() == 0:
+            continue
         repeated = ops.repeat_interleave(encoded_embedding, target_duration, axis=0)
         hidden_states[i, : repeated.shape[0]] = repeated
 
@@ -1229,7 +1230,7 @@ class FastSpeech2ConformerModel(FastSpeech2ConformerPreTrainedModel):
             hidden_states = hidden_states + language_id_embbedings.unsqueeze(1)
 
         if self.speaker_embed_dim is not None and speaker_embedding is not None:
-            normalize = lambda x: x / ops.norm(x)
+            normalize = lambda x: x / ops.norm(x)   # pylint: disable=unnecessary-lambda-assignment
             embeddings_expanded = (
                 normalize(speaker_embedding).unsqueeze(1).expand(-1, hidden_states.shape[1], -1)
             )

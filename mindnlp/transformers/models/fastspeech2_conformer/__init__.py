@@ -11,13 +11,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+FastSpeech2-Conformer Model.
+"""
 from typing import TYPE_CHECKING
+
+from . import (
+    configuration_fastspeech2_conformer,
+    modeling_fastspeech2_conformer,
+    tokenization_fastspeech2_conformer
+)
+from .configuration_fastspeech2_conformer import *
+from .modeling_fastspeech2_conformer import *
+from .tokenization_fastspeech2_conformer import *
 
 from ....utils import (
     OptionalDependencyNotAvailable,
     is_mindspore_available,
 )
-
 
 _import_structure = {
     "configuration_fastspeech2_conformer": [
@@ -61,15 +72,6 @@ if TYPE_CHECKING:
             FastSpeech2ConformerPreTrainedModel,
             FastSpeech2ConformerWithHifiGan,
         )
-
-from . import (
-    configuration_fastspeech2_conformer,
-    modeling_fastspeech2_conformer,
-    tokenization_fastspeech2_conformer
-)
-from .configuration_fastspeech2_conformer import *
-from .modeling_fastspeech2_conformer import *
-from .tokenization_fastspeech2_conformer import *
 
 __all__ = []
 __all__.extend(configuration_fastspeech2_conformer.__all__)

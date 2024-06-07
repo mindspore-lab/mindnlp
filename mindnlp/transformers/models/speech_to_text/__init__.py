@@ -14,7 +14,7 @@
 """Speech2Text model init"""
 from typing import TYPE_CHECKING
 
-from . import configuration_speech_to_text, modeling_speech_to_text
+from . import configuration_speech_to_text, modeling_speech_to_text, tokenization_speech_to_text
 from .configuration_speech_to_text import *
 from .modeling_speech_to_text import *
 from .tokenization_speech_to_text import *
