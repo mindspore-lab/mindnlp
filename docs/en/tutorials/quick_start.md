@@ -106,7 +106,7 @@ In practical fine-tuning jobs, however, the full dataset is normally used.
 
 ## Train
 
-At this stage, you can choose either the [MindNLP Trainer API]((#train_with_mindnlp_trainer)) or the [native MindSpore](#train_with_native_mindspore) approach to fine-tune the model.
+At this stage, you can choose either the [MindNLP Trainer API](#train_with_mindnlp_trainer) or the [native MindSpore](#train_with_native_mindspore) approach to fine-tune the model.
 
 Let's start with the Trainer API approach.
 
@@ -153,7 +153,7 @@ training_args = TrainingArguments(
 )
 ```
 
-For a comprehensive understanding of more parameters in `TrainingArguments`, please refer to the [Use Trainer](./3.use_trainer.md) tutorial. Here, we specified the following parameters.
+For a comprehensive understanding of more parameters in `TrainingArguments`, please refer to the [Use Trainer](./use_trainer.md) tutorial. Here, we specified the following parameters.
 * `output_dir`: This is the directory where all outputs like model checkpoints and predictions will be saved. In this example, it is set to "../../output".
 * `per_device_train_batch_size`: This controls the batch size used for training on each device. Since we already batched our dataset, here the batch size is set to 1. If you want to use `Trainer`'s batch functionality, you can set your own batch size here.
 * `per_device_eval_batch_size`: Similar to the training batch size, but used during the evaluation phase on the validation data. Since we already batched our dataset, here the batch size is set to 1.
