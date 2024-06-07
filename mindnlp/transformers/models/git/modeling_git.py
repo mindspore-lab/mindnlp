@@ -198,12 +198,12 @@ class GitSelfAttention(nn.Cell):
         if self.position_embedding_type in ["relative_key", "relative_key_query"]:
             query_length, key_length = query_layer.shape[2], key_layer.shape[2]
             if use_cache:
-                position_ids_l = mindspore.Tensor(key_length - 1, dtype=mindspore.int64).view(
+                position_ids_l = mindspore.Tensor(key_length - 1, dtype=mindspore.int32).view(
                     -1, 1
                 )
             else:
-                position_ids_l = ops.arange(query_length, dtype=mindspore.int64).view(-1, 1)
-            position_ids_r = ops.arange(key_length, dtype=mindspore.int64).view(1, -1)
+                position_ids_l = ops.arange(query_length, dtype=mindspore.int32).view(-1, 1)
+            position_ids_r = ops.arange(key_length, dtype=mindspore.int32).view(1, -1)
             distance = position_ids_l - position_ids_r
 
             positional_embedding = self.distance_embedding(distance + self.max_position_embeddings - 1)
@@ -1299,7 +1299,7 @@ class GitForCausalLM(GitPreTrainedModel):
         ...     end_idx = np.random.randint(converted_len, seg_len)
         ...     start_idx = end_idx - converted_len
         ...     indices = np.linspace(start_idx, end_idx, num=clip_len)
-        ...     indices = np.clip(indices, start_idx, end_idx - 1).astype(np.int64)
+        ...     indices = np.clip(indices, start_idx, end_idx - 1).astype(np.int32)
         ...     return indices
         >>> # load video
         >>> file_path = hf_hub_download(

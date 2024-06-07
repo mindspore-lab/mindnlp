@@ -44,7 +44,7 @@ class GitVisionModelTester:
     def __init__(
         self,
         parent,
-        batch_size=10,
+        batch_size=12,
         image_size=32,
         patch_size=16,
         num_channels=3,
@@ -206,7 +206,7 @@ class GitModelTester:
         num_channels=3,
         image_size=32,
         patch_size=16,
-        batch_size=11,
+        batch_size=13,
         text_seq_length=7,
         is_training=True,
         use_input_mask=True,
@@ -408,7 +408,7 @@ class GitModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
             if model_class in get_values(MODEL_FOR_CAUSAL_LM_MAPPING):
                 inputs_dict["labels"] = ops.zeros(
                     (self.model_tester.batch_size, self.model_tester.text_seq_length),
-                    dtype=mindspore.int64,
+                    dtype=mindspore.int32,
                 )
         return inputs_dict
 
