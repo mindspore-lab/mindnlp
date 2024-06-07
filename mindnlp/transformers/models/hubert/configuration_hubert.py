@@ -150,19 +150,19 @@ class HubertConfig(PretrainedConfig):
             Dimensionality of the projection before token mean-pooling for classification.
 
     Example:
+        ```python
+        >>> from transformers import HubertModel, HubertConfig
 
-    ```python
-    >>> from transformers import HubertModel, HubertConfig
+        >>> # Initializing a Hubert facebook/hubert-base-ls960 style configuration
+        >>> configuration = HubertConfig()
 
-    >>> # Initializing a Hubert facebook/hubert-base-ls960 style configuration
-    >>> configuration = HubertConfig()
+        >>> # Initializing a model from the facebook/hubert-base-ls960 style configuration
+        >>> model = HubertModel(configuration)
 
-    >>> # Initializing a model from the facebook/hubert-base-ls960 style configuration
-    >>> model = HubertModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "hubert"
 
     def __init__(

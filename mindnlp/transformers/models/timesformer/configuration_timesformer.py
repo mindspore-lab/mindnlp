@@ -79,19 +79,19 @@ class TimesformerConfig(PretrainedConfig):
             The dropout ratio for stochastic depth.
 
     Example:
+        ```python
+        >>> from transformers import TimesformerConfig, TimesformerModel
 
-    ```python
-    >>> from transformers import TimesformerConfig, TimesformerModel
+        >>> # Initializing a TimeSformer timesformer-base style configuration
+        >>> configuration = TimesformerConfig()
 
-    >>> # Initializing a TimeSformer timesformer-base style configuration
-    >>> configuration = TimesformerConfig()
+        >>> # Initializing a model from the configuration
+        >>> model = TimesformerModel(configuration)
 
-    >>> # Initializing a model from the configuration
-    >>> model = TimesformerModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "timesformer"
 
     def __init__(

@@ -161,14 +161,14 @@ class CpmTokenizerFast(PreTrainedTokenizerFast):
         This method checks if the slow tokenizer can be saved by verifying the existence of the vocabulary file.
         
         Args:
-        - self: The instance of the CpmTokenizerFast class.
-        
+            self: The instance of the CpmTokenizerFast class.
+
         Returns:
-        - bool: Returns a boolean value indicating whether the slow tokenizer can be saved. 
-          Returns True if the vocabulary file exists, otherwise False.
-        
+            bool: Returns a boolean value indicating whether the slow tokenizer can be saved.
+              Returns True if the vocabulary file exists, otherwise False.
+
         Raises:
-        This method does not raise any exceptions.
+            This method does not raise any exceptions.
         """
         return os.path.isfile(self.vocab_file) if self.vocab_file else False
 
@@ -180,8 +180,8 @@ class CpmTokenizerFast(PreTrainedTokenizerFast):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. An XLNet sequence has the following format:
 
-        - single sequence: `X <sep> <cls>`
-        - pair of sequences: `A <sep> B <sep> <cls>`
+        >   - single sequence: `X <sep> <cls>`
+        >   - pair of sequences: `A <sep> B <sep> <cls>`
 
         Args:
             token_ids_0 (`List[int]`):

@@ -17,14 +17,14 @@ class PatchEmbedding(nn.Cell):
         Args:
             self (PatchEmbedding): The PatchEmbedding instance itself.
             config (object): An object containing configuration settings for the PatchEmbedding.
-                - in_channels (int): Number of input channels.
-                - hidden_size (int): Size of the hidden layer.
-                - patch_size (int): Size of the patch/kernel.
-                - num_positions (int): Number of positions for position embedding.
-        
+                >   - in_channels (int): Number of input channels.
+                >   - hidden_size (int): Size of the hidden layer.
+                >   - patch_size (int): Size of the patch/kernel.
+                >   - num_positions (int): Number of positions for position embedding.
+
         Returns:
             None. This method initializes the PatchEmbedding object with the specified configurations.
-        
+
         Raises:
             - ValueError: If the configuration provided is invalid or missing required parameters.
         """
@@ -37,16 +37,16 @@ class PatchEmbedding(nn.Cell):
     def construct(self, images: "tensor(B, C, H, W)") -> "tensor(B, L, D)":
         """
         Construct method in the PatchEmbedding class.
-        
+
         This method constructs embeddings from input images.
-        
+
         Args:
             self: The instance of the PatchEmbedding class.
             images (tensor(B, C, H, W)): Input images in tensor format with dimensions Batch (B), Channels (C), Height (H), and Width (W).
-        
+
         Returns:
             tensor(B, L, D): Returns a tensor representing embeddings where B is the batch size, L is the sequence length, and D is the embedding dimension.
-        
+
         Raises:
             None specified.
         """
@@ -65,20 +65,20 @@ class Attention(nn.Cell):
     def __init__(self, config):
         """
         Initializes an instance of the Attention class.
-        
+
         Args:
             self (Attention): The instance of the Attention class.
             config (object): An object containing configuration parameters for the attention mechanism.
                 It must have the following attributes:
-                    - num_heads (int): The number of attention heads to use.
-                    - hidden_size (int): The size of the hidden layers in the attention mechanism.
+                    >   - num_heads (int): The number of attention heads to use.
+                    >   - hidden_size (int): The size of the hidden layers in the attention mechanism.
                 The config object should adhere to the following restrictions:
-                    - num_heads: Must be a positive integer.
-                    - hidden_size: Must be a positive integer.
-        
+                    >    - num_heads: Must be a positive integer.
+                    >   - hidden_size: Must be a positive integer.
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             TypeError: If the config parameter is not an object or does not have the expected attributes.
             ValueError: If the config attributes do not adhere to the specified restrictions.
@@ -94,14 +94,14 @@ class Attention(nn.Cell):
     def construct(self, x: "tensor(B, L, D)") -> "tensor(B, L, D)":
         """
         This method 'construct' is a part of the 'Attention' class and is used to construct the output tensor based on the input tensor.
-        
+
         Args:
             self: A reference to the current instance of the class.
             x: A tensor of shape (B, L, D) representing the input data, where B is the batch size, L is the sequence length, and D is the input dimension.
-        
+
         Returns:
             Returns a tensor of shape (B, L, D) representing the constructed output based on the input tensor.
-        
+
         Raises:
             This method does not explicitly raise any exceptions.
         """
@@ -117,16 +117,16 @@ class Attention(nn.Cell):
     def attention(self, q, k, v):
         """
         Performs attention mechanism on the input tensors q, k, and v.
-        
+
         Args:
             self: The instance of the Attention class.
             q: The query tensor of shape (batch_size, query_length, d_model).
             k: The key tensor of shape (batch_size, key_length, d_model).
             v: The value tensor of shape (batch_size, value_length, d_model).
-        
+
         Returns:
             The output tensor of shape (batch_size, query_length, d_model), which is the result of applying attention mechanism on the input tensors.
-        
+
         Raises:
             None.
         """
@@ -144,7 +144,7 @@ class MLP(nn.Cell):
     def __init__(self, config):
         """
         Initializes an instance of the MLP class.
-        
+
         Args:
             self (MLP): The instance of the MLP class.
             config (object): An object containing configuration parameters for the MLP model.
@@ -152,10 +152,10 @@ class MLP(nn.Cell):
                 The 'hidden_act' attribute determines the activation function to be used.
                 The 'hidden_size' attribute specifies the size of the hidden layer.
                 The 'intermediate_size' attribute specifies the size of the intermediate layer.
-                
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             None.
         """
@@ -168,14 +168,14 @@ class MLP(nn.Cell):
     def construct(self, x: mindspore.Tensor) -> mindspore.Tensor:
         """
         This method constructs a multi-layer perceptron (MLP) by applying linear transformations and activation functions to the input tensor.
-        
+
         Args:
             self (MLP): An instance of the MLP class.
             x (mindspore.Tensor): The input tensor to be processed by the MLP. It should be a tensor compatible with the MLP's architecture.
-        
+
         Returns:
             mindspore.Tensor: The output tensor obtained after passing through the MLP layers.
-        
+
         Raises:
             - TypeError: If the input 'x' is not a valid tensor.
             - ValueError: If the input 'x' does not meet the expected requirements for the MLP.
@@ -193,17 +193,17 @@ class TransformerLayer(nn.Cell):
     def __init__(self, config):
         """
         Initializes a TransformerLayer object with the provided configuration.
-        
+
         Args:
             self (TransformerLayer): The instance of the TransformerLayer class.
             config (object): The configuration object containing the settings for the TransformerLayer.
                 Expected attributes:
-                - hidden_size (int): The size of the hidden layers in the TransformerLayer.
-                - layer_norm_eps (float): The epsilon value for layer normalization.
-        
+                >   - hidden_size (int): The size of the hidden layers in the TransformerLayer.
+                >   - layer_norm_eps (float): The epsilon value for layer normalization.
+
         Returns:
             None. This method initializes the TransformerLayer object with the specified configuration settings.
-        
+
         Raises:
             - AttributeError: If the required attributes are missing in the config object.
             - TypeError: If the config object is not of the expected type.
@@ -217,29 +217,29 @@ class TransformerLayer(nn.Cell):
     def construct(self, hidden_states):
         """
         Constructs the TransformerLayer.
-        
+
         Args:
             self (TransformerLayer): An instance of the TransformerLayer class.
-            hidden_states (tensor): The input hidden states to the layer. 
-        
+            hidden_states (tensor): The input hidden states to the layer.
+
         Returns:
             None. This method modifies the hidden_states in-place.
-        
+
         Raises:
             None.
-        
+
         Description:
-        This method constructs a TransformerLayer by applying various operations on the input hidden states. It follows the standard Transformer architecture.
-        
-        The method performs the following steps:
-        1. Apply attention mechanism to the hidden_states using self.attention.
-        2. Apply input layer normalization to the attention output using self.input_layernorm.
-        3. Add the attention output and the input layer normalized attention output.
-        4. Apply multi-layer perceptron (MLP) to the resulting hidden_states using self.mlp.
-        5. Apply post-attention layer normalization to the MLP output using self.post_attention_layernorm.
-        6. Add the hidden_states and the post-attention layer normalized MLP output.
-        
-        Note that this method modifies the hidden_states in-place and does not return any value.
+            This method constructs a TransformerLayer by applying various operations on the input hidden states. It follows the standard Transformer architecture.
+
+            The method performs the following steps:
+            >   1. Apply attention mechanism to the hidden_states using self.attention.
+            >   2. Apply input layer normalization to the attention output using self.input_layernorm.
+            >   3. Add the attention output and the input layer normalized attention output.
+            >   4. Apply multi-layer perceptron (MLP) to the resulting hidden_states using self.mlp.
+            >   5. Apply post-attention layer normalization to the MLP output using self.post_attention_layernorm.
+            >   6. Add the hidden_states and the post-attention layer normalized MLP output.
+
+            Note that this method modifies the hidden_states in-place and does not return any value.
         """
         attention_input = hidden_states
         attention_output = self.attention(attention_input)
@@ -255,29 +255,29 @@ class Transformer(nn.Cell):
 
     """
     Represents a Transformer model for sequence-to-sequence tasks.
-    
+
     This class inherits from the nn.Cell class and implements the Transformer architecture, which consists of multiple Transformer layers. Each layer module applies self-attention mechanism and position-wise
-feed-forward networks to input hidden states.
-    
+    feed-forward networks to input hidden states.
+
     The Transformer class initializes with a configuration object and creates a list of Transformer layers based on the specified number of hidden layers in the configuration. The construct method applies the
-series of Transformer layers to the input hidden states, resulting in transformed hidden states.
-    
+    series of Transformer layers to the input hidden states, resulting in transformed hidden states.
+
     This class provides an efficient and flexible implementation of the Transformer model for various natural language processing tasks, such as machine translation and language modeling.
     """
     def __init__(self, config):
         """
         Initializes an instance of the Transformer class.
-        
+
         Args:
             self (object): The instance of the Transformer class.
             config (object): An object containing configuration parameters for the Transformer.
                 This object should have the following attributes:
-                    - num_hidden_layers (int): The number of hidden layers in the Transformer.
+                    >   - num_hidden_layers (int): The number of hidden layers in the Transformer.
                 The config object is used to initialize the layers in the Transformer with TransformerLayer instances.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             No specific exceptions are documented to be raised by this method.
         """
@@ -287,15 +287,15 @@ series of Transformer layers to the input hidden states, resulting in transforme
     def construct(self, hidden_states):
         """
         Constructs the output by passing the hidden states through each layer module in the Transformer.
-        
+
         Args:
             self (Transformer): An instance of the Transformer class.
             hidden_states (Tensor): The input hidden states to be processed by the Transformer.
                 Expected to be a tensor of shape (batch_size, sequence_length, hidden_size).
-        
+
         Returns:
             None: This method does not return any value directly. The final processed hidden states are returned after passing through all layers.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -306,12 +306,12 @@ series of Transformer layers to the input hidden states, resulting in transforme
 
 class GLU(nn.Cell):
 
-    """ 
+    """
     This class represents a Gated Linear Unit (GLU) module, which is used in neural networks for processing sequential data. It is implemented as a subclass of the nn.Cell class.
-    
+
     GLU applies a gating mechanism to the input data, allowing it to selectively pass through different branches of the network. It consists of several layers, including linear projections, layer
-normalization, activation functions, and dense transformations.
-    
+    normalization, activation functions, and dense transformations.
+
     Attributes:
         linear_proj (nn.Dense): A linear projection layer that maps the input features to the hidden size.
         norm1 (nn.LayerNorm): A layer normalization module that normalizes the hidden size.
@@ -320,19 +320,20 @@ normalization, activation functions, and dense transformations.
         dense_h_to_4h (nn.Dense): A dense transformation layer that maps the hidden size to the intermediate size.
         gate_proj (nn.Dense): A dense transformation layer that maps the hidden size to the intermediate size.
         dense_4h_to_h (nn.Dense): A dense transformation layer that maps the intermediate size back to the hidden size.
-    
+
     Methods:
         construct(x): Performs the forward pass through the GLU module, taking the input data 'x' and returning the transformed output.
-    
+
     Example usage:
+        ```python
         config = Configuration(hidden_size=256, intermediate_size=512)
         in_features = 128
         x = torch.randn(batch_size, in_features)
         glu = GLU(config, in_features)
         output = glu.construct(x)
-    
+
         # 'output' now contains the transformed input data after passing through the GLU module.
-    
+        ```
     """
     def __init__(self, config, in_features):
         """

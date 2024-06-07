@@ -129,7 +129,6 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
             ),
         ),
         ("codegen", ("CodeGenTokenizer", "CodeGenTokenizerFast" if is_tokenizers_available() else None)),
-        ("cohere", (None, "CohereTokenizerFast" if is_tokenizers_available() else None)),
         ("convbert", ("ConvBertTokenizer", "ConvBertTokenizerFast" if is_tokenizers_available() else None)),
         (
             "cpm",
@@ -416,7 +415,6 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         #         "T5TokenizerFast" if is_tokenizers_available() else None,
         #     ),
         # ),
-        ("stablelm", (None, "GPTNeoXTokenizerFast" if is_tokenizers_available() else None)),
         ("starcoder2", ("GPT2Tokenizer", "GPT2TokenizerFast" if is_tokenizers_available() else None)),
         (
             "t5",
@@ -497,14 +495,14 @@ CONFIG_TO_TYPE = {v: k for k, v in CONFIG_MAPPING_NAMES.items()}
 
 
 def tokenizer_class_from_name(class_name: str):
-    """ 
+    """
     Args:
-        class_name (str): The name of the tokenizer class to retrieve. 
+        class_name (str): The name of the tokenizer class to retrieve.
             It can be one of the predefined tokenizer class names or a custom tokenizer class name.
-            
+
     Returns:
         None: If no tokenizer class matching the provided class_name is found, None is returned.
-        
+
     Raises:
         AttributeError: If the tokenizer class is not found in the specified module.
         ImportError: If there is an issue importing the required modules.
@@ -554,11 +552,10 @@ def get_tokenizer_config(
     Args:
         pretrained_model_name_or_path (`str` or `os.PathLike`):
             This can be either:
-
-            - a string, the *model id* of a pretrained model configuration hosted inside a model repo on
+            >   - a string, the *model id* of a pretrained model configuration hosted inside a model repo on
               hf-mirror.com. Valid model ids can be located at the root-level, like `bert-base-uncased`, or namespaced
               under a user or organization name, like `dbmdz/bert-base-german-cased`.
-            - a path to a *directory* containing a configuration file saved using the
+            >   - a path to a *directory* containing a configuration file saved using the
               [`~PreTrainedTokenizer.save_pretrained`] method, e.g., `./my_model_directory/`.
 
         cache_dir (`str` or `os.PathLike`, *optional*):
@@ -594,21 +591,21 @@ def get_tokenizer_config(
     Returns:
         `Dict`: The configuration of the tokenizer.
 
-    Examples:
+    Example:
+        ```python
+        # Download configuration from hf-mirror.com and cache.
+        tokenizer_config = get_tokenizer_config("bert-base-uncased")
+        # This model does not have a tokenizer config so the result will be an empty dict.
+        tokenizer_config = get_tokenizer_config("xlm-roberta-base")
 
-    ```python
-    # Download configuration from hf-mirror.com and cache.
-    tokenizer_config = get_tokenizer_config("bert-base-uncased")
-    # This model does not have a tokenizer config so the result will be an empty dict.
-    tokenizer_config = get_tokenizer_config("xlm-roberta-base")
+        # Save a pretrained tokenizer locally and you can reload its config
+        from transformers import AutoTokenizer
 
-    # Save a pretrained tokenizer locally and you can reload its config
-    from transformers import AutoTokenizer
-
-    tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
-    tokenizer.save_pretrained("tokenizer-test")
-    tokenizer_config = get_tokenizer_config("tokenizer-test")
-    ```"""
+        tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
+        tokenizer.save_pretrained("tokenizer-test")
+        tokenizer_config = get_tokenizer_config("tokenizer-test")
+        ```
+    """
     _ = kwargs.get('from_pt', False)
     resolved_config_file = cached_file(
         pretrained_model_name_or_path,
@@ -643,16 +640,16 @@ class AutoTokenizer:
     def __init__(self):
         """
         This method initializes an instance of the AutoTokenizer class.
-        
+
         Args:
             self: The instance of the AutoTokenizer class.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             EnvironmentError: If the AutoTokenizer is instantiated directly using the __init__ method, an EnvironmentError is raised with the message 'AutoTokenizer is designed to be instantiated using the
-`AutoTokenizer.from_pretrained(pretrained_model_name_or_path)` method.'
+            `AutoTokenizer.from_pretrained(pretrained_model_name_or_path)` method.'
         """
         raise EnvironmentError(
             "AutoTokenizer is designed to be instantiated "
@@ -674,13 +671,12 @@ class AutoTokenizer:
         Params:
             pretrained_model_name_or_path (`str` or `os.PathLike`):
                 Can be either:
-
-                    - A string, the *model id* of a predefined tokenizer hosted inside a model repo on hf-mirror.com.
+                    >   - A string, the *model id* of a predefined tokenizer hosted inside a model repo on hf-mirror.com.
                       Valid model ids can be located at the root-level, like `bert-base-uncased`, or namespaced under a
                       user or organization name, like `dbmdz/bert-base-german-cased`.
-                    - A path to a *directory* containing vocabulary files required by the tokenizer, for instance saved
+                    >   - A path to a *directory* containing vocabulary files required by the tokenizer, for instance saved
                       using the [`~PreTrainedTokenizer.save_pretrained`] method, e.g., `./my_model_directory/`.
-                    - A path or url to a single saved vocabulary file if and only if the tokenizer only requires a
+                    >   - A path or url to a single saved vocabulary file if and only if the tokenizer only requires a
                       single vocabulary file (like Bert or XLNet), e.g.: `./my_model_directory/vocab.txt`. (Not
                       applicable to all derived classes)
             inputs (additional positional arguments, *optional*):
@@ -721,23 +717,23 @@ class AutoTokenizer:
                 `bos_token`, `eos_token`, `unk_token`, `sep_token`, `pad_token`, `cls_token`, `mask_token`,
                 `additional_special_tokens`. See parameters in the `__init__()` for more details.
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import AutoTokenizer
 
-        ```python
-        >>> from transformers import AutoTokenizer
+            >>> # Download vocabulary from hf-mirror.com and cache.
+            >>> tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
 
-        >>> # Download vocabulary from hf-mirror.com and cache.
-        >>> tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+            >>> # Download vocabulary from hf-mirror.com (user-uploaded) and cache.
+            >>> tokenizer = AutoTokenizer.from_pretrained("dbmdz/bert-base-german-cased")
 
-        >>> # Download vocabulary from hf-mirror.com (user-uploaded) and cache.
-        >>> tokenizer = AutoTokenizer.from_pretrained("dbmdz/bert-base-german-cased")
+            >>> # If vocabulary files are in a directory (e.g. tokenizer was saved using *save_pretrained('./test/saved_model/')*)
+            >>> # tokenizer = AutoTokenizer.from_pretrained("./test/bert_saved_model/")
 
-        >>> # If vocabulary files are in a directory (e.g. tokenizer was saved using *save_pretrained('./test/saved_model/')*)
-        >>> # tokenizer = AutoTokenizer.from_pretrained("./test/bert_saved_model/")
-
-        >>> # Download vocabulary from hf-mirror.com and define model-specific arguments
-        >>> tokenizer = AutoTokenizer.from_pretrained("roberta-base", add_prefix_space=True)
-        ```"""
+            >>> # Download vocabulary from hf-mirror.com and define model-specific arguments
+            >>> tokenizer = AutoTokenizer.from_pretrained("roberta-base", add_prefix_space=True)
+            ```
+        """
         use_fast = kwargs.pop("use_fast", True)
         tokenizer_type = kwargs.pop("tokenizer_type", None)
         config = kwargs.pop("config", None)
@@ -831,7 +827,6 @@ class AutoTokenizer:
     def register(config_class, slow_tokenizer_class=None, fast_tokenizer_class=None, exist_ok=False): # pylint: disable=no-self-argument
         """
         Register a new tokenizer in this mapping.
-
 
         Args:
             config_class ([`PretrainedConfig`]):

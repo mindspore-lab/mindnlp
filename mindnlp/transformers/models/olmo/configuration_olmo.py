@@ -91,18 +91,20 @@ class OlmoConfig(PretrainedConfig):
             If not `None`, elements of query, key and value attention states are clipped so that their
             absolute value does not exceed this value.
 
-    ```python
-    >>> from transformers import OlmoModel, OlmoConfig
+    Example:
+        ```python
+        >>> from transformers import OlmoModel, OlmoConfig
 
-    >>> # Initializing a OLMo 7B style configuration
-    >>> configuration = OlmoConfig()
+        >>> # Initializing a OLMo 7B style configuration
+        >>> configuration = OlmoConfig()
 
-    >>> # Initializing a model from the OLMo 7B style configuration
-    >>> model = OlmoModel(configuration)
+        >>> # Initializing a model from the OLMo 7B style configuration
+        >>> model = OlmoModel(configuration)
 
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "olmo"
     keys_to_ignore_at_inference = ["past_key_values"]
 

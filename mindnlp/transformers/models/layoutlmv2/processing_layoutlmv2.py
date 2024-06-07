@@ -55,7 +55,7 @@ class LayoutLMv2Processor(ProcessorMixin):
         Args:
             self (object): The instance of the class.
             image_processor (object): An object representing the image processor. It can be an instance of a specific image processing class or None. If None, it will default to the value of
-'feature_extractor'.
+                'feature_extractor'.
             tokenizer (object): An object representing the tokenizer to be used. This should be a valid tokenizer object required for processing the input data.
         
         Returns:

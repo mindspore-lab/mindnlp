@@ -120,23 +120,21 @@ class EncodecFeatureExtractor(SequenceFeatureExtractor):
             padding (`bool`, `str` or [`~utils.PaddingStrategy`], *optional*, defaults to `True`):
                 Select a strategy to pad the returned sequences (according to the model's padding side and padding
                 index) among:
-
-                - `True` or `'longest'`: Pad to the longest sequence in the batch (or no padding if only a single
-                  sequence if provided).
-                - `'max_length'`: Pad to a maximum length specified with the argument `max_length` or to the maximum
-                  acceptable input length for the model if that argument is not provided.
-                - `False` or `'do_not_pad'` (default): No padding (i.e., can output a batch with sequences of different
-                  lengths).
+                >   - `True` or `'longest'`: Pad to the longest sequence in the batch (or no padding if only a single
+                    sequence if provided).
+                >   - `'max_length'`: Pad to a maximum length specified with the argument `max_length` or to the maximum
+                    acceptable input length for the model if that argument is not provided.
+                >   - `False` or `'do_not_pad'` (default): No padding (i.e., can output a batch with sequences of different
+                    lengths).
             truncation (`bool`, *optional*, defaults to `False`):
                 Activates truncation to cut input sequences longer than `max_length` to `max_length`.
             max_length (`int`, *optional*):
                 Maximum length of the returned list and optionally padding length (see above).
             return_tensors (`str` or [`~utils.TensorType`], *optional*):
                 If set, will return tensors instead of list of python integers. Acceptable values are:
-
-                - `'tf'`: Return TensorFlow `tf.constant` objects.
-                - `'pt'`: Return PyTorch `torch.Tensor` objects.
-                - `'np'`: Return Numpy `np.ndarray` objects.
+                >   - `'tf'`: Return TensorFlow `tf.constant` objects.
+                >   - `'pt'`: Return PyTorch `torch.Tensor` objects.
+                >   - `'np'`: Return Numpy `np.ndarray` objects.
             sampling_rate (`int`, *optional*):
                 The sampling rate at which the `audio` input was sampled. It is strongly recommended to pass
                 `sampling_rate` at the forward call to prevent silent errors.

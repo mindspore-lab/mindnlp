@@ -191,15 +191,15 @@ class SegformerImageProcessor(BaseImageProcessor):
             data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the output image. If unset, the channel dimension format of the input
                 image is used. Can be one of:
-                - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
-                - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
+                >   - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
+                >   - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+                >   - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
             input_data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the input image. If unset, the channel dimension format is inferred
                 from the input image. Can be one of:
-                - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
-                - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
+                >   - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
+                >   - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+                >   - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
 
         Returns:
             `np.ndarray`: The resized image.
@@ -221,14 +221,14 @@ class SegformerImageProcessor(BaseImageProcessor):
     def reduce_label(self, label: ImageInput) -> np.ndarray:
         """
         Reduces the label values in the input image for Segformer image processing.
-        
+
         Args:
             self: Instance of the SegformerImageProcessor class.
             label (ImageInput): Input label image to be processed. It should be in a compatible format for processing.
-            
+
         Returns:
             np.ndarray: A NumPy array representing the processed label image with reduced values.
-        
+
         Raises:
             None.
         """
@@ -255,7 +255,7 @@ class SegformerImageProcessor(BaseImageProcessor):
     ):
         """
         Preprocesses an input image according to specified options.
-        
+
         Args:
             self: The instance of the SegformerImageProcessor class.
             image (ImageInput): The input image to be preprocessed.
@@ -269,13 +269,13 @@ class SegformerImageProcessor(BaseImageProcessor):
             image_mean (Optional[Union[float, List[float]]]): Optional mean value(s) to be used for normalization. Default is None.
             image_std (Optional[Union[float, List[float]]]): Optional standard deviation value(s) to be used for normalization. Default is None.
             input_data_format (Optional[Union[str, ChannelDimension]]): Optional data format of the input image. Default is None.
-        
+
         Returns:
             None. This method modifies the input image in-place.
-        
+
         Raises:
             None.
-        
+
         """
         if do_reduce_labels:
             image = self.reduce_label(image)
@@ -427,21 +427,21 @@ class SegformerImageProcessor(BaseImageProcessor):
                 ADE20k). The background label will be replaced by 255.
             return_tensors (`str` or `TensorType`, *optional*):
                 The type of tensors to return. Can be one of:
-                    - Unset: Return a list of `np.ndarray`.
-                    - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
-                    - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `mindspore.Tensor`.
-                    - `TensorType.NUMPY` or `'np'`: Return a batch of type `np.ndarray`.
-                    - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
+                    >   - Unset: Return a list of `np.ndarray`.
+                    >   - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
+                    >   - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `mindspore.Tensor`.
+                    >   - `TensorType.NUMPY` or `'np'`: Return a batch of type `np.ndarray`.
+                    >   - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
             data_format (`ChannelDimension` or `str`, *optional*, defaults to `ChannelDimension.FIRST`):
                 The channel dimension format for the output image. Can be one of:
-                    - `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                    - `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+                    >   - `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
+                    >   - `ChannelDimension.LAST`: image in (height, width, num_channels) format.
             input_data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the input image. If unset, the channel dimension format is inferred
                 from the input image. Can be one of:
-                - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
-                - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
+                    >   - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
+                    >   - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+                    >   - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
         """
         do_resize = do_resize if do_resize is not None else self.do_resize
         do_rescale = do_rescale if do_rescale is not None else self.do_rescale

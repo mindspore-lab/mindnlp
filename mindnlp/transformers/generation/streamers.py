@@ -53,8 +53,7 @@ class TextStreamer(BaseStreamer):
         decode_kwargs (`dict`, *optional*):
             Additional keyword arguments to pass to the tokenizer's `decode` method.
 
-    Examples:
-
+    Example:
         ```python
         >>> from transformers import AutoModelForCausalLM, AutoTokenizer, TextStreamer
 
@@ -71,15 +70,15 @@ class TextStreamer(BaseStreamer):
     def __init__(self, tokenizer: "AutoTokenizer", skip_prompt: bool = False, **decode_kwargs):
         """
         Initializes an instance of the TextStreamer class.
-        
+
         Args:
             tokenizer (AutoTokenizer): An instance of AutoTokenizer used for tokenization.
             skip_prompt (bool, optional): A flag indicating whether to skip the prompt. Defaults to False.
             **decode_kwargs: Additional keyword arguments for decoding.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             - TypeError: If tokenizer is not an instance of AutoTokenizer.
             - ValueError: If skip_prompt is not a boolean.
@@ -193,8 +192,7 @@ class TextIteratorStreamer(TextStreamer):
         decode_kwargs (`dict`, *optional*):
             Additional keyword arguments to pass to the tokenizer's `decode` method.
 
-    Examples:
-
+    Example:
         ```python
         >>> from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
         >>> from threading import Thread
