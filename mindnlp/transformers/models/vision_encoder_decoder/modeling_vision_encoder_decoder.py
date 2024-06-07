@@ -17,8 +17,7 @@
 from typing import Optional, Tuple, Union
 
 import mindspore as ms
-from mindspore import nn
-from mindspore.nn import CrossEntropyLoss
+from mindspore import nn, ops
 
 from ...configuration_utils import PretrainedConfig
 from ...modeling_outputs import BaseModelOutput, Seq2SeqLMOutput
@@ -439,8 +438,7 @@ class VisionEncoderDecoderModel(PreTrainedModel):
         loss = None
         if labels is not None:
             logits = decoder_outputs.logits if return_dict else decoder_outputs[0]
-            loss_fct = CrossEntropyLoss()
-            loss = loss_fct(logits.reshape(-1, self.decoder.config.vocab_size), labels.reshape(-1))
+            loss = ops.cross_entropy(logits.reshape(-1, self.decoder.config.vocab_size), labels.reshape(-1))
 
         if not return_dict:
             if loss is not None:
