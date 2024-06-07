@@ -95,6 +95,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("musicgen_melody", "MusicgenMelodyConfig"),
         ("mt5", "MT5Config"),
         ("nystromformer","NystromformerConfig"),
+        ("nat","NatConfig"),
         ("olmo", "OlmoConfig"),
         ("openelm", "OpenELMConfig"),
         ("opt", "OPTConfig"),
