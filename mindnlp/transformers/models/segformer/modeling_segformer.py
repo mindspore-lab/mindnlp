@@ -1140,6 +1140,9 @@ attentions.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
+        if labels is not None and self.config.num_labels < 1:
+            raise ValueError(f"Number of labels should be >=0: {self.config.num_labels}")
+
         outputs = self.segformer(
             pixel_values,
             output_attentions=output_attentions,
