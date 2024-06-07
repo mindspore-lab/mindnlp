@@ -254,15 +254,6 @@ class ConvProjection(nn.Cell):
         # inputs has shape [batch, mol_seq, molecule_hidden_size+char_hidden_final]
         # we transpose it to be [batch, molecule_hidden_size+char_hidden_final, mol_seq]
         inputs = ops.swapaxes(inputs, 1, 2)
-
-        # PyTorch < 1.9 does not support padding="same" (which is used in the original implementation),
-        # so we pad the tensor manually before passing it to the conv layer
-        # based on https://github.com/google-research/big_transfer/blob/49afe42338b62af9fbe18f0258197a33ee578a6b/bit_tf2/models.py#L36-L38
-        pad_total = self.config.upsampling_kernel_size - 1
-        pad_beg = pad_total // 2
-        pad_end = pad_total - pad_beg
-
-        pad = nn.ConstantPad1d((pad_beg, pad_end), 0)
         
         # `result`: shape (batch_size, char_seq_len, hidden_size)
         result = self.conv(inputs)
@@ -270,7 +261,6 @@ class ConvProjection(nn.Cell):
         result = self.activation(result)
         result = self.LayerNorm(result)
         result = self.dropout(result)
-        
         final_char_seq = result
 
         if final_seq_char_positions is not None:
@@ -1108,7 +1098,7 @@ class CanineForSequenceClassification(CaninePreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
