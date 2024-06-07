@@ -1094,7 +1094,7 @@ class MarianMTModel(MarianPreTrainedModel):
         self.model = MarianModel(config)
 
         target_vocab_size = config.vocab_size if config.share_encoder_decoder_embeddings else config.decoder_vocab_size
-        self.final_logits_bias=ops.zeros((1, target_vocab_size))
+        self.final_logits_bias=mindspore.Parameter(ops.zeros((1, target_vocab_size)),requires_grad=False)
         self.lm_head = nn.Dense(config.d_model, target_vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
@@ -1173,8 +1173,7 @@ class MarianMTModel(MarianPreTrainedModel):
         else:
             extra_bias = ops.zeros((1, new_num_tokens - old_num_tokens))
             new_bias = ops.cat([self.final_logits_bias, extra_bias], axis=1)
-        self.final_logits_bias=new_bias
-
+        self.final_logits_bias=mindspore.Parameter(new_bias)
     def get_output_embeddings(self):
         return self.lm_head
 
