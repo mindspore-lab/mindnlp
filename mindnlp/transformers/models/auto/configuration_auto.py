@@ -65,6 +65,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("cpmbee", "CpmBeeConfig"),
         ("cvt", "CvtConfig"),
         ("deberta", "DebertaConfig"),
+        ("deberta-v2", "DebertaV2Config"),
         ("distilbert", "DistilBertConfig"),
         ("efficientformer", "EfficientFormerConfig"),
         ("encodec", "EncodecConfig"),
