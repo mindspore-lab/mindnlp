@@ -1007,7 +1007,10 @@ class GitModel(GitPreTrainedModel):
         full_attention_mask = ops.cat((left, right), axis=1)[None, :]
 
         if memory_key_padding_mask is None:
-            memory_key_padding_mask = ops.full((memory.shape[0], memory.shape[1]), fill_value=False, dtype=mindspore.bool_)
+            if memory.shape[1] == 0:
+                memory_key_padding_mask = ops.full((memory.shape[0], 1), fill_value=False, dtype=mindspore.bool_)
+            else:
+                memory_key_padding_mask = ops.full((memory.shape[0], memory.shape[1]), fill_value=False, dtype=mindspore.bool_)
         # if it is False, it means valid. That is, it is not a padding
         if memory_key_padding_mask.dtype != mindspore.bool_:
             raise ValueError("Memory key padding mask must be a boolean tensor.")
@@ -1017,9 +1020,15 @@ class GitModel(GitPreTrainedModel):
             (memory_key_padding_mask.shape[0], num_memory + num_tgt, num_memory + past_key_values_length + num_tgt)
         )
         full_attention_mask = full_attention_mask.copy()
-        origin_left = full_attention_mask[:, :, :num_memory]
-        update = zero_negative_infinity[:, None, :]
-        full_attention_mask[:, :, :num_memory] = origin_left + update
+        
+        if num_memory != 0:
+            origin_left = full_attention_mask[:, :, :num_memory]
+            update = zero_negative_infinity[:, None, :]
+            full_attention_mask[:, :, :num_memory] = origin_left + update
+        else:
+            origin_left = full_attention_mask[:, :, :]
+            update = zero_negative_infinity[:, None, :]
+            full_attention_mask[:, :, :] = origin_left + update
 
         # add axis for multi-head
         full_attention_mask = full_attention_mask[:, None, :, :]
