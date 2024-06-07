@@ -16,9 +16,14 @@ from typing import TYPE_CHECKING
 
 from ....utils import OptionalDependencyNotAvailable, is_mindspore_available
 
+from . import configuration_wav2vec2_bert
+from . import modeling_wav2vec2_bert
+from . import processing_wav2vec2_bert
+
 from .configuration_wav2vec2_bert import *
 from .modeling_wav2vec2_bert import *
 from .processing_wav2vec2_bert import *
+
 __all__ = []
 __all__.extend(configuration_wav2vec2_bert.__all__)
 __all__.extend(modeling_wav2vec2_bert.__all__)

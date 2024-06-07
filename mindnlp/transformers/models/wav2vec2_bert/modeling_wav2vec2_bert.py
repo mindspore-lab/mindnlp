@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """MindSpore Wav2Vec2-BERT model."""
+# pylint: disable=line-too-long
 
 import math
 from typing import Optional, Tuple, Union
@@ -638,8 +639,6 @@ class Wav2Vec2BertEncoderLayer(nn.Cell):
         output_attentions: bool = False,
         conv_attention_mask: Optional[mindspore.Tensor] = None,
     ):
-        hidden_states = hidden_states
-
         # 1. Feed-Forward 1 layer
         residual = hidden_states
         hidden_states = self.ffn1_layer_norm(hidden_states)
@@ -725,7 +724,7 @@ class Wav2Vec2BertEncoder(nn.Cell):
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
             dropout_probability = ops.rand([])
 
-            skip_the_layer = True if self.training and (dropout_probability < self.config.layerdrop) else False
+            skip_the_layer = self.training and (dropout_probability < self.config.layerdrop)
             if not skip_the_layer:
                 layer_outputs = layer(
                     hidden_states,
@@ -1391,7 +1390,7 @@ class Wav2Vec2BertForAudioFrameClassification(Wav2Vec2BertPreTrainedModel):
         if labels is not None:
             labels = labels.astype(mindspore.int32)
             loss_fct = CrossEntropyLoss()
-            loss = loss_fct(logits.view(-1, self.num_labels), ops.argmax(labels.view(-1, self.num_labels), axis=1))
+            loss = loss_fct(logits.view(-1, self.num_labels), ops.argmax(labels.view(-1, self.num_labels), dim=1))
 
         if not return_dict:
             output = (logits,) + outputs[_HIDDEN_STATES_START_POSITION:]

@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Testing suite for the MindSpore Wav2Vec2-BERT model."""
+# pylint: disable=too-many-public-methods
 
 import tempfile
 import unittest
@@ -20,7 +21,6 @@ import unittest
 from datasets import load_dataset
 
 import numpy as np
-import mindspore
 from mindspore import ops
 from mindspore import Tensor
 from mindnlp.transformers import Wav2Vec2BertConfig
@@ -167,7 +167,6 @@ class Wav2Vec2BertModelTester:
 
     def create_and_check_model(self, config, input_features, attention_mask):
         model = Wav2Vec2BertModel(config=config)
-        model
         model.set_train(False)
         result = model(input_features, attention_mask=attention_mask)
         self.parent.assertEqual(
@@ -177,7 +176,6 @@ class Wav2Vec2BertModelTester:
     def create_and_check_model_with_adapter(self, config, input_features, attention_mask):
         config.add_adapter = True
         model = Wav2Vec2BertModel(config=config)
-        model
         model.set_train(False)
         result = model(input_features, attention_mask=attention_mask)
         self.parent.assertEqual(
@@ -188,7 +186,6 @@ class Wav2Vec2BertModelTester:
         config.add_adapter = True
         config.output_hidden_size = 2 * config.hidden_size
         model = Wav2Vec2BertForCTC(config=config)
-        model
         model.set_train(False)
         result = model(input_features, attention_mask=attention_mask)
         self.parent.assertEqual(
@@ -200,7 +197,6 @@ class Wav2Vec2BertModelTester:
         config.add_adapter = True
         config.use_intermediate_ffn_before_adapter = True
         model = Wav2Vec2BertModel(config=config)
-        model
         model.set_train(False)
         result = model(input_features, attention_mask=attention_mask)
         self.parent.assertEqual(
@@ -211,7 +207,6 @@ class Wav2Vec2BertModelTester:
         # also try with different adapter proj dim
         config.output_hidden_size = 8
         model = Wav2Vec2BertModel(config=config)
-        model
         model.set_train(False)
         result = model(input_features, attention_mask=attention_mask)
         self.parent.assertEqual(
@@ -223,7 +218,6 @@ class Wav2Vec2BertModelTester:
         config.add_adapter = True
         config.output_hidden_size = 8
         model = Wav2Vec2BertModel(config=config)
-        model
         model.set_train(False)
         result = model(input_features, attention_mask=attention_mask)
         self.parent.assertEqual(
