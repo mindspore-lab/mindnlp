@@ -485,6 +485,7 @@ class WavLMModelIntegrationTest(unittest.TestCase):
         )
         self.assertTrue(np.allclose(hidden_states_slice.asnumpy(), EXPECTED_HIDDEN_STATES_SLICE.asnumpy(), atol=5e-2))
 
+    @unittest.skip('Model is too large to be tested on the CI')
     def test_inference_large(self):
         model = WavLMModel.from_pretrained("microsoft/wavlm-large")
         feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
