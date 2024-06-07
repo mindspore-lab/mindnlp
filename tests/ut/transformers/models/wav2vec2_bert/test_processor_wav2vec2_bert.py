@@ -19,11 +19,11 @@ import shutil
 import tempfile
 import unittest
 
-from transformers.models.seamless_m4t import SeamlessM4TFeatureExtractor
-from transformers.models.wav2vec2 import Wav2Vec2CTCTokenizer
-from transformers.models.wav2vec2.tokenization_wav2vec2 import VOCAB_FILES_NAMES
-from transformers.models.wav2vec2_bert import Wav2Vec2BertProcessor
-from transformers.utils import FEATURE_EXTRACTOR_NAME
+from mindnlp.transformers.models.seamless_m4t import SeamlessM4TFeatureExtractor
+from mindnlp.transformers.models.wav2vec2 import Wav2Vec2CTCTokenizer
+from mindnlp.transformers.models.wav2vec2.tokenization_wav2vec2 import VOCAB_FILES_NAMES
+from mindnlp.transformers.models.wav2vec2_bert import Wav2Vec2BertProcessor
+from mindnlp.configs import FEATURE_EXTRACTOR_NAME
 
 from ..wav2vec2.test_feature_extraction_wav2vec2 import floats_list
 
@@ -110,8 +110,8 @@ class Wav2Vec2BertProcessorTest(unittest.TestCase):
 
         raw_speech = floats_list((3, 1000))
 
-        input_feat_extract = feature_extractor(raw_speech, return_tensors="np")
-        input_processor = processor(raw_speech, return_tensors="np")
+        input_feat_extract = feature_extractor(raw_speech, return_tensors="np", return_attention_mask=True)
+        input_processor = processor(raw_speech, return_tensors="np", return_attention_mask=True)
 
         for key in input_feat_extract.keys():
             self.assertAlmostEqual(input_feat_extract[key].sum(), input_processor[key].sum(), delta=1e-2)
