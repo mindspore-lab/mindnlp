@@ -471,7 +471,7 @@ class WavLMModelIntegrationTest(unittest.TestCase):
 
         input_speech = self._load_datasamples(2)
 
-        inputs = feature_extractor(input_speech, return_tensors="pt", padding=True)
+        inputs = feature_extractor(input_speech, return_tensors="ms", padding=True)
 
         input_values = inputs.input_values
         attention_mask = inputs.attention_mask
@@ -493,7 +493,7 @@ class WavLMModelIntegrationTest(unittest.TestCase):
 
         input_speech = self._load_datasamples(2)
 
-        inputs = feature_extractor(input_speech, return_tensors="pt", padding=True)
+        inputs = feature_extractor(input_speech, return_tensors="ms", padding=True)
 
         input_values = inputs.input_values
         attention_mask = inputs.attention_mask
@@ -512,7 +512,7 @@ class WavLMModelIntegrationTest(unittest.TestCase):
         model = WavLMForAudioFrameClassification.from_pretrained("microsoft/wavlm-base-plus-sd")
         processor = Wav2Vec2FeatureExtractor.from_pretrained("microsoft/wavlm-base-plus-sd")
         input_data = self._load_superb("sd", 4)
-        inputs = processor(input_data["speech"], return_tensors="pt", padding=True, sampling_rate=16_000)
+        inputs = processor(input_data["speech"], return_tensors="ms", padding=True, sampling_rate=16_000)
 
         input_values = inputs.input_values
         attention_mask = inputs.attention_mask
@@ -538,7 +538,7 @@ class WavLMModelIntegrationTest(unittest.TestCase):
         processor = Wav2Vec2FeatureExtractor.from_pretrained("microsoft/wavlm-base-plus-sv")
         input_data = self._load_superb("si", 4)
 
-        inputs = processor(input_data["speech"], return_tensors="pt", padding=True)
+        inputs = processor(input_data["speech"], return_tensors="ms", padding=True)
         labels = ms.tensor([5, 1, 1, 3]).T
 
         input_values = inputs.input_values
