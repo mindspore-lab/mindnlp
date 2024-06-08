@@ -46,6 +46,7 @@ from . import (
     bros,
     byt5,
     camembert,
+    canine,
     clip,
     codegen,
     cohere,
@@ -71,6 +72,7 @@ from . import (
     chatglm,
     chatglm2,
     chatglm3,
+    flava,
     funnel,
     gemma,
     git,
@@ -144,11 +146,14 @@ from . import (
     visual_bert,
     vit,
     wav2vec2,
+    wav2vec2_conformer,
     wav2vec2_with_lm,
+    wavlm,
     whisper,
     x_clip,
     xlm,
     xlm_roberta,
+    xlm_roberta_xl,
     xlnet,
 )
 
@@ -182,6 +187,7 @@ from .bridgetower import *
 from .bros import *
 from .byt5 import *
 from .camembert import *
+from .canine import *
 from .clip import *
 from .codegen import *
 from .cohere import *
@@ -207,6 +213,7 @@ from .ernie_m import *
 from .chatglm import *
 from .chatglm2 import *
 from .chatglm3 import *
+from .flava import *
 from .funnel import *
 from .gemma import *
 from .git import *
@@ -281,10 +288,13 @@ from .visual_bert import *
 from .vit import *
 from .whisper import *
 from .wav2vec2 import *
+from .wav2vec2_conformer import *
 from .wav2vec2_with_lm import *
+from .wavlm import *
 from .x_clip import *
 from .xlm import *
 from .xlm_roberta import *
+from .xlm_roberta_xl import *
 from .xlnet import *
 
 __all__ = []
@@ -318,6 +328,7 @@ __all__.extend(bridgetower.__all__)
 __all__.extend(bros.__all__)
 __all__.extend(byt5.__all__)
 __all__.extend(camembert.__all__)
+__all__.extend(canine.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(codegen.__all__)
 __all__.extend(cohere.__all__)
@@ -341,6 +352,7 @@ __all__.extend(ernie.__all__)
 __all__.extend(ernie_m.__all__)
 __all__.extend(esm.__all__)
 __all__.extend(chatglm.__all__)
+__all__.extend(flava.__all__)
 __all__.extend(funnel.__all__)
 __all__.extend(chatglm2.__all__)
 __all__.extend(chatglm3.__all__)
@@ -417,8 +429,11 @@ __all__.extend(visual_bert.__all__)
 __all__.extend(vit.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)
+__all__.extend(wav2vec2_conformer.__all__)
 __all__.extend(wav2vec2_with_lm.__all__)
+__all__.extend(wavlm.__all__)
 __all__.extend(x_clip.__all__)
 __all__.extend(xlm.__all__)
 __all__.extend(xlm_roberta.__all__)
+__all__.extend(xlm_roberta_xl.__all__)
 __all__.extend(xlnet.__all__)
