@@ -1,12 +1,3 @@
-
-import numpy as np
-import mindspore as ms
-import mindspore.nn as nn
-import mindspore.ops as F
-from mindspore.nn import CrossEntropyLoss
-from mindspore import Tensor, Parameter
-
-from mindnlp.modules.functional import finfo
 # Copyright 2024 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,7 +21,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, Un
 
 from mindspore import Tensor
 import numpy as np
-
+import mindspore as ms
 from ...image_processing_utils import BaseImageProcessor, BatchFeature, get_size_dict
 from ...image_transforms import (
     PaddingMode,
@@ -43,9 +34,13 @@ from ...image_transforms import (
     rgb_to_id,
     to_channel_dimension_format,
 )
-from ...image_utils import (
+
+from ....configs import(
     IMAGENET_DEFAULT_MEAN,
     IMAGENET_DEFAULT_STD,
+)
+
+from ...image_utils import (
     AnnotationFormat,
     AnnotationType,
     ChannelDimension,
@@ -85,8 +80,6 @@ if is_scipy_available():
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
 SUPPORTED_ANNOTATION_FORMATS = (AnnotationFormat.COCO_DETECTION, AnnotationFormat.COCO_PANOPTIC)
-
-__all__ = ['DetrImageProcessor']
 
 # From the original repo: https://github.com/facebookresearch/detr/blob/3af9fa878e73b6894ce3596450a8d9b89d918ca9/datasets/transforms.py#L76
 def get_size_with_aspect_ratio(image_size, size, max_size=None) -> Tuple[int, int]:
@@ -200,7 +193,7 @@ def get_numpy_to_framework_fn(arr) -> Callable:
     """
     if is_mindspore_available() and is_mindspore_tensor(arr):
         from mindspore import Tensor
-        return ms.tensor
+        return Tensor
     raise ValueError(f"Cannot convert arrays of type {type(arr)}")
 
 
@@ -660,11 +653,11 @@ def convert_segmentation_to_rle(segmentation):
     Returns:
         `List[List]`: A list of lists, where each list is the run-length encoding of a segment / class id.
     """
-    segment_ids = F.unique(segmentation)
+    segment_ids = ops.unique(segmentation)
 
     run_length_encodings = []
     for idx in segment_ids:
-        mask = F.where(segmentation == idx, 1, 0)
+        mask = ops.where(segmentation == idx, 1, 0)
         rle = binary_mask_to_rle(mask)
         run_length_encodings.append(rle)
 
@@ -729,11 +722,11 @@ def compute_segments(
     height = mask_probs.shape[1] if target_size is None else target_size[0]
     width = mask_probs.shape[2] if target_size is None else target_size[1]
 
-    segmentation = F.zeros((height, width), dtype=F.int32, device=mask_probs.device)
+    segmentation = ops.zeros((height, width), dtype=ops.int32, device=mask_probs.device)
     segments: List[Dict] = []
 
     if target_size is not None:
-        mask_probs = nn.functional.interpolate(
+        mask_probs = ops.interpolate(
             mask_probs.unsqueeze(0), size=target_size, mode="bilinear", align_corners=False
         )[0]
 
@@ -1521,14 +1514,14 @@ class DetrImageProcessor(BaseImageProcessor):
         if target_sizes.shape[1] != 2:
             raise ValueError("Each element of target_sizes must contain the size (h, w) of each image of the batch")
 
-        prob = nn.functional.softmax(out_logits, -1)
+        prob = ops.softmax(out_logits, -1)
         scores, labels = prob[..., :-1].max(-1)
 
         # convert to [x0, y0, x1, y1] format
         boxes = center_to_corners_format(out_bbox)
         # and from relative [0, 1] to absolute [0, height] coordinates
         img_h, img_w = target_sizes.unbind(1)
-        scale_fct = F.stack([img_w, img_h, img_w, img_h], axis=1).to(boxes.device)
+        scale_fct = ops.stack([img_w, img_h, img_w, img_h], axis=1).to(boxes.device)
         boxes = boxes * scale_fct[:, None, :]
 
         results = [{"scores": s, "labels": l, "boxes": b} for s, l, b in zip(scores, labels, boxes)]
@@ -1571,7 +1564,7 @@ class DetrImageProcessor(BaseImageProcessor):
             cur_scores = cur_scores[keep]
             cur_labels = cur_labels[keep]
             cur_masks = cur_masks[keep]
-            cur_masks = nn.functional.interpolate(cur_masks[:, None], to_tuple(size), mode="bilinear").squeeze(1)
+            cur_masks = ops.interpolate(cur_masks[:, None], to_tuple(size), mode="bilinear").squeeze(1)
             cur_masks = (cur_masks.sigmoid() > mask_threshold) * 1
 
             predictions = {"scores": cur_scores, "labels": cur_labels, "masks": cur_masks}
@@ -1610,7 +1603,7 @@ class DetrImageProcessor(BaseImageProcessor):
             raise ValueError("Make sure to pass in as many orig_target_sizes as max_target_sizes")
         max_h, max_w = max_target_sizes.max(0)[0].tolist()
         outputs_masks = outputs.pred_masks.squeeze(2)
-        outputs_masks = nn.functional.interpolate(
+        outputs_masks = ops.interpolate(
             outputs_masks, size=(max_h, max_w), mode="bilinear", align_corners=False
         )
         outputs_masks = (outputs_masks.sigmoid() > threshold)
@@ -1618,7 +1611,7 @@ class DetrImageProcessor(BaseImageProcessor):
         for i, (cur_mask, t, tt) in enumerate(zip(outputs_masks, max_target_sizes, orig_target_sizes)):
             img_h, img_w = t[0], t[1]
             results[i]["masks"] = cur_mask[:, :img_h, :img_w].unsqueeze(1)
-            results[i]["masks"] = nn.functional.interpolate(
+            results[i]["masks"] = ops.interpolate(
                 results[i]["masks"].float(), size=tuple(tt.tolist()), mode="nearest"
             ).byte()
 
@@ -1682,7 +1675,7 @@ class DetrImageProcessor(BaseImageProcessor):
             cur_scores = cur_scores[keep]
             cur_labels = cur_labels[keep]
             cur_masks = cur_masks[keep]
-            cur_masks = nn.functional.interpolate(cur_masks[:, None], to_tuple(size), mode="bilinear").squeeze(1)
+            cur_masks = ops.interpolate(cur_masks[:, None], to_tuple(size), mode="bilinear").squeeze(1)
             cur_boxes = center_to_corners_format(cur_boxes[keep])
 
             h, w = cur_masks.shape[-2:]
@@ -1705,7 +1698,7 @@ class DetrImageProcessor(BaseImageProcessor):
 
                 if m_id.shape[-1] == 0:
                     # We didn't detect any mask :(
-                    m_id = F.zeros((h, w), dtype=ms.int64, device=m_id.device)
+                    m_id = ops.zeros((h, w), dtype=ms.int64, device=m_id.device)
                 else:
                     m_id = m_id.argmax(-1).view(h, w)
 
@@ -1714,14 +1707,16 @@ class DetrImageProcessor(BaseImageProcessor):
                     for equiv in stuff_equiv_classes.values():
                         if len(equiv) > 1:
                             for eq_id in equiv:
-                                m_id.masked_fill_(m_id.eq(eq_id), equiv[0])
+                                # breakpoint()
+                                ops.masked_fill(m_id, m_id.eq(eq_id), equiv[0])
+                                # m_id.ops.masked_fill(m_id.eq(eq_id), equiv[0])
 
                 final_h, final_w = to_tuple(target_size)
 
                 seg_img = PIL.Image.fromarray(id_to_rgb(m_id.view(h, w)))
                 seg_img = seg_img.resize(size=(final_w, final_h), resample=PILImageResampling.NEAREST)
 
-                np_seg_img = F.ByteTensor(F.ByteStorage.from_buffer(seg_img.tobytes()))
+                np_seg_img = ops.ByteTensor(F.ByteStorage.from_buffer(seg_img.tobytes()))
                 np_seg_img = np_seg_img.view(final_h, final_w, 3)
                 np_seg_img = np_seg_img
 
@@ -1748,7 +1743,7 @@ class DetrImageProcessor(BaseImageProcessor):
                         break
 
             else:
-                cur_labels = F.ones(1, dtype=ms.int64, device=cur_labels.device)
+                cur_labels = ops.ones(1, dtype=ms.int64, device=cur_labels.device)
 
             segments_info = []
             for i, a in enumerate(area):
@@ -1790,7 +1785,7 @@ class DetrImageProcessor(BaseImageProcessor):
                     "Make sure that you pass in as many target sizes as the batch dimension of the logits"
                 )
 
-        prob = nn.functional.softmax(out_logits, -1)
+        prob = ops.softmax(out_logits, -1)
         scores, labels = prob[..., :-1].max(-1)
 
         # Convert to [x0, y0, x1, y1] format
@@ -1804,7 +1799,7 @@ class DetrImageProcessor(BaseImageProcessor):
             else:
                 img_h, img_w = target_sizes.unbind(1)
 
-            scale_fct = F.stack([img_w, img_h, img_w, img_h], axis=1).to(boxes.device)
+            scale_fct = ops.stack([img_w, img_h, img_w, img_h], axis=1).to(boxes.device)
             boxes = boxes * scale_fct[:, None, :]
 
         results = []
@@ -1840,7 +1835,7 @@ class DetrImageProcessor(BaseImageProcessor):
         masks_probs = masks_queries_logits.sigmoid()  # [batch_size, num_queries, height, width]
 
         # Semantic segmentation logits of shape (batch_size, num_classes, height, width)
-        segmentation = F.einsum("bqc, bqhw -> bchw", masks_classes, masks_probs)
+        segmentation = ops.einsum("bqc, bqhw -> bchw", masks_classes, masks_probs)
         batch_size = class_queries_logits.shape[0]
 
         # Resize logits and compute semantic segmentation maps
@@ -1852,7 +1847,7 @@ class DetrImageProcessor(BaseImageProcessor):
 
             semantic_segmentation = []
             for idx in range(batch_size):
-                resized_logits = nn.functional.interpolate(
+                resized_logits = ops.interpolate(
                     segmentation[idx].unsqueeze(dim=0), size=target_sizes[idx], mode="bilinear", align_corners=False
                 )
                 semantic_map = resized_logits[0].argmax(dim=0)
@@ -1911,7 +1906,7 @@ class DetrImageProcessor(BaseImageProcessor):
         mask_probs = masks_queries_logits.sigmoid()  # [batch_size, num_queries, height, width]
 
         # Predicted label and score of each query (batch_size, num_queries)
-        pred_scores, pred_labels = nn.functional.softmax(class_queries_logits, axis=-1).max(-1)
+        pred_scores, pred_labels = ops.softmax(class_queries_logits, axis=-1).max(-1)
 
         # Loop over items in batch size
         results: List[Dict[str, TensorType]] = []
@@ -1924,7 +1919,7 @@ class DetrImageProcessor(BaseImageProcessor):
             # No mask found
             if mask_probs_item.shape[0] <= 0:
                 height, width = target_sizes[i] if target_sizes is not None else mask_probs_item.shape[1:]
-                segmentation = F.zeros((height, width)) - 1
+                segmentation = ops.zeros((height, width)) - 1
                 results.append({"segmentation": segmentation, "segments_info": []})
                 continue
 
@@ -2004,7 +1999,7 @@ class DetrImageProcessor(BaseImageProcessor):
         mask_probs = masks_queries_logits.sigmoid()  # [batch_size, num_queries, height, width]
 
         # Predicted label and score of each query (batch_size, num_queries)
-        pred_scores, pred_labels = nn.functional.softmax(class_queries_logits, axis=-1).max(-1)
+        pred_scores, pred_labels = ops.softmax(class_queries_logits, axis=-1).max(-1)
 
         # Loop over items in batch size
         results: List[Dict[str, TensorType]] = []
@@ -2017,7 +2012,7 @@ class DetrImageProcessor(BaseImageProcessor):
             # No mask found
             if mask_probs_item.shape[0] <= 0:
                 height, width = target_sizes[i] if target_sizes is not None else mask_probs_item.shape[1:]
-                segmentation = F.zeros((height, width)) - 1
+                segmentation = ops.zeros((height, width)) - 1
                 results.append({"segmentation": segmentation, "segments_info": []})
                 continue
 
