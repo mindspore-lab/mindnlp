@@ -3,6 +3,7 @@ requests
 tqdm
 pylint==2.17
 pytest>=7.2.0,<8.0.0
+pillow
 ddt
 datasets
 sentencepiece
