@@ -1,3 +1,3 @@
 export RUN_SLOW=True
-pytest -v -s -c pytest.ini /data/wjk/huawei/gptj/mindnlp/tests/ut/transformers/models/gptj
+pytest -v -s -c pytest.ini tests/ut
 pytest tests/st
