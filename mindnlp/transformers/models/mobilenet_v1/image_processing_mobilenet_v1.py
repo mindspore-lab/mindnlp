@@ -17,6 +17,7 @@
 from typing import Dict, List, Optional, Union
 
 import numpy as np
+from mindnlp.configs import OPENAI_CLIP_MEAN,OPENAI_CLIP_STD
 
 from ...image_processing_utils import BaseImageProcessor, BatchFeature, get_size_dict
 from ...image_transforms import (
@@ -24,7 +25,6 @@ from ...image_transforms import (
     resize,
     to_channel_dimension_format,
 )
-from mindnlp.configs import OPENAI_CLIP_MEAN,OPENAI_CLIP_STD
 from ...image_utils import (
     ChannelDimension,
     ImageInput,

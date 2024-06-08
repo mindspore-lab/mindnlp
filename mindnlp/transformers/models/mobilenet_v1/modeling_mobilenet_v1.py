@@ -206,14 +206,13 @@ class MobileNetV1Model(MobileNetV1PreTrainedModel):
     def _prune_heads(self, heads_to_prune):
         raise NotImplementedError
 
-    
     def construct(
         self,
         pixel_values: Optional[ms.Tensor] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[tuple, BaseModelOutputWithPoolingAndNoAttention]:
-        
+
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
@@ -258,7 +257,7 @@ class MobileNetV1ForImageClassification(MobileNetV1PreTrainedModel):
         self.mobilenet_v1 = MobileNetV1Model(config)
 
         last_hidden_size = self.mobilenet_v1.layer[-1].convolution.out_channels
-        
+
         # Classifier head
         self.dropout = nn.Dropout(p = config.classifier_dropout_prob)
         self.classifier = nn.Dense(last_hidden_size, config.num_labels) if config.num_labels > 0 else nn.Identity()
@@ -266,7 +265,7 @@ class MobileNetV1ForImageClassification(MobileNetV1PreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    
+
     def construct(
         self,
         pixel_values: Optional[ms.Tensor] = None,
@@ -292,7 +291,7 @@ class MobileNetV1ForImageClassification(MobileNetV1PreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == ms.int64 or labels.dtype == ms.int32):
+                elif self.num_labels > 1 and labels.dtype in (ms.int64, ms.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
