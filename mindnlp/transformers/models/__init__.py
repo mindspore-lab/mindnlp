@@ -91,6 +91,7 @@ from . import (
     jetmoe,
     layoutlm,
     layoutlmv2,
+    led,
     llama,
     llava,
     llava_next,
@@ -233,6 +234,7 @@ from .imagegpt import *
 from .jetmoe import *
 from .layoutlm import *
 from .layoutlmv2 import *
+from .led import *
 from .llama import *
 from .llava import *
 from .llava_next import *
@@ -375,6 +377,7 @@ __all__.extend(imagegpt.__all__)
 __all__.extend(jetmoe.__all__)
 __all__.extend(layoutlm.__all__)
 __all__.extend(layoutlmv2.__all__)
+__all__.extend(led.__all__)
 __all__.extend(llama.__all__)
 __all__.extend(llava.__all__)
 __all__.extend(llava_next.__all__)
