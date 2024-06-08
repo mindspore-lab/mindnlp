@@ -93,7 +93,6 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("minicpm", "MiniCPMModel"),
         ("mistral", "MistralModel"),
         ("nat", "NatModel"),
-        ("nat", "MixtralModel"),
         ("olmo", "OlmoModel"),
         ("openelm", "OpenELMModel"),
         ("opt", "OPTModel"),
