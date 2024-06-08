@@ -112,19 +112,19 @@ class BeitConfig(BackboneConfigMixin, PretrainedConfig):
             seq_len, hidden_size)`. Only relevant for [`BeitBackbone`].
 
     Example:
+        ```python
+        >>> from transformers import BeitConfig, BeitModel
 
-    ```python
-    >>> from transformers import BeitConfig, BeitModel
+        >>> # Initializing a BEiT beit-base-patch16-224-pt22k style configuration
+        >>> configuration = BeitConfig()
 
-    >>> # Initializing a BEiT beit-base-patch16-224-pt22k style configuration
-    >>> configuration = BeitConfig()
+        >>> # Initializing a model (with random weights) from the beit-base-patch16-224-pt22k style configuration
+        >>> model = BeitModel(configuration)
 
-    >>> # Initializing a model (with random weights) from the beit-base-patch16-224-pt22k style configuration
-    >>> model = BeitModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "beit"
 
     def __init__(

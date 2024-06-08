@@ -48,12 +48,12 @@ class BlipProcessor(ProcessorMixin):
         Args:
             self: The BlipProcessor instance itself.
             image_processor: An object representing the image processor used for processing images.
-                Type: object
-                Purpose: It processes the input images.
+                >   - Type: object
+                >   - Purpose: It processes the input images.
             tokenizer: An object representing the tokenizer used for tokenization.
-                Type: object
-                Purpose: It tokenizes the input data.
-                Restrictions: The 'return_token_type_ids' attribute of the tokenizer should be set to False.
+                >   - Type: object
+                >   - Purpose: It tokenizes the input data.
+                >   - Restrictions: The 'return_token_type_ids' attribute of the tokenizer should be set to False.
         
         Returns:
             None. This method does not return any value.

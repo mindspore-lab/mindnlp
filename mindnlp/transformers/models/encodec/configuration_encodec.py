@@ -94,19 +94,19 @@ class EncodecConfig(PretrainedConfig):
             an identity function will be used, giving a generic residual connection.
 
     Example:
+        ```python
+        >>> from transformers import EncodecModel, EncodecConfig
 
-    ```python
-    >>> from transformers import EncodecModel, EncodecConfig
+        >>> # Initializing a "facebook/encodec_24khz" style configuration
+        >>> configuration = EncodecConfig()
 
-    >>> # Initializing a "facebook/encodec_24khz" style configuration
-    >>> configuration = EncodecConfig()
+        >>> # Initializing a model (with random weights) from the "facebook/encodec_24khz" style configuration
+        >>> model = EncodecModel(configuration)
 
-    >>> # Initializing a model (with random weights) from the "facebook/encodec_24khz" style configuration
-    >>> model = EncodecModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "encodec"
     #pylint: disable=W0102
     def __init__(

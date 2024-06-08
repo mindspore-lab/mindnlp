@@ -108,8 +108,8 @@ class CLIPTokenizerFast(PreTrainedTokenizerFast):
         
         Raises:
             ValueError: Raised if the backend tokenizer pre_tokenizer does not match the expected format. The CLIP tokenizer in this version has been heavily modified from transformers version 4.17.0. To
-resolve this issue, convert the existing tokenizer to be compatible with this version using `CLIPTokenizerFast.from_pretrained("path_to_local_folder_or_hub_repo", from_slow=True)`. If using an older tokenizer
-version, revert to a version prior to 4.17.0 of transformers.
+            resolve this issue, convert the existing tokenizer to be compatible with this version using `CLIPTokenizerFast.from_pretrained("path_to_local_folder_or_hub_repo", from_slow=True)`. If using an older tokenizer
+            version, revert to a version prior to 4.17.0 of transformers.
         """
         super().__init__(
             vocab_file,
@@ -138,16 +138,16 @@ version, revert to a version prior to 4.17.0 of transformers.
     def _wrap_decode_method_backend_tokenizer(self):
         """
         This method '_wrap_decode_method_backend_tokenizer' is a private method within the 'CLIPTokenizerFast' class. It wraps the 'decode' method of the backend tokenizer by modifying its behavior.
-        
+
         Args:
             self (CLIPTokenizerFast): The instance of the CLIPTokenizerFast class itself. It is used to access the backend_tokenizer attribute and modify the decode method.
-        
+
         Returns:
             None: This method does not return any value explicitly, but it modifies the behavior of the 'decode' method of the backend tokenizer.
-        
+
         Raises:
             No specific exceptions are raised within this method. However, potential exceptions that could be raised during the execution of the modified 'decode' method of the backend tokenizer should be
-handled within that method.
+            handled within that method.
         """
         orig_decode_method = self.backend_tokenizer.decode
 
@@ -165,7 +165,7 @@ handled within that method.
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A CLIP sequence has the following format:
 
-        - single sequence: `<|startoftext|> X <|endoftext|>`
+        >   - single sequence: `<|startoftext|> X <|endoftext|>`
 
         Pairs of sequences are not the expected use case, but they will be handled without a separator.
 

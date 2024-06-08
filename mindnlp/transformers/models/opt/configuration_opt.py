@@ -81,19 +81,19 @@ class OPTConfig(PretrainedConfig):
             Whether or not if the layer norms should have learnable parameters.
 
     Example:
+        ```python
+        >>> from transformers import OPTConfig, OPTModel
 
-    ```python
-    >>> from transformers import OPTConfig, OPTModel
+        >>> # Initializing a OPT facebook/opt-large style configuration
+        >>> configuration = OPTConfig()
 
-    >>> # Initializing a OPT facebook/opt-large style configuration
-    >>> configuration = OPTConfig()
+        >>> # Initializing a model (with random weights) from the facebook/opt-large style configuration
+        >>> model = OPTModel(configuration)
 
-    >>> # Initializing a model (with random weights) from the facebook/opt-large style configuration
-    >>> model = OPTModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "opt"
     keys_to_ignore_at_inference = ["past_key_values"]
 

@@ -205,11 +205,11 @@ class BioGptTokenizer(PreTrainedTokenizer):
             Exception: If any other error occurs during tokenization.
         
         This method utilizes the MosesTokenizer from the nltk.translate.moses package to tokenize the input text. It first checks if the MosesTokenizer for the specified language is already cached. If not, it
-creates a new MosesTokenizer instance for the language and adds it to the cache. The tokenization is then performed using the cached MosesTokenizer object.
-        
+        creates a new MosesTokenizer instance for the language and adds it to the cache. The tokenization is then performed using the cached MosesTokenizer object.
+
         The 'aggressive_dash_splits', 'return_str', and 'escape' parameters are passed to the tokenize method of the MosesTokenizer. 'aggressive_dash_splits' determines whether to perform aggressive dash
-splitting, 'return_str' specifies whether to return a string or a list of tokens, and 'escape' determines whether to escape XML/HTML characters in the text before tokenization.
-        
+        splitting, 'return_str' specifies whether to return a string or a list of tokens, and 'escape' determines whether to escape XML/HTML characters in the text before tokenization.
+
         Note: This method assumes that the BioGptTokenizer instance has been properly initialized with the necessary resources for tokenization.
         """
         if lang not in self.cache_moses_tokenizer:
@@ -222,21 +222,22 @@ splitting, 'return_str' specifies whether to return a string or a list of tokens
     def moses_detokenize(self, tokens, lang):
         """
         Performs Moses detokenization on a list of tokens for a specified language.
-        
+
         Args:
             self (BioGptTokenizer): An instance of the BioGptTokenizer class.
             tokens (list): A list of tokens to be detokenized.
             lang (str): The language of the tokens. Must be a supported language.
-        
+
         Returns:
             None. The method modifies the cache_moses_detokenizer attribute of the BioGptTokenizer instance.
-        
+
         Raises:
             KeyError: If the specified language is not supported.
             TypeError: If the tokens parameter is not a list.
-        
-        Note: This method utilizes a cache to store MosesDetokenizer objects for each language, 
-        ensuring efficient detokenization by reusing previously created instances.
+
+        Note:
+            This method utilizes a cache to store MosesDetokenizer objects for each language,
+            ensuring efficient detokenization by reusing previously created instances.
         """
         if lang not in self.cache_moses_detokenizer:
             moses_detokenizer = self.sm.MosesDetokenizer(lang=lang)
@@ -246,33 +247,35 @@ splitting, 'return_str' specifies whether to return a string or a list of tokens
     def bpe(self, token):
         """
         Performs Byte Pair Encoding (BPE) on a given token.
-        
+
         Args:
             self: An instance of the BioGptTokenizer class.
             token (str): The token to be encoded using BPE.
-        
+
         Returns:
             str: The BPE-encoded representation of the token.
-        
+
         Raises:
             None.
-        
+
         Description:
-        This method takes a token and applies Byte Pair Encoding (BPE) to it. BPE is a subword tokenization technique that breaks down a token into a sequence of subword units. The BPE algorithm iteratively
-merges the most frequent pairs of subword units to create a vocabulary of subword units.
-        
-        The token parameter is the input token to be encoded using BPE. The token is expected to be a string.
-        
-        The method returns the BPE-encoded representation of the token as a string. The encoded representation is obtained by iteratively merging the most frequent pairs of subword units until no more merges
-can be made. The resulting subword units are then joined together to form the encoded token.
-        
-        Note that the method may use a cache to store previously encoded tokens for efficiency.
-        
+            This method takes a token and applies Byte Pair Encoding (BPE) to it. BPE is a subword tokenization technique that breaks down a token into a sequence of subword units. The BPE algorithm iteratively
+            merges the most frequent pairs of subword units to create a vocabulary of subword units.
+
+            The token parameter is the input token to be encoded using BPE. The token is expected to be a string.
+
+            The method returns the BPE-encoded representation of the token as a string. The encoded representation is obtained by iteratively merging the most frequent pairs of subword units until no more merges
+            can be made. The resulting subword units are then joined together to form the encoded token.
+
+            Note that the method may use a cache to store previously encoded tokens for efficiency.
+
         Example:
+            ```python
             tokenizer = BioGptTokenizer()
             encoded_token = tokenizer.bpe('sequence')
             print(encoded_token)
             # Output: 'seq uence'</w>'
+            ```
         """
         word = tuple(token[:-1]) + (token[-1] + "</w>",)
         if token in self.cache:
@@ -354,8 +357,8 @@ can be made. The resulting subword units are then joined together to form the en
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A BioGPT sequence has the following format:
 
-        - single sequence: `</s> X `
-        - pair of sequences: `</s> A </s> B `
+        >   - single sequence: `</s> X `
+        >   - pair of sequences: `</s> A </s> B `
 
         Args:
             token_ids_0 (`List[int]`):

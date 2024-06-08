@@ -261,9 +261,9 @@ class GPTTokenizer(PreTrainedTokenizer):
     """
     Construct a GPT Tokenizer. Based on Byte-Pair-Encoding with the following peculiarities:
 
-    - lowercases all inputs,
-    - uses `SpaCy` tokenizer and `ftfy` for pre-BPE tokenization if they are installed, fallback to BERT's
-      `BasicTokenizer` if not.
+    >   - lowercases all inputs,
+    >   - uses `SpaCy` tokenizer and `ftfy` for pre-BPE tokenization if they are installed, fallback to BERT's
+          `BasicTokenizer` if not.
 
     This tokenizer inherits from [`PreTrainedTokenizer`] which contains most of the main methods. Users should refer to
     this superclass for more information regarding those methods.
@@ -285,16 +285,16 @@ class GPTTokenizer(PreTrainedTokenizer):
     def __init__(self, vocab_file, merges_file, unk_token="<unk>", **kwargs):
         """
         This method initializes an instance of the GPTTokenizer class.
-        
+
         Args:
             self: The instance of the GPTTokenizer class.
             vocab_file (str): The path to the vocabulary file containing the encoder information.
             merges_file (str): The path to the file containing merge operations for Byte Pair Encoding (BPE).
             unk_token (str, optional): The token to represent unknown words. Defaults to '<unk>'.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             ImportError: If the required packages 'ftfy' or 'spacy' are not installed, an ImportError is raised.
             FileNotFoundError: If the vocab_file or merges_file is not found, a FileNotFoundError is raised.
@@ -328,26 +328,28 @@ class GPTTokenizer(PreTrainedTokenizer):
     def do_lower_case(self):
         """
         Toggle the lower case flag for the GPTTokenizer object.
-        
+
         Args:
             self: An instance of the GPTTokenizer class.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             None.
-        
+
         This method is used to toggle the lower case flag for the GPTTokenizer object. When the lower case flag is set to True, the tokenizer will convert all text to lower case. When the flag is set to False,
-the tokenizer will preserve the original casing of the text.
-        
+        the tokenizer will preserve the original casing of the text.
+
         Note that changing the lower case flag will affect the tokenization behavior of the GPTTokenizer object. It is recommended to set the lower case flag before tokenizing any text using the tokenizer. By
-default, the lower case flag is set to True.
-        
+        default, the lower case flag is set to True.
+
         Example usage:
+        ```python
             tokenizer = GPTTokenizer()
             tokenizer.do_lower_case = False
             ...
+        ```
         """
         return True
 

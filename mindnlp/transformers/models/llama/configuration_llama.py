@@ -98,18 +98,20 @@ class LlamaConfig(PretrainedConfig):
         attention_dropout (`float`, *optional*, defaults to 0.0):
             The dropout ratio for the attention probabilities.
 
-    ```python
-    >>> from transformers import LlamaModel, LlamaConfig
+    Example:
+        ```python
+        >>> from transformers import LlamaModel, LlamaConfig
 
-    >>> # Initializing a LLaMA llama-7b style configuration
-    >>> configuration = LlamaConfig()
+        >>> # Initializing a LLaMA llama-7b style configuration
+        >>> configuration = LlamaConfig()
 
-    >>> # Initializing a model from the llama-7b style configuration
-    >>> model = LlamaModel(configuration)
+        >>> # Initializing a model from the llama-7b style configuration
+        >>> model = LlamaModel(configuration)
 
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "llama"
     keys_to_ignore_at_inference = ["past_key_values"]
 

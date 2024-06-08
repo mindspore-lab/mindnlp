@@ -160,8 +160,7 @@ class AutoProcessor:
             None. This method does not return a value.
         
         Raises:
-            EnvironmentError: This method raises an EnvironmentError with the message 'AutoProcessor is designed to be instantiated using the `AutoProcessor.from_pretrained(pretrained_model_name_or_path)`
-method.'
+            EnvironmentError: This method raises an EnvironmentError with the message 'AutoProcessor is designed to be instantiated using the `AutoProcessor.from_pretrained(pretrained_model_name_or_path)`method.'
         """
         raise EnvironmentError(
             "AutoProcessor is designed to be instantiated "
@@ -181,11 +180,10 @@ method.'
 
         Params:
             pretrained_model_name_or_path (`str` or `os.PathLike`):
-                This can be either:
-
-                - a string, the *model id* of a pretrained feature_extractor hosted inside a model repo on
+                >- This can be either:
+                >   - a string, the *model id* of a pretrained feature_extractor hosted inside a model repo on
                   hf-mirror.com.
-                - a path to a *directory* containing a processor files saved using the `save_pretrained()` method,
+                >   - a path to a *directory* containing a processor files saved using the `save_pretrained()` method,
                   e.g., `./my_model_directory/`.
             cache_dir (`str` or `os.PathLike`, *optional*):
                 Path to a directory in which a downloaded pretrained model feature extractor should be cached if the
@@ -226,17 +224,17 @@ method.'
 
         </Tip>
 
-        Examples:
+        Example:
+            ```python
+            >>> from transformers import AutoProcessor
 
-        ```python
-        >>> from transformers import AutoProcessor
+            >>> # Download processor from hf-mirror.com and cache.
+            >>> processor = AutoProcessor.from_pretrained("facebook/wav2vec2-base-960h")
 
-        >>> # Download processor from hf-mirror.com and cache.
-        >>> processor = AutoProcessor.from_pretrained("facebook/wav2vec2-base-960h")
-
-        >>> # If processor files are in a directory (e.g. processor was saved using *save_pretrained('./test/saved_model/')*)
-        >>> # processor = AutoProcessor.from_pretrained("./test/saved_model/")
-        ```"""
+            >>> # If processor files are in a directory (e.g. processor was saved using *save_pretrained('./test/saved_model/')*)
+            >>> # processor = AutoProcessor.from_pretrained("./test/saved_model/")
+            ```
+        """
         use_auth_token = kwargs.pop("use_auth_token", None)
         if use_auth_token is not None:
             warnings.warn(
