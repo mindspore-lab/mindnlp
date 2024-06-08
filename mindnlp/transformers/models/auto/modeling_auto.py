@@ -20,9 +20,9 @@ import warnings
 from collections import OrderedDict
 
 from mindnlp.utils import logging
+
 from .auto_factory import _BaseAutoModelClass, _LazyAutoMapping
 from .configuration_auto import CONFIG_MAPPING_NAMES
-
 
 logger = logging.get_logger(__name__)
 
@@ -56,7 +56,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("canine", "CanineModel"),
         ("codegen", "CodeGenModel"),
         ("cohere", "CohereModel"),
-        ("cogvlm","CogVLMModel"),
+        ("cogvlm", "CogVLMModel"),
         ("cpmant", "CpmAntModel"),
         ("ctrl", "CTRLModel"),
         ("cpmbee", "CpmBeeModel"),
@@ -66,6 +66,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("convbert", "ConvBertModel"),
         ("convnext", "ConvNextModel"),
         ("cvt", "CvtModel"),
+        ("data2vec-text", "Data2VecTextModel"),
         ("deberta", "DebertaModel"),
         ("decision_transformer", "DecisionTransformerModel"),
         ("deberta-v2", "DebertaV2Model"),
@@ -117,7 +118,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("stablelm", "StableLmModel"),
         ("squeezebert", "SqueezeBertModel"),
         ("starcoder2", "Starcoder2Model"),
-        ("swiftformer","SwiftFormerModel"),
+        ("swiftformer", "SwiftFormerModel"),
         ("switch_transformers", "SwitchTransformersModel"),
         ("t5", "T5Model"),
         ("timesformer", "TimesformerModel"),
@@ -144,6 +145,7 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
         ("bloom", "BloomForCausalLM"),
         ("camembert", "CamembertForMaskedLM"),
         ("ctrl", "CTRLLMHeadModel"),
+        ("data2vec-text", "Data2VecTextForMaskedLM"),
         ("deberta", "DebertaForMaskedLM"),
         ("deberta-v2", "DebertaV2ForMaskedLM"),
         ("flava", "FlavaForPreTraining"),
@@ -175,6 +177,7 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         ("cpmant", "CpmAntForCausalLM"),
         ("ctrl", "CTRLLMHeadModel"),
         ("cpmbee", "CpmBeeForCausalLM"),
+        ("data2vec-text", "Data2VecTextForMaskedLM"),
         ("deberta", "DebertaForMaskedLM"),
         ("deberta-v2", "DebertaV2ForMaskedLM"),
         ("esm", "EsmForMaskedLM"),
@@ -213,10 +216,11 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("camembert", "CamembertForCausalLM"),
         ("codegen", "CodeGenForCausalLM"),
         ("cohere", "CohereForCausalLM"),
-        ("cogvlm","CogVLMForCausalLM"),
+        ("cogvlm", "CogVLMForCausalLM"),
         ("cpmant", "CpmAntForCausalLM"),
         ("ctrl", "CTRLLMHeadModel"),
         ("cpmbee", "CpmBeeForCausalLM"),
+        ("data2vec-text", "Data2VecTextForCausalLM"),
         ("falcon", "FalconForCausalLM"),
         ("gemma", "GemmaForCausalLM"),
         ("gpt2", "GPT2LMHeadModel"),
@@ -360,6 +364,7 @@ MODEL_FOR_MASKED_LM_MAPPING_NAMES = OrderedDict(
         ("bert", "BertForMaskedLM"),
         ("big_bird", "BigBirdForMaskedLM"),
         ("camembert", "CamembertForMaskedLM"),
+        ("data2vec-text", "Data2VecTextForMaskedLM"),
         ("deberta", "DebertaForMaskedLM"),
         ("deberta-v2", "DebertaV2ForMaskedLM"),
         ("esm", "EsmForMaskedLM"),
@@ -453,6 +458,7 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("bloom", "BloomForSequenceClassification"),
         ("camembert", "CamembertForSequenceClassification"),
         ("ctrl", "CTRLForSequenceClassification"),
+        ("data2vec-text", "Data2VecTextForSequenceClassification"),
         ("deberta", "DebertaForSequenceClassification"),
         ("deberta-v2", "DebertaV2ForSequenceClassification"),
         ("distilbert", "DistilBertForSequenceClassification"),
