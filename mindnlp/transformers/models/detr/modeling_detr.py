@@ -23,9 +23,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import mindspore as ms
 from mindspore import Tensor, nn, ops
-from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-from mindspore.common.initializer import initializer, Normal, XavierUniform, Uniform, HeNormal
-
+from mindspore.common.initializer import initializer, XavierUniform, Uniform, HeNormal
 
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask
@@ -116,7 +114,6 @@ class DetrModelOutput(Seq2SeqModelOutput):
             Intermediate decoder activations, i.e. the output of each decoder layer, each of them gone through a
             layernorm.
     """
-
     intermediate_hidden_states: Optional[Tensor] = None
 
 
@@ -293,30 +290,6 @@ class DetrFrozenBatchNorm2d(nn.Cell):
         bias = bias - running_mean * scale
         return x * scale + bias
 
-
-def replace_batch_norm(model):
-    r"""
-    Recursively replace all `F.nn.BatchNorm2d` with `DetrFrozenBatchNorm2d`.
-
-    Args:
-        model (F.nn.Cell):
-            input model
-    """
-    for name, module in model.named_children():
-        if isinstance(module, nn.BatchNorm2d):
-            new_module = DetrFrozenBatchNorm2d(module.num_features)
-
-            new_module.weight.data.copy_(module.weight)
-            new_module.bias.data.copy_(module.bias)
-            new_module.running_mean.data.copy_(module.running_mean)
-            new_module.running_var.data.copy_(module.running_var)
-
-            model._modules[name] = new_module
-
-        if len(list(module.children())) > 0:
-            replace_batch_norm(module)
-
-
 class DetrConvEncoder(nn.Cell):
     """
     Convolutional backbone, using either the AutoBackbone API or one from the timm library.
@@ -329,23 +302,8 @@ class DetrConvEncoder(nn.Cell):
         super().__init__()
 
         self.config = config
-
-        # For backwards compatibility we have to use the timm library directly instead of the AutoBackbone API
-        # if config.use_timm_backbone:
-            # We default to values which were previously hard-coded. This enables configurability from the config
-            # using backbone arguments, while keeping the default behavior the same.
-        # requires_backends(self, ["timm"])
-        kwargs = getattr(config, "backbone_kwargs", {})
-        kwargs = {} if kwargs is None else kwargs.copy()
-        out_indices = kwargs.pop("out_indices", (1, 2, 3, 4))
-        num_channels = kwargs.pop("in_chans", config.num_channels)
-        if config.dilation:
-            kwargs["output_stride"] = kwargs.get("output_stride", 16)
         backbone = load_backbone(config)
 
-        # replace batch norm by frozen batch norm
-        # TODO: remove line
-        # replace_batch_norm(backbone)
         self.model = backbone
         self.intermediate_channel_sizes = (
             self.model.feature_info.channels() if config.use_timm_backbone else self.model.channels
@@ -432,8 +390,8 @@ class DetrSinePositionEmbedding(nn.Cell):
 
         pos_x = x_embed[:, :, :, None] / dim_t
         pos_y = y_embed[:, :, :, None] / dim_t
-        pos_x = ops.stack((pos_x[:, :, :, 0::2].sin(), pos_x[:, :, :, 1::2].cos()), axis=4).flatten(3)
-        pos_y = ops.stack((pos_y[:, :, :, 0::2].sin(), pos_y[:, :, :, 1::2].cos()), axis=4).flatten(3)
+        pos_x = ops.stack((pos_x[:, :, :, 0::2].sin(), pos_x[:, :, :, 1::2].cos()), axis=4).flatten(start_dim=3)
+        pos_y = ops.stack((pos_y[:, :, :, 0::2].sin(), pos_y[:, :, :, 1::2].cos()), axis=4).flatten(start_dim=3)
         pos = ops.cat((pos_y, pos_x), axis=3).permute(0, 3, 1, 2)
         return pos
 
@@ -553,7 +511,7 @@ class DetrAttention(nn.Cell):
         key_states = key_states.view(*proj_shape)
         value_states = value_states.view(*proj_shape)
 
-        source_len = key_states.size(1)
+        source_len = key_states.shape[1]
 
         attn_weights = ops.bmm(query_states, key_states.swapaxes(1, 2))
 
@@ -790,26 +748,27 @@ class DetrPreTrainedModel(PreTrainedModel):
         xavier_std = self.config.init_xavier_std
 
         if isinstance(cell, DetrMHAttentionMap):
-            cell.k_linear.bias.set_data(initializer('zeros', cell.k_linear.bias.shape, cell.k_linear.bias.dtype))
-            cell.q_linear.bias.set_data(initializer('zeros', cell.q_linear.bias.shape, cell.q_linear.bias.dtype))
-            cell.k_linear.weight.set_data(initializer(XavierUniform(), cell.k_linear.weight.shape, cell.k_linear.weight.dtype))
-            cell.q_linear.weight.set_data(initializer(XavierUniform(), cell.q_linear.weight.shape, cell.q_linear.weight.dtype))
+            cell.k_linear.bias = ms.Parameter(initializer('zeros', cell.k_linear.bias.shape, cell.k_linear.bias.dtype))
+            cell.q_linear.bias = ms.Parameter(initializer('zeros', cell.q_linear.bias.shape, cell.q_linear.bias.dtype))
+            cell.k_linear.weight = ms.Parameter(initializer(XavierUniform(), cell.k_linear.weight.shape, cell.k_linear.weight.dtype))
+            cell.q_linear.weight = ms.Parameter(initializer(XavierUniform(), cell.q_linear.weight.shape, cell.q_linear.weight.dtype))
         elif isinstance(cell, DetrLearnedPositionEmbedding):
             k = math.sqrt(1 / cell.row_embeddings.in_channels)
-            cell.row_embeddings.weight.set_data(initializer(Uniform(k), cell.row_embeddings.weight.shape, cell.row_embeddings.weight.dtype))
-            cell.column_embeddings.weight.set_data(initializer(Uniform(k), cell.column_embeddings.weight.shape, cell.column_embeddings.weight.dtype))
+            cell.row_embeddings.weight = ms.Parameter(initializer(Uniform(k), cell.row_embeddings.weight.shape, cell.row_embeddings.weight.dtype))
+            cell.column_embeddings.weight = ms.Parameter(initializer(Uniform(k), cell.column_embeddings.weight.shape, cell.column_embeddings.weight.dtype))
         if isinstance(cell, (nn.Dense, nn.Conv2d, nn.BatchNorm2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            k = math.sqrt(1 / cell.weight.shape[1])
-            cell.weight.set_data(initializer(Uniform(k), cell.weight.shape, cell.weight.dtype))
+            # breakpoint()
+            k = math.sqrt(1 / cell.weight.shape[0])
+            cell.weight = ms.Parameter(initializer(Uniform(k), cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias = ms.Parameter(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
-            k = math.sqrt(1 / cell.weight.shape[1])
-            cell.weight.set_data(initializer(Uniform(k), cell.weight.shape, cell.weight.dtype))
+            k = math.sqrt(1 / cell.weight.shape[0])
+            cell.weight = ms.Parameter(initializer(Uniform(k), cell.weight.shape, cell.weight.dtype))
             if cell.padding_idx is not None:
-                cell.weight[cell.padding_idx].set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.weight[cell.padding_idx] = ms.Parameter(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 class DetrEncoder(DetrPreTrainedModel):
     """
@@ -1201,10 +1160,10 @@ class DetrModel(DetrPreTrainedModel):
 
         # Third, flatten the feature map + position embeddings of shape NxCxHxW to NxCxHW, and permute it to NxHWxC
         # In other words, turn their shape into (batch_size, sequence_length, hidden_size)
-        flattened_features = projected_feature_map.flatten(2).permute(0, 2, 1)
-        object_queries = object_queries_list[-1].flatten(2).permute(0, 2, 1)
+        flattened_features = projected_feature_map.flatten(start_dim=2).permute(0, 2, 1)
+        object_queries = object_queries_list[-1].flatten(start_dim=2).permute(0, 2, 1)
 
-        flattened_mask = mask.flatten(1)
+        flattened_mask = mask.flatten(start_dim=1)
 
         # Fourth, sent flattened_features + flattened_mask + position embeddings through encoder
         # flattened_features is a Tensor of shape (batch_size, heigth*width, hidden_size)
@@ -1395,8 +1354,9 @@ class DetrForObjectDetection(DetrPreTrainedModel):
                 for i in range(self.config.decoder_layers - 1):
                     aux_weight_dict.update({k + f"_{i}": v for k, v in weight_dict.items()})
                 weight_dict.update(aux_weight_dict)
+            # breakpoint()
             loss = sum(loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict)
-
+            loss = ops.squeeze(loss)
         if not return_dict:
             if auxiliary_outputs is not None:
                 output = (logits, pred_boxes) + auxiliary_outputs + outputs
@@ -1517,10 +1477,10 @@ class DetrForSegmentation(DetrPreTrainedModel):
 
         # Third, flatten the feature map + position embeddings of shape NxCxHxW to NxCxHW, and permute it to NxHWxC
         # In other words, turn their shape into (batch_size, sequence_length, hidden_size)
-        flattened_features = projected_feature_map.flatten(2).permute(0, 2, 1)
-        object_queries = object_queries_list[-1].flatten(2).permute(0, 2, 1)
+        flattened_features = projected_feature_map.flatten(start_dim=2).permute(0, 2, 1)
+        object_queries = object_queries_list[-1].flatten(start_dim=2).permute(0, 2, 1)
 
-        flattened_mask = mask.flatten(1)
+        flattened_mask = mask.flatten(start_dim=1)
 
         # Fourth, sent flattened_features + flattened_mask + position embeddings through encoder
         # flattened_features is a Tensor of shape (batch_size, heigth*width, hidden_size)
@@ -1605,6 +1565,8 @@ class DetrForSegmentation(DetrPreTrainedModel):
                 auxiliary_outputs = self.detr._set_aux_loss(outputs_class, outputs_coord)
                 outputs_loss["auxiliary_outputs"] = auxiliary_outputs
 
+            print(type(outputs_loss), type(labels))
+            
             loss_dict = criterion(outputs_loss, labels)
             # Fourth: compute total loss, as a weighted sum of the various losses
             weight_dict = {"loss_ce": 1, "loss_bbox": self.config.bbox_loss_coefficient}
@@ -1643,7 +1605,7 @@ class DetrForSegmentation(DetrPreTrainedModel):
 
 
 def _expand(tensor, length: int):
-    return tensor.unsqueeze(1).repeat(1, int(length), 1, 1, 1).flatten(0, 1)
+    return tensor.unsqueeze(1).repeat(1, int(length), 1, 1, 1).flatten(start_dim=0, end_dim=1)
 
 
 # taken from https://github.com/facebookresearch/detr/blob/master/models/segmentation.py
@@ -1663,34 +1625,35 @@ class DetrMaskHeadSmallConv(nn.Cell):
 
         inter_dims = [dim, context_dim // 2, context_dim // 4, context_dim // 8, context_dim // 16, context_dim // 64]
 
-        self.lay1 = nn.Conv2d(dim, dim, 3, padding=1)
+        self.lay1 = nn.Conv2d(dim, dim, 3, padding=1, pad_mode='pad',has_bias=True)
         self.gn1 = nn.GroupNorm(8, dim)
-        self.lay2 = nn.Conv2d(dim, inter_dims[1], 3, padding=1)
+        self.lay2 = nn.Conv2d(dim, inter_dims[1], 3, padding=1, pad_mode='pad',has_bias=True)
         self.gn2 = nn.GroupNorm(min(8, inter_dims[1]), inter_dims[1])
-        self.lay3 = nn.Conv2d(inter_dims[1], inter_dims[2], 3, padding=1)
+        self.lay3 = nn.Conv2d(inter_dims[1], inter_dims[2], 3, padding=1, pad_mode='pad',has_bias=True)
         self.gn3 = nn.GroupNorm(min(8, inter_dims[2]), inter_dims[2])
-        self.lay4 = nn.Conv2d(inter_dims[2], inter_dims[3], 3, padding=1)
+        self.lay4 = nn.Conv2d(inter_dims[2], inter_dims[3], 3, padding=1, pad_mode='pad',has_bias=True)
         self.gn4 = nn.GroupNorm(min(8, inter_dims[3]), inter_dims[3])
-        self.lay5 = nn.Conv2d(inter_dims[3], inter_dims[4], 3, padding=1)
+        self.lay5 = nn.Conv2d(inter_dims[3], inter_dims[4], 3, padding=1, pad_mode='pad',has_bias=True)
         self.gn5 = nn.GroupNorm(min(8, inter_dims[4]), inter_dims[4])
-        self.out_lay = nn.Conv2d(inter_dims[4], 1, 3, padding=1)
+        self.out_lay = nn.Conv2d(inter_dims[4], 1, 3, padding=1, pad_mode='pad',has_bias=True)
 
         self.dim = dim
 
-        self.adapter1 = nn.Conv2d(fpn_dims[0], inter_dims[1], 1)
-        self.adapter2 = nn.Conv2d(fpn_dims[1], inter_dims[2], 1)
-        self.adapter3 = nn.Conv2d(fpn_dims[2], inter_dims[3], 1)
+        self.adapter1 = nn.Conv2d(fpn_dims[0], inter_dims[1], 1,has_bias=True)
+        self.adapter2 = nn.Conv2d(fpn_dims[1], inter_dims[2], 1,has_bias=True)
+        self.adapter3 = nn.Conv2d(fpn_dims[2], inter_dims[3], 1,has_bias=True)
 
         for m in self.cells():
             if isinstance(m, nn.Conv2d):
-                m.weight.set_data(initializer(HeNormal(negative_slope=1), m.weight.shape, m.weight.dtype))
-                m.bias.set_data(initializer('zeros', m.weight.shape, m.weight.dtype))
+                # breakpoint()
+                m.weight = ms.Parameter(initializer(HeNormal(negative_slope=1), m.weight.shape, m.weight.dtype))
+                m.bias = ms.Parameter(initializer('zeros', m.bias.shape, m.bias.dtype))
 
     def construct(self, x: Tensor, bbox_mask: Tensor, fpns: List[Tensor]):
         # here we concatenate x, the projected feature map, of shape (batch_size, d_model, heigth/32, width/32) with
         # the bbox_mask = the attention maps of shape (batch_size, n_queries, n_heads, height/32, width/32).
         # We expand the projected feature map to match the number of heads.
-        x = ops.cat([_expand(x, bbox_mask.shape[1]), bbox_mask.flatten(0, 1)], 1)
+        x = ops.cat([_expand(x, bbox_mask.shape[1]), bbox_mask.flatten(start_dim=0, end_dim=1)], 1)
 
         x = self.lay1(x)
         x = self.gn1(x)
@@ -1700,24 +1663,24 @@ class DetrMaskHeadSmallConv(nn.Cell):
         x = ops.relu(x)
 
         cur_fpn = self.adapter1(fpns[0])
-        if cur_fpn.size(0) != x.size(0):
-            cur_fpn = _expand(cur_fpn, x.size(0) // cur_fpn.size(0))
+        if cur_fpn.shape[0] != x.shape[0]:
+            cur_fpn = _expand(cur_fpn, x.shape[0] // cur_fpn.shape[0])
         x = cur_fpn + ops.interpolate(x, size=cur_fpn.shape[-2:], mode="nearest")
         x = self.lay3(x)
         x = self.gn3(x)
         x = ops.relu(x)
 
         cur_fpn = self.adapter2(fpns[1])
-        if cur_fpn.size(0) != x.size(0):
-            cur_fpn = _expand(cur_fpn, x.size(0) // cur_fpn.size(0))
+        if cur_fpn.shape[0] != x.shape[0]:
+            cur_fpn = _expand(cur_fpn, x.shape[0] // cur_fpn.shape[0])
         x = cur_fpn + ops.interpolate(x, size=cur_fpn.shape[-2:], mode="nearest")
         x = self.lay4(x)
         x = self.gn4(x)
         x = ops.relu(x)
 
         cur_fpn = self.adapter3(fpns[2])
-        if cur_fpn.size(0) != x.size(0):
-            cur_fpn = _expand(cur_fpn, x.size(0) // cur_fpn.size(0))
+        if cur_fpn.shape[0] != x.shape[0]:
+            cur_fpn = _expand(cur_fpn, x.shape[0] // cur_fpn.shape[0])
         x = cur_fpn + ops.interpolate(x, size=cur_fpn.shape[-2:], mode="nearest")
         x = self.lay5(x)
         x = self.gn5(x)
@@ -1749,8 +1712,10 @@ class DetrMHAttentionMap(nn.Cell):
         weights = ops.einsum("bqnc,bnchw->bqnhw", queries_per_head * self.normalize_fact, keys_per_head)
 
         if mask is not None:
-            weights.masked_fill_(mask.unsqueeze(1).unsqueeze(1), np.finfo(weights.dtype).min)
-        weights = ops.softmax(weights.flatten(2), axis=-1).view(weights.shape)
+            # breakpoint()
+            ops.masked_fill(weights, mask.unsqueeze(1).unsqueeze(1), np.finfo(weights.asnumpy().dtype).min)
+            # weights.masked_fill(mask.unsqueeze(1).unsqueeze(1), np.finfo(weights.dtype).min)
+        weights = ops.softmax(weights.flatten(start_dim=2), axis=-1).view(weights.shape)
         weights = self.dropout(weights)
         return weights
 
@@ -1767,7 +1732,7 @@ def dice_loss(inputs, targets, num_boxes):
                  class).
     """
     inputs = inputs.sigmoid()
-    inputs = inputs.flatten(1)
+    inputs = inputs.flatten(start_dim=1)
     numerator = 2 * (inputs * targets).sum(1)
     denominator = inputs.sum(-1) + targets.sum(-1)
     loss = 1 - (numerator + 1) / (denominator + 1)
@@ -1917,15 +1882,16 @@ class DetrLoss(nn.Cell):
         # TODO use valid to mask invalid areas due to padding in loss
         target_masks, valid = nested_tensor_from_tensor_list(masks).decompose()
         target_masks = target_masks.to(source_masks)
+                
         target_masks = target_masks[target_idx]
 
         # upsample predictions to the target size
         source_masks = ops.interpolate(
             source_masks[:, None], size=target_masks.shape[-2:], mode="bilinear", align_corners=False
         )
-        source_masks = source_masks[:, 0].flatten(1)
+        source_masks = source_masks[:, 0].flatten(start_dim=1)
 
-        target_masks = target_masks.flatten(1)
+        target_masks = target_masks.flatten(start_dim=1)
         target_masks = target_masks.view(source_masks.shape)
         losses = {
             "loss_mask": sigmoid_focal_loss(source_masks, target_masks, num_boxes),
@@ -2010,7 +1976,7 @@ class DetrMLPPredictionHead(nn.Cell):
         super().__init__()
         self.num_layers = num_layers
         h = [hidden_dim] * (num_layers - 1)
-        self.layers = nn.CellList(nn.Dense(n, k) for n, k in zip([input_dim] + h, h + [output_dim]))
+        self.layers = nn.CellList([nn.Dense(n, k) for n, k in zip([input_dim] + h, h + [output_dim])])
 
     def construct(self, x):
         for i, layer in enumerate(self.layers):
@@ -2069,8 +2035,10 @@ class DetrHungarianMatcher(nn.Cell):
         batch_size, num_queries = outputs["logits"].shape[:2]
 
         # We flatten to compute the cost matrices in a batch
-        out_prob = outputs["logits"].flatten(0, 1).softmax(-1)  # [batch_size * num_queries, num_classes]
-        out_bbox = outputs["pred_boxes"].flatten(0, 1)  # [batch_size * num_queries, 4]
+        softmax = ops.Softmax(axis=-1)
+        out_prob = softmax(outputs["logits"].view(-1, outputs["logits"].shape[-1]))
+        # out_prob = outputs["logits"].flatten(start_dim=0, end_dim=1).softmax(-1)  # [batch_size * num_queries, num_classes]
+        out_bbox = outputs["pred_boxes"].flatten(start_dim=0, end_dim=1)  # [batch_size * num_queries, 4]
 
         # Also concat the target labels and boxes
         target_ids = ops.cat([v["class_labels"] for v in targets])
@@ -2082,7 +2050,7 @@ class DetrHungarianMatcher(nn.Cell):
         class_cost = -out_prob[:, target_ids]
 
         # Compute the L1 cost between boxes
-        bbox_cost = ops.cdist(out_bbox, target_bbox, p=1)
+        bbox_cost = ops.cdist(out_bbox, target_bbox, p=1.0)
 
         # Compute the giou cost between boxes
         giou_cost = -generalized_box_iou(center_to_corners_format(out_bbox), center_to_corners_format(target_bbox))
@@ -2128,8 +2096,8 @@ def box_iou(boxes1, boxes2):
     area1 = box_area(boxes1)
     area2 = box_area(boxes2)
 
-    left_top = ops.max(boxes1[:, None, :2], boxes2[:, :2])  # [N,M,2]
-    right_bottom = ops.min(boxes1[:, None, 2:], boxes2[:, 2:])  # [N,M,2]
+    left_top = ops.maximum(boxes1[:, None, :2], boxes2[:, :2])  # [N,M,2]
+    right_bottom = ops.minimum(boxes1[:, None, 2:], boxes2[:, 2:])  # [N,M,2]
 
     width_height = (right_bottom - left_top).clamp(min=0)  # [N,M,2]
     inter = width_height[:, :, 0] * width_height[:, :, 1]  # [N,M]
@@ -2155,8 +2123,8 @@ def generalized_box_iou(boxes1, boxes2):
         raise ValueError(f"boxes2 must be in [x0, y0, x1, y1] (corner) format, but got {boxes2}")
     iou, union = box_iou(boxes1, boxes2)
 
-    top_left = ops.min(boxes1[:, None, :2], boxes2[:, :2])
-    bottom_right = ops.max(boxes1[:, None, 2:], boxes2[:, 2:])
+    top_left = ops.minimum(boxes1[:, None, :2], boxes2[:, :2])
+    bottom_right = ops.maximum(boxes1[:, None, 2:], boxes2[:, 2:])
 
     width_height = (bottom_right - top_left).clamp(min=0)  # [N,M,2]
     area = width_height[:, :, 0] * width_height[:, :, 1]
@@ -2204,7 +2172,7 @@ def nested_tensor_from_tensor_list(tensor_list: List[Tensor]):
         tensor = ops.zeros(batch_shape, dtype=dtype)
         mask = ops.ones((batch_size, height, width), dtype=ms.bool_)
         for img, pad_img, m in zip(tensor_list, tensor, mask):
-            pad_img[: img.shape[0], : img.shape[1], : img.shape[2]].copy_(img)
+            pad_img[: img.shape[0], : img.shape[1], : img.shape[2]] = Tensor.copy(img)
             m[: img.shape[1], : img.shape[2]] = False
     else:
         raise ValueError("Only 3-dimensional tensors are supported")

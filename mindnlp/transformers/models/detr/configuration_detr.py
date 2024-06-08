@@ -139,7 +139,7 @@ class DetrConfig(PretrainedConfig):
 
     def __init__(
         self,
-        use_timm_backbone=True,
+        use_timm_backbone=False,
         backbone_config=None,
         num_channels=3,
         num_queries=100,
@@ -195,14 +195,6 @@ class DetrConfig(PretrainedConfig):
             backbone = None
             # set timm attributes to None
             dilation = None
-
-        # verify_backbone_config_arguments(
-        #     use_timm_backbone=use_timm_backbone,
-        #     use_pretrained_backbone=use_pretrained_backbone,
-        #     backbone=backbone,
-        #     backbone_config=backbone_config,
-        #     backbone_kwargs=backbone_kwargs,
-        # )
 
         self.use_timm_backbone = use_timm_backbone
         self.backbone_config = backbone_config
