@@ -144,6 +144,7 @@ from . import (
     visual_bert,
     vit,
     wav2vec2,
+    wav2vec2_conformer,
     wav2vec2_with_lm,
     whisper,
     x_clip,
@@ -282,6 +283,7 @@ from .visual_bert import *
 from .vit import *
 from .whisper import *
 from .wav2vec2 import *
+from .wav2vec2_conformer import *
 from .wav2vec2_with_lm import *
 from .x_clip import *
 from .xlm import *
@@ -419,6 +421,7 @@ __all__.extend(visual_bert.__all__)
 __all__.extend(vit.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)
+__all__.extend(wav2vec2_conformer.__all__)
 __all__.extend(wav2vec2_with_lm.__all__)
 __all__.extend(x_clip.__all__)
 __all__.extend(xlm.__all__)
