@@ -46,6 +46,7 @@ from . import (
     bros,
     byt5,
     camembert,
+    canine,
     clip,
     codegen,
     cohere,
@@ -71,8 +72,10 @@ from . import (
     chatglm,
     chatglm2,
     chatglm3,
+    flava,
     funnel,
     gemma,
+    git,
     gpt,
     gpt2,
     gpt_bigcode,
@@ -93,6 +96,7 @@ from . import (
     longformer,
     luke,
     mamba,
+    marian,
     mbart,
     megatron_bert,
     minicpm,
@@ -142,11 +146,14 @@ from . import (
     visual_bert,
     vit,
     wav2vec2,
+    wav2vec2_conformer,
     wav2vec2_with_lm,
+    wavlm,
     whisper,
     x_clip,
     xlm,
     xlm_roberta,
+    xlm_roberta_xl,
     xlnet,
 )
 
@@ -180,6 +187,7 @@ from .bridgetower import *
 from .bros import *
 from .byt5 import *
 from .camembert import *
+from .canine import *
 from .clip import *
 from .codegen import *
 from .cohere import *
@@ -205,8 +213,10 @@ from .ernie_m import *
 from .chatglm import *
 from .chatglm2 import *
 from .chatglm3 import *
+from .flava import *
 from .funnel import *
 from .gemma import *
+from .git import *
 from .gpt import *
 from .gpt_neo import *
 from .gpt_neox import *
@@ -227,6 +237,7 @@ from .llava_next import *
 from .longformer import *
 from .luke import *
 from .mamba import *
+from .marian import *
 from .mbart import *
 from .megatron_bert import *
 from .minicpm import *
@@ -277,10 +288,13 @@ from .visual_bert import *
 from .vit import *
 from .whisper import *
 from .wav2vec2 import *
+from .wav2vec2_conformer import *
 from .wav2vec2_with_lm import *
+from .wavlm import *
 from .x_clip import *
 from .xlm import *
 from .xlm_roberta import *
+from .xlm_roberta_xl import *
 from .xlnet import *
 
 __all__ = []
@@ -314,6 +328,7 @@ __all__.extend(bridgetower.__all__)
 __all__.extend(bros.__all__)
 __all__.extend(byt5.__all__)
 __all__.extend(camembert.__all__)
+__all__.extend(canine.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(codegen.__all__)
 __all__.extend(cohere.__all__)
@@ -337,11 +352,13 @@ __all__.extend(ernie.__all__)
 __all__.extend(ernie_m.__all__)
 __all__.extend(esm.__all__)
 __all__.extend(chatglm.__all__)
+__all__.extend(flava.__all__)
 __all__.extend(funnel.__all__)
 __all__.extend(chatglm2.__all__)
 __all__.extend(chatglm3.__all__)
 __all__.extend(gpt.__all__)
 __all__.extend(gemma.__all__)
+__all__.extend(git.__all__)
 __all__.extend(gpt_neo.__all__)
 __all__.extend(gpt_neox.__all__)
 __all__.extend(gpt_neox_japanese.__all__)
@@ -361,6 +378,7 @@ __all__.extend(llava_next.__all__)
 __all__.extend(longformer.__all__)
 __all__.extend(luke.__all__)
 __all__.extend(mamba.__all__)
+__all__.extend(marian.__all__)
 __all__.extend(mbart.__all__)
 __all__.extend(megatron_bert.__all__)
 __all__.extend(minicpm.__all__)
@@ -411,8 +429,11 @@ __all__.extend(visual_bert.__all__)
 __all__.extend(vit.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)
+__all__.extend(wav2vec2_conformer.__all__)
 __all__.extend(wav2vec2_with_lm.__all__)
+__all__.extend(wavlm.__all__)
 __all__.extend(x_clip.__all__)
 __all__.extend(xlm.__all__)
 __all__.extend(xlm_roberta.__all__)
+__all__.extend(xlm_roberta_xl.__all__)
 __all__.extend(xlnet.__all__)
