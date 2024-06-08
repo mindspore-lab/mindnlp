@@ -21,7 +21,7 @@ from tokenizers import pre_tokenizers, processors
 
 from ...tokenization_utils_base import AddedToken, BatchEncoding, EncodedInput
 from ...tokenization_utils_fast import PreTrainedTokenizerFast
-from ...utils import PaddingStrategy, logging
+from ....utils import PaddingStrategy, logging
 from .tokenization_led import LEDTokenizer
 
 
@@ -35,33 +35,23 @@ class LEDTokenizerFast(PreTrainedTokenizerFast):
     r"""
     Construct a "fast" LED tokenizer (backed by HuggingFace's *tokenizers* library), derived from the GPT-2 tokenizer,
     using byte-level Byte-Pair-Encoding.
-
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
-
     ```python
     >>> from transformers import LEDTokenizerFast
-
     >>> tokenizer = LEDTokenizerFast.from_pretrained("allenai/led-base-16384")
     >>> tokenizer("Hello world")["input_ids"]
     [0, 31414, 232, 2]
-
     >>> tokenizer(" Hello world")["input_ids"]
     [0, 20920, 232, 2]
     ```
-
     You can get around that behavior by passing `add_prefix_space=True` when instantiating this tokenizer or when you
     call it on some text, but since the model was not pretrained this way, it might yield a decrease in performance.
-
     <Tip>
-
     When used with `is_split_into_words=True`, this tokenizer needs to be instantiated with `add_prefix_space=True`.
-
     </Tip>
-
     This tokenizer inherits from [`PreTrainedTokenizerFast`] which contains most of the main methods. Users should
     refer to this superclass for more information regarding those methods.
-
     Args:
         vocab_file (`str`):
             Path to the vocabulary file.
@@ -72,24 +62,16 @@ class LEDTokenizerFast(PreTrainedTokenizerFast):
             [bytes.decode](https://docs.python.org/3/library/stdtypes.html#bytes.decode) for more information.
         bos_token (`str`, *optional*, defaults to `"<s>"`):
             The beginning of sequence token that was used during pretraining. Can be used a sequence classifier token.
-
             <Tip>
-
             When building a sequence using special tokens, this is not the token that is used for the beginning of
             sequence. The token used is the `cls_token`.
-
             </Tip>
-
         eos_token (`str`, *optional*, defaults to `"</s>"`):
             The end of sequence token.
-
             <Tip>
-
             When building a sequence using special tokens, this is not the token that is used for the end of sequence.
             The token used is the `sep_token`.
-
             </Tip>
-
         sep_token (`str`, *optional*, defaults to `"</s>"`):
             The separator token, which is used when building a sequence from multiple sequences, e.g. two sequences for
             sequence classification or for a text and a question for question answering. It is also used as the last
@@ -198,7 +180,6 @@ class LEDTokenizerFast(PreTrainedTokenizerFast):
         """
         `str`: Mask token, to use when training a model with masked-language modeling. Log an error if used while not
         having been set.
-
         LED tokenizer has a special mask token to be usable in the fill-mask pipeline. The mask token will greedily
         comprise the space before the *<mask>*.
         """
@@ -212,7 +193,6 @@ class LEDTokenizerFast(PreTrainedTokenizerFast):
     def mask_token(self, value):
         """
         Overriding the default behavior of the mask token to have it eat the space before it.
-
         This is needed to preserve backward compatibility with all the previously used models based on LED.
         """
         # Mask token behave like a normal word, i.e. include the space before it
@@ -264,13 +244,11 @@ class LEDTokenizerFast(PreTrainedTokenizerFast):
         """
         Create a mask from the two sequences passed to be used in a sequence-pair classification task. LED does not
         make use of token type ids, therefore a list of zeros is returned.
-
         Args:
             token_ids_0 (`List[int]`):
                 List of IDs.
             token_ids_1 (`List[int]`, *optional*):
                 Optional second list of IDs for sequence pairs.
-
         Returns:
             `List[int]`: List of zeros.
         """
@@ -323,3 +301,5 @@ class LEDTokenizerFast(PreTrainedTokenizerFast):
                     raise ValueError("Invalid padding strategy:" + str(self.padding_side))
 
         return encoded_inputs
+
+__all__ = ['LEDTokenizerFast']

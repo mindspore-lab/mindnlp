@@ -17,7 +17,7 @@
 from typing import List, Union
 
 from ...configuration_utils import PretrainedConfig
-from ...utils import logging
+from mindnlp.utils import logging
 
 
 logger = logging.get_logger(__name__)
@@ -160,3 +160,7 @@ class LEDConfig(PretrainedConfig):
             decoder_start_token_id=decoder_start_token_id,
             **kwargs,
         )
+
+__all__ = [
+    "LEDConfig",
+]

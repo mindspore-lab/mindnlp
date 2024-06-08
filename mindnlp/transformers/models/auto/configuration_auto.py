@@ -84,6 +84,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("llama", "LlamaConfig"),
         ("llava", "LlavaConfig"),
         ("llava_next", "LlavaNextConfig"),
+        ("led", "LEDConfig"),
         ("mamba", "MambaConfig"),
         ("marian", "MarianConfig"),
         ("mbart", "MBartConfig"),

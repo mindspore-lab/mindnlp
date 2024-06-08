@@ -16,7 +16,6 @@
 
 from .configuration_led import *
 from .modeling_led import *
-from .modeling_tf_led import *
 from .tokenization_led import *
 from .tokenization_led_fast import *
 
@@ -24,6 +23,5 @@ from .tokenization_led_fast import *
 __all__ = []
 __all__.extend(configuration_led.__all__)
 __all__.extend(modeling_led.__all__)
-__all__.extend(modeling_tf_led.__all__)
 __all__.extend(tokenization_led.__all__)
 __all__.extend(tokenization_led_fast.__all__)
