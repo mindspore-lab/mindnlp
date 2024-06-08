@@ -52,6 +52,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("bridgetower", "BridgeTowerConfig"),
         ("bros", "BrosConfig"),
         ("camembert", "CamembertConfig"),
+        ("canine", "CanineConfig"),
         ("chatglm", "ChatGLMConfig"),
         ("clip", "CLIPConfig"),
         ("clip_vision_model", "CLIPVisionConfig"),
