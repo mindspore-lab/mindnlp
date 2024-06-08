@@ -298,7 +298,7 @@ class AnnotationFormatTestMixin:
 
     def test_processor_can_use_legacy_annotation_format(self):
         image_processor_dict = self.image_processor_tester.prepare_image_processor_dict()
-        fixtures_path = pathlib.Path(__file__).parent / "fixtures" / "tests_samples" / "COCO"
+        fixtures_path = pathlib.Path(__file__).parent.parent.parent / "fixtures" / "tests_samples" / "COCO"
 
         with open(fixtures_path / "coco_annotations.txt", "r") as f:
             detection_target = json.loads(f.read())

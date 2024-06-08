@@ -85,7 +85,7 @@ from . import (
     gpt_neox,
     gpt_neox_japanese,
     gpt_pangu,
-    graphormer,
+    # graphormer,
     groupvit,
     hubert,
     imagegpt,
@@ -229,7 +229,7 @@ from .gpt_neox_japanese import *
 from .gpt_bigcode import *
 from .gpt_pangu import *
 from .gpt2 import *
-from .graphormer import *
+# from .graphormer import *
 from .groupvit import *
 from .hubert import *
 from .imagegpt import *
@@ -373,7 +373,7 @@ __all__.extend(gpt_neox_japanese.__all__)
 __all__.extend(gpt_pangu.__all__)
 __all__.extend(gpt_bigcode.__all__)
 __all__.extend(gpt2.__all__)
-__all__.extend(graphormer.__all__)
+# __all__.extend(graphormer.__all__)
 __all__.extend(groupvit.__all__)
 __all__.extend(hubert.__all__)
 __all__.extend(imagegpt.__all__)
