@@ -128,6 +128,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("whisper", "WhisperConfig"),
         ("xclip", "XCLIPConfig"),
         ("xlm-roberta", "XLMRobertaConfig"),
+        ("xlm-roberta-xl", "XLMRobertaXLConfig"),
         ("layoutlmv2", "LayoutLMv2Config"),
         ("xlnet", "XLNetConfig"),
     ]
@@ -342,6 +343,7 @@ CONFIG_ARCHIVE_MAP_MAPPING_NAMES = OrderedDict(
         ("xlm", "XLM_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("xlm-prophetnet", "XLM_PROPHETNET_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("xlm-roberta", "XLM_ROBERTA_PRETRAINED_CONFIG_ARCHIVE_MAP"),
+        ("xlm-roberta-xl", "XLM_ROBERTA_XL_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("xlnet", "XLNET_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("xmod", "XMOD_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("yolos", "YOLOS_PRETRAINED_CONFIG_ARCHIVE_MAP"),

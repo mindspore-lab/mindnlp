@@ -149,6 +149,7 @@ from . import (
     x_clip,
     xlm,
     xlm_roberta,
+    xlm_roberta_xl,
     xlnet,
 )
 
@@ -285,6 +286,7 @@ from .wav2vec2_with_lm import *
 from .x_clip import *
 from .xlm import *
 from .xlm_roberta import *
+from .xlm_roberta_xl import *
 from .xlnet import *
 
 __all__ = []
@@ -421,4 +423,5 @@ __all__.extend(wav2vec2_with_lm.__all__)
 __all__.extend(x_clip.__all__)
 __all__.extend(xlm.__all__)
 __all__.extend(xlm_roberta.__all__)
+__all__.extend(xlm_roberta_xl.__all__)
 __all__.extend(xlnet.__all__)
