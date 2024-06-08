@@ -1541,7 +1541,8 @@ class Wav2Vec2BertForXVector(Wav2Vec2BertPreTrainedModel):
         # Statistic Pooling
         if attention_mask is None:
             mean_features = hidden_states.mean(axis=1)
-            std_features = hidden_states.std(axis=1)
+            #std_features = hidden_states.std(axis=1)
+            std_features = ops.std(hidden_states, axis=1, keepdims=True).squeeze(1)
         else:
             feat_extract_output_lengths = self._get_feat_extract_output_lengths(attention_mask.sum(axis=1))
             tdnn_output_lengths = self._get_tdnn_output_lengths(feat_extract_output_lengths)
