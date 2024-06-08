@@ -214,9 +214,9 @@ class SPTokenizer:
                 Determines whether to fallback to byte encoding if character encoding fails. Default is True.
         
         Returns:
-            None
-            This method does not return any value.
-        
+            None:
+                This method does not return any value.
+
         Raises:
             AssertionError
                 If the vocab_file is None.
@@ -232,13 +232,13 @@ class SPTokenizer:
     def _get_text_tokenizer(self):
         """
         Method _get_text_tokenizer in class SPTokenizer.
-        
+
         Args:
             self: SPTokenizer object. The instance of the SPTokenizer class.
-            
+
         Returns:
             None. This method returns the text tokenizer associated with the SPTokenizer instance.
-        
+
         Raises:
             No explicit exceptions are raised by this method.
         """
@@ -248,13 +248,13 @@ class SPTokenizer:
     def get_blank_token(length: int):
         """
         This method generates a blank token based on the specified length.
-        
+
         Args:
             length (int): The length of the blank token to be generated. Must be greater than or equal to 2.
-            
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             AssertionError: If the specified length is less than 2.
         """
@@ -265,13 +265,13 @@ class SPTokenizer:
     def get_tab_token():
         """
         This method is a static method belonging to the 'SPTokenizer' class. It returns a tab token.
-        
+
         Args:
             This method takes no parameters.
-        
+
         Returns:
             None. This method does not have a return value.
-        
+
         Raises:
             This method does not raise any exceptions.
         """
@@ -281,13 +281,13 @@ class SPTokenizer:
     def num_text_tokens(self):
         """
         Returns the number of text tokens in the SPTokenizer object.
-        
+
         Args:
             self (SPTokenizer): The SPTokenizer object.
-        
+
         Returns:
             None: This method does not return a value.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -297,13 +297,13 @@ class SPTokenizer:
     def num_tokens(self):
         """
         Method to calculate the total number of tokens in the SPTokenizer instance.
-        
+
         Args:
             self (SPTokenizer): The instance of the SPTokenizer class.
-            
+
         Returns:
             None. This method does not return a value directly but calculates the total number of tokens based on the sum of image tokens and text tokens.
-        
+
         Raises:
             This method does not raise any exceptions.
         """
@@ -313,14 +313,14 @@ class SPTokenizer:
     def _encode_whitespaces(text: str, max_len: int = 80):
         """
         This method encodes whitespaces in the input text.
-        
+
         Args:
             text (str): The input text to be encoded, containing whitespaces.
             max_len (int, optional): The maximum length of whitespaces to be encoded. Defaults to 80.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -332,16 +332,16 @@ class SPTokenizer:
     def _preprocess(self, text: str, linebreak=True, whitespaces=True):
         """
         Preprocesses the given text by replacing linebreaks and encoding whitespaces.
-        
+
         Args:
             self (SPTokenizer): An instance of the SPTokenizer class.
             text (str): The text to be preprocessed.
             linebreak (bool, optional): Determines whether linebreaks should be replaced. Defaults to True.
             whitespaces (bool, optional): Determines whether whitespaces should be encoded. Defaults to True.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -355,11 +355,12 @@ class SPTokenizer:
             self, text: str, linebreak=True, whitespaces=True, add_dummy_prefix=True
     ) -> List[int]:
         """
-        @param text: Text to encode.
-        @param linebreak: Whether to encode newline (\n) in text.
-        @param whitespaces: Whether to encode multiple whitespaces or tab in text, useful for source code encoding.
-        @param special_tokens: Whether to encode special token ([MASK], [gMASK], etc.) in text.
-        @param add_dummy_prefix: Whether to add dummy blank space in the beginning.
+        Args:
+            text: Text to encode.
+            linebreak: Whether to encode newline (\n) in text.
+            whitespaces: Whether to encode multiple whitespaces or tab in text, useful for source code encoding.
+            special_tokens: Whether to encode special token ([MASK], [gMASK], etc.) in text.
+            add_dummy_prefix: Whether to add dummy blank space in the beginning.
         """
         text = self._preprocess(text, linebreak, whitespaces)
         if not add_dummy_prefix:
@@ -371,14 +372,14 @@ class SPTokenizer:
     def postprocess(self, text):
         """
         postprocess method in SPTokenizer class.
-        
+
         Args:
             self (SPTokenizer): The instance of SPTokenizer class.
             text (str): The input text to be post-processed, containing special tokens.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             None: This method does not raise any specific exceptions.
         """
@@ -391,14 +392,14 @@ class SPTokenizer:
     def decode(self, text_ids: List[int]) -> str:
         """
         Decode the given text ids using the SPTokenizer.
-        
+
         Args:
             self: The instance of the SPTokenizer class.
             text_ids (List[int]): A list of integers representing the text ids to be decoded.
-        
+
         Returns:
             str: The decoded text corresponding to the provided text ids.
-        
+
         Raises:
             - ValueError: If the input text_ids is empty.
             - TypeError: If the input text_ids is not a list of integers.
@@ -411,19 +412,19 @@ class SPTokenizer:
 
     def decode_tokens(self, tokens: List[str]) -> str:
         """Decode a list of tokens into a string.
-        
+
         Args:
             self: An instance of the SPTokenizer class.
             tokens (List[str]): A list of tokens to be decoded into a string.
-        
+
         Returns:
             str: The decoded string.
-        
+
         Raises:
             None.
-            
+
         This method takes a list of tokens and converts them into a string using the text tokenizer. The resulting string is then passed through the postprocessing method to remove any unwanted characters or
-formatting. The method returns the final decoded string as output. This method is a part of the SPTokenizer class and requires an instance of the class to be called.
+        formatting. The method returns the final decoded string as output. This method is a part of the SPTokenizer class and requires an instance of the class to be called.
         """
         text = self._get_text_tokenizer().convert_tokens_to_string(tokens)
         text = self.postprocess(text)
@@ -433,11 +434,12 @@ formatting. The method returns the final decoded string as output. This method i
             self, text: str, linebreak=True, whitespaces=True, add_dummy_prefix=True
     ) -> List[str]:
         """
-        @param text: Text to encode.
-        @param linebreak: Whether to encode newline (\n) in text.
-        @param whitespaces: Whether to encode multiple whitespaces or tab in text, useful for source code encoding.
-        @param special_tokens: Whether to encode special token ([MASK], [gMASK], etc.) in text.
-        @param add_dummy_prefix: Whether to add dummy blank space in the beginning.
+        Args:
+            text: Text to encode.
+            linebreak: Whether to encode newline (\n) in text.
+            whitespaces: Whether to encode multiple whitespaces or tab in text, useful for source code encoding.
+            special_tokens: Whether to encode special token ([MASK], [gMASK], etc.) in text.
+            add_dummy_prefix: Whether to add dummy blank space in the beginning.
         """
         text = self._preprocess(text, linebreak, whitespaces)
         if not add_dummy_prefix:
@@ -448,16 +450,16 @@ formatting. The method returns the final decoded string as output. This method i
     def __getitem__(self, x: Union[int, str]):
         """
         This method is used to retrieve items from the SPTokenizer instance based on the provided key.
-        
+
         Args:
             self (SPTokenizer): The instance of the SPTokenizer class.
             x (Union[int, str]): The key used to retrieve the item. It can be either an integer or a string.
                 If x is an integer, it represents the index of the item to retrieve.
                 If x is a string, it represents the token to retrieve.
-        
+
         Returns:
             None: This method does not return any value directly. The retrieved item is indirectly obtained based on the key provided.
-        
+
         Raises:
             ValueError: Raised when the key provided is neither a string nor an integer, indicating an invalid key type.
         """
@@ -502,7 +504,7 @@ class ChatGLMTokenizer(PreTrainedTokenizer):
     ) -> None:
         """
         Initializes a ChatGLMTokenizer object.
-        
+
         Args:
             vocab_file (str): The file path to the vocabulary file.
             do_lower_case (bool, optional): Flag indicating whether to convert all tokens to lowercase. Defaults to False.
@@ -517,10 +519,10 @@ class ChatGLMTokenizer(PreTrainedTokenizer):
             unk_token (str, optional): The unknown token. Defaults to '<unk>'.
             num_image_tokens (int, optional): The number of image tokens. Defaults to 20000.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -555,13 +557,13 @@ class ChatGLMTokenizer(PreTrainedTokenizer):
     def gmask_token_id(self) -> Optional[int]:
         """
         This method returns the token ID of the gmask token in the ChatGLMTokenizer.
-        
+
         Args:
             self (ChatGLMTokenizer): The instance of the ChatGLMTokenizer class.
-            
+
         Returns:
             Optional[int]: Returns the token ID of the gmask token if it exists, otherwise returns None.
-        
+
         Raises:
             None
         """
@@ -593,15 +595,15 @@ class ChatGLMTokenizer(PreTrainedTokenizer):
     def preprocess_text(self, inputs):
         """
         preprocess_text method in the ChatGLMTokenizer class preprocesses the input text based on the specified configuration.
-        
+
         Args:
             self (ChatGLMTokenizer): The instance of the ChatGLMTokenizer class.
             inputs (str): The input text to be preprocessed.
-            
+
         Returns:
             str: The preprocessed text based on the specified configuration. If self.remove_space is True, leading and trailing spaces are removed, and consecutive spaces within the text are replaced with a
-single space. If self.do_lower_case is True, the text is converted to lowercase. The preprocessed text is returned.
-        
+            single space. If self.do_lower_case is True, the text is converted to lowercase. The preprocessed text is returned.
+
         Raises:
             None
         """
@@ -626,25 +628,27 @@ single space. If self.do_lower_case is True, the text is converted to lowercase.
     def convert_tokens_to_string(self, tokens: List[str]) -> str:
         """
         Converts a list of tokens into a single string representation.
-        
+
         Args:
             self (ChatGLMTokenizer): An instance of the ChatGLMTokenizer class.
             tokens (List[str]): A list of tokens to be converted into a string representation.
-        
+
         Returns:
             str: The string representation of the given list of tokens.
-        
+
         Raises:
             None.
-        
+
         Note:
-            - The tokens should be generated using the sp_tokenizer of the ChatGLMTokenizer instance.
-            - The resulting string may contain whitespace and punctuation marks based on the original tokenization.
-        
+            >   - The tokens should be generated using the sp_tokenizer of the ChatGLMTokenizer instance.
+            >   - The resulting string may contain whitespace and punctuation marks based on the original tokenization.
+
         Example:
+            ```python
             tokenizer = ChatGLMTokenizer()
             tokens = ['Hello', ',', 'how', 'are', 'you', '?']
             string_representation = tokenizer.convert_tokens_to_string(tokens)
+            ```
         """
         return self.sp_tokenizer.decode_tokens(tokens)
 
@@ -655,14 +659,14 @@ single space. If self.do_lower_case is True, the text is converted to lowercase.
     ) -> str:
         """
         This method decodes the given token IDs into a string representation.
-        
+
         Args:
             self (ChatGLMTokenizer): The instance of the ChatGLMTokenizer class.
             token_ids (Union[int, List[int]]): The token IDs to be decoded. It can be a single integer or a list of integers.
-        
+
         Returns:
             str: The decoded string representation of the token IDs.
-        
+
         Raises:
             N/A
         """
@@ -717,8 +721,8 @@ single space. If self.do_lower_case is True, the text is converted to lowercase.
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A BERT sequence has the following format:
 
-        - single sequence: `[CLS] X [SEP]`
-        - pair of sequences: `[CLS] A [SEP] B [SEP]`
+        >   - single sequence: `[CLS] X [SEP]`
+        >   - pair of sequences: `[CLS] A [SEP] B [SEP]`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -753,14 +757,12 @@ single space. If self.do_lower_case is True, the text is converted to lowercase.
             max_length: maximum length of the returned list and optionally padding length (see below).
                 Will truncate by taking into account the special tokens.
             padding_strategy: PaddingStrategy to use for padding.
-
-                - PaddingStrategy.LONGEST Pad to the longest sequence in the batch
-                - PaddingStrategy.MAX_LENGTH: Pad to the max length (default)
-                - PaddingStrategy.DO_NOT_PAD: Do not pad
-                The tokenizer padding sides are defined in self.padding_side:
-
-                    - 'left': pads on the left of the sequences
-                    - 'right': pads on the right of the sequences
+                >   - PaddingStrategy.LONGEST Pad to the longest sequence in the batch
+                >   - PaddingStrategy.MAX_LENGTH: Pad to the max length (default)
+                >   - PaddingStrategy.DO_NOT_PAD: Do not pad
+                >   - The tokenizer padding sides are defined in self.padding_side:
+                >       - 'left': pads on the left of the sequences
+                >       - 'right': pads on the right of the sequences
             pad_to_multiple_of: (optional) Integer if set will pad the sequence to a multiple of the provided value.
                 This is especially useful to enable the use of Tensor Core on NVIDIA hardware with compute capability
                 `>= 7.5` (Volta).

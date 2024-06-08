@@ -74,17 +74,16 @@ class DebertaTokenizerFast(PreTrainedTokenizerFast):
 
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
+        ```python
+        >>> from transformers import DebertaTokenizerFast
 
-    ```python
-    >>> from transformers import DebertaTokenizerFast
+        >>> tokenizer = DebertaTokenizerFast.from_pretrained("microsoft/deberta-base")
+        >>> tokenizer("Hello world")["input_ids"]
+        [1, 31414, 232, 2]
 
-    >>> tokenizer = DebertaTokenizerFast.from_pretrained("microsoft/deberta-base")
-    >>> tokenizer("Hello world")["input_ids"]
-    [1, 31414, 232, 2]
-
-    >>> tokenizer(" Hello world")["input_ids"]
-    [1, 20920, 232, 2]
-    ```
+        >>> tokenizer(" Hello world")["input_ids"]
+        [1, 20920, 232, 2]
+        ```
 
     You can get around that behavior by passing `add_prefix_space=True` when instantiating this tokenizer, but since
     the model was not pretrained this way, it might yield a decrease in performance.
@@ -154,7 +153,7 @@ class DebertaTokenizerFast(PreTrainedTokenizerFast):
         **kwargs,
     ):
         """Initialize a DebertaTokenizerFast object.
-        
+
         Args:
             self (DebertaTokenizerFast): An instance of the DebertaTokenizerFast class.
             vocab_file (str, optional): The path to the vocabulary file. Defaults to None.
@@ -169,10 +168,10 @@ class DebertaTokenizerFast(PreTrainedTokenizerFast):
             pad_token (str, optional): The padding token. Defaults to '[PAD]'.
             mask_token (str, optional): The mask token. Defaults to '[MASK]'.
             add_prefix_space (bool, optional): Whether to add a space before each token. Defaults to False.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             None. This method does not raise any exceptions.
         """
@@ -233,8 +232,8 @@ class DebertaTokenizerFast(PreTrainedTokenizerFast):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A DeBERTa sequence has the following format:
 
-        - single sequence: [CLS] X [SEP]
-        - pair of sequences: [CLS] A [SEP] B [SEP]
+        >   - single sequence: [CLS] X [SEP]
+        >   - pair of sequences: [CLS] A [SEP] B [SEP]
 
         Args:
             token_ids_0 (`List[int]`):
@@ -257,7 +256,6 @@ class DebertaTokenizerFast(PreTrainedTokenizerFast):
         """
         Create a mask from the two sequences passed to be used in a sequence-pair classification task. A DeBERTa
         sequence pair mask has the following format:
-
         ```
         0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1
         | first sequence    | second sequence |
@@ -285,13 +283,13 @@ class DebertaTokenizerFast(PreTrainedTokenizerFast):
     def _batch_encode_plus(self, *args, **kwargs) -> BatchEncoding:
         """
         Encodes a batch of inputs into their tokenized form using the DebertaTokenizerFast.
-        
+
         Args:
             self: An instance of the DebertaTokenizerFast class.
-        
+
         Returns:
             A BatchEncoding object that represents the tokenized inputs.
-        
+
         Raises:
             AssertionError: If the 'is_split_into_words' parameter is set to True but the DebertaTokenizerFast instance is not instantiated with 'add_prefix_space=True'.
         """
@@ -307,16 +305,16 @@ class DebertaTokenizerFast(PreTrainedTokenizerFast):
     def _encode_plus(self, *args, **kwargs) -> BatchEncoding:
         """
         Encodes the input into a batch of model inputs and returns a BatchEncoding object.
-        
+
         Args:
             self (DebertaTokenizerFast): An instance of the DebertaTokenizerFast class.
-            
+
         Returns:
             BatchEncoding: A BatchEncoding object containing the encoded inputs.
-            
+
         Raises:
             AssertionError: If `is_split_into_words` is True and `add_prefix_space` is False, an AssertionError is raised with a message indicating that the DebertaTokenizerFast class needs to be instantiated
-with `add_prefix_space=True` to use it with pretokenized inputs.
+            with `add_prefix_space=True` to use it with pretokenized inputs.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
 

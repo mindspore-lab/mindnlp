@@ -81,19 +81,19 @@ class BioGptConfig(PretrainedConfig):
             End of stream token id.
 
     Example:
+        ```python
+        >>> from transformers import BioGptModel, BioGptConfig
 
-    ```python
-    >>> from transformers import BioGptModel, BioGptConfig
+        >>> # Initializing a BioGPT microsoft/biogpt style configuration
+        >>> configuration = BioGptConfig()
 
-    >>> # Initializing a BioGPT microsoft/biogpt style configuration
-    >>> configuration = BioGptConfig()
+        >>> # Initializing a model from the microsoft/biogpt style configuration
+        >>> model = BioGptModel(configuration)
 
-    >>> # Initializing a model from the microsoft/biogpt style configuration
-    >>> model = BioGptModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "biogpt"
 
     def __init__(

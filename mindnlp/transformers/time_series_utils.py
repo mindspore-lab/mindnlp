@@ -168,15 +168,15 @@ class LambdaLayer(nn.Cell):
         Args:
             self (LambdaLayer): The current instance of the LambdaLayer class.
             x: The input parameter for the lambda function.
-                - Type: Any
-                - Purpose: Represents the input value for the lambda function.
+                >- Type: Any
+                >- Purpose: Represents the input value for the lambda function.
             *args: Variable length argument list.
-                - Type: Any
-                - Purpose: Additional arguments that can be passed to the lambda function.
-        
+                >- Type: Any
+                >- Purpose: Additional arguments that can be passed to the lambda function.
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -194,14 +194,14 @@ class DistributionOutput:
     def __init__(self, dim: int = 1) -> None:
         """
         Initializes an instance of the DistributionOutput class.
-        
+
         Args:
             self (DistributionOutput): The instance of the class.
             dim (int, optional): The dimension of the output. Defaults to 1.
-        
+
         Returns:
             None: This method does not return anything.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -211,25 +211,25 @@ class DistributionOutput:
     def _base_distribution(self, distr_args):
         """
         Method: _base_distribution
-        
+
         This method is a helper method for the DistributionOutput class. It creates an instance of the distribution class specified by the class variable 'distribution_class' using the provided 'distr_args'
-and returns it.
-        
+        and returns it.
+
         Args:
-            - self: A reference to the current instance of the DistributionOutput class.
-                Type: DistributionOutput
-                Purpose: Allows access to the class's variables and methods.
-                Restrictions: N/A
-        
-            - distr_args: A list of arguments to be passed to the distribution class constructor.
-                Type: list
-                Purpose: Specifies the arguments required to instantiate the distribution class.
-                Restrictions: The number and types of arguments must be compatible with the distribution class constructor.
-        
+            self: A reference to the current instance of the DistributionOutput class.
+                >- Type: DistributionOutput
+                >- Purpose: Allows access to the class's variables and methods.
+                >- Restrictions: N/A
+
+            distr_args: A list of arguments to be passed to the distribution class constructor.
+                >- Type: list
+                >- Purpose: Specifies the arguments required to instantiate the distribution class.
+                >- Restrictions: The number and types of arguments must be compatible with the distribution class constructor.
+
         Returns:
-            - None: This method does not return any value.
-                Type: None
-                Purpose: The method is used for its side effects, specifically, creating an instance of the distribution class.
+            None: This method does not return any value.
+                >- Type: None
+                >- Purpose: The method is used for its side effects, specifically, creating an instance of the distribution class.
         
         Raises:
             - N/A: This method does not raise any exceptions.

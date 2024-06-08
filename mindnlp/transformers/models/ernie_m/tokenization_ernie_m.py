@@ -252,17 +252,17 @@ class ErnieMTokenizer(PreTrainedTokenizer):
         Method: __getstate__
         
         Description:
-        This method is used to retrieve the state of an instance of the ErnieMTokenizer class. It returns a dictionary representing the current state of the instance, with the 'sp_model' attribute set to None.
-        
+            This method is used to retrieve the state of an instance of the ErnieMTokenizer class. It returns a dictionary representing the current state of the instance, with the 'sp_model' attribute set to None.
+
         Args:
-        - self: An instance of the ErnieMTokenizer class.
-        
+            self: An instance of the ErnieMTokenizer class.
+
         Returns:
-        - None: This method does not return any value.
-        
+            None: This method does not return any value.
+
         Raises:
-        - None.
-        
+            None.
+
         """
         state = self.__dict__.copy()
         state["sp_model"] = None
@@ -271,30 +271,30 @@ class ErnieMTokenizer(PreTrainedTokenizer):
     def __setstate__(self, d):
         """
         Sets the state of the ErnieMTokenizer object from a serialized state dictionary.
-        
+
         Args:
             self (ErnieMTokenizer): The instance of the ErnieMTokenizer class.
             d (dict): The serialized state dictionary containing the attributes to be set.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             None.
-        
+
         Note:
             This method is automatically called when an ErnieMTokenizer object is loaded from a serialized state.
             It sets the attributes of the object using the values from the serialized state dictionary.
-        
+
             The 'self.__dict__' attribute is updated with the values from the 'd' dictionary.
-        
+
             If the 'sp_model_kwargs' attribute is not present in the serialized state, it is initialized as an empty dictionary.
-        
+
             The SentencePieceProcessor object 'self.sp_model' is initialized using the 'spm.SentencePieceProcessor' class.
             The 'self.sp_model_kwargs' dictionary is passed as keyword arguments to the SentencePieceProcessor constructor.
-        
+
             Finally, the sentencepiece model is loaded into the SentencePieceProcessor object using 'self.sentencepiece_model_ckpt'.
-        
+
             Note that this method assumes the 'spm' module has been imported and is available in the current namespace.
         """
         self.__dict__ = d
@@ -368,14 +368,14 @@ class ErnieMTokenizer(PreTrainedTokenizer):
     def _convert_token_to_id(self, token):
         """
         Converts a token to its corresponding ID using the provided vocabulary in the ErnieMTokenizer class.
-        
+
         Args:
             self (ErnieMTokenizer): The instance of the ErnieMTokenizer class.
             token (str): The token to be converted to an ID.
-            
+
         Returns:
             None: This method returns None. The token ID can be obtained via the 'vocab' attribute in the ErnieMTokenizer class.
-        
+
         Raises:
             KeyError: If the token is not found in the vocabulary and the unknown token (self.unk_token) is also not present in the vocabulary.
         """
@@ -390,9 +390,8 @@ class ErnieMTokenizer(PreTrainedTokenizer):
         r"""
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. An ErnieM sequence has the following format:
-
-        - single sequence: `[CLS] X [SEP]`
-        - pair of sequences: `[CLS] A [SEP] [SEP] B [SEP]`
+        >   - single sequence: `[CLS] X [SEP]`
+        >   - pair of sequences: `[CLS] A [SEP] [SEP] B [SEP]`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -413,8 +412,8 @@ class ErnieMTokenizer(PreTrainedTokenizer):
         Build offset map from a pair of offset map by concatenating and adding offsets of special tokens. An Ernie-M
         offset_mapping has the following format:
 
-        - single sequence: `(0,0) X (0,0)`
-        - pair of sequences: `(0,0) A (0,0) (0,0) B (0,0)`
+        >   - single sequence: `(0,0) X (0,0)`
+        >   - pair of sequences: `(0,0) A (0,0) (0,0) B (0,0)`
 
         Args:
             offset_mapping_ids_0 (`List[tuple]`):

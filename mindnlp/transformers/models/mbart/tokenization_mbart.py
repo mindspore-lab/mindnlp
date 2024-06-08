@@ -287,8 +287,8 @@ class MBartTokenizer(PreTrainedTokenizer):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. An MBART sequence has the following format, where `X` represents the sequence:
 
-        - `input_ids` (for encoder) `X [eos, src_lang_code]`
-        - `decoder_input_ids`: (for decoder) `X [eos, tgt_lang_code]`
+        >   - `input_ids` (for encoder) `X [eos, src_lang_code]`
+        >   - `decoder_input_ids`: (for decoder) `X [eos, tgt_lang_code]`
 
         BOS is never used. Pairs of sequences are not the expected use case, but they will be handled without a
         separator.
@@ -346,25 +346,26 @@ class MBartTokenizer(PreTrainedTokenizer):
     def get_vocab(self):
         """
         Retrieves the vocabulary of the MBartTokenizer instance.
-        
+
         Args:
             self (MBartTokenizer): The instance of the MBartTokenizer class.
-        
+
         Returns:
             dict: A dictionary containing the vocabulary of the tokenizer. The keys are the tokens in the vocabulary, and the values are their corresponding token IDs.
-        
+
         Raises:
             None
-        
+
         Note:
             The vocabulary includes both the tokens from the original MBart model and any additional tokens that have been added using the `add_tokens` method.
-        
+
         Example:
+            ```python
             >>> tokenizer = MBartTokenizer.from_pretrained('facebook/mbart-large-cc25')
             >>> vocab = tokenizer.get_vocab()
             >>> print(vocab)
             {'<s>': 0, '</s>': 1, '<pad>': 2, '<unk>': 3, '<mask>': 4, '▁': 5, 'a': 6, 'b': 7, 'c': 8, ...}
-        
+            ```
         """
         vocab = {self.convert_ids_to_tokens(i): i for i in range(self.vocab_size)}
         vocab.update(self.added_tokens_encoder)
@@ -373,18 +374,18 @@ class MBartTokenizer(PreTrainedTokenizer):
     def _tokenize(self, text: str) -> List[str]:
         """
         Tokenizes the given text into a list of strings using the mBART tokenizer.
-        
+
         Args:
             self: An instance of the MBartTokenizer class.
             text (str): The text to be tokenized.
-        
+
         Returns:
             List[str]: A list of strings representing the tokenized text.
-        
+
         Raises:
             None.
-        
-        This method takes in a text and tokenizes it into a list of strings using the mBART tokenizer. The tokenizer uses the sp_model 
+
+        This method takes in a text and tokenizes it into a list of strings using the mBART tokenizer. The tokenizer uses the sp_model
         to encode the text into a string representation. The encoded text is then returned as a list of strings.
         """
         return self.sp_model.encode(text, out_type=str)
@@ -412,15 +413,15 @@ class MBartTokenizer(PreTrainedTokenizer):
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
         """
         Save the tokenizer's vocabulary to a file in the specified directory.
-        
+
         Args:
             self (MBartTokenizer): An instance of the MBartTokenizer class.
             save_directory (str): The directory where the vocabulary file will be saved.
             filename_prefix (Optional[str], default=None): An optional prefix for the filename.
-        
+
         Returns:
             Tuple[str]: A tuple containing the path to the saved vocabulary file.
-        
+
         Raises:
             TypeError: If the save_directory parameter is not a string.
             NotADirectoryError: If the save_directory does not exist or is not a directory.
@@ -455,7 +456,7 @@ class MBartTokenizer(PreTrainedTokenizer):
     ) -> BatchEncoding:
         """
         Prepare and encode a batch of sequences for sequence-to-sequence (seq2seq) model input.
-        
+
         Args:
             self (MBartTokenizer): The instance of the MBartTokenizer class.
             src_texts (List[str]): A list of source language texts to be encoded.
@@ -463,10 +464,10 @@ class MBartTokenizer(PreTrainedTokenizer):
             tgt_texts (Optional[List[str]]): An optional list of target language texts to be encoded. Defaults to None.
             tgt_lang (str): The target language code. Defaults to 'ro_RO'.
             **kwargs: Additional keyword arguments to be passed to the superclass method.
-        
+
         Returns:
             BatchEncoding: A batch encoding object containing the encoded source and target sequences.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -477,13 +478,13 @@ class MBartTokenizer(PreTrainedTokenizer):
     def _switch_to_input_mode(self):
         """
         Switch to input mode by setting the source language special tokens.
-        
+
         Args:
             self (MBartTokenizer): An instance of the MBartTokenizer class.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -492,25 +493,27 @@ class MBartTokenizer(PreTrainedTokenizer):
     def _switch_to_target_mode(self):
         """
         Switches the tokenizer to the target mode by setting the target language special tokens.
-        
+
         Args:
             self (MBartTokenizer): An instance of the MBartTokenizer class.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             None.
-        
+
         Description:
-        This method is used to switch the tokenizer to the target mode. It sets the target language special tokens using the 
-        `set_tgt_lang_special_tokens` method with the target language specified during initialization.
-        
+            This method is used to switch the tokenizer to the target mode. It sets the target language special tokens using the
+            `set_tgt_lang_special_tokens` method with the target language specified during initialization.
+
         The `self` parameter is the instance of the MBartTokenizer class that the method is called on.
-        
+
         Example:
+            ```python
             tokenizer = MBartTokenizer()
             tokenizer._switch_to_target_mode()
+            ```
         """
         return self.set_tgt_lang_special_tokens(self.tgt_lang)
 

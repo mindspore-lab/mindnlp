@@ -254,31 +254,31 @@ class LayoutLMv2Tokenizer(PreTrainedTokenizer):
         Initializes a LayoutLMv2Tokenizer object.
         
         Args:
-        - self: The instance of the class.
-        - vocab_file (str): The path to the vocabulary file.
-        - do_lower_case (bool, optional): Whether to lowercase the input text. Defaults to True.
-        - do_basic_tokenize (bool, optional): Whether to perform basic tokenization. Defaults to True.
-        - never_split (list, optional): List of tokens that should not be split. Defaults to None.
-        - unk_token (str, optional): The unknown token. Defaults to '[UNK]'.
-        - sep_token (str, optional): The separator token. Defaults to '[SEP]'.
-        - pad_token (str, optional): The padding token. Defaults to '[PAD]'.
-        - cls_token (str, optional): The classification token. Defaults to '[CLS]'.
-        - mask_token (str, optional): The masking token. Defaults to '[MASK]'.
-        - cls_token_box (list, optional): The bounding box coordinates for the classification token. Defaults to [0, 0, 0, 0].
-        - sep_token_box (list, optional): The bounding box coordinates for the separator token. Defaults to [1000, 1000, 1000, 1000].
-        - pad_token_box (list, optional): The bounding box coordinates for the padding token. Defaults to [0, 0, 0, 0].
-        - pad_token_label (int, optional): The label for the padding token. Defaults to -100.
-        - only_label_first_subword (bool, optional): Whether to only label the first subword. Defaults to True.
-        - tokenize_chinese_chars (bool, optional): Whether to tokenize Chinese characters. Defaults to True.
-        - strip_accents (str, optional): The accents to strip. Defaults to None.
-        - model_max_length (int, optional): The maximum length of the model. Defaults to 512.
-        - additional_special_tokens (list, optional): Additional special tokens. Defaults to None.
-        
+            self: The instance of the class.
+            vocab_file (str): The path to the vocabulary file.
+            do_lower_case (bool, optional): Whether to lowercase the input text. Defaults to True.
+            do_basic_tokenize (bool, optional): Whether to perform basic tokenization. Defaults to True.
+            never_split (list, optional): List of tokens that should not be split. Defaults to None.
+            unk_token (str, optional): The unknown token. Defaults to '[UNK]'.
+            sep_token (str, optional): The separator token. Defaults to '[SEP]'.
+            pad_token (str, optional): The padding token. Defaults to '[PAD]'.
+            cls_token (str, optional): The classification token. Defaults to '[CLS]'.
+            mask_token (str, optional): The masking token. Defaults to '[MASK]'.
+            cls_token_box (list, optional): The bounding box coordinates for the classification token. Defaults to [0, 0, 0, 0].
+            sep_token_box (list, optional): The bounding box coordinates for the separator token. Defaults to [1000, 1000, 1000, 1000].
+            pad_token_box (list, optional): The bounding box coordinates for the padding token. Defaults to [0, 0, 0, 0].
+            pad_token_label (int, optional): The label for the padding token. Defaults to -100.
+            only_label_first_subword (bool, optional): Whether to only label the first subword. Defaults to True.
+            tokenize_chinese_chars (bool, optional): Whether to tokenize Chinese characters. Defaults to True.
+            strip_accents (str, optional): The accents to strip. Defaults to None.
+            model_max_length (int, optional): The maximum length of the model. Defaults to 512.
+            additional_special_tokens (list, optional): Additional special tokens. Defaults to None.
+
         Returns:
-        - None
-        
+            None
+
         Raises:
-        - ValueError: If the vocabulary file cannot be found at the specified path.
+            - ValueError: If the vocabulary file cannot be found at the specified path.
         """
         sep_token = AddedToken(sep_token, special=True) if isinstance(sep_token, str) else sep_token
         unk_token = AddedToken(unk_token, special=True) if isinstance(unk_token, str) else unk_token
@@ -340,13 +340,13 @@ class LayoutLMv2Tokenizer(PreTrainedTokenizer):
     @property
     def vocab_size(self):
         """Return the size of the vocabulary used by the LayoutLMv2Tokenizer.
-        
+
         Args:
             self (LayoutLMv2Tokenizer): An instance of the LayoutLMv2Tokenizer class.
-        
+
         Returns:
             None: This method does not return anything.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -355,30 +355,30 @@ class LayoutLMv2Tokenizer(PreTrainedTokenizer):
     def get_vocab(self):
         """
         Returns the combined vocabulary of the LayoutLMv2Tokenizer instance and any additional tokens that have been added.
-        
+
         Args:
             self (LayoutLMv2Tokenizer): The instance of the LayoutLMv2Tokenizer class.
-        
+
         Returns:
             dict: A dictionary representing the combined vocabulary of the LayoutLMv2Tokenizer instance and any additional tokens that have been added.
-        
+
         Raises:
             None.
-        
+
         """
         return dict(self.vocab, **self.added_tokens_encoder)
 
     def _tokenize(self, text):
         """
         This method '_tokenize' is defined within the 'LayoutLMv2Tokenizer' class and is responsible for tokenizing the input text.
-        
+
         Args:
             self: The instance of the 'LayoutLMv2Tokenizer' class.
             text (str): The input text to be tokenized.
-        
+
         Returns:
             list: A list of tokens resulting from the tokenization process.
-        
+
         Raises:
             N/A
         """
@@ -414,8 +414,8 @@ class LayoutLMv2Tokenizer(PreTrainedTokenizer):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A BERT sequence has the following format:
 
-        - single sequence: `[CLS] X [SEP]`
-        - pair of sequences: `[CLS] A [SEP] B [SEP]`
+        >   - single sequence: `[CLS] X [SEP]`
+        >   - pair of sequences: `[CLS] A [SEP] B [SEP]`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -486,19 +486,19 @@ class LayoutLMv2Tokenizer(PreTrainedTokenizer):
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
         """
         Save the vocabulary to a file in the specified directory.
-        
+
         Args:
             self (LayoutLMv2Tokenizer): The instance of the LayoutLMv2Tokenizer class.
             save_directory (str): The directory where the vocabulary file will be saved.
             filename_prefix (Optional[str]): A prefix to be added to the filename. Defaults to None.
-        
+
         Returns:
             Tuple[str]: A tuple containing the file path of the saved vocabulary.
-        
+
         Raises:
             IOError: If an I/O error occurs while writing the vocabulary file.
             ValueError: If the provided save_directory is invalid or if the vocabulary indices are not consecutive.
-        
+
         """
         index = 0
         if os.path.isdir(save_directory):
@@ -691,11 +691,11 @@ class LayoutLMv2Tokenizer(PreTrainedTokenizer):
     ) -> BatchEncoding:
         """
         Encodes a batch of text or text pairs using the LayoutLMv2 model.
-        
+
         Args:
             self (LayoutLMv2Tokenizer): An instance of the LayoutLMv2Tokenizer class.
             batch_text_or_text_pairs (Union[List[TextInput], List[TextInputPair], List[PreTokenizedInput]]): A list of input texts or text pairs to be encoded. The input can be either a single text, a text
-pair, or a pre-tokenized input.
+                pair, or a pre-tokenized input.
             is_pair (bool, optional): Indicates whether the input is a text pair. Defaults to None.
             boxes (Optional[List[List[List[int]]]], optional): A list of bounding boxes for each token in the input. Defaults to None.
             word_labels (Optional[Union[List[int], List[List[int]]]], optional): A list of word labels for each token in the input. Defaults to None.
@@ -714,17 +714,17 @@ pair, or a pre-tokenized input.
             return_length (bool, optional): Indicates whether to return the lengths of encoded sequences. Defaults to False.
             verbose (bool, optional): Indicates whether to print informative messages. Defaults to True.
             **kwargs: Additional keyword arguments for customizing the encoding process.
-        
+
         Returns:
             BatchEncoding: A dictionary-like object containing the encoded batch, with the following keys:
-                - 'input_ids': The input token IDs.
-                - 'attention_mask': The attention mask indicating which tokens to attend to.
-                - 'token_type_ids': The token type IDs indicating the segment type of each token.
-                - 'overflowing_tokens': The list of overflowing tokens if return_overflowing_tokens=True.
-                - 'special_tokens_mask': The mask indicating the special tokens if return_special_tokens_mask=True.
-                - 'offset_mapping': The mapping of tokens to their corresponding positions in the original text if return_offsets_mapping=True.
-                - 'length': The length of each encoded sequence if return_length=True.
-        
+                >   - 'input_ids': The input token IDs.
+                >   - 'attention_mask': The attention mask indicating which tokens to attend to.
+                >   - 'token_type_ids': The token type IDs indicating the segment type of each token.
+                >   - 'overflowing_tokens': The list of overflowing tokens if return_overflowing_tokens=True.
+                >   - 'special_tokens_mask': The mask indicating the special tokens if return_special_tokens_mask=True.
+                >   - 'offset_mapping': The mapping of tokens to their corresponding positions in the original text if return_offsets_mapping=True.
+                >   - 'length': The length of each encoded sequence if return_length=True.
+
         Raises:
             None.
         """
@@ -788,7 +788,7 @@ pair, or a pre-tokenized input.
     ) -> BatchEncoding:
         """
         Batch encodes a batch of text or text pairs using the LayoutLMv2Tokenizer.
-        
+
         Args:
             self (LayoutLMv2Tokenizer): The instance of the LayoutLMv2Tokenizer class.
             batch_text_or_text_pairs (Union[List[TextInput], List[TextInputPair], List[PreTokenizedInput]]):
@@ -810,10 +810,10 @@ pair, or a pre-tokenized input.
             return_offsets_mapping (bool, optional): Specifies whether to return offsets mapping. Defaults to False.
             return_length (bool, optional): Specifies whether to return the length of each encoded input. Defaults to False.
             verbose (bool, optional): Specifies whether to print detailed information during encoding. Defaults to True.
-        
+
         Returns:
             BatchEncoding: A dictionary-like object containing the encoded inputs.
-        
+
         Raises:
             NotImplementedError: Raised when the 'return_offsets_mapping' parameter is set to True. This feature is not available when using Python tokenizers.
                 To use this feature, change your tokenizer to one deriving from transformers.PreTrainedTokenizerFast.
@@ -940,7 +940,7 @@ pair, or a pre-tokenized input.
     ) -> List[int]:
         """
         This method encodes the input text and returns a list of integer input ids.
-        
+
         Args:
             self: The LayoutLMv2Tokenizer instance.
             text (Union[TextInput, PreTokenizedInput]): The input text to encode. It can be either a TextInput object or a PreTokenizedInput object.
@@ -962,10 +962,10 @@ pair, or a pre-tokenized input.
             return_length (bool): Whether to return the length of the encoded inputs.
             verbose (bool): Whether to print verbose logs. Default is True.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
             List[int]: A list of integer input ids representing the encoded input text.
-        
+
         Raises:
             None.
         """
@@ -1081,7 +1081,7 @@ pair, or a pre-tokenized input.
             **kwargs,
     ) -> BatchEncoding:
         """Encodes the given inputs into a batch of tensors with additional special tokens for LayoutLMv2 model.
-        
+
         Args:
             self (LayoutLMv2Tokenizer): The instance of the LayoutLMv2Tokenizer class.
             text (Union[TextInput, PreTokenizedInput]): The input text to be encoded. It can be either a raw string or a list of tokens.
@@ -1103,13 +1103,13 @@ pair, or a pre-tokenized input.
             return_length (bool): Whether to return the length of the encoded inputs. Default is False.
             verbose (bool): Whether to print verbose logs during encoding. Default is True.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
             BatchEncoding: A batch of encoded inputs in the form of tensors.
-        
+
         Raises:
             NotImplementedError: If return_offsets_mapping is set to True. This feature is not available when using Python tokenizers. To use this feature, change your tokenizer to one deriving from
-transformers.PreTrainedTokenizerFast. More information on available tokenizers can be found at https://github.com/huggingface/transformers/pull/2674.
+            transformers.PreTrainedTokenizerFast. More information on available tokenizers can be found at https://github.com/huggingface/transformers/pull/2674.
         """
         if return_offsets_mapping:
             raise NotImplementedError(
@@ -1381,19 +1381,18 @@ transformers.PreTrainedTokenizerFast. More information on available tokenizers c
                 Number of tokens to remove using the truncation strategy.
             truncation_strategy (`str` or [`~tokenization_utils_base.TruncationStrategy`], *optional*, defaults to `False`):
                 The strategy to follow for truncation. Can be:
-
-                - `'longest_first'`: Truncate to a maximum length specified with the argument `max_length` or to the
-                  maximum acceptable input length for the model if that argument is not provided. This will truncate
-                  token by token, removing a token from the longest sequence in the pair if a pair of sequences (or a
-                  batch of pairs) is provided.
-                - `'only_first'`: Truncate to a maximum length specified with the argument `max_length` or to the
-                  maximum acceptable input length for the model if that argument is not provided. This will only
-                  truncate the first sequence of a pair if a pair of sequences (or a batch of pairs) is provided.
-                - `'only_second'`: Truncate to a maximum length specified with the argument `max_length` or to the
-                  maximum acceptable input length for the model if that argument is not provided. This will only
-                  truncate the second sequence of a pair if a pair of sequences (or a batch of pairs) is provided.
-                - `'do_not_truncate'` (default): No truncation (i.e., can output batch with sequence lengths greater
-                  than the model maximum admissible input size).
+                >   - `'longest_first'`: Truncate to a maximum length specified with the argument `max_length` or to the
+                      maximum acceptable input length for the model if that argument is not provided. This will truncate
+                      token by token, removing a token from the longest sequence in the pair if a pair of sequences (or a
+                      batch of pairs) is provided.
+                >   - `'only_first'`: Truncate to a maximum length specified with the argument `max_length` or to the
+                      maximum acceptable input length for the model if that argument is not provided. This will only
+                      truncate the first sequence of a pair if a pair of sequences (or a batch of pairs) is provided.
+                >   - `'only_second'`: Truncate to a maximum length specified with the argument `max_length` or to the
+                      maximum acceptable input length for the model if that argument is not provided. This will only
+                      truncate the second sequence of a pair if a pair of sequences (or a batch of pairs) is provided.
+                >   - `'do_not_truncate'` (default): No truncation (i.e., can output batch with sequence lengths greater
+                      than the model maximum admissible input size).
             stride (`int`, *optional*, defaults to 0):
                 If set to a positive number, the overflowing tokens returned will contain some tokens from the main
                 sequence returned. The value of this argument defines the number of additional tokens.
@@ -1492,13 +1491,16 @@ transformers.PreTrainedTokenizerFast. More information on available tokenizers c
             max_length: maximum length of the returned list and optionally padding length (see below).
                 Will truncate by taking into account the special tokens.
             padding_strategy: PaddingStrategy to use for padding.
-
+                <br>&emsp;
                 - PaddingStrategy.LONGEST Pad to the longest sequence in the batch
+                <br>&emsp;
                 - PaddingStrategy.MAX_LENGTH: Pad to the max length (default)
+                <br>&emsp;
                 - PaddingStrategy.DO_NOT_PAD: Do not pad
                 The tokenizer padding sides are defined in self.padding_side:
-
+                    <br>&emsp;&emsp;
                     - 'left': pads on the left of the sequences
+                    <br>&emsp;&emsp;
                     - 'right': pads on the right of the sequences
             pad_to_multiple_of: (optional) Integer if set will pad the sequence to a multiple of the provided value.
                 This is especially useful to enable the use of Tensor Core on NVIDIA hardware with compute capability

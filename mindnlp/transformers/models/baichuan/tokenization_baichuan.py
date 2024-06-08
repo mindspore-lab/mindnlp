@@ -247,8 +247,8 @@ class BaiChuanTokenizer(PreTrainedTokenizer):
             None.
         
         This method takes in two input sequences token_ids_0 and token_ids_1 (optional) and builds input sequences with special tokens. If the add_bos_token parameter is True, the method adds the beginning of
-sequence token (bos_token) at the beginning of the sequences. If the add_eos_token parameter is True, the method adds the end of sequence token (eos_token) at the end of the sequences. The method then
-concatenates the special tokens with the input sequences and returns the result.
+        sequence token (bos_token) at the beginning of the sequences. If the add_eos_token parameter is True, the method adds the end of sequence token (eos_token) at the end of the sequences. The method then
+        concatenates the special tokens with the input sequences and returns the result.
         
         If a second input sequence (token_ids_1) is provided, the method also adds special tokens to it and concatenates it with the first input sequence.
         

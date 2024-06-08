@@ -30,6 +30,7 @@ class JambaConfig(PretrainedConfig):
     [ai21labs/jamba-small](https://huggingface.co/ai21labs/Jamba-v0.1)
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
+
     Args:
         vocab_size (`int`, *optional*, defaults to 65536):
             Vocabulary size of the Jamba model. Defines the number of different tokens that can be represented by the

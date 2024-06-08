@@ -43,19 +43,19 @@ class SequenceFeatureExtractor(FeatureExtractionMixin):
         Initializes a SequenceFeatureExtractor object.
         
         Args:
-        - feature_size (int): The size of the input feature vector.
-        - sampling_rate (int): The rate at which the input feature vector is sampled.
-        - padding_value (float): The value used for padding the input sequences.
-        - **kwargs: Additional keyword arguments.
-          - padding_side (str): The side for padding the input sequences (default is 'right').
-          - return_attention_mask (bool): Flag indicating whether to return the attention mask (default is True).
-        
+            feature_size (int): The size of the input feature vector.
+            sampling_rate (int): The rate at which the input feature vector is sampled.
+            padding_value (float): The value used for padding the input sequences.
+            **kwargs: Additional keyword arguments.
+            padding_side (str): The side for padding the input sequences (default is 'right').
+            return_attention_mask (bool): Flag indicating whether to return the attention mask (default is True).
+
         Returns:
-        None. This method initializes the SequenceFeatureExtractor object with the provided parameters and keyword arguments.
-        
+            None. This method initializes the SequenceFeatureExtractor object with the provided parameters and keyword arguments.
+
         Raises:
-        - TypeError: If feature_size, sampling_rate, or padding_value is not of the expected type.
-        - ValueError: If feature_size or sampling_rate is not a positive integer, or if padding_value is not a valid float.
+            TypeError: If feature_size, sampling_rate, or padding_value is not of the expected type.
+            ValueError: If feature_size or sampling_rate is not a positive integer, or if padding_value is not a valid float.
         """
         self.feature_size = feature_size
         self.sampling_rate = sampling_rate
@@ -110,11 +110,11 @@ class SequenceFeatureExtractor(FeatureExtractionMixin):
                 Select a strategy to pad the returned sequences (according to the model's padding side and padding
                 index) among:
 
-                - `True` or `'longest'`: Pad to the longest sequence in the batch (or no padding if only a single
+                >- `True` or `'longest'`: Pad to the longest sequence in the batch (or no padding if only a single
                   sequence if provided).
-                - `'max_length'`: Pad to a maximum length specified with the argument `max_length` or to the maximum
+                >- `'max_length'`: Pad to a maximum length specified with the argument `max_length` or to the maximum
                   acceptable input length for the model if that argument is not provided.
-                - `False` or `'do_not_pad'` (default): No padding (i.e., can output a batch with sequences of different
+                >- `False` or `'do_not_pad'` (default): No padding (i.e., can output a batch with sequences of different
                   lengths).
             max_length (`int`, *optional*):
                 Maximum length of the returned list and optionally padding length (see above).
@@ -133,9 +133,9 @@ class SequenceFeatureExtractor(FeatureExtractionMixin):
             return_tensors (`str` or [`~utils.TensorType`], *optional*):
                 If set, will return tensors instead of list of python integers. Acceptable values are:
 
-                - `'tf'`: Return TensorFlow `tf.constant` objects.
-                - `'pt'`: Return PyTorch `torch.Tensor` objects.
-                - `'np'`: Return Numpy `np.ndarray` objects.
+                >- `'tf'`: Return TensorFlow `tf.constant` objects.
+                >- `'pt'`: Return PyTorch `torch.Tensor` objects.
+                >- `'np'`: Return Numpy `np.ndarray` objects.
         """
         # If we have a list of dicts, let's convert it in a dict of lists
         # We do this to allow using this method as a collate_fn function in PyTorch Dataloader
@@ -258,13 +258,12 @@ class SequenceFeatureExtractor(FeatureExtractionMixin):
             padding_strategy (`PaddingStrategy`, *optional*, default to `PaddingStrategy.DO_NOT_PAD`):
                 PaddingStrategy to use for padding.
 
-                - PaddingStrategy.LONGEST Pad to the longest sequence in the batch
-                - PaddingStrategy.MAX_LENGTH: Pad to the max length (default)
-                - PaddingStrategy.DO_NOT_PAD: Do not pad
+                >- PaddingStrategy.LONGEST Pad to the longest sequence in the batch
+                >- PaddingStrategy.MAX_LENGTH: Pad to the max length (default)
+                >- PaddingStrategy.DO_NOT_PAD: Do not pad
                 The feature_extractor padding sides are defined in self.padding_side:
-
-                    - 'left': pads on the left of the sequences
-                    - 'right': pads on the right of the sequences
+                >   - 'left': pads on the left of the sequences
+                >   - 'right': pads on the right of the sequences
             pad_to_multiple_of (`int`, *optional*):
                 Integer if set will pad the sequence to a multiple of the provided value. This is especially useful to
                 enable the use of Tensor Core on NVIDIA hardware with compute capability `>= 7.5` (Volta), or on TPUs

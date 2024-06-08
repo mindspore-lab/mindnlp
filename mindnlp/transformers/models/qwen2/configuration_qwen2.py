@@ -79,18 +79,20 @@ class Qwen2Config(PretrainedConfig):
         attention_dropout (`float`, *optional*, defaults to 0.0):
             The dropout ratio for the attention probabilities.
 
-    ```python
-    >>> from transformers import Qwen2Model, Qwen2Config
+    Example:
+        ```python
+        >>> from transformers import Qwen2Model, Qwen2Config
 
-    >>> # Initializing a Qwen2 style configuration
-    >>> configuration = Qwen2Config()
+        >>> # Initializing a Qwen2 style configuration
+        >>> configuration = Qwen2Config()
 
-    >>> # Initializing a model from the Qwen2-7B style configuration
-    >>> model = Qwen2Model(configuration)
+        >>> # Initializing a model from the Qwen2-7B style configuration
+        >>> model = Qwen2Model(configuration)
 
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "qwen2"
     keys_to_ignore_at_inference = ["past_key_values"]
 

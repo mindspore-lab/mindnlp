@@ -60,16 +60,17 @@ class VanConfig(PretrainedConfig):
             The dropout probability for dropout.
 
     Example:
-    ```python
-    >>> from transformers import VanModel, VanConfig
+        ```python
+        >>> from transformers import VanModel, VanConfig
 
-    >>> # Initializing a VAN van-base style configuration
-    >>> configuration = VanConfig()
-    >>> # Initializing a model from the van-base style configuration
-    >>> model = VanModel(configuration)
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Initializing a VAN van-base style configuration
+        >>> configuration = VanConfig()
+        >>> # Initializing a model from the van-base style configuration
+        >>> model = VanModel(configuration)
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "van"
 
     def __init__(

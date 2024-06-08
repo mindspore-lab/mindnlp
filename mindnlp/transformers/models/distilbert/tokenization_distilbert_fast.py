@@ -146,26 +146,26 @@ class DistilBertTokenizerFast(PreTrainedTokenizerFast):
         This method initializes an instance of the DistilBertTokenizerFast class.
         
         Args:
-        - self: The instance of the class.
-        - vocab_file (str): Path to the vocabulary file. Default is None.
-        - tokenizer_file (str): Path to the tokenizer file. Default is None.
-        - do_lower_case (bool): Indicates whether to convert input text to lowercase. Default is True.
-        - unk_token (str): Special token for unknown words. Default is '[UNK]'.
-        - sep_token (str): Special token for separating sequences. Default is '[SEP]'.
-        - pad_token (str): Special token for padding sequences. Default is '[PAD]'.
-        - cls_token (str): Special token for the start of a sequence. Default is '[CLS]'.
-        - mask_token (str): Special token for masking tokens. Default is '[MASK]'.
-        - tokenize_chinese_chars (bool): Indicates whether to tokenize Chinese characters. Default is True.
-        - strip_accents (str): Indicates the handling of accents. Default is None.
-        - **kwargs: Additional keyword arguments.
-        
+            self: The instance of the class.
+            vocab_file (str): Path to the vocabulary file. Default is None.
+            tokenizer_file (str): Path to the tokenizer file. Default is None.
+            do_lower_case (bool): Indicates whether to convert input text to lowercase. Default is True.
+            unk_token (str): Special token for unknown words. Default is '[UNK]'.
+            sep_token (str): Special token for separating sequences. Default is '[SEP]'.
+            pad_token (str): Special token for padding sequences. Default is '[PAD]'.
+            cls_token (str): Special token for the start of a sequence. Default is '[CLS]'.
+            mask_token (str): Special token for masking tokens. Default is '[MASK]'.
+            tokenize_chinese_chars (bool): Indicates whether to tokenize Chinese characters. Default is True.
+            strip_accents (str): Indicates the handling of accents. Default is None.
+            **kwargs: Additional keyword arguments.
+
         Returns:
-        - None: This method does not return any value.
-        
+            None: This method does not return any value.
+
         Raises:
-        - JSONDecodeError: If there is an issue decoding the normalizer state from JSON.
-        - AttributeError: If there is an issue accessing attributes or methods.
-        - ValueError: If there is a mismatch in the normalizer state parameters.
+            - JSONDecodeError: If there is an issue decoding the normalizer state from JSON.
+            - AttributeError: If there is an issue accessing attributes or methods.
+            - ValueError: If there is a mismatch in the normalizer state parameters.
         """
         super().__init__(
             vocab_file,
@@ -201,8 +201,8 @@ class DistilBertTokenizerFast(PreTrainedTokenizerFast):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A BERT sequence has the following format:
 
-        - single sequence: `[CLS] X [SEP]`
-        - pair of sequences: `[CLS] A [SEP] B [SEP]`
+        >   - single sequence: `[CLS] X [SEP]`
+        >   - pair of sequences: `[CLS] A [SEP] B [SEP]`
 
         Args:
             token_ids_0 (`List[int]`):

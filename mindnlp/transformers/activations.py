@@ -161,7 +161,7 @@ class MishActivation(nn.Cell):
             None.
         
         The Mish activation function is defined as the element-wise product of the input tensor and the hyperbolic tangent of the softplus function applied to the input tensor. This activation function
-introduces a non-linearity that helps in capturing more complex patterns in the data.
+        introduces a non-linearity that helps in capturing more complex patterns in the data.
         
         Note:
             - The input tensor should have a shape that is compatible with the activation function.
