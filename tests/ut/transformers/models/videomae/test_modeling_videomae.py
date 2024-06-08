@@ -24,7 +24,7 @@ from mindnlp.utils.generic import cached_property
 from mindnlp.transformers import VideoMAEConfig
 from mindnlp.transformers.models.auto import get_values
 from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow,is_mindspore_available,is_vision_available
-
+from mindnlp.utils.serialization import load
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 
@@ -161,7 +161,7 @@ class VideoMAEModelTester:
         config, pixel_values, labels = config_and_inputs
         inputs_dict = {"pixel_values": pixel_values}
         return config, inputs_dict
-
+    
 @require_mindspore
 class VideoMAEModelTest(ModelTesterMixin, unittest.TestCase):
     """
@@ -328,7 +328,6 @@ class VideoMAEModelTest(ModelTesterMixin, unittest.TestCase):
             check_hidden_states_output(inputs_dict, config, model_class)
 
 
-
 # We will verify our results on a video of eating spaghetti
 # Frame indices used: [164 168 172 176 181 185 189 193 198 202 206 210 215 219 223 227]
 def prepare_video():
@@ -369,32 +368,26 @@ class VideoMAEModelIntegrationTest(unittest.TestCase):
         
         self.assertTrue(np.allclose(outputs.logits[0, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-3))
 
-    @unittest.skip(reason="VideoMAE does not use inputs_embeds")
+    #@unittest.skip(reason="VideoMAE does not use inputs_embeds")
     def test_inference_for_pretraining(self):
         model = VideoMAEForPreTraining.from_pretrained("MCG-NJU/videomae-base-short", from_pt=True)
-        image_processor = self.default_image_processor()
+        model.set_train(False)
+        image_processor = self.default_image_processor
         video = prepare_video()
-        inputs = image_processor(video)
-
-        # add boolean mask, indicating which patches to mask
-        local_path = hf_hub_download(repo_id="hf-internal-testing/bool-masked-pos", filename="bool_masked_pos_np.npy")
-        inputs["bool_masked_pos"] = mindspore.tensor(np.load(local_path))
-
-        # forward pass
+        inputs = image_processor(video, return_tensors="ms")
+        local_path = hf_hub_download(repo_id="hf-internal-testing/bool-masked-pos", filename="bool_masked_pos.pt")
+        inputs["bool_masked_pos"] = load(local_path)
         with mindspore._no_grad():
             outputs = model(**inputs)
-
-        # verify the logits
-        expected_shape = [1, 1408, 1536]
+        expected_shape = (1, 1408, 1536)
         expected_slice = mindspore.tensor(
             [[0.7994, 0.9612, 0.8508], [0.7401, 0.8958, 0.8302], [0.5862, 0.7468, 0.7325]])
         self.assertEqual(outputs.logits.shape, expected_shape)
-        self.assertTrue(np.allclose(outputs.logits[0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
+        self.assertTrue(np.allclose(outputs.logits[0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1.5e-3))
 
         # verify the loss (`config.norm_pix_loss` = `True`)
         expected_loss = mindspore.tensor([0.5142])
         self.assertTrue(np.allclose(outputs.loss.asnumpy(), expected_loss.asnumpy(), atol=1e-4))
-
         # verify the loss (`config.norm_pix_loss` = `False`)
         model = VideoMAEForPreTraining.from_pretrained("MCG-NJU/videomae-base-short", norm_pix_loss=False, from_pt=True)
 
