@@ -304,7 +304,7 @@ numbers.
             else:
                 assert (
                     len(self.ffn_multipliers) == self.num_transformer_layers
-                ), f"{len(self.ffn_multipliers)=}!={self.num_transformer_layers=}"
+                ), f"{len(self.ffn_multipliers)}!={self.num_transformer_layers}"
         else:
             raise NotImplementedError(
                 f"FFN multipliers should be a single number or a list containing exactly two numbers. Got: {qkv_multipliers}."
