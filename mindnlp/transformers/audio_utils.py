@@ -231,13 +231,13 @@ def mel_filter_bank(
 
     Different banks of mel filters were introduced in the literature. The following variations are supported:
 
-    - MFCC FB-20: introduced in 1980 by Davis and Mermelstein, it assumes a sampling frequency of 10 kHz and a speech
+    >- MFCC FB-20: introduced in 1980 by Davis and Mermelstein, it assumes a sampling frequency of 10 kHz and a speech
       bandwidth of `[0, 4600]` Hz.
-    - MFCC FB-24 HTK: from the Cambridge HMM Toolkit (HTK) (1995) uses a filter bank of 24 filters for a speech
+    >- MFCC FB-24 HTK: from the Cambridge HMM Toolkit (HTK) (1995) uses a filter bank of 24 filters for a speech
       bandwidth of `[0, 8000]` Hz. This assumes sampling rate ≥ 16 kHz.
-    - MFCC FB-40: from the Auditory Toolbox for MATLAB written by Slaney in 1998, assumes a sampling rate of 16 kHz and
+    >- MFCC FB-40: from the Auditory Toolbox for MATLAB written by Slaney in 1998, assumes a sampling rate of 16 kHz and
       speech bandwidth of `[133, 6854]` Hz. This version also includes area normalization.
-    - HFCC-E FB-29 (Human Factor Cepstral Coefficients) of Skowronski and Harris (2004), assumes a sampling rate of
+    >- HFCC-E FB-29 (Human Factor Cepstral Coefficients) of Skowronski and Harris (2004), assumes a sampling rate of
       12.5 kHz and speech bandwidth of `[0, 6250]` Hz.
 
     This code is adapted from *torchaudio* and *librosa*. Note that the default parameters of torchaudio's
@@ -326,10 +326,10 @@ def window_function(
 
     The following window types are supported:
 
-        - `"boxcar"`: a rectangular window
-        - `"hamming"`: the Hamming window
-        - `"hann"`: the Hann window
-        - `"povey"`: the Povey window
+        >- `"boxcar"`: a rectangular window
+        >- `"hamming"`: the Hamming window
+        >- `"hann"`: the Hann window
+        >- `"povey"`: the Povey window
 
     Args:
         window_length (`int`):
@@ -403,12 +403,12 @@ def spectrogram(
 
     This function can create the following kinds of spectrograms:
 
-      - amplitude spectrogram (`power = 1.0`)
-      - power spectrogram (`power = 2.0`)
-      - complex-valued spectrogram (`power = None`)
-      - log spectrogram (use `log_mel` argument)
-      - mel spectrogram (provide `mel_filters`)
-      - log-mel spectrogram (provide `mel_filters` and `log_mel`)
+      >- amplitude spectrogram (`power = 1.0`)
+      >- power spectrogram (`power = 2.0`)
+      >- complex-valued spectrogram (`power = None`)
+      >- log spectrogram (use `log_mel` argument)
+      >- mel spectrogram (provide `mel_filters`)
+      >- log-mel spectrogram (provide `mel_filters` and `log_mel`)
 
     How this works:
 
@@ -420,9 +420,9 @@ def spectrogram(
 
     We make a distinction between the following "blocks" of sample data, each of which may have a different lengths:
 
-      - The analysis frame. This is the size of the time slices that the input waveform is split into.
-      - The window. Each analysis frame is multiplied by the window to avoid spectral leakage.
-      - The FFT input buffer. The length of this determines how many frequency bins are in the spectrogram.
+      >- The analysis frame. This is the size of the time slices that the input waveform is split into.
+      >- The window. Each analysis frame is multiplied by the window to avoid spectral leakage.
+      >- The FFT input buffer. The length of this determines how many frequency bins are in the spectrogram.
 
     In this implementation, the window is assumed to be zero-padded to have the same size as the analysis frame. A
     padded window can be obtained from `window_function()`. The FFT input buffer may be larger than the analysis frame,
@@ -693,17 +693,16 @@ def stft(frames: np.array, windowing_function: np.array, fft_window_size: int = 
             `(1+fft_window_size)//2`. An increase of the fft_window_size slows the calculus time proportionnally.
 
     Example:
+        ```python
+        >>> from transformers.audio_utils import stft, fram_wave
+        >>> import numpy as np
 
-    ```python
-    >>> from transformers.audio_utils import stft, fram_wave
-    >>> import numpy as np
-
-    >>> audio = np.random.rand(50)
-    >>> fft_window_size = 10
-    >>> hop_length = 2
-    >>> framed_audio = fram_wave(audio, hop_length, fft_window_size)
-    >>> spectrogram = stft(framed_audio, np.hanning(fft_window_size + 1))
-    ```
+        >>> audio = np.random.rand(50)
+        >>> fft_window_size = 10
+        >>> hop_length = 2
+        >>> framed_audio = fram_wave(audio, hop_length, fft_window_size)
+        >>> spectrogram = stft(framed_audio, np.hanning(fft_window_size + 1))
+        ```
 
     Returns:
         spectrogram (`np.ndarray`):

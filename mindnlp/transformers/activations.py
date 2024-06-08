@@ -134,9 +134,9 @@ class AccurateGELUActivation(nn.Cell):
                     The transformed tensor represents the non-linearity applied to the input tensor.
         
         Raises:
-            - TypeError: If the input tensor is not of type Tensor.
-            - ValueError: If the dimensions of the input tensor are not compatible with the operations within the method.
-            - RuntimeError: If there is an issue during the computation of the GELU activation function.
+            TypeError: If the input tensor is not of type Tensor.
+            ValueError: If the dimensions of the input tensor are not compatible with the operations within the method.
+            RuntimeError: If there is an issue during the computation of the GELU activation function.
         """
         return 0.5 * input * (1 + ops.tanh(self.precomputed_constant * (input + 0.044715 * ops.pow(input, 3))))
 
@@ -161,7 +161,7 @@ class MishActivation(nn.Cell):
             None.
         
         The Mish activation function is defined as the element-wise product of the input tensor and the hyperbolic tangent of the softplus function applied to the input tensor. This activation function
-introduces a non-linearity that helps in capturing more complex patterns in the data.
+        introduces a non-linearity that helps in capturing more complex patterns in the data.
         
         Note:
             - The input tensor should have a shape that is compatible with the activation function.
@@ -211,9 +211,9 @@ class LaplaceActivation(nn.Cell):
             None. The method modifies the input data in place.
         
         Raises:
-            - ValueError: If the input data is not a valid tensor.
-            - TypeError: If the input data or the normalization parameters are of incorrect types.
-            - ZeroDivisionError: If sigma is set to zero, resulting in division by zero.
+            ValueError: If the input data is not a valid tensor.
+            TypeError: If the input data or the normalization parameters are of incorrect types.
+            ZeroDivisionError: If sigma is set to zero, resulting in division by zero.
         """
         input = (input - mu).div(sigma * math.sqrt(2.0))
         return 0.5 * (1.0 + ops.erf(input))
