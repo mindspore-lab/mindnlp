@@ -12,12 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Testing suite for the PyTorch DETR processor."""
+# pylint: disable=not-callable
 
 import json
 import pathlib
 import unittest
 import numpy as np
-from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow
+from mindnlp.utils.testing_utils import require_vision, slow
 from mindnlp.utils import is_mindspore_available, is_vision_available
 
 from ...test_image_processing_common import AnnotationFormatTestMixin, ImageProcessingTestMixin, prepare_image_inputs
@@ -31,6 +33,7 @@ if is_vision_available():
     from PIL import Image
 
     from mindnlp.transformers import DetrImageProcessor
+
 
 class DetrImageProcessingTester(unittest.TestCase):
     def __init__(
@@ -49,6 +52,7 @@ class DetrImageProcessingTester(unittest.TestCase):
         image_std=[0.5, 0.5, 0.5],
         do_pad=True,
     ):
+        super().__init__()
         # by setting size["longest_edge"] > max_resolution we're effectively not testing this :p
         size = size if size is not None else {"shortest_edge": 18, "longest_edge": 1333}
         self.parent = parent
@@ -236,7 +240,7 @@ class DetrImageProcessingTest(AnnotationFormatTestMixin, ImageProcessingTestMixi
 
         # verify area
         expected_area = ms.Tensor([5887.9600, 11250.2061, 489353.8438, 837122.7500, 147967.5156, 165732.3438])
-        self.assertTrue(np.allclose(encoding["labels"][0]["area"].asnumpy(), expected_area))
+        self.assertTrue(np.allclose(encoding["labels"][0]["area"].asnumpy(), expected_area.asnumpy()))
         # verify boxes
         expected_boxes_shape = ops.zeros([6, 4]).shape
         self.assertEqual(encoding["labels"][0]["boxes"].shape, expected_boxes_shape)
@@ -244,7 +248,7 @@ class DetrImageProcessingTest(AnnotationFormatTestMixin, ImageProcessingTestMixi
         self.assertTrue(np.allclose(encoding["labels"][0]["boxes"][0].asnumpy(), expected_boxes_slice.asnumpy(), atol=1e-3))
         # verify image_id
         expected_image_id = ms.Tensor([39769])
-        self.assertTrue(np.allclose(encoding["labels"][0]["image_id"].asnumpy(), expected_image_id).asnumpy())
+        self.assertTrue(np.allclose(encoding["labels"][0]["image_id"].asnumpy(), expected_image_id.asnumpy()))
         # verify is_crowd
         expected_is_crowd = ms.Tensor([0, 0, 0, 0, 0, 0])
         self.assertTrue(np.allclose(encoding["labels"][0]["iscrowd"].asnumpy(), expected_is_crowd.asnumpy()))
@@ -307,6 +311,7 @@ class DetrImageProcessingTest(AnnotationFormatTestMixin, ImageProcessingTestMixi
         expected_size = ms.Tensor([800, 1066])
         self.assertTrue(np.allclose(encoding["labels"][0]["size"].asnumpy(), expected_size.asnumpy()))
 
+    @unittest.skip("require 3rd-party library 'pycocotools'")
     @slow
     def test_batched_coco_detection_annotations(self):
         image_0 = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")

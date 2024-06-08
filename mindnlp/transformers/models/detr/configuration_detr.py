@@ -14,11 +14,6 @@
 # ============================================
 """DETR model configuration"""
 
-from collections import OrderedDict
-from typing import Mapping
-
-from packaging import version
-
 from ...configuration_utils import PretrainedConfig
 from ....utils import logging
 from ..auto import CONFIG_MAPPING
@@ -139,7 +134,7 @@ class DetrConfig(PretrainedConfig):
 
     def __init__(
         self,
-        use_timm_backbone=False,
+        use_timm_backbone=True,
         backbone_config=None,
         num_channels=3,
         num_queries=100,
@@ -175,6 +170,20 @@ class DetrConfig(PretrainedConfig):
         eos_coefficient=0.1,
         **kwargs,
     ):
+        if not use_timm_backbone and use_pretrained_backbone:
+            raise ValueError(
+                "Loading pretrained backbone weights from the transformers library is not supported yet. `use_timm_backbone` must be set to `True` when `use_pretrained_backbone=True`"
+            )
+
+        if backbone_config is not None and backbone is not None:
+            raise ValueError("You can't specify both `backbone` and `backbone_config`.")
+
+        if backbone_config is not None and use_timm_backbone:
+            raise ValueError("You can't specify both `backbone_config` and `use_timm_backbone`.")
+
+        if backbone_kwargs is not None and backbone_kwargs and backbone_config is not None:
+            raise ValueError("You can't specify both `backbone_kwargs` and `backbone_config`.")
+
         # We default to values which were previously hard-coded in the model. This enables configurability of the config
         # while keeping the default behavior the same.
         if use_timm_backbone and backbone_kwargs is None:
