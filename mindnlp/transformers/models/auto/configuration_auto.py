@@ -72,6 +72,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("encodec", "EncodecConfig"),
         ("esm", "EsmConfig"),
         ("falcon", "FalconConfig"),
+        ("flava", "FlavaConfig"),
         ("funnel", "FunnelConfig"),
         ("gemma", "GemmaConfig"),
         ("git", "GitConfig"),
