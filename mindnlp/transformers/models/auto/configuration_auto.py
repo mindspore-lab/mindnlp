@@ -78,6 +78,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("git", "GitConfig"),
         ("gpt2", "GPT2Config"),
         ("gpt_bigcode", "GPTBigCodeConfig"),
+        ("gptj", "GPTJConfig"),
         ("gpt_neox", "GPTNeoXConfig"),
         ("gpt_pangu", "GPTPanguConfig"),
         ("groupvit", "GroupViTConfig"),
