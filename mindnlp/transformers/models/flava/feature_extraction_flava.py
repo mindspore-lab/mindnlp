@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2021 The HuggingFace Inc. team. All rights reserved.
+# Copyright 2022 Meta Platforms authors and The HuggingFace Team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,35 +12,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Feature extractor class for DETR."""
+"""Feature extractor class for FLAVA."""
 
 import warnings
 
-from ...image_transforms import rgb_to_id as _rgb_to_id
-from ....utils import logging
-from .image_processing_detr import DetrImageProcessor
+from mindnlp.utils import logging
+from .image_processing_flava import FlavaImageProcessor
 
 
 logger = logging.get_logger(__name__)
 
 
-def rgb_to_id(x):
-    warnings.warn(
-        "rgb_to_id has moved and will not be importable from this module from v5. "
-        "Please import from transformers.image_transforms instead.",
-        FutureWarning,
-    )
-    return _rgb_to_id(x)
-
-
-class DetrFeatureExtractor(DetrImageProcessor):
+class FlavaFeatureExtractor(FlavaImageProcessor):
     def __init__(self, *args, **kwargs) -> None:
         warnings.warn(
-            "The class DetrFeatureExtractor is deprecated and will be removed in version 5 of Transformers."
-            " Please use DetrImageProcessor instead.",
+            "The class FlavaFeatureExtractor is deprecated and will be removed in version 5 of Transformers. Please"
+            " use FlavaImageProcessor instead.",
             FutureWarning,
         )
         super().__init__(*args, **kwargs)
 
-
-__all__ = ['DetrFeatureExtractor']
+__all__ = ['FlavaFeatureExtractor']

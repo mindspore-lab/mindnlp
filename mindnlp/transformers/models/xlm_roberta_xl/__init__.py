@@ -1,4 +1,4 @@
-# Copyright 2024 Huawei Technologies Co., Ltd
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,18 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================
+# ============================================================================
 """
-DETR Model init
+XLM Roberta init
 """
-from . import configuration_detr, feature_extraction_detr, image_processing_detr, modeling_detr
-from .configuration_detr import *
-from .feature_extraction_detr import *
-from .image_processing_detr import *
-from .modeling_detr import *
+from . import configuration_xlm_roberta_xl, modeling_xlm_roberta_xl
+
+from .configuration_xlm_roberta_xl import *
+from .modeling_xlm_roberta_xl import *
 
 __all__ = []
-__all__.extend(configuration_detr.__all__)
-__all__.extend(feature_extraction_detr.__all__)
-__all__.extend(image_processing_detr.__all__)
-__all__.extend(modeling_detr.__all__)
+__all__.extend(configuration_xlm_roberta_xl.__all__)
+__all__.extend(modeling_xlm_roberta_xl.__all__)

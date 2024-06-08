@@ -53,6 +53,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("bridgetower", "BridgeTowerModel"),
         ("bros", "BrosModel"),
         ("camembert", "CamembertModel"),
+        ("canine", "CanineModel"),
         ("codegen", "CodeGenModel"),
         ("cohere", "CohereModel"),
         ("cogvlm","CogVLMModel"),
@@ -74,11 +75,13 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("ernie", "ErnieModel"),
         ("ernie_m", "ErnieMModel"),
         ("falcon", "FalconModel"),
+        ("flava", "FlavaModel"),
         ("funnel", ("FunnelModel", "FunnelBaseModel")),
         ("gemma", "GemmaModel"),
         ("git", "GitModel"),
         ("gpt_bigcode", "GPTBigCodeModel"),
         ("gpt", "GPTModel"),
+        ("gptJ", "GPTjModel"),
         ("gpt2", "GPT2Model"),
         ("gpt_neox_japanese", "GPTNeoXJapaneseModel"),
         ("gpt_pangu", "GPTPanguModel"),
@@ -86,6 +89,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("layoutlmv2", "LayoutLMv2Model"),
         ("longformer", "LongformerModel"),
         ("jetmoe", "JetMoEModel"),
+        ("led", "LEDModel"),
         ("llama", "LlamaModel"),
         ("mamba", "MambaModel"),
         ("marian", "MarianModel"),
@@ -122,8 +126,11 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("vit", "ViTModel"),
         ("whisper", "WhisperModel"),
         ("wav2vec2", "Wav2Vec2Model"),
+        ("wavlm", "WavLMModel"),
+        ("wav2vec2-conformer", "Wav2Vec2ConformerModel"),
         ("xclip", "XCLIPModel"),
         ("xlm-roberta", "XLMRobertaModel"),
+        ("xlm-roberta-xl", "XLMRobertaXLModel"),
         ("xlnet", "XLNetModel"),
     ]
 )
@@ -139,13 +146,17 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
         ("ctrl", "CTRLLMHeadModel"),
         ("deberta", "DebertaForMaskedLM"),
         ("deberta-v2", "DebertaV2ForMaskedLM"),
+        ("flava", "FlavaForPreTraining"),
         ("funnel", "FunnelForPreTraining"),
         ("gpt_pangu", "GPTPanguForCausalLM"),
         ("mamba", "MambaForCausalLM"),
         ("minicpm", "MiniCPMForCausalLM"),
         ("rwkv", "RwkvForCausalLM"),
         ("roc_bert", "RoCBertForPreTraining"),
+        ("visual_bert", "VisualBertForPreTraining"),
+        ("wav2vec2-conformer", "Wav2Vec2ConformerForPreTraining"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
+        ("xlm-roberta-xl", "XLMRobertaXLForMaskedLM"),
         ("xlnet", "XLNetLMHeadModel"),
     ]
 )
@@ -170,6 +181,8 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         ("funnel", "FunnelForMaskedLM"),
         ("gpt_neox_japanese", "GPTNeoXJapaneseForCausalLM"),
         ("gpt_pangu", "GPTPanguForCausalLM"),
+        ("gptj", "GPTJForCausalLM"),
+        ("led", "LEDForConditionalGeneration"),
         ("mamba", "MambaForCausalLM"),
         ("marian", "MarianMTModel"),
         ("minicpm", "MiniCPMForCausalLM"),
@@ -180,6 +193,7 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         ("rwkv", "RwkvForCausalLM"),
         ("whisper", "WhisperForConditionalGeneration"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
+        ("xlm-roberta-xl", "XLMRobertaXLForMaskedLM"),
         ("xlnet", "XLNetLMHeadModel"),
     ]
 )
@@ -209,6 +223,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("gpt_pangu", "GPTPanguForCausalLM"),
         ("gpt_bigcode", "GPTBigCodeForCausalLM"),
         ("gpt_neox_japanese", "GPTNeoXJapaneseForCausalLM"),
+        ("gptj", "GPTJForCausalLM"),
         ("jetmoe", "JetMoEForCausalLM"),
         ("llama", "LlamaForCausalLM"),
         ("mamba", "MambaForCausalLM"),
@@ -234,6 +249,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("starcoder2", "Starcoder2ForCausalLM"),
         ("whisper", "WhisperForCausalLM"),
         ("xlm-roberta", "XLMRobertaForCausalLM"),
+        ("xlm-roberta-xl", "XLMRobertaXLForCausalLM"),
         ("xlnet", "XLNetLMHeadModel"),
     ]
 )
@@ -264,6 +280,7 @@ MODEL_FOR_IMAGE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ),
         ("efficientnet", "EfficientNetForImageClassification"),
         ("focalnet", "FocalNetForImageClassification"),
+        ("gptj", "GPTJForSequenceClassification"),
         ("imagegpt", "ImageGPTForImageClassification"),
         (
             "levit",
@@ -351,6 +368,7 @@ MODEL_FOR_MASKED_LM_MAPPING_NAMES = OrderedDict(
         ("reformer", "ReformerForMaskedLM"),
         ("roc_bert", "RoCBertForMaskedLM"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
+        ("xlm-roberta-xl", "XLMRobertaXLForMaskedLM"),
     ]
 )
 
@@ -442,6 +460,7 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("falcon", "FalconForSequenceClassification"),
         ("funnel", "FunnelForSequenceClassification"),
         ("layoutlmv2", "LayoutLMv2ForSequenceClassification"),
+        ("led", "LEDForSequenceClassification"),
         ("jetmoe", "JetMoEForSequenceClassification"),
         ("minicpm", "MiniCPMForSequenceClassification"),
         ("mistral", "MistralForSequenceClassification"),
@@ -458,6 +477,7 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("stablelm", "StableLmForSequenceClassification"),
         ("starcoder2", "Starcoder2ForSequenceClassification"),
         ("xlm-roberta", "XLMRobertaForSequenceClassification"),
+        ("xlm-roberta-xl", "XLMRobertaXLForSequenceClassification"),
         ("xlnet", "XLNetForSequenceClassification"),
     ]
 )

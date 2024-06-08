@@ -13,16 +13,16 @@
 # limitations under the License.
 # ============================================
 """
-DETR Model init
+CANINE Model init
 """
-from . import configuration_detr, feature_extraction_detr, image_processing_detr, modeling_detr
-from .configuration_detr import *
-from .feature_extraction_detr import *
-from .image_processing_detr import *
-from .modeling_detr import *
+
+from .import configuration_canine, modeling_canine, tokenization_canine
+
+from .configuration_canine import *
+from .modeling_canine import *
+from .tokenization_canine import *
 
 __all__ = []
-__all__.extend(configuration_detr.__all__)
-__all__.extend(feature_extraction_detr.__all__)
-__all__.extend(image_processing_detr.__all__)
-__all__.extend(modeling_detr.__all__)
+__all__.extend(configuration_canine.__all__)
+__all__.extend(modeling_canine.__all__)
+__all__.extend(tokenization_canine.__all__)
