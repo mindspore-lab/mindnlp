@@ -16,6 +16,7 @@
 DETR Model init
 """
 from . import configuration_detr, feature_extraction_detr, image_processing_detr, modeling_detr
+
 from .configuration_detr import *
 from .feature_extraction_detr import *
 from .image_processing_detr import *

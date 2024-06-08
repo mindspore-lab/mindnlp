@@ -14,16 +14,15 @@
 # limitations under the License.
 """PyTorch DETR model."""
 
-
-
 import math
-import numpy as np
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 
+import numpy as np
 import mindspore as ms
 from mindspore import Tensor, nn, ops
 from mindspore.common.initializer import initializer, XavierUniform, Uniform, HeNormal
+from mindnlp.transformers.backbone_utils import load_backbone
 
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask
@@ -36,7 +35,6 @@ from ....utils import (
     logging,
     requires_backends,
 )
-from mindnlp.transformers.backbone_utils import load_backbone
 from .configuration_detr import DetrConfig
 
 if is_vision_available():
@@ -44,6 +42,7 @@ if is_vision_available():
 
 if is_scipy_available():
     from scipy.optimize import linear_sum_assignment
+
 
 logger = logging.get_logger(__name__)
 
@@ -290,6 +289,30 @@ class DetrFrozenBatchNorm2d(nn.Cell):
         bias = bias - running_mean * scale
         return x * scale + bias
 
+
+def replace_batch_norm(model:nn.Cell):
+    r"""
+    Recursively replace all `torch.nn.BatchNorm2d` with `DetrFrozenBatchNorm2d`.
+
+    Args:
+        model (torch.nn.Module):
+            input model
+    """
+    for name, cell in model.cells_and_names():
+        if isinstance(cell, nn.BatchNorm2d):
+            new_cell = DetrFrozenBatchNorm2d(cell.num_features)
+
+            new_cell.weight.data = Tensor.copy(cell.weight.data)
+            new_cell.bias.data = Tensor.copy(cell.bias.data)
+            new_cell.running_mean.data = Tensor.copy(cell.running_mean.data)
+            new_cell.running_var.data = Tensor.copy(cell.running_var.data)
+
+            model._cells[name] = new_cell
+
+        if len(list(cell.cells())) > 0:
+            replace_batch_norm(cell)
+
+
 class DetrConvEncoder(nn.Cell):
     """
     Convolutional backbone, using either the AutoBackbone API or one from the timm library.
@@ -302,21 +325,40 @@ class DetrConvEncoder(nn.Cell):
         super().__init__()
 
         self.config = config
-        backbone = load_backbone(config)
 
-        self.model = backbone
+        # For backwards compatibility we have to use the timm library directly instead of the AutoBackbone API
+        if config.use_timm_backbone:
+            '''
+            # We default to values which were previously hard-coded. This enables configurability from the config
+            # using backbone arguments, while keeping the default behavior the same.
+            requires_backends(self, ["timm"])
+            kwargs = getattr(config, "backbone_kwargs", {})
+            kwargs = {} if kwargs is None else kwargs.copy()
+            out_indices = kwargs.pop("out_indices", (1, 2, 3, 4))
+            num_channels = kwargs.pop("in_chans", config.num_channels)
+            if config.dilation:
+                kwargs["output_stride"] = kwargs.get("output_stride", 16)
+            backbone = create_model(
+                config.backbone,
+                pretrained=config.use_pretrained_backbone,
+                features_only=True,
+                out_indices=out_indices,
+                in_chans=num_channels,
+                **kwargs,
+            )
+            '''
+            raise NotImplementedError('MindSpore does not support timm')
+        else:
+            backbone = load_backbone(config)
+
+        # replace batch norm by frozen batch norm
+        #replace_batch_norm(backbone)
+        self.model: nn.Cell = backbone
         self.intermediate_channel_sizes = (
             self.model.feature_info.channels() if config.use_timm_backbone else self.model.channels
         )
 
-        backbone_model_type = None
-        if config.backbone is not None:
-            backbone_model_type = config.backbone
-        elif config.backbone_config is not None:
-            backbone_model_type = config.backbone_config.model_type
-        else:
-            raise ValueError("Either `backbone` or `backbone_config` should be provided in the config")
-
+        backbone_model_type = config.backbone if config.use_timm_backbone else config.backbone_config.model_type
         if "resnet" in backbone_model_type:
             for name, parameter in self.model.parameters_and_names():
                 if config.use_timm_backbone:
@@ -1530,7 +1572,7 @@ class DetrForSegmentation(DetrPreTrainedModel):
         memory = encoder_outputs[0].permute(0, 2, 1).view(batch_size, self.config.d_model, height, width)
         mask = flattened_mask.view(batch_size, height, width)
 
-        # FIXME h_boxes takes the last one computed, keep this in mind
+        # FIXME h_boxes takes the last one computed, keep this in mind      # pylint: disable=fixme
         # important: we need to reverse the mask, since in the original implementation the mask works reversed
         # bbox_mask is of shape (batch_size, num_queries, number_of_attention_heads in bbox_attention, height/32, width/32)
         bbox_mask = self.bbox_attention(sequence_output, memory, mask=~mask)
@@ -1565,8 +1607,6 @@ class DetrForSegmentation(DetrPreTrainedModel):
                 auxiliary_outputs = self.detr._set_aux_loss(outputs_class, outputs_coord)
                 outputs_loss["auxiliary_outputs"] = auxiliary_outputs
 
-            print(type(outputs_loss), type(labels))
-            
             loss_dict = criterion(outputs_loss, labels)
             # Fourth: compute total loss, as a weighted sum of the various losses
             weight_dict = {"loss_ce": 1, "loss_bbox": self.config.bbox_loss_coefficient}
@@ -1881,8 +1921,7 @@ class DetrLoss(nn.Cell):
         masks = [t["masks"] for t in targets]
         # TODO use valid to mask invalid areas due to padding in loss
         target_masks, valid = nested_tensor_from_tensor_list(masks).decompose()
-        target_masks = target_masks.to(source_masks)
-                
+        target_masks = target_masks.to(source_masks.dtype)
         target_masks = target_masks[target_idx]
 
         # upsample predictions to the target size
@@ -2142,7 +2181,7 @@ def _max_by_axis(the_list):
     return maxes
 
 
-class NestedTensor(object):
+class NestedTensor:
     def __init__(self, tensors, mask: Optional[Tensor]):
         self.tensors = tensors
         self.mask = mask
@@ -2180,17 +2219,8 @@ def nested_tensor_from_tensor_list(tensor_list: List[Tensor]):
 
 
 __all__ = [
-    'DetrDecoderOutput',
-    'DetrModelOutput',
-    'DetrObjectDetectionOutput',
-    'DetrSegmentationOutput',
-    'DetrFrozenBatchNorm2d',
-    'DetrConvEncoder',
-    'DetrConvModel',
-    'DetrPreTrainedModel',
-    'DetrEncoder',
-    'DetrDecoder',
     'DetrModel',
+    'DetrPreTrainedModel',
     'DetrForObjectDetection',
     'DetrForSegmentation'
 ]

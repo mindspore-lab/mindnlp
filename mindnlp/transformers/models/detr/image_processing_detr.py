@@ -13,15 +13,16 @@
 # limitations under the License.
 # ============================================
 """Image processor class for DETR."""
+# pylint: disable=cell-var-from-loop
 
 import io
 import pathlib
 from collections import defaultdict
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
 
-from mindspore import Tensor
 import numpy as np
-import mindspore as ms
+import mindspore
+from mindspore import Tensor
 from ...image_processing_utils import BaseImageProcessor, BatchFeature, get_size_dict
 from ...image_transforms import (
     PaddingMode,
@@ -59,8 +60,8 @@ from ...image_utils import (
 
 from ....utils import (
     TensorType,
-    is_mindspore_available, 
-    is_mindspore_tensor, 
+    is_mindspore_available,
+    is_mindspore_tensor,
     is_scipy_available,
     is_vision_available,
     logging,
@@ -69,6 +70,7 @@ from ....utils import (
 
 if is_vision_available():
     import PIL
+    import PIL.Image
 
 if is_mindspore_available():
     from mindspore import ops
@@ -192,7 +194,7 @@ def get_numpy_to_framework_fn(arr) -> Callable:
         arr (`np.ndarray`): The array to convert.
     """
     if is_mindspore_available() and is_mindspore_tensor(arr):
-        from mindspore import Tensor
+        from mindspore import Tensor    # pylint: disable=reimported
         return Tensor
     raise ValueError(f"Cannot convert arrays of type {type(arr)}")
 
@@ -632,9 +634,6 @@ def binary_mask_to_rle(mask):
         `List`: Run-length encoded list of the binary mask. Refer to COCO API for more information about the RLE
         format.
     """
-    if is_mindspore_tensor(mask):
-        mask = mask
-
     pixels = mask.flatten()
     pixels = np.concatenate([[0], pixels, [0]])
     runs = np.where(pixels[1:] != pixels[:-1])[0] + 1
@@ -722,7 +721,7 @@ def compute_segments(
     height = mask_probs.shape[1] if target_size is None else target_size[0]
     width = mask_probs.shape[2] if target_size is None else target_size[1]
 
-    segmentation = ops.zeros((height, width), dtype=ops.int32, device=mask_probs.device)
+    segmentation = ops.zeros((height, width), dtype=mindspore.int32)
     segments: List[Dict] = []
 
     if target_size is not None:
@@ -1521,7 +1520,7 @@ class DetrImageProcessor(BaseImageProcessor):
         boxes = center_to_corners_format(out_bbox)
         # and from relative [0, 1] to absolute [0, height] coordinates
         img_h, img_w = target_sizes.unbind(1)
-        scale_fct = ops.stack([img_w, img_h, img_w, img_h], axis=1).to(boxes.device)
+        scale_fct = ops.stack([img_w, img_h, img_w, img_h], axis=1)
         boxes = boxes * scale_fct[:, None, :]
 
         results = [{"scores": s, "labels": l, "boxes": b} for s, l, b in zip(scores, labels, boxes)]
@@ -1698,7 +1697,7 @@ class DetrImageProcessor(BaseImageProcessor):
 
                 if m_id.shape[-1] == 0:
                     # We didn't detect any mask :(
-                    m_id = ops.zeros((h, w), dtype=ms.int64, device=m_id.device)
+                    m_id = ops.zeros((h, w), dtype=mindspore.int64)
                 else:
                     m_id = m_id.argmax(-1).view(h, w)
 
@@ -1716,9 +1715,8 @@ class DetrImageProcessor(BaseImageProcessor):
                 seg_img = PIL.Image.fromarray(id_to_rgb(m_id.view(h, w)))
                 seg_img = seg_img.resize(size=(final_w, final_h), resample=PILImageResampling.NEAREST)
 
-                np_seg_img = ops.ByteTensor(F.ByteStorage.from_buffer(seg_img.tobytes()))
+                np_seg_img = Tensor.from_numpy(np.frombuffer(seg_img.tobytes()))
                 np_seg_img = np_seg_img.view(final_h, final_w, 3)
-                np_seg_img = np_seg_img
 
                 m_id = Tensor.from_numpy(rgb_to_id(np_seg_img))
 
@@ -1732,7 +1730,7 @@ class DetrImageProcessor(BaseImageProcessor):
                 # We know filter empty masks as long as we find some
                 while True:
                     filtered_small = Tensor(
-                        [area[i] <= 4 for i, c in enumerate(cur_labels)], dtype=ms.bool_, device=keep.device
+                        [area[i] <= 4 for i, c in enumerate(cur_labels)], dtype=mindspore.bool_
                     )
                     if filtered_small.any().item():
                         cur_scores = cur_scores[~filtered_small]
@@ -1743,7 +1741,7 @@ class DetrImageProcessor(BaseImageProcessor):
                         break
 
             else:
-                cur_labels = ops.ones(1, dtype=ms.int64, device=cur_labels.device)
+                cur_labels = ops.ones(1, dtype=mindspore.int64)
 
             segments_info = []
             for i, a in enumerate(area):
@@ -1799,7 +1797,7 @@ class DetrImageProcessor(BaseImageProcessor):
             else:
                 img_h, img_w = target_sizes.unbind(1)
 
-            scale_fct = ops.stack([img_w, img_h, img_w, img_h], axis=1).to(boxes.device)
+            scale_fct = ops.stack([img_w, img_h, img_w, img_h], axis=1)
             boxes = boxes * scale_fct[:, None, :]
 
         results = []
