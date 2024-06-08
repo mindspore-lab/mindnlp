@@ -12,6 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================
+"""
+This module implements the LED (Longformer Encoder-Decoder) model.
+
+The LED model is designed to handle long documents by using a combination of
+attention mechanisms and encoders-decoders.
+"""
+
 
 import math
 import warnings
