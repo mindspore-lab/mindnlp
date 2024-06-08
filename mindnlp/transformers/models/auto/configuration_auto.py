@@ -21,8 +21,8 @@ from collections import OrderedDict
 from typing import List, Union
 
 from mindnlp.configs import CONFIG_NAME
-from mindnlp.utils import logging
 from mindnlp.transformers.configuration_utils import PretrainedConfig
+from mindnlp.utils import logging
 
 logger = logging.get_logger(__name__)
 
@@ -58,13 +58,14 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("clip_vision_model", "CLIPVisionConfig"),
         ("codegen", "CodeGenConfig"),
         ("cohere", "CohereConfig"),
-        ("cogvlm","CogVLMConfig"),
+        ("cogvlm", "CogVLMConfig"),
         ("convbert", "ConvBertConfig"),
         ("convnext", "ConvNextConfig"),
         ("cpmant", "CpmAntConfig"),
         ("ctrl", "CTRLConfig"),
         ("cpmbee", "CpmBeeConfig"),
         ("cvt", "CvtConfig"),
+        ("data2vec-text", "Data2VecTextConfig"),
         ("deberta", "DebertaConfig"),
         ("deberta-v2", "DebertaV2Config"),
         ("distilbert", "DistilBertConfig"),
@@ -78,11 +79,13 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("git", "GitConfig"),
         ("gpt2", "GPT2Config"),
         ("gpt_bigcode", "GPTBigCodeConfig"),
+        ("gptj", "GPTJConfig"),
         ("gpt_neox", "GPTNeoXConfig"),
         ("gpt_pangu", "GPTPanguConfig"),
         ("groupvit", "GroupViTConfig"),
         ("hubert", "HubertConfig"),
         ("jetmoe", "JetMoEConfig"),
+        ("led", "LEDConfig"),
         ("llama", "LlamaConfig"),
         ("llava", "LlavaConfig"),
         ("llava_next", "LlavaNextConfig"),
@@ -96,7 +99,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("musicgen", "MusicgenConfig"),
         ("musicgen_melody", "MusicgenMelodyConfig"),
         ("mt5", "MT5Config"),
-        ("nystromformer","NystromformerConfig"),
+        ("nystromformer", "NystromformerConfig"),
         ("olmo", "OlmoConfig"),
         ("openelm", "OpenELMConfig"),
         ("opt", "OPTConfig"),
