@@ -15,9 +15,9 @@
 """LED model configuration"""
 
 from typing import List, Union
+from mindnlp.utils import logging
 
 from ...configuration_utils import PretrainedConfig
-from mindnlp.utils import logging
 
 
 logger = logging.get_logger(__name__)
