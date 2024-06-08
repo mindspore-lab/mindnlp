@@ -99,6 +99,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("mistral", "MistralModel"),
         ("mixtral", "MixtralModel"),
         ("olmo", "OlmoModel"),
+        ("oneformer", "OneFormerModel"),
         ("openelm", "OpenELMModel"),
         ("opt", "OPTModel"),
         ("pegasus", "PegasusModel"),

@@ -101,6 +101,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("mt5", "MT5Config"),
         ("nystromformer","NystromformerConfig"),
         ("olmo", "OlmoConfig"),
+        ("oneformer", "OneFormerConfig"),
         ("openelm", "OpenELMConfig"),
         ("opt", "OPTConfig"),
         ("owlvit", "OwlViTConfig"),

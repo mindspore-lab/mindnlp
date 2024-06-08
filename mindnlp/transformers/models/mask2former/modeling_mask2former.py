@@ -1202,7 +1202,7 @@ class Mask2FormerPixelDecoder(nn.Cell):
             self.input_projections = nn.CellList(
                 [
                     nn.SequentialCell(
-                        nn.Conv2d(transformer_in_channels[-1], feature_dim, kernel_size=1),
+                        nn.Conv2d(transformer_in_channels[-1], feature_dim, kernel_size=1, has_bias=True),
                         nn.GroupNorm(32, feature_dim),
                     )
                 ]
@@ -2102,12 +2102,11 @@ class Mask2FormerPreTrainedModel(PreTrainedModel):
                     p.set_data(initializer(XavierUniform(xavier_std), p.shape, p.dtype))
 
         elif isinstance(cell, Mask2FormerPixelLevelModule):
-            for submodule in cell.cells():
-                if isinstance(submodule, (nn.Conv2d, nn.Dense)):
-                    submodule.weight.set_data(initializer(Normal(mean=0.0, sigma=std), submodule.weight.shape, submodule.weight.dtype))
-
-                    if submodule.bias is not None:
-                        submodule.bias.set_data(initializer('zeros', submodule.bias.shape, submodule.bias.dtype))
+            for name, subcell in cell.cells_and_names():
+                if isinstance(subcell, (nn.Conv2d, nn.Dense)):
+                    subcell.weight.set_data(initializer(Normal(mean=0.0, sigma=std), subcell.weight.shape, subcell.weight.dtype))
+                    if subcell.bias is not None:
+                        subcell.bias.set_data(initializer('zeros', subcell.bias.shape, subcell.bias.dtype))
 
         elif isinstance(cell, Mask2FormerPixelDecoder):
             for _, p in cell.parameters_and_names():
