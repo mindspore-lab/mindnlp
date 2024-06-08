@@ -75,6 +75,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("ernie", "ErnieModel"),
         ("ernie_m", "ErnieMModel"),
         ("falcon", "FalconModel"),
+        ("flava", "FlavaModel"),
         ("funnel", ("FunnelModel", "FunnelBaseModel")),
         ("gemma", "GemmaModel"),
         ("git", "GitModel"),

@@ -306,8 +306,7 @@ class Module:
                 memo.add(b)
                 yield b
         for module in self.children():
-            for b in module._all_buffers(memo):
-                yield b
+            yield from module._all_buffers(memo)
 
     def children(self):
         """Returns an iterator over immediate children modules.
@@ -390,8 +389,7 @@ class Module:
                 if module is None:
                     continue
                 submodule_prefix = prefix + ('.' if prefix else '') + name
-                for m in module.named_modules(memo, submodule_prefix):
-                    yield m
+                yield from module.named_modules(memo, submodule_prefix)
 
     def train(self, mode=True):
         """Sets the module in training mode.
