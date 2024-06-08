@@ -569,7 +569,8 @@ provided, the first value represents the left stride and the second value repres
         Raises:
             ValueError: If the model_inputs dictionary does not contain either 'input_features' or 'input_values' key, when using a seq2seq or seq2seq_whisper model.
             
-            Note: Other exceptions may be raised depending on the underlying ASR model used.
+            Note:
+                Other exceptions may be raised depending on the underlying ASR model used.
         
         """
         attention_mask = model_inputs.pop("attention_mask", None)
