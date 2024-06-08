@@ -72,6 +72,7 @@ from . import (
     chatglm,
     chatglm2,
     chatglm3,
+    flava,
     funnel,
     gemma,
     git,
@@ -212,6 +213,7 @@ from .ernie_m import *
 from .chatglm import *
 from .chatglm2 import *
 from .chatglm3 import *
+from .flava import *
 from .funnel import *
 from .gemma import *
 from .git import *
@@ -350,6 +352,7 @@ __all__.extend(ernie.__all__)
 __all__.extend(ernie_m.__all__)
 __all__.extend(esm.__all__)
 __all__.extend(chatglm.__all__)
+__all__.extend(flava.__all__)
 __all__.extend(funnel.__all__)
 __all__.extend(chatglm2.__all__)
 __all__.extend(chatglm3.__all__)
