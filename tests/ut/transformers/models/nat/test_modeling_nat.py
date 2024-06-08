@@ -13,13 +13,14 @@
 # limitations under the License.
 # ============================================
 
-""" Testing suite for the PyTorch Nat model. """
+""" Testing suite for the MindSpore Nat model. """
 
 import collections
 import unittest
+import numpy as np
 
 from mindnlp.transformers import NatConfig
-from mindnlp.utils.testing_utils import require_natten, require_torch, require_vision, slow, torch_device, is_mindspore_available
+from mindnlp.utils.testing_utils import require_natten, require_mindspore, require_vision, slow, is_mindspore_available
 from mindnlp.utils import cached_property
 from mindnlp.utils.import_utils import is_vision_available
 
@@ -39,7 +40,7 @@ if is_mindspore_available():
 if is_vision_available():
     from PIL import Image
 
-    from transformers import AutoImageProcessor
+    from mindnlp.transformers import AutoImageProcessor
 
 
 class NatModelTester:
@@ -131,7 +132,6 @@ class NatModelTester:
 
     def create_and_check_model(self, config, pixel_values, labels):
         model = NatModel(config=config)
-        model.to(torch_device)
         model.eval()
         result = model(pixel_values)
 
@@ -144,7 +144,6 @@ class NatModelTester:
 
     def create_and_check_for_image_classification(self, config, pixel_values, labels):
         model = NatForImageClassification(config)
-        model.to(torch_device)
         model.eval()
         result = model(pixel_values, labels=labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
@@ -152,7 +151,6 @@ class NatModelTester:
         # test greyscale images
         config.num_channels = 1
         model = NatForImageClassification(config)
-        model.to(torch_device)
         model.eval()
 
         pixel_values = floats_tensor([self.batch_size, 1, self.image_size, self.image_size])
@@ -161,7 +159,6 @@ class NatModelTester:
 
     def create_and_check_backbone(self, config, pixel_values, labels):
         model = NatBackbone(config=config)
-        model.to(torch_device)
         model.eval()
         result = model(pixel_values)
 
@@ -175,7 +172,6 @@ class NatModelTester:
         # verify backbone works with out_features=None
         config.out_features = None
         model = NatBackbone(config=config)
-        model.to(torch_device)
         model.eval()
         result = model(pixel_values)
 
@@ -194,7 +190,7 @@ class NatModelTester:
 
 
 @require_natten
-@require_torch
+@require_mindspore
 class NatModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCase):
     all_model_classes = (
         (
@@ -267,7 +263,6 @@ class NatModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCase):
 
     def check_hidden_states_output(self, inputs_dict, config, model_class, image_size):
         model = model_class(config)
-        model.to(torch_device)
         model.eval()
 
         outputs = model(**self._prepare_for_class(inputs_dict, model_class))
@@ -349,7 +344,7 @@ class NatModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCase):
 
 @require_natten
 @require_vision
-@require_torch
+@require_mindspore
 class NatModelIntegrationTest(unittest.TestCase):
     @cached_property
     def default_image_processor(self):
@@ -373,7 +368,7 @@ class NatModelIntegrationTest(unittest.TestCase):
         self.assertTrue(np.allclose(outputs.logits[0, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
 
 
-@require_torch
+@require_mindspore
 @require_natten
 class NatBackboneTest(unittest.TestCase, BackboneTesterMixin):
     all_model_classes = (NatBackbone,) if is_mindspore_available() else ()
