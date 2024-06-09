@@ -118,6 +118,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("segformer", "SegformerConfig"),
         ("speech-encoder-decoder", "SpeechEncoderDecoderConfig"),
         ("speech_to_text", "Speech2TextConfig"),
+        ("speecht5", "SpeechT5Config"),
         ("stablelm", "StableLmConfig"),
         ("squeezebert", "SqueezeBertConfig"),
         ("starcoder2", "Starcoder2Config"),
