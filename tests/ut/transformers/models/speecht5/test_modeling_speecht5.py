@@ -1107,7 +1107,7 @@ class SpeechT5ForTextToSpeechIntegrationTests(unittest.TestCase):
         )
         # Check consistency between waveforms generated with and without standalone vocoder
         self.assertTrue(
-            np.allclose(waveforms.asnumpy(), waveforms_with_vocoder.asnumpy(), atol=1e-2), #atol=1e-8),
+            np.allclose(waveforms.asnumpy(), waveforms_with_vocoder.asnumpy(), atol=1e-3),
             "Mismatch in waveforms generated with and without the standalone vocoder.",
         )
         self.assertEqual(
@@ -1128,7 +1128,7 @@ class SpeechT5ForTextToSpeechIntegrationTests(unittest.TestCase):
 
         # Validate waveform consistency without length information
         self.assertTrue(
-            np.allclose(waveforms_with_vocoder_no_lengths.asnumpy(), waveforms_with_vocoder.asnumpy(), atol=1e-2), #atol=1e-8),
+            np.allclose(waveforms_with_vocoder_no_lengths.asnumpy(), waveforms_with_vocoder.asnumpy(), atol=1e-3),
             "Waveforms differ when generated with and without length information.",
         )
 
@@ -1164,7 +1164,7 @@ class SpeechT5ForTextToSpeechIntegrationTests(unittest.TestCase):
                 vocoder=vocoder,
             )
             self.assertTrue(
-                np.allclose(waveform.asnumpy(), waveform_with_integrated_vocoder.asnumpy(), atol=1e-2), #atol=1e-8),
+                np.allclose(waveform.asnumpy(), waveform_with_integrated_vocoder.asnumpy(), atol=1e-3),
                 "Mismatch in waveform between standalone and integrated vocoder for single instance generation.",
             )
 
@@ -1222,7 +1222,7 @@ class SpeechT5ForTextToSpeechIntegrationTests(unittest.TestCase):
         # raise ValueError(f"{waveforms, waveforms_with_vocoder}")
         # Check consistency between waveforms generated with and without standalone vocoder
         self.assertTrue(
-            np.allclose(waveforms.asnumpy(), waveforms_with_vocoder.asnumpy(), atol=1e-2), #atol=1e-8),
+            np.allclose(waveforms.asnumpy(), waveforms_with_vocoder.asnumpy(), atol=1e-2),
             "Mismatch in waveforms generated with and without the standalone vocoder.",
         )
         self.assertEqual(
@@ -1243,7 +1243,7 @@ class SpeechT5ForTextToSpeechIntegrationTests(unittest.TestCase):
 
         # Validate waveform consistency without length information
         self.assertTrue(
-            np.allclose(waveforms_with_vocoder_no_lengths.asnumpy(), waveforms_with_vocoder.asnumpy(), atol=1e-2), #atol=1e-8),
+            np.allclose(waveforms_with_vocoder_no_lengths.asnumpy(), waveforms_with_vocoder.asnumpy(), atol=1e-2),
             "Waveforms differ when generated with and without length information.",
         )
 
@@ -1280,7 +1280,7 @@ class SpeechT5ForTextToSpeechIntegrationTests(unittest.TestCase):
                 vocoder=vocoder,
             )
             self.assertTrue(
-                np.allclose(waveform.asnumpy(), waveform_with_integrated_vocoder.asnumpy(), atol=1e-2), #atol=1e-8),
+                np.allclose(waveform.asnumpy(), waveform_with_integrated_vocoder.asnumpy(), atol=1e-3),
                 "Mismatch in waveform between standalone and integrated vocoder for single instance generation.",
             )
 
@@ -1726,7 +1726,7 @@ class SpeechT5ForSpeechToSpeechIntegrationTests(unittest.TestCase):
         generated_speech = model.generate_speech(input_values, speaker_embeddings=speaker_embeddings)
 
         self.assertEqual(generated_speech.shape[1], model.config.num_mel_bins)
-        self.assertGreaterEqual(generated_speech.shape[0], 300, f"Expected at least 300 frames, got {generated_speech.shape[0]}")
+        self.assertGreaterEqual(generated_speech.shape[0], 300)
         self.assertLessEqual(generated_speech.shape[0], 310)
 
 

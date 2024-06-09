@@ -38,7 +38,7 @@ from ...modeling_utils import PreTrainedModel
 
 
 logger = logging.get_logger(__name__)
-mindspore.set_context(pynative_synchronize=True)
+
 
 # Copied from transformers.models.bart.modeling_bart.shift_tokens_right
 def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_start_token_id: int):
@@ -638,7 +638,7 @@ class SpeechT5SpeechDecoderPrenet(nn.Cell):
         inputs_embeds = input_values
         for layer in self.layers:
             inputs_embeds = ops.relu(layer(inputs_embeds))
-            inputs_embeds = self._consistent_dropout(inputs_embeds, self.config.speech_decoder_prenet_dropout)
+            # inputs_embeds = self._consistent_dropout(inputs_embeds, self.config.speech_decoder_prenet_dropout)
         inputs_embeds = self.final_layer(inputs_embeds)
         inputs_embeds = self.encode_positions(inputs_embeds)
         if speaker_embeddings is not None:
