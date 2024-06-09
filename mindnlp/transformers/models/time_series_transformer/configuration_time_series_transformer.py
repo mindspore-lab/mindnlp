@@ -157,6 +157,7 @@ class TimeSeriesTransformerConfig(PretrainedConfig):
             activation_dropout: float = 0.1,
             num_parallel_samples: int = 100,
             init_std: float = 0.02,
+            initializer_range = 0.02,
             use_cache=True,
             **kwargs,
     ):
