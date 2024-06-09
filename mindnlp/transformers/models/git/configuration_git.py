@@ -58,19 +58,19 @@ class GitVisionConfig(PretrainedConfig):
             The standard deviation of the truncated_normal_initializer for initializing all weight matrices.
 
     Example:
+        ```python
+        >>> from transformers import GitVisionConfig, GitVisionModel
 
-    ```python
-    >>> from transformers import GitVisionConfig, GitVisionModel
+        >>> # Initializing a GitVisionConfig with microsoft/git-base style configuration
+        >>> configuration = GitVisionConfig()
 
-    >>> # Initializing a GitVisionConfig with microsoft/git-base style configuration
-    >>> configuration = GitVisionConfig()
+        >>> # Initializing a GitVisionModel (with random weights) from the microsoft/git-base style configuration
+        >>> model = GitVisionModel(configuration)
 
-    >>> # Initializing a GitVisionModel (with random weights) from the microsoft/git-base style configuration
-    >>> model = GitVisionModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "git_vision_model"
 
@@ -172,19 +172,19 @@ class GitConfig(PretrainedConfig):
             The number of temporal embeddings to add, in case the model is used for video captioning/VQA.
 
     Examples:
+        ```python
+        >>> from transformers import GitConfig, GitModel
 
-    ```python
-    >>> from transformers import GitConfig, GitModel
+        >>> # Initializing a GIT microsoft/git-base style configuration
+        >>> configuration = GitConfig()
 
-    >>> # Initializing a GIT microsoft/git-base style configuration
-    >>> configuration = GitConfig()
+        >>> # Initializing a model (with random weights) from the microsoft/git-base style configuration
+        >>> model = GitModel(configuration)
 
-    >>> # Initializing a model (with random weights) from the microsoft/git-base style configuration
-    >>> model = GitModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "git"
 

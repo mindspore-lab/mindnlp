@@ -62,14 +62,14 @@ class ChannelDimension(ExplicitEnum):
     Represents a channel dimension for data analysis and visualization.
     
     This class inherits from ExplicitEnum and provides a set of predefined channel dimensions. It allows for easy management and manipulation of channel dimensions within a data processing or visualization
-context.
-    
+    context.
+
     Attributes:
         - TODO: List any attributes specific to the ChannelDimension class.
-    
+
     Methods:
         - TODO: List any methods specific to the ChannelDimension class.
-    
+
     """
     FIRST = "channels_first"
     LAST = "channels_last"
@@ -79,26 +79,27 @@ class AnnotationFormat(ExplicitEnum):
 
     """
     Represents an annotation format for storing and manipulating data.
-    
+
     This class is a subclass of ExplicitEnum, which allows for the creation of enumerated types with explicit values. The AnnotationFormat class provides a way to define and manage different annotation formats
-used in data processing and analysis.
-    
+    used in data processing and analysis.
+
     Attributes:
         name (str): The name of the annotation format.
         description (str): A brief description of the annotation format.
         file_extension (str): The file extension associated with the annotation format.
-    
+
     Methods:
         load(file_path): Loads an annotation file in the specified format.
         save(file_path): Saves an annotation file in the specified format.
         validate(): Validates the current annotation format.
-    
-    Example usage:
+
+    Example:
+        ```python
         >>> format = AnnotationFormat(name="XML", description="Annotation data stored in XML format", file_extension=".xml")
         >>> format.load("annotations.xml")
         >>> format.save("annotations.xml")
         >>> format.validate()
-    
+        ```
     """
     COCO_DETECTION = "coco_detection"
     COCO_PANOPTIC = "coco_panoptic"
@@ -108,25 +109,28 @@ class AnnotionFormat(ExplicitEnum):
 
     """
     Represents a class for defining annotation formats. This class inherits from ExplicitEnum.
-    
-    AnnotionFormat provides a way to define and manage different annotation formats. It inherits properties and methods from the ExplicitEnum class, allowing for easy management and manipulation of annotation
-formats within a Python application.
-    
+
+    AnnotionFormat provides a way to define and manage different annotation formats.
+    It inherits properties and methods from the ExplicitEnum class, allowing for easy management and manipulation of annotation
+    formats within a Python application.
+
     Attributes:
-        ExplicitEnum: The base class from which AnnotionFormat inherits.
-    
+        ExplicitEnum:
+            The base class from which AnnotionFormat inherits.
+
     Usage:
-        AnnotionFormat instances can be used to define and manage annotation formats within a Python application. The class provides methods and properties for working with annotation formats in a structured
-and consistent manner.
-    
+        AnnotionFormat instances can be used to define and manage annotation formats within a Python application.
+        The class provides methods and properties for working with annotation formats in a structured
+        and consistent manner.
+
     Example:
-        
-        # Define a new annotation format
-        class MyAnnotationFormat(AnnotionFormat):
-            JSON = 'json'
-            XML = 'xml'
-        
-    
+        ```python
+        >>> # Define a new annotation format
+        >>> class MyAnnotationFormat(AnnotionFormat):
+        >>>     JSON = 'json'
+        >>>     XML = 'xml'
+        ```
+
     Note:
         It is recommended to use AnnotionFormat for defining annotation formats to ensure consistent usage and management within the application.
     """
@@ -139,14 +143,14 @@ AnnotationType = Dict[str, Union[int, str, List[Dict]]]
 
 def is_pil_image(img):
     """
-    This function checks if the input 'img' is a PIL Image. 
-    
+    This function checks if the input 'img' is a PIL Image.
+
     Args:
         img (PIL.Image.Image): The input image to be checked.
-    
+
     Returns:
         None: This function does not return any value.
-    
+
     Raises:
         None
     """
@@ -156,13 +160,13 @@ def is_pil_image(img):
 def is_valid_image(img):
     """
     Checks if the provided image is valid.
-    
+
     Args:
         img (object): The image to be checked for validity. It can be an instance of PIL.Image.Image, np.ndarray, or a MindSpore tensor.
-    
+
     Returns:
         None: This function does not return any value.
-    
+
     Raises:
         None: This function does not raise any exceptions.
     """
@@ -175,13 +179,13 @@ def is_valid_image(img):
 
 def valid_images(imgs):
     """Validate a list of images.
-    
+
     Args:
         imgs (list or tuple): A list of image objects to be validated.
-    
+
     Returns:
         None: This function does not return any value.
-    
+
     Raises:
         TypeError: If the input parameter is not a list or tuple.
         ValueError: If any of the images in the list are invalid.
@@ -200,13 +204,13 @@ def valid_images(imgs):
 def is_batched(img):
     """
     Checks if the input is a batch of images.
-    
+
     Args:
         img (list or tuple): The input image or a batch of images to be checked.
-        
+
     Returns:
         None: Returns None if the input is not a batch of images.
-    
+
     Raises:
         None
     """
@@ -268,13 +272,13 @@ def make_list_of_images(images, expected_ndims: int = 3) -> List[ImageInput]:
 def to_numpy_array(img) -> np.ndarray:
     """
     Converts an image to a NumPy array.
-    
+
     Args:
         img (object): The image to be converted. It should be a valid image object.
-        
+
     Returns:
         np.ndarray: A NumPy array representation of the image.
-        
+
     Raises:
         ValueError: If the image type is invalid.
         Exception: If any exceptions occur during the conversion process.
@@ -370,7 +374,9 @@ def get_image_size(image: np.ndarray, channel_dim: ChannelDimension = None) -> T
 def is_valid_annotation_coco_detection(annotation: Dict[str, Union[List, Tuple]]) -> bool:
     """
     Args:
-        annotation (dict): A dictionary representing an annotation with the following keys:
+        annotation (dict):
+            A dictionary representing an annotation with the following keys:
+
             - 'image_id': An identifier for the image associated with the annotation.
             - 'annotations': A list or tuple of annotations associated with the image.
     Returns:
@@ -395,10 +401,11 @@ def is_valid_annotation_coco_detection(annotation: Dict[str, Union[List, Tuple]]
 def is_valid_annotation_coco_panoptic(annotation: Dict[str, Union[List, Tuple]]) -> bool:
     """
     Checks if the given COCO Panoptic annotation is valid.
-    
+
     Args:
-        annotation (Dict[str, Union[List, Tuple]]): A dictionary representing a COCO Panoptic annotation containing the keys 'image_id', 'segments_info', and 'file_name'. The value associated with the key
-'segments_info' must be a list or tuple, and if it is not empty, the first element must be a dictionary.
+        annotation (Dict[str, Union[List, Tuple]]):
+            A dictionary representing a COCO Panoptic annotation containing the keys 'image_id', 'segments_info', and 'file_name'.
+            The value associated with the key 'segments_info' must be a list or tuple, and if it is not empty, the first element must be a dictionary.
     
     Returns:
         bool: True if the annotation is valid, otherwise False.
@@ -553,15 +560,17 @@ class ImageFeatureExtractionMixin:
     """
     def _ensure_format_supported(self, image):
         """
-        This method '_ensure_format_supported' in the class 'ImageFeatureExtractionMixin' ensures that the input image format is supported for further processing.
+        This method '_ensure_format_supported' in the class 'ImageFeatureExtractionMixin' ensures
+        that the input image format is supported for further processing.
         
         Args:
             self: The instance of the class.
-            image: The input image to be checked for supported format. It can be either a PIL image object of type 'PIL.Image.Image', a numpy array of type 'np.ndarray', or a mindspore tensor. 
+            image: The input image to be checked for supported format.
+                It can be either a PIL image object of type 'PIL.Image.Image', a numpy array of type 'np.ndarray', or a mindspore tensor.
                 If the input image is not of any of these types, a ValueError will be raised.
         
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
             ValueError: Raised when the input image is not of type 'PIL.Image.Image', 'np.ndarray', or 'mindspore.Tensor'.
@@ -908,7 +917,8 @@ def promote_annotation_format(annotation_format: Union[AnnotionFormat, Annotatio
     Promotes the given annotation format to a higher level.
     
     Args:
-        annotation_format (Union[AnnotionFormat, AnnotationFormat]): The annotation format to be promoted. It can be either an instance of AnnotionFormat or AnnotationFormat.
+        annotation_format (Union[AnnotionFormat, AnnotationFormat]):
+            The annotation format to be promoted. It can be either an instance of AnnotionFormat or AnnotationFormat.
     
     Returns:
         AnnotationFormat: The promoted annotation format.

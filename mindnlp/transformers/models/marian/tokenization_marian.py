@@ -73,34 +73,31 @@ class MarianTokenizer(PreTrainedTokenizer):
         additional_special_tokens (`List[str]`, *optional*, defaults to `["<eop>", "<eod>"]`):
             Additional special tokens used by the tokenizer.
         sp_model_kwargs (`dict`, *optional*):
-            Will be passed to the `SentencePieceProcessor.__init__()` method. The [Python wrapper for
-            SentencePiece](https://github.com/google/sentencepiece/tree/master/python) can be used, among other things,
-            to set:
-
-            - `enable_sampling`: Enable subword regularization.
-            - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
-
-              - `nbest_size = {0,1}`: No sampling is performed.
-              - `nbest_size > 1`: samples from the nbest_size results.
-              - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
-                using forward-filtering-and-backward-sampling algorithm.
-
-            - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
-              BPE-dropout.
+            >- Will be passed to the `SentencePieceProcessor.__init__()` method. The [Python wrapper for
+                SentencePiece](https://github.com/google/sentencepiece/tree/master/python) can be used, among other things,
+                to set:
+            >   - `enable_sampling`: Enable subword regularization.
+            >   - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
+            >       - `nbest_size = {0,1}`: No sampling is performed.
+            >       - `nbest_size > 1`: samples from the nbest_size results.
+            >       - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
+                        using forward-filtering-and-backward-sampling algorithm.
+            >   - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
+                      BPE-dropout.
 
     Examples:
+        ```python
+        >>> from transformers import MarianForCausalLM, MarianTokenizer
 
-    ```python
-    >>> from transformers import MarianForCausalLM, MarianTokenizer
+        >>> model = MarianForCausalLM.from_pretrained("Helsinki-NLP/opus-mt-en-de")
+        >>> tokenizer = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-de")
+        >>> src_texts = ["I am a small frog.", "Tom asked his teacher for advice."]
+        >>> tgt_texts = ["Ich bin ein kleiner Frosch.", "Tom bat seinen Lehrer um Rat."]  # optional
+        >>> inputs = tokenizer(src_texts, text_target=tgt_texts, return_tensors="pt", padding=True)
 
-    >>> model = MarianForCausalLM.from_pretrained("Helsinki-NLP/opus-mt-en-de")
-    >>> tokenizer = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-de")
-    >>> src_texts = ["I am a small frog.", "Tom asked his teacher for advice."]
-    >>> tgt_texts = ["Ich bin ein kleiner Frosch.", "Tom bat seinen Lehrer um Rat."]  # optional
-    >>> inputs = tokenizer(src_texts, text_target=tgt_texts, return_tensors="pt", padding=True)
-
-    >>> outputs = model(**inputs)  # should work
-    ```"""
+        >>> outputs = model(**inputs)  # should work
+        ```
+    """
 
     vocab_files_names = VOCAB_FILES_NAMES
     model_input_names = ["input_ids", "attention_mask"]

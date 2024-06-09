@@ -229,8 +229,8 @@ class PegasusTokenizerFast(PreTrainedTokenizerFast):
         """
         Build model inputs from a sequence by adding eos to the end. no bos token is added to the front.
 
-        - single sequence: `X </s>`
-        - pair of sequences: `A B </s>` (not intended use)
+        >   - single sequence: `X </s>`
+        >   - pair of sequences: `A B </s>` (not intended use)
 
         Args:
             token_ids_0 (`List[int]`):

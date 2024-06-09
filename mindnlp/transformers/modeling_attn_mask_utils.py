@@ -22,10 +22,11 @@ from mindspore import ops
 class AttentionMaskConverter:
     """
     A utility attention mask class that allows one to:
-        - Create a causal 4d mask
-        - Create a causal 4d mask with slided window
-        - Convert a 2d attention mask (batch_size, query_length) to a 4d attention mask (batch_size, 1, query_length,
-          key_value_length) that can be multiplied with attention scores
+
+    - Create a causal 4d mask
+    - Create a causal 4d mask with slided window
+    - Convert a 2d attention mask (batch_size, query_length) to a 4d attention mask (batch_size, 1, query_length,
+      key_value_length) that can be multiplied with attention scores
 
     Parameters:
         is_causal (`bool`):
@@ -40,7 +41,9 @@ class AttentionMaskConverter:
         
         Args:
             is_causal (bool): A boolean value indicating whether the attention mask is causal or not.
-            sliding_window (Optional[int], optional): An optional integer representing the sliding window size. Defaults to None. If provided, it must be a strictly positive integer. 
+            sliding_window (Optional[int], optional):
+                An optional integer representing the sliding window size. Defaults to None. I
+                f provided, it must be a strictly positive integer.
         
         Returns:
             None: This method does not return any value.

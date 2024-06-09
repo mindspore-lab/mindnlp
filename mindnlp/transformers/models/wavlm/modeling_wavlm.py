@@ -138,14 +138,14 @@ def _in_projection_packed(
 
     Shape:
         Inputs:
-        - q: :math:`(..., E)` where E is the embedding dimension
-        - k: :math:`(..., E)` where E is the embedding dimension
-        - v: :math:`(..., E)` where E is the embedding dimension
-        - w: :math:`(E * 3, E)` where E is the embedding dimension
-        - b: :math:`E * 3` where E is the embedding dimension
+        >- q: :math:`(..., E)` where E is the embedding dimension
+        >- k: :math:`(..., E)` where E is the embedding dimension
+        >- v: :math:`(..., E)` where E is the embedding dimension
+        >- w: :math:`(E * 3, E)` where E is the embedding dimension
+        >- b: :math:`E * 3` where E is the embedding dimension
 
         Output:
-        - in output list :math:`[q', k', v']`, each output tensor will have the
+        >- in output list :math:`[q', k', v']`, each output tensor will have the
             same shape as the corresponding input tensor.
     """
     E = q.size(-1)
@@ -1489,13 +1489,10 @@ WAVLM_INPUTS_DOCSTRING = r"""
             soundfile`). To prepare the array into `input_values`, the [`AutoProcessor`] should be used for padding and
             conversion into a tensor of type `mindspore.Tensor`. See [`Wav2Vec2Processor.__call__`] for details.
         attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing convolution and attention on padding token indices. Mask values selected in `[0,
-            1]`:
-
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-
-            [What are attention masks?](../glossary#attention-mask)
+            >- Mask to avoid performing convolution and attention on padding token indices. Mask values selected in `[0, 1]`:
+            >   - 1 for tokens that are **not masked**,
+            >   - 0 for tokens that are **masked**.
+            >- [What are attention masks?](../glossary#attention-mask)
 
             <Tip warning={true}>
 
@@ -1837,11 +1834,12 @@ class WavLMForCTC(WavLMPreTrainedModel):
         labels: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, CausalLMOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, target_length)`, *optional*):
-            Labels for connectionist temporal classification. Note that `target_length` has to be smaller or equal to
-            the sequence length of the output logits. Indices are selected in `[-100, 0, ..., config.vocab_size - 1]`.
-            All labels set to `-100` are ignored (masked), the loss is only computed for labels in `[0, ...,
-            config.vocab_size - 1]`.
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, target_length)`, *optional*):
+                Labels for connectionist temporal classification. Note that `target_length` has to be smaller or equal to
+                the sequence length of the output logits. Indices are selected in `[-100, 0, ..., config.vocab_size - 1]`.
+                All labels set to `-100` are ignored (masked), the loss is only computed for labels in `[0, ...,
+                config.vocab_size - 1]`.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if labels is not None and labels.max() >= self.config.vocab_size:
@@ -1956,10 +1954,11 @@ class WavLMForSequenceClassification(WavLMPreTrainedModel):
         labels: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, SequenceClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -2062,10 +2061,11 @@ class WavLMForAudioFrameClassification(WavLMPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, TokenClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -2235,10 +2235,11 @@ class WavLMForXVector(WavLMPreTrainedModel):
         labels: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, XVectorOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict

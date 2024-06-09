@@ -64,7 +64,7 @@ class ClippedGELUActivation(nn.Cell):
                 The value of 'max' should be greater than 'min'.
         
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
             ValueError: If 'min' is greater than 'max', a ValueError is raised with a detailed error message.
@@ -112,7 +112,7 @@ class AccurateGELUActivation(nn.Cell):
             self: The instance of the class itself.
         
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
             No exceptions are raised by this method.
@@ -122,21 +122,25 @@ class AccurateGELUActivation(nn.Cell):
 
     def construct(self, input: Tensor) -> Tensor:
         r"""
-        This method 'construct' is responsible for applying the Accurate Gaussian Error Linear Unit (GELU) activation function to the input tensor.
+        This method 'construct' is responsible for applying the Accurate Gaussian Error Linear Unit (GELU)
+        activation function to the input tensor.
         
         Args:
             self (AccurateGELUActivation): The instance of the AccurateGELUActivation class.
-            input (Tensor): The input tensor on which the GELU activation function will be applied. It represents the input values to be transformed. 
-                            It should be a tensor of numerical values.
+            input (Tensor):
+                The input tensor on which the GELU activation function will be applied.
+                It represents the input values to be transformed. It should be a tensor of numerical values.
         
         Returns:
-            Tensor: A tensor of the same shape as the input tensor, containing the output values after applying the Accurate GELU activation function. 
-                    The transformed tensor represents the non-linearity applied to the input tensor.
+            Tensor:
+                A tensor of the same shape as the input tensor, containing the output values after applying the
+                Accurate GELU activation function.
+                The transformed tensor represents the non-linearity applied to the input tensor.
         
         Raises:
-            - TypeError: If the input tensor is not of type Tensor.
-            - ValueError: If the dimensions of the input tensor are not compatible with the operations within the method.
-            - RuntimeError: If there is an issue during the computation of the GELU activation function.
+            TypeError: If the input tensor is not of type Tensor.
+            ValueError: If the dimensions of the input tensor are not compatible with the operations within the method.
+            RuntimeError: If there is an issue during the computation of the GELU activation function.
         """
         return 0.5 * input * (1 + ops.tanh(self.precomputed_constant * (input + 0.044715 * ops.pow(input, 3))))
 
@@ -160,8 +164,9 @@ class MishActivation(nn.Cell):
         Raises:
             None.
         
-        The Mish activation function is defined as the element-wise product of the input tensor and the hyperbolic tangent of the softplus function applied to the input tensor. This activation function
-introduces a non-linearity that helps in capturing more complex patterns in the data.
+        The Mish activation function is defined as the element-wise product of the input tensor and
+        the hyperbolic tangent of the softplus function applied to the input tensor.
+        This activation function introduces a non-linearity that helps in capturing more complex patterns in the data.
         
         Note:
             - The input tensor should have a shape that is compatible with the activation function.
@@ -208,12 +213,12 @@ class LaplaceActivation(nn.Cell):
             sigma (float, optional): The standard deviation value used for normalization. Default is 0.282095.
         
         Returns:
-            None. The method modifies the input data in place.
+            None: The method modifies the input data in place.
         
         Raises:
-            - ValueError: If the input data is not a valid tensor.
-            - TypeError: If the input data or the normalization parameters are of incorrect types.
-            - ZeroDivisionError: If sigma is set to zero, resulting in division by zero.
+            ValueError: If the input data is not a valid tensor.
+            TypeError: If the input data or the normalization parameters are of incorrect types.
+            ZeroDivisionError: If sigma is set to zero, resulting in division by zero.
         """
         input = (input - mu).div(sigma * math.sqrt(2.0))
         return 0.5 * (1.0 + ops.erf(input))

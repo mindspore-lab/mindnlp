@@ -1218,13 +1218,10 @@ WAV2VEC2_CONFORMER_INPUTS_DOCSTRING = r"""
             soundfile`). To prepare the array into `input_values`, the [`AutoProcessor`] should be used for padding and
             conversion into a tensor of type `mindspore.Tensor`. See [`Wav2Vec2Processor.__call__`] for details.
         attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing convolution and attention on padding token indices. Mask values selected in `[0,
-            1]`:
-
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-
-            [What are attention masks?](../glossary#attention-mask)
+            >- Mask to avoid performing convolution and attention on padding token indices. Mask values selected in `[0, 1]`:
+            >   - 1 for tokens that are **not masked**,
+            >   - 0 for tokens that are **masked**.
+            >- [What are attention masks?](../glossary#attention-mask)
 
             <Tip warning={true}>
 
@@ -1450,53 +1447,54 @@ class Wav2Vec2ConformerForPreTraining(Wav2Vec2ConformerPreTrainedModel):
             Required input for pre-training.
 
         Returns:
+            `Union[Tuple, Wav2Vec2ConformerForPreTrainingOutput]`
 
         Example:
+            ```python
+            >>> import torch
+            >>> from transformers import AutoFeatureExtractor, Wav2Vec2ConformerForPreTraining
+            >>> from transformers.models.wav2vec2_conformer.modeling_wav2vec2_conformer import _compute_mask_indices, _sample_negative_indices
+            >>> from datasets import load_dataset
 
-        ```python
-        >>> import torch
-        >>> from transformers import AutoFeatureExtractor, Wav2Vec2ConformerForPreTraining
-        >>> from transformers.models.wav2vec2_conformer.modeling_wav2vec2_conformer import _compute_mask_indices, _sample_negative_indices
-        >>> from datasets import load_dataset
+            >>> feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/wav2vec2-conformer-rel-pos-large")
+            >>> model = Wav2Vec2ConformerForPreTraining.from_pretrained("facebook/wav2vec2-conformer-rel-pos-large")
 
-        >>> feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/wav2vec2-conformer-rel-pos-large")
-        >>> model = Wav2Vec2ConformerForPreTraining.from_pretrained("facebook/wav2vec2-conformer-rel-pos-large")
+            >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
+            >>> input_values = feature_extractor(ds[0]["audio"]["array"], return_tensors="pt").input_values  # Batch size 1
 
-        >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
-        >>> input_values = feature_extractor(ds[0]["audio"]["array"], return_tensors="pt").input_values  # Batch size 1
+            >>> # compute masked indices
+            >>> batch_size, raw_sequence_length = input_values.shape
+            >>> sequence_length = model._get_feat_extract_output_lengths(raw_sequence_length).item()
+            >>> mask_time_indices = _compute_mask_indices(
+            ...     shape=(batch_size, sequence_length), mask_prob=0.2, mask_length=2
+            ... )
+            >>> sampled_negative_indices = _sample_negative_indices(
+            ...     features_shape=(batch_size, sequence_length),
+            ...     num_negatives=model.config.num_negatives,
+            ...     mask_time_indices=mask_time_indices,
+            ... )
+            >>> mask_time_indices = mindspore.Tensor(data=mask_time_indices, dtype=mindspore.int64)
+            >>> sampled_negative_indices = mindspore.Tensor(
+            ...     data=sampled_negative_indices, dtype=mindspore.int64
+            ... )
 
-        >>> # compute masked indices
-        >>> batch_size, raw_sequence_length = input_values.shape
-        >>> sequence_length = model._get_feat_extract_output_lengths(raw_sequence_length).item()
-        >>> mask_time_indices = _compute_mask_indices(
-        ...     shape=(batch_size, sequence_length), mask_prob=0.2, mask_length=2
-        ... )
-        >>> sampled_negative_indices = _sample_negative_indices(
-        ...     features_shape=(batch_size, sequence_length),
-        ...     num_negatives=model.config.num_negatives,
-        ...     mask_time_indices=mask_time_indices,
-        ... )
-        >>> mask_time_indices = mindspore.Tensor(data=mask_time_indices, dtype=mindspore.int64)
-        >>> sampled_negative_indices = mindspore.Tensor(
-        ...     data=sampled_negative_indices, dtype=mindspore.int64
-        ... )
+            >>> with ops.no_grad():
+            ...     outputs = model(input_values, mask_time_indices=mask_time_indices)
 
-        >>> with ops.no_grad():
-        ...     outputs = model(input_values, mask_time_indices=mask_time_indices)
+            >>> # compute cosine similarity between predicted (=projected_states) and target (=projected_quantized_states)
+            >>> cosine_sim = ops.cosine_similarity(outputs.projected_states, outputs.projected_quantized_states, dim=-1)
 
-        >>> # compute cosine similarity between predicted (=projected_states) and target (=projected_quantized_states)
-        >>> cosine_sim = ops.cosine_similarity(outputs.projected_states, outputs.projected_quantized_states, dim=-1)
+            >>> # show that cosine similarity is much higher than random
+            >>> cosine_sim[mask_time_indices.to(ops.bool)].mean() > 0.5
+            tensor(True)
 
-        >>> # show that cosine similarity is much higher than random
-        >>> cosine_sim[mask_time_indices.to(ops.bool)].mean() > 0.5
-        tensor(True)
-
-        >>> # for contrastive loss training model should be put into train mode
-        >>> model = model.train()
-        >>> loss = model(
-        ...     input_values, mask_time_indices=mask_time_indices, sampled_negative_indices=sampled_negative_indices
-        ... ).loss
-        ```"""
+            >>> # for contrastive loss training model should be put into train mode
+            >>> model = model.train()
+            >>> loss = model(
+            ...     input_values, mask_time_indices=mask_time_indices, sampled_negative_indices=sampled_negative_indices
+            ... ).loss
+            ```
+        """
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1678,11 +1676,12 @@ class Wav2Vec2ConformerForCTC(Wav2Vec2ConformerPreTrainedModel):
         labels: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, CausalLMOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, target_length)`, *optional*):
-            Labels for connectionist temporal classification. Note that `target_length` has to be smaller or equal to
-            the sequence length of the output logits. Indices are selected in `[-100, 0, ..., config.vocab_size - 1]`.
-            All labels set to `-100` are ignored (masked), the loss is only computed for labels in `[0, ...,
-            config.vocab_size - 1]`.
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, target_length)`, *optional*):
+                Labels for connectionist temporal classification. Note that `target_length` has to be smaller or equal to
+                the sequence length of the output logits. Indices are selected in `[-100, 0, ..., config.vocab_size - 1]`.
+                All labels set to `-100` are ignored (masked), the loss is only computed for labels in `[0, ...,
+                config.vocab_size - 1]`.
         """
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -1784,10 +1783,11 @@ class Wav2Vec2ConformerForSequenceClassification(Wav2Vec2ConformerPreTrainedMode
         labels: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, SequenceClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -1881,10 +1881,11 @@ class Wav2Vec2ConformerForAudioFrameClassification(Wav2Vec2ConformerPreTrainedMo
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, TokenClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -2043,10 +2044,11 @@ class Wav2Vec2ConformerForXVector(Wav2Vec2ConformerPreTrainedModel):
         labels: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, XVectorOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict

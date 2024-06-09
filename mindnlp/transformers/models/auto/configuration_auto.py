@@ -692,8 +692,8 @@ class _LazyConfigMapping(OrderedDict):
         Args:
             self (object): The instance of the _LazyConfigMapping class.
             mapping (dict): A dictionary containing the initial mapping for the configuration.
-                           The keys represent the configuration keys, and the values represent the corresponding values.
-                           This parameter is required and must be of type dict.
+               The keys represent the configuration keys, and the values represent the corresponding values.
+               This parameter is required and must be of type dict.
 
         Returns:
             None: This method does not return any value.
@@ -716,12 +716,16 @@ class _LazyConfigMapping(OrderedDict):
             key (str): The key used to retrieve the corresponding value. It should be a string.
 
         Returns:
-            None: If the key is present in the _extra_content, the associated value is returned. If the key is not in _extra_content but is in _mapping, the value associated with the key is returned after
-performing necessary module imports and attribute retrieval.
+            None:
+                If the key is present in the _extra_content, the associated value is returned. 
+                If the key is not in _extra_content but is in _mapping, the value associated with the key is returned after
+                performing necessary module imports and attribute retrieval.
 
         Raises:
             KeyError: If the key is not found in either _extra_content or _mapping, a KeyError is raised.
-            AttributeError: If the attribute associated with the value corresponding to the key is not found in the dynamically imported module, an AttributeError is raised.
+            AttributeError: 
+                If the attribute associated with the value corresponding to the key is not found in the dynamically imported module, 
+                an AttributeError is raised.
             ModuleNotFoundError: If the required module is not found during dynamic import, a ModuleNotFoundError is raised.
         """
         if key in self._extra_content:
@@ -769,7 +773,7 @@ performing necessary module imports and attribute retrieval.
             list: A list containing the values of the mapping and any extra content in the _LazyConfigMapping class.
 
         Raises:
-            N/A
+            None
         """
         return [self[k] for k in self._mapping.keys()] + list(
             self._extra_content.values()
@@ -872,11 +876,11 @@ class _LazyLoadAllMappings(OrderedDict):
             self: _LazyLoadAllMappings - The instance of the _LazyLoadAllMappings class.
 
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
 
         Raises:
             FutureWarning: If ALL_PRETRAINED_CONFIG_ARCHIVE_MAP is deprecated and will be removed in v5 of Transformers.
-            It does not contain all available model checkpoints. Refer to hf.co/models for that.
+                It does not contain all available model checkpoints. Refer to hf.co/models for that.
         """
         if self._initialized:
             return
@@ -939,12 +943,13 @@ class _LazyLoadAllMappings(OrderedDict):
                 It is required to access the internal data and perform necessary operations.
 
         Returns:
-            None.
-            This method does not return any specific value but retrieves and returns the values of the internal data dictionary.
+            None:
+                This method does not return any specific value but retrieves and returns the values of the internal data dictionary.
 
         Raises:
-            No specific exceptions are raised by this method under normal circumstances.
-            However, if there are any issues during the initialization process, unexpected behavior may occur.
+            No specific exceptions:
+                No specific exceptions are raised by this method under normal circumstances,
+                However, if there are any issues during the initialization process, unexpected behavior may occur.
         """
         self._initialize()
         return self._data.values()
@@ -959,8 +964,8 @@ class _LazyLoadAllMappings(OrderedDict):
                 It must be an instance of the class '_LazyLoadAllMappings'.
 
         Returns:
-            None.
-            This method returns the keys of the data stored in the '_data' attribute after initialization.
+            None:
+                This method returns the keys of the data stored in the '_data' attribute after initialization.
 
         Raises:
             No exceptions are explicitly raised within this method.
@@ -1144,15 +1149,19 @@ class AutoConfig:
 
         Args:
             self: The instance of the AutoConfig class. It is automatically passed when the method is called.
-                Purpose: Represents the instance of the AutoConfig class.
-                Restrictions: None.
+
+                - Purpose: Represents the instance of the AutoConfig class.
+                - Restrictions: None.
 
         Returns:
             None. This method does not return any value.
 
         Raises:
-            EnvironmentError: If the AutoConfig is instantiated directly using the `__init__` method, it raises an EnvironmentError with the message
-            'AutoConfig is designed to be instantiated using the `AutoConfig.from_pretrained(pretrained_model_name_or_path)` method.'.
+            EnvironmentError:
+                If the AutoConfig is instantiated directly using the `__init__` method,
+                it raises an EnvironmentError with the message
+                'AutoConfig is designed to be instantiated using the `
+                AutoConfig.from_pretrained(pretrained_model_name_or_path)` method.'.
         """
         raise EnvironmentError(
             "AutoConfig is designed to be instantiated "
@@ -1166,14 +1175,18 @@ class AutoConfig:
 
         Args:
             cls (class): The class itself, automatically passed as the first parameter.
-            model_type (str): A string representing the type of the model for which the configuration class needs to be instantiated. It must be a key within the CONFIG_MAPPING dictionary.
+            model_type (str): A string representing the type of the model for which the configuration class needs to be instantiated.
+                It must be a key within the CONFIG_MAPPING dictionary.
 
         Returns:
-            None: This method does not return any value directly. It instantiates and returns an instance of the appropriate configuration class based on the model type.
+            None: This method does not return any value directly.
+                It instantiates and returns an instance of the appropriate configuration class based on the model type.
 
         Raises:
-            ValueError: Raised when the provided 'model_type' is not recognized or is not found as a key in the CONFIG_MAPPING dictionary. The exception message indicates the unrecognized model identifier and
-lists all valid model identifiers available in the CONFIG_MAPPING dictionary.
+            ValueError:
+                Raised when the provided 'model_type' is not recognized or is not found as a key in the CONFIG_MAPPING dictionary.
+                The exception message indicates the unrecognized model identifier and lists all valid model identifiers
+                available in the CONFIG_MAPPING dictionary.
         """
         if model_type in CONFIG_MAPPING:
             config_class = CONFIG_MAPPING[model_type]
@@ -1197,14 +1210,14 @@ lists all valid model identifiers available in the CONFIG_MAPPING dictionary.
             pretrained_model_name_or_path (`str` or `os.PathLike`):
                 Can be either:
 
-                    - A string, the *model id* of a pretrained model configuration hosted inside a model repo on
-                      hf-mirror.com. Valid model ids can be located at the root-level, like `bert-base-uncased`, or
-                      namespaced under a user or organization name, like `dbmdz/bert-base-german-cased`.
-                    - A path to a *directory* containing a configuration file saved using the
-                      [`~PretrainedConfig.save_pretrained`] method, or the [`~PreTrainedModel.save_pretrained`] method,
-                      e.g., `./my_model_directory/`.
-                    - A path or url to a saved configuration JSON *file*, e.g.,
-                      `./my_model_directory/configuration.json`.
+                - A string, the *model id* of a pretrained model configuration hosted inside a model repo on
+                hf-mirror.com. Valid model ids can be located at the root-level, like `bert-base-uncased`, or
+                namespaced under a user or organization name, like `dbmdz/bert-base-german-cased`.
+                - A path to a *directory* containing a configuration file saved using the
+                [`~PretrainedConfig.save_pretrained`] method, or the [`~PreTrainedModel.save_pretrained`] method,
+                e.g., `./my_model_directory/`.
+                - A path or url to a saved configuration JSON *file*, e.g.,
+                `./my_model_directory/configuration.json`.
             cache_dir (`str` or `os.PathLike`, *optional*):
                 Path to a directory in which a downloaded pretrained model configuration should be cached if the
                 standard cache should not be used.
@@ -1223,7 +1236,6 @@ lists all valid model identifiers available in the CONFIG_MAPPING dictionary.
                 identifier allowed by git.
             return_unused_kwargs (`bool`, *optional*, defaults to `False`):
                 If `False`, then this function returns just the final configuration object.
-
                 If `True`, then this functions returns a `Tuple(config, unused_kwargs)` where *unused_kwargs* is a
                 dictionary consisting of the key/value pairs whose keys are not configuration attributes: i.e., the
                 part of `kwargs` which has not been used to update `config` and is otherwise ignored.
@@ -1236,37 +1248,35 @@ lists all valid model identifiers available in the CONFIG_MAPPING dictionary.
                 values. Behavior concerning key/value pairs whose keys are *not* configuration attributes is controlled
                 by the `return_unused_kwargs` keyword parameter.
 
-        Examples:
-
-        ```python
-        >>> from transformers import AutoConfig
-
-        >>> # Download configuration from hf-mirror.com and cache.
-        >>> config = AutoConfig.from_pretrained("bert-base-uncased")
-
-        >>> # Download configuration from hf-mirror.com (user-uploaded) and cache.
-        >>> config = AutoConfig.from_pretrained("dbmdz/bert-base-german-cased")
-
-        >>> # If configuration file is in a directory (e.g., was saved using *save_pretrained('./test/saved_model/')*).
-        >>> config = AutoConfig.from_pretrained("./test/bert_saved_model/")
-
-        >>> # Load a specific configuration file.
-        >>> config = AutoConfig.from_pretrained("./test/bert_saved_model/my_configuration.json")
-
-        >>> # Change some config attributes when loading a pretrained config.
-        >>> config = AutoConfig.from_pretrained("bert-base-uncased", output_attentions=True, foo=False)
-        >>> config.output_attentions
-        True
-
-        >>> config, unused_kwargs = AutoConfig.from_pretrained(
-        ...     "bert-base-uncased", output_attentions=True, foo=False, return_unused_kwargs=True
-        ... )
-        >>> config.output_attentions
-        True
-
-        >>> unused_kwargs
-        {'foo': False}
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import AutoConfig
+            ...
+            >>> # Download configuration from hf-mirror.com and cache.
+            >>> config = AutoConfig.from_pretrained("bert-base-uncased")
+            ...
+            >>> # Download configuration from hf-mirror.com (user-uploaded) and cache.
+            >>> config = AutoConfig.from_pretrained("dbmdz/bert-base-german-cased")
+            ...
+            >>> # If configuration file is in a directory (e.g., was saved using *save_pretrained('./test/saved_model/')*).
+            >>> config = AutoConfig.from_pretrained("./test/bert_saved_model/")
+            ...
+            >>> # Load a specific configuration file.
+            >>> config = AutoConfig.from_pretrained("./test/bert_saved_model/my_configuration.json")
+            ...
+            >>> # Change some config attributes when loading a pretrained config.
+            >>> config = AutoConfig.from_pretrained("bert-base-uncased", output_attentions=True, foo=False)
+            >>> config.output_attentions
+            True
+            >>> config, unused_kwargs = AutoConfig.from_pretrained(
+            ...     "bert-base-uncased", output_attentions=True, foo=False, return_unused_kwargs=True
+            ... )
+            >>> config.output_attentions
+            True
+            >>> unused_kwargs
+            {'foo': False}
+            ```
+        """
         kwargs["name_or_path"] = pretrained_model_name_or_path
 
         config_dict, unused_kwargs = PretrainedConfig.get_config_dict(

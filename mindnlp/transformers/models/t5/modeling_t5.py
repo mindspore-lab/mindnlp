@@ -103,13 +103,13 @@ class T5DenseActDense(nn.Cell):
         Args:
             self: The instance of the class.
             config (T5Config): The configuration object containing the model's settings.
-                - The 'config' parameter is of type T5Config, which specifies the configuration for the T5 model.
-                - It is used to set up the parameters for the dense layers and the dropout rate.
-                - This parameter is required and has no default value.
-        
+                >   - The 'config' parameter is of type T5Config, which specifies the configuration for the T5 model.
+                >   - It is used to set up the parameters for the dense layers and the dropout rate.
+                >   - This parameter is required and has no default value.
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             None.
         """
@@ -123,14 +123,14 @@ class T5DenseActDense(nn.Cell):
         """
         This method constructs the hidden states by applying a series of transformations including linear mapping, activation function,
         dropout, and additional conversion based on weight data types.
-        
+
         Args:
             self (T5DenseActDense): The instance of the T5DenseActDense class.
             hidden_states (Tensor): The input hidden states to be processed by the method.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             TypeError: If the data type of weights in self.wo does not match the data type of hidden_states or mindspore.int8.
         """
@@ -148,14 +148,14 @@ class T5DenseGatedActDense(nn.Cell):
     def __init__(self, config: T5Config):
         """
         Initializes an instance of the T5DenseGatedActDense class.
-        
+
         Args:
             self: An instance of the T5DenseGatedActDense class.
             config (T5Config): The configuration object for the T5 model.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -169,14 +169,14 @@ class T5DenseGatedActDense(nn.Cell):
     def construct(self, hidden_states):
         """
         Constructs the hidden states of the T5DenseGatedActDense model.
-        
+
         Args:
             self: The instance of the T5DenseGatedActDense class.
             hidden_states (Tensor): The input hidden states. It should have the shape (batch_size, sequence_length, hidden_size).
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -197,14 +197,14 @@ class T5LayerFF(nn.Cell):
     def __init__(self, config: T5Config):
         """
         Initializes an instance of the T5LayerFF class.
-        
+
         Args:
             self: The instance of the T5LayerFF class.
             config (T5Config): The configuration object for the T5 model. It contains various parameters and settings for the model.
-            
+
         Returns:
             None
-            
+
         Raises:
             N/A
         """
@@ -220,14 +220,14 @@ class T5LayerFF(nn.Cell):
     def construct(self, hidden_states):
         """
         Constructs the forward pass of the T5LayerFF class.
-        
+
         Args:
             self (T5LayerFF): An instance of the T5LayerFF class.
             hidden_states (Tensor): The hidden states input tensor. Shape (batch_size, sequence_length, hidden_size).
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -242,15 +242,15 @@ class T5Attention(nn.Cell):
     def __init__(self, config: T5Config, has_relative_attention_bias=False):
         """
         Initializes an instance of the T5Attention class.
-        
+
         Args:
             self: The object itself.
             config (T5Config): An instance of the T5Config class that holds the configuration parameters for the attention mechanism.
             has_relative_attention_bias (bool): A boolean value indicating whether the attention mechanism has relative attention bias.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -278,14 +278,14 @@ class T5Attention(nn.Cell):
     def prune_heads(self, heads):
         """
         Prunes the attention heads in the T5Attention class.
-        
+
         Args:
             self (T5Attention): An instance of the T5Attention class.
             heads (list): A list of attention heads to be pruned.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -496,16 +496,16 @@ class T5LayerSelfAttention(nn.Cell):
     """T5LayerSelfAttention"""
     def __init__(self, config, has_relative_attention_bias=False):
         """Initialize the T5LayerSelfAttention.
-        
+
         Args:
             self (T5LayerSelfAttention): An instance of the T5LayerSelfAttention class.
             config (Config): An object containing the configuration parameters.
-            has_relative_attention_bias (bool, optional): A flag indicating whether the attention bias is relative or not. 
+            has_relative_attention_bias (bool, optional): A flag indicating whether the attention bias is relative or not.
                 Defaults to False.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -526,7 +526,7 @@ class T5LayerSelfAttention(nn.Cell):
     ):
         """
         This method 'construct' in the class 'T5LayerSelfAttention' constructs the output of a T5 self-attention layer.
-        
+
         Args:
             self: The instance of the class.
             hidden_states (Tensor): The hidden states of the input sequence.
@@ -536,10 +536,10 @@ class T5LayerSelfAttention(nn.Cell):
             past_key_value (Optional[Tuple[Tensor]]): An optional tuple of key and value tensors from the previous time steps for faster decoding.
             use_cache (bool): A flag indicating whether to use caching for faster decoding.
             output_attentions (bool): A flag indicating whether to output attention weights.
-        
+
         Returns:
             Tuple[Tensor]: A tuple containing the updated hidden states after self-attention and any additional outputs from the attention mechanism.
-        
+
         Raises:
             None
         """
@@ -562,19 +562,20 @@ class T5LayerCrossAttention(nn.Cell):
     def __init__(self, config):
         """
         Initializes an instance of the T5LayerCrossAttention class.
-        
+
         Args:
             self: The object instance.
-            config: An instance of the configuration class that contains the model's hyperparameters and settings.
-                It is of type 'Any' and is used to configure the behavior of the cross-attention layer.
-                The configuration object must have the following attributes:
-                    - d_model: An integer representing the dimensionality of the model's hidden states.
-                    - layer_norm_epsilon: A small float value used to stabilize the layer normalization process.
-                    - dropout_rate: A float value between 0 and 1, denoting the dropout rate for the layer.
-        
+            config:
+                > An instance of the configuration class that contains the model's hyperparameters and settings.
+                    It is of type 'Any' and is used to configure the behavior of the cross-attention layer.
+                > The configuration object must have the following attributes:
+                >   - d_model: An integer representing the dimensionality of the model's hidden states.
+                >   - layer_norm_epsilon: A small float value used to stabilize the layer normalization process.
+                >   - dropout_rate: A float value between 0 and 1, denoting the dropout rate for the layer.
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             None. This method does not raise any exceptions.
         """
@@ -597,24 +598,24 @@ class T5LayerCrossAttention(nn.Cell):
     ):
         """
         This method constructs the T5 layer cross-attention mechanism.
-        
+
         Args:
-        - self: Reference to the current instance of the class.
-        - hidden_states: Tensor representing the input hidden states.
-        - key_value_states: Tensor representing the key-value states for the attention mechanism.
-        - attention_mask: Optional tensor specifying the attention mask. Defaults to None.
-        - position_bias: Optional tensor providing positional bias information. Defaults to None.
-        - layer_head_mask: Optional tensor masking specific attention heads. Defaults to None.
-        - past_key_value: Optional tensor containing cached key-value states from previous steps. Defaults to None.
-        - use_cache: Boolean indicating whether to use cache for key-value states. Defaults to False.
-        - query_length: Optional integer specifying the length of the query. Defaults to None.
-        - output_attentions: Boolean indicating whether to output attentions. Defaults to False.
-        
+            self: Reference to the current instance of the class.
+            hidden_states: Tensor representing the input hidden states.
+            key_value_states: Tensor representing the key-value states for the attention mechanism.
+            attention_mask: Optional tensor specifying the attention mask. Defaults to None.
+            position_bias: Optional tensor providing positional bias information. Defaults to None.
+            layer_head_mask: Optional tensor masking specific attention heads. Defaults to None.
+            past_key_value: Optional tensor containing cached key-value states from previous steps. Defaults to None.
+            use_cache: Boolean indicating whether to use cache for key-value states. Defaults to False.
+            query_length: Optional integer specifying the length of the query. Defaults to None.
+            output_attentions: Boolean indicating whether to output attentions. Defaults to False.
+
         Returns:
-        - Tuple containing the layer output and additional attention outputs.
-        
+            Tuple containing the layer output and additional attention outputs.
+
         Raises:
-        - None
+            None
         """
         normed_hidden_states = self.layer_norm(hidden_states)
         attention_output = self.EncDecAttention(
@@ -638,15 +639,15 @@ class T5Block(nn.Cell):
     def __init__(self, config, has_relative_attention_bias=False):
         """
         Initializes a new instance of the T5Block class.
-        
+
         Args:
             self: The object itself.
             config (object): The configuration object containing the settings for the T5Block.
             has_relative_attention_bias (bool, optional): Specifies whether the attention bias is relative or not. Default is False.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             None.
         """
@@ -676,8 +677,8 @@ class T5Block(nn.Cell):
     ):
         """
         Constructs a T5Block.
-        
-        This method takes 12 parameters:
+
+        Args:
             self (T5Block): The T5Block instance.
             hidden_states (Tensor): The input hidden states.
             attention_mask (Tensor, optional): The attention mask tensor. Defaults to None.
@@ -690,13 +691,13 @@ class T5Block(nn.Cell):
             past_key_value (Tuple[Tensor], optional): The past key-value states. Defaults to None.
             use_cache (bool, optional): Whether to use cache. Defaults to False.
             output_attentions (bool, optional): Whether to output attentions. Defaults to False.
-        
+
         Returns:
             Tuple: A tuple containing the following elements:
-                - hidden_states (Tensor): The output hidden states.
-                - present_key_value_state (Tuple[Tensor], optional): The present key-value state. None if not available.
-                - attention_outputs (Tuple[Tensor], optional): The attention outputs. None if not available.
-        
+                >   - hidden_states (Tensor): The output hidden states.
+                >   - present_key_value_state (Tuple[Tensor], optional): The present key-value state. None if not available.
+                >   - attention_outputs (Tuple[Tensor], optional): The attention outputs. None if not available.
+
         Raises:
             ValueError: If the number of past states is not as expected.
             Warning: If `past_key_values` is passed to the encoder.
@@ -793,14 +794,14 @@ class T5ClassificationHead(nn.Cell):
     def __init__(self, config: T5Config):
         """
         Initializes a T5ClassificationHead instance.
-        
+
         Args:
             self: The T5ClassificationHead instance.
             config (T5Config): The configuration for the T5 model. It specifies the model's architecture and parameters.
-        
+
         Returns:
             None. This method initializes the T5ClassificationHead instance and does not return any value.
-        
+
         Raises:
             - TypeError: If the config parameter is not of type T5Config.
             - ValueError: If the config parameters are not valid or if there are any issues during initialization.
@@ -813,17 +814,17 @@ class T5ClassificationHead(nn.Cell):
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the T5 classification head.
-        
+
         Args:
             self: The T5ClassificationHead object.
             hidden_states (mindspore.Tensor): The input hidden states tensor.
                 This tensor contains the hidden states from the T5 model.
                 Shape of the tensor should be (batch_size, sequence_length, hidden_size).
-        
+
         Returns:
             mindspore.Tensor: The output tensor after passing through the T5 classification head.
                 Shape of the tensor is (batch_size, sequence_length, num_labels).
-        
+
         Raises:
             None.
         """
@@ -852,22 +853,23 @@ class T5PreTrainedModel(PreTrainedModel):
     def dummy_inputs(self):
         """
         Method: dummy_inputs
-        
+
         Description:
-        This method generates dummy input data for the T5PreTrainedModel.
-        
+            This method generates dummy input data for the T5PreTrainedModel.
+
         Args:
-        - self: An instance of the T5PreTrainedModel class.
-        
+            self: An instance of the T5PreTrainedModel class.
+
         Returns:
-        - Type: None
-        - Purpose: This method returns a dictionary containing dummy input data for the model. The dictionary includes the following keys:
-          - 'decoder_input_ids': Tensor containing dummy input IDs.
-          - 'input_ids': Tensor containing dummy input IDs.
-          - 'decoder_attention_mask': Tensor containing dummy mask data.
-        
+            `dict`:
+                >   - Type: None
+                >   - Purpose: This method returns a dictionary containing dummy input data for the model. The dictionary includes the following keys:
+                >       - 'decoder_input_ids': Tensor containing dummy input IDs.
+                >       - 'input_ids': Tensor containing dummy input IDs.
+                >       - 'decoder_attention_mask': Tensor containing dummy mask data.
+
         Raises:
-        This method does not raise any exceptions.
+            This method does not raise any exceptions.
         """
         input_ids = mindspore.tensor(DUMMY_INPUTS)
         input_mask = mindspore.tensor(DUMMY_MASK)
@@ -960,14 +962,14 @@ class T5PreTrainedModel(PreTrainedModel):
     def _shift_right(self, input_ids):
         """
         Shifts the input IDs to the right by one position, inserting the decoder start token ID at the beginning.
-        
+
         Args:
             self (T5PreTrainedModel): An instance of the T5PreTrainedModel class.
             input_ids (torch.Tensor): A tensor of shape (batch_size, sequence_length) containing the input IDs.
-        
+
         Returns:
             torch.Tensor: A tensor of shape (batch_size, sequence_length) representing the shifted input IDs.
-        
+
         Raises:
             ValueError: If `self.model.config.decoder_start_token_id` is not defined or if `self.model.config.pad_token_id` is not defined.
         """
@@ -998,20 +1000,20 @@ class T5Stack(T5PreTrainedModel):
     def __init__(self, config):
         """
         Initializes an instance of the T5Stack class.
-        
+
         Args:
             self: The instance of the T5Stack class.
             config: An object containing the configuration parameters for the T5Stack. It should have the following attributes:
-                - vocab_size (int): The size of the vocabulary.
-                - d_model (int): The dimensionality of the model.
-                - is_decoder (bool): Indicates whether the T5Stack is used as a decoder.
-                - num_layers (int): The number of layers in the T5Stack.
-                - layer_norm_epsilon (float): The epsilon value for layer normalization.
-                - dropout_rate (float): The dropout rate.
-        
+                >   - vocab_size (int): The size of the vocabulary.
+                >   - d_model (int): The dimensionality of the model.
+                >   - is_decoder (bool): Indicates whether the T5Stack is used as a decoder.
+                >   - num_layers (int): The number of layers in the T5Stack.
+                >   - layer_norm_epsilon (float): The epsilon value for layer normalization.
+                >   - dropout_rate (float): The dropout rate.
+
         Returns:
             None. The method initializes the T5Stack object with the provided configuration.
-        
+
         Raises:
             None.
         """
@@ -1030,13 +1032,13 @@ class T5Stack(T5PreTrainedModel):
 
     def get_input_embeddings(self):
         """Return the input embeddings of the T5Stack.
-        
+
         Args:
             self: An instance of the T5Stack class.
-        
+
         Returns:
             None. This method returns the input embeddings of the T5Stack. The input embeddings are the embedded tokens used as input for the T5 model.
-        
+
         Raises:
             None. This method does not raise any exceptions.
         """
@@ -1045,14 +1047,14 @@ class T5Stack(T5PreTrainedModel):
     def set_input_embeddings(self, new_embeddings):
         """
         Method to set new input embeddings for the T5Stack model.
-        
+
         Args:
             self (T5Stack): The instance of the T5Stack class.
             new_embeddings (object): The new embeddings to set for the input. It should be compatible with the model's input format.
-        
+
         Returns:
             None. This method updates the input embeddings of the T5Stack model in place.
-        
+
         Raises:
             None.
         """
@@ -1075,7 +1077,7 @@ class T5Stack(T5PreTrainedModel):
     ):
         """
         Constructs the T5Stack model.
-        
+
         Args:
             self (T5Stack): The instance of the T5Stack class.
             input_ids (Tensor, optional): The input token IDs. Default: None.
@@ -1090,16 +1092,16 @@ class T5Stack(T5PreTrainedModel):
             output_attentions (bool, optional): Whether to output attentions. Default: None.
             output_hidden_states (bool, optional): Whether to output hidden states. Default: None.
             return_dict (bool, optional): Whether to return a dictionary. Default: None.
-        
+
         Returns:
             None
-        
+
         Raises:
             ValueError: If both input_ids and inputs_embeds are specified at the same time.
             ValueError: If neither input_ids nor inputs_embeds are specified.
             AssertionError: If the model is not initialized with valid token embeddings.
             AssertionError: If use_cache is set to True and the model is not used as a decoder.
-        
+
         """
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
@@ -1254,15 +1256,15 @@ class T5Model(T5PreTrainedModel):
     def __init__(self, config: T5Config):
         """
         __init__ method in the T5Model class initializes a new instance of the class.
-        
+
         Args:
             self: A reference to the instance of the class.
             config (T5Config): An instance of T5Config class containing configuration parameters for the T5 model. It includes parameters such as vocab_size, d_model, is_decoder, use_cache, is_encoder_decoder,
-and num_decoder_layers. 
-        
+                and num_decoder_layers.
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             This method does not explicitly raise any exceptions.
         """
@@ -1286,13 +1288,13 @@ and num_decoder_layers.
     def get_input_embeddings(self):
         """
         Get the input embeddings for the T5Model.
-        
+
         Args:
             self: The instance of the T5Model class.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -1301,14 +1303,14 @@ and num_decoder_layers.
     def set_input_embeddings(self, new_embeddings):
         """
         Sets the input embeddings for the T5Model.
-        
+
         Args:
             self (T5Model): The instance of the T5Model class.
             new_embeddings: The new input embeddings to be set for the model. This should be a tensor of shape (vocab_size, hidden_size).
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             None. This method does not raise any exceptions.
         """
@@ -1319,14 +1321,14 @@ and num_decoder_layers.
     def _tie_weights(self):
         """
         Tie the weights of the T5Model if specified in the configuration.
-        
+
         Args:
             self (T5Model): The instance of the T5Model class.
                 - This parameter represents the T5Model object on which the method is called.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             None
         """
@@ -1337,13 +1339,13 @@ and num_decoder_layers.
     def get_encoder(self):
         """
         This method returns the encoder for the T5Model.
-        
+
         Args:
             self: The instance of the T5Model class.
-        
+
         Returns:
             Returns the encoder associated with the T5Model.
-        
+
         Raises:
             None.
         """
@@ -1352,13 +1354,13 @@ and num_decoder_layers.
     def get_decoder(self):
         """
         Method to retrieve the decoder of the T5Model.
-        
+
         Args:
             self (T5Model): The T5Model instance on which the method is called.
-            
+
         Returns:
             None. The method returns the decoder attribute of the T5Model instance.
-        
+
         Raises:
             This method does not raise any exceptions.
         """
@@ -1392,7 +1394,7 @@ and num_decoder_layers.
     ):
         """
         Constructs the T5 model for sequence-to-sequence tasks.
-        
+
         Args:
             self (T5Model): The instance of the T5Model class.
             input_ids (torch.Tensor, optional): The input sequence tensor IDs. Default: None.
@@ -1410,10 +1412,10 @@ and num_decoder_layers.
             output_attentions (bool, optional): Whether to output attentions. Default: None.
             output_hidden_states (bool, optional): Whether to output hidden states. Default: None.
             return_dict (bool, optional): Whether to return a dictionary. Default: None.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1481,15 +1483,15 @@ class T5ForConditionalGeneration(T5PreTrainedModel):
     def __init__(self, config: T5Config):
         """
         Initializes an instance of the T5ForConditionalGeneration class.
-        
+
         Args:
             self: The object instance.
             config (T5Config): The configuration object for the T5 model. It contains various parameters to customize the model's behavior, such as the model dimension, vocabulary size, and number of decoder
-layers.
-        
+                layers.
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1517,13 +1519,13 @@ layers.
     def get_input_embeddings(self):
         """
         Returns the input embeddings for the T5 model.
-        
+
         Args:
             self (T5ForConditionalGeneration): The instance of the T5ForConditionalGeneration class.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -1532,14 +1534,14 @@ layers.
     def set_input_embeddings(self, new_embeddings):
         """
         Set input embeddings for the T5 model.
-        
+
         Args:
             self (T5ForConditionalGeneration): The instance of the T5ForConditionalGeneration class.
             new_embeddings (tensor): The new input embeddings to be set for the model. It should be a tensor of shape (vocab_size, hidden_size).
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             TypeError: If the new_embeddings parameter is not a tensor.
             ValueError: If the shape of the new_embeddings tensor does not match the required shape (vocab_size, hidden_size).
@@ -1551,14 +1553,14 @@ layers.
     def _tie_weights(self):
         """
         Method _tie_weights in the class T5ForConditionalGeneration ties or clones weights for word embeddings.
-        
+
         Args:
             self (T5ForConditionalGeneration): The instance of the T5ForConditionalGeneration class.
                 It represents the current object and is used to access attributes and methods within the class.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             N/A
         """
@@ -1569,14 +1571,14 @@ layers.
     def set_output_embeddings(self, new_embeddings):
         """
         Set the output embeddings for the T5 model.
-        
+
         Args:
             self (T5ForConditionalGeneration): The T5 model instance.
             new_embeddings (torch.Tensor): The new embeddings to set as the output embeddings for the model.
-        
+
         Returns:
             None. This method updates the output embeddings of the T5 model in place.
-        
+
         Raises:
             TypeError: If the new_embeddings parameter is not a torch.Tensor.
             ValueError: If the shape of the new_embeddings does not match the expected shape for model output embeddings.
@@ -1586,13 +1588,13 @@ layers.
     def get_output_embeddings(self):
         """
         Returns the output embeddings for the T5 model.
-        
+
         Args:
             self (T5ForConditionalGeneration): An instance of the T5ForConditionalGeneration class.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -1601,13 +1603,13 @@ layers.
     def get_encoder(self):
         """
         This method is part of the 'T5ForConditionalGeneration' class and is used to retrieve the encoder.
-        
+
         Args:
             self (T5ForConditionalGeneration): An instance of the 'T5ForConditionalGeneration' class.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -1616,13 +1618,13 @@ layers.
     def get_decoder(self):
         """
         Returns the decoder used by the T5 model for conditional generation.
-        
+
         Args:
             self (T5ForConditionalGeneration): The current instance of the T5ForConditionalGeneration class.
-        
+
         Returns:
             None: The method does not return any value.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -1648,45 +1650,45 @@ layers.
         return_dict = None,
     ):
         """Constructs the T5 model for conditional generation.
-        
+
         Args:
             self (T5ForConditionalGeneration): The instance of the T5ForConditionalGeneration class.
-            input_ids (torch.Tensor, optional): The input sequence tensor of shape (batch_size, sequence_length). 
+            input_ids (torch.Tensor, optional): The input sequence tensor of shape (batch_size, sequence_length).
                 Defaults to None.
-            attention_mask (torch.Tensor, optional): The attention mask tensor of shape (batch_size, sequence_length). 
+            attention_mask (torch.Tensor, optional): The attention mask tensor of shape (batch_size, sequence_length).
                 Defaults to None.
-            decoder_input_ids (torch.Tensor, optional): The decoder input sequence tensor of shape (batch_size, decoder_sequence_length). 
+            decoder_input_ids (torch.Tensor, optional): The decoder input sequence tensor of shape (batch_size, decoder_sequence_length).
                 Defaults to None.
-            decoder_attention_mask (torch.Tensor, optional): The decoder attention mask tensor of shape (batch_size, decoder_sequence_length). 
+            decoder_attention_mask (torch.Tensor, optional): The decoder attention mask tensor of shape (batch_size, decoder_sequence_length).
                 Defaults to None.
-            head_mask (torch.Tensor, optional): The head mask tensor of shape (num_layers, num_heads). 
+            head_mask (torch.Tensor, optional): The head mask tensor of shape (num_layers, num_heads).
                 Defaults to None.
-            decoder_head_mask (torch.Tensor, optional): The decoder head mask tensor of shape (num_layers, num_heads). 
+            decoder_head_mask (torch.Tensor, optional): The decoder head mask tensor of shape (num_layers, num_heads).
                 Defaults to None.
-            cross_attn_head_mask (torch.Tensor, optional): The cross-attention head mask tensor of shape (num_layers, num_heads). 
+            cross_attn_head_mask (torch.Tensor, optional): The cross-attention head mask tensor of shape (num_layers, num_heads).
                 Defaults to None.
-            encoder_outputs (tuple, optional): The encoder outputs returned by the encoder model. 
+            encoder_outputs (tuple, optional): The encoder outputs returned by the encoder model.
                 Defaults to None.
-            past_key_values (tuple, optional): The past key values returned by the decoder model. 
+            past_key_values (tuple, optional): The past key values returned by the decoder model.
                 Defaults to None.
-            inputs_embeds (torch.Tensor, optional): The input embeddings tensor of shape (batch_size, sequence_length, hidden_size). 
+            inputs_embeds (torch.Tensor, optional): The input embeddings tensor of shape (batch_size, sequence_length, hidden_size).
                 Defaults to None.
-            decoder_inputs_embeds (torch.Tensor, optional): The decoder input embeddings tensor of shape (batch_size, decoder_sequence_length, hidden_size). 
+            decoder_inputs_embeds (torch.Tensor, optional): The decoder input embeddings tensor of shape (batch_size, decoder_sequence_length, hidden_size).
                 Defaults to None.
-            labels (torch.Tensor, optional): The labels tensor of shape (batch_size, sequence_length). 
+            labels (torch.Tensor, optional): The labels tensor of shape (batch_size, sequence_length).
                 Defaults to None.
-            use_cache (bool, optional): Whether to use cache for the model. 
+            use_cache (bool, optional): Whether to use cache for the model.
                 Defaults to None.
-            output_attentions (bool, optional): Whether to output attentions. 
+            output_attentions (bool, optional): Whether to output attentions.
                 Defaults to None.
-            output_hidden_states (bool, optional): Whether to output hidden states. 
+            output_hidden_states (bool, optional): Whether to output hidden states.
                 Defaults to None.
-            return_dict (bool, optional): Whether to return a dictionary as the output. 
+            return_dict (bool, optional): Whether to return a dictionary as the output.
                 Defaults to None.
-        
+
         Returns:
             None: The method does not return any value.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -1775,7 +1777,7 @@ layers.
     ):
         """
         Prepare inputs for generation.
-        
+
         Args:
             self (T5ForConditionalGeneration): The instance of the T5ForConditionalGeneration class.
             input_ids (torch.Tensor): The input tensor of shape (batch_size, sequence_length) containing input IDs.
@@ -1787,19 +1789,19 @@ layers.
             cross_attn_head_mask (torch.Tensor, optional): The cross-attention head mask tensor of shape (num_layers, num_heads) indicating which cross-attention heads to mask. Default is None.
             use_cache (bool, optional): Whether to use cache. Default is None.
             encoder_outputs (torch.Tensor, optional): The encoder outputs tensor of shape (batch_size, sequence_length, hidden_size) containing the hidden states of the encoder. Default is None.
-        
+
         Returns:
             dict: A dictionary containing the prepared inputs for generation with the following keys:
-                - 'decoder_input_ids' (torch.Tensor): The decoder input tensor of shape (batch_size, sequence_length) containing input IDs.
-                - 'past_key_values' (tuple): The tuple of past key values for the transformer decoder.
-                - 'encoder_outputs' (torch.Tensor): The encoder outputs tensor of shape (batch_size, sequence_length, hidden_size) containing the hidden states of the encoder.
-                - 'attention_mask' (torch.Tensor): The attention mask tensor of shape (batch_size, sequence_length) indicating which tokens to attend to.
-                - 'head_mask' (torch.Tensor): The head mask tensor of shape (num_layers, num_heads) indicating which heads to mask.
-                - 'decoder_head_mask' (torch.Tensor): The decoder head mask tensor of shape (num_layers, num_heads) indicating which decoder heads to mask.
-                - 'decoder_attention_mask' (torch.Tensor): The decoder attention mask tensor of shape (batch_size, sequence_length) indicating which tokens to attend to in the decoder.
-                - 'cross_attn_head_mask' (torch.Tensor): The cross-attention head mask tensor of shape (num_layers, num_heads) indicating which cross-attention heads to mask.
-                - 'use_cache' (bool): Whether to use cache.
-        
+                >   - 'decoder_input_ids' (torch.Tensor): The decoder input tensor of shape (batch_size, sequence_length) containing input IDs.
+                >   - 'past_key_values' (tuple): The tuple of past key values for the transformer decoder.
+                >   - 'encoder_outputs' (torch.Tensor): The encoder outputs tensor of shape (batch_size, sequence_length, hidden_size) containing the hidden states of the encoder.
+                >   - 'attention_mask' (torch.Tensor): The attention mask tensor of shape (batch_size, sequence_length) indicating which tokens to attend to.
+                >   - 'head_mask' (torch.Tensor): The head mask tensor of shape (num_layers, num_heads) indicating which heads to mask.
+                >   - 'decoder_head_mask' (torch.Tensor): The decoder head mask tensor of shape (num_layers, num_heads) indicating which decoder heads to mask.
+                >   - 'decoder_attention_mask' (torch.Tensor): The decoder attention mask tensor of shape (batch_size, sequence_length) indicating which tokens to attend to in the decoder.
+                >   - 'cross_attn_head_mask' (torch.Tensor): The cross-attention head mask tensor of shape (num_layers, num_heads) indicating which cross-attention heads to mask.
+                >   - 'use_cache' (bool): Whether to use cache.
+
         Raises:
             None.
         """
@@ -1831,35 +1833,35 @@ layers.
     def prepare_decoder_input_ids_from_labels(self, labels: mindspore.Tensor):
         """
         Prepare decoder input ids from labels.
-        
+
         This method is used to prepare the input ids for the decoder by shifting the given labels sequence to the right.
-        
+
         Args:
             self (T5ForConditionalGeneration): An instance of the T5ForConditionalGeneration class.
             labels (mindspore.Tensor): The labels tensor containing the sequence of labels.
-        
+
         Returns:
             None. This method modifies the decoder input ids in-place.
-        
+
         Raises:
             None.
-        
+
         """
         return self._shift_right(labels)
 
     def _reorder_cache(self, past_key_values, beam_idx):
         """
         This method '_reorder_cache' is defined within the class 'T5ForConditionalGeneration' and is used to reorder the cache for decoding during the T5 model's conditional generation.
-        
+
         Args:
             self (object): The instance of the class.
             past_key_values (tuple): The past key value states generated during the model's previous decoding steps. If set to None, a warning is logged to consider setting `use_cache=True` to speed up
-decoding.
+                decoding.
             beam_idx (tensor): The indices of the beam to reorder the cache.
-        
+
         Returns:
             tuple: The reordered past key value states for the decoder. If 'past_key_values' is None, it returns None.
-        
+
         Raises:
             ValueError: If the shape of the reordered layer past states and the original layer past states mismatch.
             ValueError: If the length of the reordered layer past states and the original layer past states mismatch.
@@ -1902,16 +1904,16 @@ class T5EncoderModel(T5PreTrainedModel):
     def __init__(self, config: T5Config):
         """
         Initializes a T5EncoderModel instance.
-        
+
         Args:
             self: The T5EncoderModel instance itself.
             config (T5Config): An instance of T5Config containing the configuration parameters for the model.
                 It specifies the configuration settings such as vocab_size and d_model.
                 This parameter is required for configuring the T5EncoderModel.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             N/A
         """
@@ -1927,15 +1929,15 @@ class T5EncoderModel(T5PreTrainedModel):
 
     def get_input_embeddings(self):
         """Retrieve the input embeddings.
-        
+
         This method is used to obtain the input embeddings for the T5EncoderModel class.
-        
+
         Args:
             self: An instance of the T5EncoderModel class.
-        
+
         Returns:
             None. This method does not return a value.
-        
+
         Raises:
             None. This method does not raise any exceptions.
         """
@@ -1944,14 +1946,14 @@ class T5EncoderModel(T5PreTrainedModel):
     def set_input_embeddings(self, new_embeddings):
         """
         Sets the input embeddings for the T5EncoderModel.
-        
+
         Args:
             self (T5EncoderModel): The instance of the T5EncoderModel class.
             new_embeddings (torch.Tensor): The new input embeddings to be set.
-            
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1961,13 +1963,13 @@ class T5EncoderModel(T5PreTrainedModel):
     def _tie_weights(self):
         """
         Ties the weights of the word embeddings in the T5EncoderModel.
-        
+
         Args:
             self (T5EncoderModel): An instance of the T5EncoderModel class.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -1977,13 +1979,13 @@ class T5EncoderModel(T5PreTrainedModel):
     def get_encoder(self):
         """
         Get the encoder of the T5EncoderModel.
-        
+
         Args:
             self (T5EncoderModel): An instance of the T5EncoderModel class.
-        
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -2009,7 +2011,7 @@ class T5EncoderModel(T5PreTrainedModel):
     ):
         """
         Constructs the T5EncoderModel.
-        
+
         Args:
             self: The T5EncoderModel object.
             input_ids (optional): A tensor of shape (batch_size, sequence_length) containing the input token IDs. Defaults to None.
@@ -2019,13 +2021,13 @@ class T5EncoderModel(T5PreTrainedModel):
             output_attentions (optional): A boolean indicating whether to return the attentions. Defaults to None.
             output_hidden_states (optional): A boolean indicating whether to return the hidden states. Defaults to None.
             return_dict (optional): A boolean indicating whether to return a dictionary. If not provided, it is determined by self.config.use_return_dict. Defaults to None.
-        
+
         Returns:
             encoder_outputs: A tuple containing the encoder outputs. It typically consists of the following elements:
-                - last_hidden_state: A tensor of shape (batch_size, sequence_length, hidden_size) containing the last hidden state of the encoder.
-                - hidden_states: A tuple of tensors containing all the hidden states of the encoder. Each tensor has a shape of (batch_size, sequence_length, hidden_size).
-                - attentions: A tuple of tensors containing the attentions of the encoder. Each tensor has a shape of (batch_size, num_heads, sequence_length, sequence_length).
-        
+                >   - last_hidden_state: A tensor of shape (batch_size, sequence_length, hidden_size) containing the last hidden state of the encoder.
+                >   - hidden_states: A tuple of tensors containing all the hidden states of the encoder. Each tensor has a shape of (batch_size, sequence_length, hidden_size).
+                >   - attentions: A tuple of tensors containing the attentions of the encoder. Each tensor has a shape of (batch_size, num_heads, sequence_length, sequence_length).
+
         Raises:
             None.
         """
@@ -2045,24 +2047,24 @@ class T5EncoderModel(T5PreTrainedModel):
 
 class T5ForSequenceClassification(T5PreTrainedModel):
 
-    """ 
-    T5ForSequenceClassification class implements a T5 model for sequence classification tasks. 
-    It inherits from the T5PreTrainedModel class. 
-    
-    This class includes methods for initializing the model with a T5 configuration, constructing the model for sequence classification tasks, 
-    and computing the loss based on the provided labels. 
-    
-    The __init__ method initializes the T5ForSequenceClassification instance with a T5 configuration. 
-    The construct method constructs the model for sequence classification tasks and returns the computed loss and logits. 
-    
-    The construct method takes various input arguments such as input_ids, attention_mask, decoder_input_ids, labels, and other optional parameters 
-    to customize the behavior of the model during inference. 
-    
-    If labels are provided, the model computes the loss based on the problem type specified in the T5 configuration. 
-    The loss can be computed for regression, single-label classification, or multi-label classification tasks. 
-    
+    """
+    T5ForSequenceClassification class implements a T5 model for sequence classification tasks.
+    It inherits from the T5PreTrainedModel class.
+
+    This class includes methods for initializing the model with a T5 configuration, constructing the model for sequence classification tasks,
+    and computing the loss based on the provided labels.
+
+    The __init__ method initializes the T5ForSequenceClassification instance with a T5 configuration.
+    The construct method constructs the model for sequence classification tasks and returns the computed loss and logits.
+
+    The construct method takes various input arguments such as input_ids, attention_mask, decoder_input_ids, labels, and other optional parameters
+    to customize the behavior of the model during inference.
+
+    If labels are provided, the model computes the loss based on the problem type specified in the T5 configuration.
+    The loss can be computed for regression, single-label classification, or multi-label classification tasks.
+
     This class provides flexibility in handling different types of sequence classification tasks and supports customization through the T5 configuration settings.
-    
+
     """
     _keys_to_ignore_on_load_unexpected = ["decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.weight"]
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
@@ -2070,33 +2072,33 @@ class T5ForSequenceClassification(T5PreTrainedModel):
     def __init__(self, config: T5Config):
         """
         Initializes an instance of the T5ForSequenceClassification class.
-        
+
         Args:
             self: An instance of the T5ForSequenceClassification class.
             config (T5Config): The configuration object that contains the model's hyperparameters and settings.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
-        
+
         Description:
-        This method initializes an instance of the T5ForSequenceClassification class by setting up the necessary components for sequence classification tasks. It takes in the self parameter, which refers to
-the instance of the class itself, and the config parameter, which is an instance of the T5Config class.
-        
-        The config parameter is of type T5Config and represents the configuration object that contains various hyperparameters and settings for the T5 model. It is used to initialize the transformer and
-classification_head attributes of the T5ForSequenceClassification instance.
-        
-        The transformer attribute is of type T5Model and is responsible for the main transformer model used for sequence classification. It is initialized with the provided config object.
-        
-        The classification_head attribute is of type T5ClassificationHead and represents the classification head that is added on top of the transformer model. It is also initialized with the provided config
-object.
-        
-        After initializing the transformer and classification_head attributes, the post_init method is called to perform any additional setup or customization required.
-        
+            This method initializes an instance of the T5ForSequenceClassification class by setting up the necessary components for sequence classification tasks. It takes in the self parameter, which refers to
+            the instance of the class itself, and the config parameter, which is an instance of the T5Config class.
+
+            The config parameter is of type T5Config and represents the configuration object that contains various hyperparameters and settings for the T5 model. It is used to initialize the transformer and
+            classification_head attributes of the T5ForSequenceClassification instance.
+
+            The transformer attribute is of type T5Model and is responsible for the main transformer model used for sequence classification. It is initialized with the provided config object.
+
+            The classification_head attribute is of type T5ClassificationHead and represents the classification head that is added on top of the transformer model. It is also initialized with the provided config
+            object.
+
+            After initializing the transformer and classification_head attributes, the post_init method is called to perform any additional setup or customization required.
+
         Note:
-        This method is automatically called when creating a new instance of the T5ForSequenceClassification class.
+            This method is automatically called when creating a new instance of the T5ForSequenceClassification class.
         """
         super().__init__(config)
         self.transformer = T5Model(config)
@@ -2123,10 +2125,12 @@ object.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Seq2SeqSequenceClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         Returns:
+            Union[Tuple, Seq2SeqSequenceClassifierOutput]
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if labels is not None:
@@ -2214,16 +2218,16 @@ class T5ForQuestionAnswering(T5PreTrainedModel):
 
     """
     This class represents a T5 model for question answering tasks. It is designed specifically for question answering applications where the model takes input text and outputs answers to questions posed about
-the input. The model architecture includes an encoder and a decoder, both based on the T5Stack structure. The T5ForQuestionAnswering class provides methods for setting input embeddings, tying weights,
-accessing the encoder and decoder components, and constructing the model for inference or training.
-    
+    the input. The model architecture includes an encoder and a decoder, both based on the T5Stack structure. The T5ForQuestionAnswering class provides methods for setting input embeddings, tying weights,
+    accessing the encoder and decoder components, and constructing the model for inference or training.
+
     The constructor initializes the T5ForQuestionAnswering model with a T5Config object, setting up the model dimensions, shared embeddings, encoder, decoder, and other necessary components. The model can be
-fine-tuned for specific question answering tasks by adjusting configurations and utilizing the provided methods.
-    
+    fine-tuned for specific question answering tasks by adjusting configurations and utilizing the provided methods.
+
     The construct method executes the forward pass of the model, taking input tensors and generating outputs for question answering. It handles input embeddings, attention masks, decoder inputs, and various
-optional arguments to control the model's behavior during inference or training. The method returns the model's output, including predicted start and end positions for answering questions, loss values, and
-other relevant information.
-    
+    optional arguments to control the model's behavior during inference or training. The method returns the model's output, including predicted start and end positions for answering questions, loss values, and
+    other relevant information.
+
     Overall, the T5ForQuestionAnswering class encapsulates a T5 model tailored for question answering tasks, providing a convenient interface for utilizing and fine-tuning the model for specific applications.
     """
     _keys_to_ignore_on_load_unexpected = ["decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.weight"]
@@ -2232,17 +2236,17 @@ other relevant information.
     def __init__(self, config: T5Config):
         """
         Initializes an instance of the T5ForQuestionAnswering class.
-        
+
         Args:
             self: The instance of the class.
             config (T5Config): The configuration object that defines the model's parameters.
-                - The config parameter must be an instance of the T5Config class.
-                - It is used to set up the model's architecture and hyperparameters.
-                - This parameter is required.
-        
+                >   - The config parameter must be an instance of the T5Config class.
+                >   - It is used to set up the model's architecture and hyperparameters.
+                >   - This parameter is required.
+
         Returns:
             None.
-        
+
         Raises:
             None.
         """
@@ -2271,10 +2275,11 @@ other relevant information.
 
     def get_input_embeddings(self):
         '''
-        Method: get_input_embeddings
-        
+        Method:
+            get_input_embeddings
+
         Description:
-        This method returns the shared input embeddings of the T5 model for question answering.
+            This method returns the shared input embeddings of the T5 model for question answering.
         
         Args:
             self: The instance of the T5ForQuestionAnswering class.

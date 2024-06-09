@@ -81,20 +81,20 @@ class DistilBertConfig(PretrainedConfig):
             The dropout probabilities used in the sequence classification and the multiple choice model
             [`DistilBertForSequenceClassification`].
 
-    Examples:
-
-    ```python
-    >>> from transformers import DistilBertConfig, DistilBertModel
-
-    >>> # Initializing a DistilBERT configuration
-    >>> configuration = DistilBertConfig()
-
-    >>> # Initializing a model (with random weights) from the configuration
-    >>> model = DistilBertModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+    Example:
+        ```python
+        >>> from transformers import DistilBertConfig, DistilBertModel
+        ...
+        >>> # Initializing a DistilBERT configuration
+        >>> configuration = DistilBertConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the configuration
+        >>> model = DistilBertModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "distilbert"
     attribute_map = {
         "hidden_size": "dim",

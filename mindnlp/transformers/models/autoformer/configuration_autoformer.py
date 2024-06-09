@@ -115,21 +115,20 @@ class AutoformerConfig(PretrainedConfig):
             "Attention" (i.e. AutoCorrelation mechanism) factor which is used to find top k autocorrelations delays.
             It's recommended in the paper to set it to a number between 1 and 5.
 
-
         Example:
-
-    ```python
-    >>> from transformers import AutoformerConfig, AutoformerModel
-
-    >>> # Initializing a default Autoformer configuration
-    >>> configuration = AutoformerConfig()
-
-    >>> # Randomly initializing a model (with random weights) from the configuration
-    >>> model = AutoformerModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+            ```python
+            >>> from transformers import AutoformerConfig, AutoformerModel
+            ...
+            >>> # Initializing a default Autoformer configuration
+            >>> configuration = AutoformerConfig()
+            ...
+            >>> # Randomly initializing a model (with random weights) from the configuration
+            >>> model = AutoformerModel(configuration)
+            ...
+            >>> # Accessing the model configuration
+            >>> configuration = model.config
+            ```
+    """
     model_type = "autoformer"
     attribute_map = {
         "hidden_size": "d_model",
@@ -177,7 +176,7 @@ class AutoformerConfig(PretrainedConfig):
         **kwargs,
     ):
         """Initialize the AutoformerConfig.
-        
+
             Args:
                 prediction_length (Optional[int]): The number of time steps to predict into the future. Default is None.
                 context_length (Optional[int]): The number of time steps to use as a context for prediction. Default is None.
@@ -212,14 +211,17 @@ class AutoformerConfig(PretrainedConfig):
                 label_length (int): The length of the label. Default is 10.
                 moving_average (int): The moving average factor. Default is 25.
                 autocorrelation_factor (int): The autocorrelation factor. Default is 3.
-        
+
             Returns:
                 None
-        
+
             Raises:
-                ValueError: If `cardinality` is not None and `num_static_categorical_features` is greater than 0, but the lengths of `cardinality` and `num_static_categorical_features` do not match.
-                ValueError: If `embedding_dimension` is not None and `num_static_categorical_features` is greater than 0, but the lengths of `embedding_dimension` and `num_static_categorical_features` do not
-match.
+                ValueError:
+                    If `cardinality` is not None and `num_static_categorical_features` is greater than 0,
+                    but the lengths of `cardinality` and `num_static_categorical_features` do not match.
+                ValueError:
+                    If `embedding_dimension` is not None and `num_static_categorical_features` is greater than 0,
+                    but the lengths of `embedding_dimension` and `num_static_categorical_features` do not match.
             """
         # time series specific configuration
         self.prediction_length = prediction_length

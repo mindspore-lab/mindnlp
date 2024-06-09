@@ -340,19 +340,19 @@ class VisionTextDualEncoderModel(PreTrainedModel):
                 Behaves differently depending on whether a `config` is provided or automatically loaded.
 
         Example:
+            ```python
+            >>> from transformers import VisionTextDualEncoderModel
 
-        ```python
-        >>> from transformers import VisionTextDualEncoderModel
-
-        >>> # initialize a model from pretrained ViT and BERT models. Note that the projection layers will be randomly initialized.
-        >>> model = VisionTextDualEncoderModel.from_vision_text_pretrained(
-        ...     "google/vit-base-patch16-224", "google-bert/bert-base-uncased"
-        ... )
-        >>> # saving model after fine-tuning
-        >>> model.save_pretrained("./vit-bert")
-        >>> # load fine-tuned model
-        >>> model = VisionTextDualEncoderModel.from_pretrained("./vit-bert")
-        ```"""
+            >>> # initialize a model from pretrained ViT and BERT models. Note that the projection layers will be randomly initialized.
+            >>> model = VisionTextDualEncoderModel.from_vision_text_pretrained(
+            ...     "google/vit-base-patch16-224", "google-bert/bert-base-uncased"
+            ... )
+            >>> # saving model after fine-tuning
+            >>> model.save_pretrained("./vit-bert")
+            >>> # load fine-tuned model
+            >>> model = VisionTextDualEncoderModel.from_pretrained("./vit-bert")
+            ```
+        """
         kwargs_vision = {
             argument[len("vision_") :]: value for argument, value in kwargs.items() if argument.startswith("vision_")
         }

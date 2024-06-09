@@ -93,20 +93,20 @@ class ErnieConfig(PretrainedConfig):
         classifier_dropout (`float`, *optional*):
             The dropout ratio for the classification head.
 
-    Examples:
-
-    ```python
-    >>> from transformers import ErnieConfig, ErnieModel
-
-    >>> # Initializing a ERNIE nghuyong/ernie-3.0-base-zh style configuration
-    >>> configuration = ErnieConfig()
-
-    >>> # Initializing a model (with random weights) from the nghuyong/ernie-3.0-base-zh style configuration
-    >>> model = ErnieModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+    Example:
+        ```python
+        >>> from transformers import ErnieConfig, ErnieModel
+        ...
+        >>> # Initializing a ERNIE nghuyong/ernie-3.0-base-zh style configuration
+        >>> configuration = ErnieConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the nghuyong/ernie-3.0-base-zh style configuration
+        >>> model = ErnieModel(configuration)
+        ... 
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "ernie"
 
     def __init__(
@@ -159,7 +159,7 @@ class ErnieConfig(PretrainedConfig):
             None. This method does not return any value.
         
         Raises:
-            N/A
+            None.
         """
         super().__init__(pad_token_id=pad_token_id, **kwargs)
 

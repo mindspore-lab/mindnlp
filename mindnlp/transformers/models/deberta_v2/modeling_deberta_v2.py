@@ -51,8 +51,9 @@ class ContextPooler(nn.Cell):
     """
     Represents a ContextPooler module used for pooling contextual embeddings in a neural network architecture.
     
-    This class inherits from nn.Cell and provides methods for initializing the pooler, constructing the pooled output based on hidden states,
-    and retrieving the output dimension. The pooler consists of a dense layer and dropout mechanism for processing hidden states.
+    This class inherits from nn.Cell and provides methods for initializing the pooler, constructing the pooled output
+    based on hidden states, and retrieving the output dimension.
+    The pooler consists of a dense layer and dropout mechanism for processing hidden states.
     
     Attributes:
         dense (nn.Dense): A dense layer for transforming input hidden states to pooler hidden size.
@@ -60,8 +61,8 @@ class ContextPooler(nn.Cell):
         config: Configuration object containing pooler settings.
     
     Methods:
-        __init__(config): Initializes the ContextPooler with the given configuration.
-        construct(hidden_states): Constructs the pooled output by processing hidden states.
+        __init__: Initializes the ContextPooler with the given configuration.
+        construct: Constructs the pooled output by processing hidden states.
         output_dim: Property that returns the output dimension based on the hidden size in the configuration.
     """
     def __init__(self, config):
@@ -70,7 +71,9 @@ class ContextPooler(nn.Cell):
         
         Args:
             self: The instance of the ContextPooler class.
-            config: An object of type 'config' that contains the configuration parameters for the ContextPooler.
+            config:
+                An object of type 'config' that contains the configuration parameters for the ContextPooler.
+
                 - Type: 'config'
                 - Purpose: Specifies the configuration parameters for the ContextPooler.
                 - Restrictions: None.
@@ -90,10 +93,12 @@ class ContextPooler(nn.Cell):
         """
         Args:
             self (ContextPooler): The instance of the ContextPooler class.
-            hidden_states (tensor): A tensor containing hidden states. It is expected to have a specific shape and format for processing.
+            hidden_states (tensor): A tensor containing hidden states.
+                It is expected to have a specific shape and format for processing.
         
         Returns:
-            pooled_output (tensor): The output tensor after the pooling operation. It represents the pooled context information.
+            pooled_output (tensor): The output tensor after the pooling operation.
+                It represents the pooled context information.
         
         Raises:
             ValueError: If the hidden_states tensor does not meet the expected shape or format requirements.
@@ -119,7 +124,7 @@ class ContextPooler(nn.Cell):
                 This parameter is required to access the configuration information.
             
         Returns:
-            None. The method does not perform any computation but simply returns the output dimension.
+            None: The method does not perform any computation but simply returns the output dimension.
             
         Raises:
             No exceptions are raised within this method.
@@ -138,22 +143,22 @@ class XSoftmax(nn.Cell):
         dim (int): The dimension that will apply softmax
 
     Example:
-
-    ```python
-    >>> import torch
-    >>> from transformers.models.deberta.modeling_deberta import XSoftmax
-
-    >>> # Make a tensor
-    >>> x = torch.randn([4, 20, 100])
-
-    >>> # Create a mask
-    >>> mask = (x > 0).int()
-
-    >>> # Specify the dimension to apply softmax
-    >>> dim = -1
-
-    >>> y = XSoftmax.apply(x, mask, dim)
-    ```"""
+        ```python
+        >>> import torch
+        >>> from transformers.models.deberta.modeling_deberta import XSoftmax
+        ...
+        >>> # Make a tensor
+        >>> x = torch.randn([4, 20, 100])
+        ...
+        >>> # Create a mask
+        >>> mask = (x > 0).int()
+        ...
+        >>> # Specify the dimension to apply softmax
+        >>> dim = -1
+        ...
+        >>> y = XSoftmax.apply(x, mask, dim)
+        ```
+    """
     def __init__(self, dim=-1):
         """
         Initializes an instance of the XSoftmax class.
@@ -165,7 +170,7 @@ class XSoftmax(nn.Cell):
                 along the last dimension of the input tensor.
         
         Returns:
-            None. The method does not return any value.
+            None: The method does not return any value.
         
         Raises:
             None.
@@ -184,12 +189,12 @@ class XSoftmax(nn.Cell):
             mask (Tensor): A tensor representing the mask used for masking certain elements in the input tensor.
             
         Returns:
-            None. The method modifies the input tensor in-place and does not return any value.
+            None: The method modifies the input tensor in-place and does not return any value.
         
         Raises:
-            - TypeError: If the input tensor or the mask tensor is not of the expected type.
-            - ValueError: If the dimensions of the input tensor and the mask tensor do not match.
-            - RuntimeError: If an error occurs during the softmax operation or masking process.
+            TypeError: If the input tensor or the mask tensor is not of the expected type.
+            ValueError: If the dimensions of the input tensor and the mask tensor do not match.
+            RuntimeError: If an error occurs during the softmax operation or masking process.
         """
         rmask = ~(mask.to(mindspore.bool_))
 
@@ -200,25 +205,26 @@ class XSoftmax(nn.Cell):
 
     def brop(self, input, mask, output, grad_output):
         """
-        This method, 'brop', is a member of the 'XSoftmax' class and performs a specific operation on the given input, mask, output, and grad_output parameters.
+        This method, 'brop', is a member of the 'XSoftmax' class and performs a specific operation on the given input,
+        mask, output, and grad_output parameters.
         
         Args:
             self: An instance of the 'XSoftmax' class.
             input: The input parameter of type <input_type>. It represents the input value used in the operation.
-            mask: The mask parameter of type <mask_type>. It represents a mask used in the operation. <Additional details about the purpose and restrictions of the mask parameter.>
+            mask: The mask parameter of type <mask_type>. It represents a mask used in the operation.
+                <Additional details about the purpose and restrictions of the mask parameter.>
             output: The output parameter of type <output_type>. It represents the output value of the operation.
             grad_output: The grad_output parameter of type <grad_output_type>. It represents the gradient of the output value.
         
         Returns:
-            dx: A value of type <dx_type>. It represents the final result of the operation. <Additional details about the purpose and format of the dx value.>
+            dx: A value of type <dx_type>. It represents the final result of the operation.
+                <Additional details about the purpose and format of the dx value.>
             None
         
         Raises:
             <Exception1>: <Description of when and why this exception may be raised.>
             <Exception2>: <Description of when and why this exception may be raised.>
-            .
-            .
-            <Additional exceptions that may be raised during the execution of the method.>
+            <Additional exceptions>: <may be raised during the execution of the method.>
         """
         dx = ops.mul(output, ops.sub(grad_output, ops.sum(ops.mul(output, grad_output), self.dim, keepdim=True)))
         return dx, None
@@ -229,8 +235,9 @@ class DropoutContext:
     """
     Represents a context for managing dropout operations within a neural network.
     
-    This class defines a context for managing dropout operations, including setting the dropout rate, mask, scaling factor, and reusing masks across iterations. It is designed to be used within a neural
-network framework to control dropout behavior during training.
+    This class defines a context for managing dropout operations, including setting the dropout rate, mask,
+    scaling factor, and reusing masks across iterations.
+    It is designed to be used within a neural network framework to control dropout behavior during training.
     
     Attributes:
         dropout (float): The dropout rate to be applied.
@@ -247,7 +254,7 @@ network framework to control dropout behavior during training.
             self: The instance of the DropoutContext class.
         
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
             No exceptions are raised within this method.
@@ -263,8 +270,9 @@ def get_mask(input, local_context):
     Args:
         input (Tensor): The input tensor for which the dropout mask is generated.
         local_context (DropoutContext or float): The local context containing information about dropout parameters.
-            If a DropoutContext object is provided, the dropout mask will be generated based on its parameters.
-            If a float value is provided, it will be used as the dropout rate.
+
+            - If a DropoutContext object is provided, the dropout mask will be generated based on its parameters.
+            - If a float value is provided, it will be used as the dropout rate.
     
     Returns:
         None: The function returns the generated dropout mask, or None if no mask is generated.
@@ -350,7 +358,8 @@ class StableDropout(nn.Cell):
         """Initialize the StableDropout object.
         
         This method is called when a new instance of the StableDropout class is created.
-        It initializes the object with the given drop probability and sets the count and context_stack attributes to their initial values.
+        It initializes the object with the given drop probability and sets the count and context_stack attributes
+        to their initial values.
         
         Args:
             self (StableDropout): The instance of the StableDropout class.
@@ -386,10 +395,10 @@ class StableDropout(nn.Cell):
             self (StableDropout): An instance of the StableDropout class.
         
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
-            None. This method does not raise any exceptions.
+            None: This method does not raise any exceptions.
         """
         self.count = 0
         self.context_stack = None
@@ -404,7 +413,7 @@ class StableDropout(nn.Cell):
             scale (int, optional): The scaling factor applied to the dropout mask. Defaults to 1.
         
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
             None.
@@ -443,10 +452,13 @@ class StableDropout(nn.Cell):
 class DebertaV2SelfOutput(nn.Cell):
 
     """
-    Represents the output layer for the DeBERTa model, responsible for transforming hidden states and applying normalization and dropout.
+    Represents the output layer for the DeBERTa model, responsible for transforming hidden states and
+    applying normalization and dropout.
     
-    This class inherits from nn.Cell and contains methods to initialize the output layer components, including dense transformation, layer normalization, and dropout.
-    The 'construct' method takes hidden states and input tensor, applies transformations, and returns the final hidden states after normalization and dropout.
+    This class inherits from nn.Cell and contains methods to initialize the output layer components,
+    including dense transformation, layer normalization, and dropout.
+    The 'construct' method takes hidden states and input tensor, applies transformations,
+    and returns the final hidden states after normalization and dropout.
     
     Attributes:
         dense (nn.Dense): A fully connected layer for transforming hidden states.
@@ -454,8 +466,8 @@ class DebertaV2SelfOutput(nn.Cell):
         dropout (StableDropout): Dropout regularization to prevent overfitting.
     
     Methods:
-        __init__(self, config): Initializes the output layer components with the given configuration.
-        construct(self, hidden_states, input_tensor): Applies transformations to hidden states and input tensor to produce final hidden states.
+        __init__: Initializes the output layer components with the given configuration.
+        construct: Applies transformations to hidden states and input tensor to produce final hidden states.
     
     """
     def __init__(self, config):
@@ -485,19 +497,22 @@ class DebertaV2SelfOutput(nn.Cell):
         
         Args:
             self: Instance of the DebertaSelfOutput class.
+
                 - Type: DebertaSelfOutput
                 - Purpose: Represents the current instance of the class.
             
             hidden_states: Hidden states that need to be processed.
+
                 - Type: tensor
                 - Purpose: Represents the input hidden states that will undergo transformation.
             
             input_tensor: Input tensor to be added to the processed hidden states.
+
                 - Type: tensor
                 - Purpose: Represents the input tensor to be added to the processed hidden states.
         
         Returns:
-            None
+            None:
                 - Type: None
                 - Purpose: The method does not return any value.
         
@@ -513,10 +528,12 @@ class DebertaV2SelfOutput(nn.Cell):
 class DebertaV2Attention(nn.Cell):
 
     """
-    This class represents the DebertaAttention module, which is a component of the DeBERTa model. It inherits from the nn.Cell class.
+    This class represents the DebertaAttention module, which is a component of the DeBERTa model.
+    It inherits from the nn.Cell class.
     
-    DebertaAttention applies self-attention mechanism on the input hidden states, allowing the model to focus on different parts of the input sequence. It consists of a DisentangledSelfAttention layer and a
-DebertaSelfOutput layer.
+    DebertaAttention applies self-attention mechanism on the input hidden states, allowing the model to
+    focus on different parts of the input sequence. It consists of a DisentangledSelfAttention layer and a
+    DebertaSelfOutput layer.
     
     Args:
         config (dict): A dictionary containing the configuration parameters for the DebertaAttention module.
@@ -526,22 +543,30 @@ DebertaSelfOutput layer.
             Initializes a new instance of DebertaAttention.
             
             Args:
-                config (dict): A dictionary containing the configuration parameters for the DebertaAttention module.
+
+            - config (dict): A dictionary containing the configuration parameters for the DebertaAttention module.
                 
-        construct(self, hidden_states, attention_mask, output_attentions=False, query_states=None, relative_pos=None, rel_embeddings=None):
+        construct:
+
             Applies the DebertaAttention mechanism on the input hidden states.
             
             Args:
-                hidden_states (Tensor): The input hidden states of shape (batch_size, sequence_length, hidden_size).
-                attention_mask (Tensor): The attention mask of shape (batch_size, sequence_length, sequence_length) where 1 indicates tokens to attend to and 0 indicates tokens to ignore.
-                output_attentions (bool, optional): Whether to output the attention matrix. Defaults to False.
-                query_states (Tensor, optional): The query states of shape (batch_size, sequence_length, hidden_size). If not provided, defaults to using the input hidden states.
-                relative_pos (Tensor, optional): The relative positions of the tokens of shape (batch_size, sequence_length, sequence_length).
-                rel_embeddings (Tensor, optional): The relative embeddings of shape (batch_size, sequence_length, hidden_size).
+
+            - hidden_states (Tensor): The input hidden states of shape (batch_size, sequence_length, hidden_size).
+            - attention_mask (Tensor): The attention mask of shape (batch_size, sequence_length, sequence_length)
+            where 1 indicates tokens to attend to and 0 indicates tokens to ignore.
+            - output_attentions (bool, optional): Whether to output the attention matrix. Defaults to False.
+            - query_states (Tensor, optional): The query states of shape (batch_size, sequence_length, hidden_size).
+            If not provided, defaults to using the input hidden states.
+            - relative_pos (Tensor, optional):
+            The relative positions of the tokens of shape (batch_size, sequence_length, sequence_length).
+            - rel_embeddings (Tensor, optional):
+            The relative embeddings of shape (batch_size, sequence_length, hidden_size).
                 
             Returns:
-                Tensor or Tuple: The attention output tensor of shape (batch_size, sequence_length, hidden_size) or a tuple containing the attention output tensor and the attention matrix if output_attentions
-is True.
+                Tensor or Tuple: The attention output tensor of shape (batch_size, sequence_length, hidden_size)
+                or a tuple containing the attention output tensor and the attention matrix if output_attentions
+                is True.
     """
     def __init__(self, config):
         """
@@ -549,11 +574,12 @@ is True.
         
         Args:
             self (DebertaAttention): The current instance of the DebertaAttention class.
-            config (object): The configuration object containing the settings for the attention module. It should provide the necessary parameters for initializing the DisentangledSelfAttention and
-DebertaSelfOutput instances.
+            config (object): The configuration object containing the settings for the attention module.
+                It should provide the necessary parameters for initializing the DisentangledSelfAttention and
+                DebertaSelfOutput instances.
         
         Returns:
-            None. This method does not return anything.
+            None: This method does not return anything.
         
         Raises:
             None.
@@ -580,9 +606,12 @@ DebertaSelfOutput instances.
             hidden_states (torch.Tensor): The input hidden states with shape (batch_size, sequence_length, hidden_size).
             attention_mask (torch.Tensor): The attention mask with shape (batch_size, sequence_length).
             output_attentions (bool): Whether to output attention matrices.
-            query_states (torch.Tensor): The query states with shape (batch_size, sequence_length, hidden_size). If not provided, defaults to hidden_states.
-            relative_pos (torch.Tensor): The relative position encoding with shape (batch_size, sequence_length, sequence_length).
-            rel_embeddings (torch.Tensor): The relative position embeddings with shape (num_relative_distances, hidden_size).
+            query_states (torch.Tensor): The query states with shape (batch_size, sequence_length, hidden_size).
+                If not provided, defaults to hidden_states.
+            relative_pos (torch.Tensor):
+                The relative position encoding with shape (batch_size, sequence_length, sequence_length).
+            rel_embeddings (torch.Tensor):
+                The relative position embeddings with shape (num_relative_distances, hidden_size).
         
         Returns:
             None
@@ -616,12 +645,13 @@ class DebertaV2Intermediate(nn.Cell):
     The layer consists of a dense transformation followed by an activation function specified in the configuration. 
     
     Attributes:
-        - dense (nn.Dense): A dense layer with hidden size and intermediate size specified in the configuration.
-        - intermediate_act_fn (function): The activation function applied to the hidden states.
+        dense (nn.Dense): A dense layer with hidden size and intermediate size specified in the configuration.
+        intermediate_act_fn (function): The activation function applied to the hidden states.
     
     Methods:
-        - __init__(config): Initializes the DebertaIntermediate layer with the provided configuration.
-        - construct(hidden_states: mindspore.Tensor) -> mindspore.Tensor: Applies the dense transformation and activation function to the input hidden states.
+        __init__(config): Initializes the DebertaIntermediate layer with the provided configuration.
+        construct(hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+            Applies the dense transformation and activation function to the input hidden states.
     
     """
     def __init__(self, config):
@@ -630,17 +660,21 @@ class DebertaV2Intermediate(nn.Cell):
         
         Args:
             self: The object itself.
-            config (object): An object containing the configuration parameters for the DebertaIntermediate class. It should have the following properties:
+            config (object): An object containing the configuration parameters for the DebertaIntermediate class.
+                It should have the following properties:
+
                 - hidden_size (int): The size of the hidden layer in the intermediate module.
                 - intermediate_size (int): The size of the intermediate layer.
-                - hidden_act (str or object): The activation function for the hidden layer. If it is a string, it should be one of the supported activation functions. If it is an object, it should be a
-callable that takes a single argument.
+                - hidden_act (str or object): The activation function for the hidden layer.
+
+                    - If it is a string, it should be one of the supported activation functions.
+                    - If it is an object, it should be a callable that takes a single argument.
         
         Returns:
-            None. The method does not return any value.
+            None: The method does not return any value.
         
         Raises:
-            None. The method does not raise any exceptions.
+            None: The method does not raise any exceptions.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
@@ -663,11 +697,14 @@ callable that takes a single argument.
         Raises:
             None.
         
-        This method takes in the hidden states tensor and applies a series of transformations to it in order to construct the intermediate layer of the Deberta model. The hidden states tensor is first passed
-through a dense layer, followed by an activation function specified by 'intermediate_act_fn'. The resulting tensor represents the intermediate hidden states and is returned as the output of this method.
+        This method takes in the hidden states tensor and applies a series of transformations to it in order to
+        construct the intermediate layer of the Deberta model. The hidden states tensor is first passed through
+        a dense layer, followed by an activation function specified by 'intermediate_act_fn'.
+        The resulting tensor represents the intermediate hidden states and is returned as the output of this method.
         
         Note:
-            The 'intermediate_act_fn' attribute should be set prior to calling this method to specify the desired activation function.
+            The 'intermediate_act_fn' attribute should be set prior to calling this method to specify the desired
+            activation function.
         
         Example:
             >>> intermediate_layer = DebertaIntermediate()
@@ -682,7 +719,8 @@ through a dense layer, followed by an activation function specified by 'intermed
 class DebertaV2Output(nn.Cell):
 
     """
-    This class represents the output layer of the Deberta model. It inherits from the nn.Cell class and is responsible for applying the final transformations to the hidden states.
+    This class represents the output layer of the Deberta model.
+    It inherits from the nn.Cell class and is responsible for applying the final transformations to the hidden states.
     
     Attributes:
         dense (nn.Dense): A dense layer that transforms the hidden states to an intermediate size.
@@ -695,17 +733,20 @@ class DebertaV2Output(nn.Cell):
             Initializes the DebertaOutput instance.
             
             Args:
-                config: The configuration object for the Deberta model.
+
+            - config: The configuration object for the Deberta model.
         
         construct(self, hidden_states, input_tensor):
             Applies the final transformations to the hidden states.
             
             Args:
-                hidden_states: The input hidden states.
-                input_tensor: The original input tensor.
+
+            - hidden_states: The input hidden states.
+            - input_tensor: The original input tensor.
             
             Returns:
-                The transformed hidden states after applying the intermediate dense layer, dropout, and layer normalization.
+                The transformed hidden states after applying the intermediate dense layer, dropout,
+                and layer normalization.
     """
     def __init__(self, config):
         """
@@ -714,12 +755,12 @@ class DebertaV2Output(nn.Cell):
         Args:
             self: The instance of the DebertaOutput class.
             config: An instance of the configuration class containing the parameters for the DebertaOutput layer.
-                Type: object
-                Purpose: Specifies the configuration settings for the DebertaOutput layer.
-                Restrictions: Must be a valid instance of the configuration class.
+                - Type: object
+                - Purpose: Specifies the configuration settings for the DebertaOutput layer.
+                - Restrictions: Must be a valid instance of the configuration class.
         
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
             None. This method does not raise any exceptions.
@@ -754,10 +795,12 @@ class DebertaV2Output(nn.Cell):
 class DebertaV2Layer(nn.Cell):
 
     """
-    Represents a single layer in the DeBERTa model, containing modules for attention, intermediate processing, and output computation.
+    Represents a single layer in the DeBERTa model, containing modules for attention, intermediate processing,
+    and output computation.
     
-    This class inherits from nn.Cell and is responsible for processing input hidden states through attention mechanisms, intermediate processing, and final output computation. It provides a 'construct' method
-to perform these operations and return the final layer output.
+    This class inherits from nn.Cell and is responsible for processing input hidden states through attention mechanisms,
+    intermediate processing, and final output computation. It provides a 'construct' method to perform these operations
+    and return the final layer output.
     
     Attributes:
         attention (DebertaAttention): Module for performing attention mechanism computation.
@@ -769,19 +812,22 @@ to perform these operations and return the final layer output.
             Process the input hidden states through attention, intermediate, and output modules to compute the final layer output.
     
             Args:
-                hidden_states (Tensor): Input hidden states to be processed.
-                attention_mask (Tensor): Mask for attention calculation.
-                query_states (Tensor, optional): Query states for attention mechanism. Default is None.
-                relative_pos (Tensor, optional): Relative position information for attention computation. Default is None.
-                rel_embeddings (Tensor, optional): Relative embeddings for attention computation. Default is None.
-                output_attentions (bool, optional): Flag indicating whether to output attention matrices. Default is False.
+
+            - hidden_states (Tensor): Input hidden states to be processed.
+            - attention_mask (Tensor): Mask for attention calculation.
+            - query_states (Tensor, optional): Query states for attention mechanism. Default is None.
+            - relative_pos (Tensor, optional): Relative position information for attention computation. Default is None.
+            - rel_embeddings (Tensor, optional): Relative embeddings for attention computation. Default is None.
+            - output_attentions (bool, optional): Flag indicating whether to output attention matrices. Default is False.
     
             Returns:
-                layer_output (Tensor): Final computed output of the layer.
-                att_matrix (Tensor, optional): Attention matrix if 'output_attentions' is True. Otherwise, None.
+
+            - layer_output (Tensor): Final computed output of the layer.
+            - att_matrix (Tensor, optional): Attention matrix if 'output_attentions' is True. Otherwise, None.
     
     Note:
-        If 'output_attentions' is set to True, the 'construct' method will return both the final layer output and the attention matrix.
+        If 'output_attentions' is set to True,
+        the 'construct' method will return both the final layer output and the attention matrix.
     """
     def __init__(self, config):
         """
@@ -790,10 +836,10 @@ to perform these operations and return the final layer output.
         Args:
             self (object): The instance of the DebertaLayer class.
             config (object): An object containing configuration settings for the DebertaLayer.
-                             It is used to customize the behavior of the layer during initialization.
+                It is used to customize the behavior of the layer during initialization.
         
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
             No specific exceptions are raised within this method.
@@ -819,9 +865,12 @@ to perform these operations and return the final layer output.
             self (object): The class instance.
             hidden_states (torch.Tensor): The input hidden states tensor.
             attention_mask (torch.Tensor): The attention mask tensor to mask out padded tokens.
-            query_states (torch.Tensor, optional): The tensor representing query states for attention computation. Defaults to None.
-            relative_pos (torch.Tensor, optional): The tensor representing relative positions for attention computation. Defaults to None.
-            rel_embeddings (torch.Tensor, optional): The tensor containing relative embeddings for attention computation. Defaults to None.
+            query_states (torch.Tensor, optional): The tensor representing query states for attention computation. 
+                Defaults to None.
+            relative_pos (torch.Tensor, optional): The tensor representing relative positions for attention computation. 
+                Defaults to None.
+            rel_embeddings (torch.Tensor, optional): The tensor containing relative embeddings for attention computation. 
+                Defaults to None.
             output_attentions (bool): Flag indicating whether to output attention matrices. Defaults to False.
         
         Returns:
@@ -1296,16 +1345,19 @@ class DebertaV2Embeddings(nn.Cell):
         
         Args:
             self (object): Instance of the DebertaEmbeddings class.
-            config (object): An object containing configuration parameters for the Deberta model.
+            config (object): 
+                An object containing configuration parameters for the Deberta model.
+                
                 - Type: Custom class object.
-                - Purpose: Specifies the model configuration including vocab size, hidden size, max position embeddings, type vocab size, etc.
+                - Purpose: Specifies the model configuration including vocab size, hidden size, max position embeddings, 
+                type vocab size, etc.
                 - Restrictions: Must be a valid configuration object.
         
         Returns:
             None: This method does not return any value.
         
         Raises:
-            N/A
+            None.
         """
         super().__init__()
         pad_token_id = getattr(config, "pad_token_id", 0)
@@ -1336,11 +1388,17 @@ class DebertaV2Embeddings(nn.Cell):
         
         Args:
             self (DebertaEmbeddings): An instance of the DebertaEmbeddings class.
-            input_ids (Tensor, optional): A tensor of shape (batch_size, sequence_length) representing the input token IDs. Default is None.
-            token_type_ids (Tensor, optional): A tensor of shape (batch_size, sequence_length) representing the token type IDs. Default is None.
-            position_ids (Tensor, optional): A tensor of shape (batch_size, sequence_length) representing the position IDs. Default is None.
-            mask (Tensor, optional): A tensor of shape (batch_size, sequence_length) representing the attention mask. Default is None.
-            inputs_embeds (Tensor, optional): A tensor of shape (batch_size, sequence_length, embedding_size) representing the input embeddings. Default is None.
+            input_ids (Tensor, optional):
+                A tensor of shape (batch_size, sequence_length) representing the input token IDs. Default is None.
+            token_type_ids (Tensor, optional):
+                A tensor of shape (batch_size, sequence_length) representing the token type IDs. Default is None.
+            position_ids (Tensor, optional):
+                A tensor of shape (batch_size, sequence_length) representing the position IDs. Default is None.
+            mask (Tensor, optional):
+                A tensor of shape (batch_size, sequence_length) representing the attention mask. Default is None.
+            inputs_embeds (Tensor, optional):
+                A tensor of shape (batch_size, sequence_length, embedding_size) representing the input embeddings.
+                Default is None.
         
         Returns:
             Tensor: A tensor of shape (batch_size, sequence_length, embedding_size) representing the constructed embeddings.
@@ -1426,7 +1484,8 @@ class DebertaV2Model(DebertaV2PreTrainedModel):
 
     """
     DebertaModel class represents a DeBERTa model for natural language processing tasks. 
-    This class inherits functionalities from DebertaPreTrainedModel and implements methods for initializing the model, getting and setting input embeddings, and constructing the model output. 
+    This class inherits functionalities from DebertaPreTrainedModel and implements methods for initializing the model,
+    getting and setting input embeddings, and constructing the model output.
     
     Attributes:
         embeddings (DebertaEmbeddings): The embeddings module of the DeBERTa model.
@@ -1435,21 +1494,24 @@ class DebertaV2Model(DebertaV2PreTrainedModel):
         config: Configuration object for the model.
     
     Methods:
-        __init__(self, config): Initializes the DebertaModel with the provided configuration.
-        get_input_embeddings(self): Retrieves the word embeddings from the input embeddings.
-        set_input_embeddings(self, new_embeddings): Sets new word embeddings for the input embeddings.
-        _prune_heads(self, heads_to_prune): Prunes heads of the model based on the provided dictionary.
-        construct(self, input_ids, attention_mask, token_type_ids, position_ids, inputs_embeds, output_attentions, output_hidden_states, return_dict): Constructs the model output based on the input parameters.
+        __init__: Initializes the DebertaModel with the provided configuration.
+        get_input_embeddings: Retrieves the word embeddings from the input embeddings.
+        set_input_embeddings: Sets new word embeddings for the input embeddings.
+        _prune_heads: Prunes heads of the model based on the provided dictionary.
+        construct: Constructs the model output based on the input parameters.
     
     Raises:
         NotImplementedError: If the prune function is called as it is not implemented in the DeBERTa model.
-        ValueError: If both input_ids and inputs_embeds are specified simultaneously, or if neither input_ids nor inputs_embeds are provided.
+        ValueError: If both input_ids and inputs_embeds are specified simultaneously,
+            or if neither input_ids nor inputs_embeds are provided.
     
     Returns:
-        Tuple or BaseModelOutput: Depending on the configuration settings, returns either a tuple or a BaseModelOutput object containing the model output.
+        Tuple or BaseModelOutput: Depending on the configuration settings, returns either a tuple or a
+            BaseModelOutput object containing the model output.
     
     Note:
-        This class is designed for use in natural language processing tasks and leverages the DeBERTa architecture for efficient modeling.
+        This class is designed for use in natural language processing tasks and leverages the DeBERTa architecture
+        for efficient modeling.
     
     """
     def __init__(self, config):
@@ -1461,7 +1523,7 @@ class DebertaV2Model(DebertaV2PreTrainedModel):
             config (object): The configuration object containing the model configuration parameters.
         
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
             None.
@@ -1500,11 +1562,11 @@ class DebertaV2Model(DebertaV2PreTrainedModel):
                 It should be of the appropriate type compatible with the model's word_embeddings attribute.
         
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
-            - TypeError: If the new_embeddings parameter is not of the expected type.
-            - ValueError: If the new_embeddings parameter is invalid or incompatible with the model.
+            TypeError: If the new_embeddings parameter is not of the expected type.
+            ValueError: If the new_embeddings parameter is invalid or incompatible with the model.
         """
         self.embeddings.word_embeddings = new_embeddings
 
@@ -1530,22 +1592,26 @@ class DebertaV2Model(DebertaV2PreTrainedModel):
         This method constructs a DebertaModel based on the provided input parameters.
         
         Args:
-        - self (object): The instance of the DebertaModel class.
-        - input_ids (Optional[mindspore.Tensor]): The input tensor containing token indices. Default is None.
-        - attention_mask (Optional[mindspore.Tensor]): The attention mask tensor to specify which tokens should be attended to. Default is None.
-        - token_type_ids (Optional[mindspore.Tensor]): The tensor specifying the type of each token. Default is None.
-        - position_ids (Optional[mindspore.Tensor]): The tensor containing position indices of tokens. Default is None.
-        - inputs_embeds (Optional[mindspore.Tensor]): The tensor containing precomputed embeddings for input tokens. Default is None.
-        - output_attentions (Optional[bool]): Flag to indicate whether to output attentions. Default is None.
-        - output_hidden_states (Optional[bool]): Flag to indicate whether to output hidden states. Default is None.
-        - return_dict (Optional[bool]): Flag to indicate whether to return output as a dictionary. Default is None.
+            self (object): The instance of the DebertaModel class.
+            input_ids (Optional[mindspore.Tensor]): The input tensor containing token indices. Default is None.
+            attention_mask (Optional[mindspore.Tensor]):
+                The attention mask tensor to specify which tokens should be attended to. Default is None.
+            token_type_ids (Optional[mindspore.Tensor]): The tensor specifying the type of each token. Default is None.
+            position_ids (Optional[mindspore.Tensor]): The tensor containing position indices of tokens. Default is None.
+            inputs_embeds (Optional[mindspore.Tensor]):
+                The tensor containing precomputed embeddings for input tokens. Default is None.
+            output_attentions (Optional[bool]): Flag to indicate whether to output attentions. Default is None.
+            output_hidden_states (Optional[bool]): Flag to indicate whether to output hidden states. Default is None.
+            return_dict (Optional[bool]): Flag to indicate whether to return output as a dictionary. Default is None.
         
         Returns:
-        Union[Tuple, BaseModelOutput]: The output value, which can either be a tuple or a BaseModelOutput object, containing the constructed DebertaModel.
+            Union[Tuple, BaseModelOutput]:
+                The output value, which can either be a tuple or a BaseModelOutput object, containing
+                the constructed DebertaModel.
         
         Raises:
-        - ValueError: Raised if both input_ids and inputs_embeds are specified simultaneously.
-        - ValueError: Raised if neither input_ids nor inputs_embeds are specified.
+            ValueError: Raised if both input_ids and inputs_embeds are specified simultaneously.
+            ValueError: Raised if neither input_ids nor inputs_embeds are specified.
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1691,14 +1757,17 @@ class DebertaV2PredictionHeadTransform(nn.Cell):
 
     def construct(self, hidden_states):
         """
-        This method 'construct' is defined within the class 'DebertaPredictionHeadTransform' and is responsible for processing the hidden states.
+        This method 'construct' is defined within the class 'DebertaPredictionHeadTransform' and is responsible for
+        processing the hidden states.
         
         Args:
             self: An instance of the 'DebertaPredictionHeadTransform' class.
-            hidden_states: A tensor representing the hidden states to be processed. It is of type 'Tensor' and is expected to contain the information to be transformed.
+            hidden_states: A tensor representing the hidden states to be processed.
+                It is of type 'Tensor' and is expected to contain the information to be transformed.
         
         Returns:
-            hidden_states: A tensor containing the transformed hidden states after processing. It is of type 'Tensor' and represents the result of the transformation operation.
+            hidden_states: A tensor containing the transformed hidden states after processing.
+                It is of type 'Tensor' and represents the result of the transformation operation.
         
         Raises:
             This method does not explicitly raise any exceptions.
@@ -1734,7 +1803,7 @@ class DebertaV2LMPredictionHead(nn.Cell):
             hidden_states (tensor): The hidden states to be processed for prediction.
         
         Returns:
-            None. The processed hidden states after passing through the transformation and decoder layers.
+            None: The processed hidden states after passing through the transformation and decoder layers.
         
         Raises:
             None.
@@ -1874,8 +1943,9 @@ class DebertaV2ForTokenClassification(DebertaV2PreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, TokenClassifierOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1919,10 +1989,10 @@ class DebertaV2ForQuestionAnswering(DebertaV2PreTrainedModel):
             config: An instance of the configuration class containing the model configuration.
         
         Returns:
-            None. This method does not return any value.
+            None: This method does not return any value.
         
         Raises:
-            N/A
+            None.
         """
         super().__init__(config)
         self.num_labels = config.num_labels

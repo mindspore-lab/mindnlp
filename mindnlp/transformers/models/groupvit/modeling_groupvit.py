@@ -877,17 +877,15 @@ class GroupViTTextEncoder(nn.Cell):
                 This is useful if you want more control over how to convert `input_ids` indices into associated vectors
                 than the model's internal embedding lookup matrix.
             attention_mask (`torch.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
+                >- Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
             causal_attention_mask (`torch.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Causal mask for the text model. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
+                >- Causal mask for the text model. Mask values selected in `[0, 1]`:
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
             output_attentions (`bool`, *optional*):
@@ -968,7 +966,7 @@ class GroupViTTextTransformer(nn.Cell):
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
         Returns:
-
+            `Union[Tuple, BaseModelOutputWithPooling]`
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1065,21 +1063,22 @@ class GroupViTTextModel(GroupViTPreTrainedModel):
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
         Returns:
+            `Union[Tuple, BaseModelOutputWithPooling]`
 
         Examples:
+            ```python
+            >>> from transformers import CLIPTokenizer, GroupViTTextModel
 
-        ```python
-        >>> from transformers import CLIPTokenizer, GroupViTTextModel
+            >>> tokenizer = CLIPTokenizer.from_pretrained("nvidia/groupvit-gcc-yfcc")
+            >>> model = GroupViTTextModel.from_pretrained("nvidia/groupvit-gcc-yfcc")
 
-        >>> tokenizer = CLIPTokenizer.from_pretrained("nvidia/groupvit-gcc-yfcc")
-        >>> model = GroupViTTextModel.from_pretrained("nvidia/groupvit-gcc-yfcc")
+            >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
 
-        >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
-
-        >>> outputs = model(**inputs)
-        >>> last_hidden_state = outputs.last_hidden_state
-        >>> pooled_output = outputs.pooler_output  # pooled (EOS token) states
-        ```"""
+            >>> outputs = model(**inputs)
+            >>> last_hidden_state = outputs.last_hidden_state
+            >>> pooled_output = outputs.pooler_output  # pooled (EOS token) states
+            ```
+        """
         return self.text_model(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -1109,7 +1108,7 @@ class GroupViTVisionTransformer(nn.Cell):
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
         Returns:
-
+            `Union[Tuple, BaseModelOutputWithPooling]`
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1168,26 +1167,27 @@ class GroupViTVisionModel(GroupViTPreTrainedModel):
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
         Returns:
+            `Union[Tuple, BaseModelOutputWithPooling]`
 
         Examples:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, GroupViTVisionModel
 
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, GroupViTVisionModel
+            >>> processor = AutoProcessor.from_pretrained("nvidia/groupvit-gcc-yfcc")
+            >>> model = GroupViTVisionModel.from_pretrained("nvidia/groupvit-gcc-yfcc")
 
-        >>> processor = AutoProcessor.from_pretrained("nvidia/groupvit-gcc-yfcc")
-        >>> model = GroupViTVisionModel.from_pretrained("nvidia/groupvit-gcc-yfcc")
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> inputs = processor(images=image, return_tensors="pt")
 
-        >>> inputs = processor(images=image, return_tensors="pt")
-
-        >>> outputs = model(**inputs)
-        >>> last_hidden_state = outputs.last_hidden_state
-        >>> pooled_output = outputs.pooler_output  # pooled CLS states
-        ```"""
+            >>> outputs = model(**inputs)
+            >>> last_hidden_state = outputs.last_hidden_state
+            >>> pooled_output = outputs.pooler_output  # pooled CLS states
+            ```
+        """
         return self.vision_model(
             pixel_values=pixel_values,
             output_attentions=output_attentions,
@@ -1254,19 +1254,19 @@ class GroupViTModel(GroupViTPreTrainedModel):
         r"""
         Returns:
             text_features (`mindspore.Tensor` of shape `(batch_size, output_dim`): The text embeddings obtained by
-            applying the projection layer to the pooled output of [`GroupViTTextModel`].
+                applying the projection layer to the pooled output of [`GroupViTTextModel`].
 
         Examples:
+            ```python
+            >>> from transformers import CLIPTokenizer, GroupViTModel
 
-        ```python
-        >>> from transformers import CLIPTokenizer, GroupViTModel
+            >>> model = GroupViTModel.from_pretrained("nvidia/groupvit-gcc-yfcc")
+            >>> tokenizer = CLIPTokenizer.from_pretrained("nvidia/groupvit-gcc-yfcc")
 
-        >>> model = GroupViTModel.from_pretrained("nvidia/groupvit-gcc-yfcc")
-        >>> tokenizer = CLIPTokenizer.from_pretrained("nvidia/groupvit-gcc-yfcc")
-
-        >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
-        >>> text_features = model.get_text_features(**inputs)
-        ```"""
+            >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
+            >>> text_features = model.get_text_features(**inputs)
+            ```
+        """
         # Use GROUPVIT model's config for some fields (if specified) instead of those of vision & text components.
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1301,22 +1301,22 @@ class GroupViTModel(GroupViTPreTrainedModel):
             applying the projection layer to the pooled output of [`GroupViTVisionModel`].
 
         Examples:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, GroupViTModel
 
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, GroupViTModel
+            >>> model = GroupViTModel.from_pretrained("nvidia/groupvit-gcc-yfcc")
+            >>> processor = AutoProcessor.from_pretrained("nvidia/groupvit-gcc-yfcc")
 
-        >>> model = GroupViTModel.from_pretrained("nvidia/groupvit-gcc-yfcc")
-        >>> processor = AutoProcessor.from_pretrained("nvidia/groupvit-gcc-yfcc")
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> inputs = processor(images=image, return_tensors="pt")
 
-        >>> inputs = processor(images=image, return_tensors="pt")
-
-        >>> image_features = model.get_image_features(**inputs)
-        ```"""
+            >>> image_features = model.get_image_features(**inputs)
+            ```
+        """
         # Use GROUPVIT model's config for some fields (if specified) instead of those of vision & text components.
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1350,28 +1350,29 @@ class GroupViTModel(GroupViTPreTrainedModel):
     ) -> Union[Tuple, GroupViTModelOutput]:
         r"""
         Returns:
+            `Union[Tuple, GroupViTModelOutput]`
 
         Examples:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, GroupViTModel
 
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, GroupViTModel
+            >>> model = GroupViTModel.from_pretrained("nvidia/groupvit-gcc-yfcc")
+            >>> processor = AutoProcessor.from_pretrained("nvidia/groupvit-gcc-yfcc")
 
-        >>> model = GroupViTModel.from_pretrained("nvidia/groupvit-gcc-yfcc")
-        >>> processor = AutoProcessor.from_pretrained("nvidia/groupvit-gcc-yfcc")
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> inputs = processor(
+            ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="pt", padding=True
+            ... )
 
-        >>> inputs = processor(
-        ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="pt", padding=True
-        ... )
-
-        >>> outputs = model(**inputs)
-        >>> logits_per_image = outputs.logits_per_image  # this is the image-text similarity score
-        >>> probs = logits_per_image.softmax(dim=1)  # we can take the softmax to get the label probabilities
-        ```"""
+            >>> outputs = model(**inputs)
+            >>> logits_per_image = outputs.logits_per_image  # this is the image-text similarity score
+            >>> probs = logits_per_image.softmax(dim=1)  # we can take the softmax to get the label probabilities
+            ```
+        """
         # Use GROUPVIT model's config for some fields (if specified) instead of those of vision & text components.
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_segmentation = (

@@ -96,9 +96,9 @@ class MusicgenMelodyProcessor(ProcessorMixin):
                 tokenizer.
         Returns:
             [`BatchEncoding`]: A [`BatchEncoding`] with the following fields:
-            - **input_ids** -- List of token ids to be fed to a model. Returned when `text` is not `None`.
-            - **input_features** -- Audio input features to be fed to a model. Returned when `audio` is not `None`.
-            - **attention_mask** -- List of token indices specifying which tokens should be attended to by the model when `text` is not `None`.
+            >   - **input_ids** -- List of token ids to be fed to a model. Returned when `text` is not `None`.
+            >   - **input_features** -- Audio input features to be fed to a model. Returned when `audio` is not `None`.
+            >   - **attention_mask** -- List of token indices specifying which tokens should be attended to by the model when `text` is not `None`.
             When only `audio` is specified, returns the timestamps attention mask.
         """
         sampling_rate = kwargs.pop("sampling_rate", None)
@@ -184,17 +184,18 @@ class MusicgenMelodyProcessor(ProcessorMixin):
                 Number of audio samples to unconditionally generate.
 
         Example:
-        ```python
-        >>> from transformers import MusicgenMelodyForConditionalGeneration, MusicgenMelodyProcessor
+            ```python
+            >>> from transformers import MusicgenMelodyForConditionalGeneration, MusicgenMelodyProcessor
 
-        >>> model = MusicgenMelodyForConditionalGeneration.from_pretrained("facebook/musicgen-melody")
+            >>> model = MusicgenMelodyForConditionalGeneration.from_pretrained("facebook/musicgen-melody")
 
-        >>> # get the unconditional (or 'null') inputs for the model
-        >>> processor = MusicgenMelodyProcessor.from_pretrained("facebook/musicgen-melody")
-        >>> unconditional_inputs = processor.get_unconditional_inputs(num_samples=1)
+            >>> # get the unconditional (or 'null') inputs for the model
+            >>> processor = MusicgenMelodyProcessor.from_pretrained("facebook/musicgen-melody")
+            >>> unconditional_inputs = processor.get_unconditional_inputs(num_samples=1)
 
-        >>> audio_samples = model.generate(**unconditional_inputs, max_new_tokens=256)
-        ```"""
+            >>> audio_samples = model.generate(**unconditional_inputs, max_new_tokens=256)
+            ```
+        """
         inputs = self.tokenizer([""] * num_samples, return_tensors=return_tensors, return_attention_mask=True)
         inputs["attention_mask"][:] = 0
 

@@ -57,23 +57,23 @@ class BlenderbotSmallTokenizerFast(PreTrainedTokenizerFast):
         Initializes a BlenderbotSmallTokenizerFast object.
         
         Args:
-        - self: The instance of the class.
-        - vocab_file (str): Path to the vocabulary file. Default is None.
-        - merges_file (str): Path to the merges file. Default is None.
-        - unk_token (str): The unknown token. Default is 'endoftext'.
-        - bos_token (str): The beginning of sentence token. Default is 'endoftext'.
-        - eos_token (str): The end of sentence token. Default is 'endoftext'.
-        - add_prefix_space (bool): Whether to add prefix space. Default is False.
-        - trim_offsets (bool): Whether to trim offsets. Default is True.
-        - **kwargs: Additional keyword arguments.
+            self: The instance of the class.
+            vocab_file (str): Path to the vocabulary file. Default is None.
+            merges_file (str): Path to the merges file. Default is None.
+            unk_token (str): The unknown token. Default is 'endoftext'.
+            bos_token (str): The beginning of sentence token. Default is 'endoftext'.
+            eos_token (str): The end of sentence token. Default is 'endoftext'.
+            add_prefix_space (bool): Whether to add prefix space. Default is False.
+            trim_offsets (bool): Whether to trim offsets. Default is True.
+            **kwargs: Additional keyword arguments.
         
         Returns:
-        None. This method initializes a BlenderbotSmallTokenizerFast object.
+            None: This method initializes a BlenderbotSmallTokenizerFast object.
         
         Raises:
-        - ValueError: If the vocab_file or merges_file is not provided.
-        - TypeError: If unk_token, bos_token, eos_token are not strings.
-        - ValueError: If add_prefix_space or trim_offsets are not boolean values.
+            ValueError: If the vocab_file or merges_file is not provided.
+            TypeError: If unk_token, bos_token, eos_token are not strings.
+            ValueError: If add_prefix_space or trim_offsets are not boolean values.
         """
         super().__init__(
             ByteLevelBPETokenizer(

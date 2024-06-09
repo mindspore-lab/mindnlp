@@ -1052,18 +1052,19 @@ class FlavaModel(FlavaPreTrainedModel):
             applying the projection layer to the pooled output of [`FlavaTextModel`].
 
         Examples:
+            ```python
+            >>> from transformers import AutoProcessor, FlavaModel
+    
+            >>> model = FlavaModel.from_pretrained("{0}")
+            >>> processor = AutoProcessor.from_pretrained("{0}")
+    
+            >>> inputs = processor(
+            ...     text=["a photo of a cat", "a photo of a dog"], max_length=77, padding="max_length", return_tensors="pt"
+            ... )
+            >>> text_features = model.get_text_features(**inputs)
+        ```
+        """.format(_CHECKPOINT_FOR_DOC)
 
-        ```python
-        >>> from transformers import AutoProcessor, FlavaModel
-
-        >>> model = FlavaModel.from_pretrained("{0}")
-        >>> processor = AutoProcessor.from_pretrained("{0}")
-
-        >>> inputs = processor(
-        ...     text=["a photo of a cat", "a photo of a dog"], max_length=77, padding="max_length", return_tensors="pt"
-        ... )
-        >>> text_features = model.get_text_features(**inputs)
-        ```""".format(_CHECKPOINT_FOR_DOC)
         text_outputs = self.text_model(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -1096,22 +1097,23 @@ class FlavaModel(FlavaPreTrainedModel):
             applying the projection layer to the pooled output of [`FlavaImageModel`].
 
         Examples:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, FlavaModel
+    
+            >>> model = FlavaModel.from_pretrained("{0}")
+            >>> processor = AutoProcessor.from_pretrained("{0}")
+    
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+    
+            >>> inputs = processor(images=image, return_tensors="pt")
+    
+            >>> image_features = model.get_image_features(**inputs)
+            ```
+        """.format(_CHECKPOINT_FOR_DOC)
 
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, FlavaModel
-
-        >>> model = FlavaModel.from_pretrained("{0}")
-        >>> processor = AutoProcessor.from_pretrained("{0}")
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> inputs = processor(images=image, return_tensors="pt")
-
-        >>> image_features = model.get_image_features(**inputs)
-        ```""".format(_CHECKPOINT_FOR_DOC)
         image_outputs = self.image_model(
             pixel_values=pixel_values,
             bool_masked_pos=bool_masked_pos,
@@ -1145,37 +1147,37 @@ class FlavaModel(FlavaPreTrainedModel):
     ) -> Union[Tuple, FlavaOutput]:
         r"""
         Returns:
+            `Union[Tuple, FlavaOutput]`
 
         Examples:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, FlavaModel
 
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, FlavaModel
+            >>> model = FlavaModel.from_pretrained("facebook/flava-full")
+            >>> processor = AutoProcessor.from_pretrained("facebook/flava-full")
 
-        >>> model = FlavaModel.from_pretrained("facebook/flava-full")
-        >>> processor = AutoProcessor.from_pretrained("facebook/flava-full")
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> inputs = processor(text=["a photo of a cat"], images=image, return_tensors="pt", padding=True)
 
-        >>> inputs = processor(text=["a photo of a cat"], images=image, return_tensors="pt", padding=True)
+            >>> outputs = model(**inputs)
 
-        >>> outputs = model(**inputs)
+            >>> image_embeddings = outputs.image_embeddings
+            >>> text_embeddings = outputs.text_embeddings
+            >>> multimodal_embeddings = outputs.multimodal_embeddings
 
-        >>> image_embeddings = outputs.image_embeddings
-        >>> text_embeddings = outputs.text_embeddings
-        >>> multimodal_embeddings = outputs.multimodal_embeddings
+            >>> outputs.image_embeddings.shape
+            torch.Size([1, 197, 768])
 
-        >>> outputs.image_embeddings.shape
-        torch.Size([1, 197, 768])
+            >>> text_embeddings.shape
+            torch.Size([1, 7, 768])
 
-        >>> text_embeddings.shape
-        torch.Size([1, 7, 768])
-
-        >>> multimodal_embeddings.shape
-        torch.Size([1, 205, 768])
-        ```
+            >>> multimodal_embeddings.shape
+            torch.Size([1, 205, 768])
+            ```
         """
 
         return_dict = return_dict if return_dict is not None else self.config.return_dict
@@ -1375,22 +1377,22 @@ class FlavaImageCodebook(FlavaPreTrainedModel):
                 `return_codebook_pixels=True`. See [`FlavaImageProcessor.__call__`] for details.
 
         Examples:
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoImageProcessor, FlavaImageCodebook
-
-        >>> model = FlavaImageCodebook.from_pretrained("{0}")
-        >>> image_processor = AutoImageProcessor.from_pretrained("{0}")
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> inputs = image_processor([image], return_codebook_pixels=True, return_tensors="pt")
-        >>> inputs = dict(pixel_values=inputs.codebook_pixel_values)
-
-        >>> outputs = model.get_codebook_indices(**inputs)
-        ```
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoImageProcessor, FlavaImageCodebook
+    
+            >>> model = FlavaImageCodebook.from_pretrained("{0}")
+            >>> image_processor = AutoImageProcessor.from_pretrained("{0}")
+    
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+    
+            >>> inputs = image_processor([image], return_codebook_pixels=True, return_tensors="pt")
+            >>> inputs = dict(pixel_values=inputs.codebook_pixel_values)
+    
+            >>> outputs = model.get_codebook_indices(**inputs)
+            ```
         """.format(_CHECKPOINT_FOR_CODEBOOK_DOC)
         z_logits = self.blocks(pixel_values)
         return ops.argmax(z_logits, dim=1)
@@ -1407,25 +1409,24 @@ class FlavaImageCodebook(FlavaPreTrainedModel):
                 `return_codebook_pixels=True`. See [`FlavaImageProcessor.__call__`] for details.
 
         Examples:
-
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoImageProcessor, FlavaImageCodebook
-
-        >>> model = FlavaImageCodebook.from_pretrained("{0}")
-        >>> image_processor = AutoImageProcessor.from_pretrained("{0}")
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> inputs = image_processor([image], return_codebook_pixels=True, return_tensors="pt")
-        >>> inputs = dict(pixel_values=inputs.codebook_pixel_values)
-
-        >>> outputs = model(**inputs)
-        >>> print(outputs.shape)
-        (1, 196)
-        ```
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoImageProcessor, FlavaImageCodebook
+    
+            >>> model = FlavaImageCodebook.from_pretrained("{0}")
+            >>> image_processor = AutoImageProcessor.from_pretrained("{0}")
+    
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+    
+            >>> inputs = image_processor([image], return_codebook_pixels=True, return_tensors="pt")
+            >>> inputs = dict(pixel_values=inputs.codebook_pixel_values)
+    
+            >>> outputs = model(**inputs)
+            >>> print(outputs.shape)
+            (1, 196)
+            ```
         """.format(_CHECKPOINT_FOR_CODEBOOK_DOC)
         if len(pixel_values.shape) != 4:
             raise ValueError(f"input shape {pixel_values.shape} is not 4d")
@@ -1574,36 +1575,37 @@ class FlavaForPreTraining(FlavaPreTrainedModel):
         return_loss: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], FlavaForPreTrainingOutput]:
         """
+
         Examples:
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import FlavaForPreTraining, AutoProcessor
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import FlavaForPreTraining, AutoProcessor
 
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> model = FlavaForPreTraining.from_pretrained("facebook/flava-full")
-        >>> processor = AutoProcessor.from_pretrained("facebook/flava-full")
+            >>> model = FlavaForPreTraining.from_pretrained("facebook/flava-full")
+            >>> processor = AutoProcessor.from_pretrained("facebook/flava-full")
 
-        >>> text = ["a photo of a cat"]
+            >>> text = ["a photo of a cat"]
 
-        >>> inputs = processor(
-        ...     images=[image],
-        ...     text=text,
-        ...     return_masks=True,
-        ...     return_codebook_pixels=True,
-        ...     padding=True,
-        ...     max_length=77,
-        ...     return_tensors="pt",
-        ... )
+            >>> inputs = processor(
+            ...     images=[image],
+            ...     text=text,
+            ...     return_masks=True,
+            ...     return_codebook_pixels=True,
+            ...     padding=True,
+            ...     max_length=77,
+            ...     return_tensors="pt",
+            ... )
 
 
-        >>> output = model(**inputs)
-        ```
+            >>> output = model(**inputs)
+            ```
 
         Return:
-
+            `Union[Tuple[mindspore.Tensor], FlavaForPreTrainingOutput]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         return_loss = return_loss if return_loss is not None else self.config.return_loss

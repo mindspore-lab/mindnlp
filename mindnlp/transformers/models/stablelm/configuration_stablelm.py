@@ -97,13 +97,13 @@ class StableLmConfig(PretrainedConfig):
             The id of the `EOS` token in the vocabulary.
 
     Example:
+        ```python
+        >>> from transformers import StableLmModel, StableLmConfig
 
-    ```python
-    >>> from transformers import StableLmModel, StableLmConfig
-
-    >>> # Initializing a StableLM stablelm-3b style configuration
-    >>> configuration = StableLmConfig()
-    ```"""
+        >>> # Initializing a StableLM stablelm-3b style configuration
+        >>> configuration = StableLmConfig()
+        ```
+    """
 
     model_type = "stablelm"
     keys_to_ignore_at_inference = ["past_key_values"]

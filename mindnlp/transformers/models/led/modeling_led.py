@@ -158,10 +158,9 @@ class LEDEncoderSelfAttention(nn.Cell):
         *attention_window* happens in [`LEDEncoderModel.forward`] to avoid redoing the padding on each layer.
 
         The *attention_mask* is changed in [`LEDEncoderModel.forward`] from 0, 1, 2 to:
-
-            - -10000: no attention
-            - 0: local attention
-            - +10000: global attention
+            >- -10000: no attention
+            >- 0: local attention
+            >- +10000: global attention
         """
         hidden_states = hidden_states.swapaxes(0, 1)
 
@@ -328,32 +327,30 @@ class LEDEncoderSelfAttention(nn.Cell):
         shift every row 1 step right, converting columns into diagonals.
 
         Example:
-
-        ```python
-        chunked_hidden_states: [
-            0.4983,
-            2.6918,
-            -0.0071,
-            1.0492,
-            -1.8348,
-            0.7672,
-            0.2986,
-            0.0285,
-            -0.7584,
-            0.4206,
-            -0.0405,
-            0.1599,
-            2.0514,
-            -1.1600,
-            0.5372,
-            0.2629,
-        ]
-        window_overlap = num_rows = 4
-        ```
-
-                     (pad & diagonalize) => [ 0.4983, 2.6918, -0.0071, 1.0492, 0.0000, 0.0000, 0.0000
-                       0.0000, -1.8348, 0.7672, 0.2986, 0.0285, 0.0000, 0.0000 0.0000, 0.0000, -0.7584, 0.4206,
-                       -0.0405, 0.1599, 0.0000 0.0000, 0.0000, 0.0000, 2.0514, -1.1600, 0.5372, 0.2629 ]
+            ```python
+            >>> chunked_hidden_states: [
+            ...     0.4983,
+            ...     2.6918,
+            ...     -0.0071,
+            ...     1.0492,
+            ...     -1.8348,
+            ...     0.7672,
+            ...     0.2986,
+            ...     0.0285,
+            ...     -0.7584,
+            ...     0.4206,
+            ...     -0.0405,
+            ...     0.1599,
+            ...     2.0514,
+            ...     -1.1600,
+            ...     0.5372,
+            ...     0.2629,
+            ... ]
+            >>> window_overlap = num_rows = 4
+            ```
+             (pad & diagonalize) => [ 0.4983, 2.6918, -0.0071, 1.0492, 0.0000, 0.0000, 0.0000
+               0.0000, -1.8348, 0.7672, 0.2986, 0.0285, 0.0000, 0.0000 0.0000, 0.0000, -0.7584, 0.4206,
+               -0.0405, 0.1599, 0.0000 0.0000, 0.0000, 0.0000, 2.0514, -1.1600, 0.5372, 0.2629 ]
         """
         total_num_heads, num_chunks, window_overlap, hidden_dim = chunked_hidden_states.shape
         chunked_hidden_states = ops.pad(
@@ -1483,40 +1480,39 @@ LED_START_DOCSTRING = r"""
 
 LED_GENERATION_EXAMPLE = r"""
     Summarization example:
-
-    ```python
-    >>> import torch
-    >>> from transformers import AutoTokenizer, LEDForConditionalGeneration
-
-    >>> model = LEDForConditionalGeneration.from_pretrained("allenai/led-large-16384-arxiv")
-    >>> tokenizer = AutoTokenizer.from_pretrained("allenai/led-large-16384-arxiv")
-
-    >>> ARTICLE_TO_SUMMARIZE = '''Transformers (Vaswani et al., 2017) have achieved state-of-the-art
-    ...     results in a wide range of natural language tasks including generative language modeling
-    ...     (Dai et al., 2019; Radford et al., 2019) and discriminative ... language understanding (Devlin et al., 2019).
-    ...     This success is partly due to the self-attention component which enables the network to capture contextual
-    ...     information from the entire sequence. While powerful, the memory and computational requirements of
-    ...     self-attention grow quadratically with sequence length, making it infeasible (or very expensive) to
-    ...     process long sequences. To address this limitation, we present Longformer, a modified Transformer
-    ...     architecture with a self-attention operation that scales linearly with the sequence length, making it
-    ...     versatile for processing long documents (Fig 1). This is an advantage for natural language tasks such as
-    ...     long document classification, question answering (QA), and coreference resolution, where existing approaches
-    ...     partition or shorten the long context into smaller sequences that fall within the typical 512 token limit
-    ...     of BERT-style pretrained models. Such partitioning could potentially result in loss of important
-    ...     cross-partition information, and to mitigate this problem, existing methods often rely on complex
-    ...     architectures to address such interactions. On the other hand, our proposed Longformer is able to build
-    ...     contextual representations of the entire context using multiple layers of attention, reducing the need for
-    ...     task-specific architectures.'''
-    >>> inputs = tokenizer.encode(ARTICLE_TO_SUMMARIZE, return_tensors="ms")
-
-    >>> # Global attention on the first token (cf. Beltagy et al. 2020)
-    >>> global_attention_mask = torch.zeros_like(inputs)
-    >>> global_attention_mask[:, 0] = 1
-
-    >>> # Generate Summary
-    >>> summary_ids = model.generate(inputs, global_attention_mask=global_attention_mask, num_beams=3, max_length=32)
-    >>> print(tokenizer.decode(summary_ids[0], skip_special_tokens=True, clean_up_tokenization_spaces=True))
-    ```
+        ```python
+        >>> import torch
+        >>> from transformers import AutoTokenizer, LEDForConditionalGeneration
+    
+        >>> model = LEDForConditionalGeneration.from_pretrained("allenai/led-large-16384-arxiv")
+        >>> tokenizer = AutoTokenizer.from_pretrained("allenai/led-large-16384-arxiv")
+    
+        >>> ARTICLE_TO_SUMMARIZE = '''Transformers (Vaswani et al., 2017) have achieved state-of-the-art
+        ...     results in a wide range of natural language tasks including generative language modeling
+        ...     (Dai et al., 2019; Radford et al., 2019) and discriminative ... language understanding (Devlin et al., 2019).
+        ...     This success is partly due to the self-attention component which enables the network to capture contextual
+        ...     information from the entire sequence. While powerful, the memory and computational requirements of
+        ...     self-attention grow quadratically with sequence length, making it infeasible (or very expensive) to
+        ...     process long sequences. To address this limitation, we present Longformer, a modified Transformer
+        ...     architecture with a self-attention operation that scales linearly with the sequence length, making it
+        ...     versatile for processing long documents (Fig 1). This is an advantage for natural language tasks such as
+        ...     long document classification, question answering (QA), and coreference resolution, where existing approaches
+        ...     partition or shorten the long context into smaller sequences that fall within the typical 512 token limit
+        ...     of BERT-style pretrained models. Such partitioning could potentially result in loss of important
+        ...     cross-partition information, and to mitigate this problem, existing methods often rely on complex
+        ...     architectures to address such interactions. On the other hand, our proposed Longformer is able to build
+        ...     contextual representations of the entire context using multiple layers of attention, reducing the need for
+        ...     task-specific architectures.'''
+        >>> inputs = tokenizer.encode(ARTICLE_TO_SUMMARIZE, return_tensors="ms")
+    
+        >>> # Global attention on the first token (cf. Beltagy et al. 2020)
+        >>> global_attention_mask = torch.zeros_like(inputs)
+        >>> global_attention_mask[:, 0] = 1
+    
+        >>> # Generate Summary
+        >>> summary_ids = model.generate(inputs, global_attention_mask=global_attention_mask, num_beams=3, max_length=32)
+        >>> print(tokenizer.decode(summary_ids[0], skip_special_tokens=True, clean_up_tokenization_spaces=True))
+        ```
 """
 
 LED_INPUTS_DOCSTRING = r"""
@@ -1530,10 +1526,9 @@ LED_INPUTS_DOCSTRING = r"""
 
             [What are input IDs?](../glossary#input-ids)
         attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
+            >- Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+            >   - 1 for tokens that are **not masked**,
+            >   - 0 for tokens that are **masked**.
 
             [What are attention masks?](../glossary#attention-mask)
         decoder_input_ids (`mindspore.Tensor` of shape `(batch_size, target_sequence_length)`, *optional*):
@@ -1554,32 +1549,27 @@ LED_INPUTS_DOCSTRING = r"""
             to your needs. See diagram 1 in [the paper](https://arxiv.org/abs/1910.13461) for more information on the
             default strategy.
         global_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to decide the attention given on each token, local attention or global attention for the encoder.
-            Tokens with global attention attends to all other tokens, and all other tokens attend to them. This is
-            important for task-specific finetuning because it makes the model more flexible at representing the task.
-            For example, for classification, the <s> token should be given global attention. For QA, all question
-            tokens should also have global attention. Please refer to the [Longformer
-            paper](https://arxiv.org/abs/2004.05150) for more details. Mask values selected in `[0, 1]`:
-
-            - 0 for local attention (a sliding window attention),
-            - 1 for global attention (tokens that attend to all other tokens, and all other tokens attend to them).
+            >-  Mask to decide the attention given on each token, local attention or global attention for the encoder.
+                Tokens with global attention attends to all other tokens, and all other tokens attend to them. This is
+                important for task-specific finetuning because it makes the model more flexible at representing the task.
+                For example, for classification, the <s> token should be given global attention. For QA, all question
+                tokens should also have global attention. Please refer to the [Longformer
+                paper](https://arxiv.org/abs/2004.05150) for more details. Mask values selected in `[0, 1]`:
+            >   - 0 for local attention (a sliding window attention),
+            >   - 1 for global attention (tokens that attend to all other tokens, and all other tokens attend to them).
         head_mask (`mindspore.Tensor` of shape `(encoder_layers, encoder_attention_heads)`, *optional*):
-            Mask to nullify selected heads of the attention modules in the encoder. Mask values selected in `[0, 1]`:
-
-            - 1 indicates the head is **not masked**,
-            - 0 indicates the head is **masked**.
+            >- Mask to nullify selected heads of the attention modules in the encoder. Mask values selected in `[0, 1]`:
+            >   - 1 indicates the head is **not masked**,
+            >   - 0 indicates the head is **masked**.
 
         decoder_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-            Mask to nullify selected heads of the attention modules in the decoder. Mask values selected in `[0, 1]`:
-
-            - 1 indicates the head is **not masked**,
-            - 0 indicates the head is **masked**.
+            >- Mask to nullify selected heads of the attention modules in the decoder. Mask values selected in `[0, 1]`:
+            >   - 1 indicates the head is **not masked**,
+            >   - 0 indicates the head is **masked**.
         cross_attn_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-            Mask to nullify selected heads of the cross-attention modules in the decoder. Mask values selected in `[0,
-            1]`:
-
-            - 1 indicates the head is **not masked**,
-            - 0 indicates the head is **masked**.
+            >- Mask to nullify selected heads of the cross-attention modules in the decoder. Mask values selected in `[0, 1]`:
+            >   - 1 indicates the head is **not masked**,
+            >   - 0 indicates the head is **masked**.
 
         encoder_outputs (`tuple(tuple(mindspore.Tensor)`, *optional*):
             Tuple consists of (`last_hidden_state`, *optional*: `hidden_states`, *optional*: `attentions`)
@@ -1744,27 +1734,23 @@ class LEDEncoder(LEDPreTrainedModel):
 
                 [What are input IDs?](../glossary#input-ids)
             attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
-
-                [What are attention masks?](../glossary#attention-mask)
+                >- Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
+                >- [What are attention masks?](../glossary#attention-mask)
             global_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Mask to decide the attention given on each token, local attention or global attention for the encoder.
-                Tokens with global attention attends to all other tokens, and all other tokens attend to them. This is
-                important for task-specific finetuning because it makes the model more flexible at representing the
-                task. For example, for classification, the <s> token should be given global attention. For QA, all
-                question tokens should also have global attention. Please refer to the [Longformer
-                paper](https://arxiv.org/abs/2004.05150) for more details. Mask values selected in `[0, 1]`:
-
-                - 0 for local attention (a sliding window attention),
-                - 1 for global attention (tokens that attend to all other tokens, and all other tokens attend to them).
+                >- Mask to decide the attention given on each token, local attention or global attention for the encoder.
+                    Tokens with global attention attends to all other tokens, and all other tokens attend to them. This is
+                    important for task-specific finetuning because it makes the model more flexible at representing the
+                    task. For example, for classification, the <s> token should be given global attention. For QA, all
+                    question tokens should also have global attention. Please refer to the [Longformer
+                    paper](https://arxiv.org/abs/2004.05150) for more details. Mask values selected in `[0, 1]`:
+                >   - 0 for local attention (a sliding window attention),
+                >   - 1 for global attention (tokens that attend to all other tokens, and all other tokens attend to them).
             head_mask (`mindspore.Tensor` of shape `(encoder_layers, encoder_attention_heads)`, *optional*):
-                Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
+                >- Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
+                >   - 1 indicates the head is **not masked**,
+                >   - 0 indicates the head is **masked**.
             inputs_embeds (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
                 Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation.
                 This is useful if you want more control over how to convert `input_ids` indices into associated vectors
@@ -1967,44 +1953,38 @@ class LEDDecoder(LEDPreTrainedModel):
 
                 [What are input IDs?](../glossary#input-ids)
             attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
+                >- Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
             global_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Mask to decide the attention given on each token, local attention or global attention. Tokens with
-                global attention attends to all other tokens, and all other tokens attend to them. This is important
-                for task-specific finetuning because it makes the model more flexible at representing the task. For
-                example, for classification, the <s> token should be given global attention. For QA, all question
-                tokens should also have global attention. Please refer to the [Longformer
-                paper](https://arxiv.org/abs/2004.05150) for more details. Mask values selected in `[0, 1]`:
-
-                - 0 for local attention (a sliding window attention),
-                - 1 for global attention (tokens that attend to all other tokens, and all other tokens attend to them).
+                >- Mask to decide the attention given on each token, local attention or global attention. Tokens with
+                    global attention attends to all other tokens, and all other tokens attend to them. This is important
+                    for task-specific finetuning because it makes the model more flexible at representing the task. For
+                    example, for classification, the <s> token should be given global attention. For QA, all question
+                    tokens should also have global attention. Please refer to the [Longformer
+                    paper](https://arxiv.org/abs/2004.05150) for more details. Mask values selected in `[0, 1]`:
+                >   - 0 for local attention (a sliding window attention),
+                >   - 1 for global attention (tokens that attend to all other tokens, and all other tokens attend to them).
             encoder_hidden_states (`mindspore.Tensor` of shape `(batch_size, encoder_sequence_length, hidden_size)`, *optional*):
                 Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention
                 of the decoder.
             encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, encoder_sequence_length)`, *optional*):
-                Mask to avoid performing cross-attention on padding tokens indices of encoder input_ids. Mask values
-                selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
-
-                [What are attention masks?](../glossary#attention-mask)
+                >- Mask to avoid performing cross-attention on padding tokens indices of encoder input_ids. Mask values
+                    selected in `[0, 1]`:
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
+                >- [What are attention masks?](../glossary#attention-mask)
             head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-                Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
+                >- Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
+                >   - 1 indicates the head is **not masked**,
+                >   - 0 indicates the head is **masked**.
 
             cross_attn_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-                Mask to nullify selected heads of the cross-attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
+                >- Mask to nullify selected heads of the cross-attention modules. Mask values selected in `[0, 1]`:
+                >   - 1 indicates the head is **not masked**,
+                >   - 0 indicates the head is **masked**.
 
             past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
                 Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
@@ -2348,27 +2328,29 @@ class LEDForConditionalGeneration(LEDPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], LEDSeq2SeqLMOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
-            config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
-            (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
+                config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
+                (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
+            `Union[Tuple[mindspore.Tensor], LEDSeq2SeqLMOutput]`
 
         Conditional generation example:
+            ```python
+            >>> from transformers import AutoTokenizer, LEDForConditionalGeneration
 
-        ```python
-        >>> from transformers import AutoTokenizer, LEDForConditionalGeneration
+            >>> tokenizer = AutoTokenizer.from_pretrained("allenai/led-base-16384")
+            >>> TXT = "My friends are <mask> but they eat too many carbs."
 
-        >>> tokenizer = AutoTokenizer.from_pretrained("allenai/led-base-16384")
-        >>> TXT = "My friends are <mask> but they eat too many carbs."
+            >>> model = LEDForConditionalGeneration.from_pretrained("allenai/led-base-16384")
+            >>> input_ids = tokenizer([TXT], return_tensors="ms")["input_ids"]
 
-        >>> model = LEDForConditionalGeneration.from_pretrained("allenai/led-base-16384")
-        >>> input_ids = tokenizer([TXT], return_tensors="ms")["input_ids"]
-
-        >>> prediction = model.generate(input_ids)[0]
-        >>> print(tokenizer.decode(prediction, skip_special_tokens=True))
-        ```"""
+            >>> prediction = model.generate(input_ids)[0]
+            >>> print(tokenizer.decode(prediction, skip_special_tokens=True))
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if labels is not None:
@@ -2508,9 +2490,10 @@ class LEDForSequenceClassification(LEDPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], LEDSeq2SeqSequenceClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if labels is not None:
@@ -2619,14 +2602,15 @@ class LEDForQuestionAnswering(LEDPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], LEDSeq2SeqQuestionAnsweringModelOutput]:
         r"""
-        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
-            are not taken into account for computing the loss.
+        Args:
+            start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the start of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
+                are not taken into account for computing the loss.
+            end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the end of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
+                are not taken into account for computing the loss.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if start_positions is not None and end_positions is not None:

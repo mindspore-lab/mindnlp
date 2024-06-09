@@ -80,19 +80,19 @@ class MarianConfig(PretrainedConfig):
             `eos_token_id`.
 
     Examples:
+        ```python
+        >>> from transformers import MarianModel, MarianConfig
 
-    ```python
-    >>> from transformers import MarianModel, MarianConfig
+        >>> # Initializing a Marian Helsinki-NLP/opus-mt-en-de style configuration
+        >>> configuration = MarianConfig()
 
-    >>> # Initializing a Marian Helsinki-NLP/opus-mt-en-de style configuration
-    >>> configuration = MarianConfig()
+        >>> # Initializing a model from the Helsinki-NLP/opus-mt-en-de style configuration
+        >>> model = MarianModel(configuration)
 
-    >>> # Initializing a model from the Helsinki-NLP/opus-mt-en-de style configuration
-    >>> model = MarianModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "marian"
     keys_to_ignore_at_inference = ["past_key_values"]

@@ -33,6 +33,7 @@ class PeftAdapterMixin:
 
     Currently supported PEFT methods are all non-prefix tuning methods. Below is the list of supported PEFT methods
     that anyone can load, train and run with this mixin class:
+
     - Low Rank Adapters (LoRA): https://huggingface.co/docs/peft/conceptual_guides/lora
     - IA3: https://huggingface.co/docs/peft/conceptual_guides/ia3
     - AdaLora: https://arxiv.org/abs/2303.10512

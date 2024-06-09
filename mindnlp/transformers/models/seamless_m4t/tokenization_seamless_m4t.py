@@ -61,18 +61,17 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
     The tokenization method is `<language code> <tokens> <eos>` for source language documents, and `<eos> <language
     code> <tokens> <eos>` for target language documents.
 
-    Examples:
+    Example:
+        ```python
+        >>> from transformers import SeamlessM4TTokenizer
 
-    ```python
-    >>> from transformers import SeamlessM4TTokenizer
-
-    >>> tokenizer = SeamlessM4TTokenizer.from_pretrained(
-    ...     "facebook/hf-seamless-m4t-medium", src_lang="eng", tgt_lang="fra"
-    ... )
-    >>> example_english_phrase = " UN Chief Says There Is No Military Solution in Syria"
-    >>> expected_translation_french = "Le chef de l'ONU affirme qu'il n'y a pas de solution militaire en Syrie."
-    >>> inputs = tokenizer(example_english_phrase, text_target=expected_translation_french, return_tensors="pt")
-    ```
+        >>> tokenizer = SeamlessM4TTokenizer.from_pretrained(
+        ...     "facebook/hf-seamless-m4t-medium", src_lang="eng", tgt_lang="fra"
+        ... )
+        >>> example_english_phrase = " UN Chief Says There Is No Military Solution in Syria"
+        >>> expected_translation_french = "Le chef de l'ONU affirme qu'il n'y a pas de solution militaire en Syrie."
+        >>> inputs = tokenizer(example_english_phrase, text_target=expected_translation_french, return_tensors="pt")
+        ```
 
     Args:
         vocab_file (`str`):
@@ -147,7 +146,7 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
     ):
         """
         Initializes an instance of the SeamlessM4TTokenizer class.
-        
+
         Args:
             self: The instance of the class.
             vocab_file (str): The path to the vocabulary file.
@@ -162,10 +161,10 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
             tgt_lang (str, optional): The target language. Defaults to 'fra'.
             sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional arguments for the sentencepiece model. Defaults to None.
             additional_special_tokens (List[str], optional): Additional special tokens. Defaults to None.
-        
+
         Returns:
             None. The method does not return any value.
-        
+
         Raises:
             None.
         """
@@ -219,16 +218,16 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
     def __getstate__(self):
         """
         Return the state of the SeamlessM4TTokenizer object.
-        
+
         Args:
             self (SeamlessM4TTokenizer): The instance of the SeamlessM4TTokenizer class.
-        
+
         Returns:
             dict: A dictionary containing the current state of the object, with the following keys:
-                - '__dict__': A dictionary containing the object's instance variables.
-                - 'sp_model': The value of the 'sp_model' instance variable set to None.
-                - 'sp_model_proto': The serialized model proto of the 'sp_model' instance variable.
-        
+                >   - '__dict__': A dictionary containing the object's instance variables.
+                >   - 'sp_model': The value of the 'sp_model' instance variable set to None.
+                >   - 'sp_model_proto': The serialized model proto of the 'sp_model' instance variable.
+
         Raises:
             None.
         """
@@ -241,14 +240,14 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
     def __setstate__(self, d):
         """
         Method to set the state of the SeamlessM4TTokenizer instance.
-        
+
         Args:
             self (SeamlessM4TTokenizer): The instance of the SeamlessM4TTokenizer class.
             d (dict): A dictionary containing the state information to be set on the instance.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             No specific exceptions are raised within this method.
         """
@@ -265,13 +264,13 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
     def vocab_size(self):
         """
         This method returns the size of the vocabulary used by the SeamlessM4TTokenizer.
-        
+
         Args:
             self: An instance of the SeamlessM4TTokenizer class.
-        
+
         Returns:
             int: The size of the vocabulary used by the SeamlessM4TTokenizer.
-        
+
         Raises:
             This method does not raise any exceptions.
         """
@@ -312,13 +311,12 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
             padding (`bool`, `str` or [`~utils.PaddingStrategy`], *optional*, defaults to `True`):
                  Select a strategy to pad the returned sequences (according to the model's padding side and padding
                  index) among:
-
-                - `True` or `'longest'`: Pad to the longest sequence in the batch (or no padding if only a single
-                  sequence if provided).
-                - `'max_length'`: Pad to a maximum length specified with the argument `max_length` or to the maximum
-                  acceptable input length for the model if that argument is not provided.
-                - `False` or `'do_not_pad'` (default): No padding (i.e., can output a batch with sequences of different
-                  lengths).
+                >   - `True` or `'longest'`: Pad to the longest sequence in the batch (or no padding if only a single
+                    sequence if provided).
+                >   - `'max_length'`: Pad to a maximum length specified with the argument `max_length` or to the maximum
+                    acceptable input length for the model if that argument is not provided.
+                >   - `False` or `'do_not_pad'` (default): No padding (i.e., can output a batch with sequences of different
+                    lengths).
             pad_to_multiple_of (`int`, *optional*):
                 If set will pad the sequence to a multiple of the provided value.
 
@@ -355,26 +353,27 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
     def src_lang(self) -> str:
         """
         Returns the source language of the SeamlessM4TTokenizer instance.
-        
+
         Args:
             self (SeamlessM4TTokenizer): The instance of the SeamlessM4TTokenizer class.
-        
+
         Returns:
             str: The source language of the tokenized text.
-        
+
         Raises:
             None.
-        
-        This property method returns the source language of the tokenized text. The source language refers to the language in which the original text was written. 
-        
+
+        This property method returns the source language of the tokenized text. The source language refers to the language in which the original text was written.
+
         Note:
             The source language is stored internally as a private attribute '_src_lang'. This method retrieves the value of '_src_lang' and returns it as a string.
-        
+
         Example:
+            ```python
             >>> tokenizer = SeamlessM4TTokenizer()
             >>> tokenizer.src_lang
             'en'
-        
+            ```
         In the example above, the 'src_lang' property method is called on an instance of the SeamlessM4TTokenizer class, returning the source language 'en'.
         """
         return self._src_lang
@@ -383,14 +382,14 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
     def src_lang(self, new_src_lang: str) -> None:
         """
         Sets the source language for the SeamlessM4TTokenizer instance.
-        
+
         Args:
             self (SeamlessM4TTokenizer): The current instance of the SeamlessM4TTokenizer class.
             new_src_lang (str): The new source language to be set. It should be a string representing the language code.
-        
+
         Returns:
             None. This method updates the source language attribute of the instance.
-        
+
         Raises:
             None.
         """
@@ -404,16 +403,16 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
     def tgt_lang(self) -> str:
         """
         Returns the target language of the SeamlessM4TTokenizer instance.
-        
+
         Args:
             self: An instance of the SeamlessM4TTokenizer class.
-        
+
         Returns:
             str: The target language of the tokenizer. It represents the language into which the input text will be translated.
-        
+
         Raises:
             None.
-        
+
         """
         return self._tgt_lang
 
@@ -421,16 +420,16 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
     def tgt_lang(self, new_tgt_lang: str) -> None:
         """
         Set the target language for the SeamlessM4TTokenizer.
-        
+
         Args:
             self: The instance of the SeamlessM4TTokenizer class.
             new_tgt_lang (str): The new target language to set. It should be a string representing the target language code.
                 If the target language does not contain '__' (double underscore), it will be prefixed and suffixed with '__'
                 to indicate that it is a special token. Otherwise, the target language will be set as is.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             None. This method does not raise any exceptions.
         """
@@ -477,9 +476,8 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
         """
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. An NLLB sequence has the following format, where `X` represents the sequence:
-
-        - `input_ids` (for encoder) `X [eos, src_lang_code]`
-        - `decoder_input_ids`: (for decoder) `X [eos, tgt_lang_code]`
+        >   - `input_ids` (for encoder) `X [eos, src_lang_code]`
+        >   - `decoder_input_ids`: (for decoder) `X [eos, tgt_lang_code]`
 
         BOS is never used. Pairs of sequences are not the expected use case, but they will be handled without a
         separator.
@@ -540,18 +538,18 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
     def get_vocab(self):
         """
         Method: get_vocab
-        
+
         Description:
         This method returns the vocabulary for the SeamlessM4TTokenizer instance.
-        
+
         Args:
-        - self: The instance of the SeamlessM4TTokenizer class.
-        
+            self: The instance of the SeamlessM4TTokenizer class.
+
         Returns:
-        - vocab: A dictionary containing the vocabulary, where the keys are tokens and the values are their corresponding IDs.
-        
+            vocab: A dictionary containing the vocabulary, where the keys are tokens and the values are their corresponding IDs.
+
         Raises:
-        This method does not raise any exceptions.
+            This method does not raise any exceptions.
         """
         vocab = {
             self.convert_ids_to_tokens(i): i for i in range(self.fairseq_offset, self.vocab_size + self.fairseq_offset)
@@ -563,26 +561,28 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
     def unk_token_length(self):
         """
         Returns the length of the unknown token.
-        
+
         Args:
             self (SeamlessM4TTokenizer): An instance of the SeamlessM4TTokenizer class.
-            
+
         Returns:
             int: The length of the unknown token.
-            
+
         Raises:
             None.
-        
+
         This method calculates and returns the length of the unknown token present in the SeamlessM4TTokenizer instance. The unknown token is obtained by encoding the string representation of the 'unk_token'
-attribute using the 'sp_model' encoding method. The length of the resulting encoded token is then returned as an integer value.
-        
+        attribute using the 'sp_model' encoding method. The length of the resulting encoded token is then returned as an integer value.
+
         Note that this method takes no additional parameters besides the mandatory 'self' parameter, which represents the instance of the SeamlessM4TTokenizer class on which the method is called.
-        
+
         Example:
+            ```python
             >>> tokenizer = SeamlessM4TTokenizer()
             >>> tokenizer.unk_token = "unknown"
             >>> tokenizer.unk_token_length()
             7
+            ```
         """
         return len(self.sp_model.encode(str(self.unk_token)))
 
@@ -695,11 +695,13 @@ attribute using the 'sp_model' encoding method. The length of the resulting enco
             - If the self.vocab_file is not an existing file, the vocabulary will be saved directly to the specified directory.
         
         Example:
-            tokenizer = SeamlessM4TTokenizer()
-            save_directory = '/path/to/save_directory'
-            filename_prefix = 'my_vocab'
-            saved_file = tokenizer.save_vocabulary(save_directory, filename_prefix)
-            print(saved_file)  # Output: ('/path/to/save_directory/my_vocab-vocab.txt',)
+            ```python
+            >>> tokenizer = SeamlessM4TTokenizer()
+            >>> save_directory = '/path/to/save_directory'
+            >>> filename_prefix = 'my_vocab'
+            >>> saved_file = tokenizer.save_vocabulary(save_directory, filename_prefix)
+            >>> print(saved_file)  # Output: ('/path/to/save_directory/my_vocab-vocab.txt',)
+            ```
         """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
@@ -772,8 +774,10 @@ attribute using the 'sp_model' encoding method. The length of the resulting enco
             parameter to the set_src_lang_special_tokens method to configure the special tokens specific to the source language.
         
         Example:
-            tokenizer = SeamlessM4TTokenizer()
-            tokenizer._switch_to_input_mode()
+            ```python
+            >>> tokenizer = SeamlessM4TTokenizer()
+            >>> tokenizer._switch_to_input_mode()
+            ```
         """
         return self.set_src_lang_special_tokens(self.src_lang)
 

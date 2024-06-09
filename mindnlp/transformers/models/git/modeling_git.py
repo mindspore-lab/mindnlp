@@ -53,16 +53,15 @@ class GitVisionModelOutput(ModelOutput):
         last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
             Sequence of hidden-states at the output of the last layer of the model.
         hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `mindspore.Tensor` (one for the output of the embeddings, if the model has an embedding layer, +
-            one for the output of each layer) of shape `(batch_size, sequence_length, hidden_size)`.
+            >- Tuple of `mindspore.Tensor` (one for the output of the embeddings, if the model has an embedding layer, +
+                one for the output of each layer) of shape `(batch_size, sequence_length, hidden_size)`.
 
-            Hidden-states of the model at the output of each layer plus the optional initial embedding outputs.
+            >- Hidden-states of the model at the output of each layer plus the optional initial embedding outputs.
         attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
-            sequence_length)`.
-
-            Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
-            heads.
+            >- Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+                sequence_length)`.
+            >- Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
+                heads.
     """
 
     image_embeds: Optional[mindspore.Tensor] = None
@@ -753,18 +752,14 @@ class GitVisionEncoder(nn.Cell):
                 This is useful if you want more control over how to convert `input_ids` indices into associated vectors
                 than the model's internal embedding lookup matrix.
             attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
-
+                >- Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
                 [What are attention masks?](../glossary#attention-mask)
             causal_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Causal mask for the text model. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
-
+                >- Causal mask for the text model. Mask values selected in `[0, 1]`:
+                >   - 1 for tokens that are **not masked**,
+                >   - 0 for tokens that are **masked**.
                 [What are attention masks?](../glossary#attention-mask)
             output_attentions (`bool`, *optional*):
                 Whether or not to return the attentions tensors of all attention layers. See `attentions` under
@@ -840,7 +835,7 @@ class GitVisionTransformer(nn.Cell):
     ) -> Union[Tuple, BaseModelOutput]:
         r"""
         Returns:
-
+            `Union[Tuple, BaseModelOutput]`
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -898,25 +893,26 @@ class GitVisionModel(GitPreTrainedModel):
     ) -> Union[Tuple, BaseModelOutput]:
         r"""
         Returns:
+            `Union[Tuple, BaseModelOutput]`
 
         Examples:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, GitVisionModel
 
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, GitVisionModel
+            >>> processor = AutoProcessor.from_pretrained("microsoft/git-base")
+            >>> model = GitVisionModel.from_pretrained("microsoft/git-base")
 
-        >>> processor = AutoProcessor.from_pretrained("microsoft/git-base")
-        >>> model = GitVisionModel.from_pretrained("microsoft/git-base")
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> inputs = processor(images=image, return_tensors="pt")
 
-        >>> inputs = processor(images=image, return_tensors="pt")
-
-        >>> outputs = model(**inputs)
-        >>> last_hidden_state = outputs.last_hidden_state
-        ```"""
+            >>> outputs = model(**inputs)
+            >>> last_hidden_state = outputs.last_hidden_state
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         return self.vision_model(
@@ -1050,37 +1046,37 @@ class GitModel(GitPreTrainedModel):
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPooling]:
         r"""
         past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
-            Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
-
-            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+            >- Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
+            >- If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
+                don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
+                `decoder_input_ids` of shape `(batch_size, sequence_length)`.
         use_cache (`bool`, *optional*):
             If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
             `past_key_values`).
 
         Returns:
+            `Union[Tuple[mindspore.Tensor], BaseModelOutputWithPooling]`
 
         Examples:
+            ```python
+            >>> from transformers import AutoProcessor, AutoModel
+            >>> import requests
+            >>> from PIL import Image
 
-        ```python
-        >>> from transformers import AutoProcessor, AutoModel
-        >>> import requests
-        >>> from PIL import Image
+            >>> processor = AutoProcessor.from_pretrained("microsoft/git-base")
+            >>> model = AutoModel.from_pretrained("microsoft/git-base")
 
-        >>> processor = AutoProcessor.from_pretrained("microsoft/git-base")
-        >>> model = AutoModel.from_pretrained("microsoft/git-base")
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> text = "this is an image of two cats"
 
-        >>> text = "this is an image of two cats"
+            >>> inputs = processor(text, images=image, return_tensors="pt")
 
-        >>> inputs = processor(text, images=image, return_tensors="pt")
-
-        >>> outputs = model(**inputs)
-        >>> last_hidden_state = outputs.last_hidden_state
-        ```"""
+            >>> outputs = model(**inputs)
+            >>> last_hidden_state = outputs.last_hidden_state
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1249,131 +1245,130 @@ class GitForCausalLM(GitPreTrainedModel):
             `past_key_values`).
 
         Returns:
+            `Union[Tuple[mindspore.Tensor], CausalLMOutputWithPast]`
 
         Examples:
+            Image captioning example:
+            ```python
+            >>> from transformers import AutoProcessor, AutoModelForCausalLM
+            >>> import requests
+            >>> from PIL import Image
 
-        Image captioning example:
+            >>> processor = AutoProcessor.from_pretrained("microsoft/git-base-coco")
+            >>> model = AutoModelForCausalLM.from_pretrained("microsoft/git-base-coco")
 
-        ```python
-        >>> from transformers import AutoProcessor, AutoModelForCausalLM
-        >>> import requests
-        >>> from PIL import Image
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> processor = AutoProcessor.from_pretrained("microsoft/git-base-coco")
-        >>> model = AutoModelForCausalLM.from_pretrained("microsoft/git-base-coco")
+            >>> pixel_values = processor(images=image, return_tensors="pt").pixel_values
 
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> generated_ids = model.generate(pixel_values=pixel_values, max_length=50)
+            >>> generated_caption = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+            >>> print(generated_caption)
+            two cats sleeping on a pink blanket next to remotes.
+            ```
 
-        >>> pixel_values = processor(images=image, return_tensors="pt").pixel_values
+            Visual question answering (VQA) example:
 
-        >>> generated_ids = model.generate(pixel_values=pixel_values, max_length=50)
-        >>> generated_caption = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-        >>> print(generated_caption)
-        two cats sleeping on a pink blanket next to remotes.
-        ```
+            ```python
+            >>> from transformers import AutoProcessor, AutoModelForCausalLM
+            >>> from huggingface_hub import hf_hub_download
+            >>> from PIL import Image
 
-        Visual question answering (VQA) example:
+            >>> processor = AutoProcessor.from_pretrained("microsoft/git-base-textvqa")
+            >>> model = AutoModelForCausalLM.from_pretrained("microsoft/git-base-textvqa")
 
-        ```python
-        >>> from transformers import AutoProcessor, AutoModelForCausalLM
-        >>> from huggingface_hub import hf_hub_download
-        >>> from PIL import Image
+            >>> file_path = hf_hub_download(repo_id="nielsr/textvqa-sample", filename="bus.png", repo_type="dataset")
+            >>> image = Image.open(file_path).convert("RGB")
 
-        >>> processor = AutoProcessor.from_pretrained("microsoft/git-base-textvqa")
-        >>> model = AutoModelForCausalLM.from_pretrained("microsoft/git-base-textvqa")
+            >>> pixel_values = processor(images=image, return_tensors="pt").pixel_values
 
-        >>> file_path = hf_hub_download(repo_id="nielsr/textvqa-sample", filename="bus.png", repo_type="dataset")
-        >>> image = Image.open(file_path).convert("RGB")
+            >>> question = "what does the front of the bus say at the top?"
 
-        >>> pixel_values = processor(images=image, return_tensors="pt").pixel_values
+            >>> input_ids = processor(text=question, add_special_tokens=False).input_ids
+            >>> input_ids = [processor.tokenizer.cls_token_id] + input_ids
+            >>> input_ids = mindspore.Tensor(input_ids).unsqueeze(0)
 
-        >>> question = "what does the front of the bus say at the top?"
+            >>> generated_ids = model.generate(pixel_values=pixel_values, input_ids=input_ids, max_length=50)
+            >>> print(processor.batch_decode(generated_ids, skip_special_tokens=True))
+            ['what does the front of the bus say at the top? special']
+            ```
 
-        >>> input_ids = processor(text=question, add_special_tokens=False).input_ids
-        >>> input_ids = [processor.tokenizer.cls_token_id] + input_ids
-        >>> input_ids = mindspore.Tensor(input_ids).unsqueeze(0)
+            Video captioning example:
 
-        >>> generated_ids = model.generate(pixel_values=pixel_values, input_ids=input_ids, max_length=50)
-        >>> print(processor.batch_decode(generated_ids, skip_special_tokens=True))
-        ['what does the front of the bus say at the top? special']
-        ```
+            ```python
+            >>> import av
+            >>> import numpy as np
+            >>> from PIL import Image
+            >>> from huggingface_hub import hf_hub_download
+            >>> from transformers import AutoProcessor, AutoModelForCausalLM
 
-        Video captioning example:
+            >>> processor = AutoProcessor.from_pretrained("microsoft/git-base-vatex")
+            >>> model = AutoModelForCausalLM.from_pretrained("microsoft/git-base-vatex")
 
-        ```python
-        >>> import av
-        >>> import numpy as np
-        >>> from PIL import Image
-        >>> from huggingface_hub import hf_hub_download
-        >>> from transformers import AutoProcessor, AutoModelForCausalLM
-
-        >>> processor = AutoProcessor.from_pretrained("microsoft/git-base-vatex")
-        >>> model = AutoModelForCausalLM.from_pretrained("microsoft/git-base-vatex")
-
-        >>> # set seed for reproducability
-        >>> np.random.seed(45)
+            >>> # set seed for reproducability
+            >>> np.random.seed(45)
 
 
-        >>> def read_video_pyav(container, indices):
-        ...     '''
-        ...     Decode the video with PyAV decoder.
-        ...     Args:
-        ...         container (`av.container.input.InputContainer`): PyAV container.
-        ...         indices (`List[int]`): List of frame indices to decode.
-        ...     Returns:
-        ...         result (np.ndarray): np array of decoded frames of shape (num_frames, height, width, 3).
-        ...     '''
-        ...     frames = []
-        ...     container.seek(0)
-        ...     start_index = indices[0]
-        ...     end_index = indices[-1]
-        ...     for i, frame in enumerate(container.decode(video=0)):
-        ...         if i > end_index:
-        ...             break
-        ...         if i >= start_index and i in indices:
-        ...             frames.append(frame)
-        ...     return np.stack([x.to_ndarray(format="rgb24") for x in frames])
+            >>> def read_video_pyav(container, indices):
+            ...     '''
+            ...     Decode the video with PyAV decoder.
+            ...     Args:
+            ...         container (`av.container.input.InputContainer`): PyAV container.
+            ...         indices (`List[int]`): List of frame indices to decode.
+            ...     Returns:
+            ...         result (np.ndarray): np array of decoded frames of shape (num_frames, height, width, 3).
+            ...     '''
+            ...     frames = []
+            ...     container.seek(0)
+            ...     start_index = indices[0]
+            ...     end_index = indices[-1]
+            ...     for i, frame in enumerate(container.decode(video=0)):
+            ...         if i > end_index:
+            ...             break
+            ...         if i >= start_index and i in indices:
+            ...             frames.append(frame)
+            ...     return np.stack([x.to_ndarray(format="rgb24") for x in frames])
 
 
-        >>> def sample_frame_indices(clip_len, frame_sample_rate, seg_len):
-        ...     '''
-        ...     Sample a given number of frame indices from the video.
-        ...     Args:
-        ...         clip_len (`int`): Total number of frames to sample.
-        ...         frame_sample_rate (`int`): Sample every n-th frame.
-        ...         seg_len (`int`): Maximum allowed index of sample's last frame.
-        ...     Returns:
-        ...         indices (`List[int]`): List of sampled frame indices
-        ...     '''
-        ...     converted_len = int(clip_len * frame_sample_rate)
-        ...     end_idx = np.random.randint(converted_len, seg_len)
-        ...     start_idx = end_idx - converted_len
-        ...     indices = np.linspace(start_idx, end_idx, num=clip_len)
-        ...     indices = np.clip(indices, start_idx, end_idx - 1).astype(np.int64)
-        ...     return indices
+            >>> def sample_frame_indices(clip_len, frame_sample_rate, seg_len):
+            ...     '''
+            ...     Sample a given number of frame indices from the video.
+            ...     Args:
+            ...         clip_len (`int`): Total number of frames to sample.
+            ...         frame_sample_rate (`int`): Sample every n-th frame.
+            ...         seg_len (`int`): Maximum allowed index of sample's last frame.
+            ...     Returns:
+            ...         indices (`List[int]`): List of sampled frame indices
+            ...     '''
+            ...     converted_len = int(clip_len * frame_sample_rate)
+            ...     end_idx = np.random.randint(converted_len, seg_len)
+            ...     start_idx = end_idx - converted_len
+            ...     indices = np.linspace(start_idx, end_idx, num=clip_len)
+            ...     indices = np.clip(indices, start_idx, end_idx - 1).astype(np.int64)
+            ...     return indices
 
 
-        >>> # load video
-        >>> file_path = hf_hub_download(
-        ...     repo_id="nielsr/video-demo", filename="eating_spaghetti.mp4", repo_type="dataset"
-        ... )
-        >>> container = av.open(file_path)
+            >>> # load video
+            >>> file_path = hf_hub_download(
+            ...     repo_id="nielsr/video-demo", filename="eating_spaghetti.mp4", repo_type="dataset"
+            ... )
+            >>> container = av.open(file_path)
 
-        >>> # sample frames
-        >>> num_frames = model.config.num_image_with_embedding
-        >>> indices = sample_frame_indices(
-        ...     clip_len=num_frames, frame_sample_rate=4, seg_len=container.streams.video[0].frames
-        ... )
-        >>> frames = read_video_pyav(container, indices)
+            >>> # sample frames
+            >>> num_frames = model.config.num_image_with_embedding
+            >>> indices = sample_frame_indices(
+            ...     clip_len=num_frames, frame_sample_rate=4, seg_len=container.streams.video[0].frames
+            ... )
+            >>> frames = read_video_pyav(container, indices)
 
-        >>> pixel_values = processor(images=list(frames), return_tensors="pt").pixel_values
+            >>> pixel_values = processor(images=list(frames), return_tensors="pt").pixel_values
 
-        >>> generated_ids = model.generate(pixel_values=pixel_values, max_length=50)
+            >>> generated_ids = model.generate(pixel_values=pixel_values, max_length=50)
 
-        >>> print("Generated caption:", processor.batch_decode(generated_ids, skip_special_tokens=True))
-        Generated caption: ['a woman is sitting at a table and she is talking about the food she is holding.']
-        ```
+            >>> print("Generated caption:", processor.batch_decode(generated_ids, skip_special_tokens=True))
+            Generated caption: ['a woman is sitting at a table and she is talking about the food she is holding.']
+            ```
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if labels is not None:

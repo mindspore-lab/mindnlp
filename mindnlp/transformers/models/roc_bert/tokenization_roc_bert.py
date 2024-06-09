@@ -75,10 +75,11 @@ def whitespace_tokenize(text):
 
 class RoCBertTokenizer(PreTrainedTokenizer):
     r"""
-    Args:
     Construct a RoCBert tokenizer. Based on WordPiece. This tokenizer inherits from [`PreTrainedTokenizer`] which
     contains most of the main methods. Users should refer to this superclass for more information regarding those
     methods.
+
+    Args:
         vocab_file (`str`):
             File containing the vocabulary.
         word_shape_file (`str`):
@@ -869,8 +870,8 @@ class RoCBertTokenizer(PreTrainedTokenizer):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A BERT sequence has the following format:
 
-        - single sequence: `[CLS] X [SEP]`
-        - pair of sequences: `[CLS] A [SEP] B [SEP]`
+        >- single sequence: `[CLS] X [SEP]`
+        >- pair of sequences: `[CLS] A [SEP] B [SEP]`
 
         Args:
             token_ids_0 (`List[int]`):

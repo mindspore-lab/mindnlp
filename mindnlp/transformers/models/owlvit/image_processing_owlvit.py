@@ -277,15 +277,15 @@ class OwlViTImageProcessor(BaseImageProcessor):
             rescale_factor (`float`):
                 The value to use for rescaling.
             data_format (`str` or `ChannelDimension`, *optional*):
-                The channel dimension format for the output image. If unset, the channel dimension format of the input
-                image is used. Can be one of:
-                - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+                >- The channel dimension format for the output image. If unset, the channel dimension format of the input
+                    image is used. Can be one of:
+                >   - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
+                >   - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
             input_data_format (`str` or `ChannelDimension`, *optional*):
-                The channel dimension format for the input image. If unset, is inferred from the input image. Can be
-                one of:
-                - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+                >- The channel dimension format for the input image. If unset, is inferred from the input image. Can be
+                    one of:
+                >   - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
+                >   - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
         """
         return rescale(image, rescale_factor, data_format=data_format, input_data_format=input_data_format)
 
@@ -341,23 +341,23 @@ class OwlViTImageProcessor(BaseImageProcessor):
                 The standard deviation to divide the input by when normalizing. Only has an effect if `do_normalize` is
                 set to `True`.
             return_tensors (`str` or `TensorType`, *optional*):
-                The type of tensors to return. Can be one of:
-                - Unset: Return a list of `np.ndarray`.
-                - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
-                - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `torch.Tensor`.
-                - `TensorType.NUMPY` or `'np'`: Return a batch of type `np.ndarray`.
-                - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
+                >- The type of tensors to return. Can be one of:
+                >   - Unset: Return a list of `np.ndarray`.
+                >   - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
+                >   - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `torch.Tensor`.
+                >   - `TensorType.NUMPY` or `'np'`: Return a batch of type `np.ndarray`.
+                >   - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
             data_format (`ChannelDimension` or `str`, *optional*, defaults to `ChannelDimension.FIRST`):
-                The channel dimension format for the output image. Can be one of:
-                - `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                - `ChannelDimension.LAST`: image in (height, width, num_channels) format.
-                - Unset: defaults to the channel dimension format of the input image.
+                >- The channel dimension format for the output image. Can be one of:
+                >   - `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
+                >   - `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+                >   - Unset: defaults to the channel dimension format of the input image.
             input_data_format (`ChannelDimension` or `str`, *optional*):
-                The channel dimension format for the input image. If unset, the channel dimension format is inferred
-                from the input image. Can be one of:
-                - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
-                - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
+                >- The channel dimension format for the input image. If unset, the channel dimension format is inferred
+                    from the input image. Can be one of:
+                >   - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
+                >   - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+                >   - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
         """
         do_resize = do_resize if do_resize is not None else self.do_resize
         size = size if size is not None else self.size

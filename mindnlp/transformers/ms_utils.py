@@ -43,7 +43,7 @@ class Conv1D(nn.Cell):
             n_in (int): The number of input channels for the convolution operation.
         
         Returns:
-            None. This method initializes the Conv1D object with the provided parameters.
+            None: This method initializes the Conv1D object with the provided parameters.
         
         Raises:
             None.
@@ -64,11 +64,11 @@ class Conv1D(nn.Cell):
                 Should have a shape of (batch_size, sequence_length, input_channels).
                 
         Returns:
-            None. The method modifies the input tensor x in place by performing the convolution operation.
+            None: The method modifies the input tensor x in place by performing the convolution operation.
         
         Raises:
-            - ValueError: If the shape of the input tensor x is not as expected for a 1D convolution operation.
-            - RuntimeError: If there are any runtime issues during the convolution operation.
+            ValueError: If the shape of the input tensor x is not as expected for a 1D convolution operation.
+            RuntimeError: If there are any runtime issues during the convolution operation.
         """
         size_out = x.shape[:-1] + (self.n_out,)
         x = self.matmul(x.view(-1, x.shape[-1]), self.weight) + self.bias
