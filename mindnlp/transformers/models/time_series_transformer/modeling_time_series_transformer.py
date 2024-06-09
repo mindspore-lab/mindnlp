@@ -240,6 +240,7 @@ class TimeSeriesSinusoidalPositionalEmbedding(nn.Embedding):
         Identical to the XLM create_sinusoidal_embeddings except features are not interleaved. The cos features are in
         the 2nd half of the vector. [dim // 2:]
         """
+        np_out = out.asnumpy()
         n_pos, dim = out.shape
         position_enc = np.array(
             [[pos / np.power(10000, 2 * (j // 2) / dim)
@@ -247,8 +248,9 @@ class TimeSeriesSinusoidalPositionalEmbedding(nn.Embedding):
         )
         out.requires_grad = False  # set early to avoid an error in pytorch-1.8+
         sentinel = dim // 2 if dim % 2 == 0 else (dim // 2) + 1
-        out[:, 0:sentinel] = mindspore.Tensor(np.sin(position_enc[:, 0::2]))
-        out[:, sentinel:] = mindspore.Tensor(np.cos(position_enc[:, 1::2]))
+        np_out[:, 0:sentinel] = mindspore.Tensor(np.sin(position_enc[:, 0::2]))
+        np_out[:, sentinel:] = mindspore.Tensor(np.cos(position_enc[:, 1::2]))
+        out.set_data(mindspore.Tensor(np_out, out.dtype))
         return out
 
     def construct(self, input_ids_shape, past_key_values_length: int = 0) -> mindspore.Tensor:
@@ -642,19 +644,24 @@ class TimeSeriesTransformerPreTrainedModel(PreTrainedModel):
         std = self.config.init_std
         if isinstance(cell, nn.Dense):
             cell.weight.set_data(initializer(
-                Normal(std), cell.weight.shape, cell.weight.dtype))
+                Normal(sigma=std, mean=0), cell.weight.shape, cell.weight.dtype))
             if cell.has_bias:
                 cell.bias.set_data(initializer(
                     'zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, TimeSeriesSinusoidalPositionalEmbedding):
             pass
         elif isinstance(cell, nn.Embedding):
-            cell.weight.set_data(initializer(
-                Normal(std), cell.weight.shape, cell.weight.dtype))
+            # cell.weight.set_data(initializer(
+            #     Normal(std), cell.weight.shape, cell.weight.dtype))
 
+            # if cell.padding_idx:
+            #     cell.weight[cell.padding_idx] = initializer(
+            #         "zeros", cell.weight[cell.padding_idx].shape, cell.weight.dtype)
+            weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
             if cell.padding_idx:
-                cell.weight[cell.padding_idx] = initializer(
-                    "zeros", cell.weight[cell.padding_idx].shape, cell.weight.dtype)
+                weight[cell.padding_idx] = 0
+
+            cell.weight.set_data(mindspore.Tensor(weight, cell.weight.dtype))
 
 
 TIME_SERIES_TRANSFORMER_START_DOCSTRING = r"""
