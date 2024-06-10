@@ -21,7 +21,7 @@ import os
 from collections import OrderedDict
 from typing import Dict, Optional, Union
 
-from mindnlp.utils import cached_file, is_sentencepiece_available, is_tokenizers_available, logging
+from mindnlp.utils import cached_file, is_sentencepiece_available, is_tokenizers_available, is_g2p_en_available, logging
 from ...configuration_utils import PretrainedConfig, EncoderDecoderConfig
 from ...tokenization_utils import PreTrainedTokenizer
 from ...tokenization_utils_base import TOKENIZER_CONFIG_FILE
@@ -164,6 +164,10 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         ("ernie_m", ("ErnieMTokenizer" if is_sentencepiece_available() else None, None)),
         ("esm", ("EsmTokenizer", None)),
         ("falcon", (None, "PreTrainedTokenizerFast" if is_tokenizers_available() else None)),
+        (
+            "fastspeech2_conformer",
+            ("FastSpeech2ConformerTokenizer" if is_g2p_en_available() else None, None),
+        ),
         ("flaubert", ("FlaubertTokenizer", None)),
         ("fnet", ("FNetTokenizer", "FNetTokenizerFast" if is_tokenizers_available() else None)),
         ("fsmt", ("FSMTTokenizer", None)),

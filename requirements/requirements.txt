@@ -24,3 +24,4 @@ pyctcdecode
 pytesseract
 gensim
 evaluate
+g2p-en
