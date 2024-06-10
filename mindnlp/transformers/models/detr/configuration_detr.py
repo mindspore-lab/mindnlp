@@ -15,7 +15,6 @@
 """DETR model configuration"""
 
 from mindnlp.utils import logging
-from mindnlp.transformers.backbone_utils import verify_backbone_config_arguments
 from ...configuration_utils import PretrainedConfig
 from ..auto import CONFIG_MAPPING
 # from ...onnx import OnnxConfig
@@ -192,14 +191,6 @@ class DetrConfig(PretrainedConfig):
             backbone = None
             # set timm attributes to None
             dilation = None
-
-        verify_backbone_config_arguments(
-            use_timm_backbone=use_timm_backbone,
-            use_pretrained_backbone=use_pretrained_backbone,
-            backbone=backbone,
-            backbone_config=backbone_config,
-            backbone_kwargs=backbone_kwargs,
-        )
 
         self.use_timm_backbone = use_timm_backbone
         self.backbone_config = backbone_config
