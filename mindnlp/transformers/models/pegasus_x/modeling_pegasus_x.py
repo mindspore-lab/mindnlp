@@ -108,7 +108,7 @@ class PegasusXSinusoidalPositionalEmbedding(nn.Cell):
         positions = ops.arange(
             past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
         )[:, None]
-        pe = ops.zeros((seq_len, self.embed_dim),  dtype=input_embeds.dtype)
+        pe = ops.zeros((seq_len, self.embed_dim), dtype=input_embeds.dtype)
         half_d_feature = self.embed_dim // 2
         div_term = ops.exp(
             ops.arange(half_d_feature, dtype=mindspore.int64).type_as(input_embeds)
@@ -941,13 +941,7 @@ class PegasusXEncoder(PegasusXPreTrainedModel):
         return self.embed_positions
 
     def construct(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        inputs_embeds=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
+        self,input_ids=None, attention_mask=None, inputs_embeds=None, output_attentions=None, output_hidden_states=None, return_dict=None,
     ):
         r"""
         Args:
