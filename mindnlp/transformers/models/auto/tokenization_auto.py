@@ -385,7 +385,6 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
                 "RemBertTokenizerFast" if is_tokenizers_available() else None,
             ),
         ),
-        ("retribert", ("RetriBertTokenizer", "RetriBertTokenizerFast" if is_tokenizers_available() else None)),
         ("roberta", ("RobertaTokenizer", "RobertaTokenizerFast" if is_tokenizers_available() else None)),
         (
             "roberta-prelayernorm",
