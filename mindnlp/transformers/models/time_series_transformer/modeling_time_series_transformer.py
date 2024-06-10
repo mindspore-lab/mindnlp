@@ -651,17 +651,17 @@ class TimeSeriesTransformerPreTrainedModel(PreTrainedModel):
         elif isinstance(cell, TimeSeriesSinusoidalPositionalEmbedding):
             pass
         elif isinstance(cell, nn.Embedding):
-            # cell.weight.set_data(initializer(
-            #     Normal(std), cell.weight.shape, cell.weight.dtype))
+            cell.weight.set_data(initializer(
+                Normal(sigma=std, mean=0), cell.weight.shape, cell.weight.dtype))
 
+            if cell.padding_idx is not None:
+                cell.weight[cell.padding_idx] = initializer(
+                    "zeros", cell.weight[cell.padding_idx].shape, cell.weight.dtype)
+            # weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
             # if cell.padding_idx:
-            #     cell.weight[cell.padding_idx] = initializer(
-            #         "zeros", cell.weight[cell.padding_idx].shape, cell.weight.dtype)
-            weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
+            #     weight[cell.padding_idx] = 0
 
-            cell.weight.set_data(mindspore.Tensor(weight, cell.weight.dtype))
+            # cell.weight.set_data(mindspore.Tensor(weight, cell.weight.dtype))
 
 
 TIME_SERIES_TRANSFORMER_START_DOCSTRING = r"""
@@ -1432,19 +1432,23 @@ class TimeSeriesTransformerModel(TimeSeriesTransformerPreTrainedModel):
                     encoder_outputs) > 2 else None,
             )
 
-        dec_input = transformer_inputs[:, self.config.context_length:, ...]
-        decoder_outputs = self.decoder(
-            inputs_embeds=dec_input,
-            attention_mask=decoder_attention_mask,
-            encoder_hidden_states=encoder_outputs[0],
-            head_mask=decoder_head_mask,
-            cross_attn_head_mask=cross_attn_head_mask,
-            past_key_values=past_key_values,
-            use_cache=use_cache,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
-        )
+        if future_values is not None:
+
+            dec_input = transformer_inputs[:, self.config.context_length:, ...]
+            decoder_outputs = self.decoder(
+                inputs_embeds=dec_input,
+                attention_mask=decoder_attention_mask,
+                encoder_hidden_states=encoder_outputs[0],
+                head_mask=decoder_head_mask,
+                cross_attn_head_mask=cross_attn_head_mask,
+                past_key_values=past_key_values,
+                use_cache=use_cache,
+                output_attentions=output_attentions,
+                output_hidden_states=output_hidden_states,
+                return_dict=return_dict,
+            )
+        else:
+            decoder_outputs = BaseModelOutputWithPastAndCrossAttentions()
 
         if not return_dict:
             return decoder_outputs + encoder_outputs + (loc, scale, static_feat)
