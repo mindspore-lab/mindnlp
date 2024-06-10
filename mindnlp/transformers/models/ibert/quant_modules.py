@@ -15,6 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Mindspore I-BERT quant modules."""
+
 import decimal
 
 import numpy as np
@@ -753,6 +755,12 @@ class FixedPointMul(nn.Cell):
     def __init__(self):
         super(FixedPointMul, self).__init__()
 
+    def lambda_1(self, x):
+        return x
+
+    def lambda_2(self, x):
+        return x.view(1, 1, -1)
+
     def construct(
         self,
         pre_act,
@@ -763,9 +771,9 @@ class FixedPointMul(nn.Cell):
         identity_scaling_factor=None,
     ):
         if len(pre_act_scaling_factor.shape) == 3:
-            reshape = lambda x: x  # noqa: E731
+            reshape = self.lambda_1
         else:
-            reshape = lambda x: x.view(1, 1, -1)  # noqa: E731
+            reshape = self.lambda_2
 
         n = 2 ** (bit_num - 1) - 1
 

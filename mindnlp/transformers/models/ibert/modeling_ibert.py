@@ -927,7 +927,7 @@ class IBertForSequenceClassification(IBertPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == ms.int64 or labels.dtype == ms.int32):
+                elif self.num_labels > 1 and (labels.dtype in (ms.int32, ms.int64)):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
