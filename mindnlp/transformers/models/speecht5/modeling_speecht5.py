@@ -625,7 +625,7 @@ class SpeechT5SpeechDecoderPrenet(nn.Cell):
         self.speaker_embeds_layer = nn.Dense(config.speaker_embedding_dim + config.hidden_size, config.hidden_size)
 
     def _consistent_dropout(self, inputs_embeds, p):
-        mask = ops.bernoulli(inputs_embeds[0], p=p)
+        mask = ops.bernoulli(inputs_embeds[0], p=p, seed=555)
         all_masks = mask.unsqueeze(0).tile((inputs_embeds.shape[0], 1, 1))
         return ops.where(all_masks == 1, inputs_embeds, 0) * 1 / (1 - p)
 
@@ -638,7 +638,7 @@ class SpeechT5SpeechDecoderPrenet(nn.Cell):
         inputs_embeds = input_values
         for layer in self.layers:
             inputs_embeds = ops.relu(layer(inputs_embeds))
-            # inputs_embeds = self._consistent_dropout(inputs_embeds, self.config.speech_decoder_prenet_dropout)
+            inputs_embeds = self._consistent_dropout(inputs_embeds, self.config.speech_decoder_prenet_dropout)
         inputs_embeds = self.final_layer(inputs_embeds)
         inputs_embeds = self.encode_positions(inputs_embeds)
         if speaker_embeddings is not None:
