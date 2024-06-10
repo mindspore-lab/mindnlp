@@ -186,12 +186,9 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         ("funnel", "FunnelForMaskedLM"),
         ("gpt_neox_japanese", "GPTNeoXJapaneseForCausalLM"),
         ("gpt_pangu", "GPTPanguForCausalLM"),
-<<<<<<< HEAD
         ("gptj", "GPTJForCausalLM"),
         ("led", "LEDForConditionalGeneration"),
-=======
         ("ibert", "IBertForMaskedLM"),
->>>>>>> da692ad (【昇腾AI创新大赛】ibert)
         ("mamba", "MambaForCausalLM"),
         ("marian", "MarianMTModel"),
         ("minicpm", "MiniCPMForCausalLM"),
