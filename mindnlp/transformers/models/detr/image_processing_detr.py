@@ -1417,8 +1417,9 @@ class DetrImageProcessor(BaseImageProcessor):
                 resized_images, resized_annotations = [], []
                 for image, target in zip(images, annotations):
                     orig_size = get_image_size(image, input_data_format)
-                    resized_image = self.resize(
-                        image, size=size, max_size=max_size, resample=resample, input_data_format=input_data_format
+                    resized_image = resize(
+                        # image, size=size, max_size=max_size, resample=resample, input_data_format=input_data_format
+                        image, size=size, resample=resample, input_data_format=input_data_format
                     )
                     resized_annotation = self.resize_annotation(
                         target, orig_size, get_image_size(resized_image, input_data_format)
@@ -1430,7 +1431,7 @@ class DetrImageProcessor(BaseImageProcessor):
                 del resized_images, resized_annotations
             else:
                 images = [
-                    self.resize(image, size=size, resample=resample, input_data_format=input_data_format)
+                    resize(image, size=size, resample=resample, input_data_format=input_data_format)
                     for image in images
                 ]
 
