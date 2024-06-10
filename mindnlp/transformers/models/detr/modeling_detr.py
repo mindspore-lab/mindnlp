@@ -21,7 +21,7 @@ from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 import mindspore as ms
 from mindspore import Tensor, nn, ops
-from mindspore.common.initializer import initializer, XavierUniform, Uniform, HeNormal
+from mindspore.common.initializer import initializer, XavierUniform, Uniform, Normal, HeNormal
 from mindnlp.transformers.backbone_utils import load_backbone
 
 from ...activations import ACT2FN
@@ -790,27 +790,24 @@ class DetrPreTrainedModel(PreTrainedModel):
         xavier_std = self.config.init_xavier_std
 
         if isinstance(cell, DetrMHAttentionMap):
-            cell.k_linear.bias = ms.Parameter(initializer('zeros', cell.k_linear.bias.shape, cell.k_linear.bias.dtype))
-            cell.q_linear.bias = ms.Parameter(initializer('zeros', cell.q_linear.bias.shape, cell.q_linear.bias.dtype))
-            cell.k_linear.weight = ms.Parameter(initializer(XavierUniform(), cell.k_linear.weight.shape, cell.k_linear.weight.dtype))
-            cell.q_linear.weight = ms.Parameter(initializer(XavierUniform(), cell.q_linear.weight.shape, cell.q_linear.weight.dtype))
+            cell.k_linear.bias.set_data(initializer('zeros', cell.k_linear.bias.shape, cell.k_linear.bias.dtype))
+            cell.q_linear.bias.set_data(initializer('zeros', cell.q_linear.bias.shape, cell.q_linear.bias.dtype))
+            cell.k_linear.weight.set_data(initializer(XavierUniform(xavier_std), cell.k_linear.weight.shape, cell.k_linear.weight.dtype))
+            cell.q_linear.weight.set_data(initializer(XavierUniform(xavier_std), cell.q_linear.weight.shape, cell.q_linear.weight.dtype))
         elif isinstance(cell, DetrLearnedPositionEmbedding):
-            k = math.sqrt(1 / cell.row_embeddings.in_channels)
-            cell.row_embeddings.weight = ms.Parameter(initializer(Uniform(k), cell.row_embeddings.weight.shape, cell.row_embeddings.weight.dtype))
-            cell.column_embeddings.weight = ms.Parameter(initializer(Uniform(k), cell.column_embeddings.weight.shape, cell.column_embeddings.weight.dtype))
+            cell.row_embeddings.weight.set_data(initializer(Uniform(), cell.row_embeddings.weight.shape, cell.row_embeddings.weight.dtype))
+            cell.column_embeddings.weight.set_data(initializer(Uniform(), cell.column_embeddings.weight.shape, cell.column_embeddings.weight.dtype))
         if isinstance(cell, (nn.Dense, nn.Conv2d, nn.BatchNorm2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            # breakpoint()
-            k = math.sqrt(1 / cell.weight.shape[0])
-            cell.weight = ms.Parameter(initializer(Uniform(k), cell.weight.shape, cell.weight.dtype))
+            cell.weight.set_data(initializer(Normal(sigma=std), cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias = ms.Parameter(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
-            k = math.sqrt(1 / cell.weight.shape[0])
-            cell.weight = ms.Parameter(initializer(Uniform(k), cell.weight.shape, cell.weight.dtype))
+            cell.weight.set_data(initializer(Normal(sigma=std), cell.weight.shape, cell.weight.dtype))
             if cell.padding_idx is not None:
-                cell.weight[cell.padding_idx] = ms.Parameter(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.weight[cell.padding_idx] = 0.0
+
 
 class DetrEncoder(DetrPreTrainedModel):
     """
@@ -1128,12 +1125,12 @@ class DetrModel(DetrPreTrainedModel):
         return self.decoder
 
     def freeze_backbone(self):
-        for name, param in self.backbone.conv_encoder.model.named_parameters():
-            param.requires_grad_(False)
+        for name, param in self.backbone.conv_encoder.model.parameters_and_names():
+            param.requires_grad = False
 
     def unfreeze_backbone(self):
-        for name, param in self.backbone.conv_encoder.model.named_parameters():
-            param.requires_grad_(True)
+        for name, param in self.backbone.conv_encoder.model.parameters_and_names():
+            param.requires_grad = True
 
     def construct(
         self,
