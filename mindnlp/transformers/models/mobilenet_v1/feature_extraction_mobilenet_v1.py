@@ -12,18 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================
-"""
-MobileVit Model init
-"""
-from . import configuration_mobilevit, feature_extraction_mobilevit, image_processing_mobilevit, modeling_mobilevit
 
-from .configuration_mobilevit import *
-from .feature_extraction_mobilevit import *
-from .image_processing_mobilevit import *
-from .modeling_mobilevit import *
+"""Feature extractor class for MobileNet_v1."""
 
-__all__ = []
-__all__.extend(configuration_mobilevit.__all__)
-__all__.extend(feature_extraction_mobilevit.__all__)
-__all__.extend(image_processing_mobilevit.__all__)
-__all__.extend(modeling_mobilevit.__all__)
+
+import warnings
+
+from ....utils import logging
+from .image_processing_mobilenet_v1 import MobileNetV1ImageProcessor
+
+
+logger = logging.get_logger(__name__)
+
+
+class MobileNetV1FeatureExtractor(MobileNetV1ImageProcessor):
+    def __init__(self, *args, **kwargs) -> None:
+        warnings.warn(
+            "The class MobileNetV1FeatureExtractor is deprecated."
+            " Please use MobileNetV1ImageProcessor instead.",
+            FutureWarning,
+        )
+        super().__init__(*args, **kwargs)
+
+__all__ = ["MobileNetV1FeatureExtractor"]
