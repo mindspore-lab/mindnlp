@@ -2258,3 +2258,30 @@ def nested_tensor_from_tensor_list(tensor_list: List[Tensor]):
     else:
         raise ValueError("Only 3-axisensional tensors are supported")
     return NestedTensor(tensor, mask)
+
+
+__all__ = [
+    "DetrDecoderOutput",
+    "DetrModelOutput",
+    "DetrObjectDetectionOutput",
+    "DetrSegmentationOutput",
+    "DetrFrozenBatchNorm2d",
+    "DetrConvEncoder",
+    "DetrConvModel",
+    "DetrSinePositionEmbedding",
+    "DetrLearnedPositionEmbedding",
+    "DetrAttention",
+    "DetrEncoderLayer",
+    "DetrDecoderLayer",
+    "DetrPreTrainedModel",
+    "DetrEncoder",
+    "DetrDecoder",
+    "DetrModel",
+    "DetrForSegmentation",
+    "DetrMaskHeadSmallConv",
+    "DetrMHAttentionMap",
+    "DetrLoss",
+    "DetrMLPPredictionHead",
+    "DetrHungarianMatcher"
+]
+
