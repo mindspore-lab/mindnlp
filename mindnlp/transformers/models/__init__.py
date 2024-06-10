@@ -88,6 +88,7 @@ from . import (
     graphormer,
     groupvit,
     hubert,
+    ibert,
     imagegpt,
     jetmoe,
     layoutlm,
@@ -233,6 +234,7 @@ from .gpt2 import *
 from .graphormer import *
 from .groupvit import *
 from .hubert import *
+from .ibert import *
 from .imagegpt import *
 from .jetmoe import *
 from .layoutlm import *
@@ -378,6 +380,7 @@ __all__.extend(gpt2.__all__)
 __all__.extend(graphormer.__all__)
 __all__.extend(groupvit.__all__)
 __all__.extend(hubert.__all__)
+__all__.extend(ibert.__all__)
 __all__.extend(imagegpt.__all__)
 __all__.extend(jetmoe.__all__)
 __all__.extend(layoutlm.__all__)
