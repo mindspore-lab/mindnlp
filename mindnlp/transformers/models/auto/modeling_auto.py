@@ -115,6 +115,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("sam", "SamModel"),
         ("segformer", "SegformerModel"),
         ("speech_to_text", "Speech2TextModel"),
+        ("speecht5", "SpeechT5Model"),
         ("stablelm", "StableLmModel"),
         ("squeezebert", "SqueezeBertModel"),
         ("starcoder2", "Starcoder2Model"),
