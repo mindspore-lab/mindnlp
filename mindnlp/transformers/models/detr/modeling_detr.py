@@ -331,8 +331,7 @@ class DetrConvEncoder(nn.Cell):
         backbone = load_backbone(config)
 
         # replace batch norm by frozen batch norm
-        with ops.no_grad():
-            replace_batch_norm(backbone)
+        replace_batch_norm(backbone)
         self.model = backbone
         self.intermediate_channel_sizes = (
             self.model.feature_info.channels() if config.use_timm_backbone else self.model.channels
@@ -1917,7 +1916,6 @@ class DetrLoss(nn.Cell):
 
         return losses
 
-    @mindspore.no_grad()
     def loss_cardinality(outputs, targets, indices, num_boxes):
         """
         Compute the cardinality error, i.e. the absolute error in the number of predicted non-empty boxes.
@@ -2106,7 +2104,6 @@ class DetrHungarianMatcher(nn.Cell):
         if class_cost == 0 and bbox_cost == 0 and giou_cost == 0:
             raise ValueError("All costs of the Matcher can't be 0")
 
-    # @torch.no_grad()
     def construct(self, outputs, targets):
         """
         Args:

@@ -277,8 +277,7 @@ class DetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
             config.return_dict = True
             model = model_class(config)
             model.eval()
-            with ops.no_grad():
-                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             attentions = outputs.encoder_attentions if config.is_encoder_decoder else outputs.attentions
             self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
 
@@ -287,8 +286,7 @@ class DetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
             config.output_attentions = True
             model = model_class(config)
             model.eval()
-            with ops.no_grad():
-                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             attentions = outputs.encoder_attentions if config.is_encoder_decoder else outputs.attentions
             self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
 
@@ -342,8 +340,7 @@ class DetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
             inputs_dict["output_hidden_states"] = True
             model = model_class(config)
             model.eval()
-            with ops.no_grad():
-                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
             if hasattr(self.model_tester, "num_hidden_states_types"):
                 added_hidden_states = self.model_tester.num_hidden_states_types
@@ -444,8 +441,7 @@ class DetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         for model_class in self.all_model_classes:
             model = model_class(config)
             model.eval()
-            with ops.no_grad():
-                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
             if model_class.__name__ == "DetrForObjectDetection":
                 expected_shape = (
@@ -478,8 +474,7 @@ class DetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         for model_class in self.all_model_classes:
             model = model_class(config)
             model.eval()
-            with ops.no_grad():
-                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
             if model_class.__name__ == "DetrForObjectDetection":
                 expected_shape = (
@@ -514,8 +509,7 @@ class DetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         for model_class in self.all_model_classes:
             model = model_class(config)
             model.eval()
-            with ops.no_grad():
-                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
             self.assertTrue(outputs)
 
@@ -566,8 +560,7 @@ class DetrModelIntegrationTestsTimmBackbone(unittest.TestCase):
         image = prepare_img()
         encoding = image_processor(images=image, return_tensors="pt")
 
-        with ops.no_grad():
-            outputs = model(**encoding)
+        outputs = model(**encoding)
 
         expected_shape = ops.Size((1, 100, 256))
         assert outputs.last_hidden_state.shape == expected_shape
@@ -585,8 +578,7 @@ class DetrModelIntegrationTestsTimmBackbone(unittest.TestCase):
         pixel_values = encoding["pixel_values"]
         pixel_mask = encoding["pixel_mask"]
 
-        with ops.no_grad():
-            outputs = model(pixel_values, pixel_mask)
+        outputs = model(pixel_values, pixel_mask)
 
         # verify outputs
         expected_shape_logits = ops.Size((1, model.config.num_queries, model.config.num_labels + 1))
@@ -625,8 +617,7 @@ class DetrModelIntegrationTestsTimmBackbone(unittest.TestCase):
         pixel_values = encoding["pixel_values"]
         pixel_mask = encoding["pixel_mask"]
 
-        with ops.no_grad():
-            outputs = model(pixel_values, pixel_mask)
+        outputs = model(pixel_values, pixel_mask)
 
         # verify outputs
         expected_shape_logits = ops.Size((1, model.config.num_queries, model.config.num_labels + 1))
@@ -689,8 +680,7 @@ class DetrModelIntegrationTests(unittest.TestCase):
         image = prepare_img()
         encoding = image_processor(images=image, return_tensors="pt")
 
-        with ops.no_grad():
-            outputs = model(**encoding)
+        outputs = model(**encoding)
 
         expected_shape = ops.Size((1, 100, 256))
         assert outputs.last_hidden_state.shape == expected_shape
