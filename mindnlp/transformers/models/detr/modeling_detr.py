@@ -2274,6 +2274,7 @@ __all__ = [
     "DetrEncoderLayer",
     "DetrDecoderLayer",
     "DetrPreTrainedModel",
+    "DetrForObjectDetection",
     "DetrEncoder",
     "DetrDecoder",
     "DetrModel",

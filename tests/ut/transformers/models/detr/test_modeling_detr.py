@@ -35,7 +35,7 @@ if is_mindspore_available():
 if is_vision_available():
     from PIL import Image
 
-    from transformers import DetrImageProcessor
+    from mindnlp.transformers import DetrImageProcessor
 
 
 class DetrModelTester:

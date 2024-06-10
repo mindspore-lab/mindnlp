@@ -29,7 +29,7 @@ if is_mindspore_available():
 if is_vision_available():
     from PIL import Image
 
-    from transformers import DetrImageProcessor
+    from mindnlp.transformers import DetrImageProcessor
 
 
 class DetrImageProcessingTester(unittest.TestCase):
@@ -127,7 +127,7 @@ class DetrImageProcessingTester(unittest.TestCase):
 @require_mindspore
 @require_vision
 class DetrImageProcessingTest(AnnotationFormatTestMixin, ImageProcessingTestMixin, unittest.TestCase):
-    image_processing_class = DetrImageProcessor if is_vision_available() else None
+    image_processing_class = AutoImageProcessor if is_vision_available() else None
 
     def setUp(self):
         self.image_processor_tester = DetrImageProcessingTester(self)
