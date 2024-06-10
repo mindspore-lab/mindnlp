@@ -153,6 +153,7 @@ from . import (
     time_series_transformer,
     timesformer,
     tinybert,
+    videomae,
     vipllava,
     vision_text_dual_encoder,
     visual_bert,
@@ -307,6 +308,7 @@ from .tinybert import *
 from .t5 import *
 from .time_series_transformer import *
 from .timesformer import *
+from .videomae import *
 from .vipllava import *
 from .vision_text_dual_encoder import *
 from .visual_bert import *
@@ -461,6 +463,7 @@ __all__.extend(t5.__all__)
 __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
+__all__.extend(videomae.__all__)
 __all__.extend(vipllava.__all__)
 __all__.extend(vision_text_dual_encoder.__all__)
 __all__.extend(visual_bert.__all__)

@@ -133,6 +133,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("t5", "T5Config"),
         ("time_series_transformer", "TimeSeriesTransformerConfig"),
         ("timesformer", "TimesformerConfig"),
+        ("videomae", "VideoMAEConfig"),
         ("vit", "ViTConfig"),
         ("vision-text-dual-encoder", "VisionTextDualEncoderConfig"),
         ("vipllava", "VipLlavaConfig"),
