@@ -933,7 +933,6 @@ class PegasusXEncoder(PegasusXPreTrainedModel):
         self.config.max_position_embeddings = new_num_position_embeddings
 
         self.embed_positions = PegasusXSinusoidalPositionalEmbedding(self.config.d_model)
-        self.embed_positions
 
     def get_position_embeddings(self) -> nn.Embedding:
         """
@@ -1012,7 +1011,7 @@ class PegasusXEncoder(PegasusXPreTrainedModel):
         # Setup mask
         if attention_mask is None:
             attention_mask = ops.ones(*input_shape, dtype=inputs_embeds.dtype)
-        attention_mask = mindspore.Tensor(attention_mask, dtype=hidden_states.dtype) 
+        attention_mask = mindspore.Tensor(attention_mask, dtype=hidden_states.dtype)
         mask_min_value = np.finfo(mindspore.dtype_to_nptype(hidden_states.dtype)).min
         inverted_mask = 1.0 - attention_mask
         attention_mask = inverted_mask.masked_fill(
@@ -1226,8 +1225,6 @@ class PegasusXDecoder(PegasusXPreTrainedModel):
 
         # embed positions
         positions = self.embed_positions(inputs_embeds, past_key_values_length)
-
-        positions = positions
 
         hidden_states = inputs_embeds + positions
 
@@ -1635,5 +1632,5 @@ class PegasusXDecoderWrapper(PegasusXPreTrainedModel):
 
     def construct(self, *args, **kwargs):
         return self.decoder(*args, **kwargs)
-    
+
 __all__ = ["PegasusXModel", "PegasusXPreTrainedModel", "PegasusXForConditionalGeneration"]
