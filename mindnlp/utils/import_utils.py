@@ -80,6 +80,7 @@ _safetensors_available = _is_package_available("safetensors")
 _modelscope_available = _is_package_available("modelscope")
 _jieba_available = _is_package_available("jieba")
 _pytesseract_available = _is_package_available("pytesseract")
+_g2p_en_available = _is_package_available("g2p_en")
 _mindspore_version, _mindspore_available = _is_package_available(
     "mindspore", return_version=True
 )
@@ -379,6 +380,10 @@ def is_pytesseract_available():
     return _pytesseract_available
 
 
+def is_g2p_en_available():
+    return _g2p_en_available
+
+
 @lru_cache()
 def is_vision_available():
     """
@@ -531,6 +536,12 @@ VISION_IMPORT_ERROR = """
 `pip install pillow`. Please note that you may need to restart your runtime after installation.
 """
 
+# docstyle-ignore
+G2P_EN_IMPORT_ERROR = """
+{0} requires the g2p-en library but it was not found in your environment. You can install it with pip:
+`pip install g2p-en`. Please note that you may need to restart your runtime after installation.
+"""
+
 BACKENDS_MAPPING = OrderedDict(
     [
         ("mindspore", (is_mindspore_available, MINDSPORE_IMPORT_ERROR)),
@@ -546,7 +557,7 @@ BACKENDS_MAPPING = OrderedDict(
         ("pyctcdecode", (is_pyctcdecode_available, PYCTCDECODE_IMPORT_ERROR)),
         ("jieba", (is_jieba_available, JIEBA_IMPORT_ERROR)),
         ("vision", (is_vision_available, VISION_IMPORT_ERROR)),
-
+        ("g2p_en", (is_g2p_en_available, G2P_EN_IMPORT_ERROR)),
     ]
 )
 

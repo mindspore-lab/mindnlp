@@ -158,6 +158,7 @@ data*/
 !mindnlp/data/
 !mindnlp/dataset/
 !docs/api/data/
+!data2vec/
 *config.json
 
 fusion_result.json
