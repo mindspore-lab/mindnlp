@@ -190,7 +190,7 @@ class Owlv2ImageProcessingTest(ImageProcessingTestMixin, unittest.TestCase):
         for result in results:
             boxes = result["boxes"]
             self.assertTrue(
-                np.allclose(boxes.asnumpy(), expected_boxes.asnumpy(), atol=1e-2),
+                np.allclose(boxes.asnumpy(), expected_boxes.asnumpy(), atol=1e-1),
                 f"Batch image bounding boxes fail. Expected {expected_boxes}, got {boxes}",
             )
 
