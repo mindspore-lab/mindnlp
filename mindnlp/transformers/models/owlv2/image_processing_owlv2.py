@@ -94,8 +94,8 @@ def box_iou(boxes1, boxes2):
     area1 = box_area(boxes1)
     area2 = box_area(boxes2)
 
-    left_top = ops.max(boxes1[:, None, :2], boxes2[:, :2])  # [N,M,2]
-    right_bottom = ops.min(boxes1[:, None, 2:], boxes2[:, 2:])  # [N,M,2]
+    left_top = ops.maximum(boxes1[:, None, :2], boxes2[:, :2])  # [N,M,2]
+    right_bottom = ops.minimum(boxes1[:, None, 2:], boxes2[:, 2:])  # [N,M,2]
 
     width_height = (right_bottom - left_top).clamp(min=0)  # [N,M,2]
     inter = width_height[:, :, 0] * width_height[:, :, 1]  # [N,M]
@@ -571,7 +571,7 @@ class Owlv2ImageProcessor(BaseImageProcessor):
 
             # Rescale coordinates, image is padded to square for inference,
             # that is why we need to scale boxes to the max size
-            size = ops.max(img_h, img_w)
+            size = ops.maximum(img_h, img_w)
             scale_fct = ops.stack([size, size, size, size], axis=1)
 
             boxes = boxes * scale_fct[:, None, :]
@@ -671,5 +671,6 @@ class Owlv2ImageProcessor(BaseImageProcessor):
             results.append({"scores": box_scores, "labels": None, "boxes": boxes})
 
         return results
+
 
 __all__ = ["Owlv2ImageProcessor"]

@@ -21,11 +21,7 @@ from typing import Any, Dict, Optional, Tuple, Union
 import mindspore as ms
 from mindspore import Tensor, nn, ops
 from mindspore.common.initializer import Normal
-from mindnlp.utils import (
-    ModelOutput,
-    is_mindspore_available,
-    logging,
-)
+
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import (
     _create_4d_causal_attention_mask,
@@ -33,7 +29,11 @@ from ...modeling_attn_mask_utils import (
 )
 from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithPooling
 from ...modeling_utils import PreTrainedModel
-
+from ....utils import (
+    ModelOutput,
+    is_mindspore_available,
+    logging,
+)
 from .configuration_owlv2 import Owlv2Config, Owlv2TextConfig, Owlv2VisionConfig
 
 

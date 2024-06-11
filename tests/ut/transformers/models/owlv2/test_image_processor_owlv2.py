@@ -162,8 +162,8 @@ class Owlv2ImageProcessingTest(ImageProcessingTestMixin, unittest.TestCase):
 
         # single image
         inputs = processor(text=[text], images=[image], return_tensors="ms")
-        with mindspore._no_grad():
-            outputs = model(**inputs)
+
+        outputs = model(**inputs)
 
         results = processor.post_process_object_detection(
             outputs, threshold=0.2, target_sizes=[target_size]
@@ -179,8 +179,8 @@ class Owlv2ImageProcessingTest(ImageProcessingTestMixin, unittest.TestCase):
         inputs = processor(
             text=[text, text], images=[image, image], return_tensors="ms"
         )
-        with mindspore._no_grad():
-            outputs = model(**inputs)
+        
+        outputs = model(**inputs)
         results = processor.post_process_object_detection(
             outputs, threshold=0.2, target_sizes=[target_size, target_size]
         )

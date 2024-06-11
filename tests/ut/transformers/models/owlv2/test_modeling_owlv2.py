@@ -21,7 +21,7 @@ import unittest
 
 import numpy as np
 import requests
-from mindnlp.utils.serialization import safe_load_file, safe_save_file
+
 from mindnlp.transformers import Owlv2Config, Owlv2TextConfig, Owlv2VisionConfig
 from mindnlp.utils.testing_utils import (
     require_mindspore,
@@ -29,7 +29,7 @@ from mindnlp.utils.testing_utils import (
     slow,
 )
 from mindnlp.utils import is_mindspore_available, is_vision_available
-
+from mindnlp.utils.serialization import safe_load_file, safe_save_file
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import (
     ModelTesterMixin,
@@ -915,20 +915,28 @@ class Owlv2ModelIntegrationTest(unittest.TestCase):
                 [-20.958896, -21.382694],
             ]
         )
-        
+        # self.assertTrue(
+        #     np.allclose(
+        #         outputs.logits[0, :3, :3].asnumpy(),
+        #         expected_slice_logits.asnumpy(),
+        #         atol=1e-4,
+        #     )
+        # )
+        self.assertTrue(
+            np.allclose(
+                outputs.pred_boxes[0, :3, :3].asnumpy(),
+                expected_slice_boxes.asnumpy(),
+                outputs.logits[0, :3, :3].asnumpy(),
+                expected_slice_logits.asnumpy(),
+                atol=1e-4,
+            )
+        )
         expected_slice_boxes = ms.tensor(
             [
                 [0.241309, 0.051896, 0.453267],
                 [0.139474, 0.045701, 0.250660],
                 [0.233022, 0.050479, 0.427671],
             ],
-        )
-        self.assertTrue(
-            np.allclose(
-                outputs.pred_boxes[0, :3, :3].asnumpy(),
-                expected_slice_boxes.asnumpy(),
-                atol=1e-4,
-            )
         )
         self.assertTrue(
             np.allclose(
@@ -984,9 +992,7 @@ class Owlv2ModelIntegrationTest(unittest.TestCase):
     @slow
     def test_inference_one_shot_object_detection_fp16(self):
         model_name = "google/owlv2-base-patch16"
-        model = Owlv2ForObjectDetection.from_pretrained(
-            model_name, ms_dtype=ms.float16
-        )
+        model = Owlv2ForObjectDetection.from_pretrained(model_name, ms_dtype=ms.float16)
 
         processor = OwlViTProcessor.from_pretrained(model_name)
 
@@ -999,7 +1005,6 @@ class Owlv2ModelIntegrationTest(unittest.TestCase):
             padding="max_length",
             return_tensors="ms",
         )
-
 
         outputs = model.image_guided_detection(**inputs)
 
