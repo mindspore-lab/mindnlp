@@ -129,7 +129,7 @@ class Owlv2ImageProcessingTest(ImageProcessingTestMixin, unittest.TestCase):
         processor = Owlv2ImageProcessor()
 
         image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
-        pixel_values = processor(image, return_tensors="pt").pixel_values
+        pixel_values = processor(image, return_tensors="ms").pixel_values
 
         mean_value = round(pixel_values.mean().item(), 4)
         self.assertEqual(mean_value, 0.2353)
@@ -161,7 +161,7 @@ class Owlv2ImageProcessingTest(ImageProcessingTestMixin, unittest.TestCase):
         )
 
         # single image
-        inputs = processor(text=[text], images=[image], return_tensors="pt")
+        inputs = processor(text=[text], images=[image], return_tensors="ms")
         with mindspore._no_grad():
             outputs = model(**inputs)
 
@@ -177,7 +177,7 @@ class Owlv2ImageProcessingTest(ImageProcessingTestMixin, unittest.TestCase):
 
         # batch of images
         inputs = processor(
-            text=[text, text], images=[image, image], return_tensors="pt"
+            text=[text, text], images=[image, image], return_tensors="ms"
         )
         with mindspore._no_grad():
             outputs = model(**inputs)
