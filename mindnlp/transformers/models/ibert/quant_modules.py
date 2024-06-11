@@ -14,6 +14,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""I-BERT quant model"""
 
 import decimal
 
@@ -654,7 +655,7 @@ class SymmetricQuantFunction(nn.Cell):
         else:
             scale = scale.view(-1)
 
-        return dout.copy() / scale,
+        return (dout.copy() / scale,)
 
 
 class floor_ste(nn.Cell):
@@ -669,7 +670,7 @@ class floor_ste(nn.Cell):
         return ops.floor(x)
 
     def bprop(self, x, out, dout):
-        return dout.copy(),
+        return (dout.copy(),)
 
 
 class round_ste(nn.Cell):
@@ -684,7 +685,7 @@ class round_ste(nn.Cell):
         return ops.round(x)
 
     def bprop(self, x, out, dout):
-        return dout.copy(),
+        return (dout.copy(),)
 
 
 def batch_frexp(inputs, max_bit=31):
@@ -755,15 +756,21 @@ class FixedPointMul(nn.Cell):
         self.z_scaling_factor = z_scaling_factor
         self.identity_scaling_factor = identity_scaling_factor
 
+    def reshape_3d(self, x):
+        return x
+
+    def reshape_other(self, x):
+        return x.view(1, 1, -1)
+
     def construct(
         self,
         pre_act,
         identity=None
     ):
         if len(self.pre_act_scaling_factor.shape) == 3:
-            reshape = lambda x: x  # noqa: E731
+            reshape = self.reshape_3d  # noqa: E731
         else:
-            reshape = lambda x: x.view(1, 1, -1)  # noqa: E731
+            reshape = self.reshape_other  # noqa: E731
         self.identity = identity
 
         n = 2 ** (self.bit_num - 1) - 1

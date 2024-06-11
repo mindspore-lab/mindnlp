@@ -387,6 +387,7 @@ MODEL_FOR_MASKED_LM_MAPPING_NAMES = OrderedDict(
         ("deberta-v2", "DebertaV2ForMaskedLM"),
         ("esm", "EsmForMaskedLM"),
         ("funnel", "FunnelForMaskedLM"),
+        {"ibert", "IBertForMaskedLM"},
         ("rembert", "RemBertForMaskedLM"),
         ("reformer", "ReformerForMaskedLM"),
         ("squeezebert", "SqueezeBertForMaskedLM"),

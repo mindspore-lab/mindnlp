@@ -91,6 +91,7 @@ from . import (
     groupvit,
     hubert,
     imagegpt,
+    ibert,
     jetmoe,
     layoutlm,
     layoutlmv2,
@@ -244,6 +245,7 @@ from .gpt_pangu import *
 from .gpt2 import *
 from .graphormer import *
 from .groupvit import *
+from .ibert import *
 from .hubert import *
 from .imagegpt import *
 from .jetmoe import *
@@ -399,6 +401,7 @@ __all__.extend(gpt_bigcode.__all__)
 __all__.extend(gpt2.__all__)
 __all__.extend(graphormer.__all__)
 __all__.extend(groupvit.__all__)
+__all__.extend(ibert.__all__)
 __all__.extend(hubert.__all__)
 __all__.extend(imagegpt.__all__)
 __all__.extend(jetmoe.__all__)

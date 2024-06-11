@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""PyTorch I-BERT model."""
+"""I-BERT model."""
 
 import math
 from typing import Optional, Tuple, Union
@@ -25,6 +25,7 @@ import mindspore
 from mindspore import nn, ops
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.utils import logging
 from ...activations import gelu
 from ...modeling_outputs import (
     BaseModelOutputWithPastAndCrossAttentions,
@@ -35,7 +36,6 @@ from ...modeling_outputs import (
     SequenceClassifierOutput,
     TokenClassifierOutput,
 )
-from mindnlp.utils import logging
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
 from .configuration_ibert import IBertConfig
@@ -921,7 +921,7 @@ class IBertForSequenceClassification(IBertPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and (labels.dtype in (mindspore.int64, mindspore.int32)):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
