@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-squeezebert Model init
+SqueezeBert Model init
 """
 from . import (
     configuration_squeezebert,
