@@ -677,7 +677,7 @@ class floor_ste(nn.Cell):
 
     def bprop(self, input, output, grad_output):
         grad_output = ops.Cast()(grad_output.copy(), ms.float32)
-        return (grad_output,)
+        return grad_outputk,
 
 
 class round_ste(nn.Cell):
