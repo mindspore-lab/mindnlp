@@ -17,7 +17,7 @@
 """
 LLAMA Model init
 """
-from .import configuration_mixtral, modeling_mixtral
+from . import configuration_mixtral, modeling_mixtral
 from .modeling_mixtral import *
 from .configuration_mixtral import *
 

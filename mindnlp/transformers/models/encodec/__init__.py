@@ -16,7 +16,7 @@
 Ernie Model init
 """
 
-from .import modeling_encodec, configuration_encodec, feature_extraction_encodec
+from . import modeling_encodec, configuration_encodec, feature_extraction_encodec
 from .configuration_encodec import *
 from .modeling_encodec import *
 from .feature_extraction_encodec import *
