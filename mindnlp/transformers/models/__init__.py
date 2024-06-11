@@ -122,7 +122,6 @@ from . import (
     oneformer,
     openelm,
     opt,
-    owlv2,
     owlvit,
     pegasus,
     phi,
@@ -281,7 +280,6 @@ from .olmo import *
 from .oneformer import *
 from .openelm import *
 from .opt import *
-from .owlv2 import *
 from .owlvit import *
 from .pegasus import *
 from .phi import *
@@ -440,7 +438,6 @@ __all__.extend(olmo.__all__)
 __all__.extend(oneformer.__all__)
 __all__.extend(openelm.__all__)
 __all__.extend(opt.__all__)
-__all__.extend(owlv2.__all__)
 __all__.extend(owlvit.__all__)
 __all__.extend(pegasus.__all__)
 __all__.extend(phi.__all__)
