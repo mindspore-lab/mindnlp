@@ -1,4 +1,4 @@
-# Copyright 2020 The HuggingFace Team. All rights reserved.
+# Copyright 2023 The HuggingFace Team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,13 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-I-BERT Model init
+Owlv2 Model init
 """
 
-from . import configuration_ibert, modeling_ibert
-from .configuration_ibert import *
-from .modeling_ibert import *
+from . import (
+    configuration_owlv2,
+    modeling_owlv2,
+    image_processing_owlv2,
+    processing_owlv2,
+)
+
+from .configuration_owlv2 import *
+from .modeling_owlv2 import *
+from .image_processing_owlv2 import *
+from .processing_owlv2 import *
 
 __all__ = []
-__all__.extend(configuration_ibert.__all__)
-__all__.extend(modeling_ibert.__all__)
+__all__.extend(configuration_owlv2.__all__)
+__all__.extend(modeling_owlv2.__all__)
+__all__.extend(image_processing_owlv2.__all__)
+__all__.extend(processing_owlv2.__all__)

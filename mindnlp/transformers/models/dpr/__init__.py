@@ -1,4 +1,4 @@
-# Copyright 2024 Huawei Technologies Co., Ltd
+# Copyright 2022 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,22 +13,17 @@
 # limitations under the License.
 # ============================================================================
 """
-SqueezeBert Model init
+Dpr Model init
 """
-from . import (
-    configuration_squeezebert,
-    modeling_squeezebert,
-    tokenization_squeezebert,
-    tokenization_squeezebert_fast,
-)
 
-from .configuration_squeezebert import *
-from .modeling_squeezebert import *
-from .tokenization_squeezebert import *
-from .tokenization_squeezebert_fast import *
+from . import configuration_dpr, modeling_dpr, tokenization_dpr, tokenization_dpr_fast
+from .configuration_dpr import *
+from .modeling_dpr import *
+from .tokenization_dpr import *
+from .tokenization_dpr_fast import *
 
 __all__ = []
-__all__.extend(configuration_squeezebert.__all__)
-__all__.extend(modeling_squeezebert.__all__)
-__all__.extend(tokenization_squeezebert.__all__)
-__all__.extend(tokenization_squeezebert_fast.__all__)
+__all__.extend(configuration_dpr.__all__)
+__all__.extend(modeling_dpr.__all__)
+__all__.extend(tokenization_dpr.__all__)
+__all__.extend(tokenization_dpr_fast.__all__)

@@ -63,6 +63,7 @@ from . import (
     deberta_v2,
     decision_transformer,
     distilbert,
+    dpr,
     efficientnet,
     efficientformer,
     electra,
@@ -89,7 +90,6 @@ from . import (
     graphormer,
     groupvit,
     hubert,
-    ibert,
     imagegpt,
     jetmoe,
     layoutlm,
@@ -122,6 +122,7 @@ from . import (
     oneformer,
     openelm,
     opt,
+    owlv2,
     owlvit,
     pegasus,
     phi,
@@ -218,6 +219,7 @@ from .deberta import *
 from .deberta_v2 import *
 from .decision_transformer import *
 from .distilbert import *
+from .dpr import *
 from .efficientnet import *
 from .efficientformer import *
 from .electra import *
@@ -244,7 +246,6 @@ from .gpt2 import *
 from .graphormer import *
 from .groupvit import *
 from .hubert import *
-from .ibert import *
 from .imagegpt import *
 from .jetmoe import *
 from .layoutlm import *
@@ -277,6 +278,7 @@ from .olmo import *
 from .oneformer import *
 from .openelm import *
 from .opt import *
+from .owlv2 import *
 from .owlvit import *
 from .pegasus import *
 from .phi import *
@@ -373,6 +375,7 @@ __all__.extend(deberta.__all__)
 __all__.extend(deberta_v2.__all__)
 __all__.extend(decision_transformer.__all__)
 __all__.extend(distilbert.__all__)
+__all__.extend(dpr.__all__)
 __all__.extend(efficientnet.__all__)
 __all__.extend(efficientformer.__all__)
 __all__.extend(electra.__all__)
@@ -399,7 +402,6 @@ __all__.extend(gpt2.__all__)
 __all__.extend(graphormer.__all__)
 __all__.extend(groupvit.__all__)
 __all__.extend(hubert.__all__)
-__all__.extend(ibert.__all__)
 __all__.extend(imagegpt.__all__)
 __all__.extend(jetmoe.__all__)
 __all__.extend(layoutlm.__all__)
@@ -432,6 +434,7 @@ __all__.extend(olmo.__all__)
 __all__.extend(oneformer.__all__)
 __all__.extend(openelm.__all__)
 __all__.extend(opt.__all__)
+__all__.extend(owlv2.__all__)
 __all__.extend(owlvit.__all__)
 __all__.extend(pegasus.__all__)
 __all__.extend(phi.__all__)
