@@ -13,7 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-""" Auto Config class."""
+"""Auto Config class."""
+
 import importlib
 import re
 import warnings
@@ -99,7 +100,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("mistral", "MistralConfig"),
         ("mixtral", "MixtralConfig"),
         ("mobilevit", "MobileViTConfig"),
-        ("mobilenet_v1","MobileNetV1Config"),
+        ("mobilenet_v1", "MobileNetV1Config"),
         ("musicgen", "MusicgenConfig"),
         ("musicgen_melody", "MusicgenMelodyConfig"),
         ("mt5", "MT5Config"),
@@ -108,6 +109,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("oneformer", "OneFormerConfig"),
         ("openelm", "OpenELMConfig"),
         ("opt", "OPTConfig"),
+        ("owlv2", "Owlv2Config"),
         ("owlvit", "OwlViTConfig"),
         ("pegasus", "PegasusConfig"),
         ("phi", "PhiConfig"),
@@ -410,7 +412,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("codegen", "CodeGen"),
         ("cohere", "Cohere"),
         ("conditional_detr", "Conditional DETR"),
-        ("cogvlm","CogVLM"),
+        ("cogvlm", "CogVLM"),
         ("convbert", "ConvBERT"),
         ("convnext", "ConvNeXT"),
         ("convnextv2", "ConvNeXTV2"),
@@ -695,6 +697,7 @@ class _LazyConfigMapping(OrderedDict):
     """
     A dictionary that lazily load its values when they are requested.
     """
+
     def __init__(self, mapping):
         """
         Initializes a new instance of the _LazyConfigMapping class.
@@ -717,22 +720,22 @@ class _LazyConfigMapping(OrderedDict):
 
     def __getitem__(self, key):
         """
-        __getitem__
+                __getitem__
 
-        Retrieve the value associated with the given key from the _LazyConfigMapping object.
+                Retrieve the value associated with the given key from the _LazyConfigMapping object.
 
-        Args:
-            self (_LazyConfigMapping): The instance of the _LazyConfigMapping class.
-            key (str): The key used to retrieve the corresponding value. It should be a string.
+                Args:
+                    self (_LazyConfigMapping): The instance of the _LazyConfigMapping class.
+                    key (str): The key used to retrieve the corresponding value. It should be a string.
 
-        Returns:
-            None: If the key is present in the _extra_content, the associated value is returned. If the key is not in _extra_content but is in _mapping, the value associated with the key is returned after
-performing necessary module imports and attribute retrieval.
+                Returns:
+                    None: If the key is present in the _extra_content, the associated value is returned. If the key is not in _extra_content but is in _mapping, the value associated with the key is returned after
+        performing necessary module imports and attribute retrieval.
 
-        Raises:
-            KeyError: If the key is not found in either _extra_content or _mapping, a KeyError is raised.
-            AttributeError: If the attribute associated with the value corresponding to the key is not found in the dynamically imported module, an AttributeError is raised.
-            ModuleNotFoundError: If the required module is not found during dynamic import, a ModuleNotFoundError is raised.
+                Raises:
+                    KeyError: If the key is not found in either _extra_content or _mapping, a KeyError is raised.
+                    AttributeError: If the attribute associated with the value corresponding to the key is not found in the dynamically imported module, an AttributeError is raised.
+                    ModuleNotFoundError: If the required module is not found during dynamic import, a ModuleNotFoundError is raised.
         """
         if key in self._extra_content:
             return self._extra_content[key]
@@ -856,6 +859,7 @@ class _LazyLoadAllMappings(OrderedDict):
     Args:
         mapping: The mapping to load.
     """
+
     def __init__(self, mapping):
         """
         Initializes an instance of the '_LazyLoadAllMappings' class.
@@ -1116,6 +1120,7 @@ def replace_list_option_in_docstrings(config_to_class=None, use_model_types=True
     Raises:
         ValueError: If the input function's docstring does not contain an empty 'List options' section as a placeholder.
     """
+
     def docstring_decorator(fn):
         docstrings = fn.__doc__
         lines = docstrings.split("\n")
@@ -1148,6 +1153,7 @@ class AutoConfig:
 
     This class cannot be instantiated directly using `__init__()` (throws an error).
     """
+
     def __init__(self):
         """
         Initialize AutoConfig.
@@ -1172,18 +1178,18 @@ class AutoConfig:
     @classmethod
     def for_model(cls, model_type: str, *args, **kwargs):
         """
-        This class method 'for_model' in the 'AutoConfig' class is used to instantiate a configuration class based on the provided model type.
+                This class method 'for_model' in the 'AutoConfig' class is used to instantiate a configuration class based on the provided model type.
 
-        Args:
-            cls (class): The class itself, automatically passed as the first parameter.
-            model_type (str): A string representing the type of the model for which the configuration class needs to be instantiated. It must be a key within the CONFIG_MAPPING dictionary.
+                Args:
+                    cls (class): The class itself, automatically passed as the first parameter.
+                    model_type (str): A string representing the type of the model for which the configuration class needs to be instantiated. It must be a key within the CONFIG_MAPPING dictionary.
 
-        Returns:
-            None: This method does not return any value directly. It instantiates and returns an instance of the appropriate configuration class based on the model type.
+                Returns:
+                    None: This method does not return any value directly. It instantiates and returns an instance of the appropriate configuration class based on the model type.
 
-        Raises:
-            ValueError: Raised when the provided 'model_type' is not recognized or is not found as a key in the CONFIG_MAPPING dictionary. The exception message indicates the unrecognized model identifier and
-lists all valid model identifiers available in the CONFIG_MAPPING dictionary.
+                Raises:
+                    ValueError: Raised when the provided 'model_type' is not recognized or is not found as a key in the CONFIG_MAPPING dictionary. The exception message indicates the unrecognized model identifier and
+        lists all valid model identifiers available in the CONFIG_MAPPING dictionary.
         """
         if model_type in CONFIG_MAPPING:
             config_class = CONFIG_MAPPING[model_type]
