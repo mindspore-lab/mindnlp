@@ -70,6 +70,7 @@ from . import (
     esm,
     ernie,
     ernie_m,
+    fastspeech2_conformer,
     chatglm,
     chatglm2,
     chatglm3,
@@ -101,12 +102,14 @@ from . import (
     luke,
     mamba,
     marian,
+    mask2former,
     mbart,
     megatron_bert,
     minicpm,
     mistral,
     mixtral,
     mobilebert,
+    mobilenet_v1,
     mobilevit,
     mpnet,
     mpt,
@@ -116,6 +119,7 @@ from . import (
     nezha,
     nystromformer,
     olmo,
+    oneformer,
     openelm,
     opt,
     owlvit,
@@ -138,20 +142,25 @@ from . import (
     segformer,
     seggpt,
     speech_encoder_decoder,
+    speecht5,
     stablelm,
     squeezebert,
     starcoder2,
     swiftformer,
+    swin,
     switch_transformers,
     t5,
+    time_series_transformer,
     timesformer,
     tinybert,
+    videomae,
     vipllava,
     vision_text_dual_encoder,
     visual_bert,
     vit,
     wav2vec2,
     wav2vec2_conformer,
+    wav2vec2_bert,
     wav2vec2_with_lm,
     wavlm,
     whisper,
@@ -221,6 +230,7 @@ from .chatglm2 import *
 from .chatglm3 import *
 from .flava import *
 from .funnel import *
+from .fastspeech2_conformer import *
 from .gemma import *
 from .git import *
 from .gpt import *
@@ -247,12 +257,14 @@ from .longformer import *
 from .luke import *
 from .mamba import *
 from .marian import *
+from .mask2former import *
 from .mbart import *
 from .megatron_bert import *
 from .minicpm import *
 from .mistral import *
 from .mixtral import *
 from .mobilebert import *
+from .mobilenet_v1 import *
 from .mobilevit import *
 from .mpnet import *
 from .mpt import *
@@ -262,6 +274,7 @@ from .mvp import *
 from .nezha import *
 from .nystromformer import *
 from .olmo import *
+from .oneformer import *
 from .openelm import *
 from .opt import *
 from .owlvit import *
@@ -284,14 +297,18 @@ from .seamless_m4t_v2 import *
 from .segformer import *
 from .seggpt import *
 from .speech_encoder_decoder import *
+from .speecht5 import *
 from .stablelm import *
 from .squeezebert import *
 from .starcoder2 import *
 from .swiftformer import *
+from .swin import *
 from .switch_transformers import *
 from .tinybert import *
 from .t5 import *
+from .time_series_transformer import *
 from .timesformer import *
+from .videomae import *
 from .vipllava import *
 from .vision_text_dual_encoder import *
 from .visual_bert import *
@@ -299,6 +316,7 @@ from .vit import *
 from .whisper import *
 from .wav2vec2 import *
 from .wav2vec2_conformer import *
+from .wav2vec2_bert import *
 from .wav2vec2_with_lm import *
 from .wavlm import *
 from .x_clip import *
@@ -365,6 +383,7 @@ __all__.extend(esm.__all__)
 __all__.extend(chatglm.__all__)
 __all__.extend(flava.__all__)
 __all__.extend(funnel.__all__)
+__all__.extend(fastspeech2_conformer.__all__)
 __all__.extend(chatglm2.__all__)
 __all__.extend(chatglm3.__all__)
 __all__.extend(gpt.__all__)
@@ -393,12 +412,14 @@ __all__.extend(longformer.__all__)
 __all__.extend(luke.__all__)
 __all__.extend(mamba.__all__)
 __all__.extend(marian.__all__)
+__all__.extend(mask2former.__all__)
 __all__.extend(mbart.__all__)
 __all__.extend(megatron_bert.__all__)
 __all__.extend(minicpm.__all__)
 __all__.extend(mistral.__all__)
 __all__.extend(mixtral.__all__)
 __all__.extend(mobilebert.__all__)
+__all__.extend(mobilenet_v1.__all__)
 __all__.extend(mobilevit.__all__)
 __all__.extend(mpnet.__all__)
 __all__.extend(mpt.__all__)
@@ -408,6 +429,7 @@ __all__.extend(mvp.__all__)
 __all__.extend(nezha.__all__)
 __all__.extend(nystromformer.__all__)
 __all__.extend(olmo.__all__)
+__all__.extend(oneformer.__all__)
 __all__.extend(openelm.__all__)
 __all__.extend(opt.__all__)
 __all__.extend(owlvit.__all__)
@@ -430,14 +452,18 @@ __all__.extend(seamless_m4t_v2.__all__)
 __all__.extend(segformer.__all__)
 __all__.extend(seggpt.__all__)
 __all__.extend(speech_encoder_decoder.__all__)
+__all__.extend(speecht5.__all__)
 __all__.extend(stablelm.__all__)
 __all__.extend(squeezebert.__all__)
 __all__.extend(starcoder2.__all__)
 __all__.extend(swiftformer.__all__)
+__all__.extend(swin.__all__)
 __all__.extend(switch_transformers.__all__)
 __all__.extend(t5.__all__)
+__all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
+__all__.extend(videomae.__all__)
 __all__.extend(vipllava.__all__)
 __all__.extend(vision_text_dual_encoder.__all__)
 __all__.extend(visual_bert.__all__)
@@ -445,6 +471,7 @@ __all__.extend(vit.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)
 __all__.extend(wav2vec2_conformer.__all__)
+__all__.extend(wav2vec2_bert.__all__)
 __all__.extend(wav2vec2_with_lm.__all__)
 __all__.extend(wavlm.__all__)
 __all__.extend(x_clip.__all__)
