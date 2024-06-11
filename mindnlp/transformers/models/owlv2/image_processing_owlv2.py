@@ -68,9 +68,9 @@ logger = logging.get_logger(__name__)
 def _upcast(t):
     # Protects from numerical overflows in multiplications by upcasting to the equivalent higher type
     if t.is_floating_point():
-        return t if t.dtype in (ms.float32, ms.float64) else t.float()
+        return t if t.dtype in (ms.float32, ms.float64) else t.astype(ms.float32)
     else:
-        return t if t.dtype in (ms.int32, ms.int64) else t.int()
+        return t if t.dtype in (ms.int32, ms.int64) else t.astype(ms.int32)
 
 
 # Copied from transformers.models.owlvit.image_processing_owlvit.box_area
@@ -571,7 +571,7 @@ class Owlv2ImageProcessor(BaseImageProcessor):
 
             # Rescale coordinates, image is padded to square for inference,
             # that is why we need to scale boxes to the max size
-            size = ops.max(img_h, img_w)
+            size = ops.max(img_h, int(img_w))
             scale_fct = ops.stack([size, size, size, size], axis=1)
 
             boxes = boxes * scale_fct[:, None, :]
