@@ -984,7 +984,7 @@ class Owlv2ModelIntegrationTest(unittest.TestCase):
     def test_inference_one_shot_object_detection_fp16(self):
         model_name = "google/owlv2-base-patch16"
         model = Owlv2ForObjectDetection.from_pretrained(
-            model_name, torch_dtype=ms.float16
+            model_name, ms_dtype=ms.float16
         )
 
         processor = OwlViTProcessor.from_pretrained(model_name)
