@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     pass
 
 from ...configuration_utils import PretrainedConfig
-from ....utils import logging
+from mindnlp.utils import logging
 
 
 logger = logging.get_logger(__name__)
