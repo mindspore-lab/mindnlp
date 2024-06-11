@@ -85,6 +85,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("gpt_pangu", "GPTPanguConfig"),
         ("groupvit", "GroupViTConfig"),
         ("hubert", "HubertConfig"),
+        ("ibert", "IBertConfig"),
         ("jetmoe", "JetMoEConfig"),
         ("led", "LEDConfig"),
         ("llama", "LlamaConfig"),
