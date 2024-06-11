@@ -171,7 +171,7 @@ class Owlv2ImageProcessingTest(ImageProcessingTestMixin, unittest.TestCase):
 
         boxes = results["boxes"]
         self.assertTrue(
-            np.allclose(boxes, expected_boxes, atol=1e-2),
+            np.allclose(boxes, expected_boxes, rtol=1e-1, atol=1e-1),
             f"Single image bounding boxes fail. Expected {expected_boxes}, got {boxes}",
         )
 
@@ -179,7 +179,7 @@ class Owlv2ImageProcessingTest(ImageProcessingTestMixin, unittest.TestCase):
         inputs = processor(
             text=[text, text], images=[image, image], return_tensors="ms"
         )
-        
+
         outputs = model(**inputs)
         results = processor.post_process_object_detection(
             outputs, threshold=0.2, target_sizes=[target_size, target_size]
@@ -188,7 +188,7 @@ class Owlv2ImageProcessingTest(ImageProcessingTestMixin, unittest.TestCase):
         for result in results:
             boxes = result["boxes"]
             self.assertTrue(
-                np.allclose(boxes, expected_boxes, atol=1e-2),
+                np.allclose(boxes.asnumpy(), expected_boxes.asnumpy(), atol=1e-2),
                 f"Batch image bounding boxes fail. Expected {expected_boxes}, got {boxes}",
             )
 

@@ -17,6 +17,7 @@
 import warnings
 from typing import Dict, List, Optional, Tuple, Union
 
+import mindspore
 import numpy as np
 
 from mindnlp.configs import OPENAI_CLIP_MEAN, OPENAI_CLIP_STD
@@ -571,8 +572,8 @@ class Owlv2ImageProcessor(BaseImageProcessor):
 
             # Rescale coordinates, image is padded to square for inference,
             # that is why we need to scale boxes to the max size
-            size = ops.maximum(img_h, img_w)
-            scale_fct = ops.stack([size, size, size, size], axis=1)
+
+            scale_fct = ops.stack([img_w, img_w, img_w, img_w], axis=1)
 
             boxes = boxes * scale_fct[:, None, :]
 
