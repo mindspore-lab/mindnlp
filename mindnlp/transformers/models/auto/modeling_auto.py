@@ -70,6 +70,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("deberta", "DebertaModel"),
         ("decision_transformer", "DecisionTransformerModel"),
         ("deberta-v2", "DebertaV2Model"),
+        ("detr", "DetrModel"),
         ("efficientformer", "EfficientFormerModel"),
         ("encodec", "EncodecModel"),
         ("esm", "EsmModel"),
@@ -925,6 +926,13 @@ MODEL_FOR_IMAGE_MAPPING_NAMES = OrderedDict(
     ]
 )
 
+MODEL_FOR_IMAGE_SEGMENTATION_MAPPING_NAMES = OrderedDict(
+    [
+        # Do not add new models here, this class will be deprecated in the future.
+        # Model for Image Segmentation mapping
+        ("detr", "DetrForSegmentation"),
+    ]
+)
 
 MODEL_FOR_SEMANTIC_SEGMENTATION_MAPPING_NAMES = OrderedDict(
     [

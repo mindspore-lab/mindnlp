@@ -68,6 +68,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("data2vec-text", "Data2VecTextConfig"),
         ("deberta", "DebertaConfig"),
         ("deberta-v2", "DebertaV2Config"),
+        ("detr", "DetrConfig"),
         ("distilbert", "DistilBertConfig"),
         ("efficientformer", "EfficientFormerConfig"),
         ("encodec", "EncodecConfig"),
