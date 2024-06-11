@@ -110,7 +110,7 @@ class Owlv2Processor(ProcessorMixin):
                 encodings = []
 
                 # Maximum number of queries across batch
-                max_num_queries = max([len(t) for t in text])
+                max_num_queries = max(len(t) for t in text)
 
                 # Pad all batch samples to max number of text queries
                 for t in text:

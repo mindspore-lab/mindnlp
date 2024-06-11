@@ -111,7 +111,7 @@ def _preprocess_resize_output_shape(image, output_shape):
 
     Args:
         image (`np.ndarray`):
-         Image to be resized.
+        Image to be resized.
         output_shape (`iterable`):
             Size of the generated output image `(rows, cols[, ...][, dim])`. If `dim` is not provided, the number of
             channels is preserved.
