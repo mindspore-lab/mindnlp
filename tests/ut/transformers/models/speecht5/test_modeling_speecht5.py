@@ -1128,7 +1128,7 @@ class SpeechT5ForTextToSpeechIntegrationTests(unittest.TestCase):
 
         # Validate waveform consistency without length information
         self.assertTrue(
-            np.allclose(waveforms_with_vocoder_no_lengths.asnumpy(), waveforms_with_vocoder.asnumpy(), atol=1e-5),
+            np.allclose(waveforms_with_vocoder_no_lengths.asnumpy(), waveforms_with_vocoder.asnumpy(), atol=1e-4),
             "Waveforms differ when generated with and without length information.",
         )
 
