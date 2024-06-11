@@ -571,7 +571,7 @@ class Owlv2ImageProcessor(BaseImageProcessor):
 
             # Rescale coordinates, image is padded to square for inference,
             # that is why we need to scale boxes to the max size
-            size = ops.max(img_h, int(img_w))
+            size = ops.maximum(img_h, img_w)
             scale_fct = ops.stack([size, size, size, size], axis=1)
 
             boxes = boxes * scale_fct[:, None, :]
