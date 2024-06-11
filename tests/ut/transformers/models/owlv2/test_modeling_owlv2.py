@@ -915,19 +915,20 @@ class Owlv2ModelIntegrationTest(unittest.TestCase):
                 [-20.958896, -21.382694],
             ]
         )
-        self.assertTrue(
-            np.allclose(
-                outputs.pred_boxes[0, :3, :3].asnumpy(),
-                expected_slice_boxes.asnumpy(),
-                atol=1e-4,
-            )
-        )
+        
         expected_slice_boxes = ms.tensor(
             [
                 [0.241309, 0.051896, 0.453267],
                 [0.139474, 0.045701, 0.250660],
                 [0.233022, 0.050479, 0.427671],
             ],
+        )
+        self.assertTrue(
+            np.allclose(
+                outputs.pred_boxes[0, :3, :3].asnumpy(),
+                expected_slice_boxes.asnumpy(),
+                atol=1e-4,
+            )
         )
         self.assertTrue(
             np.allclose(
@@ -999,8 +1000,8 @@ class Owlv2ModelIntegrationTest(unittest.TestCase):
             return_tensors="ms",
         )
 
-        with ms.no_grad():
-            outputs = model.image_guided_detection(**inputs)
+
+        outputs = model.image_guided_detection(**inputs)
 
         # No need to check the logits, we just check inference runs fine.
         num_queries = int(
