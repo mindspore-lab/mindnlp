@@ -656,7 +656,7 @@ class ClapAudioLayer(nn.Cell):
         _, height_pad, width_pad, _ = hidden_states.shape
         # cyclic shift
         if self.shift_size > 0:
-            shifted_hidden_states = ops.roll(hidden_states, shifts=(-self.shift_size, -self.shift_size), dims=(1, 2))
+            shifted_hidden_states = ops.roll(hidden_states, shifts=-self.shift_size, dims=(1, 2))
         else:
             shifted_hidden_states = hidden_states
 
@@ -678,7 +678,7 @@ class ClapAudioLayer(nn.Cell):
 
         # reverse cyclic shift
         if self.shift_size > 0:
-            attention_windows = ops.roll(shifted_windows, shifts=(self.shift_size, self.shift_size), dims=(1, 2))
+            attention_windows = ops.roll(shifted_windows, shifts=self.shift_size, dims=(1, 2))
         else:
             attention_windows = shifted_windows
 
