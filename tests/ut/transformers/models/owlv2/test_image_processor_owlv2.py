@@ -170,7 +170,6 @@ class Owlv2ImageProcessingTest(ImageProcessingTestMixin, unittest.TestCase):
         )[0]
 
         boxes = results["boxes"]
-        print("boxes: ", boxes)
         self.assertTrue(
             np.allclose(
                 boxes.asnumpy(), expected_boxes.asnumpy(), rtol=1e-1, atol=1e-1
