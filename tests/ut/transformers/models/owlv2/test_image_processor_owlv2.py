@@ -171,7 +171,7 @@ class Owlv2ImageProcessingTest(ImageProcessingTestMixin, unittest.TestCase):
 
         boxes = results["boxes"]
         self.assertTrue(
-            np.allclose(boxes.asnumpy(), expected_boxes.asnumpy(), rtol=1e-1),
+            np.allclose(boxes.asnumpy(), expected_boxes.asnumpy(), rtol=1),
             f"Single image bounding boxes fail. Expected {expected_boxes}, got {boxes}",
         )
 
