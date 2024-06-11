@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-Sew Model.
+SEW Model.
 """
 
 from . import modeling_sew, configuration_sew
