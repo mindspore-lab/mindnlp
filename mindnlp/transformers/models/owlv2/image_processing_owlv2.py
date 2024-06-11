@@ -18,7 +18,14 @@ import warnings
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
-
+from mindnlp.utils import (
+    TensorType,
+    is_scipy_available,
+    is_mindspore_available,
+    is_vision_available,
+    logging,
+    requires_backends,
+)
 from mindnlp.configs import OPENAI_CLIP_MEAN, OPENAI_CLIP_STD
 from ...image_processing_utils import BaseImageProcessor, BatchFeature
 from ...image_transforms import (
@@ -39,14 +46,7 @@ from ...image_utils import (
     validate_kwargs,
     validate_preprocess_arguments,
 )
-from ....utils import (
-    TensorType,
-    is_scipy_available,
-    is_mindspore_available,
-    is_vision_available,
-    logging,
-    requires_backends,
-)
+
 
 
 if is_mindspore_available():
