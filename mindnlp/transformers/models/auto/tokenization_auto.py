@@ -412,13 +412,13 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
             "squeezebert",
             ("SqueezeBertTokenizer", "SqueezeBertTokenizerFast" if is_tokenizers_available() else None),
         ),
-        # (
-        #     "switch_transformers",
-        #     (
-        #         "T5Tokenizer" if is_sentencepiece_available() else None,
-        #         "T5TokenizerFast" if is_tokenizers_available() else None,
-        #     ),
-        # ),
+        (
+            "switch_transformers",
+            (
+                "T5Tokenizer" if is_sentencepiece_available() else None,
+                "T5TokenizerFast" if is_tokenizers_available() else None,
+            ),
+        ),
         ("stablelm", (None, "GPTNeoXTokenizerFast" if is_tokenizers_available() else None)),
         ("starcoder2", ("GPT2Tokenizer", "GPT2TokenizerFast" if is_tokenizers_available() else None)),
         (
