@@ -1603,12 +1603,12 @@ class Owlv2ForObjectDetection(Owlv2PreTrainedModel):
             output_hidden_states=output_hidden_states,
         )
 
-        batch_size, num_patches, num_patches, hidden_dim = feature_map.shape
+        batch_size, _, num_patches, hidden_dim = feature_map.shape
         image_feats = ops.reshape(
             feature_map, (batch_size, num_patches * num_patches, hidden_dim)
         )
 
-        batch_size, num_patches, num_patches, hidden_dim = query_feature_map.shape
+        batch_size, _, num_patches, hidden_dim = query_feature_map.shape
         query_image_feats = ops.reshape(
             query_feature_map, (batch_size, num_patches * num_patches, hidden_dim)
         )
@@ -1723,7 +1723,7 @@ class Owlv2ForObjectDetection(Owlv2PreTrainedModel):
         text_outputs = outputs.text_model_output
         vision_outputs = outputs.vision_model_output
 
-        batch_size, num_patches, num_patches, hidden_dim = feature_map.shape
+        batch_size, _, num_patches, hidden_dim = feature_map.shape
         image_feats = ops.reshape(
             feature_map, (batch_size, num_patches * num_patches, hidden_dim)
         )

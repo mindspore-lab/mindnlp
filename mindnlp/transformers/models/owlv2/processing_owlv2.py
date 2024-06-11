@@ -172,9 +172,7 @@ class Owlv2Processor(ProcessorMixin):
         elif text is not None or query_images is not None:
             return encoding
         else:
-            return BatchEncoding(
-                data=dict(**image_features), tensor_type=return_tensors
-            )
+            return BatchEncoding(data={**image_features}, tensor_type=return_tensors)
 
     # Copied from transformers.models.owlvit.processing_owlvit.OwlViTProcessor.post_process_object_detection with OWLViT->OWLv2
     def post_process_object_detection(self, *args, **kwargs):
