@@ -915,22 +915,7 @@ class Owlv2ModelIntegrationTest(unittest.TestCase):
                 [-20.958896, -21.382694],
             ]
         )
-        # self.assertTrue(
-        #     np.allclose(
-        #         outputs.logits[0, :3, :3].asnumpy(),
-        #         expected_slice_logits.asnumpy(),
-        #         atol=1e-4,
-        #     )
-        # )
-        self.assertTrue(
-            np.allclose(
-                outputs.pred_boxes[0, :3, :3].asnumpy(),
-                expected_slice_boxes.asnumpy(),
-                outputs.logits[0, :3, :3].asnumpy(),
-                expected_slice_logits.asnumpy(),
-                atol=1e-4,
-            )
-        )
+        self.assertTrue(np.allclose(outputs.pred_boxes[0, :3, :3].asnumpy(), expected_slice_logits.asnumpy(), atol=1e-4))
         expected_slice_boxes = ms.tensor(
             [
                 [0.241309, 0.051896, 0.453267],
