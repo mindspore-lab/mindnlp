@@ -16,13 +16,12 @@
 
 import os
 from typing import TYPE_CHECKING, Dict, Union
-from mindnlp.utils import logging
+from ...configuration_utils import PretrainedConfig
+from ....utils import logging
+
 
 if TYPE_CHECKING:
     pass
-
-from ...configuration_utils import PretrainedConfig
-
 
 
 logger = logging.get_logger(__name__)

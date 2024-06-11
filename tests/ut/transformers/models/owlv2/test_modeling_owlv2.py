@@ -21,7 +21,7 @@ import unittest
 
 import numpy as np
 import requests
-
+from mindnlp.utils.serialization import safe_load_file, safe_save_file
 from mindnlp.transformers import Owlv2Config, Owlv2TextConfig, Owlv2VisionConfig
 from mindnlp.utils.testing_utils import (
     require_mindspore,

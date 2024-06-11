@@ -1,3 +1,21 @@
+# coding=utf-8
+# Copyright 2023 The HuggingFace Inc. team.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""
+Image/Text processor class for OWLv2
+"""
+
 from typing import List
 
 import numpy as np
@@ -13,6 +31,7 @@ class Owlv2Processor(ProcessorMixin):
     Constructs an Owlv2 processor which wraps [`Owlv2ImageProcessor`] and [`CLIPTokenizer`]/[`CLIPTokenizerFast`] into
     a single processor that interits both the image processor and tokenizer functionalities. See the
     [`~OwlViTProcessor.__call__`] and [`~OwlViTProcessor.decode`] for more information.
+
     Args:
         image_processor ([`Owlv2ImageProcessor`]):
             The image processor is a required input.
@@ -43,6 +62,7 @@ class Owlv2Processor(ProcessorMixin):
         the text. To prepare the image(s), this method forwards the `images` and `kwrags` arguments to
         CLIPImageProcessor's [`~CLIPImageProcessor.__call__`] if `images` is not `None`. Please refer to the doctsring
         of the above two methods for more information.
+
         Args:
             text (`str`, `List[str]`, `List[List[str]]`):
                 The sequence or batch of sequences to be encoded. Each sequence can be a string or a list of strings
@@ -152,9 +172,7 @@ class Owlv2Processor(ProcessorMixin):
         elif text is not None or query_images is not None:
             return encoding
         else:
-            return BatchEncoding(
-                data=dict(**image_features), tensor_type=return_tensors
-            )
+            return BatchEncoding(data={**image_features}, tensor_type=return_tensors)
 
     # Copied from transformers.models.owlvit.processing_owlvit.OwlViTProcessor.post_process_object_detection with OWLViT->OWLv2
     def post_process_object_detection(self, *args, **kwargs):
