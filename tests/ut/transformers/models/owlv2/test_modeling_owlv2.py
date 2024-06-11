@@ -917,8 +917,8 @@ class Owlv2ModelIntegrationTest(unittest.TestCase):
         )
         self.assertTrue(
             np.allclose(
-                outputs.pred_boxes[0, :3, :3].asnumpy(),
-                expected_slice_boxes.asnumpy(),
+                outputs.logits[0, :3, :3].asnumpy(),
+                expected_slice_logits.asnumpy(),
                 atol=1e-4,
             )
         )
@@ -983,9 +983,7 @@ class Owlv2ModelIntegrationTest(unittest.TestCase):
     @slow
     def test_inference_one_shot_object_detection_fp16(self):
         model_name = "google/owlv2-base-patch16"
-        model = Owlv2ForObjectDetection.from_pretrained(
-            model_name, ms_dtype=ms.float16
-        )
+        model = Owlv2ForObjectDetection.from_pretrained(model_name, ms_dtype=ms.float16)
 
         processor = OwlViTProcessor.from_pretrained(model_name)
 
@@ -999,8 +997,7 @@ class Owlv2ModelIntegrationTest(unittest.TestCase):
             return_tensors="ms",
         )
 
-        with ms.no_grad():
-            outputs = model.image_guided_detection(**inputs)
+        outputs = model.image_guided_detection(**inputs)
 
         # No need to check the logits, we just check inference runs fine.
         num_queries = int(
