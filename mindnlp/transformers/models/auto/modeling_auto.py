@@ -498,6 +498,7 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("roberta", "RobertaForSequenceClassification"),
         ("squeezebert", "SqueezeBertForSequenceClassification"),
         ("roc_bert", "RoCBertForSequenceClassification"),
+        ("squeezebert", "SqueezeBertForSequenceClassification"),
         ("stablelm", "StableLmForSequenceClassification"),
         ("starcoder2", "Starcoder2ForSequenceClassification"),
         ("xlm-roberta", "XLMRobertaForSequenceClassification"),
