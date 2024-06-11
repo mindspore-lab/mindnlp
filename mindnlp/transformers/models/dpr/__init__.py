@@ -16,7 +16,7 @@
 Dpr Model init
 """
 
-from .import configuration_dpr, modeling_dpr, tokenization_dpr, tokenization_dpr_fast
+from . import configuration_dpr, modeling_dpr, tokenization_dpr, tokenization_dpr_fast
 from .configuration_dpr import *
 from .modeling_dpr import *
 from .tokenization_dpr import *
