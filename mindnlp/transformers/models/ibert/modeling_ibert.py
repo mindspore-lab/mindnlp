@@ -44,9 +44,6 @@ from .quant_modules import IntGELU, IntLayerNorm, IntSoftmax, QuantAct, QuantEmb
 
 logger = logging.get_logger(__name__)
 
-_CHECKPOINT_FOR_DOC = "kssteven/ibert-roberta-base"
-_CONFIG_FOR_DOC = "IBertConfig"
-
 
 class IBertEmbeddings(nn.Cell):
     """
