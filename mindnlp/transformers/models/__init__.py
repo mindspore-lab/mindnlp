@@ -110,6 +110,7 @@ from . import (
     mixtral,
     mobilebert,
     mobilenet_v1,
+    mobilenet_v2,
     mobilevit,
     mpnet,
     mpt,
@@ -266,6 +267,7 @@ from .mistral import *
 from .mixtral import *
 from .mobilebert import *
 from .mobilenet_v1 import *
+from .mobilenet_v2 import *
 from .mobilevit import *
 from .mpnet import *
 from .mpt import *
@@ -422,6 +424,7 @@ __all__.extend(mistral.__all__)
 __all__.extend(mixtral.__all__)
 __all__.extend(mobilebert.__all__)
 __all__.extend(mobilenet_v1.__all__)
+__all__.extend(mobilenet_v2.__all__)
 __all__.extend(mobilevit.__all__)
 __all__.extend(mpnet.__all__)
 __all__.extend(mpt.__all__)
