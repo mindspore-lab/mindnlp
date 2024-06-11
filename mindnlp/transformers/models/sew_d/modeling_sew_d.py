@@ -728,7 +728,7 @@ class DisentangledSelfAttention(nn.Cell):
             if not self.share_att_key:
                 if "c2p" in self.pos_att_type:
                     self.pos_key_proj = nn.Dense(
-                        config.hidden_size, self.all_head_size, bias=True
+                        config.hidden_size, self.all_head_size, has_bias=True
                     )
                 if "p2c" in self.pos_att_type:
                     self.pos_query_proj = nn.Dense(
