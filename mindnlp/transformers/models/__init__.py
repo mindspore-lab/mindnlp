@@ -92,7 +92,6 @@ from . import (
     graphormer,
     groupvit,
     hubert,
-    ibert,
     imagegpt,
     jetmoe,
     layoutlm,
@@ -161,6 +160,7 @@ from . import (
     vision_text_dual_encoder,
     visual_bert,
     vit,
+    vitdet,
     wav2vec2,
     wav2vec2_conformer,
     wav2vec2_bert,
@@ -249,7 +249,6 @@ from .gpt2 import *
 from .graphormer import *
 from .groupvit import *
 from .hubert import *
-from .ibert import *
 from .imagegpt import *
 from .jetmoe import *
 from .layoutlm import *
@@ -318,6 +317,7 @@ from .vipllava import *
 from .vision_text_dual_encoder import *
 from .visual_bert import *
 from .vit import *
+from .vitdet import *
 from .whisper import *
 from .wav2vec2 import *
 from .wav2vec2_conformer import *
@@ -405,7 +405,6 @@ __all__.extend(gpt2.__all__)
 __all__.extend(graphormer.__all__)
 __all__.extend(groupvit.__all__)
 __all__.extend(hubert.__all__)
-__all__.extend(ibert.__all__)
 __all__.extend(imagegpt.__all__)
 __all__.extend(jetmoe.__all__)
 __all__.extend(layoutlm.__all__)
@@ -475,6 +474,7 @@ __all__.extend(vipllava.__all__)
 __all__.extend(vision_text_dual_encoder.__all__)
 __all__.extend(visual_bert.__all__)
 __all__.extend(vit.__all__)
+__all__.extend(vitdet.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)
 __all__.extend(wav2vec2_conformer.__all__)
