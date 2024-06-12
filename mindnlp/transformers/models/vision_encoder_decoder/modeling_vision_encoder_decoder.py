@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""MindSpore VisionEncoderDecoder model."""
 from typing import Optional, Tuple, Union
 
 import mindspore as ms
@@ -230,7 +230,7 @@ class VisionEncoderDecoderModel(PreTrainedModel):
         return self.decoder.get_output_embeddings()
 
     def set_output_embeddings(self, new_embeddings):
-        return self.decoder.set_output_embeddings(new_embeddings)   
+        return self.decoder.set_output_embeddings(new_embeddings)
 
     @classmethod
     def from_encoder_decoder_pretrained(
