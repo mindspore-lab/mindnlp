@@ -27,6 +27,8 @@ from mindnlp.utils.testing_utils import (require_mindspore, require_vision, slow
 from ...test_modeling_common import floats_tensor, ids_tensor, random_attention_mask
 from ..bert.test_modeling_bert import BertModelTester
 from ..clip.test_modeling_clip import CLIPVisionModelTester
+from ..deit.test_modeling_deit import DeiTModelTester
+from ..roberta.test_modeling_roberta import RobertaModelTester
 from ..vit.test_modeling_vit import ViTModelTester
 
 
@@ -36,6 +38,8 @@ if is_mindspore_available():
     from mindnlp.transformers import (
         BertModel,
         CLIPVisionModel,
+        DeiTModel,
+        RobertaModel,
         VisionTextDualEncoderConfig,
         VisionTextDualEncoderModel,
         ViTModel,
@@ -248,6 +252,97 @@ class ViTBertModelTest(VisionTextDualEncoderMixin, unittest.TestCase):
             "text_token_labels": token_labels,
             "text_choice_labels": choice_labels,
         }
+
+
+@require_mindspore
+class DeiTRobertaModelTest(VisionTextDualEncoderMixin, unittest.TestCase):
+    def get_pretrained_model_and_inputs(self):
+        model = VisionTextDualEncoderModel.from_vision_text_pretrained(
+            vision_model_name_or_path="hf-internal-testing/tiny-random-deit",
+            text_model_name_or_path="hf-internal-testing/tiny-random-roberta"
+        )
+        batch_size = 13
+        pixel_values = floats_tensor(
+            [
+                batch_size,
+                model.vision_model.config.num_channels,
+                model.vision_model.config.image_size,
+                model.vision_model.config.image_size,
+            ]
+        )
+        input_ids = ids_tensor([batch_size, 4], model.text_model.config.vocab_size)
+        attention_mask = random_attention_mask([batch_size, 4])
+        inputs = {"pixel_values": pixel_values, "input_ids": input_ids, "attention_mask": attention_mask}
+
+        return model, inputs
+
+    def check_vision_text_output_attention(
+        self, text_config, input_ids, attention_mask, vision_config, pixel_values=None, **kwargs
+    ):
+        vision_model, text_model = self.get_vision_text_model(vision_config, text_config)
+        model = VisionTextDualEncoderModel(vision_model=vision_model, text_model=text_model)
+        model.set_train(False)
+
+        output = model(
+            input_ids=input_ids, pixel_values=pixel_values, attention_mask=attention_mask, output_attentions=True
+        )
+
+        vision_attentions = output.vision_model_output.attentions
+        self.assertEqual(len(vision_attentions), vision_config.num_hidden_layers)
+
+        # in DEiT, the seq_len equals the number of patches + 2 (we add 2 for the [CLS] and distillation tokens)
+        image_size = to_2tuple(vision_model.config.image_size)
+        patch_size = to_2tuple(vision_model.config.patch_size)
+        num_patches = (image_size[1] // patch_size[1]) * (image_size[0] // patch_size[0])
+        seq_len = num_patches + 2
+        self.assertEqual(vision_attentions[0].shape[-3:], (vision_config.num_attention_heads, seq_len, seq_len))
+
+        text_attentions = output.text_model_output.attentions
+        self.assertEqual(len(text_attentions), text_config.num_hidden_layers)
+
+        self.assertEqual(
+            text_attentions[0].shape[-3:],
+            (text_config.num_attention_heads, input_ids.shape[-1], input_ids.shape[-1]),
+        )
+
+    def get_vision_text_model(self, vision_config, text_config):
+        vision_model = DeiTModel(vision_config).set_train(False)
+        text_model = RobertaModel(text_config).set_train(False)
+        return vision_model, text_model
+
+    def prepare_config_and_inputs(self):
+        vit_model_tester = DeiTModelTester(self)
+        bert_model_tester = RobertaModelTester(self)
+        vision_config_and_inputs = vit_model_tester.prepare_config_and_inputs()
+        text_config_and_inputs = bert_model_tester.prepare_config_and_inputs()
+
+        vision_config, pixel_values, _ = vision_config_and_inputs
+
+        (
+            text_config,
+            input_ids,
+            token_type_ids,
+            input_mask,
+            sequence_labels,
+            token_labels,
+            choice_labels,
+        ) = text_config_and_inputs
+
+        return {
+            "text_config": text_config,
+            "vision_config": vision_config,
+            "pixel_values": pixel_values,
+            "attention_mask": input_mask,
+            "input_ids": input_ids,
+            "text_token_type_ids": token_type_ids,
+            "text_sequence_labels": sequence_labels,
+            "text_token_labels": token_labels,
+            "text_choice_labels": choice_labels,
+        }
+
+    # skip as DeiT is not available in Flax
+    def test_pt_flax_equivalence(self):
+        pass
 
 
 @require_mindspore
