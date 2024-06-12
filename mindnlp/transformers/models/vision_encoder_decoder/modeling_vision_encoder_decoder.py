@@ -13,11 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Tuple, Union, Any, Mapping, OrderedDict
+from typing import Optional, Tuple, Union
 
 import mindspore as ms
-import mindspore.nn as nn
-import mindspore.ops as ops
+from mindspore import nn
 from mindspore import Tensor
 from mindspore.nn.loss import CrossEntropyLoss
 
@@ -26,7 +25,6 @@ from ...configuration_utils import PretrainedConfig
 from ....utils import logging
 from ..auto.configuration_auto import AutoConfig
 from ...modeling_utils import PreTrainedModel
-from ..auto.configuration_auto import AutoConfig
 from ..auto.modeling_auto import AutoModel, AutoModelForCausalLM
 from .configuration_vision_encoder_decoder import VisionEncoderDecoderConfig
 
@@ -232,9 +230,7 @@ class VisionEncoderDecoderModel(PreTrainedModel):
         return self.decoder.get_output_embeddings()
 
     def set_output_embeddings(self, new_embeddings):
-        return self.decoder.set_output_embeddings(new_embeddings)
-    
-   
+        return self.decoder.set_output_embeddings(new_embeddings)   
 
     @classmethod
     def from_encoder_decoder_pretrained(
