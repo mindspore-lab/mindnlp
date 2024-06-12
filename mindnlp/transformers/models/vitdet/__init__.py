@@ -11,24 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-Owlv2 Model init
-"""
-
-from . import (
-    configuration_owlv2,
-    modeling_owlv2,
-    image_processing_owlv2,
-    processing_owlv2,
-)
-
-from .configuration_owlv2 import *
-from .modeling_owlv2 import *
-from .image_processing_owlv2 import *
-from .processing_owlv2 import *
+"""Vitdet Model Init"""
+from . import configuration_vitdet, modeling_vitdet
+from .modeling_vitdet import *
+from .configuration_vitdet import *
 
 __all__ = []
-__all__.extend(configuration_owlv2.__all__)
-__all__.extend(modeling_owlv2.__all__)
-__all__.extend(image_processing_owlv2.__all__)
-__all__.extend(processing_owlv2.__all__)
+__all__.extend(modeling_vitdet.__all__)
+__all__.extend(configuration_vitdet.__all__)
