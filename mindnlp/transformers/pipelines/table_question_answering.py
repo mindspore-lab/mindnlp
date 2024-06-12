@@ -15,9 +15,9 @@
 """table question answering pipeline."""
 
 import types
-from typing import Any, Dict
+from typing import Dict
 
-from .base import ArgumentHandler, Dataset, GenericTensor
+from .base import ArgumentHandler, Dataset
 from .. import Pipeline
 from ...utils import (
     is_mindspore_available,
@@ -27,6 +27,7 @@ from ...utils import (
 
 if is_mindspore_available():
     import mindspore
+    import mindspore.nn
     from ..models.auto.modeling_auto import (
         MODEL_FOR_TABLE_QUESTION_ANSWERING_MAPPING_NAMES,
         MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING_NAMES
@@ -250,7 +251,65 @@ class TableQuestionAnsweringPipeline(Pipeline):
         return inputs
 
     def _forward(self, model_inputs, sequential=False, **kwargs):
-        pass
+        table = model_inputs["table"]
+
+        if self.type == "table":
+            if sequential:
+                outputs = self.sequential_inference(**model_inputs)
+            else:
+                outputs = self.batch_inference(**model_inputs)
+        else:
+            outputs = self.model.generate(**model_inputs, **kwargs)
+
+        model_outputs = {"model_inputs": model_inputs, "table": table, "outputs": outputs}
+        return model_outputs
 
     def postprocess(self, model_outputs: ModelOutput, **postprocess_parameters: Dict):
         pass
+
+    def batch_inference(self, **inputs):
+        return self.model(**inputs)
+
+    def sequential_inference(self, **inputs):
+        """
+        Inference used for models that need to process sequences in a sequential fashion, like the SQA models which
+        handle conversational query related to a table.
+        """
+        all_logits = []
+        all_aggregations = []
+        prev_answers = None
+        batch_size = inputs["input_inds"].shape[0]
+
+        input_ids = inputs["input_ids"]
+        attention_mask = inputs["attention_mask"]
+        token_type_ids = inputs["token_type_ids"]
+        token_type_ids_example = None
+
+        for index in range(batch_size):
+            # If sequences have already been processed, the token type IDs will be created according to the previous
+            # answer.
+            if prev_answers is not None:
+                prev_labels_example = token_type_ids_example[:, 3]  # shape(seq_len,)
+                model_labels = mindspore.numpy.zeros_like(  # shape(seq_len,)
+                    prev_labels_example.asnumpy(),
+                    dtype=mindspore.dtype.int32
+                )
+
+            input_ids_example = input_ids[index]
+            attention_mask_example = attention_mask[index]
+            token_type_ids_example = token_type_ids[index]
+            outputs = self.model(
+                input_ids=input_ids_example.unsqueeze(0),
+                attention_mask=attention_mask_example.unsqueeze(0),
+                token_type_ids=token_type_ids_example.unsqueeze(0),
+            )
+            logits = outputs.logits
+
+            if self.aggregate:
+                all_aggregations.append(outputs.logis_aggregation)
+
+            all_logits.append(logits)
+
+            dist_per_token = mindspore.nn.probability.distribution.Bernoulli(seed=logits)
+
+        return self.model(**inputs)
