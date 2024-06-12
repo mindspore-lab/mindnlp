@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Any, Mapping, Optional, OrderedDict
+from typing import TYPE_CHECKING
 
 from ...configuration_utils import PretrainedConfig
 from ....utils import logging
