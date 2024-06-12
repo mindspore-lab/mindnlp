@@ -174,13 +174,13 @@ class ImageProcessingTestMixin:
             # for layoutLM compatiblity
             self.assertEqual(encoding.pixel_values.dtype, ms.float32)
 
-            encoding = image_processor(image_inputs, return_tensors="ms").astype(ms.float16)
+            encoding = image_processor(image_inputs, return_tensors="ms").to(ms.float16)
             self.assertEqual(encoding.pixel_values.dtype, ms.float16)
 
             # Try with text + image feature
             encoding = image_processor(image_inputs, return_tensors="ms")
             encoding.update({"input_ids": ms.Tensor([[1, 2, 3], [4, 5, 6]])})
-            encoding = encoding.astype(ms.float16)
+            encoding = encoding.to(ms.float16)
 
             self.assertEqual(encoding.pixel_values.dtype, ms.float16)
             self.assertEqual(encoding.input_ids.dtype, ms.int64)

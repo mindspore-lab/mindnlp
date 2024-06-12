@@ -67,6 +67,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("convnext", "ConvNextModel"),
         ("cvt", "CvtModel"),
         ("data2vec-text", "Data2VecTextModel"),
+        ("deit", "DeiTModel"),
         ("deberta", "DebertaModel"),
         ("decision_transformer", "DecisionTransformerModel"),
         ("deberta-v2", "DebertaV2Model"),
@@ -275,6 +276,17 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("xlm-roberta", "XLMRobertaForCausalLM"),
         ("xlm-roberta-xl", "XLMRobertaXLForCausalLM"),
         ("xlnet", "XLNetLMHeadModel"),
+    ]
+)
+
+
+MODEL_FOR_MASKED_IMAGE_MODELING_MAPPING_NAMES = OrderedDict(
+    [
+        ("deit", "DeiTForMaskedImageModeling"),
+        # ("focalnet", "FocalNetForMaskedImageModeling"),
+        # ("swin", "SwinForMaskedImageModeling"),
+        # ("swinv2", "Swinv2ForMaskedImageModeling"),
+        # ("vit", "ViTForMaskedImageModeling"),
     ]
 )
 
