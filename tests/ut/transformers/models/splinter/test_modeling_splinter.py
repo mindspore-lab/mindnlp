@@ -14,8 +14,8 @@
 # ============================================================================
 """Testing suite for the MindSpore Splinter model."""
 
+import copy
 import unittest
-from copy import copy
 
 from mindspore import ops
 
