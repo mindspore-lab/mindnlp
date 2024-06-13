@@ -70,6 +70,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("deit", "DeiTConfig"),
         ("deberta", "DebertaConfig"),
         ("deberta-v2", "DebertaV2Config"),
+        ("detr", "DetrConfig"),
         ("distilbert", "DistilBertConfig"),
         ("efficientformer", "EfficientFormerConfig"),
         ("encodec", "EncodecConfig"),
