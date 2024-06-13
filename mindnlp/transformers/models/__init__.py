@@ -47,6 +47,7 @@ from . import (
     byt5,
     camembert,
     canine,
+    clap,
     clip,
     codegen,
     cohere,
@@ -63,6 +64,7 @@ from . import (
     deberta_v2,
     decision_transformer,
     detr,
+    deit,
     distilbert,
     dpr,
     efficientnet,
@@ -156,6 +158,7 @@ from . import (
     tinybert,
     videomae,
     vipllava,
+    vision_encoder_decoder,
     vision_text_dual_encoder,
     visual_bert,
     vit,
@@ -204,6 +207,7 @@ from .bros import *
 from .byt5 import *
 from .camembert import *
 from .canine import *
+from .clap import *
 from .clip import *
 from .codegen import *
 from .cohere import *
@@ -220,6 +224,7 @@ from .deberta import *
 from .deberta_v2 import *
 from .decision_transformer import *
 from .detr import *
+from .deit import *
 from .distilbert import *
 from .dpr import *
 from .efficientnet import *
@@ -313,6 +318,7 @@ from .time_series_transformer import *
 from .timesformer import *
 from .videomae import *
 from .vipllava import *
+from .vision_encoder_decoder import *
 from .vision_text_dual_encoder import *
 from .visual_bert import *
 from .vit import *
@@ -361,6 +367,7 @@ __all__.extend(bros.__all__)
 __all__.extend(byt5.__all__)
 __all__.extend(camembert.__all__)
 __all__.extend(canine.__all__)
+__all__.extend(clap.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(codegen.__all__)
 __all__.extend(cohere.__all__)
@@ -376,6 +383,7 @@ __all__.extend(data2vec.__all__)
 __all__.extend(deberta.__all__)
 __all__.extend(deberta_v2.__all__)
 __all__.extend(decision_transformer.__all__)
+__all__.extend(deit.__all__)
 __all__.extend(distilbert.__all__)
 __all__.extend(detr.__all__)
 __all__.extend(dpr.__all__)
@@ -470,6 +478,7 @@ __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
 __all__.extend(videomae.__all__)
 __all__.extend(vipllava.__all__)
+__all__.extend(vision_encoder_decoder.__all__)
 __all__.extend(vision_text_dual_encoder.__all__)
 __all__.extend(visual_bert.__all__)
 __all__.extend(vit.__all__)

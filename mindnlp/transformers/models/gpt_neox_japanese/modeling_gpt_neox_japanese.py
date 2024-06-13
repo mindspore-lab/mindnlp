@@ -547,9 +547,9 @@ class GPTNeoXJapaneseModel(GPTNeoXJapanesePreTrainedModel):
             # Since we are adding it to the raw scores before the softmax, this is
             # effectively the same as removing these entirely.
             attention_mask = attention_mask.to(dtype=self.dtype)  # fp16 compatibility
-            attention_mask = (1.0 - attention_mask) * np.finfo(
+            attention_mask = (1.0 - attention_mask) * mindspore.tensor(np.finfo(
                 mindspore.dtype_to_nptype(attention_mask.dtype)
-            ).min
+            ).min)
 
         # Prepare head mask if needed
         # 1.0 in head_mask indicate we keep the head
