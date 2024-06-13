@@ -47,7 +47,8 @@ def verify_out_features_out_indices(
             raise ValueError(f"out_features must be a subset of stage_names: {stage_names} got {out_features}")
         if len(out_features) != len(set(out_features)):
             raise ValueError(f"out_features must not contain any duplicates, got {out_features}")
-        if out_features != (sorted_feats := [feat for feat in stage_names if feat in out_features]):
+        sorted_feats = [feat for feat in stage_names if feat in out_features]
+        if out_features != sorted_feats:
             raise ValueError(
                 f"out_features must be in the same order as stage_names, expected {sorted_feats} got {out_features}"
             )

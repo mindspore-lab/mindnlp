@@ -19,11 +19,7 @@ from typing import  Union
 from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
 
-__all__ = [
-    "GroupViTConfig",
-    "GroupViTTextConfig",
-    "GroupViTVisionConfig",
-]
+
 
 
 logger = logging.get_logger(__name__)
@@ -397,3 +393,9 @@ class GroupViTConfig(PretrainedConfig):
         """
 
         return cls(text_config=text_config.to_dict(), vision_config=vision_config.to_dict(), **kwargs)
+
+__all__ = [
+    "GroupViTConfig",
+    "GroupViTTextConfig",
+    "GroupViTVisionConfig",
+]

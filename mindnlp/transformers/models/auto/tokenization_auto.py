@@ -21,7 +21,7 @@ import os
 from collections import OrderedDict
 from typing import Dict, Optional, Union
 
-from mindnlp.utils import cached_file, is_sentencepiece_available, is_tokenizers_available, logging
+from mindnlp.utils import cached_file, is_sentencepiece_available, is_tokenizers_available, is_g2p_en_available, logging
 from ...configuration_utils import PretrainedConfig, EncoderDecoderConfig
 from ...tokenization_utils import PreTrainedTokenizer
 from ...tokenization_utils_base import TOKENIZER_CONFIG_FILE
@@ -129,6 +129,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
             ),
         ),
         ("codegen", ("CodeGenTokenizer", "CodeGenTokenizerFast" if is_tokenizers_available() else None)),
+        ("cohere", (None, "CohereTokenizerFast" if is_tokenizers_available() else None)),
         ("convbert", ("ConvBertTokenizer", "ConvBertTokenizerFast" if is_tokenizers_available() else None)),
         (
             "cpm",
@@ -163,6 +164,10 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         ("ernie_m", ("ErnieMTokenizer" if is_sentencepiece_available() else None, None)),
         ("esm", ("EsmTokenizer", None)),
         ("falcon", (None, "PreTrainedTokenizerFast" if is_tokenizers_available() else None)),
+        (
+            "fastspeech2_conformer",
+            ("FastSpeech2ConformerTokenizer" if is_g2p_en_available() else None, None),
+        ),
         ("flaubert", ("FlaubertTokenizer", None)),
         ("fnet", ("FNetTokenizer", "FNetTokenizerFast" if is_tokenizers_available() else None)),
         ("fsmt", ("FSMTTokenizer", None)),
@@ -408,13 +413,13 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
             "squeezebert",
             ("SqueezeBertTokenizer", "SqueezeBertTokenizerFast" if is_tokenizers_available() else None),
         ),
-        # (
-        #     "switch_transformers",
-        #     (
-        #         "T5Tokenizer" if is_sentencepiece_available() else None,
-        #         "T5TokenizerFast" if is_tokenizers_available() else None,
-        #     ),
-        # ),
+        (
+            "switch_transformers",
+            (
+                "T5Tokenizer" if is_sentencepiece_available() else None,
+                "T5TokenizerFast" if is_tokenizers_available() else None,
+            ),
+        ),
         ("stablelm", (None, "GPTNeoXTokenizerFast" if is_tokenizers_available() else None)),
         ("starcoder2", ("GPT2Tokenizer", "GPT2TokenizerFast" if is_tokenizers_available() else None)),
         (
@@ -439,6 +444,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         ("visual_bert", ("BertTokenizer", "BertTokenizerFast" if is_tokenizers_available() else None)),
         ("vits", ("VitsTokenizer", None)),
         ("wav2vec2", ("Wav2Vec2CTCTokenizer", None)),
+        ("wav2vec2-bert", ("Wav2Vec2CTCTokenizer", None)),
         ("wav2vec2-conformer", ("Wav2Vec2CTCTokenizer", None)),
         ("wav2vec2_phoneme", ("Wav2Vec2PhonemeCTCTokenizer", None)),
         ("whisper", ("WhisperTokenizer", "WhisperTokenizerFast" if is_tokenizers_available() else None)),

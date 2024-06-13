@@ -613,7 +613,7 @@ class Trainer:
 
         return model
 
-    @lru_cache
+    @lru_cache(128)
     def get_train_dataset(self) -> Dataset:
         """
         Returns the training [`~mindspore.dataset.GeneratorDataset`].
@@ -645,7 +645,7 @@ class Trainer:
         train_dataset = train_dataset.batch(self._train_batch_size, self.args.dataset_drop_last, self.args.dataset_num_workers)
         return train_dataset
 
-    @lru_cache
+    @lru_cache(128)
     def get_test_dataset(self, test_dataset: Dataset) -> Dataset:
         """
         Returns the test [`~mindspore.dataset.GeneratorDataset`].
@@ -666,7 +666,7 @@ class Trainer:
         # We use the same batch_size as for eval.
         return test_dataset
 
-    @lru_cache
+    @lru_cache(128)
     def get_eval_dataset(self, eval_dataset: Dataset = None) -> Dataset:
         """
         Returns the test [`~mindspore.dataset.GeneratorDataset`].
@@ -1399,10 +1399,12 @@ indicating whether to prefer safe tensors.
             self._past = outputs[self.args.past_index]
 
         if labels is not None:
-            # if _is_peft_model(unwrapped_model):
-            #     model_name = unwrapped_model.base_model.model._get_name()
-            # else:
-            model_name = model._get_name()
+            # unwrapped_model = self.accelerator.unwrap_model(model)
+            unwrapped_model = model
+            if _is_peft_model(unwrapped_model):
+                model_name = type(unwrapped_model.get_base_model()).__name__
+            else:
+                model_name = type(unwrapped_model).__name__
             if model_name in MODEL_FOR_CAUSAL_LM_MAPPING_NAMES.values():
                 loss = self.label_smoother(outputs, labels, shift_labels=True)
             else:
