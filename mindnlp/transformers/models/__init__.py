@@ -47,6 +47,7 @@ from . import (
     byt5,
     camembert,
     canine,
+    clap,
     clip,
     codegen,
     cohere,
@@ -205,6 +206,7 @@ from .bros import *
 from .byt5 import *
 from .camembert import *
 from .canine import *
+from .clap import *
 from .clip import *
 from .codegen import *
 from .cohere import *
@@ -363,6 +365,7 @@ __all__.extend(bros.__all__)
 __all__.extend(byt5.__all__)
 __all__.extend(camembert.__all__)
 __all__.extend(canine.__all__)
+__all__.extend(clap.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(codegen.__all__)
 __all__.extend(cohere.__all__)

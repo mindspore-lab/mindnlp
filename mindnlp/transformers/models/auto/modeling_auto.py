@@ -61,6 +61,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("ctrl", "CTRLModel"),
         ("cpmbee", "CpmBeeModel"),
         ("chatglm", "ChatGLMModel"),
+        ("clap", "ClapModel"),
         ("clip", "CLIPModel"),
         ("clip_vision_model", "CLIPVisionModel"),
         ("convbert", "ConvBertModel"),
