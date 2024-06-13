@@ -124,6 +124,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("squeezebert", "SqueezeBertModel"),
         ("starcoder2", "Starcoder2Model"),
         ("swiftformer", "SwiftFormerModel"),
+        ("swin", "SwinModel"),
         ("switch_transformers", "SwitchTransformersModel"),
         ("t5", "T5Model"),
         ("time_series_transformer", "TimeSeriesTransformerModel"),
