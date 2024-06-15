@@ -30,7 +30,7 @@ def norm_except_dim(weight_v, pows, dim):
         output_size = (w_shape_v,) + (1,) * (weight_v.ndim - 1)
         return mnp.norm(weight_v.view((w_shape_v, -1)), pows, 1).view(output_size)
     if dim == (weight_v.ndim - 1):
-        output_size = (1,) * (weight_v.ndim - 1) + (weight_v.shape[weight_v.ndim - 1])
+        output_size = (1,) * (weight_v.ndim - 1) + (weight_v.shape[weight_v.ndim - 1],)
         return mnp.norm(weight_v.view((-1, weight_v.shape[weight_v.ndim - 1])), pows, 0).view(output_size)
     return norm_except_dim(weight_v.swapaxes(0, dim), pows, dim).swapaxes(0, dim)
 

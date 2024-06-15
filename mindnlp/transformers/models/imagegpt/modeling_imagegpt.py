@@ -23,6 +23,7 @@ import numpy as np
 
 import mindspore as ms
 from mindspore import nn, ops
+from mindspore import numpy as mnp
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from mindspore.common.initializer import Normal
 
@@ -273,8 +274,8 @@ class ImageGPTAttention(nn.Cell):
         _, _, k_seq_len, _ = key.shape
 
         # Preallocate attn_weights for `baddbmm`
-        attn_weights = ops.empty(
-            bsz * num_heads, q_seq_len, k_seq_len, dtype=ms.float32)
+        attn_weights = mnp.empty((
+            bsz * num_heads, q_seq_len, k_seq_len), dtype=ms.float32)
 
         # Compute Scale Factor
         scale_factor = 1.0
