@@ -23,14 +23,14 @@ import mindspore
 from mindspore import nn, ops
 from mindspore.common.initializer import initializer, TruncatedNormal
 
+from mindnlp.utils import (
+    ModelOutput,
+    logging,
+)
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, ImageSuperResolutionOutput
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, meshgrid, prune_linear_layer
-from mindnlp.utils import (
-    ModelOutput, 
-    logging,
-)
 
 from .configuration_swin2sr import Swin2SRConfig
 

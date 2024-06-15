@@ -18,6 +18,8 @@ from typing import Optional, Union
 
 import numpy as np
 
+from mindnlp.utils import TensorType, logging
+
 from ...image_processing_utils import BaseImageProcessor, BatchFeature
 from ...image_transforms import get_image_size, pad, to_channel_dimension_format
 from ...image_utils import (
@@ -31,7 +33,6 @@ from ...image_utils import (
     validate_kwargs,
     validate_preprocess_arguments,
 )
-from mindnlp.utils import TensorType, logging
 
 
 logger = logging.get_logger(__name__)

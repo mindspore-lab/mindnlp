@@ -14,8 +14,8 @@
 # limitations under the License.
 """Swin2SR Transformer model configuration"""
 
-from ...configuration_utils import PretrainedConfig
 from mindnlp.utils import logging
+from ...configuration_utils import PretrainedConfig
 
 
 logger = logging.get_logger(__name__)
