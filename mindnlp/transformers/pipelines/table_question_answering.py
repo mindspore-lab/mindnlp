@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """table question answering pipeline."""
-
+import collections
 import types
 from typing import Dict
 
@@ -295,6 +295,15 @@ class TableQuestionAnsweringPipeline(Pipeline):
                     dtype=mindspore.dtype.int32
                 )
 
+                token_type_ids_example = token_type_ids[index]
+                for i in range(model_labels.shape[0]):
+                    segment_id = token_type_ids_example[:, 0].tolist()[i] - 1
+                    col = token_type_ids_example[:, 1].tolist()[i] - 1
+                    row = token_type_ids_example[:, 2].tolist()[i] - 1
+                    if col >= 0 and row >= 0 and segment_id == 1:
+                        model_labels[i] = int(prev_answers[(col, row)])
+                token_type_ids_example[:, 3] = mindspore.Tensor(model_labels)
+
             input_ids_example = input_ids[index]
             attention_mask_example = attention_mask[index]
             token_type_ids_example = token_type_ids[index]
@@ -311,5 +320,19 @@ class TableQuestionAnsweringPipeline(Pipeline):
             all_logits.append(logits)
 
             dist_per_token = mindspore.nn.probability.distribution.Bernoulli(seed=logits)
+            probabilities = dist_per_token.probs * attention_mask_example.type(mindspore.dtype.float32)
 
-        return self.model(**inputs)
+            coords_to_probs = collections.defaultdict(list)
+            for i, p in enumerate(probabilities.squeeze(0).tolist()):
+                segment_id = token_type_ids_example[:, 0].tolist()[i] - 1
+                col = token_type_ids_example[:, 1].tolist()[i] - 1
+                row = token_type_ids_example[:, 2].tolist()[i] - 1
+                if col >= 0 and row >= 0 and segment_id == 1:
+                    coords_to_probs[(col, row)].append(p)
+
+            prev_answers = {key: mindspore.numpy.array(coords_to_probs[key]).mean() > 0.5
+                            for key in coords_to_probs}
+
+        logits_batch = mindspore.ops.cat(tuple(all_logits), axis=0)
+        return (logits_batch,) if not self.aggregate \
+            else (logits_batch, mindspore.ops.cat(tuple(all_aggregations), axis=0))
