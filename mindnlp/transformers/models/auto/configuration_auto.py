@@ -480,6 +480,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("groupvit", "GroupViT"),
         ("herbert", "HerBERT"),
         ("hubert", "Hubert"),
+        ("ibert", "I-Bert"),
         ("idefics", "IDEFICS"),
         ("imagegpt", "ImageGPT"),
         ("informer", "Informer"),

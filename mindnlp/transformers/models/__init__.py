@@ -76,6 +76,7 @@ from . import (
     esm,
     ernie,
     ernie_m,
+    falcon,
     fastspeech2_conformer,
     chatglm,
     chatglm2,
@@ -101,6 +102,7 @@ from . import (
     layoutlm,
     layoutlmv2,
     led,
+    lilt,
     llama,
     llava,
     llava_next,
@@ -244,6 +246,7 @@ from .ernie_m import *
 from .chatglm import *
 from .chatglm2 import *
 from .chatglm3 import *
+from .falcon import *
 from .flava import *
 from .funnel import *
 from .fastspeech2_conformer import *
@@ -266,6 +269,7 @@ from .jetmoe import *
 from .layoutlm import *
 from .layoutlmv2 import *
 from .led import *
+from .lilt import *
 from .llama import *
 from .llava import *
 from .llava_next import *
@@ -406,6 +410,7 @@ __all__.extend(ernie.__all__)
 __all__.extend(ernie_m.__all__)
 __all__.extend(esm.__all__)
 __all__.extend(chatglm.__all__)
+__all__.extend(falcon.__all__)
 __all__.extend(flava.__all__)
 __all__.extend(funnel.__all__)
 __all__.extend(fastspeech2_conformer.__all__)
@@ -430,6 +435,7 @@ __all__.extend(jetmoe.__all__)
 __all__.extend(layoutlm.__all__)
 __all__.extend(layoutlmv2.__all__)
 __all__.extend(led.__all__)
+__all__.extend(lilt.__all__)
 __all__.extend(llama.__all__)
 __all__.extend(llava.__all__)
 __all__.extend(llava_next.__all__)
