@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2020-2022 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,23 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+""" MindSpore Whisper model for graph mode."""
 
 import math
 import copy
 import os.path
+import sys
 
 import numpy as np
 import mindspore as ms
-import mindspore.ops as ops
-import mindspore.nn as nn
 
-from mindspore import Tensor, Parameter, load_param_into_net
+from mindspore import ops, nn, Tensor, Parameter, load_param_into_net
+from mindspore.ops.primitive import constexpr
 from mindnlp.utils.serialization import load
 
-from mindspore.ops.primitive import constexpr
-
 INF = 1. * 1e9
-
 
 class WhisperGraphConfig:
     def __init__(self,
@@ -861,7 +860,7 @@ class WhisperGraphModel(nn.Cell):
     def load_graph_model(cls, path, language, **kwargs):
         if language is None:
             print("language detected not support now!!")
-            exit(-1)
+            sys.exit()
         model_config = WhisperGraphModel.load_model_config(path, language)
         for key, value in kwargs.items():
             model_config.__setattr__(key, value)
