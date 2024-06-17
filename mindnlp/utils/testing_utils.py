@@ -55,6 +55,7 @@ from .import_utils import (
     is_pyctcdecode_available,
     is_safetensors_available,
     is_sentencepiece_available,
+    is_soundfile_availble,
     is_tokenizers_available,
     is_pytesseract_available,
     is_vision_available,
@@ -2048,3 +2049,15 @@ def is_staging_test(test_case):
             return test_case
         else:
             return pytest.mark.is_staging_test()(test_case)
+
+
+def require_soundfile(test_case):
+    """
+    Decorator marking a test that requires soundfile
+
+    These tests are skipped when soundfile isn't installed.
+
+    """
+    return unittest.skipUnless(is_soundfile_availble(), "test requires soundfile")(
+        test_case
+    )

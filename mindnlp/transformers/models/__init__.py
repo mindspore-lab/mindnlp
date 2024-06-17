@@ -147,6 +147,8 @@ from . import (
     seamless_m4t_v2,
     segformer,
     seggpt,
+    sew,
+    sew_d,
     speech_encoder_decoder,
     speecht5,
     stablelm,
@@ -309,6 +311,8 @@ from .seamless_m4t import *
 from .seamless_m4t_v2 import *
 from .segformer import *
 from .seggpt import *
+from .sew import *
+from .sew_d import *
 from .speech_encoder_decoder import *
 from .speecht5 import *
 from .stablelm import *
@@ -470,6 +474,8 @@ __all__.extend(seamless_m4t.__all__)
 __all__.extend(seamless_m4t_v2.__all__)
 __all__.extend(segformer.__all__)
 __all__.extend(seggpt.__all__)
+__all__.extend(sew.__all__)
+__all__.extend(sew_d.__all__)
 __all__.extend(speech_encoder_decoder.__all__)
 __all__.extend(speecht5.__all__)
 __all__.extend(stablelm.__all__)

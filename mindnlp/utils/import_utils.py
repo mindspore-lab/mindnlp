@@ -74,6 +74,7 @@ def _is_package_available(
 _pytest_available = _is_package_available("pytest")
 _datasets_available = _is_package_available("datasets")
 _sentencepiece_available = _is_package_available("sentencepiece")
+_soundfile_available = _is_package_available("soundfile")
 _tokenizers_available = _is_package_available("tokenizers")
 _pyctcdecode_available = _is_package_available("pyctcdecode")
 _safetensors_available = _is_package_available("safetensors")
@@ -661,3 +662,7 @@ def direct_transformers_import(path: str, file="__init__.py") -> ModuleType:
     spec.loader.exec_module(module)
     module = sys.modules[name]
     return module
+
+
+def is_soundfile_availble():
+    return _soundfile_available
