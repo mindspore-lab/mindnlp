@@ -21,7 +21,7 @@ import tempfile
 
 from mindnlp.transformers.feature_extraction_utils import BatchFeature
 from mindnlp.transformers.image_utils import AnnotationFormat, AnnotionFormat
-from mindnlp.utils.testing_utils import check_json_file_has_correct_format, require_mindspore, require_vision
+from mindnlp.utils.testing_utils import check_json_file_has_correct_format, require_mindspore, require_vision, get_tests_dir
 from mindnlp.utils import is_mindspore_available, is_vision_available
 
 
@@ -174,13 +174,13 @@ class ImageProcessingTestMixin:
             # for layoutLM compatiblity
             self.assertEqual(encoding.pixel_values.dtype, ms.float32)
 
-            encoding = image_processor(image_inputs, return_tensors="ms").astype(ms.float16)
+            encoding = image_processor(image_inputs, return_tensors="ms").to(ms.float16)
             self.assertEqual(encoding.pixel_values.dtype, ms.float16)
 
             # Try with text + image feature
             encoding = image_processor(image_inputs, return_tensors="ms")
             encoding.update({"input_ids": ms.Tensor([[1, 2, 3], [4, 5, 6]])})
-            encoding = encoding.astype(ms.float16)
+            encoding = encoding.to(ms.float16)
 
             self.assertEqual(encoding.pixel_values.dtype, ms.float16)
             self.assertEqual(encoding.input_ids.dtype, ms.int64)
@@ -298,7 +298,7 @@ class AnnotationFormatTestMixin:
 
     def test_processor_can_use_legacy_annotation_format(self):
         image_processor_dict = self.image_processor_tester.prepare_image_processor_dict()
-        fixtures_path = pathlib.Path(__file__).parent / "fixtures" / "tests_samples" / "COCO"
+        fixtures_path = pathlib.Path(get_tests_dir()) / "fixtures" / "tests_samples" / "COCO"
 
         with open(fixtures_path / "coco_annotations.txt", "r") as f:
             detection_target = json.loads(f.read())

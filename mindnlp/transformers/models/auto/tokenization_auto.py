@@ -191,7 +191,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         ("groupvit", ("CLIPTokenizer", "CLIPTokenizerFast" if is_tokenizers_available() else None)),
         ("herbert", ("HerbertTokenizer", "HerbertTokenizerFast" if is_tokenizers_available() else None)),
         ("hubert", ("Wav2Vec2CTCTokenizer", None)),
-        ("ibert", ("RobertaTokenizer", "RobertaTokenizerFast" if is_tokenizers_available() else None)),
+        # ("ibert", ("RobertaTokenizer", "RobertaTokenizerFast" if is_tokenizers_available() else None)),
         # ("idefics", (None, "LlamaTokenizerFast" if is_tokenizers_available() else None)),
         ("instructblip", ("GPT2Tokenizer", "GPT2TokenizerFast" if is_tokenizers_available() else None)),
         (
@@ -389,7 +389,6 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
                 "RemBertTokenizerFast" if is_tokenizers_available() else None,
             ),
         ),
-        ("retribert", ("RetriBertTokenizer", "RetriBertTokenizerFast" if is_tokenizers_available() else None)),
         ("roberta", ("RobertaTokenizer", "RobertaTokenizerFast" if is_tokenizers_available() else None)),
         (
             "roberta-prelayernorm",
