@@ -12,16 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================
-"""
-SegGpt Model init
-"""
-from . import configuration_seggpt, image_processing_seggpt, modeling_seggpt
 
-from .configuration_seggpt import *
-from .image_processing_seggpt import *
-from .modeling_seggpt import *
+"""Feature extractor class for MobileNet_v2."""
 
-__all__ = []
-__all__.extend(configuration_seggpt.__all__)
-__all__.extend(image_processing_seggpt.__all__)
-__all__.extend(modeling_seggpt.__all__)
+import warnings
+
+from ....utils import logging
+from .image_processing_mobilenet_v2 import MobileNetV2ImageProcessor
+
+
+logger = logging.get_logger(__name__)
+
+
+class MobileNetV2FeatureExtractor(MobileNetV2ImageProcessor):
+    def __init__(self, *args, **kwargs) -> None:
+        warnings.warn(
+            "The class MobileNetV2FeatureExtractor is deprecated."
+            " Please use MobileNetV2ImageProcessor instead.",
+            FutureWarning,
+        )
+        super().__init__(*args, **kwargs)
+
+__all__ = ['MobileNetV2FeatureExtractor']

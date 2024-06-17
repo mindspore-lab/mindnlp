@@ -105,6 +105,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("mistral", "MistralModel"),
         ("mixtral", "MixtralModel"),
         ("mobilenet_v1","MobileNetV1Model"),
+        ("mobilenet_v2","MobileNetV2Model"),
         ("olmo", "OlmoModel"),
         ("oneformer", "OneFormerModel"),
         ("openelm", "OpenELMModel"),

@@ -17,7 +17,7 @@
 """
 LLAMA Model init
 """
-from .import configuration_llama, modeling_llama, tokenization_llama, tokenization_llama_fast, \
+from . import configuration_llama, modeling_llama, tokenization_llama, tokenization_llama_fast, \
     tokenization_code_llama, tokenization_code_llama_fast
 
 from .modeling_llama import *
