@@ -15,12 +15,14 @@
 """
 Models init
 """
+
 from . import (
     albert,
     align,
     altclip,
     audio_spectrogram_transformer,
     auto,
+    owlv2,
     autoformer,
     baichuan,
     bark,
@@ -47,6 +49,7 @@ from . import (
     byt5,
     camembert,
     canine,
+    clap,
     clip,
     codegen,
     cohere,
@@ -62,6 +65,8 @@ from . import (
     deberta,
     deberta_v2,
     decision_transformer,
+    detr,
+    deit,
     distilbert,
     dpr,
     efficientnet,
@@ -91,6 +96,7 @@ from . import (
     groupvit,
     hubert,
     imagegpt,
+    ibert,
     jetmoe,
     layoutlm,
     layoutlmv2,
@@ -142,6 +148,8 @@ from . import (
     seamless_m4t_v2,
     segformer,
     seggpt,
+    sew,
+    sew_d,
     speech_encoder_decoder,
     speecht5,
     stablelm,
@@ -150,12 +158,14 @@ from . import (
     swiftformer,
     swin,
     switch_transformers,
+    swin2sr,
     t5,
     time_series_transformer,
     timesformer,
     tinybert,
     videomae,
     vipllava,
+    vision_encoder_decoder,
     vision_text_dual_encoder,
     visual_bert,
     vit,
@@ -173,6 +183,7 @@ from . import (
     xlnet,
 )
 
+from .owlv2 import *
 from .albert import *
 from .align import *
 from .altclip import *
@@ -204,6 +215,7 @@ from .bros import *
 from .byt5 import *
 from .camembert import *
 from .canine import *
+from .clap import *
 from .clip import *
 from .codegen import *
 from .cohere import *
@@ -219,6 +231,8 @@ from .data2vec import *
 from .deberta import *
 from .deberta_v2 import *
 from .decision_transformer import *
+from .detr import *
+from .deit import *
 from .distilbert import *
 from .dpr import *
 from .efficientnet import *
@@ -246,6 +260,7 @@ from .gpt_pangu import *
 from .gpt2 import *
 from .graphormer import *
 from .groupvit import *
+from .ibert import *
 from .hubert import *
 from .imagegpt import *
 from .jetmoe import *
@@ -299,6 +314,8 @@ from .seamless_m4t import *
 from .seamless_m4t_v2 import *
 from .segformer import *
 from .seggpt import *
+from .sew import *
+from .sew_d import *
 from .speech_encoder_decoder import *
 from .speecht5 import *
 from .stablelm import *
@@ -307,12 +324,14 @@ from .starcoder2 import *
 from .swiftformer import *
 from .swin import *
 from .switch_transformers import *
+from .swin2sr import *
 from .tinybert import *
 from .t5 import *
 from .time_series_transformer import *
 from .timesformer import *
 from .videomae import *
 from .vipllava import *
+from .vision_encoder_decoder import *
 from .vision_text_dual_encoder import *
 from .visual_bert import *
 from .vit import *
@@ -361,6 +380,7 @@ __all__.extend(bros.__all__)
 __all__.extend(byt5.__all__)
 __all__.extend(camembert.__all__)
 __all__.extend(canine.__all__)
+__all__.extend(clap.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(codegen.__all__)
 __all__.extend(cohere.__all__)
@@ -376,7 +396,9 @@ __all__.extend(data2vec.__all__)
 __all__.extend(deberta.__all__)
 __all__.extend(deberta_v2.__all__)
 __all__.extend(decision_transformer.__all__)
+__all__.extend(deit.__all__)
 __all__.extend(distilbert.__all__)
+__all__.extend(detr.__all__)
 __all__.extend(dpr.__all__)
 __all__.extend(efficientnet.__all__)
 __all__.extend(efficientformer.__all__)
@@ -403,6 +425,7 @@ __all__.extend(gpt_bigcode.__all__)
 __all__.extend(gpt2.__all__)
 __all__.extend(graphormer.__all__)
 __all__.extend(groupvit.__all__)
+__all__.extend(ibert.__all__)
 __all__.extend(hubert.__all__)
 __all__.extend(imagegpt.__all__)
 __all__.extend(jetmoe.__all__)
@@ -456,20 +479,25 @@ __all__.extend(seamless_m4t.__all__)
 __all__.extend(seamless_m4t_v2.__all__)
 __all__.extend(segformer.__all__)
 __all__.extend(seggpt.__all__)
+__all__.extend(sew.__all__)
+__all__.extend(sew_d.__all__)
 __all__.extend(speech_encoder_decoder.__all__)
 __all__.extend(speecht5.__all__)
 __all__.extend(stablelm.__all__)
 __all__.extend(squeezebert.__all__)
 __all__.extend(starcoder2.__all__)
 __all__.extend(swiftformer.__all__)
+__all__.extend(owlv2.__all__)
 __all__.extend(swin.__all__)
 __all__.extend(switch_transformers.__all__)
+__all__.extend(swin2sr.__all__)
 __all__.extend(t5.__all__)
 __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
 __all__.extend(videomae.__all__)
 __all__.extend(vipllava.__all__)
+__all__.extend(vision_encoder_decoder.__all__)
 __all__.extend(vision_text_dual_encoder.__all__)
 __all__.extend(visual_bert.__all__)
 __all__.extend(vit.__all__)
