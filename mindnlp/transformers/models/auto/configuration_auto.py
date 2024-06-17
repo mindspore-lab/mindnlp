@@ -13,7 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-""" Auto Config class."""
+"""Auto Config class."""
+
 import importlib
 import re
 import warnings
@@ -54,6 +55,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("camembert", "CamembertConfig"),
         ("canine", "CanineConfig"),
         ("chatglm", "ChatGLMConfig"),
+        ("clap", "ClapConfig"),
         ("clip", "CLIPConfig"),
         ("clip_vision_model", "CLIPVisionConfig"),
         ("codegen", "CodeGenConfig"),
@@ -66,8 +68,10 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("cpmbee", "CpmBeeConfig"),
         ("cvt", "CvtConfig"),
         ("data2vec-text", "Data2VecTextConfig"),
+        ("deit", "DeiTConfig"),
         ("deberta", "DebertaConfig"),
         ("deberta-v2", "DebertaV2Config"),
+        ("detr", "DetrConfig"),
         ("distilbert", "DistilBertConfig"),
         ("efficientformer", "EfficientFormerConfig"),
         ("encodec", "EncodecConfig"),
@@ -75,6 +79,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("falcon", "FalconConfig"),
         ("flava", "FlavaConfig"),
         ("funnel", "FunnelConfig"),
+        ("fastspeech2_conformer", "FastSpeech2ConformerConfig"),
         ("gemma", "GemmaConfig"),
         ("git", "GitConfig"),
         ("gpt2", "GPT2Config"),
@@ -84,6 +89,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("gpt_pangu", "GPTPanguConfig"),
         ("groupvit", "GroupViTConfig"),
         ("hubert", "HubertConfig"),
+        ("ibert", "IBertConfig"),
         ("jetmoe", "JetMoEConfig"),
         ("led", "LEDConfig"),
         ("llama", "LlamaConfig"),
@@ -91,18 +97,23 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("llava_next", "LlavaNextConfig"),
         ("mamba", "MambaConfig"),
         ("marian", "MarianConfig"),
+        ("mask2former", "Mask2FormerConfig"),
         ("mbart", "MBartConfig"),
         ("minicpm", "MiniCPMConfig"),
         ("mistral", "MistralConfig"),
         ("mixtral", "MixtralConfig"),
         ("mobilevit", "MobileViTConfig"),
+        ("mobilenet_v1","MobileNetV1Config"),
+        ("mobilenet_v2","MobileNetV2Config"),
         ("musicgen", "MusicgenConfig"),
         ("musicgen_melody", "MusicgenMelodyConfig"),
         ("mt5", "MT5Config"),
         ("nystromformer", "NystromformerConfig"),
         ("olmo", "OlmoConfig"),
+        ("oneformer", "OneFormerConfig"),
         ("openelm", "OpenELMConfig"),
         ("opt", "OPTConfig"),
+        ("owlv2", "Owlv2Config"),
         ("owlvit", "OwlViTConfig"),
         ("pegasus", "PegasusConfig"),
         ("phi", "PhiConfig"),
@@ -118,19 +129,28 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("segformer", "SegformerConfig"),
         ("speech-encoder-decoder", "SpeechEncoderDecoderConfig"),
         ("speech_to_text", "Speech2TextConfig"),
+        ("speecht5", "SpeechT5Config"),
         ("stablelm", "StableLmConfig"),
+        ("splinter", "SplinterConfig"),
         ("squeezebert", "SqueezeBertConfig"),
         ("starcoder2", "Starcoder2Config"),
+        ("swin", "SwinConfig"),
         ("swiftformer", "SwiftFormerConfig"),
         ("switch_transformers", "SwitchTransformersConfig"),
+        ("swin2sr", "Swin2SRConfig"),
         ("t5", "T5Config"),
+        ("time_series_transformer", "TimeSeriesTransformerConfig"),
         ("timesformer", "TimesformerConfig"),
+        ("videomae", "VideoMAEConfig"),
         ("vit", "ViTConfig"),
+        ("vision-encoder-decoder", "VisionEncoderDecoderConfig"),
         ("vision-text-dual-encoder", "VisionTextDualEncoderConfig"),
         ("vipllava", "VipLlavaConfig"),
         ("visual_bert", "VisualBertConfig"),
+        ("vitdet", "VitDetConfig"),
         ("wav2vec2", "Wav2Vec2Config"),
         ("wavlm", "WavLMConfig"),
+        ("wav2vec2-bert", "Wav2Vec2BertConfig"),
         ("wav2vec2-conformer", "Wav2Vec2ConformerConfig"),
         ("whisper", "WhisperConfig"),
         ("xclip", "XCLIPConfig"),
@@ -229,7 +249,6 @@ CONFIG_ARCHIVE_MAP_MAPPING_NAMES = OrderedDict(
         ("graphormer", "GRAPHORMER_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("groupvit", "GROUPVIT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("hubert", "HUBERT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
-        ("ibert", "IBERT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("idefics", "IDEFICS_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("imagegpt", "IMAGEGPT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("informer", "INFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP"),
@@ -296,7 +315,6 @@ CONFIG_ARCHIVE_MAP_MAPPING_NAMES = OrderedDict(
         ("regnet", "REGNET_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("rembert", "REMBERT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("resnet", "RESNET_PRETRAINED_CONFIG_ARCHIVE_MAP"),
-        ("retribert", "RETRIBERT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("roberta", "ROBERTA_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("roberta-prelayernorm", "ROBERTA_PRELAYERNORM_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("roc_bert", "ROC_BERT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
@@ -401,7 +419,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("codegen", "CodeGen"),
         ("cohere", "Cohere"),
         ("conditional_detr", "Conditional DETR"),
-        ("cogvlm","CogVLM"),
+        ("cogvlm", "CogVLM"),
         ("convbert", "ConvBERT"),
         ("convnext", "ConvNeXT"),
         ("convnextv2", "ConvNeXTV2"),
@@ -438,6 +456,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("ernie_m", "ErnieM"),
         ("esm", "ESM"),
         ("falcon", "Falcon"),
+        ("fastspeech2_conformer", "FastSpeech2ConformerModel"),
         ("flan-t5", "FLAN-T5"),
         ("flan-ul2", "FLAN-UL2"),
         ("flaubert", "FlauBERT"),
@@ -553,7 +572,6 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("regnet", "RegNet"),
         ("rembert", "RemBERT"),
         ("resnet", "ResNet"),
-        ("retribert", "RetriBERT"),
         ("roberta", "RoBERTa"),
         ("roberta-prelayernorm", "RoBERTa-PreLayerNorm"),
         ("roc_bert", "RoCBert"),
@@ -610,6 +628,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("vits", "VITS"),
         ("vivit", "ViViT"),
         ("wav2vec2", "Wav2Vec2"),
+        ("wav2vec2-bert", "Wav2Vec2-BERT"),
         ("wav2vec2-conformer", "Wav2Vec2-Conformer"),
         ("wav2vec2_phoneme", "Wav2Vec2Phoneme"),
         ("wavlm", "WavLM"),
@@ -685,6 +704,7 @@ class _LazyConfigMapping(OrderedDict):
     """
     A dictionary that lazily load its values when they are requested.
     """
+
     def __init__(self, mapping):
         """
         Initializes a new instance of the _LazyConfigMapping class.
@@ -707,13 +727,13 @@ class _LazyConfigMapping(OrderedDict):
 
     def __getitem__(self, key):
         """
-        __getitem__
+                __getitem__
 
-        Retrieve the value associated with the given key from the _LazyConfigMapping object.
+                Retrieve the value associated with the given key from the _LazyConfigMapping object.
 
-        Args:
-            self (_LazyConfigMapping): The instance of the _LazyConfigMapping class.
-            key (str): The key used to retrieve the corresponding value. It should be a string.
+                Args:
+                    self (_LazyConfigMapping): The instance of the _LazyConfigMapping class.
+                    key (str): The key used to retrieve the corresponding value. It should be a string.
 
         Returns:
             None:
@@ -850,6 +870,7 @@ class _LazyLoadAllMappings(OrderedDict):
     Args:
         mapping: The mapping to load.
     """
+
     def __init__(self, mapping):
         """
         Initializes an instance of the '_LazyLoadAllMappings' class.
@@ -1111,6 +1132,7 @@ def replace_list_option_in_docstrings(config_to_class=None, use_model_types=True
     Raises:
         ValueError: If the input function's docstring does not contain an empty 'List options' section as a placeholder.
     """
+
     def docstring_decorator(fn):
         docstrings = fn.__doc__
         lines = docstrings.split("\n")
@@ -1143,6 +1165,7 @@ class AutoConfig:
 
     This class cannot be instantiated directly using `__init__()` (throws an error).
     """
+
     def __init__(self):
         """
         Initialize AutoConfig.
@@ -1171,7 +1194,7 @@ class AutoConfig:
     @classmethod
     def for_model(cls, model_type: str, *args, **kwargs):
         """
-        This class method 'for_model' in the 'AutoConfig' class is used to instantiate a configuration class based on the provided model type.
+                This class method 'for_model' in the 'AutoConfig' class is used to instantiate a configuration class based on the provided model type.
 
         Args:
             cls (class): The class itself, automatically passed as the first parameter.

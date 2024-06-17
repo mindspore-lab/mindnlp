@@ -1054,13 +1054,13 @@ class SqueezeBertForQuestionAnswering(SqueezeBertPreTrainedModel):
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
-
-
 __all__ = [
-    "SqueezeBertModel",
     "SqueezeBertForMaskedLM",
-    "SqueezeBertForSequenceClassification",
     "SqueezeBertForMultipleChoice",
-    "SqueezeBertForTokenClassification",
     "SqueezeBertForQuestionAnswering",
+    "SqueezeBertForSequenceClassification",
+    "SqueezeBertForTokenClassification",
+    "SqueezeBertModel",
+    "SqueezeBertModule",
+    "SqueezeBertPreTrainedModel",
 ]

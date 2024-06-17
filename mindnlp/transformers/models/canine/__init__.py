@@ -16,7 +16,7 @@
 CANINE Model init
 """
 
-from .import configuration_canine, modeling_canine, tokenization_canine
+from . import configuration_canine, modeling_canine, tokenization_canine
 
 from .configuration_canine import *
 from .modeling_canine import *

@@ -17,7 +17,7 @@
 """
 LLAMA Model init
 """
-from .import configuration_mistral, modeling_mistral
+from . import configuration_mistral, modeling_mistral
 from .modeling_mistral import *
 from .configuration_mistral import *
 

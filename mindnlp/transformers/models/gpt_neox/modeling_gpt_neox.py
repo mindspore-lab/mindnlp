@@ -417,7 +417,7 @@ class GPTNeoXAttention(nn.Cell):
 
 def attention_mask_func(attention_scores, ltor_mask):
     """attention mask function"""
-    attention_scores = attention_scores.masked_fill(~ltor_mask, mindspore.Tensor(np.finfo(mindspore.dtype_to_nptype(attention_scores.dtype)).min))
+    attention_scores = attention_scores.masked_fill(~ltor_mask, mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(attention_scores.dtype)).min))
     return attention_scores
 
 
@@ -940,7 +940,7 @@ class GPTNeoXModel(GPTNeoXPreTrainedModel):
                 # Since we are adding it to the raw scores before the softmax, this is
                 # effectively the same as removing these entirely.
                 attention_mask = attention_mask.to(dtype=self.dtype)  # fp16 compatibility
-                attention_mask = (1.0 - attention_mask) * np.finfo(mindspore.dtype_to_nptype(self.dtype)).min
+                attention_mask = (1.0 - attention_mask) * mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(self.dtype)).min)
 
         # Prepare head mask if needed
         # 1.0 in head_mask indicate we keep the head

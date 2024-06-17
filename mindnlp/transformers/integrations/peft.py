@@ -150,7 +150,6 @@ class PeftAdapterMixin:
         if peft_config is None:
             adapter_config_file = find_adapter_config_file(
                 peft_model_id,
-                token=token,
                 **adapter_kwargs,
             )
 

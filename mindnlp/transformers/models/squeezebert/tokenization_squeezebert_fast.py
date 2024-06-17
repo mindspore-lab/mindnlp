@@ -34,7 +34,7 @@ PRETRAINED_VOCAB_FILES_MAP = {
         "squeezebert/squeezebert-mnli-headless": "https://hf-mirror.com/squeezebert/squeezebert-mnli-headless/resolve/main/vocab.txt",
     },
     "tokenizer_file": {
-        "squeezebert/squeezebert-uncased": "https://hf-mirror.com/squeezebert/squeezebert-uncased/resolve/main/tokenizer.jso",
+        "squeezebert/squeezebert-uncased": "https://hf-mirror.com/squeezebert/squeezebert-uncased/resolve/main/tokenizer.json",
         "squeezebert/squeezebert-mnli": "https://hf-mirror.com/squeezebert/squeezebert-mnli/resolve/main/tokenizer.json",
         "squeezebert/squeezebert-mnli-headless": "https://hf-mirror.com/squeezebert/squeezebert-mnli-headless/resolve/main/tokenizer.json",
     },
