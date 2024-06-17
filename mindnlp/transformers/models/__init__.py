@@ -15,12 +15,14 @@
 """
 Models init
 """
+
 from . import (
     albert,
     align,
     altclip,
     audio_spectrogram_transformer,
     auto,
+    owlv2,
     autoformer,
     baichuan,
     bark,
@@ -177,6 +179,7 @@ from . import (
     xlnet,
 )
 
+from .owlv2 import *
 from .albert import *
 from .align import *
 from .altclip import *
@@ -473,6 +476,7 @@ __all__.extend(stablelm.__all__)
 __all__.extend(squeezebert.__all__)
 __all__.extend(starcoder2.__all__)
 __all__.extend(swiftformer.__all__)
+__all__.extend(owlv2.__all__)
 __all__.extend(swin.__all__)
 __all__.extend(switch_transformers.__all__)
 __all__.extend(t5.__all__)
