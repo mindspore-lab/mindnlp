@@ -153,6 +153,7 @@ from . import (
     speech_encoder_decoder,
     speecht5,
     stablelm,
+    splinter,
     squeezebert,
     starcoder2,
     swiftformer,
@@ -319,6 +320,7 @@ from .sew_d import *
 from .speech_encoder_decoder import *
 from .speecht5 import *
 from .stablelm import *
+from .splinter import *
 from .squeezebert import *
 from .starcoder2 import *
 from .swiftformer import *
@@ -484,6 +486,7 @@ __all__.extend(sew_d.__all__)
 __all__.extend(speech_encoder_decoder.__all__)
 __all__.extend(speecht5.__all__)
 __all__.extend(stablelm.__all__)
+__all__.extend(splinter.__all__)
 __all__.extend(squeezebert.__all__)
 __all__.extend(starcoder2.__all__)
 __all__.extend(swiftformer.__all__)
