@@ -537,6 +537,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("mt5", "MT5"),
         ("musicgen", "MusicGen"),
         ("musicgen_melody", "MusicGen Melody"),
+        ("mvp", "MVP"),
         ("nat", "NAT"),
         ("nezha", "Nezha"),
         ("nllb", "NLLB"),
