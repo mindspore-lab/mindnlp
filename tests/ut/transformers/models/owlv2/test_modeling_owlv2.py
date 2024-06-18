@@ -919,7 +919,7 @@ class Owlv2ModelIntegrationTest(unittest.TestCase):
             np.allclose(
                 outputs.logits[0, :3, :3].asnumpy(),
                 expected_slice_logits.asnumpy(),
-                atol=1e-1,
+                atol=1e-2,
             )
         )
         expected_slice_boxes = ms.tensor(
@@ -976,7 +976,7 @@ class Owlv2ModelIntegrationTest(unittest.TestCase):
             np.allclose(
                 outputs.target_pred_boxes[0, :3, :3].asnumpy(),
                 expected_slice_boxes.asnumpy(),
-                atol=1e-1,
+                atol=1e-2,
             )
         )
 
