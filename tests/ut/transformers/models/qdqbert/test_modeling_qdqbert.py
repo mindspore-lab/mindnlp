@@ -16,13 +16,12 @@
 """Testing suite for the PyTorch QDQBERT model."""
 
 import unittest
-
-from transformers import QDQBertConfig, is_torch_available
-from transformers.testing_utils import (
-    require_pytorch_quantization,
-    require_torch,
+import numpy as np
+from mindnlp.transformers import QDQBertConfig
+from mindnlp.utils import is_mindspore_available
+from mindnlp.utils.testing_utils import (
+    require_mindspore,
     slow,
-    torch_device,
 )
 
 from ...test_configuration_common import ConfigTester
@@ -32,11 +31,11 @@ from ...test_modeling_common import (
     ids_tensor,
     random_attention_mask,
 )
-from ...test_pipeline_mixin import PipelineTesterMixin
 
 
-if is_torch_available():
-    import torch
+if is_mindspore_available():
+    import mindspore
+    from mindspore import ops, nn
 
     from transformers import (
         QDQBertForMaskedLM,
@@ -101,17 +100,17 @@ class QDQBertModelTester:
 
     def prepare_config_and_inputs(self):
         # Set default quantizers before creating the model.
-        import pytorch_quantization.nn as quant_nn
-        from pytorch_quantization.tensor_quant import QuantDescriptor
+        # import pytorch_quantization.nn as quant_nn
+        # from pytorch_quantization.tensor_quant import QuantDescriptor
 
         # The default tensor quantizer is set to use Max calibration method
-        input_desc = QuantDescriptor(num_bits=8, calib_method="max")
-        # The default tensor quantizer is set to be per-channel quantization for weights
-        weight_desc = QuantDescriptor(num_bits=8, axis=((0,)))
-        quant_nn.QuantLinear.set_default_quant_desc_input(input_desc)
-        quant_nn.QuantLinear.set_default_quant_desc_weight(weight_desc)
-        # For the test cases, since QDQBert model is tested in one run without calibration, the quantized tensors are set as fake quantized tensors which give float type tensors in the end.
-        quant_nn.TensorQuantizer.use_fb_fake_quant = True
+        # input_desc = QuantDescriptor(num_bits=8, calib_method="max")
+        # # The default tensor quantizer is set to be per-channel quantization for weights
+        # weight_desc = QuantDescriptor(num_bits=8, axis=((0,)))
+        # quant_nn.QuantLinear.set_default_quant_desc_input(input_desc)
+        # quant_nn.QuantLinear.set_default_quant_desc_weight(weight_desc)
+        # # For the test cases, since QDQBert model is tested in one run without calibration, the quantized tensors are set as fake quantized tensors which give float type tensors in the end.
+        # quant_nn.TensorQuantizer.use_fb_fake_quant = True
 
         input_ids = ids_tensor([self.batch_size, self.seq_length], self.vocab_size)
 
@@ -207,8 +206,7 @@ class QDQBertModelTester:
         choice_labels,
     ):
         model = QDQBertModel(config=config)
-        model.to(torch_device)
-        model.eval()
+        model.set_train(False)
         result = model(
             input_ids, attention_mask=input_mask, token_type_ids=token_type_ids
         )
@@ -233,8 +231,7 @@ class QDQBertModelTester:
     ):
         config.add_cross_attention = True
         model = QDQBertModel(config)
-        model.to(torch_device)
-        model.eval()
+        model.set_train(False)
         result = model(
             input_ids,
             attention_mask=input_mask,
@@ -269,8 +266,7 @@ class QDQBertModelTester:
         encoder_attention_mask,
     ):
         model = QDQBertLMHeadModel(config=config)
-        model.to(torch_device)
-        model.eval()
+        model.set_train(False)
         result = model(
             input_ids,
             attention_mask=input_mask,
@@ -292,8 +288,7 @@ class QDQBertModelTester:
         choice_labels,
     ):
         model = QDQBertForMaskedLM(config=config)
-        model.to(torch_device)
-        model.eval()
+        model.set_train(False)
         result = model(
             input_ids,
             attention_mask=input_mask,
@@ -318,8 +313,7 @@ class QDQBertModelTester:
     ):
         config.add_cross_attention = True
         model = QDQBertLMHeadModel(config=config)
-        model.to(torch_device)
-        model.eval()
+        model.set_train(False)
         result = model(
             input_ids,
             attention_mask=input_mask,
@@ -354,8 +348,7 @@ class QDQBertModelTester:
         config.is_decoder = True
         config.add_cross_attention = True
         model = QDQBertLMHeadModel(config=config)
-        model.to(torch_device)
-        model.eval()
+        model.set_train(False)
 
         # first forward pass
         outputs = model(
@@ -372,8 +365,8 @@ class QDQBertModelTester:
         next_mask = ids_tensor((self.batch_size, 3), vocab_size=2)
 
         # append to next input_ids and
-        next_input_ids = torch.cat([input_ids, next_tokens], dim=-1)
-        next_attention_mask = torch.cat([input_mask, next_mask], dim=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
+        next_attention_mask = ops.cat([input_mask, next_mask], axis=-1)
 
         output_from_no_past = model(
             next_input_ids,
@@ -402,7 +395,11 @@ class QDQBertModelTester:
 
         # test that outputs are equal for slice
         self.parent.assertTrue(
-            torch.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3)
+            np.allclose(
+                output_from_past_slice.asnumpy(),
+                output_from_no_past_slice.asnumpy(),
+                atol=1e-3,
+            )
         )
 
     def create_and_check_for_next_sequence_prediction(
@@ -416,8 +413,7 @@ class QDQBertModelTester:
         choice_labels,
     ):
         model = QDQBertForNextSentencePrediction(config=config)
-        model.to(torch_device)
-        model.eval()
+        model.set_train(False)
         result = model(
             input_ids,
             attention_mask=input_mask,
@@ -437,8 +433,7 @@ class QDQBertModelTester:
         choice_labels,
     ):
         model = QDQBertForQuestionAnswering(config=config)
-        model.to(torch_device)
-        model.eval()
+        model.set_train(False)
         result = model(
             input_ids,
             attention_mask=input_mask,
@@ -465,8 +460,7 @@ class QDQBertModelTester:
     ):
         config.num_labels = self.num_labels
         model = QDQBertForSequenceClassification(config)
-        model.to(torch_device)
-        model.eval()
+        model.set_train(False)
         result = model(
             input_ids,
             attention_mask=input_mask,
@@ -487,8 +481,7 @@ class QDQBertModelTester:
     ):
         config.num_labels = self.num_labels
         model = QDQBertForTokenClassification(config=config)
-        model.to(torch_device)
-        model.eval()
+        model.set_train(False)
         result = model(
             input_ids,
             attention_mask=input_mask,
@@ -511,8 +504,7 @@ class QDQBertModelTester:
     ):
         config.num_choices = self.num_choices
         model = QDQBertForMultipleChoice(config=config)
-        model.to(torch_device)
-        model.eval()
+        model.set_train(False)
         multiple_choice_inputs_ids = (
             input_ids.unsqueeze(1).expand(-1, self.num_choices, -1).contiguous()
         )
@@ -551,9 +543,8 @@ class QDQBertModelTester:
         return config, inputs_dict
 
 
-@require_torch
-@require_pytorch_quantization
-class QDQBertModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCase):
+@require_mindspore
+class QDQBertModelTest(ModelTesterMixin, unittest.TestCase):
     all_model_classes = (
         (
             QDQBertModel,
@@ -565,10 +556,12 @@ class QDQBertModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCase)
             QDQBertForTokenClassification,
             QDQBertLMHeadModel,
         )
-        if is_torch_available()
+        if is_mindspore_available()
         else ()
     )
-    all_generative_model_classes = (QDQBertLMHeadModel,) if is_torch_available() else ()
+    all_generative_model_classes = (
+        (QDQBertLMHeadModel,) if is_mindspore_available() else ()
+    )
     pipeline_model_mapping = (
         {
             "feature-extraction": QDQBertModel,
@@ -579,7 +572,7 @@ class QDQBertModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCase)
             "token-classification": QDQBertForTokenClassification,
             "zero-shot": QDQBertForSequenceClassification,
         }
-        if is_torch_available()
+        if is_mindspore_available()
         else {}
     )
 
@@ -690,31 +683,30 @@ class QDQBertModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCase)
         pass
 
 
-@require_torch
-@require_pytorch_quantization
+@require_mindspore
 class QDQBertModelIntegrationTest(unittest.TestCase):
     @slow
     def test_inference_no_head_absolute_embedding(self):
         # Set default quantizers before creating the model.
-        import pytorch_quantization.nn as quant_nn
-        from pytorch_quantization.tensor_quant import QuantDescriptor
+        # import pytorch_quantization.nn as quant_nn
+        # from pytorch_quantization.tensor_quant import QuantDescriptor
 
         # The default tensor quantizer is set to use Max calibration method
-        input_desc = QuantDescriptor(num_bits=8, calib_method="max")
-        # The default tensor quantizer is set to be per-channel quantization for weights
-        weight_desc = QuantDescriptor(num_bits=8, axis=((0,)))
-        quant_nn.QuantLinear.set_default_quant_desc_input(input_desc)
-        quant_nn.QuantLinear.set_default_quant_desc_weight(weight_desc)
+        # input_desc = QuantDescriptor(num_bits=8, calib_method="max")
+        # # The default tensor quantizer is set to be per-channel quantization for weights
+        # weight_desc = QuantDescriptor(num_bits=8, axis=((0,)))
+        # quant_nn.QuantLinear.set_default_quant_desc_input(input_desc)
+        # quant_nn.QuantLinear.set_default_quant_desc_weight(weight_desc)
 
         model = QDQBertModel.from_pretrained("google-bert/bert-base-uncased")
-        input_ids = torch.tensor(
+        input_ids = mindspore.tensor(
             [[0, 345, 232, 328, 740, 140, 1695, 69, 6078, 1588, 2]]
         )
-        attention_mask = torch.tensor([[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]])
+        attention_mask = mindspore.tensor([[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]])
         output = model(input_ids, attention_mask=attention_mask)[0]
-        expected_shape = torch.Size((1, 11, 768))
+        expected_shape = (1, 11, 768)
         self.assertEqual(output.shape, expected_shape)
-        expected_slice = torch.tensor(
+        expected_slice = mindspore.tensor(
             [
                 [
                     [0.4571, -0.0735, 0.8594],
@@ -723,4 +715,8 @@ class QDQBertModelIntegrationTest(unittest.TestCase):
                 ]
             ]
         )
-        self.assertTrue(torch.allclose(output[:, 1:4, 1:4], expected_slice, atol=1e-4))
+        self.assertTrue(
+            np.allclose(
+                output[:, 1:4, 1:4].asnumpy(), expected_slice.asnumpy(), atol=1e-4
+            )
+        )
