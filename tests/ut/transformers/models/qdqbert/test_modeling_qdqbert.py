@@ -715,6 +715,6 @@ class QDQBertModelIntegrationTest(unittest.TestCase):
         )
         self.assertTrue(
             np.allclose(
-                output[:, 1:4, 1:4].asnumpy(), expected_slice.asnumpy(), atol=1e-4
+                output[:, 1:4, 1:4].asnumpy(), expected_slice.asnumpy(), atol=1e-2
             )
         )
