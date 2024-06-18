@@ -117,7 +117,6 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("pegasus", "PegasusModel"),
         ("phi", "PhiModel"),
         ("phi3", "Phi3Model"),
-        ("qdqbert", "QDQBertModel"),
         ("qwen2", "Qwen2Model"),
         ("qwen2_moe", "Qwen2MoeModel"),
         ("reformer", "ReformerModel"),
