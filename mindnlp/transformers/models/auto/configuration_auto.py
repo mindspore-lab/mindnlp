@@ -108,6 +108,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("musicgen", "MusicgenConfig"),
         ("musicgen_melody", "MusicgenMelodyConfig"),
         ("mt5", "MT5Config"),
+        ("mvp", "MvpConfig"),
         ("nystromformer", "NystromformerConfig"),
         ("olmo", "OlmoConfig"),
         ("oneformer", "OneFormerConfig"),
