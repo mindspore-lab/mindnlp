@@ -1471,11 +1471,10 @@ class QDQBertForSequenceClassification(QDQBertPreTrainedModel):
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
-                loss_fct = ops.mse_loss()
                 if self.num_labels == 1:
-                    loss = loss_fct(logits.squeeze(), labels.squeeze())
+                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = loss_fct(logits, labels)
+                    loss = ops.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
                 loss = ops.cross_entropy(
                     logits.view(-1, self.num_labels), labels.view(-1)
