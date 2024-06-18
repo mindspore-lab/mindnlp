@@ -16,7 +16,6 @@
 """PyTorch QDQBERT model."""
 
 import math
-import os
 import warnings
 from typing import Dict, List, Optional, Tuple, Union
 from mindspore.common.initializer import initializer, Normal
@@ -74,7 +73,9 @@ class QDQBertEmbeddings(nn.Cell):
         self.position_embedding_type = getattr(
             config, "position_embedding_type", "absolute"
         )
-        self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
+        self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to(
+            (1, -1)
+        )
 
         self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=ms.int64)
 
@@ -147,10 +148,7 @@ class QDQBertSelfAttention(nn.Cell):
         self.position_embedding_type = getattr(
             config, "position_embedding_type", "absolute"
         )
-        if (
-            self.position_embedding_type == "relative_key"
-            or self.position_embedding_type == "relative_key_query"
-        ):
+        if self.position_embedding_type in ("relative_key", "relative_key_query"):
             self.max_position_embeddings = config.max_position_embeddings
             self.distance_embedding = nn.Embedding(
                 2 * config.max_position_embeddings - 1, self.attention_head_size
@@ -232,10 +230,7 @@ class QDQBertSelfAttention(nn.Cell):
             key_layer.swapaxes(-1, -2),
         )
 
-        if (
-            self.position_embedding_type == "relative_key"
-            or self.position_embedding_type == "relative_key_query"
-        ):
+        if self.position_embedding_type in ("relative_key", "relative_key_query"):
             seq_length = hidden_states.shape[1]
             position_ids_l = ops.arange(seq_length, dtype=ms.int64).view(-1, 1)
             position_ids_r = ops.arange(seq_length, dtype=ms.int64).view(1, -1)
@@ -941,8 +936,6 @@ class QDQBertModel(QDQBertPreTrainedModel):
         else:
             raise ValueError("You have to specify either input_ids or inputs_embeds")
 
-
-
         # past_key_values_length
         past_key_values_length = (
             past_key_values[0][0].shape[2] if past_key_values is not None else 0
@@ -1193,8 +1186,7 @@ class QDQBertLMHeadModel(QDQBertPreTrainedModel):
         for layer_past in past_key_values:
             reordered_past += (
                 tuple(
-                    past_state.index_select(0, beam_idx)
-                    for past_state in layer_past
+                    past_state.index_select(0, beam_idx) for past_state in layer_past
                 ),
             )
         return reordered_past
@@ -1473,9 +1465,7 @@ class QDQBertForSequenceClassification(QDQBertPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (
-                    labels.dtype == ms.int64 or labels.dtype == ms.int32
-                ):
+                elif self.num_labels > 1 and (labels.dtype in (ms.int64, ms.int32)):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -1487,10 +1477,11 @@ class QDQBertForSequenceClassification(QDQBertPreTrainedModel):
                 else:
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = ops.cross_entropy(
+                    logits.view(-1, self.num_labels), labels.view(-1)
+                )
             elif self.config.problem_type == "multi_label_classification":
-                loss_fct = ops.binary_cross_entropy_with_logits()
-                loss = loss_fct(logits, labels)
+                loss = ops.binary_cross_entropy_with_logits(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
@@ -1734,8 +1725,12 @@ class QDQBertForQuestionAnswering(QDQBertPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
-            end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
+            start_loss = ops.cross_entropy(
+                start_logits, start_positions, ignore_index=ignored_index
+            )
+            end_loss = ops.cross_entropy(
+                end_logits, end_positions, ignore_index=ignored_index
+            )
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:
@@ -1752,12 +1747,12 @@ class QDQBertForQuestionAnswering(QDQBertPreTrainedModel):
 
 
 __all__ = [
-    'QDQBertForMaskedLM',
-    'QDQBertForMultipleChoice',
-    'QDQBertForNextSentencePrediction',
-    'QDQBertForQuestionAnswering',
-    'QDQBertForSequenceClassification',
-    'QDQBertForTokenClassification',
-    'QDQBertLMHeadModel',
-    'QDQBertModel',
+    "QDQBertForMaskedLM",
+    "QDQBertForMultipleChoice",
+    "QDQBertForNextSentencePrediction",
+    "QDQBertForQuestionAnswering",
+    "QDQBertForSequenceClassification",
+    "QDQBertForTokenClassification",
+    "QDQBertLMHeadModel",
+    "QDQBertModel",
 ]
