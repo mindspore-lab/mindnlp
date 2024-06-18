@@ -1399,10 +1399,12 @@ indicating whether to prefer safe tensors.
             self._past = outputs[self.args.past_index]
 
         if labels is not None:
-            # if _is_peft_model(unwrapped_model):
-            #     model_name = unwrapped_model.base_model.model._get_name()
-            # else:
-            model_name = model._get_name()
+            # unwrapped_model = self.accelerator.unwrap_model(model)
+            unwrapped_model = model
+            if _is_peft_model(unwrapped_model):
+                model_name = type(unwrapped_model.get_base_model()).__name__
+            else:
+                model_name = type(unwrapped_model).__name__
             if model_name in MODEL_FOR_CAUSAL_LM_MAPPING_NAMES.values():
                 loss = self.label_smoother(outputs, labels, shift_labels=True)
             else:

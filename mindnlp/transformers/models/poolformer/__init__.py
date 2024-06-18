@@ -15,7 +15,7 @@
 """
 PoolFormer Model init
 """
-from .import configuration_poolformer, feature_extraction_poolformer, image_processing_poolformer, modeling_poolformer
+from . import configuration_poolformer, feature_extraction_poolformer, image_processing_poolformer, modeling_poolformer
 
 from .configuration_poolformer import *
 from .feature_extraction_poolformer import *

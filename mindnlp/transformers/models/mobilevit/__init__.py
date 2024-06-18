@@ -15,7 +15,7 @@
 """
 MobileVit Model init
 """
-from .import configuration_mobilevit, feature_extraction_mobilevit, image_processing_mobilevit, modeling_mobilevit
+from . import configuration_mobilevit, feature_extraction_mobilevit, image_processing_mobilevit, modeling_mobilevit
 
 from .configuration_mobilevit import *
 from .feature_extraction_mobilevit import *
