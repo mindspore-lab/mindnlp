@@ -74,18 +74,11 @@ class QDQBertEmbeddings(nn.Cell):
         self.position_embedding_type = getattr(
             config, "position_embedding_type", "absolute"
         )
-        self.register_buffer(
-            "position_ids",
-            ops.arange(config.max_position_embeddings).broadcast_to((1, -1)),
-            persistent=False,
-        )
-        self.register_buffer(
-            "token_type_ids",
-            ops.zeros(self.position_ids.shape, dtype=ms.int64),
-            persistent=False,
-        )
+        self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
 
-    def contrust(
+        self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=ms.int64)
+
+    def construct(
         self,
         input_ids: Optional[ms.Tensor] = None,
         token_type_ids: Optional[ms.Tensor] = None,
@@ -186,7 +179,7 @@ class QDQBertSelfAttention(nn.Cell):
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def contrust(
+    def construct(
         self,
         hidden_states,
         attention_mask=None,
@@ -235,8 +228,8 @@ class QDQBertSelfAttention(nn.Cell):
 
         # Take the dot product between "query" and "key" to get the raw attention scores.
         attention_scores = ops.matmul(
-            self.query_layer,
-            self.key_layer.swapaxes(-1, -2),
+            query_layer,
+            key_layer.swapaxes(-1, -2),
         )
 
         if (
@@ -245,7 +238,7 @@ class QDQBertSelfAttention(nn.Cell):
         ):
             seq_length = hidden_states.shape[1]
             position_ids_l = ops.arange(seq_length, dtype=ms.int64).view(-1, 1)
-            position_ids_r = ms.arange(seq_length, dtype=ms.int64).view(1, -1)
+            position_ids_r = ops.arange(seq_length, dtype=ms.int64).view(1, -1)
             distance = position_ids_l - position_ids_r
             positional_embedding = self.distance_embedding(
                 distance + self.max_position_embeddings - 1
@@ -289,8 +282,8 @@ class QDQBertSelfAttention(nn.Cell):
             attention_probs = attention_probs * head_mask
 
         context_layer = ops.matmul(
-            self.attention_probs,
-            self.value_layer,
+            attention_probs,
+            value_layer,
         )
 
         context_layer = context_layer.permute(0, 2, 1, 3)
@@ -325,7 +318,7 @@ class QDQBertSelfOutput(nn.Cell):
         #     quant_nn.QuantLinear.default_quant_desc_input
         # )
 
-    def contrust(self, hidden_states, input_tensor):
+    def construct(self, hidden_states, input_tensor):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         # Quantize the inputs to the residual add
@@ -359,7 +352,7 @@ class QDQBertAttention(nn.Cell):
         self.self.query = prune_linear_layer(self.self.query, index)
         self.self.key = prune_linear_layer(self.self.key, index)
         self.self.value = prune_linear_layer(self.self.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
@@ -368,7 +361,7 @@ class QDQBertAttention(nn.Cell):
         )
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def contrust(
+    def construct(
         self,
         hidden_states,
         attention_mask=None,
@@ -404,7 +397,7 @@ class QDQBertIntermediate(nn.Cell):
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def contrust(self, hidden_states):
+    def construct(self, hidden_states):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
@@ -428,7 +421,7 @@ class QDQBertOutput(nn.Cell):
         #     quant_nn.QuantLinear.default_quant_desc_input
         # )
 
-    def contrust(self, hidden_states, input_tensor):
+    def construct(self, hidden_states, input_tensor):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         # Quantize the inputs to the residual add
@@ -458,7 +451,7 @@ class QDQBertLayer(nn.Cell):
         self.intermediate = QDQBertIntermediate(config)
         self.output = QDQBertOutput(config)
 
-    def contrust(
+    def construct(
         self,
         hidden_states,
         attention_mask=None,
@@ -545,7 +538,7 @@ class QDQBertEncoder(nn.Cell):
         )
         self.gradient_checkpointing = False
 
-    def contrust(
+    def construct(
         self,
         hidden_states,
         attention_mask=None,
@@ -637,7 +630,7 @@ class QDQBertPooler(nn.Cell):
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def contrust(self, hidden_states: ms.Tensor) -> ms.Tensor:
+    def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -658,7 +651,7 @@ class QDQBertPredictionHeadTransform(nn.Cell):
             [config.hidden_size], epsilon=config.layer_norm_eps
         )
 
-    def contrust(self, hidden_states: ms.Tensor) -> ms.Tensor:
+    def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.transform_act_fn(hidden_states)
         hidden_states = self.LayerNorm(hidden_states)
@@ -683,7 +676,7 @@ class QDQBertLMPredictionHead(nn.Cell):
     def _tie_weights(self):
         self.decoder.bias = self.bias
 
-    def contrust(self, hidden_states):
+    def construct(self, hidden_states):
         hidden_states = self.transform(hidden_states)
         hidden_states = self.decoder(hidden_states)
         return hidden_states
@@ -695,7 +688,7 @@ class QDQBertOnlyMLMHead(nn.Cell):
         super().__init__()
         self.predictions = QDQBertLMPredictionHead(config)
 
-    def contrust(self, sequence_output):
+    def construct(self, sequence_output):
         prediction_scores = self.predictions(sequence_output)
         return prediction_scores
 
@@ -705,7 +698,7 @@ class QDQBertOnlyNSPHead(nn.Cell):
         super().__init__()
         self.seq_relationship = nn.Dense(config.hidden_size, 2)
 
-    def contrust(self, pooled_output):
+    def construct(self, pooled_output):
         seq_relationship_score = self.seq_relationship(pooled_output)
         return seq_relationship_score
 
@@ -717,7 +710,7 @@ class QDQBertPreTrainingHeads(nn.Cell):
         self.predictions = QDQBertLMPredictionHead(config)
         self.seq_relationship = nn.Dense(config.hidden_size, 2)
 
-    def contrust(self, sequence_output, pooled_output):
+    def construct(self, sequence_output, pooled_output):
         prediction_scores = self.predictions(sequence_output)
         seq_relationship_score = self.seq_relationship(pooled_output)
         return prediction_scores, seq_relationship_score
@@ -879,7 +872,7 @@ class QDQBertModel(QDQBertPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def contrust(
+    def construct(
         self,
         input_ids: Optional[ms.Tensor] = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -948,7 +941,7 @@ class QDQBertModel(QDQBertPreTrainedModel):
         else:
             raise ValueError("You have to specify either input_ids or inputs_embeds")
 
-        device = input_ids.device if input_ids is not None else inputs_embeds.device
+
 
         # past_key_values_length
         past_key_values_length = (
@@ -1057,7 +1050,7 @@ class QDQBertLMHeadModel(QDQBertPreTrainedModel):
         self.cls.predictions.decoder = new_embeddings
         self.cls.predictions.bias = new_embeddings.bias
 
-    def contrust(
+    def construct(
         self,
         input_ids: Optional[ms.Tensor] = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -1146,8 +1139,7 @@ class QDQBertLMHeadModel(QDQBertPreTrainedModel):
             # we are doing next-token prediction; shift prediction scores and input ids by one
             shifted_prediction_scores = prediction_scores[:, :-1, :]
             labels = labels[:, 1:]
-            loss_fct = ops.cross_entropy()
-            lm_loss = loss_fct(
+            lm_loss = ops.cross_entropy(
                 shifted_prediction_scores.view(-1, self.config.vocab_size),
                 labels.view(-1),
             )
@@ -1201,7 +1193,7 @@ class QDQBertLMHeadModel(QDQBertPreTrainedModel):
         for layer_past in past_key_values:
             reordered_past += (
                 tuple(
-                    past_state.index_select(0, beam_idx.to(past_state.device))
+                    past_state.index_select(0, beam_idx)
                     for past_state in layer_past
                 ),
             )
@@ -1233,7 +1225,7 @@ class QDQBertForMaskedLM(QDQBertPreTrainedModel):
         self.cls.predictions.decoder = new_embeddings
         self.cls.predictions.bias = new_embeddings.bias
 
-    def contrust(
+    def construct(
         self,
         input_ids: Optional[ms.Tensor] = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -1278,8 +1270,7 @@ class QDQBertForMaskedLM(QDQBertPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            loss_fct = ops.cross_entropy()  # -100 index = padding token
-            masked_lm_loss = loss_fct(
+            masked_lm_loss = ops.cross_entropy(
                 prediction_scores.view(-1, self.config.vocab_size), labels.view(-1)
             )
 
@@ -1333,7 +1324,7 @@ class QDQBertForNextSentencePrediction(QDQBertPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def contrust(
+    def construct(
         self,
         input_ids: Optional[ms.Tensor] = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -1405,8 +1396,7 @@ class QDQBertForNextSentencePrediction(QDQBertPreTrainedModel):
 
         next_sentence_loss = None
         if labels is not None:
-            loss_fct = ops.cross_entropy()
-            next_sentence_loss = loss_fct(
+            next_sentence_loss = ops.cross_entropy(
                 seq_relationship_scores.view(-1, 2), labels.view(-1)
             )
 
@@ -1438,7 +1428,7 @@ class QDQBertForSequenceClassification(QDQBertPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def contrust(
+    def construct(
         self,
         input_ids: Optional[ms.Tensor] = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -1497,8 +1487,7 @@ class QDQBertForSequenceClassification(QDQBertPreTrainedModel):
                 else:
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss_fct = ops.cross_entropy()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = ops.binary_cross_entropy_with_logits()
                 loss = loss_fct(logits, labels)
@@ -1525,7 +1514,7 @@ class QDQBertForMultipleChoice(QDQBertPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def contrust(
+    def construct(
         self,
         input_ids: Optional[ms.Tensor] = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -1595,8 +1584,7 @@ class QDQBertForMultipleChoice(QDQBertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss_fct = ops.cross_entropy()
-            loss = loss_fct(reshaped_logits, labels)
+            loss = ops.cross_entropy(reshaped_logits, labels)
 
         if not return_dict:
             output = (reshaped_logits,) + outputs[2:]
@@ -1622,7 +1610,7 @@ class QDQBertForTokenClassification(QDQBertPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def contrust(
+    def construct(
         self,
         input_ids: Optional[ms.Tensor] = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -1662,8 +1650,7 @@ class QDQBertForTokenClassification(QDQBertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss_fct = ops.cross_entropy()
-            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+            loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1688,7 +1675,7 @@ class QDQBertForQuestionAnswering(QDQBertPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def contrust(
+    def construct(
         self,
         input_ids: Optional[ms.Tensor] = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -1731,7 +1718,7 @@ class QDQBertForQuestionAnswering(QDQBertPreTrainedModel):
         sequence_output = outputs[0]
 
         logits = self.qa_outputs(sequence_output)
-        start_logits, end_logits = logits.split(1, dim=-1)
+        start_logits, end_logits = logits.split(1, axis=-1)
         start_logits = start_logits.squeeze(-1)
         end_logits = end_logits.squeeze(-1)
 
@@ -1747,9 +1734,8 @@ class QDQBertForQuestionAnswering(QDQBertPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            loss_fct = ops.cross_entropy(ignore_index=ignored_index)
-            start_loss = loss_fct(start_logits, start_positions)
-            end_loss = loss_fct(end_logits, end_positions)
+            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
+            end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:
@@ -1766,13 +1752,12 @@ class QDQBertForQuestionAnswering(QDQBertPreTrainedModel):
 
 
 __all__ = [
-    "QDQBertPreTrainedModel",
-    "QDQBertModel",
-    "QDQBertLMHeadModel",
-    "QDQBertForMaskedLM",
-    "QDQBertForSequenceClassification",
-    "QDQBertForTokenClassification",
-    "QDQBertForQuestionAnswering",
-    "QDQBertForMultipleChoice",
-    "QDQBertLayer",
+    'QDQBertForMaskedLM',
+    'QDQBertForMultipleChoice',
+    'QDQBertForNextSentencePrediction',
+    'QDQBertForQuestionAnswering',
+    'QDQBertForSequenceClassification',
+    'QDQBertForTokenClassification',
+    'QDQBertLMHeadModel',
+    'QDQBertModel',
 ]

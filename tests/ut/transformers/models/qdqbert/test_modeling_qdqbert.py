@@ -37,7 +37,7 @@ if is_mindspore_available():
     import mindspore
     from mindspore import ops, nn
 
-    from transformers import (
+    from mindnlp.transformers import (
         QDQBertForMaskedLM,
         QDQBertForMultipleChoice,
         QDQBertForNextSentencePrediction,
@@ -386,10 +386,8 @@ class QDQBertModelTester:
 
         # select random slice
         random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
-        output_from_no_past_slice = output_from_no_past[
-            :, -3:, random_slice_idx
-        ].detach()
-        output_from_past_slice = output_from_past[:, :, random_slice_idx].detach()
+        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx]
+        output_from_past_slice = output_from_past[:, :, random_slice_idx]
 
         self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
 
