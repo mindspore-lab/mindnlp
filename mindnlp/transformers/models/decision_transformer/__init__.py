@@ -16,7 +16,7 @@
 Deberta Model init
 """
 
-from .import configuration_decision_transformer, modeling_decision_transformer
+from . import configuration_decision_transformer, modeling_decision_transformer
 from .configuration_decision_transformer import *
 from .modeling_decision_transformer import *
 

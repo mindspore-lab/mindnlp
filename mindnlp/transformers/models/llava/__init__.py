@@ -14,7 +14,7 @@
 """
 Llava Model init
 """
-from .import configuration_llava, modeling_llava, processing_llava
+from . import configuration_llava, modeling_llava, processing_llava
 
 from .configuration_llava import *
 from .modeling_llava import *

@@ -15,7 +15,7 @@
 """
 Llava-NeXT Model init
 """
-from .import configuration_llava_next, modeling_llava_next, processing_llava_next, image_processing_llava_next
+from . import configuration_llava_next, modeling_llava_next, processing_llava_next, image_processing_llava_next
 
 from .configuration_llava_next import *
 from .modeling_llava_next import *

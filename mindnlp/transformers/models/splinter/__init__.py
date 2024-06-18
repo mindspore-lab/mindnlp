@@ -1,4 +1,4 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# Copyright 2024 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,16 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""
-Ernie Model init
-"""
-
-from . import configuration_ernie, modeling_ernie, modeling_graph_ernie
-from .configuration_ernie import *
-from .modeling_ernie import *
-from .modeling_graph_ernie import *
+"""Splinter model init."""
+from . import (
+    configuration_splinter,
+    modeling_splinter,
+    tokenization_splinter,
+    tokenization_splinter_fast,
+)
+from .configuration_splinter import *
+from .modeling_splinter import *
+from .tokenization_splinter import *
+from .tokenization_splinter_fast import *
 
 __all__ = []
-__all__.extend(modeling_ernie.__all__)
-__all__.extend(modeling_graph_ernie.__all__)
-__all__.extend(configuration_ernie.__all__)
+__all__.extend(configuration_splinter.__all__)
+__all__.extend(modeling_splinter.__all__)
+__all__.extend(tokenization_splinter.__all__)
+__all__.extend(tokenization_splinter_fast.__all__)

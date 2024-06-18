@@ -12,16 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================
-"""
-SegGpt Model init
-"""
-from . import configuration_seggpt, image_processing_seggpt, modeling_seggpt
 
-from .configuration_seggpt import *
-from .image_processing_seggpt import *
-from .modeling_seggpt import *
+"""
+MobileNet_V2 Model init
+"""
+
+from . import configuration_mobilenet_v2, feature_extraction_mobilenet_v2, image_processing_mobilenet_v2, modeling_mobilenet_v2
+
+from .configuration_mobilenet_v2 import *
+from .feature_extraction_mobilenet_v2 import *
+from .image_processing_mobilenet_v2 import *
+from .modeling_mobilenet_v2 import *
 
 __all__ = []
-__all__.extend(configuration_seggpt.__all__)
-__all__.extend(image_processing_seggpt.__all__)
-__all__.extend(modeling_seggpt.__all__)
+__all__.extend(configuration_mobilenet_v2.__all__)
+__all__.extend(feature_extraction_mobilenet_v2.__all__)
+__all__.extend(image_processing_mobilenet_v2.__all__)
+__all__.extend(modeling_mobilenet_v2.__all__)
