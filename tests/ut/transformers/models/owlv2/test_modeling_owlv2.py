@@ -877,7 +877,7 @@ class Owlv2ModelIntegrationTest(unittest.TestCase):
         expected_logits = ms.tensor([[-6.2229, -8.2601]])
         self.assertTrue(
             np.allclose(
-                outputs.logits_per_image.asnumpy(), expected_logits.asnumpy(), atol=1e-3
+                outputs.logits_per_image.asnumpy(), expected_logits.asnumpy(), atol=1e-4
             )
         )
 
@@ -919,7 +919,7 @@ class Owlv2ModelIntegrationTest(unittest.TestCase):
             np.allclose(
                 outputs.logits[0, :3, :3].asnumpy(),
                 expected_slice_logits.asnumpy(),
-                atol=1e-1,
+                atol=1e-3,
             )
         )
         expected_slice_boxes = ms.tensor(
@@ -976,7 +976,7 @@ class Owlv2ModelIntegrationTest(unittest.TestCase):
             np.allclose(
                 outputs.target_pred_boxes[0, :3, :3].asnumpy(),
                 expected_slice_boxes.asnumpy(),
-                atol=1e-1,
+                atol=1e-4,
             )
         )
 
