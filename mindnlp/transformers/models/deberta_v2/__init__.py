@@ -16,7 +16,7 @@
 Deberta Model init
 """
 
-from . import configuration_deberta_v2, modeling_deberta_v2, tokenization_deberta_v2, tokenization_deberta_v2_fast
+from .import configuration_deberta_v2, modeling_deberta_v2, tokenization_deberta_v2, tokenization_deberta_v2_fast
 from .configuration_deberta_v2 import *
 from .modeling_deberta_v2 import *
 from .tokenization_deberta_v2 import *

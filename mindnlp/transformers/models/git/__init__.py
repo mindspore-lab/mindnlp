@@ -16,7 +16,7 @@
 GIT Model init
 """
 
-from . import configuration_git, modeling_git, processing_git
+from .import configuration_git, modeling_git, processing_git
 
 from .configuration_git import *
 from .modeling_git import *

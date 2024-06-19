@@ -15,7 +15,7 @@
 """
 OwlViT Model init
 """
-from . import configuration_owlvit, feature_extraction_owlvit, image_processing_owlvit, modeling_owlvit, processing_owlvit
+from .import configuration_owlvit, feature_extraction_owlvit, image_processing_owlvit, modeling_owlvit, processing_owlvit
 
 from .configuration_owlvit import *
 from .feature_extraction_owlvit import *

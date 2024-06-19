@@ -13,8 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Auto Config class."""
-
+""" Auto Config class."""
 import importlib
 import re
 import warnings
@@ -73,6 +72,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("deberta-v2", "DebertaV2Config"),
         ("detr", "DetrConfig"),
         ("distilbert", "DistilBertConfig"),
+        ("donut-swin", "DonutSwinConfig"),
         ("efficientformer", "EfficientFormerConfig"),
         ("encodec", "EncodecConfig"),
         ("esm", "EsmConfig"),
@@ -95,6 +95,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("llama", "LlamaConfig"),
         ("llava", "LlavaConfig"),
         ("llava_next", "LlavaNextConfig"),
+        ("layoutlmv3", "LayoutLMv3Config"),
         ("mamba", "MambaConfig"),
         ("marian", "MarianConfig"),
         ("mask2former", "Mask2FormerConfig"),
@@ -109,6 +110,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("musicgen_melody", "MusicgenMelodyConfig"),
         ("mt5", "MT5Config"),
         ("mvp", "MvpConfig"),
+        ("nougat", "VisionEncoderDecoderConfig"),
         ("nystromformer", "NystromformerConfig"),
         ("olmo", "OlmoConfig"),
         ("oneformer", "OneFormerConfig"),
@@ -142,6 +144,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("t5", "T5Config"),
         ("time_series_transformer", "TimeSeriesTransformerConfig"),
         ("timesformer", "TimesformerConfig"),
+        ("trocr", "TrOCRConfig"),
         ("videomae", "VideoMAEConfig"),
         ("vit", "ViTConfig"),
         ("vision-encoder-decoder", "VisionEncoderDecoderConfig"),
@@ -729,22 +732,22 @@ class _LazyConfigMapping(OrderedDict):
 
     def __getitem__(self, key):
         """
-                __getitem__
+        __getitem__
 
-                Retrieve the value associated with the given key from the _LazyConfigMapping object.
+        Retrieve the value associated with the given key from the _LazyConfigMapping object.
 
-                Args:
-                    self (_LazyConfigMapping): The instance of the _LazyConfigMapping class.
-                    key (str): The key used to retrieve the corresponding value. It should be a string.
+        Args:
+            self (_LazyConfigMapping): The instance of the _LazyConfigMapping class.
+            key (str): The key used to retrieve the corresponding value. It should be a string.
 
-                Returns:
-                    None: If the key is present in the _extra_content, the associated value is returned. If the key is not in _extra_content but is in _mapping, the value associated with the key is returned after
-        performing necessary module imports and attribute retrieval.
+        Returns:
+            None: If the key is present in the _extra_content, the associated value is returned. If the key is not in _extra_content but is in _mapping, the value associated with the key is returned after
+performing necessary module imports and attribute retrieval.
 
-                Raises:
-                    KeyError: If the key is not found in either _extra_content or _mapping, a KeyError is raised.
-                    AttributeError: If the attribute associated with the value corresponding to the key is not found in the dynamically imported module, an AttributeError is raised.
-                    ModuleNotFoundError: If the required module is not found during dynamic import, a ModuleNotFoundError is raised.
+        Raises:
+            KeyError: If the key is not found in either _extra_content or _mapping, a KeyError is raised.
+            AttributeError: If the attribute associated with the value corresponding to the key is not found in the dynamically imported module, an AttributeError is raised.
+            ModuleNotFoundError: If the required module is not found during dynamic import, a ModuleNotFoundError is raised.
         """
         if key in self._extra_content:
             return self._extra_content[key]
@@ -1187,18 +1190,18 @@ class AutoConfig:
     @classmethod
     def for_model(cls, model_type: str, *args, **kwargs):
         """
-                This class method 'for_model' in the 'AutoConfig' class is used to instantiate a configuration class based on the provided model type.
+        This class method 'for_model' in the 'AutoConfig' class is used to instantiate a configuration class based on the provided model type.
 
-                Args:
-                    cls (class): The class itself, automatically passed as the first parameter.
-                    model_type (str): A string representing the type of the model for which the configuration class needs to be instantiated. It must be a key within the CONFIG_MAPPING dictionary.
+        Args:
+            cls (class): The class itself, automatically passed as the first parameter.
+            model_type (str): A string representing the type of the model for which the configuration class needs to be instantiated. It must be a key within the CONFIG_MAPPING dictionary.
 
-                Returns:
-                    None: This method does not return any value directly. It instantiates and returns an instance of the appropriate configuration class based on the model type.
+        Returns:
+            None: This method does not return any value directly. It instantiates and returns an instance of the appropriate configuration class based on the model type.
 
-                Raises:
-                    ValueError: Raised when the provided 'model_type' is not recognized or is not found as a key in the CONFIG_MAPPING dictionary. The exception message indicates the unrecognized model identifier and
-        lists all valid model identifiers available in the CONFIG_MAPPING dictionary.
+        Raises:
+            ValueError: Raised when the provided 'model_type' is not recognized or is not found as a key in the CONFIG_MAPPING dictionary. The exception message indicates the unrecognized model identifier and
+lists all valid model identifiers available in the CONFIG_MAPPING dictionary.
         """
         if model_type in CONFIG_MAPPING:
             config_class = CONFIG_MAPPING[model_type]

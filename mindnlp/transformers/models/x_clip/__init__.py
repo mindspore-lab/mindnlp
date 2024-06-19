@@ -16,7 +16,7 @@
 X-Clip Model init
 """
 
-from . import configuration_x_clip, modeling_x_clip, processing_x_clip
+from .import configuration_x_clip, modeling_x_clip, processing_x_clip
 
 from .configuration_x_clip import *
 from .modeling_x_clip import *
