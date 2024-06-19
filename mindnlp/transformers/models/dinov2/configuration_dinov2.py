@@ -15,8 +15,9 @@
 # ============================================================================
 """DINOv2 model configuration"""
 
-from ...configuration_utils import PretrainedConfig
 from mindnlp.utils import logging
+
+from ...configuration_utils import PretrainedConfig
 from ...backbone_utils import BackboneConfigMixin, get_aligned_output_features_output_indices
 
 

@@ -21,6 +21,7 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 import mindspore
 from mindspore import nn, ops
 from mindspore.common.initializer import initializer, TruncatedNormal
+from mindnlp.utils import logging
 
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -31,7 +32,6 @@ from ...modeling_outputs import (
 )
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
-from mindnlp.utils import logging
 from ...backbone_utils import BackboneMixin
 from .configuration_dinov2 import Dinov2Config
 
@@ -625,7 +625,7 @@ class Dinov2ForImageClassification(Dinov2PreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -662,7 +662,7 @@ class Dinov2Backbone(Dinov2PreTrainedModel, BackboneMixin):
         self.embeddings = Dinov2Embeddings(config)
         self.encoder = Dinov2Encoder(config)
 
-        self.layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
 
         # Initialize weights and apply final processing
         self.post_init()
