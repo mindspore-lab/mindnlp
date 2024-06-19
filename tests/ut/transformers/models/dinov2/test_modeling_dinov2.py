@@ -306,7 +306,7 @@ class Dinov2ModelIntegrationTest(unittest.TestCase):
 
 
         # forward pass
-        with mindspore.no_grad():
+        with mindspore._no_grad():
             outputs = model(**inputs)
 
         # verify the last hidden states
