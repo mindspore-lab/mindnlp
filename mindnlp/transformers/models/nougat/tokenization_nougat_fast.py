@@ -20,15 +20,13 @@ import re
 from functools import partial
 from multiprocessing import Pool
 from typing import List, Union
-
+from Levenshtein import ratio
+import nltk
 import numpy as np
 
 from mindnlp.transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 
 from ....utils import logging, requires_backends
-
-from Levenshtein import ratio
-import nltk
 
 
 logger = logging.get_logger(__name__)

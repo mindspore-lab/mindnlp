@@ -16,8 +16,8 @@
 
 import copy
 import math
-import numpy as np
 from typing import Optional, Tuple, Union
+import numpy as np
 
 import mindspore as ms
 from mindspore import nn, ops

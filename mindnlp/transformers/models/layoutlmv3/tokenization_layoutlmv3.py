@@ -421,10 +421,11 @@ class LayoutLMv3Tokenizer(PreTrainedTokenizer):
         add_prefix_space = kwargs.pop("add_prefix_space", self.add_prefix_space)
         # If the text starts with a token that should not be split, no space is added before the text in any case.
         # It's necessary to match the fast tokenization
+        judge_list = [text.startswith(no_split_token) for no_split_token in self.added_tokens_encoder]
         if (
             (is_split_into_words or add_prefix_space)
             and (len(text) > 0 and not text[0].isspace())
-            and sum([text.startswith(no_split_token) for no_split_token in self.added_tokens_encoder]) == 0
+            and sum(judge_list) == 0
         ):
             text = " " + text
         return (text, kwargs)

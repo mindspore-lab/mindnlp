@@ -628,10 +628,11 @@ class LayoutLMv3TokenizerFast(PreTrainedTokenizerFast):
                                 labels_example.append(word_labels[original_index][word_id])
                             else:
                                 labels_example.append(self.pad_token_label)
-                            if offset == (0, 0):
-                                previous_token_empty = True
-                            else:
-                                previous_token_empty = False
+                            previous_token_empty = True if offset == (0, 0) else False
+                            # if offset == (0, 0):
+                            #     previous_token_empty = True
+                            # else:
+                            #     previous_token_empty = False
                         else:
                             labels_example.append(word_labels[original_index][word_id])
                     else:
