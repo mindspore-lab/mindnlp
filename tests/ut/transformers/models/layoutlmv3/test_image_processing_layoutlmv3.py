@@ -94,6 +94,7 @@ class LayoutLMv3ImageProcessingTest(ImageProcessingTestMixin, unittest.TestCase)
         image_processor = self.image_processing_class.from_dict(self.image_processor_dict, size=42)
         self.assertEqual(image_processor.size, {"height": 42, "width": 42})
 
+    @unittest.skip("Testseract is missing.")
     def test_LayoutLMv3_integration_test(self):
         # with apply_OCR = True
         image_processing = LayoutLMv3ImageProcessor()
@@ -124,3 +125,19 @@ class LayoutLMv3ImageProcessingTest(ImageProcessingTestMixin, unittest.TestCase)
         encoding = image_processing(image, return_tensors="ms")
 
         self.assertEqual(encoding.pixel_values.shape, (1, 3, 224, 224))
+
+    @unittest.skip("Testseract is missing.")
+    def test_call_pytorch(self):
+        pass
+
+    @unittest.skip("Testseract is missing.")
+    def test_call_pil(self):
+        pass
+
+    @unittest.skip("Testseract is missing.")
+    def test_call_numpy_4_channels(self):
+        pass
+
+    @unittest.skip("Testseract is missing.")
+    def test_call_numpy(self):
+        pass

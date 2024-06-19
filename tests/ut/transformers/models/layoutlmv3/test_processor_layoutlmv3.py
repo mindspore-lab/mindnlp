@@ -160,6 +160,7 @@ class LayoutLMv3ProcessorTest(unittest.TestCase):
         self.assertEqual(processor.image_processor.to_json_string(), image_processor_add_kwargs.to_json_string())
         self.assertIsInstance(processor.image_processor, LayoutLMv3ImageProcessor)
 
+    @unittest.skip("Testseract is missing.")
     def test_model_input_names(self):
         image_processor = self.get_image_processor()
         tokenizer = self.get_tokenizer()
@@ -184,7 +185,7 @@ class LayoutLMv3ProcessorIntegrationTests(unittest.TestCase):
         # we verify our implementation on 2 document images from the DocVQA dataset
         from datasets import load_dataset
 
-        ds = load_dataset("hf-internal-testing/fixtures_docvqa", split="test", trust_remote_code=True)
+        ds = load_dataset("hf-internal-testing/fixtures_docvqa", split="test")
 
         image_1 = Image.open(ds[0]["file"]).convert("RGB")
         image_2 = Image.open(ds[1]["file"]).convert("RGB")
@@ -197,6 +198,7 @@ class LayoutLMv3ProcessorIntegrationTests(unittest.TestCase):
         fast_tokenizer = LayoutLMv3TokenizerFast.from_pretrained("microsoft/layoutlmv3-base", add_visual_labels=False)
         return [slow_tokenizer, fast_tokenizer]
 
+    @unittest.skip("Testseract is missing.")
     @slow
     def test_processor_case_1(self):
         # case 1: document image classification (training, inference) + token classification (inference), apply_ocr = True
@@ -367,6 +369,7 @@ class LayoutLMv3ProcessorIntegrationTests(unittest.TestCase):
             expected_labels = [-100, 6, 3, 10, 2, -100, -100]
             self.assertListEqual(input_processor.labels[1].tolist(), expected_labels)
 
+    @unittest.skip("Testseract is missing.")
     @slow
     def test_processor_case_4(self):
         # case 4: visual question answering (inference), apply_ocr=True
