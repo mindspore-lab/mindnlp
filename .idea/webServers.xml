@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="f666d5d9-0d99-490b-ae07-542595c33af3" name="ved">
+        <fileTransfer rootFolder="/public/home/henobamboo_32/vision_encoder_decoder/mindnlp" accessType="SFTP" host="192.168.143.248" port="50022" sshConfigId="bd549c40-bd94-4de6-888e-d08e75d183d9" sshConfig="henobamboo_32@192.168.143.248:50022 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
