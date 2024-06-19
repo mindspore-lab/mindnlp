@@ -15,12 +15,14 @@
 """
 Models init
 """
+
 from . import (
     albert,
     align,
     altclip,
     audio_spectrogram_transformer,
     auto,
+    owlv2,
     autoformer,
     baichuan,
     bark,
