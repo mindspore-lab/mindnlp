@@ -34,7 +34,7 @@ def shift_tokens_right(input_ids: ms.Tensor, pad_token_id: int, decoder_start_to
     Shift input ids one token to the right.
     """
     shifted_input_ids = input_ids.new_zeros(input_ids.shape)
-    shifted_input_ids[:, 1:] = input_ids[:, :-1].clone()
+    shifted_input_ids[:, 1:] = input_ids[:, :-1].copy()
     if decoder_start_token_id is None:
         raise ValueError("Make sure to set the decoder_start_token_id attribute of the model's configuration.")
     shifted_input_ids[:, 0] = decoder_start_token_id

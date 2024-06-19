@@ -15,7 +15,7 @@
 """
 Vision Encoder Decoder Model init
 """
-from .import configuration_vision_encoder_decoder, modeling_vision_encoder_decoder
+from . import configuration_vision_encoder_decoder, modeling_vision_encoder_decoder
 
 from .configuration_vision_encoder_decoder import *
 from .modeling_vision_encoder_decoder import *

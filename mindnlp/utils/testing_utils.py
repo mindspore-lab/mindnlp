@@ -55,6 +55,7 @@ from .import_utils import (
     is_pyctcdecode_available,
     is_safetensors_available,
     is_sentencepiece_available,
+    is_soundfile_availble,
     is_tokenizers_available,
     is_pytesseract_available,
     is_vision_available,

@@ -16,7 +16,7 @@
 Encodec Model init
 """
 
-from .import generation_configuration_bark, modeling_bark, configuration_bark, processing_bark
+from . import generation_configuration_bark, modeling_bark, configuration_bark, processing_bark
 from .configuration_bark import *
 from .generation_configuration_bark import *
 from .modeling_bark import *

@@ -15,7 +15,7 @@
 """
 Vision Text Dual Encoder Model init
 """
-from .import configuration_vision_text_dual_encoder, processing_vision_text_dual_encoder, modeling_vision_text_dual_encoder
+from . import configuration_vision_text_dual_encoder, processing_vision_text_dual_encoder, modeling_vision_text_dual_encoder
 
 from .configuration_vision_text_dual_encoder import *
 from .processing_vision_text_dual_encoder import *

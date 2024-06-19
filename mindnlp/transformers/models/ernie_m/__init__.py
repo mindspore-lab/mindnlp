@@ -16,7 +16,7 @@
 ErnieM Model init
 """
 
-from .import configuration_ernie_m, modeling_ernie_m, tokenization_ernie_m, modeling_graph_ernie_m
+from . import configuration_ernie_m, modeling_ernie_m, tokenization_ernie_m, modeling_graph_ernie_m
 from .configuration_ernie_m import *
 from .modeling_ernie_m import *
 from .modeling_graph_ernie_m import *
