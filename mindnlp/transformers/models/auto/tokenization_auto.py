@@ -191,7 +191,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         ("groupvit", ("CLIPTokenizer", "CLIPTokenizerFast" if is_tokenizers_available() else None)),
         ("herbert", ("HerbertTokenizer", "HerbertTokenizerFast" if is_tokenizers_available() else None)),
         ("hubert", ("Wav2Vec2CTCTokenizer", None)),
-        # ("ibert", ("RobertaTokenizer", "RobertaTokenizerFast" if is_tokenizers_available() else None)),
+        ("ibert", ("RobertaTokenizer", "RobertaTokenizerFast" if is_tokenizers_available() else None)),
         # ("idefics", (None, "LlamaTokenizerFast" if is_tokenizers_available() else None)),
         ("instructblip", ("GPT2Tokenizer", "GPT2TokenizerFast" if is_tokenizers_available() else None)),
         (
@@ -251,9 +251,9 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
                 "MBart50TokenizerFast" if is_tokenizers_available() else None,
             ),
         ),
-        ("mega", ("RobertaTokenizer", "RobertaTokenizerFast" if is_tokenizers_available() else None)),
+        # ("mega", ("RobertaTokenizer", "RobertaTokenizerFast" if is_tokenizers_available() else None)),
         ("megatron-bert", ("BertTokenizer", "BertTokenizerFast" if is_tokenizers_available() else None)),
-        ("mgp-str", ("MgpstrTokenizer", None)),
+        # ("mgp-str", ("MgpstrTokenizer", None)),
         (
             "minicpm",
             (
@@ -274,11 +274,11 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
                 "LlamaTokenizerFast" if is_tokenizers_available() else None,
             ),
         ),
-        ("mluke", ("MLukeTokenizer" if is_sentencepiece_available() else None, None)),
+        # ("mluke", ("MLukeTokenizer" if is_sentencepiece_available() else None, None)),
         ("mobilebert", ("MobileBertTokenizer", "MobileBertTokenizerFast" if is_tokenizers_available() else None)),
         ("mpnet", ("MPNetTokenizer", "MPNetTokenizerFast" if is_tokenizers_available() else None)),
         ("mpt", (None, "GPTNeoXTokenizerFast" if is_tokenizers_available() else None)),
-        ("mra", ("RobertaTokenizer", "RobertaTokenizerFast" if is_tokenizers_available() else None)),
+        # ("mra", ("RobertaTokenizer", "RobertaTokenizerFast" if is_tokenizers_available() else None)),
         (
             "mt5",
             (
@@ -297,13 +297,13 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
                 "NllbTokenizerFast" if is_tokenizers_available() else None,
             ),
         ),
-        (
-            "nllb-moe",
-            (
-                "NllbTokenizer" if is_sentencepiece_available() else None,
-                "NllbTokenizerFast" if is_tokenizers_available() else None,
-            ),
-        ),
+        # (
+        #     "nllb-moe",
+        #     (
+        #         "NllbTokenizer" if is_sentencepiece_available() else None,
+        #         "NllbTokenizerFast" if is_tokenizers_available() else None,
+        #     ),
+        # ),
         (
             "nystromformer",
             (
@@ -323,7 +323,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         ("opt", ("GPT2Tokenizer", "GPT2TokenizerFast" if is_tokenizers_available() else None)),
         ("owlv2", ("CLIPTokenizer", "CLIPTokenizerFast" if is_tokenizers_available() else None)),
         ("owlvit", ("CLIPTokenizer", "CLIPTokenizerFast" if is_tokenizers_available() else None)),
-        ("gpt_pangu", ("GPTPanguTokenizer", None)),
+        # ("gpt_pangu", ("GPTPanguTokenizer", None)),
         (
             "pegasus",
             (
@@ -331,34 +331,34 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
                 "PegasusTokenizerFast" if is_tokenizers_available() else None,
             ),
         ),
-        (
-            "pegasus_x",
-            (
-                "PegasusTokenizer" if is_sentencepiece_available() else None,
-                "PegasusTokenizerFast" if is_tokenizers_available() else None,
-            ),
-        ),
-        (
-            "perceiver",
-            (
-                "PerceiverTokenizer",
-                None,
-            ),
-        ),
-        (
-            "persimmon",
-            (
-                "LlamaTokenizer" if is_sentencepiece_available() else None,
-                "LlamaTokenizerFast" if is_tokenizers_available() else None,
-            ),
-        ),
-        ("phi3", ("LlamaTokenizer", "LlamaTokenizerFast" if is_tokenizers_available() else None)),
+        # (
+        #     "pegasus_x",
+        #     (
+        #         "PegasusTokenizer" if is_sentencepiece_available() else None,
+        #         "PegasusTokenizerFast" if is_tokenizers_available() else None,
+        #     ),
+        # ),
+        # (
+        #     "perceiver",
+        #     (
+        #         "PerceiverTokenizer",
+        #         None,
+        #     ),
+        # ),
+        # (
+        #     "persimmon",
+        #     (
+        #         "LlamaTokenizer" if is_sentencepiece_available() else None,
+        #         "LlamaTokenizerFast" if is_tokenizers_available() else None,
+        #     ),
+        # ),
+        # ("phi3", ("LlamaTokenizer", "LlamaTokenizerFast" if is_tokenizers_available() else None)),
         ("phi", ("CodeGenTokenizer", "CodeGenTokenizerFast" if is_tokenizers_available() else None)),
-        ("phobert", ("PhobertTokenizer", None)),
+        # ("phobert", ("PhobertTokenizer", None)),
         # ("pix2struct", ("T5Tokenizer", "T5TokenizerFast" if is_tokenizers_available() else None)),
-        ("plbart", ("PLBartTokenizer" if is_sentencepiece_available() else None, None)),
-        ("prophetnet", ("ProphetNetTokenizer", None)),
-        ("qdqbert", ("BertTokenizer", "BertTokenizerFast" if is_tokenizers_available() else None)),
+        # ("plbart", ("PLBartTokenizer" if is_sentencepiece_available() else None, None)),
+        # ("prophetnet", ("ProphetNetTokenizer", None)),
+        # ("qdqbert", ("BertTokenizer", "BertTokenizerFast" if is_tokenizers_available() else None)),
         (
             "qwen2",
             (
@@ -373,8 +373,8 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
                 "Qwen2TokenizerFast" if is_tokenizers_available() else None,
             ),
         ),
-        ("rag", ("RagTokenizer", None)),
-        ("realm", ("RealmTokenizer", "RealmTokenizerFast" if is_tokenizers_available() else None)),
+        # ("rag", ("RagTokenizer", None)),
+        # ("realm", ("RealmTokenizer", "RealmTokenizerFast" if is_tokenizers_available() else None)),
         (
             "reformer",
             (
@@ -395,7 +395,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
             ("RobertaTokenizer", "RobertaTokenizerFast" if is_tokenizers_available() else None),
         ),
         ("roc_bert", ("RoCBertTokenizer", None)),
-        ("roformer", ("RoFormerTokenizer", "RoFormerTokenizerFast" if is_tokenizers_available() else None)),
+        # ("roformer", ("RoFormerTokenizer", "RoFormerTokenizerFast" if is_tokenizers_available() else None)),
         ("rwkv", (None, "GPTNeoXTokenizerFast" if is_tokenizers_available() else None)),
         (
             "seamless_m4t",
@@ -405,7 +405,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
             ),
         ),
         ("speech_to_text", ("Speech2TextTokenizer" if is_sentencepiece_available() else None, None)),
-        ("speech_to_text_2", ("Speech2Text2Tokenizer", None)),
+        # ("speech_to_text_2", ("Speech2Text2Tokenizer", None)),
         ("speecht5", ("SpeechT5Tokenizer" if is_sentencepiece_available() else None, None)),
         ("splinter", ("SplinterTokenizer", "SplinterTokenizerFast")),
         (
@@ -428,35 +428,35 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
                 "T5TokenizerFast" if is_tokenizers_available() else None,
             ),
         ),
-        ("tapas", ("TapasTokenizer", None)),
-        ("tapex", ("TapexTokenizer", None)),
-        ("transfo-xl", ("TransfoXLTokenizer", None)),
-        (
-            "umt5",
-            (
-                "T5Tokenizer" if is_sentencepiece_available() else None,
-                "T5TokenizerFast" if is_tokenizers_available() else None,
-            ),
-        ),
-        ("vilt", ("BertTokenizer", "BertTokenizerFast" if is_tokenizers_available() else None)),
+        # ("tapas", ("TapasTokenizer", None)),
+        # ("tapex", ("TapexTokenizer", None)),
+        # ("transfo-xl", ("TransfoXLTokenizer", None)),
+        # (
+        #     "umt5",
+        #     (
+        #         "T5Tokenizer" if is_sentencepiece_available() else None,
+        #         "T5TokenizerFast" if is_tokenizers_available() else None,
+        #     ),
+        # ),
+        # ("vilt", ("BertTokenizer", "BertTokenizerFast" if is_tokenizers_available() else None)),
         ("vipllava", ("LlamaTokenizer", "LlamaTokenizerFast" if is_tokenizers_available() else None)),
         ("visual_bert", ("BertTokenizer", "BertTokenizerFast" if is_tokenizers_available() else None)),
-        ("vits", ("VitsTokenizer", None)),
+        # ("vits", ("VitsTokenizer", None)),
         ("wav2vec2", ("Wav2Vec2CTCTokenizer", None)),
         ("wav2vec2-bert", ("Wav2Vec2CTCTokenizer", None)),
         ("wav2vec2-conformer", ("Wav2Vec2CTCTokenizer", None)),
-        ("wav2vec2_phoneme", ("Wav2Vec2PhonemeCTCTokenizer", None)),
+        # ("wav2vec2_phoneme", ("Wav2Vec2PhonemeCTCTokenizer", None)),
         ("whisper", ("WhisperTokenizer", "WhisperTokenizerFast" if is_tokenizers_available() else None)),
         ("xclip", ("CLIPTokenizer", "CLIPTokenizerFast" if is_tokenizers_available() else None)),
-        (
-            "xglm",
-            (
-                "XGLMTokenizer" if is_sentencepiece_available() else None,
-                "XGLMTokenizerFast" if is_tokenizers_available() else None,
-            ),
-        ),
+        # (
+        #     "xglm",
+        #     (
+        #         "XGLMTokenizer" if is_sentencepiece_available() else None,
+        #         "XGLMTokenizerFast" if is_tokenizers_available() else None,
+        #     ),
+        # ),
         ("xlm", ("XLMTokenizer", None)),
-        ("xlm-prophetnet", ("XLMProphetNetTokenizer" if is_sentencepiece_available() else None, None)),
+        # ("xlm-prophetnet", ("XLMProphetNetTokenizer" if is_sentencepiece_available() else None, None)),
         (
             "xlm-roberta",
             (
@@ -478,20 +478,20 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
                 "XLNetTokenizerFast" if is_tokenizers_available() else None,
             ),
         ),
-        (
-            "xmod",
-            (
-                "XLMRobertaTokenizer" if is_sentencepiece_available() else None,
-                "XLMRobertaTokenizerFast" if is_tokenizers_available() else None,
-            ),
-        ),
-        (
-            "yoso",
-            (
-                "AlbertTokenizer" if is_sentencepiece_available() else None,
-                "AlbertTokenizerFast" if is_tokenizers_available() else None,
-            ),
-        ),
+        # (
+        #     "xmod",
+        #     (
+        #         "XLMRobertaTokenizer" if is_sentencepiece_available() else None,
+        #         "XLMRobertaTokenizerFast" if is_tokenizers_available() else None,
+        #     ),
+        # ),
+        # (
+        #     "yoso",
+        #     (
+        #         "AlbertTokenizer" if is_sentencepiece_available() else None,
+        #         "AlbertTokenizerFast" if is_tokenizers_available() else None,
+        #     ),
+        # ),
     ]
 )
 
