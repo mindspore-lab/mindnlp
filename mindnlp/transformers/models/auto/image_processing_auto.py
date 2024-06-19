@@ -60,7 +60,11 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("detr", "DetrImageProcessor"),
         # ("dinat", "ViTImageProcessor"),
         # ("dinov2", "BitImageProcessor"),
+<<<<<<< HEAD
+        ("donut-swin", "DonutImageProcessor"),
+=======
         # ("donut-swin", "DonutImageProcessor"),
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
         # ("dpt", "DPTImageProcessor"),
         ("efficientformer", "EfficientFormerImageProcessor"),
         ("efficientnet", "EfficientNetImageProcessor"),
@@ -86,7 +90,11 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("mobilevit", "MobileViTImageProcessor"),
         # ("mobilevitv2", "MobileViTImageProcessor"),
         # ("nat", "ViTImageProcessor"),
+<<<<<<< HEAD
+        ("nougat", "NougatImageProcessor"),
+=======
         # ("nougat", "NougatImageProcessor"),
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
         ("oneformer", "OneFormerImageProcessor"),
         # ("owlv2", "Owlv2ImageProcessor"),
         ("owlvit", "OwlViTImageProcessor"),
@@ -109,7 +117,11 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("timesformer", "VideoMAEImageProcessor"),
         # ("tvlt", "TvltImageProcessor"),
         # ("tvp", "TvpImageProcessor"),
+<<<<<<< HEAD
+        ("udop", "LayoutLMv3ImageProcessor"),
+=======
         # ("udop", "LayoutLMv3ImageProcessor"),
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
         # ("upernet", "SegformerImageProcessor"),
         ("van", "ConvNextImageProcessor"),
         ("videomae", "VideoMAEImageProcessor"),

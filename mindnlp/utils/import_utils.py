@@ -80,6 +80,11 @@ _pyctcdecode_available = _is_package_available("pyctcdecode")
 _safetensors_available = _is_package_available("safetensors")
 _modelscope_available = _is_package_available("modelscope")
 _jieba_available = _is_package_available("jieba")
+<<<<<<< HEAD
+_levenshtein_available = _is_package_available("Levenshtein")
+_nltk_available = _is_package_available("nltk")
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
 _pytesseract_available = _is_package_available("pytesseract")
 _g2p_en_available = _is_package_available("g2p_en")
 _mindspore_version, _mindspore_available = _is_package_available(
@@ -218,6 +223,17 @@ def is_sentencepiece_available():
     return _sentencepiece_available
 
 
+<<<<<<< HEAD
+def is_nltk_available():
+    return _nltk_available
+
+
+def is_levenshtein_available():
+    return _levenshtein_available
+
+
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
 def is_tokenizers_available():
     """Check if tokenizers are available.
     
@@ -532,11 +548,33 @@ JIEBA_IMPORT_ERROR = """
 jieba`. Please note that you may need to restart your runtime after installation.
 """
 
+<<<<<<< HEAD
+# docstyle-ignore
+NLTK_IMPORT_ERROR = """
+{0} requires the NLTK library but it was not found in your environment. You can install it by referring to:
+https://www.nltk.org/install.html. Please note that you may need to restart your runtime after installation.
+"""
+
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
 VISION_IMPORT_ERROR = """
 {0} requires the PIL library but it was not found in your environment. You can install it with pip:
 `pip install pillow`. Please note that you may need to restart your runtime after installation.
 """
 
+<<<<<<< HEAD
+PYTESSERACT_IMPORT_ERROR = """
+{0} requires the PyTesseract library but it was not found in your environment. You can install it with pip:
+`pip install pytesseract`. Please note that you may need to restart your runtime after installation.
+"""
+
+LEVENSHTEIN_IMPORT_ERROR = """
+{0} requires the python-Levenshtein library but it was not found in your environment. You can install it with pip: `pip
+install python-Levenshtein`. Please note that you may need to restart your runtime after installation.
+"""
+
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
 # docstyle-ignore
 G2P_EN_IMPORT_ERROR = """
 {0} requires the g2p-en library but it was not found in your environment. You can install it with pip:
@@ -549,13 +587,23 @@ BACKENDS_MAPPING = OrderedDict(
         ("cython", (is_cython_available, CYTHON_IMPORT_ERROR)),
         ("datasets", (is_datasets_available, DATASETS_IMPORT_ERROR)),
         ("protobuf", (is_protobuf_available, PROTOBUF_IMPORT_ERROR)),
+<<<<<<< HEAD
+        ("levenshtein", (is_levenshtein_available, LEVENSHTEIN_IMPORT_ERROR)),
         ("sentencepiece", (is_sentencepiece_available, SENTENCEPIECE_IMPORT_ERROR)),
+        ("nltk", (is_nltk_available, NLTK_IMPORT_ERROR)),
+=======
+        ("sentencepiece", (is_sentencepiece_available, SENTENCEPIECE_IMPORT_ERROR)),
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
         ("tokenizers", (is_tokenizers_available, TOKENIZERS_IMPORT_ERROR)),
         ("librosa", (is_librosa_available, LIBROSA_IMPORT_ERROR)),
         ("essentia", (is_essentia_available, ESSENTIA_IMPORT_ERROR)),
         ("scipy", (is_scipy_available, SCIPY_IMPORT_ERROR)),
         ("pretty_midi", (is_pretty_midi_available, PRETTY_MIDI_IMPORT_ERROR)),
         ("pyctcdecode", (is_pyctcdecode_available, PYCTCDECODE_IMPORT_ERROR)),
+<<<<<<< HEAD
+        ("pytesseract", (is_pytesseract_available, PYTESSERACT_IMPORT_ERROR)),
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
         ("jieba", (is_jieba_available, JIEBA_IMPORT_ERROR)),
         ("vision", (is_vision_available, VISION_IMPORT_ERROR)),
         ("g2p_en", (is_g2p_en_available, G2P_EN_IMPORT_ERROR)),

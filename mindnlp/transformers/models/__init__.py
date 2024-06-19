@@ -68,6 +68,10 @@ from . import (
     detr,
     deit,
     distilbert,
+<<<<<<< HEAD
+    donut,
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
     dpr,
     efficientnet,
     efficientformer,
@@ -101,6 +105,10 @@ from . import (
     jetmoe,
     layoutlm,
     layoutlmv2,
+<<<<<<< HEAD
+    layoutlmv3,
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
     led,
     lilt,
     llama,
@@ -126,6 +134,10 @@ from . import (
     musicgen_melody,
     mvp,
     nezha,
+<<<<<<< HEAD
+    nougat,
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
     nystromformer,
     olmo,
     oneformer,
@@ -166,6 +178,10 @@ from . import (
     time_series_transformer,
     timesformer,
     tinybert,
+<<<<<<< HEAD
+    trocr,
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
     videomae,
     vipllava,
     vision_encoder_decoder,
@@ -237,6 +253,10 @@ from .decision_transformer import *
 from .detr import *
 from .deit import *
 from .distilbert import *
+<<<<<<< HEAD
+from .donut import *
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
 from .dpr import *
 from .efficientnet import *
 from .efficientformer import *
@@ -270,6 +290,10 @@ from .imagegpt import *
 from .jetmoe import *
 from .layoutlm import *
 from .layoutlmv2 import *
+<<<<<<< HEAD
+from .layoutlmv3 import *
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
 from .led import *
 from .lilt import *
 from .llama import *
@@ -295,6 +319,10 @@ from .musicgen import *
 from .musicgen_melody import *
 from .mvp import *
 from .nezha import *
+<<<<<<< HEAD
+from .nougat import *
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
 from .nystromformer import *
 from .olmo import *
 from .oneformer import *
@@ -335,6 +363,10 @@ from .tinybert import *
 from .t5 import *
 from .time_series_transformer import *
 from .timesformer import *
+<<<<<<< HEAD
+from .trocr import *
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
 from .videomae import *
 from .vipllava import *
 from .vision_encoder_decoder import *
@@ -404,6 +436,10 @@ __all__.extend(deberta_v2.__all__)
 __all__.extend(decision_transformer.__all__)
 __all__.extend(deit.__all__)
 __all__.extend(distilbert.__all__)
+<<<<<<< HEAD
+__all__.extend(donut.__all__)
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
 __all__.extend(detr.__all__)
 __all__.extend(dpr.__all__)
 __all__.extend(efficientnet.__all__)
@@ -438,6 +474,10 @@ __all__.extend(imagegpt.__all__)
 __all__.extend(jetmoe.__all__)
 __all__.extend(layoutlm.__all__)
 __all__.extend(layoutlmv2.__all__)
+<<<<<<< HEAD
+__all__.extend(layoutlmv3.__all__)
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
 __all__.extend(led.__all__)
 __all__.extend(lilt.__all__)
 __all__.extend(llama.__all__)
@@ -463,6 +503,10 @@ __all__.extend(musicgen.__all__)
 __all__.extend(musicgen_melody.__all__)
 __all__.extend(mvp.__all__)
 __all__.extend(nezha.__all__)
+<<<<<<< HEAD
+__all__.extend(nougat.__all__)
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
 __all__.extend(nystromformer.__all__)
 __all__.extend(olmo.__all__)
 __all__.extend(oneformer.__all__)
@@ -504,6 +548,10 @@ __all__.extend(t5.__all__)
 __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
+<<<<<<< HEAD
+__all__.extend(trocr.__all__)
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
 __all__.extend(videomae.__all__)
 __all__.extend(vipllava.__all__)
 __all__.extend(vision_encoder_decoder.__all__)

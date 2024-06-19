@@ -73,6 +73,10 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("decision_transformer", "DecisionTransformerModel"),
         ("deberta-v2", "DebertaV2Model"),
         ("detr", "DetrModel"),
+<<<<<<< HEAD
+        ("donut-swin", "DonutSwinModel"),
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
         ("efficientformer", "EfficientFormerModel"),
         ("encodec", "EncodecModel"),
         ("esm", "EsmModel"),
@@ -93,6 +97,10 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("groupvit", "GroupViTModel"),
         ("ibert", "IBertModel"),
         ("layoutlmv2", "LayoutLMv2Model"),
+<<<<<<< HEAD
+        ("layoutlmv3", "LayoutLMv3Model"),
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
         ("longformer", "LongformerModel"),
         ("jetmoe", "JetMoEModel"),
         ("led", "LEDModel"),
@@ -171,7 +179,11 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
         ("flava", "FlavaForPreTraining"),
         ("funnel", "FunnelForPreTraining"),
         ("gpt_pangu", "GPTPanguForCausalLM"),
+<<<<<<< HEAD
+        ("ibert", "IBertForMaskedLM"),
+=======
         ("ibert", "IBertForPreTraining"),
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
         ("mamba", "MambaForCausalLM"),
         ("minicpm", "MiniCPMForCausalLM"),
         ("mvp", "MvpForConditionalGeneration"),
@@ -270,6 +282,10 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("mixtral", "MixtralForCausalLM"),
         ("musicgen", "MusicgenForCausalLM"),
         ("musicgen_melody", "MusicgenMelodyForCausalLM"),
+<<<<<<< HEAD
+        ("mbart", "MBartForCausalLM"),
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
         ("mvp", "MvpForCausalLM"),
         ("olmo", "OlmoForCausalLM"),
         ("openelm", "OpenELMForCausalLM"),
@@ -279,12 +295,20 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("phi3", "Phi3ForCausalLM"),
         ("qwen2", "Qwen2ForCausalLM"),
         ("qwen2_moe", "Qwen2MoeForCausalLM"),
+<<<<<<< HEAD
+        ("roberta", "RobertaForCausalLM"),
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
         ("reformer", "ReformerModelWithLMHead"),
         ("rembert", "RemBertForCausalLM"),
         ("roc_bert", "RoCBertForCausalLM"),
         ("rwkv", "RwkvForCausalLM"),
         ("stablelm", "StableLmForCausalLM"),
         ("starcoder2", "Starcoder2ForCausalLM"),
+<<<<<<< HEAD
+        ("trocr", "TrOCRForCausalLM"),
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
         ("whisper", "WhisperForCausalLM"),
         ("xlm-roberta", "XLMRobertaForCausalLM"),
         ("xlm-roberta-xl", "XLMRobertaXLForCausalLM"),
@@ -415,6 +439,10 @@ MODEL_FOR_MASKED_LM_MAPPING_NAMES = OrderedDict(
         ("esm", "EsmForMaskedLM"),
         ("funnel", "FunnelForMaskedLM"),
         {"ibert", "IBertForMaskedLM"},
+<<<<<<< HEAD
+        ("mbart", "MBartForConditionalGeneration"),
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
         ("mvp", "MvpForConditionalGeneration"),
         ("rembert", "RemBertForMaskedLM"),
         ("reformer", "ReformerForMaskedLM"),
@@ -516,11 +544,19 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("funnel", "FunnelForSequenceClassification"),
         ("ibert", "IBertForSequenceClassification"),
         ("layoutlmv2", "LayoutLMv2ForSequenceClassification"),
+<<<<<<< HEAD
+        ("layoutlmv3", "LayoutLMv3ForSequenceClassification"),
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
         ("led", "LEDForSequenceClassification"),
         ("jetmoe", "JetMoEForSequenceClassification"),
         ("minicpm", "MiniCPMForSequenceClassification"),
         ("mistral", "MistralForSequenceClassification"),
         ("mixtral", "MixtralForSequenceClassification"),
+<<<<<<< HEAD
+        ("mbart", "MBartForSequenceClassification"),
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
         ("mvp", "MvpForSequenceClassification"),
         ("opt", "OPTForSequenceClassification"),
         ("phi", "PhiForSequenceClassification"),
@@ -568,6 +604,10 @@ MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES = OrderedDict(
         ("gpt_neo", "GPTNeoForQuestionAnswering"),
         ("gpt_neox", "GPTNeoXForQuestionAnswering"),
         ("gptj", "GPTJForQuestionAnswering"),
+<<<<<<< HEAD
+        ("ibert", "IBertForQuestionAnswering"),
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
         ("layoutlmv2", "LayoutLMv2ForQuestionAnswering"),
         ("layoutlmv3", "LayoutLMv3ForQuestionAnswering"),
         ("led", "LEDForQuestionAnswering"),
@@ -660,6 +700,10 @@ MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("gpt_bigcode", "GPTBigCodeForTokenClassification"),
         ("gpt_neo", "GPTNeoForTokenClassification"),
         ("gpt_neox", "GPTNeoXForTokenClassification"),
+<<<<<<< HEAD
+        ("ibert", "IBertForTokenClassification"),
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
         ("layoutlm", "LayoutLMForTokenClassification"),
         ("layoutlmv2", "LayoutLMv2ForTokenClassification"),
         ("layoutlmv3", "LayoutLMv3ForTokenClassification"),
@@ -712,6 +756,10 @@ MODEL_FOR_MULTIPLE_CHOICE_MAPPING_NAMES = OrderedDict(
         ("flaubert", "FlaubertForMultipleChoice"),
         ("fnet", "FNetForMultipleChoice"),
         ("funnel", "FunnelForMultipleChoice"),
+<<<<<<< HEAD
+        ("ibert", "IBertForMultipleChoice"),
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
         ("longformer", "LongformerForMultipleChoice"),
         ("luke", "LukeForMultipleChoice"),
         ("mega", "MegaForMultipleChoice"),
@@ -877,6 +925,10 @@ MODEL_FOR_TEXT_ENCODING_MAPPING_NAMES = OrderedDict(
         ("distilbert", "DistilBertModel"),
         ("electra", "ElectraModel"),
         ("flaubert", "FlaubertModel"),
+<<<<<<< HEAD
+        ("ibert", "IBertModel"),
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
         ("longformer", "LongformerModel"),
         ("mobilebert", "MobileBertModel"),
         ("mt5", "MT5EncoderModel"),

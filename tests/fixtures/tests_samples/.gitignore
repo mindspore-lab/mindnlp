@@ -1,6 +1,14 @@
+<<<<<<< HEAD
 cache*
 temp*
 !*.txt
 !*.tsv
 !*.json
+=======
+cache*
+temp*
+!*.txt
+!*.tsv
+!*.json
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
 !.gitignore 

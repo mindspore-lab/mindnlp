@@ -16,7 +16,11 @@
 Ernie Model init
 """
 
+<<<<<<< HEAD
+from .import modeling_encodec, configuration_encodec, feature_extraction_encodec
+=======
 from . import modeling_encodec, configuration_encodec, feature_extraction_encodec
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
 from .configuration_encodec import *
 from .modeling_encodec import *
 from .feature_extraction_encodec import *

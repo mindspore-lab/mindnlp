@@ -1,4 +1,8 @@
+<<<<<<< HEAD
+# Copyright 2024 Huawei Technologies Co., Ltd
+=======
 # Copyright 2023 Huawei Technologies Co., Ltd
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,11 +15,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+<<<<<<< HEAD
+# ============================================
+"""
+Vision Encoder Decoder Model init
+"""
+from . import configuration_vision_encoder_decoder, modeling_vision_encoder_decoder
+
+=======
 # ============================================================================
 """
 Vision-Encoder-Text-Decoder Model.
 """
 from . import configuration_vision_encoder_decoder, modeling_vision_encoder_decoder
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
 from .configuration_vision_encoder_decoder import *
 from .modeling_vision_encoder_decoder import *
 

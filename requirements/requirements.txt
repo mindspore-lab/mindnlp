@@ -4,7 +4,11 @@ tqdm
 pylint==2.17
 pytest>=7.2.0,<8.0.0
 ddt
+<<<<<<< HEAD
+datasets==2.14.6
+=======
 datasets
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
 sentencepiece
 regex
 parameterized
@@ -26,3 +30,7 @@ gensim
 evaluate
 g2p-en
 pycocotools
+<<<<<<< HEAD
+Levenshtein
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d

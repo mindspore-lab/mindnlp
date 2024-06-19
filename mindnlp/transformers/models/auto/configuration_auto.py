@@ -73,6 +73,10 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("deberta-v2", "DebertaV2Config"),
         ("detr", "DetrConfig"),
         ("distilbert", "DistilBertConfig"),
+<<<<<<< HEAD
+        ("donut-swin", "DonutSwinConfig"),
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
         ("efficientformer", "EfficientFormerConfig"),
         ("encodec", "EncodecConfig"),
         ("esm", "EsmConfig"),
@@ -95,6 +99,10 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("llama", "LlamaConfig"),
         ("llava", "LlavaConfig"),
         ("llava_next", "LlavaNextConfig"),
+<<<<<<< HEAD
+        ("layoutlmv3", "LayoutLMv3Config"),
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
         ("mamba", "MambaConfig"),
         ("marian", "MarianConfig"),
         ("mask2former", "Mask2FormerConfig"),
@@ -108,7 +116,13 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("musicgen", "MusicgenConfig"),
         ("musicgen_melody", "MusicgenMelodyConfig"),
         ("mt5", "MT5Config"),
+<<<<<<< HEAD
+        ("nougat", "VisionEncoderDecoderConfig"),
         ("mvp", "MvpConfig"),
+        ("nougat", "VisionEncoderDecoderConfig"),
+=======
+        ("mvp", "MvpConfig"),
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
         ("nystromformer", "NystromformerConfig"),
         ("olmo", "OlmoConfig"),
         ("oneformer", "OneFormerConfig"),
@@ -142,6 +156,10 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("t5", "T5Config"),
         ("time_series_transformer", "TimeSeriesTransformerConfig"),
         ("timesformer", "TimesformerConfig"),
+<<<<<<< HEAD
+        ("trocr", "TrOCRConfig"),
+=======
+>>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
         ("videomae", "VideoMAEConfig"),
         ("vit", "ViTConfig"),
         ("vision-encoder-decoder", "VisionEncoderDecoderConfig"),
