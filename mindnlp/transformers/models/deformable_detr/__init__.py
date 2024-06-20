@@ -16,6 +16,10 @@ from typing import TYPE_CHECKING
 
 from ....utils import OptionalDependencyNotAvailable, is_mindspore_available, is_vision_available
 
+from .configuration_deformable_detr import *
+from .feature_extraction_deformable_detr import *
+from .image_processing_deformable_detr import *
+from .modeling_deformable_detr import *
 
 _import_structure = {
     "configuration_deformable_detr": ["DeformableDetrConfig"],

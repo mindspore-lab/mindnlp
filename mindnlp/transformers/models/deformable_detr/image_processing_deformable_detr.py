@@ -21,9 +21,8 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, Un
 
 import numpy as np
 
-from ...feature_extraction_utils import BatchFeature
-from ...image_processing_utils import BaseImageProcessor, get_size_dict
-from ...image_transforms import (
+from mindnlp.transformers.image_processing_utils import BaseImageProcessor, BatchFeature, get_size_dict
+from mindnlp.transformers.image_transforms import (
     PaddingMode,
     center_to_corners_format,
     corners_to_center_format,
@@ -34,11 +33,11 @@ from ...image_transforms import (
     rgb_to_id,
     to_channel_dimension_format,
 )
-from ....configs import (
+from mindnlp.configs import (
     IMAGENET_DEFAULT_MEAN,
     IMAGENET_DEFAULT_STD,
 )
-from ...image_utils import (
+from mindnlp.transformers.image_utils import (
     AnnotationFormat,
     AnnotationType,
     ChannelDimension,
@@ -54,7 +53,7 @@ from ...image_utils import (
     validate_kwargs,
     validate_preprocess_arguments,
 )
-from ....utils import (
+from mindnlp.utils import (
     TensorType,
     is_scipy_available,
     is_mindspore_available,
@@ -744,7 +743,7 @@ def compute_segments(
     segments: List[Dict] = []
 
     if target_size is not None:
-        mask_probs = nn.functional.interpolate(
+        mask_probs = mindspore.ops.functional.interpolate(
             mask_probs.unsqueeze(0), size=target_size, mode="bilinear", align_corners=False
         )[0]
 
@@ -789,57 +788,6 @@ def compute_segments(
 
 
 class DeformableDetrImageProcessor(BaseImageProcessor):
-    r"""
-    Constructs a Deformable DETR image processor.
-
-    Args:
-        format (`str`, *optional*, defaults to `"coco_detection"`):
-            Data format of the annotations. One of "coco_detection" or "coco_panoptic".
-        do_resize (`bool`, *optional*, defaults to `True`):
-            Controls whether to resize the image's (height, width) dimensions to the specified `size`. Can be
-            overridden by the `do_resize` parameter in the `preprocess` method.
-        size (`Dict[str, int]` *optional*, defaults to `{"shortest_edge": 800, "longest_edge": 1333}`):
-            Size of the image's `(height, width)` dimensions after resizing. Can be overridden by the `size` parameter
-            in the `preprocess` method. Available options are:
-                - `{"height": int, "width": int}`: The image will be resized to the exact size `(height, width)`.
-                    Do NOT keep the aspect ratio.
-                - `{"shortest_edge": int, "longest_edge": int}`: The image will be resized to a maximum size respecting
-                    the aspect ratio and keeping the shortest edge less or equal to `shortest_edge` and the longest edge
-                    less or equal to `longest_edge`.
-                - `{"max_height": int, "max_width": int}`: The image will be resized to the maximum size respecting the
-                    aspect ratio and keeping the height less or equal to `max_height` and the width less or equal to
-                    `max_width`.
-        resample (`PILImageResampling`, *optional*, defaults to `PILImageResampling.BILINEAR`):
-            Resampling filter to use if resizing the image.
-        do_rescale (`bool`, *optional*, defaults to `True`):
-            Controls whether to rescale the image by the specified scale `rescale_factor`. Can be overridden by the
-            `do_rescale` parameter in the `preprocess` method.
-        rescale_factor (`int` or `float`, *optional*, defaults to `1/255`):
-            Scale factor to use if rescaling the image. Can be overridden by the `rescale_factor` parameter in the
-            `preprocess` method.
-        do_normalize:
-            Controls whether to normalize the image. Can be overridden by the `do_normalize` parameter in the
-            `preprocess` method.
-        image_mean (`float` or `List[float]`, *optional*, defaults to `IMAGENET_DEFAULT_MEAN`):
-            Mean values to use when normalizing the image. Can be a single value or a list of values, one for each
-            channel. Can be overridden by the `image_mean` parameter in the `preprocess` method.
-        image_std (`float` or `List[float]`, *optional*, defaults to `IMAGENET_DEFAULT_STD`):
-            Standard deviation values to use when normalizing the image. Can be a single value or a list of values, one
-            for each channel. Can be overridden by the `image_std` parameter in the `preprocess` method.
-        do_convert_annotations (`bool`, *optional*, defaults to `True`):
-            Controls whether to convert the annotations to the format expected by the DETR model. Converts the
-            bounding boxes to the format `(center_x, center_y, width, height)` and in the range `[0, 1]`.
-            Can be overridden by the `do_convert_annotations` parameter in the `preprocess` method.
-        do_pad (`bool`, *optional*, defaults to `True`):
-            Controls whether to pad the image. Can be overridden by the `do_pad` parameter in the `preprocess`
-            method. If `True`, padding will be applied to the bottom and right of the image with zeros.
-            If `pad_size` is provided, the image will be padded to the specified dimensions.
-            Otherwise, the image will be padded to the maximum height and width of the batch.
-        pad_size (`Dict[str, int]`, *optional*):
-            The size `{"height": int, "width" int}` to pad the images to. Must be larger than any image size
-            provided for preprocessing. If `pad_size` is not provided, images will be padded to the largest
-            height and width in the batch.
-    """
 
     model_input_names = ["pixel_values", "pixel_mask"]
 
@@ -972,31 +920,7 @@ class DeformableDetrImageProcessor(BaseImageProcessor):
         input_data_format: Optional[Union[str, ChannelDimension]] = None,
         **kwargs,
     ) -> np.ndarray:
-        """
-        Resize the image to the given size. Size can be `min_size` (scalar) or `(height, width)` tuple. If size is an
-        int, smaller edge of the image will be matched to this number.
 
-        Args:
-            image (`np.ndarray`):
-                Image to resize.
-            size (`Dict[str, int]`):
-                Size of the image's `(height, width)` dimensions after resizing. Available options are:
-                    - `{"height": int, "width": int}`: The image will be resized to the exact size `(height, width)`.
-                        Do NOT keep the aspect ratio.
-                    - `{"shortest_edge": int, "longest_edge": int}`: The image will be resized to a maximum size respecting
-                        the aspect ratio and keeping the shortest edge less or equal to `shortest_edge` and the longest edge
-                        less or equal to `longest_edge`.
-                    - `{"max_height": int, "max_width": int}`: The image will be resized to the maximum size respecting the
-                        aspect ratio and keeping the height less or equal to `max_height` and the width less or equal to
-                        `max_width`.
-            resample (`PILImageResampling`, *optional*, defaults to `PILImageResampling.BILINEAR`):
-                Resampling filter to use if resizing the image.
-            data_format (`str` or `ChannelDimension`, *optional*):
-                The channel dimension format for the output image. If unset, the channel dimension format of the input
-                image is used.
-            input_data_format (`ChannelDimension` or `str`, *optional*):
-                The channel dimension format of the input image. If not provided, it will be inferred.
-        """
         if "max_size" in kwargs:
             logger.warning_once(
                 "The `max_size` parameter is deprecated and will be removed in v4.26. "
@@ -1053,25 +977,6 @@ class DeformableDetrImageProcessor(BaseImageProcessor):
         data_format: Optional[Union[str, ChannelDimension]] = None,
         input_data_format: Optional[Union[str, ChannelDimension]] = None,
     ) -> np.ndarray:
-        """
-        Rescale the image by the given factor. image = image * rescale_factor.
-
-        Args:
-            image (`np.ndarray`):
-                Image to rescale.
-            rescale_factor (`float`):
-                The value to use for rescaling.
-            data_format (`str` or `ChannelDimension`, *optional*):
-                The channel dimension format for the output image. If unset, the channel dimension format of the input
-                image is used. Can be one of:
-                - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
-            input_data_format (`str` or `ChannelDimension`, *optional*):
-                The channel dimension format for the input image. If unset, is inferred from the input image. Can be
-                one of:
-                - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
-        """
         return rescale(image, rescale_factor, data_format=data_format, input_data_format=input_data_format)
 
     # Copied from transformers.models.detr.image_processing_detr.DetrImageProcessor.normalize_annotation
@@ -1173,39 +1078,7 @@ class DeformableDetrImageProcessor(BaseImageProcessor):
         update_bboxes: bool = True,
         pad_size: Optional[Dict[str, int]] = None,
     ) -> BatchFeature:
-        """
-        Pads a batch of images to the bottom and right of the image with zeros to the size of largest height and width
-        in the batch and optionally returns their corresponding pixel mask.
 
-        Args:
-            images (List[`np.ndarray`]):
-                Images to pad.
-            annotations (`AnnotationType` or `List[AnnotationType]`, *optional*):
-                Annotations to transform according to the padding that is applied to the images.
-            constant_values (`float` or `Iterable[float]`, *optional*):
-                The value to use for the padding if `mode` is `"constant"`.
-            return_pixel_mask (`bool`, *optional*, defaults to `True`):
-                Whether to return a pixel mask.
-            return_tensors (`str` or `TensorType`, *optional*):
-                The type of tensors to return. Can be one of:
-                    - Unset: Return a list of `np.ndarray`.
-                    - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
-                    - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `mindspore.Tensor`.
-                    - `TensorType.NUMPY` or `'np'`: Return a batch of type `np.ndarray`.
-                    - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
-            data_format (`str` or `ChannelDimension`, *optional*):
-                The channel dimension format of the image. If not provided, it will be the same as the input image.
-            input_data_format (`ChannelDimension` or `str`, *optional*):
-                The channel dimension format of the input image. If not provided, it will be inferred.
-            update_bboxes (`bool`, *optional*, defaults to `True`):
-                Whether to update the bounding boxes in the annotations to match the padded images. If the
-                bounding boxes have not been converted to relative coordinates and `(centre_x, centre_y, width, height)`
-                format, the bounding boxes will not be updated.
-            pad_size (`Dict[str, int]`, *optional*):
-                The size `{"height": int, "width" int}` to pad the images to. Must be larger than any image size
-                provided for preprocessing. If `pad_size` is not provided, images will be padded to the largest
-                height and width in the batch.
-        """
         pad_size = pad_size if pad_size is not None else self.pad_size
         if pad_size is not None:
             padded_size = (pad_size["height"], pad_size["width"])
@@ -1542,7 +1415,7 @@ class DeformableDetrImageProcessor(BaseImageProcessor):
             raise ValueError("Each element of target_sizes must contain the size (h, w) of each image of the batch")
 
         prob = out_logits.sigmoid()
-        topk_values, topk_indexes = mindspore.ops.topk(prob.view(out_logits.shape[0], -1), 100, axis=1)
+        topk_values, topk_indexes = mindspore.ops.topk(prob.view(out_logits.shape[0], -1), 100, dim=1)
         scores = topk_values
         topk_boxes = mindspore.ops.div(topk_indexes, out_logits.shape[2], rounding_mode="floor")
         labels = topk_indexes % out_logits.shape[2]
@@ -1591,20 +1464,23 @@ class DeformableDetrImageProcessor(BaseImageProcessor):
         prob = out_logits.sigmoid()
         prob = prob.view(out_logits.shape[0], -1)
         k_value = min(top_k, prob.size(1))
-        topk_values, topk_indexes = mindspore.ops.topk(prob, k_value, axis=1)
+        topk_values, topk_indexes = mindspore.ops.topk(prob, k_value, dim=1)
         scores = topk_values
         topk_boxes = mindspore.ops.div(topk_indexes, out_logits.shape[2], rounding_mode="floor")
         labels = topk_indexes % out_logits.shape[2]
         boxes = center_to_corners_format(out_bbox)
         boxes = mindspore.ops.gather(boxes, 1, topk_boxes.unsqueeze(-1).repeat(1, 1, 4))
+        from mindspore import Tensor
+        def unbind(tensor, dim):
+            return [t.squeeze(axis=dim) for t in mindspore.ops.split(tensor, tensor.shape[dim], axis=dim)]
 
         # and from relative [0, 1] to absolute [0, height] coordinates
         if target_sizes is not None:
             if isinstance(target_sizes, List):
-                img_h = mindspore.Tensor([i[0] for i in target_sizes])
-                img_w = mindspore.Tensor([i[1] for i in target_sizes])
+                img_h = Tensor([i[0] for i in target_sizes], mindspore.float32)
+                img_w = Tensor([i[1] for i in target_sizes], mindspore.float32)
             else:
-                img_h, img_w = target_sizes.unbind(1)
+                img_h, img_w = unbind(target_sizes,1)
             scale_fct = mindspore.ops.stack([img_w, img_h, img_w, img_h], axis=1).to(boxes.device)
             boxes = boxes * scale_fct[:, None, :]
 

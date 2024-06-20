@@ -20,7 +20,8 @@ import unittest
 from typing import Dict, List, Tuple
 import numpy as np
 from mindspore import context
-from mindnlp.transformers import DeformableDetrConfig, ResNetConfig, is_mindspore_available, is_vision_available
+from mindnlp.transformers import DeformableDetrConfig, ResNetConfig
+from mindnlp.utils.testing_utils import is_mindspore_available, is_vision_available, slow, require_vision
 from mindnlp.utils import cached_property
 '''from minsnlp.transformers.testing_utils import (
     require_timm,
@@ -120,8 +121,8 @@ class DeformableDetrModelTester:
             for i in range(self.batch_size):
                 target = {}
                 target["class_labels"] = mindspore.ops.randint(
-                    high=self.num_labels, size=(self.n_targets,)
-                )
+                    low=0,high=self.num_labels, size=(self.n_targets,)
+                ).astype(mindspore.int32)
                 target["boxes"] = mindspore.ops.rand(self.n_targets, 4)
                 target["masks"] = mindspore.ops.rand(self.n_targets, self.image_size, self.image_size)
                 labels.append(target)
@@ -140,9 +141,11 @@ class DeformableDetrModelTester:
             out_features=["stage2", "stage3", "stage4"],
             out_indices=[2, 3, 4],
         )
+
         return DeformableDetrConfig(
             d_model=self.hidden_size,
             encoder_layers=self.num_hidden_layers,
+            backbone_config=resnet_config,
             decoder_layers=self.num_hidden_layers,
             encoder_attention_heads=self.num_attention_heads,
             decoder_attention_heads=self.num_attention_heads,
@@ -157,7 +160,7 @@ class DeformableDetrModelTester:
             decoder_n_points=self.decoder_n_points,
             use_timm_backbone=False,
             backbone=None,
-            backbone_config=resnet_config,
+
             use_pretrained_backbone=False,
         )
 
@@ -173,7 +176,8 @@ class DeformableDetrModelTester:
         result = model(pixel_values=pixel_values, pixel_mask=pixel_mask)
         result = model(pixel_values)
 
-        self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.num_queries, self.hidden_size))
+        self.parent.assertEqual\
+            (result.last_hidden_state.shape, (self.batch_size, self.num_queries, self.hidden_size))
 
     def create_and_check_deformable_detr_object_detection_head_model(self, config, pixel_values, pixel_mask, labels):
         model = DeformableDetrForObjectDetection(config=config)
@@ -194,13 +198,17 @@ class DeformableDetrModelTester:
 
 
 class DeformableDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
-    all_model_classes = (DeformableDetrModel, DeformableDetrForObjectDetection) if is_mindspore_available() else ()
+    all_model_classes = (
+        DeformableDetrModel,
+        DeformableDetrForObjectDetection
+    ) if is_mindspore_available() else ()
 
     is_encoder_decoder = True
     test_torchscript = False
     test_pruning = False
     test_head_masking = False
     test_missing_keys = False
+    zero_init_hidden_state = True
 
     # special case for head models
     def _prepare_for_class(self, inputs_dict, model_class, return_labels=False):
@@ -212,7 +220,7 @@ class DeformableDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.
                 for i in range(self.model_tester.batch_size):
                     target = {}
                     target["class_labels"] = mindspore.ops.ones(
-                        size=(self.model_tester.n_targets,), dtype=mindspore.int64
+                        shape=(self.model_tester.n_targets,), dtype=mindspore.int64
                     )
                     target["boxes"] = mindspore.ops.ones(
                         self.model_tester.n_targets, 4, dtype=mindspore.float32
@@ -240,8 +248,10 @@ class DeformableDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.
         self.config_tester.create_and_test_config_with_num_labels()
         self.config_tester.check_config_can_be_init_without_params()
 
+
     def test_deformable_detr_model(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
+
         self.model_tester.create_and_check_deformable_detr_model(*config_and_inputs)
 
     def test_deformable_detr_object_detection_head_model(self):
@@ -524,7 +534,7 @@ class DeformableDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.
 
         # let's pick a random timm backbone
         config.backbone = "tf_mobilenetv3_small_075"
-        config.backbone_config = None
+        config.backbone_config = {}
         config.use_timm_backbone = True
         config.backbone_kwargs = {"out_indices": [1, 2, 3, 4]}
 
@@ -555,7 +565,7 @@ class DeformableDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.
 
         # Load a pretrained HF checkpoint as backbone
         config.backbone = "microsoft/resnet-18"
-        config.backbone_config = None
+        config.backbone_config = {}
         config.use_timm_backbone = False
         config.use_pretrained_backbone = True
         config.backbone_kwargs = {"out_indices": [1, 2, 3, 4]}
@@ -659,26 +669,49 @@ class DeformableDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.
 
 
 TOLERANCE = 1e-4
+def get_tests_dir(append_path=None):
+    import os
+    # this function caller's __file__
+    caller__file__ = inspect.stack()[1][1]
+    tests_dir = os.path.abspath(os.path.dirname(caller__file__))
 
+    while not tests_dir.endswith("tests"):
+        tests_dir = os.path.dirname(tests_dir)
+
+    if append_path:
+        return os.path.join(tests_dir, append_path)
+    return tests_dir
 
 # We will verify our results on an image of cute cats
 def prepare_img():
-    image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
+    import pathlib
+    fixtures_path = pathlib.Path(get_tests_dir()) / 'fixtures/tests_samples/COCO'
+    image = Image.open(fixtures_path / "000000039769.png")
     return image
 
 
-
+@require_vision
+@slow
 class DeformableDetrModelIntegrationTests(unittest.TestCase):
     @cached_property
     def default_image_processor(self):
-        return AutoImageProcessor.from_pretrained("SenseTime/deformable_detr") if is_vision_available() else None
+        return AutoImageProcessor.from_pretrained("SenseTime/deformable-detr") if is_vision_available() else None
 
     def test_inference_object_detection_head(self):
-        model = DeformableDetrForObjectDetection.from_pretrained("SenseTime/deformable_detr")
+        model = DeformableDetrForObjectDetection.from_pretrained("SenseTime/deformable-detr")
+        # 确保配置只包含一个 backbone 参数
+        config = model.config
+        if config.backbone_config is not None:
+            config.backbone = None
+        elif config.backbone is not None:
+            config.backbone_config = None
+
+        # 重新加载模型以应用修改后的配置
+        model = DeformableDetrForObjectDetection(config)
 
         image_processor = self.default_image_processor
         image = prepare_img()
-        encoding = image_processor(images=image, return_tensors="pt")
+        encoding = image_processor(images=image, return_tensors="ms")
         pixel_values = encoding["pixel_values"]
         pixel_mask = encoding["pixel_mask"]
 
@@ -716,17 +749,16 @@ class DeformableDetrModelIntegrationTests(unittest.TestCase):
 
     def test_inference_object_detection_head_with_box_refine_two_stage(self):
         model = DeformableDetrForObjectDetection.from_pretrained(
-            "SenseTime/deformable_detr-with-box-refine-two-stage"
+            "SenseTime/deformable-detr-with-box-refine-two-stage"
         )
 
         image_processor = self.default_image_processor
         image = prepare_img()
-        encoding = image_processor(images=image, return_tensors="pt")
+        encoding = image_processor(images=image, return_tensors="ms")
         pixel_values = encoding["pixel_values"]
         pixel_mask = encoding["pixel_mask"]
 
-        with no_grad():
-            outputs = model(pixel_values, pixel_mask)
+        outputs = model(pixel_values, pixel_mask)
 
         expected_shape_logits = ((1, model.config.num_queries, model.config.num_labels))
         self.assertEqual(outputs.logits.shape, expected_shape_logits)
@@ -748,12 +780,12 @@ class DeformableDetrModelIntegrationTests(unittest.TestCase):
     def test_inference_object_detection_head_equivalence_cpu_gpu(self):
         image_processor = self.default_image_processor
         image = prepare_img()
-        encoding = image_processor(images=image, return_tensors="pt")
+        encoding = image_processor(images=image, return_tensors="ms")
         pixel_values = encoding["pixel_values"]
         pixel_mask = encoding["pixel_mask"]
 
         # 1. run model on CPU
-        model = DeformableDetrForObjectDetection.from_pretrained("SenseTime/deformable_detr-single-scale")
+        model = DeformableDetrForObjectDetection.from_pretrained("SenseTime/deformable-detr-single-scale")
 
         with no_grad():
             cpu_outputs = model(pixel_values, pixel_mask)

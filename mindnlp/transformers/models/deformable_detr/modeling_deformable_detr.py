@@ -26,60 +26,85 @@ import numpy as np
 import mindspore
 from mindspore.ops import functional as F
 from mindspore import nn, Tensor, Parameter
+
 from mindspore.common.initializer import initializer, Constant, XavierUniform
 import mindspore.ops as ops
 
 
-from ...activations import ACT2FN
+from mindnlp.transformers.activations import ACT2FN
 from mindnlp.utils import (
     ModelOutput,
     is_scipy_available,
     is_vision_available,
     requires_backends,
 )
-from ...modeling_attn_mask_utils import _prepare_4d_attention_mask
-from ...modeling_outputs import BaseModelOutput
-from ...modeling_utils import PreTrainedModel
-from ...ms_utils import meshgrid
+from mindnlp.transformers.modeling_attn_mask_utils import _prepare_4d_attention_mask
+from mindnlp.transformers.modeling_outputs import BaseModelOutput
+from mindnlp.transformers.modeling_utils import PreTrainedModel
+from mindnlp.transformers.ms_utils import meshgrid
 from mindnlp.utils import logging
-from ...backbone_utils import load_backbone
-from .configuration_deformable_detr import DeformableDetrConfig
+from mindnlp.transformers.backbone_utils import load_backbone
+from mindnlp.transformers.models.deformable_detr.configuration_deformable_detr import DeformableDetrConfig
 from mindspore.ops import Custom
 
 logger = logging.get_logger(__name__)
 
 MultiScaleDeformableAttention = None
 
-'''
-def load_cuda_kernels():
-    from torch.utils.cpp_extension import load
 
-    global MultiScaleDeformableAttention
+def load_cuda_kernels(func_name, context_length):
+    """Load deformable attention CUDA kernel"""
+    device_target = mindspore.context.get_context('device_target')
+    if device_target != 'GPU':
+        raise RuntimeError('Deformable Attention operator only supports GPU currently.')
+
+    logger.info(f"Loading CUDA kernel for MultiScaleDeformableAttention at context length of {context_length}.")
 
     root = Path(__file__).resolve().parent.parent.parent / "kernels" / "deformable_detr"
     src_files = [
-        root / filename
-        for filename in [
-            "vision.cpp",
-            os.path.join("cpu", "ms_deform_attn_cpu.cpp"),
-            os.path.join("cuda", "ms_deform_attn_cuda.cu"),
-        ]
+        root / "vision.cpp",
+        root / "cpu" / "ms_deform_attn_cpu.cpp",
+        root / "cuda" / "ms_deform_attn_cuda.cu"
     ]
 
-    MultiScaleDeformableAttention = load(
-        "MultiScaleDeformableAttention",
-        src_files,
-        with_cuda=True,
-        extra_include_paths=[str(root)],
-        extra_cflags=["-DWITH_CUDA=1"],
-        extra_cuda_cflags=[
-            "-DCUDA_HAS_FP16=1",
-            "-D__CUDA_NO_HALF_OPERATORS__",
-            "-D__CUDA_NO_HALF_CONVERSIONS__",
-            "-D__CUDA_NO_HALF2_OPERATORS__",
-        ],
+    extra_include_paths = [str(root)]
+    extra_cflags = ["-DWITH_CUDA=1"]
+    extra_cuda_cflags = [
+        "-DCUDA_HAS_FP16=1",
+        "-D__CUDA_NO_HALF_OPERATORS__",
+        "-D__CUDA_NO_HALF_CONVERSIONS__",
+        "-D__CUDA_NO_HALF2_OPERATORS__",
+    ]
+    # 用于形状和数据类型推断的字典
+    DEFORMABLE_ATTENTION_SHAPE_INFER = {
+        'ms_deform_attn_forward': lambda x: x.shape,  # 示例推断函数
+        'ms_deform_attn_backward': lambda x: x.shape  # 示例推断函数
+    }
+
+    DEFORMABLE_ATTENTION_DTYPE_INFER = {
+        'ms_deform_attn_forward': lambda x: x.dtype,  # 示例推断函数
+        'ms_deform_attn_backward': lambda x: x.dtype  # 示例推断函数
+    }
+    from ...kernel_utils import compile_kernel
+    so_path = compile_kernel(
+        kernel_name="MultiScaleDeformableAttention",
+        src_files=src_files,
+        extra_include_paths=extra_include_paths,
+        extra_cflags=extra_cflags,
+        extra_cuda_cflags=extra_cuda_cflags
     )
-'''
+
+    deformable_attn_op = ops.Custom(
+        str(so_path) + ':' + func_name,
+        out_shape=DEFORMABLE_ATTENTION_SHAPE_INFER[func_name],
+        out_dtype=DEFORMABLE_ATTENTION_DTYPE_INFER[func_name],
+        func_type='aot'
+    )
+    deformable_attn_op.add_prim_attr('primitive_target', device_target)
+
+    global MultiScaleDeformableAttention
+    MultiScaleDeformableAttention = deformable_attn_op
+
 
 if is_vision_available():
     from mindnlp.transformers.image_transforms import center_to_corners_format
@@ -146,32 +171,6 @@ class MultiScaleDeformableAttentionFunction(nn.Cell):
 
 @dataclass
 class DeformableDetrDecoderOutput(ModelOutput):
-    """
-    Base class for outputs of the DeformableDetrDecoder. This class adds two attributes to
-    BaseModelOutputWithCrossAttentions, namely:
-    - a stacked tensor of intermediate decoder hidden states (i.e. the output of each decoder layer)
-    - a stacked tensor of intermediate reference points.
-
-    Args:
-        last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
-            Sequence of hidden-states at the output of the last layer of the model.
-        intermediate_hidden_states (`mindspore.Tensor` of shape `(batch_size, config.decoder_layers, num_queries, hidden_size)`):
-            Stacked intermediate hidden states (output of each layer of the decoder).
-        intermediate_reference_points (`mindspore.Tensor` of shape `(batch_size, config.decoder_layers, sequence_length, hidden_size)`):
-            Stacked intermediate reference points (reference points of each layer of the decoder).
-        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
-            shape `(batch_size, sequence_length, hidden_size)`. Hidden-states of the model at the output of each layer
-            plus the initial embedding outputs.
-        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
-            sequence_length)`. Attentions weights after the attention softmax, used to compute the weighted average in
-            the self-attention heads.
-        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` and `config.add_cross_attention=True` is passed or when `config.output_attentions=True`):
-            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
-            sequence_length)`. Attentions weights of the decoder's cross-attention layer, after the attention softmax,
-            used to compute the weighted average in the cross-attention heads.
-    """
 
     last_hidden_state: mindspore.Tensor = None
     intermediate_hidden_states: mindspore.Tensor = None
@@ -183,47 +182,6 @@ class DeformableDetrDecoderOutput(ModelOutput):
 
 @dataclass
 class DeformableDetrModelOutput(ModelOutput):
-    """
-    Base class for outputs of the Deformable DETR encoder-decoder model.
-
-    Args:
-        init_reference_points (`mindspore.Tensor` of shape  `(batch_size, num_queries, 4)`):
-            Initial reference points sent through the Transformer decoder.
-        last_hidden_state (`mindspore.Tensor` of shape `(batch_size, num_queries, hidden_size)`):
-            Sequence of hidden-states at the output of the last layer of the decoder of the model.
-        intermediate_hidden_states (`mindspore.Tensor` of shape `(batch_size, config.decoder_layers, num_queries, hidden_size)`):
-            Stacked intermediate hidden states (output of each layer of the decoder).
-        intermediate_reference_points (`mindspore.Tensor` of shape `(batch_size, config.decoder_layers, num_queries, 4)`):
-            Stacked intermediate reference points (reference points of each layer of the decoder).
-        decoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
-            shape `(batch_size, num_queries, hidden_size)`. Hidden-states of the decoder at the output of each layer
-            plus the initial embedding outputs.
-        decoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, num_queries,
-            num_queries)`. Attentions weights of the decoder, after the attention softmax, used to compute the weighted
-            average in the self-attention heads.
-        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_queries, num_heads, 4, 4)`.
-            Attentions weights of the decoder's cross-attention layer, after the attention softmax, used to compute the
-            weighted average in the cross-attention heads.
-        encoder_last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
-            Sequence of hidden-states at the output of the last layer of the encoder of the model.
-        encoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
-            shape `(batch_size, sequence_length, hidden_size)`. Hidden-states of the encoder at the output of each
-            layer plus the initial embedding outputs.
-        encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_queries, num_heads, 4, 4)`.
-            Attentions weights of the encoder, after the attention softmax, used to compute the weighted average in the
-            self-attention heads.
-        enc_outputs_class (`mindspore.Tensor` of shape `(batch_size, sequence_length, config.num_labels)`, *optional*, returned when `config.with_box_refine=True` and `config.two_stage=True`):
-            Predicted bounding boxes scores where the top `config.two_stage_num_proposals` scoring bounding boxes are
-            picked as region proposals in the first stage. Output of bounding box binary classification (i.e.
-            foreground and background).
-        enc_outputs_coord_logits (`mindspore.Tensor` of shape `(batch_size, sequence_length, 4)`, *optional*, returned when `config.with_box_refine=True` and `config.two_stage=True`):
-            Logits of predicted bounding boxes coordinates in the first stage.
-    """
 
     init_reference_points: mindspore.Tensor = None
     last_hidden_state: mindspore.Tensor = None
@@ -241,64 +199,6 @@ class DeformableDetrModelOutput(ModelOutput):
 
 @dataclass
 class DeformableDetrObjectDetectionOutput(ModelOutput):
-    """
-    Output type of [`DeformableDetrForObjectDetection`].
-
-    Args:
-        loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `labels` are provided)):
-            Total loss as a linear combination of a negative log-likehood (cross-entropy) for class prediction and a
-            bounding box loss. The latter is defined as a linear combination of the L1 loss and the generalized
-            scale-invariant IoU loss.
-        loss_dict (`Dict`, *optional*):
-            A dictionary containing the individual losses. Useful for logging.
-        logits (`mindspore.Tensor` of shape `(batch_size, num_queries, num_classes + 1)`):
-            Classification logits (including no-object) for all queries.
-        pred_boxes (`mindspore.Tensor` of shape `(batch_size, num_queries, 4)`):
-            Normalized boxes coordinates for all queries, represented as (center_x, center_y, width, height). These
-            values are normalized in [0, 1], relative to the size of each individual image in the batch (disregarding
-            possible padding). You can use [`~DeformableDetrProcessor.post_process_object_detection`] to retrieve the
-            unnormalized bounding boxes.
-        auxiliary_outputs (`list[Dict]`, *optional*):
-            Optional, only returned when auxilary losses are activated (i.e. `config.auxiliary_loss` is set to `True`)
-            and labels are provided. It is a list of dictionaries containing the two above keys (`logits` and
-            `pred_boxes`) for each decoder layer.
-        last_hidden_state (`mindspore.Tensor` of shape `(batch_size, num_queries, hidden_size)`, *optional*):
-            Sequence of hidden-states at the output of the last layer of the decoder of the model.
-        decoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
-            shape `(batch_size, num_queries, hidden_size)`. Hidden-states of the decoder at the output of each layer
-            plus the initial embedding outputs.
-        decoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, num_queries,
-            num_queries)`. Attentions weights of the decoder, after the attention softmax, used to compute the weighted
-            average in the self-attention heads.
-        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_queries, num_heads, 4, 4)`.
-            Attentions weights of the decoder's cross-attention layer, after the attention softmax, used to compute the
-            weighted average in the cross-attention heads.
-        encoder_last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
-            Sequence of hidden-states at the output of the last layer of the encoder of the model.
-        encoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
-            shape `(batch_size, sequence_length, hidden_size)`. Hidden-states of the encoder at the output of each
-            layer plus the initial embedding outputs.
-        encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, sequence_length, num_heads, 4,
-            4)`. Attentions weights of the encoder, after the attention softmax, used to compute the weighted average
-            in the self-attention heads.
-        intermediate_hidden_states (`mindspore.Tensor` of shape `(batch_size, config.decoder_layers, num_queries, hidden_size)`):
-            Stacked intermediate hidden states (output of each layer of the decoder).
-        intermediate_reference_points (`mindspore.Tensor` of shape `(batch_size, config.decoder_layers, num_queries, 4)`):
-            Stacked intermediate reference points (reference points of each layer of the decoder).
-        init_reference_points (`mindspore.Tensor` of shape  `(batch_size, num_queries, 4)`):
-            Initial reference points sent through the Transformer decoder.
-        enc_outputs_class (`mindspore.Tensor` of shape `(batch_size, sequence_length, config.num_labels)`, *optional*, returned when `config.with_box_refine=True` and `config.two_stage=True`):
-            Predicted bounding boxes scores where the top `config.two_stage_num_proposals` scoring bounding boxes are
-            picked as region proposals in the first stage. Output of bounding box binary classification (i.e.
-            foreground and background).
-        enc_outputs_coord_logits (`mindspore.Tensor` of shape `(batch_size, sequence_length, 4)`, *optional*, returned when `config.with_box_refine=True` and `config.two_stage=True`):
-            Logits of predicted bounding boxes coordinates in the first stage.
-    """
 
     loss: Optional[mindspore.Tensor] = None
     loss_dict: Optional[Dict] = None
@@ -332,19 +232,15 @@ def inverse_sigmoid(x, eps=1e-5):
 
 # Copied from transformers.models.detr.modeling_detr.DetrFrozenBatchNorm2d with Detr->DeformableDetr
 class DeformableDetrFrozenBatchNorm2d(nn.Cell):
-    """
-    BatchNorm2d where the batch statistics and the affine parameters are fixed.
-
-    Copy-paste from torchvision.misc.ops with added eps before rqsrt, without which any other models than
-    torchvision.models.resnet[18,34,50,101] produce nans.
-    """
 
     def __init__(self, n):
         super().__init__()
-        self.register_buffer("weight", mindspore.ops.ones(n))
-        self.register_buffer("bias", mindspore.ops.zeros(n))
-        self.register_buffer("running_mean", mindspore.ops.zeros(n))
-        self.register_buffer("running_var", mindspore.ops.ones(n))
+        self.weight = Parameter(Tensor(np.ones(n), dtype=mindspore.float32), name="weight", requires_grad=False)
+        self.bias = Parameter(Tensor(np.zeros(n), dtype=mindspore.float32), name="bias", requires_grad=False)
+        self.running_mean = Parameter(Tensor(np.zeros(n), dtype=mindspore.float32), name="running_mean",
+                                      requires_grad=False)
+        self.running_var = Parameter(Tensor(np.ones(n), dtype=mindspore.float32), name="running_var",
+                                     requires_grad=False)
 
     def _load_from_state_dict(
         self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs
@@ -371,30 +267,30 @@ class DeformableDetrFrozenBatchNorm2d(nn.Cell):
 
 
 # Copied from transformers.models.detr.modeling_detr.replace_batch_norm with Detr->DeformableDetr
-def replace_batch_norm(model):
-    r"""
-    Recursively replace all `mindspore.nn.BatchNorm2d` with `DeformableDetrFrozenBatchNorm2d`.
+def replace_batch_norm(model: nn.Cell):
 
-    Args:
-        model (torch.nn.Cell):
-            input model
-    """
-    for name, module in model.cells_and_names():
-        if isinstance(module, nn.BatchNorm2d):
-            new_module = DeformableDetrFrozenBatchNorm2d(module.num_features)
+    for name, cell in model.cells_and_names():
+        if cell is model:
+            continue
 
-            new_module.weight = module.gamma
-            new_module.bias = module.beta
-            new_module.running_mean = module.moving_mean
-            new_module.running_var = module.moving_variance
+        if isinstance(cell, nn.BatchNorm2d):
+            new_cell = DeformableDetrFrozenBatchNorm2d(cell.num_features)
 
-            model.insert_child_to_cell(name, new_module)
+            new_cell.weight = Parameter(Tensor(cell.weight.asnumpy(), dtype=mindspore.float32), requires_grad=False)
+            new_cell.bias = Parameter(Tensor(cell.bias.asnumpy(), dtype=mindspore.float32), requires_grad=False)
+            new_cell.running_mean = Parameter(Tensor(cell.running_mean.asnumpy(), dtype=mindspore.float32),
+                                              requires_grad=False)
+            new_cell.running_var = Parameter(Tensor(cell.running_var.asnumpy(), dtype=mindspore.float32),
+                                             requires_grad=False)
 
-        if len(list(module.cells())) > 0:
-            replace_batch_norm(module)
+            model._cells[name] = new_cell
+
+        if len(list(cell.cells())) > 0:
+            replace_batch_norm(cell)
 
 
-from mindcv.models import create_model as mindcv_create_model
+from mindcv.models import create_model
+#from timm import create_model
 class DeformableDetrConvEncoder(nn.Cell):
     """
     Convolutional backbone, using either the AutoBackbone API or one from the timm library.
@@ -411,7 +307,7 @@ class DeformableDetrConvEncoder(nn.Cell):
             if config.dilation:
                 kwargs["output_stride"] = kwargs.get("output_stride", 16)
 
-            backbone = mindcv_create_model(
+            backbone = create_model(
                 model_name=config.backbone,
                 pretrained=config.use_pretrained_backbone,
                 features_only=True,
@@ -443,6 +339,7 @@ class DeformableDetrConvEncoder(nn.Cell):
             mask = ops.ResizeNearestNeighbor(size=feature_map.shape[-2:])(pixel_mask[None].astype(mindspore.float32)).astype(mindspore.bool_)[0]
             out.append((feature_map, mask))
         return out
+
 
 
 
@@ -495,7 +392,7 @@ class DeformableDetrSinePositionEmbedding(nn.Cell):
             y_embed = (y_embed - 0.5) / (y_embed[:, -1:, :] + eps) * self.scale
             x_embed = (x_embed - 0.5) / (x_embed[:, :, -1:] + eps) * self.scale
 
-        dim_t = mindspore.ops.arange(self.embedding_dim, dtype=mindspore.int64, device=pixel_values.device).float()
+        dim_t = mindspore.ops.arange(self.embedding_dim, dtype=mindspore.int64).float()
         dim_t = self.temperature ** (2 * mindspore.ops.div(dim_t, 2, rounding_mode="floor") / self.embedding_dim)
 
         pos_x = x_embed[:, :, :, None] / dim_t
@@ -519,8 +416,8 @@ class DeformableDetrLearnedPositionEmbedding(nn.Cell):
 
     def construct(self, pixel_values, pixel_mask=None):
         height, width = pixel_values.shape[-2:]
-        width_values = mindspore.ops.arange(width, device=pixel_values.device)
-        height_values = mindspore.ops.arange(height, device=pixel_values.device)
+        width_values = mindspore.ops.arange(width)
+        height_values = mindspore.ops.arange(height)
         x_emb = self.column_embeddings(width_values)
         y_emb = self.row_embeddings(height_values)
         pos = mindspore.ops.cat([x_emb.unsqueeze(0).repeat(height, 1, 1), y_emb.unsqueeze(1).repeat(1, width, 1)], axis=-1)
@@ -553,10 +450,6 @@ def multi_scale_deformable_attention(
     sampling_grids = 2 * sampling_locations - 1
     sampling_value_list = []
     for level_id, (height, width) in enumerate(value_spatial_shapes):
-        # batch_size, height*width, num_heads, hidden_dim
-        # -> batch_size, height*width, num_heads*hidden_dim
-        # -> batch_size, num_heads*hidden_dim, height*width
-        # -> batch_size*num_heads, hidden_dim, height, width
         value_l_ = (
             value_list[level_id].flatten(2).transpose(1, 2).reshape(batch_size * num_heads, hidden_dim, height, width)
         )
@@ -584,11 +477,7 @@ def multi_scale_deformable_attention(
 
 
 class DeformableDetrMultiscaleDeformableAttention(nn.Cell):
-    """
-    Multiscale deformable attention as proposed in Deformable DETR.
-    """
-
-    def __init__(self, config, num_heads: int, n_points: int):
+    def __init__(self, config, num_heads: int, num_points: int):
         super().__init__()
 
         if config.d_model % num_heads != 0:
@@ -596,7 +485,6 @@ class DeformableDetrMultiscaleDeformableAttention(nn.Cell):
                 f"embed_dim (d_model) must be divisible by num_heads, but got {config.d_model} and {num_heads}"
             )
         dim_per_head = config.d_model // num_heads
-        # check if dim_per_head is power of 2
         if not ((dim_per_head & (dim_per_head - 1) == 0) and dim_per_head != 0):
             print(
                 "You'd better set embed_dim (d_model) in DeformableDetrMultiscaleDeformableAttention to make the"
@@ -607,12 +495,12 @@ class DeformableDetrMultiscaleDeformableAttention(nn.Cell):
         self.im2col_step = 64
 
         self.d_model = config.d_model
-        self.n_levels = config.num_feature_levels
-        self.n_heads = num_heads
-        self.n_points = n_points
+        self.num_levels = config.num_feature_levels
+        self.num_heads = num_heads
+        self.num_points = num_points
 
-        self.sampling_offsets = nn.Dense(config.d_model, num_heads * self.n_levels * n_points * 2)
-        self.attention_weights = nn.Dense(config.d_model, num_heads * self.n_levels * n_points)
+        self.sampling_offsets = nn.Dense(config.d_model, num_heads * self.num_levels * self.num_points * 2)
+        self.attention_weights = nn.Dense(config.d_model, num_heads * self.num_levels * self.num_points)
         self.value_proj = nn.Dense(config.d_model, config.d_model)
         self.output_proj = nn.Dense(config.d_model, config.d_model)
 
@@ -621,29 +509,51 @@ class DeformableDetrMultiscaleDeformableAttention(nn.Cell):
         self._reset_parameters()
 
     def _reset_parameters(self):
-        self.sampling_offsets.weight.set_data(initializer(Constant(0.0), self.sampling_offsets.weight.shape))
+        # 初始化 sampling_offsets 的权重为常数 0
+        sampling_offsets_weight_tensor = Tensor(self.sampling_offsets.weight.shape, mindspore.float32)
+        Constant(0.0)._initialize(sampling_offsets_weight_tensor)
+        self.sampling_offsets.weight.set_data(sampling_offsets_weight_tensor)
 
         default_dtype = mindspore.float32
-        thetas = ops.arange(self.n_heads, dtype=mindspore.int64).astype(default_dtype) * (2.0 * math.pi / self.n_heads)
-        grid_init = ops.stack([ops.cos(thetas), ops.sin(thetas)], -1)
+        thetas = mindspore.numpy.arange(self.n_heads, dtype=default_dtype) * (2.0 * math.pi / self.n_heads)
+        grid_init = mindspore.numpy.stack([mindspore.numpy.cos(thetas), mindspore.numpy.sin(thetas)], axis=-1)
         grid_init = (
-            (grid_init / ops.max(ops.abs(grid_init), axis=-1, keepdims=True))
+            (grid_init / mindspore.numpy.max(mindspore.numpy.abs(grid_init), axis=-1, keepdims=True))
             .reshape((self.n_heads, 1, 1, 2))
-            .tile((1, self.n_levels, self.n_points, 1))
+            .repeat((1, self.n_levels, self.n_points, 1))
         )
+
         for i in range(self.n_points):
             grid_init[:, :, i, :] *= i + 1
 
-        self.sampling_offsets.bias = Parameter(grid_init.view(-1), requires_grad=True)
+        self.sampling_offsets.bias = Parameter(Tensor(grid_init.reshape(-1), mindspore.float32))
 
-        self.attention_weights.weight.set_data(initializer(Constant(0.0), self.attention_weights.weight.shape))
-        self.attention_weights.bias.set_data(initializer(Constant(0.0), self.attention_weights.bias.shape))
+        # 初始化 attention_weights 的权重和偏置为常数 0
+        attention_weights_weight_tensor = Tensor(self.attention_weights.weight.shape, mindspore.float32)
+        Constant(0.0)._initialize(attention_weights_weight_tensor)
+        self.attention_weights.weight.set_data(attention_weights_weight_tensor)
 
-        self.value_proj.weight.set_data(initializer(XavierUniform(), self.value_proj.weight.shape))
-        self.value_proj.bias.set_data(initializer(Constant(0.0), self.value_proj.bias.shape))
+        attention_weights_bias_tensor = Tensor(self.attention_weights.bias.shape, mindspore.float32)
+        Constant(0.0)._initialize(attention_weights_bias_tensor)
+        self.attention_weights.bias.set_data(attention_weights_bias_tensor)
 
-        self.output_proj.weight.set_data(initializer(XavierUniform(), self.output_proj.weight.shape))
-        self.output_proj.bias.set_data(initializer(Constant(0.0), self.output_proj.bias.shape))
+        # 初始化 value_proj 的权重为 XavierUniform，偏置为常数 0
+        value_proj_weight_tensor = Tensor(self.value_proj.weight.shape, mindspore.float32)
+        XavierUniform()._initialize(value_proj_weight_tensor)
+        self.value_proj.weight.set_data(value_proj_weight_tensor)
+
+        value_proj_bias_tensor = Tensor(self.value_proj.bias.shape, mindspore.float32)
+        Constant(0.0)._initialize(value_proj_bias_tensor)
+        self.value_proj.bias.set_data(value_proj_bias_tensor)
+
+        # 初始化 output_proj 的权重为 XavierUniform，偏置为常数 0
+        output_proj_weight_tensor = Tensor(self.output_proj.weight.shape, mindspore.float32)
+        XavierUniform()._initialize(output_proj_weight_tensor)
+        self.output_proj.weight.set_data(output_proj_weight_tensor)
+
+        output_proj_bias_tensor = Tensor(self.output_proj.bias.shape, mindspore.float32)
+        Constant(0.0)._initialize(output_proj_bias_tensor)
+        self.output_proj.bias.set_data(output_proj_bias_tensor)
 
     def with_pos_embed(self, tensor: Tensor, position_embeddings: Optional[Tensor]):
         return tensor if position_embeddings is None else tensor + position_embeddings
@@ -673,16 +583,16 @@ class DeformableDetrMultiscaleDeformableAttention(nn.Cell):
         value = self.value_proj(encoder_hidden_states)
         if attention_mask is not None:
             value = ops.MaskedFill()(value, ~attention_mask[..., None], float(0))
-        value = value.view(batch_size, sequence_length, self.n_heads, self.d_model // self.n_heads)
+        value = value.view(batch_size, sequence_length, self.num_heads, self.d_model // self.num_heads)
 
         sampling_offsets = self.sampling_offsets(hidden_states).view(
-            batch_size, num_queries, self.n_heads, self.n_levels, self.n_points, 2
+            batch_size, num_queries, self.num_heads, self.num_levels, self.num_points, 2
         )
         attention_weights = self.attention_weights(hidden_states).view(
-            batch_size, num_queries, self.n_heads, self.n_levels * self.n_points
+            batch_size, num_queries, self.num_heads, self.num_levels * self.num_points
         )
         attention_weights = ops.Softmax(axis=-1)(attention_weights).view(
-            batch_size, num_queries, self.n_heads, self.n_levels, self.n_points
+            batch_size, num_queries, self.num_heads, self.num_levels, self.num_points
         )
 
         num_coordinates = reference_points.shape[-1]
@@ -695,7 +605,7 @@ class DeformableDetrMultiscaleDeformableAttention(nn.Cell):
         elif num_coordinates == 4:
             sampling_locations = (
                     reference_points[:, :, None, :, None, :2]
-                    + sampling_offsets / self.n_points * reference_points[:, :, None, :, None, 2:] * 0.5
+                    + sampling_offsets / self.num_points * reference_points[:, :, None, :, None, 2:] * 0.5
             )
         else:
             raise ValueError(f"Last dim of reference_points must be 2 or 4, but got {reference_points.shape[-1]}")
@@ -720,13 +630,8 @@ class DeformableDetrMultiscaleDeformableAttention(nn.Cell):
         return output, attention_weights
 
 
+
 class DeformableDetrMultiheadAttention(nn.Cell):
-    """
-    Multi-headed attention from 'Attention Is All You Need' paper.
-
-    Here, we add position embeddings to the queries and keys (as explained in the Deformable DETR paper).
-    """
-
     def __init__(
         self,
         embed_dim: int,
@@ -746,10 +651,10 @@ class DeformableDetrMultiheadAttention(nn.Cell):
             )
         self.scaling = self.head_dim**-0.5
 
-        self.k_proj = nn.Dense(embed_dim, embed_dim, bias=bias)
-        self.v_proj = nn.Dense(embed_dim, embed_dim, bias=bias)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, bias=bias)
-        self.out_proj = nn.Dense(embed_dim, embed_dim, bias=bias)
+        self.k_proj = nn.Dense(embed_dim, embed_dim)
+        self.v_proj = nn.Dense(embed_dim, embed_dim)
+        self.q_proj = nn.Dense(embed_dim, embed_dim)
+        self.out_proj = nn.Dense(embed_dim, embed_dim)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, batch_size: int):
         return tensor.view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2).contiguous()
@@ -842,7 +747,7 @@ class DeformableDetrEncoderLayer(nn.Cell):
         super().__init__()
         self.embed_dim = config.d_model
         self.self_attn = DeformableDetrMultiscaleDeformableAttention(
-            config, num_heads=config.encoder_attention_heads, n_points=config.encoder_n_points
+            config, num_heads=config.encoder_attention_heads, num_points=config.encoder_num_points
         )
         self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim)
         self.dropout = config.dropout
@@ -862,24 +767,7 @@ class DeformableDetrEncoderLayer(nn.Cell):
         level_start_index=None,
         output_attentions: bool = False,
     ):
-        """
-        Args:
-            hidden_states (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
-                Input to the layer.
-            attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
-                Attention mask.
-            position_embeddings (`mindspore.Tensor`, *optional*):
-                Position embeddings, to be added to `hidden_states`.
-            reference_points (`mindspore.Tensor`, *optional*):
-                Reference points.
-            spatial_shapes (`mindspore.Tensor`, *optional*):
-                Spatial shapes of the backbone feature maps.
-            level_start_index (`mindspore.Tensor`, *optional*):
-                Level start index.
-            output_attentions (`bool`, *optional*):
-                Whether or not to return the attentions tensors of all attention layers. See `attentions` under
-                returned tensors for more detail.
-        """
+
         residual = hidden_states
 
         # Apply Multi-scale Deformable Attention Module on the multi-scale feature maps.
@@ -942,7 +830,7 @@ class DeformableDetrDecoderLayer(nn.Cell):
         self.encoder_attn = DeformableDetrMultiscaleDeformableAttention(
             config,
             num_heads=config.decoder_attention_heads,
-            n_points=config.decoder_n_points,
+            num_points=config.decoder_num_points,
         )
         self.encoder_attn_layer_norm = nn.LayerNorm(self.embed_dim)
         # feedforward neural networks
@@ -1033,6 +921,10 @@ class DeformableDetrDecoderLayer(nn.Cell):
         return outputs
 
 
+import mindspore
+from mindspore import nn, Tensor
+from mindspore.common.initializer import initializer, Normal, Uniform, XavierUniform, Zero
+
 class DeformableDetrPreTrainedModel(PreTrainedModel):
     config_class = DeformableDetrConfig
     base_model_prefix = "model"
@@ -1045,25 +937,25 @@ class DeformableDetrPreTrainedModel(PreTrainedModel):
         std = self.config.init_std
 
         if isinstance(module, DeformableDetrLearnedPositionEmbedding):
-            nn.init.uniform_(module.row_embeddings.weight)
-            nn.init.uniform_(module.column_embeddings.weight)
+            module.row_embeddings.embedding_table = initializer(Uniform(0), module.row_embeddings.embedding_table.shape, mindspore.float32)
+            module.column_embeddings.embedding_table = initializer(Uniform(0), module.column_embeddings.embedding_table.shape, mindspore.float32)
         elif isinstance(module, DeformableDetrMultiscaleDeformableAttention):
             module._reset_parameters()
         elif isinstance(module, (nn.Dense, nn.Conv2d, nn.BatchNorm2d)):
-            # Slightly different from the TF version which uses truncated_normal for initialization
-            # cf https://github.com/pytorch/pytorch/pull/5617
-            module.weight.data.normal_(mean=0.0, std=std)
+            module.weight.set_data(initializer(Normal(0.0, std), module.weight.shape, mindspore.float32))
             if module.bias is not None:
-                module.bias.data.zero_()
+                module.bias.set_data(initializer(Zero(), module.bias.shape, mindspore.float32))
         elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=std)
+            module.embedding_table.set_data(initializer(Normal(0.0, std), module.embedding_table.shape, mindspore.float32))
             if module.padding_idx is not None:
-                module.weight.data[module.padding_idx].zero_()
+                padding_idx = module.padding_idx
+                module.embedding_table[padding_idx] = 0.0
         if hasattr(module, "reference_points") and not self.config.two_stage:
-            nn.init.xavier_uniform_(module.reference_points.weight.data, gain=1.0)
-            nn.init.constant_(module.reference_points.bias.data, 0.0)
+            module.reference_points.set_data(initializer(XavierUniform(), module.reference_points.shape, mindspore.float32))
+            module.reference_points_bias.set_data(initializer(Zero(), module.reference_points_bias.shape, mindspore.float32))
         if hasattr(module, "level_embed"):
-            nn.init.normal_(module.level_embed)
+            module.level_embed.set_data(initializer(Normal(0.0, std), module.level_embed.shape, mindspore.float32))
+
 
 
 DEFORMABLE_DETR_START_DOCSTRING = r"""
@@ -1160,8 +1052,8 @@ class DeformableDetrEncoder(DeformableDetrPreTrainedModel):
         reference_points_list = []
         for level, (height, width) in enumerate(spatial_shapes):
             ref_y, ref_x = meshgrid(
-                mindspore.ops.linspace(0.5, height - 0.5, height, dtype=valid_ratios.dtype, device=device),
-                mindspore.ops.linspace(0.5, width - 0.5, width, dtype=valid_ratios.dtype, device=device),
+                mindspore.ops.linspace(Tensor(0.5, dtype=valid_ratios.dtype), Tensor(height - 0.5, dtype=valid_ratios.dtype), height),
+                mindspore.ops.linspace(Tensor(0.5, dtype=valid_ratios.dtype), Tensor(width - 0.5, dtype=valid_ratios.dtype), width),
                 indexing="ij",
             )
             # TODO: valid_ratios could be useless here. check https://github.com/fundamentalvision/Deformable-DETR/issues/36
@@ -1220,7 +1112,7 @@ class DeformableDetrEncoder(DeformableDetrPreTrainedModel):
         hidden_states = inputs_embeds
         hidden_states = mindspore.ops.dropout(hidden_states, p=self.dropout, training=self.training)
 
-        reference_points = self.get_reference_points(spatial_shapes, valid_ratios, device=inputs_embeds.device)
+        reference_points = self.get_reference_points(spatial_shapes, valid_ratios)
 
         encoder_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
@@ -1469,15 +1361,15 @@ class DeformableDetrModel(DeformableDetrPreTrainedModel):
             for _ in range(num_backbone_outs):
                 in_channels = backbone.intermediate_channel_sizes[_]
                 input_proj_list.append(
-                    nn.Sequential(
+                    nn.SequentialCell(
                         nn.Conv2d(in_channels, config.d_model, kernel_size=1),
                         nn.GroupNorm(32, config.d_model),
                     )
                 )
             for _ in range(config.num_feature_levels - num_backbone_outs):
                 input_proj_list.append(
-                    nn.Sequential(
-                        nn.Conv2d(in_channels, config.d_model, kernel_size=3, stride=2, padding=1),
+                    nn.SequentialCell(
+                        nn.Conv2d(in_channels, config.d_model, kernel_size=3, stride=2, padding=1, pad_mode='pad'),
                         nn.GroupNorm(32, config.d_model),
                     )
                 )
@@ -1486,7 +1378,7 @@ class DeformableDetrModel(DeformableDetrPreTrainedModel):
         else:
             self.input_proj = nn.CellList(
                 [
-                    nn.Sequential(
+                    nn.SequentialCell(
                         nn.Conv2d(backbone.intermediate_channel_sizes[-1], config.d_model, kernel_size=1),
                         nn.GroupNorm(32, config.d_model),
                     )
@@ -1499,7 +1391,7 @@ class DeformableDetrModel(DeformableDetrPreTrainedModel):
         self.encoder = DeformableDetrEncoder(config)
         self.decoder = DeformableDetrDecoder(config)
 
-        self.level_embed = nn.Parameter(mindspore.Tensor(config.num_feature_levels, config.d_model))
+        self.level_embed = mindspore.Parameter(mindspore.Tensor(config.num_feature_levels, config.d_model))
 
         if config.two_stage:
             self.enc_output = nn.Dense(config.d_model, config.d_model)
@@ -1543,7 +1435,7 @@ class DeformableDetrModel(DeformableDetrPreTrainedModel):
         temperature = 10000
         scale = 2 * math.pi
 
-        dim_t = mindspore.ops.arange(num_pos_feats, dtype=mindspore.int64, device=proposals.device).float()
+        dim_t = mindspore.ops.arange(num_pos_feats, dtype=mindspore.int64).float()
         dim_t = temperature ** (2 * mindspore.ops.div(dim_t, 2, rounding_mode="floor") / num_pos_feats)
         # batch_size, num_queries, 4
         proposals = proposals.sigmoid() * scale
@@ -1577,8 +1469,8 @@ class DeformableDetrModel(DeformableDetrPreTrainedModel):
             valid_width = mindspore.ops.sum(~mask_flatten_[:, 0, :, 0], 1)
 
             grid_y, grid_x = meshgrid(
-                mindspore.ops.linspace(0, height - 1, height, dtype=enc_output.dtype, device=enc_output.device),
-                mindspore.ops.linspace(0, width - 1, width, dtype=enc_output.dtype, device=enc_output.device),
+                mindspore.ops.linspace(Tensor(0, dtype=enc_output.dtype), Tensor(height - 1, dtype=enc_output.dtype), height),
+                mindspore.ops.linspace(Tensor(0, dtype=enc_output.dtype),Tensor(width - 1, dtype=enc_output.dtype), width),
                 indexing="ij",
             )
             grid = mindspore.ops.cat([grid_x.unsqueeze(-1), grid_y.unsqueeze(-1)], -1)
@@ -1615,30 +1507,7 @@ class DeformableDetrModel(DeformableDetrPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], DeformableDetrModelOutput]:
-        r"""
-        Returns:
 
-        Examples:
-
-        ```python
-        >>> from mindnlp.transformers import AutoImageProcessor, DeformableDetrModel
-        >>> from PIL import Image
-        >>> import requests
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> image_processor = AutoImageProcessor.from_pretrained("SenseTime/deformable_detr")
-        >>> model = DeformableDetrModel.from_pretrained("SenseTime/deformable_detr")
-
-        >>> inputs = image_processor(images=image, return_tensors="pt")
-
-        >>> outputs = model(**inputs)
-
-        >>> last_hidden_states = outputs.last_hidden_state
-        >>> list(last_hidden_states.shape)
-        [1, 300, 256]
-        ```"""
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1748,7 +1617,7 @@ class DeformableDetrModel(DeformableDetrPreTrainedModel):
 
             # only keep top scoring `config.two_stage_num_proposals` proposals
             topk = self.config.two_stage_num_proposals
-            topk_proposals = mindspore.ops.topk(enc_outputs_class[..., 0], topk, axis=1)[1]
+            topk_proposals = mindspore.ops.topk(enc_outputs_class[..., 0], topk, dim=1)[1]
             topk_coords_logits = mindspore.ops.gather_elements(
                 enc_outputs_coord_logits, 1, topk_proposals.unsqueeze(-1).repeat(1, 1, 4)
             )
@@ -1822,20 +1691,21 @@ class DeformableDetrForObjectDetection(DeformableDetrPreTrainedModel):
 
         prior_prob = 0.01
         bias_value = -math.log((1 - prior_prob) / prior_prob)
-        self.class_embed.bias.data = mindspore.ops.ones(config.num_labels) * bias_value
-        nn.init.constant_(self.bbox_embed.layers[-1].weight.data, 0)
-        nn.init.constant_(self.bbox_embed.layers[-1].bias.data, 0)
+        self.class_embed.bias.set_data(Tensor(ops.ones((config.num_labels,)) * bias_value, mindspore.float32))
+
+        self.bbox_embed.layers[-1].weight.set_data(initializer(Zero(), self.bbox_embed.layers[-1].weight.shape, mindspore.float32))
+        self.bbox_embed.layers[-1].bias.set_data(initializer(Zero(), self.bbox_embed.layers[-1].bias.shape, mindspore.float32))
 
         # if two-stage, the last class_embed and bbox_embed is for region proposal generation
         num_pred = (config.decoder_layers + 1) if config.two_stage else config.decoder_layers
         if config.with_box_refine:
             self.class_embed = _get_clones(self.class_embed, num_pred)
             self.bbox_embed = _get_clones(self.bbox_embed, num_pred)
-            nn.init.constant_(self.bbox_embed[0].layers[-1].bias.data[2:], -2.0)
+            self.bbox_embed[0].layers[-1].bias.set_data(initializer(Constant(-2.0), self.bbox_embed[0].layers[-1].bias.shape, mindspore.float32))
             # hack implementation for iterative bounding box refinement
             self.model.decoder.bbox_embed = self.bbox_embed
         else:
-            nn.init.constant_(self.bbox_embed.layers[-1].bias.data[2:], -2.0)
+            self.bbox_embed.layers[-1].bias.set_data(initializer(Constant(-2.0), self.bbox_embed.layers[-1].bias.shape[2:], mindspore.float32))
             self.class_embed = nn.CellList([self.class_embed for _ in range(num_pred)])
             self.bbox_embed = nn.CellList([self.bbox_embed for _ in range(num_pred)])
             self.model.decoder.bbox_embed = None
@@ -1843,7 +1713,7 @@ class DeformableDetrForObjectDetection(DeformableDetrPreTrainedModel):
             # hack implementation for two-stage
             self.model.decoder.class_embed = self.class_embed
             for box_embed in self.bbox_embed:
-                nn.init.constant_(box_embed.layers[-1].bias.data[2:], 0.0)
+                box_embed.layers[-1].bias.set_data(initializer(Constant(0.0), box_embed.layers[-1].bias.shape[2:], mindspore.float32))
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1869,46 +1739,7 @@ class DeformableDetrForObjectDetection(DeformableDetrPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], DeformableDetrObjectDetectionOutput]:
-        r"""
-        labels (`List[Dict]` of len `(batch_size,)`, *optional*):
-            Labels for computing the bipartite matching loss. List of dicts, each dictionary containing at least the
-            following 2 keys: 'class_labels' and 'boxes' (the class labels and bounding boxes of an image in the batch
-            respectively). The class labels themselves should be a `mindspore.Tensor` of len `(number of bounding boxes
-            in the image,)` and the boxes a `mindspore.Tensor` of shape `(number of bounding boxes in the image, 4)`.
 
-        Returns:
-
-        Examples:
-
-        ```python
-        >>> from mindnlp.transformers import AutoImageProcessor, DeformableDetrForObjectDetection
-        >>> from PIL import Image
-        >>> import requests
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> image_processor = AutoImageProcessor.from_pretrained("SenseTime/deformable_detr")
-        >>> model = DeformableDetrForObjectDetection.from_pretrained("SenseTime/deformable_detr")
-
-        >>> inputs = image_processor(images=image, return_tensors="pt")
-        >>> outputs = model(**inputs)
-
-        >>> # convert outputs (bounding boxes and class logits) to Pascal VOC format (xmin, ymin, xmax, ymax)
-        >>> target_sizes = mindspore.Tensor([image.size[::-1]])
-        >>> results = image_processor.post_process_object_detection(outputs, threshold=0.5, target_sizes=target_sizes)[
-        ...     0
-        ... ]
-        >>> for score, label, box in zip(results["scores"], results["labels"], results["boxes"]):
-        ...     box = [round(i, 2) for i in box.tolist()]
-        ...     print(
-        ...         f"Detected {model.config.id2label[label.item()]} with confidence "
-        ...         f"{round(score.item(), 3)} at location {box}"
-        ...     )
-        Detected cat with confidence 0.8 at location [16.5, 52.84, 318.25, 470.78]
-        Detected cat with confidence 0.789 at location [342.19, 24.3, 640.02, 372.25]
-        Detected remote with confidence 0.633 at location [40.79, 72.78, 176.76, 117.25]
-        ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # First, sent images through DETR base model to obtain encoder + decoder outputs
@@ -2230,7 +2061,7 @@ class DeformableDetrHungarianMatcher(nn.Cell):
         if class_cost == 0 and bbox_cost == 0 and giou_cost == 0:
             raise ValueError("All costs of the Matcher can't be 0")
 
-    @mindspore.ops.stop_gradient()
+
     def construct(self, outputs, targets):
         """
         Args:
@@ -2336,9 +2167,10 @@ def generalized_box_iou(boxes1, boxes2):
     """
     # degenerate boxes gives inf / nan results
     # so do an early check
-    if not (boxes1[:, 2:] >= boxes1[:, :2]).all():
+    all = ops.ReduceAll()
+    if not all(boxes1[:, 2:] >= boxes1[:, :2]):
         raise ValueError(f"boxes1 must be in [x0, y0, x1, y1] (corner) format, but got {boxes1}")
-    if not (boxes2[:, 2:] >= boxes2[:, :2]).all():
+    if not all(boxes2[:, 2:] >= boxes2[:, :2])():
         raise ValueError(f"boxes2 must be in [x0, y0, x1, y1] (corner) format, but got {boxes2}")
     iou, union = box_iou(boxes1, boxes2)
 
