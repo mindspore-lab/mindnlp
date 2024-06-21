@@ -14,11 +14,12 @@
 # limitations under the License.
 """ Wav2Vec2 model configuration"""
 
+from mindnlp.utils import logging
+
 import functools
 import operator
 
 from ...configuration_utils import PretrainedConfig
-from ....utils import logging
 
 __all__ = [
     'WAV_2_VEC_2_PRETRAINED_CONFIG_ARCHIVE_MAP',
