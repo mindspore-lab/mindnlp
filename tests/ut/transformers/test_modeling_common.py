@@ -51,12 +51,14 @@ from mindnlp.transformers.models.auto.modeling_auto import (
     MODEL_FOR_CAUSAL_LM_MAPPING_NAMES,
     MODEL_FOR_DOCUMENT_QUESTION_ANSWERING_MAPPING_NAMES,
     MODEL_FOR_MASKED_LM_MAPPING_NAMES,
+    MODEL_FOR_MASKED_IMAGE_MODELING_MAPPING_NAMES,
     MODEL_FOR_MULTIPLE_CHOICE_MAPPING_NAMES,
     MODEL_FOR_NEXT_SENTENCE_PREDICTION_MAPPING_NAMES,
     MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES,
     MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING_NAMES,
     MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES,
     MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING_NAMES,
+    MODEL_FOR_IMAGE_CLASSIFICATION_MAPPING_NAMES,
     MODEL_FOR_VIDEO_CLASSIFICATION_MAPPING_NAMES,
     MODEL_MAPPING_NAMES,
 )
@@ -163,6 +165,7 @@ class ModelTesterMixin:
             elif model_class.__name__ in [
                 *get_values(MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES),
                 *get_values(MODEL_FOR_NEXT_SENTENCE_PREDICTION_MAPPING_NAMES),
+                *get_values(MODEL_FOR_IMAGE_CLASSIFICATION_MAPPING_NAMES),
                 *get_values(MODEL_FOR_VIDEO_CLASSIFICATION_MAPPING_NAMES),
                 *get_values(MODEL_FOR_AUDIO_CLASSIFICATION_MAPPING_NAMES),
             ]:
@@ -177,6 +180,11 @@ class ModelTesterMixin:
             ]:
                 inputs_dict["labels"] = ops.ones(
                     (self.model_tester.batch_size, self.model_tester.seq_length), dtype=mindspore.int64
+                )
+            elif model_class.__name__ in get_values(MODEL_FOR_MASKED_IMAGE_MODELING_MAPPING_NAMES):
+                num_patches = self.model_tester.image_size // self.model_tester.patch_size
+                inputs_dict["bool_masked_pos"] = ops.zeros(
+                    (self.model_tester.batch_size, num_patches ** 2), dtype=mindspore.int64
                 )
 
 

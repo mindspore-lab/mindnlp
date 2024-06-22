@@ -16,7 +16,7 @@
 Ernie Model init
 """
 
-from .import configuration_ernie, modeling_ernie, modeling_graph_ernie
+from . import configuration_ernie, modeling_ernie, modeling_graph_ernie
 from .configuration_ernie import *
 from .modeling_ernie import *
 from .modeling_graph_ernie import *

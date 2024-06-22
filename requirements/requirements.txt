@@ -25,3 +25,4 @@ pytesseract
 gensim
 evaluate
 g2p-en
+pycocotools
