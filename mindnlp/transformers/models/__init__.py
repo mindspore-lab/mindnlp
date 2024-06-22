@@ -331,7 +331,9 @@ from .starcoder2 import *
 from .swiftformer import *
 from .swin import *
 from .switch_transformers import *
+from .swin2sr import *
 from .tinybert import *
+from .tapas import *
 from .t5 import *
 from .time_series_transformer import *
 from .timesformer import *

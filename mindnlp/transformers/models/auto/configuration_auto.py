@@ -138,11 +138,8 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("swin", "SwinConfig"),
         ("swiftformer", "SwiftFormerConfig"),
         ("switch_transformers", "SwitchTransformersConfig"),
-<<<<<<< HEAD
-        ("tapas", "TapasConfig"),
-=======
         ("swin2sr", "Swin2SRConfig"),
->>>>>>> 92b2bcf66e16da01a6be2ef2e1b1e69ef6bed11d
+        ("tapas", "TapasConfig"),
         ("t5", "T5Config"),
         ("time_series_transformer", "TimeSeriesTransformerConfig"),
         ("timesformer", "TimesformerConfig"),
