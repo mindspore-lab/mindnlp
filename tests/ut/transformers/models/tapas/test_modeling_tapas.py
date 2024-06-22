@@ -630,7 +630,8 @@ class TapasModelIntegrationTest(unittest.TestCase):
         # however here we test the version with absolute position embeddings
         #revision参数在mindspore参数下会存在问题，加载到本地的config文件始终是main分支的文件，reset_position_index_per_cell=True,需要手动修改为False才能测试通过
         model = TapasForQuestionAnswering.from_pretrained("google/tapas-small-finetuned-sqa", revision="no_reset", from_pt=True)
-
+        #from_pretrained revision目前可能存在bug，获取到的是reset分支，而不是no_reset分支,下面手动修改为了False
+        model.config.reset_position_index_per_cell = False
         tokenizer = self.default_tokenizer
         table, queries = prepare_tapas_single_inputs_for_inference()
         inputs = tokenizer(table=table, queries=queries, return_tensors="ms")
