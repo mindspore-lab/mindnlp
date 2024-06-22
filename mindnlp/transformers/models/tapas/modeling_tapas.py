@@ -16,13 +16,12 @@
 
 import enum
 import math
-import os
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindspore import nn, ops, Parameter, Tensor
+from mindspore import nn, ops
 from mindspore.common.initializer import initializer, Normal
 
 from ...activations import ACT2FN
@@ -1337,7 +1336,7 @@ class TapasForSequenceClassification(TapasPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -1378,7 +1377,7 @@ class AverageApproximationFunction(str, enum.Enum):
 # Beginning of everything related to segmented tensors
 
 
-class IndexMap(object):
+class IndexMap:
     """Index grouping entries within a tensor."""
 
     def __init__(self, indices, num_segments, batch_dims=0):
@@ -1594,7 +1593,7 @@ def _segment_reduce(values, index, segment_reduce_fn, name):
         scatter_fun = ops.tensor_scatter_add
 
     #ops.tensor_scatter_xxx需要二维以上，所以下面变换成二维tensor再处理
-    out = out.view(1, -1) 
+    out = out.view(1, -1)
     indices_tmp = ops.stack([ops.zeros_like(flat_index.indices.long()), flat_index.indices.long()], axis = -1)
     segment_means = scatter_fun(out, indices_tmp, flat_values.float())
     segment_means = segment_means.view(-1)

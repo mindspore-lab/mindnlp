@@ -1951,7 +1951,7 @@ class TapasTokenizer(PreTrainedTokenizer):
 
 
 # Copied from transformers.models.bert.tokenization_bert.BasicTokenizer
-class BasicTokenizer(object):
+class BasicTokenizer:
     """
     Constructs a BasicTokenizer that will run basic tokenization (punctuation splitting, lower casing, etc.).
 
@@ -2113,7 +2113,7 @@ class BasicTokenizer(object):
 
 
 # Copied from transformers.models.bert.tokenization_bert.WordpieceTokenizer
-class WordpieceTokenizer(object):
+class WordpieceTokenizer:
     """Runs WordPiece tokenization."""
 
     def __init__(self, vocab, unk_token, max_input_chars_per_word=100):
@@ -2434,7 +2434,7 @@ def normalize_for_match(text):
 def format_text(text):
     """Lowercases and strips punctuation."""
     text = text.lower().strip()
-    if text == "n/a" or text == "?" or text == "nan":
+    if text in ('n/a', '?', 'nan'):
         text = EMPTY_TEXT
 
     text = re.sub(r"[^\w\d]+", " ", text).replace("_", " ")
