@@ -1105,7 +1105,6 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
             probs = mindspore.ops.log_softmax(logits,axis=-1)
             probs = ops.clamp(probs, min=1e-7, max=1 - 1e-7)
             dist_per_token = nn.probability.distribution.Bernoulli(probs=probs)
-   
             # Compute cell selection loss per example.
             selection_loss_per_example = None
             if not self.config.select_one_column:
@@ -1771,7 +1770,7 @@ def _single_column_cell_selection_loss(token_logits, column_logits, labels, cell
 
     probs = mindspore.ops.softmax(logits_per_cell,axis=-1)
     probs = ops.clamp(probs, min=1e-7, max=1 - 1e-7)
-   
+
     cell_dist = nn.probability.distribution.Bernoulli(probs=probs)  # shape (batch_size, 64*32)
     cell_log_prob = cell_dist.log_prob(labels_per_cell.type(mindspore.float32))  # shape(batch_size, 64*32)
     cell_loss = -ops.sum(cell_log_prob * column_mask * cell_mask, dim=1)
@@ -1854,8 +1853,8 @@ def _calculate_aggregate_mask(answer, pooled_output, cell_selection_preference, 
     probs = ops.clamp(probs, min=1e-7, max=1 - 1e-7)
 
     dist_aggregation = nn.probability.distribution.Categorical(probs=probs)
-   
-    # Index 0 corresponds to "no aggregation".
+
+
     aggregation_ops_total_mass = ops.sum(dist_aggregation.probs[:, 1:], dim=1)
 
     # Cell selection examples according to current model.
@@ -1935,8 +1934,6 @@ def _calculate_aggregation_loss_unknown(logits_aggregation, aggregate_mask):
     probs = mindspore.ops.softmax(logits_aggregation,axis=-1)
     probs = ops.clamp(probs, min=1e-7, max=1 - 1e-7)
     dist_aggregation = nn.probability.distribution.Categorical(probs=probs)
-   
-   
     # Index 0 corresponds to "no aggregation".
     aggregation_ops_total_mass = ops.sum(dist_aggregation.probs[:, 1:], dim=1)
     # Predict some aggregation in case of an answer that needs aggregation.
@@ -2044,12 +2041,7 @@ def _calculate_expected_result(
         raise ValueError(f"Invalid average_approximation_function: {config.average_approximation_function}")
 
     if config.use_gumbel_for_aggregation:
-        #mindspore存在RelaxedOneHotCategorical实现
-        #gumbel_dist = nn.probability.distribution.RelaxedOneHotCategorical(
-        #    config.aggregation_temperature, logits=logits_aggregation[:, 1:]
-        #)
-        # <float32>[batch_size, num_aggregation_labels - 1]
-        #aggregation_op_only_probs = gumbel_dist.sample()
+
         temperature = config.aggregation_temperature
         gumbel_noise = -ops.log(-ops.log(ops.rand_like(logits_aggregation[:, 1:])))
         relaxed_logits = logits_aggregation[:, 1:] + gumbel_noise
