@@ -23,7 +23,6 @@ import numpy as np
 import mindspore
 from mindspore import nn, ops
 from mindspore.common.initializer import initializer, Normal
-from mindspore.nn.probability.distribution import Distribution
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithPooling, MaskedLMOutput, SequenceClassifierOutput
 from ...modeling_utils import PreTrainedModel
@@ -1106,7 +1105,7 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
             probs = mindspore.ops.log_softmax(logits,axis=-1)
             probs = ops.clamp(probs, min=1e-7, max=1 - 1e-7)
             dist_per_token = nn.probability.distribution.Bernoulli(probs=probs)
-    
+   
             # Compute cell selection loss per example.
             selection_loss_per_example = None
             if not self.config.select_one_column:
@@ -1772,7 +1771,7 @@ def _single_column_cell_selection_loss(token_logits, column_logits, labels, cell
 
     probs = mindspore.ops.softmax(logits_per_cell,axis=-1)
     probs = ops.clamp(probs, min=1e-7, max=1 - 1e-7)
-    
+   
     cell_dist = nn.probability.distribution.Bernoulli(probs=probs)  # shape (batch_size, 64*32)
     cell_log_prob = cell_dist.log_prob(labels_per_cell.type(mindspore.float32))  # shape(batch_size, 64*32)
     cell_loss = -ops.sum(cell_log_prob * column_mask * cell_mask, dim=1)
@@ -1855,7 +1854,7 @@ def _calculate_aggregate_mask(answer, pooled_output, cell_selection_preference, 
     probs = ops.clamp(probs, min=1e-7, max=1 - 1e-7)
 
     dist_aggregation = nn.probability.distribution.Categorical(probs=probs)
-    
+   
     # Index 0 corresponds to "no aggregation".
     aggregation_ops_total_mass = ops.sum(dist_aggregation.probs[:, 1:], dim=1)
 
@@ -1936,8 +1935,8 @@ def _calculate_aggregation_loss_unknown(logits_aggregation, aggregate_mask):
     probs = mindspore.ops.softmax(logits_aggregation,axis=-1)
     probs = ops.clamp(probs, min=1e-7, max=1 - 1e-7)
     dist_aggregation = nn.probability.distribution.Categorical(probs=probs)
-    
-    
+   
+   
     # Index 0 corresponds to "no aggregation".
     aggregation_ops_total_mass = ops.sum(dist_aggregation.probs[:, 1:], dim=1)
     # Predict some aggregation in case of an answer that needs aggregation.
