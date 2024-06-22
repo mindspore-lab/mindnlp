@@ -1003,48 +1003,47 @@ class TapasTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 self.assertIn(0, output["token_type_ids"][0])
 
 
-    # def test_torch_encode_plus_sent_to_model(self):
-    #     import torch
+    def test_mindspore_encode_plus_sent_to_model(self):
+        import mindspore
 
-    #     from transformers import MODEL_MAPPING, TOKENIZER_MAPPING
+        from mindnlp.transformers import MODEL_MAPPING, TOKENIZER_MAPPING
 
-    #     MODEL_TOKENIZER_MAPPING = merge_model_tokenizer_mappings(MODEL_MAPPING, TOKENIZER_MAPPING)
+        MODEL_TOKENIZER_MAPPING = merge_model_tokenizer_mappings(MODEL_MAPPING, TOKENIZER_MAPPING)
 
-    #     tokenizers = self.get_tokenizers(do_lower_case=False)
-    #     for tokenizer in tokenizers:
-    #         with self.subTest(f"{tokenizer.__class__.__name__}"):
-    #             if tokenizer.__class__ not in MODEL_TOKENIZER_MAPPING:
-    #                 return
+        tokenizers = self.get_tokenizers(do_lower_case=False)
+        for tokenizer in tokenizers:
+            with self.subTest(f"{tokenizer.__class__.__name__}"):
+                if tokenizer.__class__ not in MODEL_TOKENIZER_MAPPING:
+                    return
 
-    #             config_class, model_class = MODEL_TOKENIZER_MAPPING[tokenizer.__class__]
-    #             config = config_class()
+                config_class, model_class = MODEL_TOKENIZER_MAPPING[tokenizer.__class__]
+                config = config_class()
 
-    #             if config.is_encoder_decoder or config.pad_token_id is None:
-    #                 return
+                if config.is_encoder_decoder or config.pad_token_id is None:
+                    return
 
-    #             model = model_class(config)
+                model = model_class(config)
 
-    #             # Make sure the model contains at least the full vocabulary size in its embedding matrix
-    #             is_using_common_embeddings = hasattr(model.get_input_embeddings(), "weight")
-    #             assert (
-    #                 (model.get_input_embeddings().weight.shape[0] >= len(tokenizer))
-    #                 if is_using_common_embeddings
-    #                 else True
-    #             )
+                # Make sure the model contains at least the full vocabulary size in its embedding matrix
+                is_using_common_embeddings = hasattr(model.get_input_embeddings(), "weight")
+                assert (
+                    (model.get_input_embeddings().weight.shape[0] >= len(tokenizer))
+                    if is_using_common_embeddings
+                    else True
+                )
 
-    #             # Build sequence
-    #             first_ten_tokens = list(tokenizer.get_vocab().keys())[:10]
-    #             sequence = " ".join(first_ten_tokens)
-    #             table = self.get_table(tokenizer, length=0)
-    #             encoded_sequence = tokenizer.encode_plus(table, sequence, return_tensors="pt")
-    #             batch_encoded_sequence = tokenizer.batch_encode_plus(table, [sequence, sequence], return_tensors="pt")
-    #             # This should not fail
+                # Build sequence
+                first_ten_tokens = list(tokenizer.get_vocab().keys())[:10]
+                sequence = " ".join(first_ten_tokens)
+                table = self.get_table(tokenizer, length=0)
+                encoded_sequence = tokenizer.encode_plus(table, sequence, return_tensors="ms")
+                batch_encoded_sequence = tokenizer.batch_encode_plus(table, [sequence, sequence], return_tensors="ms")
+                # This should not fail
 
-    #             with torch.no_grad():  # saves some time
-    #                 model(**encoded_sequence)
-    #                 model(**batch_encoded_sequence) 
+                model(**encoded_sequence)
+                model(**batch_encoded_sequence)
 
-    # @unittest.skip("TAPAS doesn't handle pre-tokenized inputs.")
+    @unittest.skip("TAPAS doesn't handle pre-tokenized inputs.")
     def test_pretokenized_inputs(self):
         pass 
 
