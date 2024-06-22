@@ -52,6 +52,13 @@ EPSILON_PROB_ZERO_DIVISION = 1e-6 #避免出现概率出现0报错
 CLOSE_ENOUGH_TO_LOG_ZERO = -10000.0
 MAX_ENOUGH_VAlUE = 1e10
 
+def softmax_with_epsilon(logits):
+    #由于mindspore分布不允许存在0概率项，所有修改保证输出概率值不存在0
+    probs  = ops.softmax(logits)
+    probs = probs + EPSILON_PROB_ZERO_DIVISION #probs不能存在0
+    probs = probs/probs.sum(axis=-1, keepdims=True)
+    return probs
+
 
 @dataclass
 class TableQuestionAnsweringOutput(ModelOutput):
@@ -1138,9 +1145,8 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
             if self.config.average_logits_per_cell:
                 logits_per_cell, _ = reduce_mean(logits, cell_index)
                 logits = gather(logits_per_cell, cell_index)
-            probs  = ops.softmax(logits)
-            probs = probs + EPSILON_PROB_ZERO_DIVISION #probs不能存在0
-            probs = probs/probs.sum(axis=-1, keepdims=True)
+
+            probs = softmax_with_epsilon(logits)
             dist_per_token = nn.probability.distribution.Bernoulli(probs=probs)
 
             # Compute cell selection loss per example.
@@ -1159,9 +1165,7 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
                 selection_loss_per_example, logits = _single_column_cell_selection_loss(
                     logits, column_logits, labels, cell_index, col_index, cell_mask
                 )
-                probs  = ops.softmax(logits)
-                probs = probs + EPSILON_PROB_ZERO_DIVISION
-                probs = probs/probs.sum(axis=-1, keepdims=True)
+                probs = softmax_with_epsilon(logits)
                 dist_per_token = nn.probability.distribution.Bernoulli(probs=probs)
 
             # Supervised cell selection
@@ -1823,10 +1827,7 @@ def _single_column_cell_selection_loss(token_logits, column_logits, labels, cell
         no_cell_selected.reshape(column_label.shape), ops.zeros_like(column_label), column_label
     )
 
-    probs = ops.softmax(column_logits)
-    probs = probs + EPSILON_PROB_ZERO_DIVISION
-    probs = probs/probs.sum(axis=-1, keepdims=True)
-
+    probs = softmax_with_epsilon(column_logits)
     column_dist = nn.probability.distribution.Categorical(probs=probs)  # shape (batch_size, max_num_cols)
     column_loss_per_example = -column_dist.log_prob(column_label)
 
@@ -1846,9 +1847,7 @@ def _single_column_cell_selection_loss(token_logits, column_logits, labels, cell
     column_mask = ops.eq(column_id_for_cells, ops.unsqueeze(column_label, dim=-1)).type(mindspore.float32)
 
     # Compute the log-likelihood for cells, but only for the selected column.
-    probs = ops.softmax(logits_per_cell)
-    probs = probs + EPSILON_PROB_ZERO_DIVISION
-    probs = probs/probs.sum(axis=-1, keepdims=True)
+    probs = softmax_with_epsilon(logits_per_cell)
     cell_dist = nn.probability.distribution.Bernoulli(probs=probs)  # shape (batch_size, 64*32)
     cell_log_prob = cell_dist.log_prob(labels_per_cell.type(mindspore.float32))  # shape(batch_size, 64*32)
     cell_loss = -ops.sum(cell_log_prob * column_mask * cell_mask, dim=1)
@@ -1931,9 +1930,7 @@ def _calculate_aggregate_mask(answer, pooled_output, cell_selection_preference, 
     # mindspore.Tensor(batch_size,)
     aggregate_mask_init = ops.logical_not(ops.isnan(answer))#.type(mindspore.Tensor)
     logits_aggregation = aggregation_classifier(pooled_output)
-    probs  = ops.softmax(logits_aggregation)
-    probs = probs + EPSILON_PROB_ZERO_DIVISION
-    probs = probs/probs.sum(axis=-1, keepdims=True)
+    probs = softmax_with_epsilon(logits_aggregation)
     dist_aggregation = nn.probability.distribution.Categorical(probs=probs)
     # Index 0 corresponds to "no aggregation".
     aggregation_ops_total_mass = ops.sum(dist_aggregation.probs[:, 1:], dim=1)
@@ -2017,9 +2014,7 @@ def _calculate_aggregation_loss_unknown(logits_aggregation, aggregate_mask):
         aggregation_loss_unknown (`mindspore.Tensor` of shape `(batch_size,)`): Aggregation loss (in case of answer
         supervision) per example.
     """
-    probs = ops.softmax(logits_aggregation)
-    probs = probs + EPSILON_PROB_ZERO_DIVISION
-    probs = probs/probs.sum(axis=-1, keepdims=True)
+    probs = softmax_with_epsilon(logits_aggregation)
     dist_aggregation = nn.probability.distribution.Categorical(probs=probs)
     # Index 0 corresponds to "no aggregation".
     aggregation_ops_total_mass = ops.sum(dist_aggregation.probs[:, 1:], dim=1)
