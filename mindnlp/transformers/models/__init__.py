@@ -149,6 +149,7 @@ from . import (
     swiftformer,
     swin,
     switch_transformers,
+    tapas,
     t5,
     time_series_transformer,
     timesformer,
@@ -305,6 +306,7 @@ from .starcoder2 import *
 from .swiftformer import *
 from .swin import *
 from .switch_transformers import *
+from .tapas import *
 from .tinybert import *
 from .t5 import *
 from .time_series_transformer import *
@@ -462,6 +464,7 @@ __all__.extend(swiftformer.__all__)
 __all__.extend(swin.__all__)
 __all__.extend(switch_transformers.__all__)
 __all__.extend(t5.__all__)
+__all__.extend(tapas.__all__)
 __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)

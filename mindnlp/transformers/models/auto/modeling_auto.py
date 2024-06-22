@@ -125,6 +125,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("starcoder2", "Starcoder2Model"),
         ("swiftformer", "SwiftFormerModel"),
         ("switch_transformers", "SwitchTransformersModel"),
+        ("tapas", "TapasModel"),
         ("t5", "T5Model"),
         ("time_series_transformer", "TimeSeriesTransformerModel"),
         ("timesformer", "TimesformerModel"),
@@ -171,6 +172,7 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
         ("wav2vec2-conformer", "Wav2Vec2ConformerForPreTraining"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
         ("xlm-roberta-xl", "XLMRobertaXLForMaskedLM"),
+        ("tapas", "TapasForMaskedLM"),
         ("xlnet", "XLNetLMHeadModel"),
     ]
 )
@@ -213,6 +215,7 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
         ("xlm-roberta-xl", "XLMRobertaXLForMaskedLM"),
         ("xlnet", "XLNetLMHeadModel"),
+        ("tapas", "TapasPreTrainedModel"),
     ]
 )
 
@@ -271,6 +274,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("whisper", "WhisperForCausalLM"),
         ("xlm-roberta", "XLMRobertaForCausalLM"),
         ("xlm-roberta-xl", "XLMRobertaXLForCausalLM"),
+        ("tapas", "TapasForMaskedLM"),
         ("xlnet", "XLNetLMHeadModel"),
     ]
 )
