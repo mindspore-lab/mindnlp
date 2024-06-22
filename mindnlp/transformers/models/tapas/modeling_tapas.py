@@ -1503,7 +1503,7 @@ def flatten(index, name="segmented_flatten"):
     # and multiply element-wise by num segments (to offset different elements in the batch) e.g. if batch size is 2: [0, 64]
     batch_size = ops.maximum(batch_size, 1)
     offset = ops.arange(start=0, end=int(batch_size)) * index.num_segments
-    offset = offset.view(index.batch_shape())
+    offset = offset.reshape(index.batch_shape())
     for _ in range(index.batch_dims, len(index.indices.shape)):  # typically range(1,2)
         offset = offset.unsqueeze(-1)
 
