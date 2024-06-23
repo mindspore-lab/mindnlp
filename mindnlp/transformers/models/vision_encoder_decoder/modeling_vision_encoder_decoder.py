@@ -1,35 +1,35 @@
-# coding=utf-8
-# Copyright 2021 The HuggingFace Inc. team.
+# Copyright 2024 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+# http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# ============================================
 """Classes to support Vision-Encoder-Text-Decoder architectures"""
 
 from typing import Optional, Tuple, Union
 
-import mindspore
+import mindspore as ms
 from mindspore import nn, ops
-from mindnlp.utils import logging
 
 from ...configuration_utils import PretrainedConfig
 from ...modeling_outputs import BaseModelOutput, Seq2SeqLMOutput
 from ...modeling_utils import PreTrainedModel
+from ....utils import logging
 from ..auto.configuration_auto import AutoConfig
 from ..auto.modeling_auto import AutoModel, AutoModelForCausalLM
 from .configuration_vision_encoder_decoder import VisionEncoderDecoderConfig
 
 
 # Copied from transformers.models.encoder_decoder.modeling_encoder_decoder.shift_tokens_right
-def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_start_token_id: int):
+def shift_tokens_right(input_ids: ms.Tensor, pad_token_id: int, decoder_start_token_id: int):
     """
     Shift input ids one token to the right.
     """
@@ -42,12 +42,14 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
     if pad_token_id is None:
         raise ValueError("Make sure to set the pad_token_id attribute of the model's configuration.")
     # replace possible -100 values in labels by `pad_token_id`
-    shifted_input_ids.masked_fill_(shifted_input_ids == -100, pad_token_id)
+    shifted_input_ids.masked_fill(shifted_input_ids == -100, pad_token_id)
 
     return shifted_input_ids
 
 
 logger = logging.get_logger(__name__)
+
+_CONFIG_FOR_DOC = "VisionEncoderDecoderConfig"
 
 
 class VisionEncoderDecoderModel(PreTrainedModel):
@@ -332,19 +334,19 @@ class VisionEncoderDecoderModel(PreTrainedModel):
 
     def construct(
         self,
-        pixel_values: Optional[mindspore.Tensor] = None,
-        decoder_input_ids: Optional[mindspore.Tensor] = None,
-        decoder_attention_mask: Optional[mindspore.Tensor] = None,
-        encoder_outputs: Optional[Tuple[mindspore.Tensor]] = None,
-        past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
-        decoder_inputs_embeds: Optional[mindspore.Tensor] = None,
-        labels: Optional[mindspore.Tensor] = None,
+        pixel_values: Optional[ms.Tensor] = None,
+        decoder_input_ids: Optional[ms.Tensor] = None,
+        decoder_attention_mask: Optional[ms.Tensor] = None,
+        encoder_outputs: Optional[Tuple[ms.Tensor]] = None,
+        past_key_values: Optional[Tuple[Tuple[ms.Tensor]]] = None,
+        decoder_inputs_embeds: Optional[ms.Tensor] = None,
+        labels: Optional[ms.Tensor] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
         **kwargs,
-    ) -> Union[Tuple[mindspore.Tensor], Seq2SeqLMOutput]:
+    ) -> Union[Tuple[ms.Tensor], Seq2SeqLMOutput]:
         r"""
         Returns:
 
@@ -456,7 +458,7 @@ class VisionEncoderDecoderModel(PreTrainedModel):
             encoder_attentions=encoder_outputs.attentions,
         )
 
-    def prepare_decoder_input_ids_from_labels(self, labels: mindspore.Tensor):
+    def prepare_decoder_input_ids_from_labels(self, labels: ms.Tensor):
         return shift_tokens_right(labels, self.config.pad_token_id, self.config.decoder_start_token_id)
 
     def prepare_inputs_for_generation(
@@ -483,6 +485,7 @@ class VisionEncoderDecoderModel(PreTrainedModel):
     def _reorder_cache(self, past_key_values, beam_idx):
         # apply decoder cache reordering here
         return self.decoder._reorder_cache(past_key_values, beam_idx)
+
 
 __all__ = [
     "VisionEncoderDecoderModel"

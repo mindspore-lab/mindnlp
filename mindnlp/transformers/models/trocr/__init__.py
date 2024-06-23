@@ -13,15 +13,15 @@
 # limitations under the License.
 # ============================================
 """
-Vision Text Dual Encoder Model init
+TrOCR Model init
 """
-from . import configuration_vision_text_dual_encoder, processing_vision_text_dual_encoder, modeling_vision_text_dual_encoder
+from .import configuration_trocr, modeling_trocr, processing_trocr
 
-from .configuration_vision_text_dual_encoder import *
-from .processing_vision_text_dual_encoder import *
-from .modeling_vision_text_dual_encoder import *
+from .configuration_trocr import *
+from .modeling_trocr import *
+from .processing_trocr import *
 
 __all__ = []
-__all__.extend(configuration_vision_text_dual_encoder.__all__)
-__all__.extend(processing_vision_text_dual_encoder.__all__)
-__all__.extend(modeling_vision_text_dual_encoder.__all__)
+__all__.extend(configuration_trocr.__all__)
+__all__.extend(modeling_trocr.__all__)
+__all__.extend(processing_trocr.__all__)
