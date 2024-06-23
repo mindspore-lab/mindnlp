@@ -15,16 +15,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Mindspore I-BERT model."""
+"""I-BERT model."""
 
 import math
 from typing import Optional, Tuple, Union
 import numpy as np
 
-import mindspore as ms
-from mindspore import nn, ops, Parameter, Tensor
+import mindspore
+from mindspore import nn, ops
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.utils import logging
 from ...activations import gelu
 from ...modeling_outputs import (
     BaseModelOutputWithPastAndCrossAttentions,
@@ -37,15 +38,11 @@ from ...modeling_outputs import (
 )
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
-from ....utils import logging
 from .configuration_ibert import IBertConfig
 from .quant_modules import IntGELU, IntLayerNorm, IntSoftmax, QuantAct, QuantEmbedding, QuantLinear
 
 
 logger = logging.get_logger(__name__)
-
-_CHECKPOINT_FOR_DOC = "kssteven/ibert-roberta-base"
-_CONFIG_FOR_DOC = "IBertConfig"
 
 
 class IBertEmbeddings(nn.Cell):
@@ -75,6 +72,7 @@ class IBertEmbeddings(nn.Cell):
 
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
+
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
 
         # End copy
@@ -121,13 +119,12 @@ class IBertEmbeddings(nn.Cell):
             input_shape = inputs_embeds.shape[:-1]
 
         if token_type_ids is None:
-            token_type_ids = ops.zeros(input_shape, dtype=ms.int64)
+            token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
 
         if inputs_embeds is None:
             inputs_embeds, inputs_embeds_scaling_factor = self.word_embeddings(input_ids)
         else:
             inputs_embeds_scaling_factor = None
-
         token_type_embeddings, token_type_embeddings_scaling_factor = self.token_type_embeddings(token_type_ids)
 
         embeddings, embeddings_scaling_factor = self.embeddings_act1(
@@ -164,7 +161,7 @@ class IBertEmbeddings(nn.Cell):
         sequence_length = input_shape[1]
 
         position_ids = ops.arange(
-            self.padding_idx + 1, sequence_length + self.padding_idx + 1, dtype=ms.int64
+            self.padding_idx + 1, sequence_length + self.padding_idx + 1, dtype=mindspore.int64
         )
         return position_ids.unsqueeze(0).broadcast_to(input_shape)
 
@@ -635,22 +632,24 @@ class IBertPreTrainedModel(PreTrainedModel):
     config_class = IBertConfig
     base_model_prefix = "ibert"
 
-    def _init_weights(self, module):
+    def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(module, (QuantLinear, nn.Dense)):
-            module.weight.set_data(initializer(Normal(self.config.initializer_range),
-                                                    module.weight.shape, module.weight.dtype))
-            if module.bias is not None:
-                module.bias.set_data(initializer('zeros', module.bias.shape, module.bias.dtype))
-        elif isinstance(module, (QuantEmbedding, nn.Embedding)):
-            weight = np.random.normal(0.0, self.config.initializer_range, module.weight.shape)
-            if module.padding_idx is not None:
-                weight[module.padding_idx] = 0
+        if isinstance(cell, (QuantLinear, nn.Dense)):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
+                                                    cell.weight.shape, cell.weight.dtype))
+            if cell.bias is not None:
+                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
-            module.weight.set_data(Tensor(weight, module.weight.dtype))
-        elif isinstance(module, (IntLayerNorm, nn.LayerNorm)):
-            module.weight.set_data(initializer('ones', module.weight.shape, module.weight.dtype))
-            module.bias.set_data(initializer('zeros', module.bias.shape, module.bias.dtype))
+        elif isinstance(cell, (QuantEmbedding, nn.Embedding)):
+            weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
+            if cell.padding_idx:
+                weight[cell.padding_idx] = 0
+            cell.weight.set_data(mindspore.Tensor(weight, cell.weight.dtype))
+        elif isinstance(cell, (IntLayerNorm, nn.LayerNorm)):
+            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
     def resize_token_embeddings(self, new_num_tokens=None):
         raise NotImplementedError("`resize_token_embeddings` is not supported for I-BERT.")
@@ -695,17 +694,16 @@ class IBertModel(IBertPreTrainedModel):
 
     def construct(
         self,
-        input_ids: Optional[ms.Tensor] = None,
-        attention_mask: Optional[ms.Tensor] = None,
-        token_type_ids: Optional[ms.Tensor] = None,
-        position_ids: Optional[ms.Tensor] = None,
-        head_mask: Optional[ms.Tensor] = None,
-        inputs_embeds: Optional[ms.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[BaseModelOutputWithPoolingAndCrossAttentions, Tuple[ms.Tensor]]:
-
+    ) -> Union[BaseModelOutputWithPoolingAndCrossAttentions, Tuple[mindspore.Tensor]]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -725,13 +723,13 @@ class IBertModel(IBertPreTrainedModel):
         batch_size, seq_length = input_shape
 
         if attention_mask is None:
-            attention_mask = ops.ones((batch_size, seq_length))
+            attention_mask = ops.ones(((batch_size, seq_length)))
         if token_type_ids is None:
-            token_type_ids = ops.zeros(input_shape, dtype=ms.int64)
+            token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
 
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
-        extended_attention_mask: ms.Tensor = self.get_extended_attention_mask(attention_mask, input_shape)
+        extended_attention_mask: mindspore.Tensor = self.get_extended_attention_mask(attention_mask, input_shape)
 
         # Prepare head mask if needed
         # 1.0 in head_mask indicate we keep the head
@@ -746,7 +744,6 @@ class IBertModel(IBertPreTrainedModel):
             token_type_ids=token_type_ids,
             inputs_embeds=inputs_embeds,
         )
-
         encoder_outputs = self.encoder(
             embedding_output,
             embedding_output_scaling_factor,
@@ -793,17 +790,17 @@ class IBertForMaskedLM(IBertPreTrainedModel):
 
     def construct(
         self,
-        input_ids: Optional[ms.Tensor] = None,
-        attention_mask: Optional[ms.Tensor] = None,
-        token_type_ids: Optional[ms.Tensor] = None,
-        position_ids: Optional[ms.Tensor] = None,
-        head_mask: Optional[ms.Tensor] = None,
-        inputs_embeds: Optional[ms.Tensor] = None,
-        labels: Optional[ms.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[MaskedLMOutput, Tuple[ms.Tensor]]:
+    ) -> Union[MaskedLMOutput, Tuple[mindspore.Tensor]]:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
@@ -825,7 +822,6 @@ class IBertForMaskedLM(IBertPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-
         sequence_output = outputs[0]
         prediction_scores = self.lm_head(sequence_output)
 
@@ -851,10 +847,10 @@ class IBertLMHead(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.layer_norm = nn.LayerNorm([config.hidden_size,], epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
 
         self.decoder = nn.Dense(config.hidden_size, config.vocab_size)
-        self.bias = Parameter(ops.zeros(config.vocab_size), name="bias")
+        self.bias = mindspore.Parameter(ops.zeros(config.vocab_size), 'bias')
         self.decoder.bias = self.bias
 
     def construct(self, features, **kwargs):
@@ -868,11 +864,6 @@ class IBertLMHead(nn.Cell):
         return x
 
     def _tie_weights(self) -> None:
-        # For accelerate compatibility and to not break backward compatibility
-        # if self.decoder.bias.device.type == "meta":
-        #     self.decoder.bias = self.bias
-        # else:
-        # To tie those two weights if they get disconnected (on TPU or when the bias is resized)
         self.bias = self.decoder.bias
 
 
@@ -889,19 +880,19 @@ class IBertForSequenceClassification(IBertPreTrainedModel):
 
     def construct(
         self,
-        input_ids: Optional[ms.Tensor] = None,
-        attention_mask: Optional[ms.Tensor] = None,
-        token_type_ids: Optional[ms.Tensor] = None,
-        position_ids: Optional[ms.Tensor] = None,
-        head_mask: Optional[ms.Tensor] = None,
-        inputs_embeds: Optional[ms.Tensor] = None,
-        labels: Optional[ms.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[SequenceClassifierOutput, Tuple[ms.Tensor]]:
+    ) -> Union[SequenceClassifierOutput, Tuple[mindspore.Tensor]]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
@@ -927,7 +918,7 @@ class IBertForSequenceClassification(IBertPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype in (ms.int32, ms.int64)):
+                elif self.num_labels > 1 and (labels.dtype in (mindspore.int64, mindspore.int32)):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -966,19 +957,19 @@ class IBertForMultipleChoice(IBertPreTrainedModel):
 
     def construct(
         self,
-        input_ids: Optional[ms.Tensor] = None,
-        token_type_ids: Optional[ms.Tensor] = None,
-        attention_mask: Optional[ms.Tensor] = None,
-        labels: Optional[ms.Tensor] = None,
-        position_ids: Optional[ms.Tensor] = None,
-        head_mask: Optional[ms.Tensor] = None,
-        inputs_embeds: Optional[ms.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[MultipleChoiceModelOutput, Tuple[ms.Tensor]]:
+    ) -> Union[MultipleChoiceModelOutput, Tuple[mindspore.Tensor]]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
             num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
             `input_ids` above)
@@ -1041,21 +1032,22 @@ class IBertForTokenClassification(IBertPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
+
     def construct(
         self,
-        input_ids: Optional[ms.Tensor] = None,
-        attention_mask: Optional[ms.Tensor] = None,
-        token_type_ids: Optional[ms.Tensor] = None,
-        position_ids: Optional[ms.Tensor] = None,
-        head_mask: Optional[ms.Tensor] = None,
-        inputs_embeds: Optional[ms.Tensor] = None,
-        labels: Optional[ms.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[TokenClassifierOutput, Tuple[ms.Tensor]]:
+    ) -> Union[TokenClassifierOutput, Tuple[mindspore.Tensor]]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -1125,18 +1117,18 @@ class IBertForQuestionAnswering(IBertPreTrainedModel):
 
     def construct(
         self,
-        input_ids: Optional[ms.Tensor] = None,
-        attention_mask: Optional[ms.Tensor] = None,
-        token_type_ids: Optional[ms.Tensor] = None,
-        position_ids: Optional[ms.Tensor] = None,
-        head_mask: Optional[ms.Tensor] = None,
-        inputs_embeds: Optional[ms.Tensor] = None,
-        start_positions: Optional[ms.Tensor] = None,
-        end_positions: Optional[ms.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        start_positions: Optional[mindspore.Tensor] = None,
+        end_positions: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[QuestionAnsweringModelOutput, Tuple[ms.Tensor]]:
+    ) -> Union[QuestionAnsweringModelOutput, Tuple[mindspore.Tensor]]:
         r"""
         start_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
             Labels for position (index) of the start of the labelled span for computing the token classification loss.
@@ -1164,7 +1156,7 @@ class IBertForQuestionAnswering(IBertPreTrainedModel):
         sequence_output = outputs[0]
 
         logits = self.qa_outputs(sequence_output)
-        start_logits, end_logits = ops.split(logits, 1, axis=-1)
+        start_logits, end_logits = logits.split(1, axis=-1)
         start_logits = start_logits.squeeze(-1)
         end_logits = end_logits.squeeze(-1)
 
@@ -1177,8 +1169,8 @@ class IBertForQuestionAnswering(IBertPreTrainedModel):
                 end_positions = end_positions.squeeze(-1)
             # sometimes the start/end positions are outside our model inputs, we ignore these terms
             ignored_index = start_logits.shape[1]
-            start_positions = ops.clamp(start_positions, 0, ignored_index)
-            end_positions = ops.clamp(end_positions, 0, ignored_index)
+            start_positions = start_positions.clamp(0, ignored_index)
+            end_positions = end_positions.clamp(0, ignored_index)
 
             start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
             end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
@@ -1209,10 +1201,9 @@ def create_position_ids_from_input_ids(input_ids, padding_idx, past_key_values_l
     Returns: torch.Tensor
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
-    mask = ops.cast(input_ids.ne(padding_idx), ms.int32)
-    incremental_indices = (ops.cumsum(mask, axis=1, dtype=mask.dtype) + past_key_values_length) * mask
-    return ops.cast(incremental_indices, ms.int64) + padding_idx
-
+    mask = input_ids.ne(padding_idx).int()
+    incremental_indices = (ops.cumsum(mask, axis=1).type_as(mask) + past_key_values_length) * mask
+    return incremental_indices.long() + padding_idx
 
 __all__ = [
     "IBertForMaskedLM",

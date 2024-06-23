@@ -15,7 +15,7 @@
 """
 SegGpt Model init
 """
-from .import configuration_seggpt, image_processing_seggpt, modeling_seggpt
+from . import configuration_seggpt, image_processing_seggpt, modeling_seggpt
 
 from .configuration_seggpt import *
 from .image_processing_seggpt import *

@@ -1174,7 +1174,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
                 if add_prefix_to_model:
                     param_name = prefix + '.' + pname_in_net
                 elif remove_prefix_from_model:
-                    param_name = pname_in_net.replace(f'{prefix}.', '')
+                    param_name = pname_in_net.replace(f'{prefix}.', '', 1)
                 else:
                     param_name = pname_in_net
 

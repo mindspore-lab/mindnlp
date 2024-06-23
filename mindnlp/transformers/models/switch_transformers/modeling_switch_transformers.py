@@ -155,6 +155,7 @@ class SwitchTransformersTop1Router(nn.Cell):
             hidden_states *= ops.uniform(hidden_states.shape,
                                          mindspore.Tensor(1.0 - self.jitter_noise, hidden_states.dtype),
                                          mindspore.Tensor(1.0 + self.jitter_noise, hidden_states.dtype),
+                                         seed=0,
                                          dtype=hidden_states.dtype)
 
         # Shape: [num_groups, tokens_per_group, num_experts]

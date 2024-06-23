@@ -15,12 +15,14 @@
 """
 Models init
 """
+
 from . import (
     albert,
     align,
     altclip,
     audio_spectrogram_transformer,
     auto,
+    owlv2,
     autoformer,
     baichuan,
     bark,
@@ -47,6 +49,7 @@ from . import (
     byt5,
     camembert,
     canine,
+    clap,
     clip,
     codegen,
     cohere,
@@ -62,7 +65,11 @@ from . import (
     deberta,
     deberta_v2,
     decision_transformer,
+    detr,
+    deit,
     distilbert,
+    donut,
+    dpr,
     efficientnet,
     efficientformer,
     electra,
@@ -70,6 +77,7 @@ from . import (
     esm,
     ernie,
     ernie_m,
+    falcon,
     fastspeech2_conformer,
     chatglm,
     chatglm2,
@@ -89,12 +97,14 @@ from . import (
     graphormer,
     groupvit,
     hubert,
-    ibert,
     imagegpt,
+    ibert,
     jetmoe,
     layoutlm,
     layoutlmv2,
+    layoutlmv3,
     led,
+    lilt,
     llama,
     llava,
     llava_next,
@@ -110,6 +120,7 @@ from . import (
     mixtral,
     mobilebert,
     mobilenet_v1,
+    mobilenet_v2,
     mobilevit,
     mpnet,
     mpt,
@@ -117,6 +128,7 @@ from . import (
     musicgen_melody,
     mvp,
     nezha,
+    nougat,
     nystromformer,
     olmo,
     oneformer,
@@ -129,6 +141,7 @@ from . import (
     phi3,
     poolformer,
     pop2piano,
+    qdqbert,
     qwen2,
     qwen2_moe,
     reformer,
@@ -142,23 +155,31 @@ from . import (
     seamless_m4t_v2,
     segformer,
     seggpt,
+    sew,
+    sew_d,
     speech_encoder_decoder,
     speecht5,
     stablelm,
+    splinter,
     squeezebert,
     starcoder2,
     swiftformer,
     swin,
     switch_transformers,
+    swin2sr,
     t5,
+    tapas,
     time_series_transformer,
     timesformer,
     tinybert,
+    trocr,
     videomae,
     vipllava,
+    vision_encoder_decoder,
     vision_text_dual_encoder,
     visual_bert,
     vit,
+    vitdet,
     wav2vec2,
     wav2vec2_conformer,
     wav2vec2_bert,
@@ -172,6 +193,7 @@ from . import (
     xlnet,
 )
 
+from .owlv2 import *
 from .albert import *
 from .align import *
 from .altclip import *
@@ -203,6 +225,7 @@ from .bros import *
 from .byt5 import *
 from .camembert import *
 from .canine import *
+from .clap import *
 from .clip import *
 from .codegen import *
 from .cohere import *
@@ -218,7 +241,11 @@ from .data2vec import *
 from .deberta import *
 from .deberta_v2 import *
 from .decision_transformer import *
+from .detr import *
+from .deit import *
 from .distilbert import *
+from .donut import *
+from .dpr import *
 from .efficientnet import *
 from .efficientformer import *
 from .electra import *
@@ -229,6 +256,7 @@ from .ernie_m import *
 from .chatglm import *
 from .chatglm2 import *
 from .chatglm3 import *
+from .falcon import *
 from .flava import *
 from .funnel import *
 from .fastspeech2_conformer import *
@@ -244,13 +272,15 @@ from .gpt_pangu import *
 from .gpt2 import *
 from .graphormer import *
 from .groupvit import *
-from .hubert import *
 from .ibert import *
+from .hubert import *
 from .imagegpt import *
 from .jetmoe import *
 from .layoutlm import *
 from .layoutlmv2 import *
+from .layoutlmv3 import *
 from .led import *
+from .lilt import *
 from .llama import *
 from .llava import *
 from .llava_next import *
@@ -266,6 +296,7 @@ from .mistral import *
 from .mixtral import *
 from .mobilebert import *
 from .mobilenet_v1 import *
+from .mobilenet_v2 import *
 from .mobilevit import *
 from .mpnet import *
 from .mpt import *
@@ -273,6 +304,7 @@ from .musicgen import *
 from .musicgen_melody import *
 from .mvp import *
 from .nezha import *
+from .nougat import *
 from .nystromformer import *
 from .olmo import *
 from .oneformer import *
@@ -285,6 +317,7 @@ from .phi import *
 from .phi3 import *
 from .poolformer import *
 from .pop2piano import *
+from .qdqbert import *
 from .qwen2 import *
 from .qwen2_moe import *
 from .reformer import *
@@ -298,23 +331,31 @@ from .seamless_m4t import *
 from .seamless_m4t_v2 import *
 from .segformer import *
 from .seggpt import *
+from .sew import *
+from .sew_d import *
 from .speech_encoder_decoder import *
 from .speecht5 import *
 from .stablelm import *
+from .splinter import *
 from .squeezebert import *
 from .starcoder2 import *
 from .swiftformer import *
 from .swin import *
 from .switch_transformers import *
+from .swin2sr import *
 from .tinybert import *
 from .t5 import *
+from .tapas import *
 from .time_series_transformer import *
 from .timesformer import *
+from .trocr import *
 from .videomae import *
 from .vipllava import *
+from .vision_encoder_decoder import *
 from .vision_text_dual_encoder import *
 from .visual_bert import *
 from .vit import *
+from .vitdet import *
 from .whisper import *
 from .wav2vec2 import *
 from .wav2vec2_conformer import *
@@ -359,6 +400,7 @@ __all__.extend(bros.__all__)
 __all__.extend(byt5.__all__)
 __all__.extend(camembert.__all__)
 __all__.extend(canine.__all__)
+__all__.extend(clap.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(codegen.__all__)
 __all__.extend(cohere.__all__)
@@ -374,7 +416,11 @@ __all__.extend(data2vec.__all__)
 __all__.extend(deberta.__all__)
 __all__.extend(deberta_v2.__all__)
 __all__.extend(decision_transformer.__all__)
+__all__.extend(deit.__all__)
 __all__.extend(distilbert.__all__)
+__all__.extend(donut.__all__)
+__all__.extend(detr.__all__)
+__all__.extend(dpr.__all__)
 __all__.extend(efficientnet.__all__)
 __all__.extend(efficientformer.__all__)
 __all__.extend(electra.__all__)
@@ -383,6 +429,7 @@ __all__.extend(ernie.__all__)
 __all__.extend(ernie_m.__all__)
 __all__.extend(esm.__all__)
 __all__.extend(chatglm.__all__)
+__all__.extend(falcon.__all__)
 __all__.extend(flava.__all__)
 __all__.extend(funnel.__all__)
 __all__.extend(fastspeech2_conformer.__all__)
@@ -400,13 +447,15 @@ __all__.extend(gpt_bigcode.__all__)
 __all__.extend(gpt2.__all__)
 __all__.extend(graphormer.__all__)
 __all__.extend(groupvit.__all__)
-__all__.extend(hubert.__all__)
 __all__.extend(ibert.__all__)
+__all__.extend(hubert.__all__)
 __all__.extend(imagegpt.__all__)
 __all__.extend(jetmoe.__all__)
 __all__.extend(layoutlm.__all__)
 __all__.extend(layoutlmv2.__all__)
+__all__.extend(layoutlmv3.__all__)
 __all__.extend(led.__all__)
+__all__.extend(lilt.__all__)
 __all__.extend(llama.__all__)
 __all__.extend(llava.__all__)
 __all__.extend(llava_next.__all__)
@@ -422,6 +471,7 @@ __all__.extend(mistral.__all__)
 __all__.extend(mixtral.__all__)
 __all__.extend(mobilebert.__all__)
 __all__.extend(mobilenet_v1.__all__)
+__all__.extend(mobilenet_v2.__all__)
 __all__.extend(mobilevit.__all__)
 __all__.extend(mpnet.__all__)
 __all__.extend(mpt.__all__)
@@ -429,6 +479,7 @@ __all__.extend(musicgen.__all__)
 __all__.extend(musicgen_melody.__all__)
 __all__.extend(mvp.__all__)
 __all__.extend(nezha.__all__)
+__all__.extend(nougat.__all__)
 __all__.extend(nystromformer.__all__)
 __all__.extend(olmo.__all__)
 __all__.extend(oneformer.__all__)
@@ -441,6 +492,7 @@ __all__.extend(phi.__all__)
 __all__.extend(phi3.__all__)
 __all__.extend(poolformer.__all__)
 __all__.extend(pop2piano.__all__)
+__all__.extend(qdqbert.__all__)
 __all__.extend(qwen2.__all__)
 __all__.extend(qwen2_moe.__all__)
 __all__.extend(reformer.__all__)
@@ -454,23 +506,31 @@ __all__.extend(seamless_m4t.__all__)
 __all__.extend(seamless_m4t_v2.__all__)
 __all__.extend(segformer.__all__)
 __all__.extend(seggpt.__all__)
+__all__.extend(sew.__all__)
+__all__.extend(sew_d.__all__)
 __all__.extend(speech_encoder_decoder.__all__)
 __all__.extend(speecht5.__all__)
 __all__.extend(stablelm.__all__)
+__all__.extend(splinter.__all__)
 __all__.extend(squeezebert.__all__)
 __all__.extend(starcoder2.__all__)
 __all__.extend(swiftformer.__all__)
+__all__.extend(owlv2.__all__)
 __all__.extend(swin.__all__)
 __all__.extend(switch_transformers.__all__)
+__all__.extend(swin2sr.__all__)
 __all__.extend(t5.__all__)
 __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
+__all__.extend(trocr.__all__)
 __all__.extend(videomae.__all__)
 __all__.extend(vipllava.__all__)
+__all__.extend(vision_encoder_decoder.__all__)
 __all__.extend(vision_text_dual_encoder.__all__)
 __all__.extend(visual_bert.__all__)
 __all__.extend(vit.__all__)
+__all__.extend(vitdet.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)
 __all__.extend(wav2vec2_conformer.__all__)

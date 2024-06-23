@@ -19,13 +19,16 @@ from . import (
     configuration_squeezebert,
     modeling_squeezebert,
     tokenization_squeezebert,
+    tokenization_squeezebert_fast,
 )
 
 from .configuration_squeezebert import *
 from .modeling_squeezebert import *
 from .tokenization_squeezebert import *
+from .tokenization_squeezebert_fast import *
 
 __all__ = []
 __all__.extend(configuration_squeezebert.__all__)
 __all__.extend(modeling_squeezebert.__all__)
 __all__.extend(tokenization_squeezebert.__all__)
+__all__.extend(tokenization_squeezebert_fast.__all__)

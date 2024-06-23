@@ -15,7 +15,7 @@
 """
 ImageGpt Model init
 """
-from .import configuration_imagegpt, feature_extraction_imagegpt, image_processing_imagegpt, modeling_imagegpt
+from . import configuration_imagegpt, feature_extraction_imagegpt, image_processing_imagegpt, modeling_imagegpt
 
 from .configuration_imagegpt import *
 from .feature_extraction_imagegpt import *

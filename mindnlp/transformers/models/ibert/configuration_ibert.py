@@ -16,8 +16,8 @@
 # limitations under the License.
 """I-BERT configuration"""
 
+from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
-from ....utils import logging
 
 
 logger = logging.get_logger(__name__)
@@ -120,6 +120,4 @@ class IBertConfig(PretrainedConfig):
         self.force_dequant = force_dequant
 
 
-__all__ = [
-    "IBertConfig"
-]
+__all__ = ['IBertConfig']
