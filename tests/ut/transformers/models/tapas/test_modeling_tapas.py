@@ -761,7 +761,6 @@ class TapasModelIntegrationTest(unittest.TestCase):
         # test the loss
         loss = outputs.loss
         expected_loss = mindspore.Tensor(3.3527612686157227e-08)
-        print(loss.asnumpy(), expected_loss.asnumpy())
         self.assertTrue(np.allclose(loss.asnumpy(), expected_loss.asnumpy(), atol=1e-6))
 
         # test the logits on the first example
@@ -789,8 +788,6 @@ class TapasModelIntegrationTest(unittest.TestCase):
         expected_shape = (2, 4)
         self.assertEqual(logits_aggregation.shape, expected_shape)
         expected_slice = mindspore.Tensor([-4.0538, 40.0304, -5.3554, 23.3965])
-
-        print(logits_aggregation[1, -4:].asnumpy(), expected_slice.asnumpy())
         #1e-4 to 1e-3
         self.assertTrue(np.allclose(logits_aggregation[1, -4:].asnumpy(), expected_slice.asnumpy(), atol=1e-3))
 
