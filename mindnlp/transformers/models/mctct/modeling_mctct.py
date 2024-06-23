@@ -97,7 +97,7 @@ class MCTCTConv1dSubsampler(nn.Cell):
     def construct(self, input_features):
         # NOTE: in reference to the NOTE in __init__, right now it just calculates padding as if
         # there will be just one conv layer.
-        padding = sum([size // 2 for size in self.kernel_size])  # (7, 7) -> (3, 3)
+        padding = sum(size // 2 for size in self.kernel_size)  # (7, 7) -> (3, 3)
 
         input_features = ops.pad(input_features, (0, 0, padding, padding), "constant", 0)
         hidden_states = input_features.swapaxes(1, 2)  # -> Batch x Frame x Time
