@@ -163,6 +163,7 @@ from . import (
     switch_transformers,
     swin2sr,
     t5,
+    tapas,
     time_series_transformer,
     timesformer,
     tinybert,
@@ -333,6 +334,7 @@ from .switch_transformers import *
 from .swin2sr import *
 from .tinybert import *
 from .t5 import *
+from .tapas import *
 from .time_series_transformer import *
 from .timesformer import *
 from .videomae import *
