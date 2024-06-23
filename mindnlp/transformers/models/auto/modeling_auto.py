@@ -103,6 +103,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("marian", "MarianModel"),
         ("mask2former", "Mask2FormerModel"),
         ("mbart", "MBartModel"),
+        ("mctct","MCTCTModel"),
         ("minicpm", "MiniCPMModel"),
         ("mistral", "MistralModel"),
         ("mixtral", "MixtralModel"),

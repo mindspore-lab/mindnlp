@@ -101,6 +101,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("marian", "MarianConfig"),
         ("mask2former", "Mask2FormerConfig"),
         ("mbart", "MBartConfig"),
+        ("mctct", "MCTCTConfig"),
         ("minicpm", "MiniCPMConfig"),
         ("mistral", "MistralConfig"),
         ("mixtral", "MixtralConfig"),
