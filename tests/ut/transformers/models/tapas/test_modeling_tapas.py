@@ -762,8 +762,7 @@ class TapasModelIntegrationTest(unittest.TestCase):
         loss = outputs.loss
         expected_loss = mindspore.Tensor(3.3527612686157227e-08)
         print(loss.asnumpy(), expected_loss.asnumpy())
-        #1e-6 to 1e-3
-        self.assertTrue(np.allclose(loss.asnumpy(), expected_loss.asnumpy(), atol=1e-2))
+        self.assertTrue(np.allclose(loss.asnumpy(), expected_loss.asnumpy(), atol=1e-6))
 
         # test the logits on the first example
         logits = outputs.logits
