@@ -98,7 +98,7 @@ class TapasModelTester:
         temperature=1.0,
         agg_temperature=1.0,
         use_gumbel_for_cells=True,
-        use_gumbel_for_agg=False,
+        use_gumbel_for_agg=True,
         average_approximation_function="ratio",
         cell_selection_preference=0.5,
         answer_loss_cutoff=100,
