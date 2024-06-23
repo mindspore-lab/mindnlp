@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-Pegasus Models init
+Pegasus-X Models init
 """
 from . import configuration_pegasus_x, modeling_pegasus_x
 from .configuration_pegasus_x import *

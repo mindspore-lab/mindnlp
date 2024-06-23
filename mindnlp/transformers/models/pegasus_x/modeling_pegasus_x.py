@@ -1009,7 +1009,7 @@ class PegasusXEncoder(PegasusXPreTrainedModel):
         mask_min_value = np.finfo(mindspore.dtype_to_nptype(hidden_states.dtype)).min
         inverted_mask = 1.0 - attention_mask
         attention_mask = inverted_mask.masked_fill(
-            inverted_mask.to(mindspore.bool_),
+            inverted_mask.astype(mindspore.bool_),
             mask_min_value,
         )
 
@@ -1495,8 +1495,9 @@ class PegasusXForConditionalGeneration(PegasusXPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            loss_fct = ops.cross_entropy()
-            masked_lm_loss = loss_fct(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
+            masked_lm_loss = ops.cross_entropy()(
+                lm_logits.view(-1, self.config.vocab_size), labels.view(-1)
+            )
 
         if not return_dict:
             output = (lm_logits,) + outputs[1:]

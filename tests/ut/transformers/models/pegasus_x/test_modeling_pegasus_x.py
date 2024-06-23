@@ -626,7 +626,7 @@ class PegasusXModelIntegrationTests(unittest.TestCase):
             padding="max_length",
             truncation_strategy="only_first",
             truncation=True,
-            return_tensors="pt",
+            return_tensors="ms",
         )
 
         hypotheses_batch = hf.generate(
