@@ -325,7 +325,7 @@ class MCTCTAttention(nn.Cell):
         self.self.query = prune_linear_layer(self.self.query, index)
         self.self.key = prune_linear_layer(self.self.key, index)
         self.self.value = prune_linear_layer(self.self.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
@@ -590,7 +590,7 @@ class MCTCTEncoder(MCTCTPreTrainedModel):
             if head_mask.shape[0] != len(self.layers):
                 raise ValueError(
                     f"The head_mask should be specified for {len(self.layers)} layers, "
-                    f"but it is for {head_mask.size()[0]}."
+                    f"but it is for {head_mask.shape[0]}."
                 )
 
         deepspeed_zero3_is_enabled = is_deepspeed_zero3_enabled()
@@ -601,7 +601,7 @@ class MCTCTEncoder(MCTCTPreTrainedModel):
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
             dropout_probability = ops.rand([])
 
-            skip_the_layer = True if self.training and (dropout_probability < self.config.layerdrop) else False
+            skip_the_layer = self.training and (dropout_probability < self.config.layerdrop)
             if not skip_the_layer or deepspeed_zero3_is_enabled:
                 # under deepspeed zero3 all gpus must run in sync
                 if self.gradient_checkpointing and self.training:
