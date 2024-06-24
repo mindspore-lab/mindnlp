@@ -140,6 +140,7 @@ from . import (
     phi3,
     poolformer,
     pop2piano,
+    qdqbert,
     qwen2,
     qwen2_moe,
     reformer,
@@ -166,6 +167,7 @@ from . import (
     switch_transformers,
     swin2sr,
     t5,
+    tapas,
     time_series_transformer,
     timesformer,
     tinybert,
@@ -313,6 +315,7 @@ from .phi import *
 from .phi3 import *
 from .poolformer import *
 from .pop2piano import *
+from .qdqbert import *
 from .qwen2 import *
 from .qwen2_moe import *
 from .reformer import *
@@ -340,6 +343,7 @@ from .switch_transformers import *
 from .swin2sr import *
 from .tinybert import *
 from .t5 import *
+from .tapas import *
 from .time_series_transformer import *
 from .timesformer import *
 from .trocr import *
@@ -485,6 +489,7 @@ __all__.extend(phi.__all__)
 __all__.extend(phi3.__all__)
 __all__.extend(poolformer.__all__)
 __all__.extend(pop2piano.__all__)
+__all__.extend(qdqbert.__all__)
 __all__.extend(qwen2.__all__)
 __all__.extend(qwen2_moe.__all__)
 __all__.extend(reformer.__all__)
