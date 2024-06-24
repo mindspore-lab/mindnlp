@@ -68,7 +68,6 @@ from . import (
     detr,
     deit,
     distilbert,
-    donut,
     dpr,
     efficientnet,
     efficientformer,
@@ -102,7 +101,6 @@ from . import (
     jetmoe,
     layoutlm,
     layoutlmv2,
-    layoutlmv3,
     led,
     lilt,
     llama,
@@ -128,7 +126,6 @@ from . import (
     musicgen_melody,
     mvp,
     nezha,
-    nougat,
     nystromformer,
     olmo,
     oneformer,
@@ -171,7 +168,6 @@ from . import (
     time_series_transformer,
     timesformer,
     tinybert,
-    trocr,
     videomae,
     vipllava,
     vision_encoder_decoder,
@@ -243,7 +239,6 @@ from .decision_transformer import *
 from .detr import *
 from .deit import *
 from .distilbert import *
-from .donut import *
 from .dpr import *
 from .efficientnet import *
 from .efficientformer import *
@@ -277,7 +272,6 @@ from .imagegpt import *
 from .jetmoe import *
 from .layoutlm import *
 from .layoutlmv2 import *
-from .layoutlmv3 import *
 from .led import *
 from .lilt import *
 from .llama import *
@@ -303,7 +297,6 @@ from .musicgen import *
 from .musicgen_melody import *
 from .mvp import *
 from .nezha import *
-from .nougat import *
 from .nystromformer import *
 from .olmo import *
 from .oneformer import *
@@ -346,7 +339,6 @@ from .t5 import *
 from .tapas import *
 from .time_series_transformer import *
 from .timesformer import *
-from .trocr import *
 from .videomae import *
 from .vipllava import *
 from .vision_encoder_decoder import *
@@ -416,7 +408,6 @@ __all__.extend(deberta_v2.__all__)
 __all__.extend(decision_transformer.__all__)
 __all__.extend(deit.__all__)
 __all__.extend(distilbert.__all__)
-__all__.extend(donut.__all__)
 __all__.extend(detr.__all__)
 __all__.extend(dpr.__all__)
 __all__.extend(efficientnet.__all__)
@@ -451,7 +442,6 @@ __all__.extend(imagegpt.__all__)
 __all__.extend(jetmoe.__all__)
 __all__.extend(layoutlm.__all__)
 __all__.extend(layoutlmv2.__all__)
-__all__.extend(layoutlmv3.__all__)
 __all__.extend(led.__all__)
 __all__.extend(lilt.__all__)
 __all__.extend(llama.__all__)
@@ -477,7 +467,6 @@ __all__.extend(musicgen.__all__)
 __all__.extend(musicgen_melody.__all__)
 __all__.extend(mvp.__all__)
 __all__.extend(nezha.__all__)
-__all__.extend(nougat.__all__)
 __all__.extend(nystromformer.__all__)
 __all__.extend(olmo.__all__)
 __all__.extend(oneformer.__all__)
@@ -520,7 +509,6 @@ __all__.extend(t5.__all__)
 __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
-__all__.extend(trocr.__all__)
 __all__.extend(videomae.__all__)
 __all__.extend(vipllava.__all__)
 __all__.extend(vision_encoder_decoder.__all__)
