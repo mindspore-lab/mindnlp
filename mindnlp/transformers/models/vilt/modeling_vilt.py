@@ -20,10 +20,10 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
 import mindspore
-import mindspore as ms
 from mindspore import nn, ops, Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -37,7 +37,6 @@ from ...modeling_utils import PreTrainedModel
 
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer, meshgrid
 
-from mindnlp.utils import logging
 from .configuration_vilt import ViltConfig
 
 
@@ -239,7 +238,7 @@ class TextEmbeddings(nn.Cell):
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
@@ -468,8 +467,8 @@ class ViltLayer(nn.Cell):
         self.attention = ViltAttention(config)
         self.intermediate = ViltIntermediate(config)
         self.output = ViltOutput(config)
-        self.layernorm_before = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
-        self.layernorm_after = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.layernorm_before = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layernorm_after = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
 
     def construct(self, hidden_states, attention_mask=None, head_mask=None, output_attentions=False):
         self_attention_outputs = self.attention(
@@ -710,7 +709,7 @@ class ViltModel(ViltPreTrainedModel):
         self.embeddings = ViltEmbeddings(config)
         self.encoder = ViltEncoder(config)
 
-        self.layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         self.pooler = ViltPooler(config) if add_pooling_layer else None
 
         # Initialize weights and apply final processing
@@ -998,7 +997,7 @@ class ViltPredictionHeadTransform(nn.Cell):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
             self.transform_act_fn = config.hidden_act
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
 
     def construct(self, hidden_states):
         hidden_states = self.dense(hidden_states)

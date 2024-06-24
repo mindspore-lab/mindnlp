@@ -19,9 +19,9 @@ Processor class for ViLT.
 import warnings
 from typing import List, Optional, Union
 
+from mindnlp.utils import TensorType
 from ...processing_utils import ProcessorMixin
 from ...tokenization_utils_base import BatchEncoding, PaddingStrategy, PreTokenizedInput, TextInput, TruncationStrategy
-from mindnlp.utils import TensorType
 
 
 class ViltProcessor(ProcessorMixin):
