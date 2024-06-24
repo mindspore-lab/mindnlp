@@ -133,6 +133,7 @@ from . import (
     opt,
     owlvit,
     pegasus,
+    persimmon,
     phi,
     phi3,
     poolformer,
@@ -302,6 +303,7 @@ from .openelm import *
 from .opt import *
 from .owlvit import *
 from .pegasus import *
+from .persimmon import *
 from .phi import *
 from .phi3 import *
 from .poolformer import *
@@ -470,6 +472,7 @@ __all__.extend(openelm.__all__)
 __all__.extend(opt.__all__)
 __all__.extend(owlvit.__all__)
 __all__.extend(pegasus.__all__)
+__all__.extend(persimmon.__all__)
 __all__.extend(phi.__all__)
 __all__.extend(phi3.__all__)
 __all__.extend(poolformer.__all__)
