@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================
 """
-Vision Text Dual Encoder Model init
+PoolFormer Model init
 """
 from . import configuration_vision_text_dual_encoder, processing_vision_text_dual_encoder, modeling_vision_text_dual_encoder
 
