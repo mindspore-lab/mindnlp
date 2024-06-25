@@ -176,6 +176,7 @@ from . import (
     vision_text_dual_encoder,
     visual_bert,
     vit,
+    vit_hybrid,
     vit_msn,
     vitdet,
     wav2vec2,
@@ -350,6 +351,7 @@ from .vision_encoder_decoder import *
 from .vision_text_dual_encoder import *
 from .visual_bert import *
 from .vit import *
+from .vit_hybrid import *
 from .vit_msn import *
 from .vitdet import *
 from .whisper import *
@@ -523,6 +525,7 @@ __all__.extend(vision_encoder_decoder.__all__)
 __all__.extend(vision_text_dual_encoder.__all__)
 __all__.extend(visual_bert.__all__)
 __all__.extend(vit.__all__)
+__all__.extend(vit_hybrid.__all__)
 __all__.extend(vit_msn.__all__)
 __all__.extend(vitdet.__all__)
 __all__.extend(whisper.__all__)
