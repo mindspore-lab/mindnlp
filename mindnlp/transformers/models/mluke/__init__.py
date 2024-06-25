@@ -12,33 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING
+from . import tokenization_mluke
+from .tokenization_mluke import MLukeTokenizer
 
-from ...utils import OptionalDependencyNotAvailable, _LazyModule, is_sentencepiece_available
-
-
-_import_structure = {}
-
-
-try:
-    if not is_sentencepiece_available():
-        raise OptionalDependencyNotAvailable()
-except OptionalDependencyNotAvailable:
-    pass
-else:
-    _import_structure["tokenization_mluke"] = ["MLukeTokenizer"]
-
-if TYPE_CHECKING:
-    try:
-        if not is_sentencepiece_available():
-            raise OptionalDependencyNotAvailable()
-    except OptionalDependencyNotAvailable:
-        pass
-    else:
-        from .tokenization_mluke import MLukeTokenizer
-
-
-else:
-    import sys
-
-    sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+__all__ = []
+__all__.extend(tokenization_mluke.__all__)
