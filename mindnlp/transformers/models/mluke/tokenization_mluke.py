@@ -24,9 +24,10 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 import sentencepiece as spm
 
+from mindnlp.utils import logging
 from ...tokenization_utils import PreTrainedTokenizer
 from ...tokenization_utils_base import (
-    ENCODE_KWARGS_DOCSTRING,
+    # ENCODE_KWARGS_DOCSTRING,
     AddedToken,
     BatchEncoding,
     EncodedInput,
@@ -37,7 +38,7 @@ from ...tokenization_utils_base import (
     TruncationStrategy,
     to_py_obj,
 )
-from ...utils import add_end_docstrings, is_tf_tensor, is_torch_tensor, logging
+# from ...utils import add_end_docstrings, is_tf_tensor, is_torch_tensor, logging
 
 
 logger = logging.get_logger(__name__)
