@@ -78,6 +78,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("esm", "EsmConfig"),
         ("falcon", "FalconConfig"),
         ("flava", "FlavaConfig"),
+        ("focalnet","FocalnetConfig"),
         ("funnel", "FunnelConfig"),
         ("fastspeech2_conformer", "FastSpeech2ConformerConfig"),
         ("gemma", "GemmaConfig"),
