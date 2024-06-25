@@ -262,7 +262,7 @@ class ViTModelIntegrationTest(unittest.TestCase):
     @slow
     def test_accelerate_inference(self):
         image_processor = ViTHybridImageProcessor.from_pretrained("google/vit-hybrid-base-bit-384")
-        model = ViTHybridForImageClassification.from_pretrained("google/vit-hybrid-base-bit-384", device_map="auto")
+        model = ViTHybridForImageClassification.from_pretrained("google/vit-hybrid-base-bit-384")
 
         image = prepare_img()
 

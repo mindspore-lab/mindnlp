@@ -22,4 +22,3 @@ __all__ = []
 __all__.extend(configuration_vit_hybrid.__all__)
 __all__.extend(image_processing_vit_hybrid.__all__)
 __all__.extend(modeling_vit_hybrid.__all__)
-

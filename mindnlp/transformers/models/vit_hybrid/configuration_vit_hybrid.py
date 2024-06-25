@@ -15,7 +15,7 @@
 """ViT Hybrid model configuration"""
 
 from ...configuration_utils import PretrainedConfig
-from mindnlp.utils import logging
+from ....utils import logging
 from ..auto import CONFIG_MAPPING
 from ..bit import BitConfig
 

@@ -25,7 +25,7 @@ from ...image_transforms import (
     resize,
     to_channel_dimension_format,
 )
-from mindnlp.configs import OPENAI_CLIP_MEAN, OPENAI_CLIP_STD
+from ....configs import OPENAI_CLIP_MEAN, OPENAI_CLIP_STD
 from ...image_utils import (
     ChannelDimension,
     ImageInput,
