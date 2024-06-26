@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+"""VilT model."""
 from . import configuration_vilt, feature_extraction_vilt, image_processing_vilt, modeling_vilt, processing_vilt
 
 from .processing_vilt import *
