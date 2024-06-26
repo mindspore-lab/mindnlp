@@ -116,7 +116,7 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         # ("vilt", "ViltImageProcessor"),
         ("vipllava", "CLIPImageProcessor"),
         ("vit", "ViTImageProcessor"),
-        # ("vit_hybrid", "ViTHybridImageProcessor"),
+        ("vit_hybrid", "ViTHybridImageProcessor"),
         # ("vit_mae", "ViTImageProcessor"),
         # ("vit_msn", "ViTImageProcessor"),
         # ("vitmatte", "VitMatteImageProcessor"),
