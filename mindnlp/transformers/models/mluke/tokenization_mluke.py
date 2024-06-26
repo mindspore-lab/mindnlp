@@ -40,7 +40,9 @@ from ...tokenization_utils_base import (
 )
 # from ...utils import add_end_docstrings, is_tf_tensor, is_torch_tensor, logging
 
-
+__all__=[
+    'MLukeTokenizer'
+]
 logger = logging.get_logger(__name__)
 
 EntitySpan = Tuple[int, int]
@@ -382,7 +384,7 @@ class MLukeTokenizer(PreTrainedTokenizer):
         self.sp_model = spm.SentencePieceProcessor(**self.sp_model_kwargs)
         self.sp_model.LoadFromSerializedProto(self.sp_model_proto)
 
-    @add_end_docstrings(ENCODE_KWARGS_DOCSTRING, ENCODE_PLUS_ADDITIONAL_KWARGS_DOCSTRING)
+    # @add_end_docstrings(ENCODE_KWARGS_DOCSTRING, ENCODE_PLUS_ADDITIONAL_KWARGS_DOCSTRING)
     # Copied from transformers.models.luke.tokenization_luke.LukeTokenizer.__call__
     def __call__(
         self,
@@ -891,7 +893,7 @@ class MLukeTokenizer(PreTrainedTokenizer):
             second_entity_token_spans,
         )
 
-    @add_end_docstrings(ENCODE_KWARGS_DOCSTRING, ENCODE_PLUS_ADDITIONAL_KWARGS_DOCSTRING)
+    # @add_end_docstrings(ENCODE_KWARGS_DOCSTRING, ENCODE_PLUS_ADDITIONAL_KWARGS_DOCSTRING)
     # Copied from transformers.models.luke.tokenization_luke.LukeTokenizer._batch_prepare_for_model
     def _batch_prepare_for_model(
         self,
@@ -974,7 +976,7 @@ class MLukeTokenizer(PreTrainedTokenizer):
 
         return batch_outputs
 
-    @add_end_docstrings(ENCODE_KWARGS_DOCSTRING, ENCODE_PLUS_ADDITIONAL_KWARGS_DOCSTRING)
+    # @add_end_docstrings(ENCODE_KWARGS_DOCSTRING, ENCODE_PLUS_ADDITIONAL_KWARGS_DOCSTRING)
     # Copied from transformers.models.luke.tokenization_luke.LukeTokenizer.prepare_for_model
     def prepare_for_model(
         self,

@@ -17,8 +17,8 @@
 import unittest
 from typing import Tuple
 
-from transformers.models.mluke.tokenization_mluke import MLukeTokenizer
-from transformers.testing_utils import get_tests_dir, require_torch, slow
+from mindnlp.transformers.models.mluke.tokenization_mluke import MLukeTokenizer
+from mindnlp.utils.testing_utils import get_tests_dir, require_mindspore, slow
 
 from ...test_tokenization_common import TokenizerTesterMixin
 
@@ -202,7 +202,7 @@ class MLukeTokenizerTest(TokenizerTesterMixin, unittest.TestCase):
 
 
 @slow
-@require_torch
+# @require_torch
 class MLukeTokenizerIntegrationTests(unittest.TestCase):
     tokenizer_class = MLukeTokenizer
     from_pretrained_kwargs = {"cls_token": "<s>"}
@@ -329,7 +329,7 @@ class MLukeTokenizerIntegrationTests(unittest.TestCase):
             padding="max_length",
             max_length=30,
             max_entity_length=16,
-            return_tensors="pt",
+            return_tensors="np",
         )
 
         # test words
@@ -480,7 +480,7 @@ class MLukeTokenizerIntegrationTests(unittest.TestCase):
             padding="max_length",
             max_length=40,
             max_entity_length=16,
-            return_tensors="pt",
+            return_tensors="np",
         )
 
         # test words
@@ -535,7 +535,7 @@ class MLukeTokenizerIntegrationTests(unittest.TestCase):
         span = (15, 34)
 
         encoding = tokenizer(
-            sentence, entity_spans=[span], return_token_type_ids=True, padding="max_length", return_tensors="pt"
+            sentence, entity_spans=[span], return_token_type_ids=True, padding="max_length", return_tensors="np"
         )
 
         # test words
@@ -601,7 +601,7 @@ class MLukeTokenizerIntegrationTests(unittest.TestCase):
             return_token_type_ids=True,
             padding="max_length",
             max_length=30,
-            return_tensors="pt",
+            return_tensors="np",
         )
 
         # test words
@@ -659,7 +659,7 @@ class MLukeTokenizerIntegrationTests(unittest.TestCase):
             padding="max_length",
             max_length=30,
             max_entity_length=16,
-            return_tensors="pt",
+            return_tensors="np",
         )
 
         # test words
