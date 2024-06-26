@@ -36,7 +36,6 @@ if is_mindspore_available():
 
     from mindnlp.transformers import AutoTokenizer, CohereForCausalLM, CohereModel
 
-
 # Copied from transformers.tests.models.llama.LlamaModelTester with Llama->Cohere
 class CohereModelTester:
     def __init__(

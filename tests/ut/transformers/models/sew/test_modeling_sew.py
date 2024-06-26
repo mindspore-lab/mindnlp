@@ -44,7 +44,6 @@ if is_mindspore_available():
     import mindspore
     from mindspore import ops
 
-    mindspore.set_context(pynative_synchronize=True)
     from mindnlp.transformers import (
         SEWForCTC,
         SEWForSequenceClassification,

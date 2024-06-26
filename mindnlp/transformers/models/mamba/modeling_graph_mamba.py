@@ -457,7 +457,7 @@ class MSMambaPreTrainedModel(PreTrainedModel):
             for name, p in cell.parameters_and_names():
                 if name in ["out_proj.weight"]:
                     # Special Scaled Initialization --> There are 2 Layer Norms per Transformer Block
-                    # Following Pytorch init, except scale by 1/sqrt(2 * n_layer)
+                    # Following MindSpore init, except scale by 1/sqrt(2 * n_layer)
                     # We need to reinit p since this code could be called multiple times
                     # Having just p *= scale would repeatedly scale it down
                     p.set_data(initializer(HeUniform(math.sqrt(5)), p.shape, p.dtype) / math.sqrt(self.config.num_layers))

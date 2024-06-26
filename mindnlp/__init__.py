@@ -27,4 +27,4 @@ from mindnlp import transformers
 from mindnlp import dataset
 from mindnlp import evaluate
 
-__all__ = ['ms_jit']
+__all__ = ['ms_jit', 'transformers']

@@ -19,7 +19,7 @@ bash download.sh $model_size $TARGET_FOLDER
 
 ## Convert weight
 
-Convert weights from Pytorch to MindSpore.
+Convert weights from MindSpore to MindSpore.
 
 ```
 python convert.py --ckpt_path $TARGET_FOLDER/model_size

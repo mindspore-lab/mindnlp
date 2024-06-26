@@ -23,7 +23,6 @@ from mindspore import ops, nn, Parameter
 from mindspore.common.initializer import initializer, Uniform, Normal, HeNormal, XavierUniform
 from mindnlp.modules.functional.graph_func import finfo
 from mindnlp.modules.functional.weight_norm import weight_norm, remove_weight_norm
-#from mindspore import context ; context.set_context(pynative_synchronize=True)
 
 from ...modeling_outputs import BaseModelOutput
 from ...modeling_utils import PreTrainedModel
