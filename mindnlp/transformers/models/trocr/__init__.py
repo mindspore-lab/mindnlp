@@ -14,7 +14,7 @@
 # limitations under the License.
 """TrOCR Model init."""
 
-from . import configuration_trocr, modeling_trocr
+from . import configuration_trocr, modeling_trocr, processing_trocr
 from .configuration_trocr import *
 from .modeling_trocr import *
 from .processing_trocr import *

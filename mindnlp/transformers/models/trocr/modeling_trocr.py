@@ -45,10 +45,10 @@ class TrOCRLearnedPositionalEmbedding(nn.Embedding):
         self.offset = 2
         super().__init__(num_embeddings + self.offset, embedding_dim)
 
-    def construct(self, input_ids: mindspore.Tensor, past_key_values_length: int = 0):
+    def construct(self, ids: mindspore.Tensor, past_key_values_length: int = 0):
         """`input_ids' shape is expected to be [bsz x seqlen]."""
 
-        bsz, seq_len = input_ids.shape[:2]
+        bsz, seq_len = ids.shape[:2]
         positions = ops.arange(
             past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
         ).expand(bsz, -1)
@@ -65,8 +65,8 @@ class TrOCRScaledWordEmbedding(nn.Embedding):
         super().__init__(num_embeddings, embedding_dim, padding_idx=padding_idx)
         self.embed_scale = embed_scale
 
-    def construct(self, input_ids: mindspore.Tensor):
-        return super().construct(input_ids) * self.embed_scale
+    def construct(self, ids: mindspore.Tensor):
+        return super().construct(ids) * self.embed_scale
 
 
 class TrOCRSinusoidalPositionalEmbedding(nn.Cell):
@@ -150,7 +150,7 @@ class TrOCRAttention(nn.Cell):
         self.num_heads = num_heads
         self.dropout = dropout
         self.head_dim = embed_dim // num_heads
-        if not (self.head_dim * num_heads == self.embed_dim):
+        if not self.head_dim * num_heads == self.embed_dim:
             raise ValueError(
                 f"embed_dim must be divisible by num_heads (got `embed_dim`: {self.embed_dim} and `num_heads`:"
                 f" {num_heads})."

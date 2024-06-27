@@ -14,27 +14,28 @@
 # limitations under the License.
 """TrOCR model configuration"""
 
-from ...configuration_utils import PretrainedConfig
 from mindnlp.utils import logging
+from ...configuration_utils import PretrainedConfig
 
 logger = logging.get_logger(__name__)
 
 
 class TrOCRConfig(PretrainedConfig):
     r"""
-    This is the configuration class to store the configuration of a [`TrOCRForCausalLM`]. It is used to instantiate an
-    TrOCR model according to the specified arguments, defining the model architecture. Instantiating a configuration
-    with the defaults will yield a similar configuration to that of the TrOCR
-    [microsoft/trocr-base-handwritten](https://huggingface.co/microsoft/trocr-base-handwritten) architecture.
+    This is the configuration class to store the configuration of a [`TrOCRForCausalLM`].
+    It is used to instantiate anTrOCR model according to the specified arguments, defining
+    the model architecture. Instantiating a configuration with the defaults will yield a
+    similar configuration to that of the TrOCR [microsoft/trocr-base-handwritten]
+    (https://huggingface.co/microsoft/trocr-base-handwritten) architecture.
 
-    Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
-    documentation from [`PretrainedConfig`] for more information.
+    Configuration objects inherit from [`PretrainedConfig`] and can be used to control the
+    model outputs. Read the documentation from [`PretrainedConfig`] for more information.
 
 
     Args:
         vocab_size (`int`, *optional*, defaults to 50265):
-            Vocabulary size of the TrOCR model. Defines the number of different tokens that can be represented by the
-            `inputs_ids` passed when calling [`TrOCRForCausalLM`].
+            Vocabulary size of the TrOCR model. Defines the number of different tokens that
+             can be represented by the `inputs_ids` passed when calling [`TrOCRForCausalLM`].
         d_model (`int`, *optional*, defaults to 1024):
             Dimensionality of the layers and the pooler layer.
         decoder_layers (`int`, *optional*, defaults to 12):
