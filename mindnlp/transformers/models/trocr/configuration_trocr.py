@@ -45,28 +45,36 @@ class TrOCRConfig(PretrainedConfig):
         decoder_ffn_dim (`int`, *optional*, defaults to 4096):
             Dimensionality of the "intermediate" (often named feed-forward) layer in decoder.
         activation_function (`str` or `function`, *optional*, defaults to `"gelu"`):
-            The non-linear activation function (function or string) in the pooler. If string, `"gelu"`, `"relu"`,
+            The non-linear activation function (function or string)
+            in the pooler. If string, `"gelu"`, `"relu"`,
             `"silu"` and `"gelu_new"` are supported.
         max_position_embeddings (`int`, *optional*, defaults to 512):
-            The maximum sequence length that this model might ever be used with. Typically set this to something large
+            The maximum sequence length that this model might ever
+            be used with. Typically set this to something large
             just in case (e.g., 512 or 1024 or 2048).
         dropout (`float`, *optional*, defaults to 0.1):
-            The dropout probability for all fully connected layers in the embeddings, and pooler.
+            The dropout probability for all fully connected layers
+             in the embeddings, and pooler.
         attention_dropout (`float`, *optional*, defaults to 0.0):
             The dropout ratio for the attention probabilities.
         activation_dropout (`float`, *optional*, defaults to 0.0):
-            The dropout ratio for activations inside the fully connected layer.
+            The dropout ratio for activations inside the fully
+            connected layer.
         init_std (`float`, *optional*, defaults to 0.02):
-            The standard deviation of the truncated_normal_initializer for initializing all weight matrices.
+            The standard deviation of the truncated_normal_initializer
+             for initializing all weight matrices.
         decoder_layerdrop (`float`, *optional*, defaults to 0.0):
-            The LayerDrop probability for the decoder. See the [LayerDrop paper](see https://arxiv.org/abs/1909.11556)
+            The LayerDrop probability for the decoder. See
+            the [LayerDrop paper](see https://arxiv.org/abs/1909.11556)
             for more details.
         use_cache (`bool`, *optional*, defaults to `True`):
-            Whether or not the model should return the last key/values attentions (not used by all models).
+            Whether or not the model should return the last
+            key/values attentions (not used by all models).
         scale_embedding (`bool`, *optional*, defaults to `False`):
             Whether or not to scale the word embeddings by sqrt(d_model).
         use_learned_position_embeddings (`bool`, *optional*, defaults to `True`):
-            Whether or not to use learned position embeddings. If not, sinusoidal position embeddings will be used.
+            Whether or not to use learned position embeddings.
+            If not, sinusoidal position embeddings will be used.
         layernorm_embedding (`bool`, *optional*, defaults to `True`):
             Whether or not to use a layernorm after the word + position embeddings.
     """
