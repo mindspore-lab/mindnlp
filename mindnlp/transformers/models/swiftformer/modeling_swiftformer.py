@@ -60,10 +60,26 @@ class SwiftFormerPatchEmbedding(nn.Cell):
         in_chs = config.num_channels
         out_chs = config.embed_dims[0]
         self.patch_embedding = nn.SequentialCell(
-            nn.Conv2d(in_chs, out_chs // 2, kernel_size=3, stride=2, padding=1, pad_mode='pad'),
+            nn.Conv2d(
+                in_chs,
+                out_chs // 2,
+                kernel_size=3,
+                stride=2,
+                padding=1,
+                pad_mode="pad",
+                has_bias=True,
+            ),
             nn.BatchNorm2d(out_chs // 2, eps=config.batch_norm_eps),
             nn.ReLU(),
-            nn.Conv2d(out_chs // 2, out_chs, kernel_size=3, stride=2, padding=1, pad_mode='pad'),
+            nn.Conv2d(
+                out_chs // 2,
+                out_chs,
+                kernel_size=3,
+                stride=2,
+                padding=1,
+                pad_mode="pad",
+                has_bias=True,
+            ),
             nn.BatchNorm2d(out_chs, eps=config.batch_norm_eps),
             nn.ReLU(),
         )
@@ -73,7 +89,9 @@ class SwiftFormerPatchEmbedding(nn.Cell):
 
 
 # Copied from transformers.models.beit.modeling_beit.drop_path
-def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = False) -> mindspore.Tensor:
+def drop_path(
+    input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = False
+) -> mindspore.Tensor:
     """
     Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
 
@@ -86,7 +104,9 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
     if drop_prob == 0.0 or not training:
         return input
     keep_prob = 1 - drop_prob
-    shape = (input.shape[0],) + (1,) * (input.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
+    shape = (input.shape[0],) + (1,) * (
+        input.ndim - 1
+    )  # work with diff dim tensors, not just 2D ConvNets
     random_tensor = keep_prob + ops.rand(shape, dtype=input.dtype)
     random_tensor.floor_()  # binarize
     output = input.div(keep_prob) * random_tensor
@@ -127,14 +147,32 @@ class SwiftFormerEmbeddings(nn.Cell):
         in_chans = embed_dims[index]
         embed_dim = embed_dims[index + 1]
 
-        patch_size = patch_size if isinstance(patch_size, collections.abc.Iterable) else (patch_size, patch_size)
-        stride = stride if isinstance(stride, collections.abc.Iterable) else (stride, stride)
-        padding = padding if isinstance(padding, collections.abc.Iterable) else (padding, padding)
+        patch_size = (
+            patch_size
+            if isinstance(patch_size, collections.abc.Iterable)
+            else (patch_size, patch_size)
+        )
+        stride = (
+            stride if isinstance(stride, collections.abc.Iterable) else (stride, stride)
+        )
+        padding = (
+            padding
+            if isinstance(padding, collections.abc.Iterable)
+            else (padding, padding)
+        )
 
         if len(padding) == 2:
             padding = (padding[0], padding[0], padding[1], padding[1])
 
-        self.proj = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=stride, padding=padding, pad_mode='pad')
+        self.proj = nn.Conv2d(
+            in_chans,
+            embed_dim,
+            kernel_size=patch_size,
+            stride=stride,
+            padding=padding,
+            pad_mode="pad",
+            has_bias=True,
+        )
         self.norm = nn.BatchNorm2d(embed_dim, eps=config.batch_norm_eps)
 
     def construct(self, x):
@@ -156,13 +194,21 @@ class SwiftFormerConvEncoder(nn.Cell):
         super().__init__()
         hidden_dim = int(config.mlp_ratio * dim)
 
-        self.depth_wise_conv = nn.Conv2d(dim, dim, kernel_size=3, padding=1, group=dim, pad_mode='pad')
+        self.depth_wise_conv = nn.Conv2d(
+            dim, dim, kernel_size=3, padding=1, group=dim, pad_mode="pad", has_bias=True
+        )
         self.norm = nn.BatchNorm2d(dim, eps=config.batch_norm_eps)
-        self.point_wise_conv1 = nn.Conv2d(dim, hidden_dim, kernel_size=1, pad_mode='pad')
+        self.point_wise_conv1 = nn.Conv2d(
+            dim, hidden_dim, kernel_size=1, pad_mode="pad", has_bias=True
+        )
         self.act = nn.GELU()
-        self.point_wise_conv2 = nn.Conv2d(hidden_dim, dim, kernel_size=1, pad_mode='pad')
+        self.point_wise_conv2 = nn.Conv2d(
+            hidden_dim, dim, kernel_size=1, pad_mode="pad", has_bias=True
+        )
         self.drop_path = nn.Dropout(p=config.drop_conv_encoder_rate)
-        self.layer_scale = mindspore.Parameter(ops.ones(dim).unsqueeze(-1).unsqueeze(-1), requires_grad=True)
+        self.layer_scale = mindspore.Parameter(
+            ops.ones(dim).unsqueeze(-1).unsqueeze(-1), requires_grad=True
+        )
 
     def construct(self, x):
         input = x
@@ -188,14 +234,18 @@ class SwiftFormerMlp(nn.Cell):
         super().__init__()
         hidden_features = int(in_features * config.mlp_ratio)
         self.norm1 = nn.BatchNorm2d(in_features, eps=config.batch_norm_eps)
-        self.fc1 = nn.Conv2d(in_features, hidden_features, 1, pad_mode='pad',has_bias=True)
+        self.fc1 = nn.Conv2d(
+            in_features, hidden_features, 1, pad_mode="pad", has_bias=True
+        )
         act_layer = ACT2CLS["gelu_new"]
         self.act = act_layer()
         # if isinstance(config.hidden_act, str):
         #     self.act_layer = ACT2CLS[config.hidden_act]
         # else:
         #     self.act_layer = config.hidden_act
-        self.fc2 = nn.Conv2d(hidden_features, in_features, 1, pad_mode='pad', has_bias=True)
+        self.fc2 = nn.Conv2d(
+            hidden_features, in_features, 1, pad_mode="pad", has_bias=True
+        )
         self.drop = nn.Dropout(p=config.drop_mlp_rate)
 
     def construct(self, x):
@@ -237,7 +287,7 @@ class SwiftFormerEfficientAdditiveAttention(nn.Cell):
 
         query_weight = query @ self.w_g
         scaled_query_weight = query_weight * self.scale_factor
-        scaled_query_weight = ops.softmax(scaled_query_weight,axis=-1)
+        scaled_query_weight = ops.softmax(scaled_query_weight, axis=-1)
 
         global_queries = ops.sum(scaled_query_weight * query, dim=1)
         global_queries = global_queries.unsqueeze(1).repeat(1, key.shape[1], 1)
@@ -260,13 +310,21 @@ class SwiftFormerLocalRepresentation(nn.Cell):
     def __init__(self, config: SwiftFormerConfig, dim: int):
         super().__init__()
 
-        self.depth_wise_conv = nn.Conv2d(dim, dim, kernel_size=3, padding=1, group=dim, pad_mode='pad', has_bias=True)
+        self.depth_wise_conv = nn.Conv2d(
+            dim, dim, kernel_size=3, padding=1, group=dim, pad_mode="pad", has_bias=True
+        )
         self.norm = nn.BatchNorm2d(dim, eps=config.batch_norm_eps)
-        self.point_wise_conv1 = nn.Conv2d(dim, dim, kernel_size=1, pad_mode='pad', has_bias=True)
+        self.point_wise_conv1 = nn.Conv2d(
+            dim, dim, kernel_size=1, pad_mode="pad", has_bias=True
+        )
         self.act = nn.GELU()
-        self.point_wise_conv2 = nn.Conv2d(dim, dim, kernel_size=1, pad_mode='pad', has_bias=True)
+        self.point_wise_conv2 = nn.Conv2d(
+            dim, dim, kernel_size=1, pad_mode="pad", has_bias=True
+        )
         self.drop_path = nn.Identity()
-        self.layer_scale = mindspore.Parameter(ops.ones(dim).unsqueeze(-1).unsqueeze(-1), requires_grad=True)
+        self.layer_scale = mindspore.Parameter(
+            ops.ones(dim).unsqueeze(-1).unsqueeze(-1), requires_grad=True
+        )
 
     def construct(self, x):
         input = x
@@ -289,7 +347,9 @@ class SwiftFormerEncoderBlock(nn.Cell):
     Output: tensor of shape `[batch_size, channels,height, width]`
     """
 
-    def __init__(self, config: SwiftFormerConfig, dim: int, drop_path: float = 0.0) -> None:
+    def __init__(
+        self, config: SwiftFormerConfig, dim: int, drop_path: float = 0.0
+    ) -> None:
         super().__init__()
 
         layer_scale_init_value = config.layer_scale_init_value
@@ -298,20 +358,26 @@ class SwiftFormerEncoderBlock(nn.Cell):
         self.local_representation = SwiftFormerLocalRepresentation(config, dim=dim)
         self.attn = SwiftFormerEfficientAdditiveAttention(config, dim=dim)
         self.linear = SwiftFormerMlp(config, in_features=dim)
-        self.drop_path = SwiftFormerDropPath(config) if drop_path > 0.0 else nn.Identity()
+        self.drop_path = (
+            SwiftFormerDropPath(config) if drop_path > 0.0 else nn.Identity()
+        )
         self.use_layer_scale = use_layer_scale
         if use_layer_scale:
             self.layer_scale_1 = mindspore.Parameter(
-                layer_scale_init_value * ops.ones(dim).unsqueeze(-1).unsqueeze(-1), requires_grad=True
+                layer_scale_init_value * ops.ones(dim).unsqueeze(-1).unsqueeze(-1),
+                requires_grad=True,
             )
             self.layer_scale_2 = mindspore.Parameter(
-                layer_scale_init_value * ops.ones(dim).unsqueeze(-1).unsqueeze(-1), requires_grad=True
+                layer_scale_init_value * ops.ones(dim).unsqueeze(-1).unsqueeze(-1),
+                requires_grad=True,
             )
 
     def construct(self, x):
         x = self.local_representation(x)
         batch_size, channels, height, width = x.shape
-        res = self.attn(x.permute(0, 2, 3, 1).reshape(batch_size, height * width, channels))
+        res = self.attn(
+            x.permute(0, 2, 3, 1).reshape(batch_size, height * width, channels)
+        )
         res = res.reshape(batch_size, height, width, channels).permute(0, 3, 1, 2)
         if self.use_layer_scale:
             x = x + self.drop_path(self.layer_scale_1 * res)
@@ -341,10 +407,16 @@ class SwiftFormerStage(nn.Cell):
 
         blocks = []
         for block_idx in range(depth):
-            block_dpr = config.drop_path_rate * (block_idx + sum(layer_depths[:index])) / (sum(layer_depths) - 1)
+            block_dpr = (
+                config.drop_path_rate
+                * (block_idx + sum(layer_depths[:index]))
+                / (sum(layer_depths) - 1)
+            )
 
             if depth - block_idx <= 1:
-                blocks.append(SwiftFormerEncoderBlock(config, dim=dim, drop_path=block_dpr))
+                blocks.append(
+                    SwiftFormerEncoderBlock(config, dim=dim, drop_path=block_dpr)
+                )
             else:
                 blocks.append(SwiftFormerConvEncoder(config, dim=dim))
 
@@ -386,9 +458,13 @@ class SwiftFormerEncoder(nn.Cell):
         return_dict: Optional[bool] = None,
     ) -> Union[tuple, BaseModelOutputWithNoAttention]:
         output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         all_hidden_states = (hidden_states,) if output_hidden_states else None
 
@@ -421,12 +497,26 @@ class SwiftFormerPreTrainedModel(PreTrainedModel):
     def _init_weights(self, module: Union[nn.Dense, nn.Conv2d, nn.LayerNorm]) -> None:
         """Initialize the weights"""
         if isinstance(module, (nn.Conv2d, nn.Dense)):
-            module.weight.set_data(initializer(TruncatedNormal(sigma=0.02), module.weight.shape, module.weight.dtype))
+            module.weight.set_data(
+                initializer(
+                    TruncatedNormal(sigma=0.02),
+                    module.weight.shape,
+                    module.weight.dtype,
+                )
+            )
             if module.bias is not None:
-                module.bias.set_data(initializer(Constant(value=0), module.bias.shape, module.bias.dtype))
+                module.bias.set_data(
+                    initializer(Constant(value=0), module.bias.shape, module.bias.dtype)
+                )
         elif isinstance(module, (nn.LayerNorm)):
-            module.bias.set_data(initializer(Constant(value=0), module.bias.shape, module.bias.dtype))
-            module.weight.set_data(initializer(Constant(value=1.0), module.weight.shape, module.weight.dtype))
+            module.bias.set_data(
+                initializer(Constant(value=0), module.bias.shape, module.bias.dtype)
+            )
+            module.weight.set_data(
+                initializer(
+                    Constant(value=1.0), module.weight.shape, module.weight.dtype
+                )
+            )
 
 
 SWIFTFORMER_START_DOCSTRING = r"""
@@ -452,7 +542,6 @@ SWIFTFORMER_INPUTS_DOCSTRING = r"""
 """
 
 
-
 class SwiftFormerModel(SwiftFormerPreTrainedModel):
     def __init__(self, config: SwiftFormerConfig):
         super().__init__(config)
@@ -472,9 +561,13 @@ class SwiftFormerModel(SwiftFormerPreTrainedModel):
     ) -> Union[Tuple, BaseModelOutputWithNoAttention]:
 
         output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         if pixel_values is None:
             raise ValueError("You have to specify pixel_values")
@@ -506,8 +599,16 @@ class SwiftFormerForImageClassification(SwiftFormerPreTrainedModel):
 
         # Classifier head
         self.norm = nn.BatchNorm2d(embed_dims[-1], eps=config.batch_norm_eps)
-        self.head = nn.Dense(embed_dims[-1], self.num_labels) if self.num_labels > 0 else nn.Identity()
-        self.dist_head = nn.Dense(embed_dims[-1], self.num_labels) if self.num_labels > 0 else nn.Identity()
+        self.head = (
+            nn.Dense(embed_dims[-1], self.num_labels)
+            if self.num_labels > 0
+            else nn.Identity()
+        )
+        self.dist_head = (
+            nn.Dense(embed_dims[-1], self.num_labels)
+            if self.num_labels > 0
+            else nn.Identity()
+        )
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -525,7 +626,9 @@ class SwiftFormerForImageClassification(SwiftFormerPreTrainedModel):
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         # run base model
         outputs = self.swiftformer(
@@ -550,7 +653,10 @@ class SwiftFormerForImageClassification(SwiftFormerPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
+                elif self.num_labels > 1 and labels.dtype in (
+                    mindspore.int64,
+                    mindspore.int32,
+                ):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -561,7 +667,9 @@ class SwiftFormerForImageClassification(SwiftFormerPreTrainedModel):
                 else:
                     loss = ops.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = ops.cross_entropy(
+                    logits.view(-1, self.num_labels), labels.view(-1)
+                )
             elif self.config.problem_type == "multi_label_classification":
                 loss = ops.binary_cross_entropy_with_logits(logits, labels)
 
@@ -575,7 +683,9 @@ class SwiftFormerForImageClassification(SwiftFormerPreTrainedModel):
             hidden_states=outputs.hidden_states,
         )
 
-__all__=["SwiftFormerModel",
-        "SwiftFormerForImageClassification",
-        "SwiftFormerPreTrainedModel",
-    ]
+
+__all__ = [
+    "SwiftFormerModel",
+    "SwiftFormerForImageClassification",
+    "SwiftFormerPreTrainedModel",
+]
