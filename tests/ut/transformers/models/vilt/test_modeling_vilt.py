@@ -613,12 +613,12 @@ class ViltModelIntegrationTest(unittest.TestCase):
         processor = self.default_processor
 
         dataset = load_dataset("hf-internal-testing/fixtures_nlvr2", split="test", trust_remote_code=True)
-        image1 = Image.open(dataset[0]["file"]).convert("RGB")
-        image2 = Image.open(dataset[1]["file"]).convert("RGB")
+        image1 = prepare_img()
+        image2 = prepare_img()
 
         text = (
             "The left image contains twice the number of dogs as the right image, and at least two dogs in total are"
-            " standing."
+            "standing."
         )
         encoding_1 = processor(image1, text, return_tensors="ms")
         encoding_2 = processor(image2, text, return_tensors="ms")
