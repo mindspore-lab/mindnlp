@@ -15,6 +15,7 @@
 """
 Processor class for ViLT.
 """
+# pylint: disable=E1102
 
 import warnings
 from typing import List, Optional, Union
@@ -62,24 +63,24 @@ class ViltProcessor(ProcessorMixin):
         self.current_processor = self.image_processor
 
     def __call__(
-        self,
-        images,
-        text: Union[TextInput, PreTokenizedInput, List[TextInput], List[PreTokenizedInput]] = None,
-        add_special_tokens: bool = True,
-        padding: Union[bool, str, PaddingStrategy] = False,
-        truncation: Union[bool, str, TruncationStrategy] = None,
-        max_length: Optional[int] = None,
-        stride: int = 0,
-        pad_to_multiple_of: Optional[int] = None,
-        return_token_type_ids: Optional[bool] = None,
-        return_attention_mask: Optional[bool] = None,
-        return_overflowing_tokens: bool = False,
-        return_special_tokens_mask: bool = False,
-        return_offsets_mapping: bool = False,
-        return_length: bool = False,
-        verbose: bool = True,
-        return_tensors: Optional[Union[str, TensorType]] = None,
-        **kwargs,
+            self,
+            images,
+            text: Union[TextInput, PreTokenizedInput, List[TextInput], List[PreTokenizedInput]] = None,
+            add_special_tokens: bool = True,
+            padding: Union[bool, str, PaddingStrategy] = False,
+            truncation: Union[bool, str, TruncationStrategy] = None,
+            max_length: Optional[int] = None,
+            stride: int = 0,
+            pad_to_multiple_of: Optional[int] = None,
+            return_token_type_ids: Optional[bool] = None,
+            return_attention_mask: Optional[bool] = None,
+            return_overflowing_tokens: bool = False,
+            return_special_tokens_mask: bool = False,
+            return_offsets_mapping: bool = False,
+            return_length: bool = False,
+            verbose: bool = True,
+            return_tensors: Optional[Union[str, TensorType]] = None,
+            **kwargs,
     ) -> BatchEncoding:
         """
         This method uses [`ViltImageProcessor.__call__`] method to prepare image(s) for the model, and
@@ -106,7 +107,7 @@ class ViltProcessor(ProcessorMixin):
             **kwargs,
         )
         # add pixel_values + pixel_mask
-        encoding_image_processor = self.image_prcessor(images, return_tensors=return_tensors)
+        encoding_image_processor = self.current_processor(images, return_tensors=return_tensors)
         encoding.update(encoding_image_processor)
 
         return encoding
@@ -147,4 +148,7 @@ class ViltProcessor(ProcessorMixin):
         )
         return self.image_processor
 
-__all__ = ["ViltProcessor"]
+
+__all__ = [
+    "ViltProcessor"
+]
