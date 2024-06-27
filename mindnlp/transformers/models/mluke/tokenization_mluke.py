@@ -21,6 +21,7 @@ from collections.abc import Mapping
 from shutil import copyfile
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import mindspore
 import numpy as np
 import sentencepiece as spm
 
@@ -1303,10 +1304,12 @@ class MLukeTokenizer(PreTrainedTokenizer):
                 first_element = required_input[index][0]
         # At this state, if `first_element` is still a list/tuple, it's an empty one so there is nothing to do.
         if not isinstance(first_element, (int, list, tuple)):
-            if is_tf_tensor(first_element):
-                return_tensors = "tf" if return_tensors is None else return_tensors
-            elif is_torch_tensor(first_element):
-                return_tensors = "pt" if return_tensors is None else return_tensors
+            # if is_tf_tensor(first_element):
+            #     return_tensors = "tf" if return_tensors is None else return_tensors
+            # elif is_torch_tensor(first_element):
+            #     return_tensors = "pt" if return_tensors is None else return_tensors
+            if isinstance(first_element, mindspore.Tensor):
+                return_tensors = "np" if return_tensors is None else return_tensors
             elif isinstance(first_element, np.ndarray):
                 return_tensors = "np" if return_tensors is None else return_tensors
             else:
