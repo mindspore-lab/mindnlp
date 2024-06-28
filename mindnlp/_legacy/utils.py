@@ -15,9 +15,11 @@
 """"legacy utils"""
 import numpy as np
 
+import mindspore
 from mindspore import Tensor
 from mindspore.train.serialization import _parse_ckpt_proto, \
     tensor_to_np_type, tensor_to_ms_type
+from packaging import version
 
 try:
     from mindspore.train.serialization import _load_mapparameter as _load_map_parameter
@@ -26,13 +28,19 @@ except: # pylint: disable=bare-except
 
 from mindnlp.utils import logging
 
+is_version_greater_or_equal_2_3 = version.parse(mindspore.__version__) >= version.parse('2.3.0')
+
 logger = logging.get_logger(__name__)
 
 
 def load_checkpoint(ckpt_file_name):
     """redefined load_checkpoint method, not mindspore official version."""
     logger.info("Execute the process of loading checkpoint files.")
-    checkpoint_list = _parse_ckpt_proto(ckpt_file_name, None, None)
+    if is_version_greater_or_equal_2_3:
+        checkpoint_list = _parse_ckpt_proto(ckpt_file_name, None, None, True)
+    else:
+        checkpoint_list = _parse_ckpt_proto(ckpt_file_name, None, None)
+
     parameter_dict = {}
     # try:
     param_data_list = []
