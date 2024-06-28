@@ -28,7 +28,7 @@ except: # pylint: disable=bare-except
 
 from mindnlp.utils import logging
 
-is_version_greater_or_equal_2_3 = version.parse(mindspore.__version__) >= version.parse('2.3.0')
+LESS_MS_2_3 = version.parse(mindspore.__version__) < version.parse('2.3.0')
 
 logger = logging.get_logger(__name__)
 
@@ -36,10 +36,10 @@ logger = logging.get_logger(__name__)
 def load_checkpoint(ckpt_file_name):
     """redefined load_checkpoint method, not mindspore official version."""
     logger.info("Execute the process of loading checkpoint files.")
-    if is_version_greater_or_equal_2_3:
-        checkpoint_list = _parse_ckpt_proto(ckpt_file_name, None, None, True)
-    else:
+    if LESS_MS_2_3:
         checkpoint_list = _parse_ckpt_proto(ckpt_file_name, None, None)
+    else:
+        checkpoint_list = _parse_ckpt_proto(ckpt_file_name, None, None, False)
 
     parameter_dict = {}
     # try:
