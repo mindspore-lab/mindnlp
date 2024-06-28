@@ -69,6 +69,7 @@ from . import (
     detr,
     deit,
     distilbert,
+    donut,
     dpr,
     efficientnet,
     efficientformer,
@@ -245,6 +246,7 @@ from .decision_transformer import *
 from .detr import *
 from .deit import *
 from .distilbert import *
+from .donut import *
 from .dpr import *
 from .efficientnet import *
 from .efficientformer import *
@@ -419,6 +421,7 @@ __all__.extend(deberta_v2.__all__)
 __all__.extend(decision_transformer.__all__)
 __all__.extend(deit.__all__)
 __all__.extend(distilbert.__all__)
+__all__.extend(donut.__all__)
 __all__.extend(detr.__all__)
 __all__.extend(dpr.__all__)
 __all__.extend(efficientnet.__all__)
