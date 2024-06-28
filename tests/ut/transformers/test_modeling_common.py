@@ -463,15 +463,12 @@ class ModelTesterMixin:
                 *get_values(MODEL_FOR_BACKBONE_MAPPING_NAMES),
             ]:
                 continue
-
+            
             model = model_class(config)
             model.set_train()
             inputs = self._prepare_for_class(inputs_dict, model_class, return_labels=True)
-
             def forward(**inputs):
                 outputs = model(**inputs)
-                import pdb
-                pdb.set_trace()
                 loss = outputs.loss
                 return loss
 
