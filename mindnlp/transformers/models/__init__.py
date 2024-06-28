@@ -56,6 +56,7 @@ from . import (
     cogvlm,
     convbert,
     convnext,
+    convnextv2,
     cpm,
     cpmant,
     ctrl,
@@ -82,6 +83,7 @@ from . import (
     chatglm2,
     chatglm3,
     flava,
+    focalnet,
     funnel,
     gemma,
     git,
@@ -112,6 +114,7 @@ from . import (
     marian,
     mask2former,
     mbart,
+    mctct,
     megatron_bert,
     minicpm,
     mistral,
@@ -137,6 +140,7 @@ from . import (
     phi3,
     poolformer,
     pop2piano,
+    qdqbert,
     qwen2,
     qwen2_moe,
     reformer,
@@ -163,6 +167,7 @@ from . import (
     switch_transformers,
     swin2sr,
     t5,
+    tapas,
     time_series_transformer,
     timesformer,
     tinybert,
@@ -172,6 +177,8 @@ from . import (
     vision_text_dual_encoder,
     visual_bert,
     vit,
+    vit_hybrid,
+    vit_msn,
     vitdet,
     wav2vec2,
     wav2vec2_conformer,
@@ -225,6 +232,7 @@ from .cohere import *
 from .cogvlm import *
 from .convbert import *
 from .convnext import *
+from .convnextv2 import *
 from .cpm import *
 from .ctrl import *
 from .cpmant import *
@@ -250,6 +258,7 @@ from .chatglm2 import *
 from .chatglm3 import *
 from .falcon import *
 from .flava import *
+from .focalnet import *
 from .funnel import *
 from .fastspeech2_conformer import *
 from .gemma import *
@@ -281,6 +290,7 @@ from .mamba import *
 from .marian import *
 from .mask2former import *
 from .mbart import *
+from .mctct import *
 from .megatron_bert import *
 from .minicpm import *
 from .mistral import *
@@ -306,6 +316,7 @@ from .phi import *
 from .phi3 import *
 from .poolformer import *
 from .pop2piano import *
+from .qdqbert import *
 from .qwen2 import *
 from .qwen2_moe import *
 from .reformer import *
@@ -333,6 +344,7 @@ from .switch_transformers import *
 from .swin2sr import *
 from .tinybert import *
 from .t5 import *
+from .tapas import *
 from .time_series_transformer import *
 from .timesformer import *
 from .videomae import *
@@ -341,6 +353,8 @@ from .vision_encoder_decoder import *
 from .vision_text_dual_encoder import *
 from .visual_bert import *
 from .vit import *
+from .vit_hybrid import *
+from .vit_msn import *
 from .vitdet import *
 from .whisper import *
 from .wav2vec2 import *
@@ -393,6 +407,7 @@ __all__.extend(cohere.__all__)
 __all__.extend(cogvlm.__all__)
 __all__.extend(convbert.__all__)
 __all__.extend(convnext.__all__)
+__all__.extend(convnextv2.__all__)
 __all__.extend(cpm.__all__)
 __all__.extend(ctrl.__all__)
 __all__.extend(cpmant.__all__)
@@ -416,6 +431,7 @@ __all__.extend(esm.__all__)
 __all__.extend(chatglm.__all__)
 __all__.extend(falcon.__all__)
 __all__.extend(flava.__all__)
+__all__.extend(focalnet.__all__)
 __all__.extend(funnel.__all__)
 __all__.extend(fastspeech2_conformer.__all__)
 __all__.extend(chatglm2.__all__)
@@ -449,6 +465,7 @@ __all__.extend(mamba.__all__)
 __all__.extend(marian.__all__)
 __all__.extend(mask2former.__all__)
 __all__.extend(mbart.__all__)
+__all__.extend(mctct.__all__)
 __all__.extend(megatron_bert.__all__)
 __all__.extend(minicpm.__all__)
 __all__.extend(mistral.__all__)
@@ -474,6 +491,7 @@ __all__.extend(phi.__all__)
 __all__.extend(phi3.__all__)
 __all__.extend(poolformer.__all__)
 __all__.extend(pop2piano.__all__)
+__all__.extend(qdqbert.__all__)
 __all__.extend(qwen2.__all__)
 __all__.extend(qwen2_moe.__all__)
 __all__.extend(reformer.__all__)
@@ -510,6 +528,8 @@ __all__.extend(vision_encoder_decoder.__all__)
 __all__.extend(vision_text_dual_encoder.__all__)
 __all__.extend(visual_bert.__all__)
 __all__.extend(vit.__all__)
+__all__.extend(vit_hybrid.__all__)
+__all__.extend(vit_msn.__all__)
 __all__.extend(vitdet.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)

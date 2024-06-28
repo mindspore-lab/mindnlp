@@ -65,7 +65,7 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("efficientformer", "EfficientFormerImageProcessor"),
         ("efficientnet", "EfficientNetImageProcessor"),
         ("flava", "FlavaImageProcessor"),
-        # ("focalnet", "BitImageProcessor"),
+        ("focalnet", "BitImageProcessor"),
         # ("fuyu", "FuyuImageProcessor"),
         ("git", "CLIPImageProcessor"),
         # ("glpn", "GLPNImageProcessor"),
@@ -116,7 +116,7 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         # ("vilt", "ViltImageProcessor"),
         ("vipllava", "CLIPImageProcessor"),
         ("vit", "ViTImageProcessor"),
-        # ("vit_hybrid", "ViTHybridImageProcessor"),
+        ("vit_hybrid", "ViTHybridImageProcessor"),
         # ("vit_mae", "ViTImageProcessor"),
         # ("vit_msn", "ViTImageProcessor"),
         # ("vitmatte", "VitMatteImageProcessor"),
@@ -133,10 +133,10 @@ def image_processor_class_from_name(class_name: str):
     Args:
         class_name (str): The name of the image processor class to retrieve.
             It is used to locate and import the corresponding class based on the provided name.
-    
+
     Returns:
         None: If the class with the given name is not found, None is returned.
-    
+
     Raises:
         AttributeError: If an attribute error occurs while attempting to retrieve the class from the imported module.
         ImportError: If an import error occurs while attempting to import the module.
@@ -273,13 +273,13 @@ class AutoImageProcessor:
     def __init__(self):
         """
         Initializes an instance of AutoImageProcessor.
-        
+
         Args:
             self: The object itself.
-            
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             EnvironmentError: Raised when attempting to directly instantiate an AutoImageProcessor object. AutoImageProcessor is designed to be instantiated using the
 `AutoImageProcessor.from_pretrained(pretrained_model_name_or_path)` method.
