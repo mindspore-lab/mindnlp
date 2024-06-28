@@ -56,6 +56,7 @@ from . import (
     cogvlm,
     convbert,
     convnext,
+    convnextv2,
     cpm,
     cpmant,
     ctrl,
@@ -177,6 +178,7 @@ from . import (
     vision_text_dual_encoder,
     visual_bert,
     vit,
+    vit_hybrid,
     vit_msn,
     vitdet,
     wav2vec2,
@@ -231,6 +233,7 @@ from .cohere import *
 from .cogvlm import *
 from .convbert import *
 from .convnext import *
+from .convnextv2 import *
 from .cpm import *
 from .ctrl import *
 from .cpmant import *
@@ -352,6 +355,7 @@ from .vision_encoder_decoder import *
 from .vision_text_dual_encoder import *
 from .visual_bert import *
 from .vit import *
+from .vit_hybrid import *
 from .vit_msn import *
 from .vitdet import *
 from .whisper import *
@@ -405,6 +409,7 @@ __all__.extend(cohere.__all__)
 __all__.extend(cogvlm.__all__)
 __all__.extend(convbert.__all__)
 __all__.extend(convnext.__all__)
+__all__.extend(convnextv2.__all__)
 __all__.extend(cpm.__all__)
 __all__.extend(ctrl.__all__)
 __all__.extend(cpmant.__all__)
@@ -526,6 +531,7 @@ __all__.extend(vision_encoder_decoder.__all__)
 __all__.extend(vision_text_dual_encoder.__all__)
 __all__.extend(visual_bert.__all__)
 __all__.extend(vit.__all__)
+__all__.extend(vit_hybrid.__all__)
 __all__.extend(vit_msn.__all__)
 __all__.extend(vitdet.__all__)
 __all__.extend(whisper.__all__)
