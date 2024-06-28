@@ -205,7 +205,6 @@ class DonutSwinEmbeddings(nn.Cell):
         _, num_channels, height, width = pixel_values.shape
         embeddings, output_dimensions = self.patch_embeddings(pixel_values)
         embeddings = self.norm(embeddings)
-        # TODO
         batch_size, seq_len, _ = embeddings.shape
 
         if bool_masked_pos is not None:
@@ -392,8 +391,6 @@ class DonutSwinSelfAttention(nn.Cell):
         relative_coords[:, :, 1] += self.window_size[1] - 1
         relative_coords[:, :, 0] *= 2 * self.window_size[1] - 1
         relative_position_index = relative_coords.sum(-1)
-        #TODO
-        # self.register_buffer("relative_position_index", relative_position_index)
         self.relative_position_index = relative_position_index
 
         self.query = nn.Dense(self.all_head_size, self.all_head_size, has_bias=config.qkv_bias)
@@ -565,10 +562,6 @@ class DonutSwinLayer(nn.Cell):
         if min(input_resolution) <= self.window_size:
             # if window size is larger than input resolution, we don't partition windows
             self.shift_size = 0
-            #TODO
-            # self.window_size = (
-            #     torch.min(torch.tensor(input_resolution)) if torch.jit.is_tracing() else min(input_resolution)
-            # )
             self.window_size = min(input_resolution)
 
     def get_attn_mask(self, height, width, dtype):
@@ -632,8 +625,6 @@ class DonutSwinLayer(nn.Cell):
         _, height_pad, width_pad, _ = hidden_states.shape
         # cyclic shift
         if self.shift_size > 0:
-            #TODO
-            # shifted_hidden_states = torch.roll(hidden_states, shifts=(-self.shift_size, -self.shift_size), dims=(1, 2))
             shifted_hidden_states = ms.Tensor(ms.numpy.roll(hidden_states, shift=(-self.shift_size, -self.shift_size), axis=(1, 2)))
         else:
             shifted_hidden_states = hidden_states
