@@ -29,13 +29,7 @@ import numpy as np
 import pandas as pd
 
 from ...tokenization_utils import PreTrainedTokenizer, _is_control, _is_punctuation, _is_whitespace
-from ...tokenization_utils_base import (
-    VERY_LARGE_INTEGER,
-    BatchEncoding,
-    EncodedInput,
-    PreTokenizedInput,
-    TextInput,
-)
+from ...tokenization_utils_base import (VERY_LARGE_INTEGER,BatchEncoding,EncodedInput,PreTokenizedInput,TextInput,)
 from ....utils import ExplicitEnum, PaddingStrategy, TensorType, logging
 
 
@@ -107,7 +101,6 @@ TAPAS_ENCODE_PLUS_ADDITIONAL_KWARGS_DOCSTRING = r"""
                 Whether or not to encode the sequences with the special tokens relative to their model.
             padding (`bool`, `str` or [`~utils.PaddingStrategy`], *optional*, defaults to `False`):
                 Activates and controls padding. Accepts the following values:
-
                 - `True` or `'longest'`: Pad to the longest sequence in the batch (or no padding if only a single
                   sequence if provided).
                 - `'max_length'`: Pad to a maximum length specified with the argument `max_length` or to the maximum
@@ -116,7 +109,6 @@ TAPAS_ENCODE_PLUS_ADDITIONAL_KWARGS_DOCSTRING = r"""
                   lengths).
             truncation (`bool`, `str` or [`TapasTruncationStrategy`], *optional*, defaults to `False`):
                 Activates and controls truncation. Accepts the following values:
-
                 - `True` or `'drop_rows_to_fit'`: Truncate to a maximum length specified with the argument `max_length`
                   or to the maximum acceptable input length for the model if that argument is not provided. This will
                   truncate row by row, removing rows from the table.
@@ -124,7 +116,6 @@ TAPAS_ENCODE_PLUS_ADDITIONAL_KWARGS_DOCSTRING = r"""
                   greater than the model maximum admissible input size).
             max_length (`int`, *optional*):
                 Controls the maximum length to use by one of the truncation/padding parameters.
-
                 If left unset or set to `None`, this will use the predefined model maximum length if a maximum length
                 is required by one of the truncation/padding parameters. If the model has no specific maximum input
                 length (like XLNet) truncation/padding to a maximum length will be deactivated.
@@ -137,7 +128,6 @@ TAPAS_ENCODE_PLUS_ADDITIONAL_KWARGS_DOCSTRING = r"""
                 the use of Tensor Cores on NVIDIA hardware with compute capability `>= 7.5` (Volta).
             return_tensors (`str` or [`~utils.TensorType`], *optional*):
                 If set, will return tensors instead of list of python integers. Acceptable values are:
-
                 - `'tf'`: Return TensorFlow `tf.constant` objects.
                 - `'pt'`: Return PyTorch `torch.Tensor` objects.
                 - `'np'`: Return Numpy `np.ndarray` objects.
@@ -148,12 +138,10 @@ class TapasTokenizer(PreTrainedTokenizer):
     r"""
     Construct a TAPAS tokenizer. Based on WordPiece. Flattens a table and one or more related sentences to be used by
     TAPAS models.
-
     This tokenizer inherits from [`PreTrainedTokenizer`] which contains most of the main methods. Users should refer to
     this superclass for more information regarding those methods. [`TapasTokenizer`] creates several token type ids to
     encode tabular structure. To be more precise, it adds 7 token type ids, in the following order: `segment_ids`,
     `column_ids`, `row_ids`, `prev_labels`, `column_ranks`, `inv_column_ranks` and `numeric_relations`:
-
     - segment_ids: indicate whether a token belongs to the question (0) or the table (1). 0 for special tokens and
       padding.
     - column_ids: indicate to which column of the table a token belongs (starting from 1). Is 0 for all question
@@ -170,10 +158,8 @@ class TapasTokenizer(PreTrainedTokenizer):
       1, 3 and 2 respectively. 0 for all question tokens, special tokens and padding.
     - numeric_relations: indicate numeric relations between the question and the tokens of the table. 0 for all
       question tokens, special tokens and padding.
-
     [`TapasTokenizer`] runs end-to-end tokenization on a table and associated sentences: punctuation splitting and
     wordpiece.
-
     Args:
         vocab_file (`str`):
             File containing the vocabulary.
@@ -382,12 +368,10 @@ class TapasTokenizer(PreTrainedTokenizer):
     def create_attention_mask_from_sequences(self, query_ids: List[int], table_values: List[TableValue]) -> List[int]:
         """
         Creates the attention mask according to the query token IDs and a list of table values.
-
         Args:
             query_ids (`List[int]`): list of token IDs corresponding to the ID.
             table_values (`List[TableValue]`): lift of table values, which are named tuples containing the
                 token value, the column ID and the row ID of said token.
-
         Returns:
             `List[int]`: List of ints containing the attention mask values.
         """
@@ -398,12 +382,10 @@ class TapasTokenizer(PreTrainedTokenizer):
     ) -> List[int]:
         """
         Creates the segment token type IDs according to the query token IDs and a list of table values.
-
         Args:
             query_ids (`List[int]`): list of token IDs corresponding to the ID.
             table_values (`List[TableValue]`): lift of table values, which are named tuples containing the
                 token value, the column ID and the row ID of said token.
-
         Returns:
             `List[int]`: List of ints containing the segment token type IDs values.
         """
@@ -415,12 +397,10 @@ class TapasTokenizer(PreTrainedTokenizer):
     ) -> List[int]:
         """
         Creates the column token type IDs according to the query token IDs and a list of table values.
-
         Args:
             query_ids (`List[int]`): list of token IDs corresponding to the ID.
             table_values (`List[TableValue]`): lift of table values, which are named tuples containing the
                 token value, the column ID and the row ID of said token.
-
         Returns:
             `List[int]`: List of ints containing the column token type IDs values.
         """
@@ -432,12 +412,10 @@ class TapasTokenizer(PreTrainedTokenizer):
     ) -> List[int]:
         """
         Creates the row token type IDs according to the query token IDs and a list of table values.
-
         Args:
             query_ids (`List[int]`): list of token IDs corresponding to the ID.
             table_values (`List[TableValue]`): lift of table values, which are named tuples containing the
                 token value, the column ID and the row ID of said token.
-
         Returns:
             `List[int]`: List of ints containing the row token type IDs values.
         """
@@ -450,11 +428,9 @@ class TapasTokenizer(PreTrainedTokenizer):
         """
         Build model inputs from a question and flattened table for question answering or sequence classification tasks
         by concatenating and adding special tokens.
-
         Args:
             token_ids_0 (`List[int]`): The ids of the question.
             token_ids_1 (`List[int]`, *optional*): The ids of the flattened table.
-
         Returns:
             `List[int]`: The model input with special tokens.
         """
@@ -469,7 +445,6 @@ class TapasTokenizer(PreTrainedTokenizer):
         """
         Retrieve sequence ids from a token list that has no special tokens added. This method is called when adding
         special tokens using the tokenizer `prepare_for_model` method.
-
         Args:
             token_ids_0 (`List[int]`):
                 List of question IDs.
@@ -477,7 +452,6 @@ class TapasTokenizer(PreTrainedTokenizer):
                 List of flattened table IDs.
             already_has_special_tokens (`bool`, *optional*, defaults to `False`):
                 Whether or not the token list is already formatted with special tokens for the model.
-
         Returns:
             `List[int]`: A list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
         """
@@ -523,7 +497,6 @@ class TapasTokenizer(PreTrainedTokenizer):
     ) -> BatchEncoding:
         """
         Main method to tokenize and prepare for the model one or several sequence(s) related to a table.
-
         Args:
             table (`pd.DataFrame`):
                 Table containing tabular data. Note that all cell values must be text. Use *.astype(str)* on a Pandas
@@ -636,13 +609,9 @@ class TapasTokenizer(PreTrainedTokenizer):
     ) -> BatchEncoding:
         """
         Prepare a table and a list of strings for the model.
-
         <Tip warning={true}>
-
         This method is deprecated, `__call__` should be used instead.
-
         </Tip>
-
         Args:
             table (`pd.DataFrame`):
                 Table containing tabular data. Note that all cell values must be text. Use *.astype(str)* on a Pandas
@@ -865,7 +834,6 @@ class TapasTokenizer(PreTrainedTokenizer):
         Prepare a table and a string for the model. This method does not return token type IDs, attention masks, etc.
         which are necessary for the model to work correctly. Use that method if you want to build your processing on
         your own, otherwise refer to `__call__`.
-
         Args:
             table (`pd.DataFrame`):
                 Table containing tabular data. Note that all cell values must be text. Use *.astype(str)* on a Pandas
@@ -914,7 +882,6 @@ class TapasTokenizer(PreTrainedTokenizer):
     ) -> BatchEncoding:
         """
         Prepare a table and a string for the model.
-
         Args:
             table (`pd.DataFrame`):
                 Table containing tabular data. Note that all cell values must be text. Use *.astype(str)* on a Pandas
@@ -1054,7 +1021,6 @@ class TapasTokenizer(PreTrainedTokenizer):
         """
         Prepares a sequence of input id so that it can be used by the model. It adds special tokens, truncates
         sequences if overflowing while taking into account the special tokens.
-
         Args:
             raw_table (`pd.DataFrame`):
                 The original table before any transformation (like tokenization) was applied to it.
@@ -1227,7 +1193,6 @@ class TapasTokenizer(PreTrainedTokenizer):
     ) -> Tuple[int, int]:
         """
         Truncates a sequence pair in-place following the strategy.
-
         Args:
             query_tokens (`List[str]`):
                 List of strings corresponding to the tokenized query.
@@ -1242,7 +1207,6 @@ class TapasTokenizer(PreTrainedTokenizer):
             truncation_strategy (`str` or [`TapasTruncationStrategy`]):
                 Truncation strategy to use. Seeing as this method should only be called when truncating, the only
                 available strategy is the `"drop_rows_to_fit"` strategy.
-
         Returns:
             `Tuple(int, int)`: tuple containing the number of rows after truncation, and the number of tokens available
             for each table element.
@@ -1279,7 +1243,6 @@ class TapasTokenizer(PreTrainedTokenizer):
     ):
         """
         Tokenizes column headers and cell texts of a table.
-
         Args:
             table (`pd.Dataframe`):
                 Table. Returns: `TokenizedTable`: TokenizedTable object.
@@ -1326,7 +1289,6 @@ class TapasTokenizer(PreTrainedTokenizer):
         """
         Computes the number of tokens left for the table after tokenizing a question, taking into account the max
         sequence length of the model.
-
         Args:
             question_tokens (`List[String]`):
                 List of question tokens. Returns: `int`: the number of tokens left for the table, given the model max
@@ -1508,11 +1470,9 @@ class TapasTokenizer(PreTrainedTokenizer):
         """
         Returns the sort key function for comparing value to table values. The function returned will be a suitable
         input for the key param of the sort(). See number_annotation_utils._get_numeric_sort_key_fn for details
-
         Args:
             table_numeric_values: Numeric values of a column
             value: Numeric value in the question
-
         Returns:
             A function key function to compare column and question values.
         """
@@ -1528,7 +1488,6 @@ class TapasTokenizer(PreTrainedTokenizer):
     def _get_numeric_relations(self, question, column_ids, row_ids, table):
         """
         Returns numeric relations embeddings
-
         Args:
             question: Question object.
             column_ids: Maps word piece position to column id.
@@ -1639,7 +1598,6 @@ class TapasTokenizer(PreTrainedTokenizer):
     def _get_all_answer_ids(self, column_ids, row_ids, answer_coordinates):
         """
         Maps answer coordinates of a question to token indexes.
-
         In the SQA format (TSV), the coordinates are given as (row, column) tuples. Here, we first swap them to
         (column, row) format before calling _get_all_answer_ids_from_coordinates.
         """
@@ -1748,19 +1706,16 @@ class TapasTokenizer(PreTrainedTokenizer):
     ) -> dict:
         """
         Pad encoded inputs (on left/right and up to predefined length or max length in the batch)
-
         Args:
             encoded_inputs:
                 Dictionary of tokenized inputs (`List[int]`) or batch of tokenized inputs (`List[List[int]]`).
             max_length: maximum length of the returned list and optionally padding length (see below).
                 Will truncate by taking into account the special tokens.
             padding_strategy: PaddingStrategy to use for padding.
-
                 - PaddingStrategy.LONGEST Pad to the longest sequence in the batch
                 - PaddingStrategy.MAX_LENGTH: Pad to the max length (default)
                 - PaddingStrategy.DO_NOT_PAD: Do not pad
                 The tokenizer padding sides are defined in self.padding_side:
-
                     - 'left': pads on the left of the sequences
                     - 'right': pads on the right of the sequences
             pad_to_multiple_of: (optional) Integer if set will pad the sequence to a multiple of the provided value.
@@ -1853,10 +1808,8 @@ class TapasTokenizer(PreTrainedTokenizer):
         """
         Converts logits of [`TapasForQuestionAnswering`] to actual predicted answer coordinates and optional
         aggregation indices.
-
         The original implementation, on which this function is based, can be found
         [here](https://github.com/google-research/tapas/blob/4908213eb4df7aa988573350278b44c4dbe3f71b/tapas/experiments/prediction_utils.py#L288).
-
         Args:
             data (`dict`):
                 Dictionary mapping features to actual values. Should be created using [`TapasTokenizer`].
@@ -1867,10 +1820,8 @@ class TapasTokenizer(PreTrainedTokenizer):
             cell_classification_threshold (`float`, *optional*, defaults to 0.5):
                 Threshold to be used for cell selection. All table cells for which their probability is larger than
                 this threshold will be selected.
-
         Returns:
             `tuple` comprising various elements depending on the inputs:
-
             - predicted_answer_coordinates (`List[List[[tuple]]` of length `batch_size`): Predicted answer coordinates
               as a list of lists of tuples. Each element in the list contains the predicted answer coordinates of a
               single example in the batch, as a list of tuples. Each tuple is a cell, i.e. (row index, column index).
@@ -1954,7 +1905,6 @@ class TapasTokenizer(PreTrainedTokenizer):
 class BasicTokenizer:
     """
     Constructs a BasicTokenizer that will run basic tokenization (punctuation splitting, lower casing, etc.).
-
     Args:
         do_lower_case (`bool`, *optional*, defaults to `True`):
             Whether or not to lowercase the input when tokenizing.
@@ -1963,7 +1913,6 @@ class BasicTokenizer:
             `do_basic_tokenize=True`
         tokenize_chinese_chars (`bool`, *optional*, defaults to `True`):
             Whether or not to tokenize Chinese characters.
-
             This should likely be deactivated for Japanese (see this
             [issue](https://github.com/huggingface/transformers/issues/328)).
         strip_accents (`bool`, *optional*):
@@ -1993,7 +1942,6 @@ class BasicTokenizer:
     def tokenize(self, text, never_split=None):
         """
         Basic Tokenization of a piece of text. For sub-word tokenization, see WordPieceTokenizer.
-
         Args:
             never_split (`List[str]`, *optional*)
                 Kept for backward compatibility purposes. Now implemented directly at the base class level (see
@@ -2125,13 +2073,10 @@ class WordpieceTokenizer:
         """
         Tokenizes a piece of text into its word pieces. This uses a greedy longest-match-first algorithm to perform
         tokenization using the given vocabulary.
-
         For example, `input = "unaffable"` wil return as output `["un", "##aff", "##able"]`.
-
         Args:
             text: A single token or whitespace separated tokens. This should have
                 already been passed through *BasicTokenizer*.
-
         Returns:
             A list of wordpiece tokens.
         """
@@ -2387,7 +2332,6 @@ def _parse_date(text):
             continue
     return None
 
-
 def _parse_number(text):
     """Parses simple cardinal and ordinals numbers."""
     for suffix in _ORDINAL_SUFFIXES:
@@ -2409,7 +2353,6 @@ def _parse_number(text):
 def get_all_spans(text, max_ngram_length):
     """
     Split a text into all possible ngrams up to 'max_ngram_length'. Split points are white space and punctuation.
-
     Args:
       text: Text to split.
       max_ngram_length: maximal ngram length.
@@ -2448,10 +2391,8 @@ def format_text(text):
 def parse_text(text):
     """
     Extracts longest number and date spans.
-
     Args:
       text: text to annotate
-
     Returns:
       List of longest numeric value spans.
     """
@@ -2556,13 +2497,10 @@ def get_numeric_sort_key_fn(numeric_values):
     (2010.,5.,5.) and (2007.,8., None). These values can be compared by year and date so we map to the sequence (2010.,
     5.), (2007., 8.). If we added a third value "2006" with primitive value (2006., None, None), we could only compare
     by the year so we would map to (2010.,), (2007.,) and (2006.,).
-
     Args:
      numeric_values: Values to compare
-
     Returns:
      A function that can be used as a sort key function (mapping numeric values to a comparable tuple)
-
     Raises:
       ValueError if values don't have a common type or are not comparable.
     """
@@ -2599,7 +2537,6 @@ def get_numeric_sort_key_fn(numeric_values):
 def _consolidate_numeric_values(row_index_to_values, min_consolidation_fraction, debug_info):
     """
     Finds the most common numeric values in a column and returns them
-
     Args:
         row_index_to_values:
             For each row index all the values in that cell.
@@ -2607,7 +2544,6 @@ def _consolidate_numeric_values(row_index_to_values, min_consolidation_fraction,
             Fraction of cells that need to have consolidated value.
         debug_info:
             Additional information only used for logging
-
     Returns:
         For each row index the first value that matches the most common value. Rows that don't have a matching value
         are dropped. Empty list if values can't be consolidated.
@@ -2653,7 +2589,6 @@ def _get_column_values(table, col_index):
     """
     Parses text in column and returns a dict mapping row_index to values. This is the _get_column_values function from
     number_annotation_utils.py of the original implementation
-
     Args:
       table: Pandas dataframe
       col_index: integer, indicating the index of the column to get the numeric values of
@@ -2695,7 +2630,6 @@ def filter_invalid_unicode_from_table(table):
     """
     Removes invalid unicode from table. Checks whether a table cell text contains an invalid unicode encoding. If yes,
     reset the table cell text to an empty str and log a warning for each invalid cell
-
     Args:
         table: table to clean.
     """
@@ -2721,7 +2655,6 @@ def add_numeric_table_values(table, min_consolidation_fraction=0.7, debug_info=N
     """
     Parses text in table column-wise and adds the consolidated values. Consolidation refers to finding values with a
     common types (date or number)
-
     Args:
         table:
             Table to annotate.

@@ -166,6 +166,7 @@ from . import (
     swin,
     switch_transformers,
     swin2sr,
+    tapas,
     t5,
     tapas,
     time_series_transformer,
@@ -344,6 +345,7 @@ from .swin import *
 from .switch_transformers import *
 from .swin2sr import *
 from .tinybert import *
+from .tapas import *
 from .t5 import *
 from .tapas import *
 from .time_series_transformer import *
@@ -521,6 +523,7 @@ __all__.extend(swin.__all__)
 __all__.extend(switch_transformers.__all__)
 __all__.extend(swin2sr.__all__)
 __all__.extend(t5.__all__)
+__all__.extend(tapas.__all__)
 __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(umt5.__all__)

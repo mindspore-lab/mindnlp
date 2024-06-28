@@ -161,8 +161,8 @@ class TapasConfig(PretrainedConfig):
         huber_loss_delta=None,
         temperature=1.0,
         aggregation_temperature=1.0,
-        use_gumbel_for_cells=False,
-        use_gumbel_for_aggregation=False,
+        use_gumbel_for_cells=True,
+        use_gumbel_for_aggregation=True,
         average_approximation_function="ratio",
         cell_selection_preference=None,
         answer_loss_cutoff=None,
@@ -225,6 +225,4 @@ class TapasConfig(PretrainedConfig):
         if isinstance(self.aggregation_labels, dict):
             self.aggregation_labels = {int(k): v for k, v in aggregation_labels.items()}
 
-__all__ = [
-   "TapasConfig",
-]
+__all__ = ['TapasConfig']

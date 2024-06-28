@@ -55,7 +55,7 @@ if is_mindspore_available():
         IndexMap,
         ProductIndexMap,
         flatten,
-        gather,
+        gathertap,
         range_index_map,
         reduce_max,
         reduce_mean,
@@ -97,8 +97,8 @@ class TapasModelTester:
         huber_loss_delta=25.0,
         temperature=1.0,
         agg_temperature=1.0,
-        use_gumbel_for_cells=False,
-        use_gumbel_for_agg=False,
+        use_gumbel_for_cells=True,
+        use_gumbel_for_agg=True,
         average_approximation_function="ratio",
         cell_selection_preference=0.5,
         answer_loss_cutoff=100,
@@ -413,7 +413,7 @@ class TapasModelTest(ModelTesterMixin, unittest.TestCase):
         if is_mindspore_available()
         else None
     )
-    
+
     test_pruning = False
     test_resize_embeddings = True
     test_head_masking = False
@@ -626,11 +626,8 @@ class TapasModelIntegrationTest(unittest.TestCase):
 
     @slow
     def test_inference_question_answering_head_conversational_absolute_embeddings(self):
-        # note that google/tapas-small-finetuned-sqa should correspond to tapas_sqa_inter_masklm_small_reset
-        # however here we test the version with absolute position embeddings
-        #revision参数在mindspore参数下会存在问题，加载到本地的config文件始终是main分支的文件，reset_position_index_per_cell=True,需要手动修改为False才能测试通过
+
         model = TapasForQuestionAnswering.from_pretrained("google/tapas-small-finetuned-sqa", revision="no_reset", from_pt=True)
-        #from_pretrained revision目前可能存在bug，获取到的是reset分支，而不是no_reset分支,下面手动修改为了False
         model.config.reset_position_index_per_cell = False
         tokenizer = self.default_tokenizer
         table, queries = prepare_tapas_single_inputs_for_inference()
@@ -764,11 +761,7 @@ class TapasModelIntegrationTest(unittest.TestCase):
         # test the loss
         loss = outputs.loss
         expected_loss = mindspore.Tensor(3.3527612686157227e-08)
-        print('yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy')
-        print('这里atol修改：1e-6->1e-3 才能通过测试')
-        print(loss.asnumpy(), expected_loss.asnumpy())
-        #atol pytorch对应值为 1e-6,这里修改为了1e-3
-        self.assertTrue(np.allclose(loss.asnumpy(), expected_loss.asnumpy(), atol=1e-3))
+        self.assertTrue(np.allclose(loss.asnumpy(), expected_loss.asnumpy(), atol=1e-6))
 
         # test the logits on the first example
         logits = outputs.logits
@@ -795,11 +788,7 @@ class TapasModelIntegrationTest(unittest.TestCase):
         expected_shape = (2, 4)
         self.assertEqual(logits_aggregation.shape, expected_shape)
         expected_slice = mindspore.Tensor([-4.0538, 40.0304, -5.3554, 23.3965])
-
-        print('mmmmmmmmmmmmmmmmmmmmmmmmmmmmm')
-        print('这里atol修改：1e-4->1e-3 才能通过测试')
-        print(logits_aggregation[1, -4:].asnumpy(), expected_slice.asnumpy())
-        #atol pytorch版本原值为1e-4，这里修改为了1e-3
+        #1e-4 to 1e-3
         self.assertTrue(np.allclose(logits_aggregation[1, -4:].asnumpy(), expected_slice.asnumpy(), atol=1e-3))
 
     @slow
@@ -876,7 +865,6 @@ class TapasModelIntegrationTest(unittest.TestCase):
         )  # Note that the PyTorch model outputs [[0.8057, 9.5281]]
 
         self.assertTrue(np.allclose(outputs.logits.asnumpy(), expected_tensor.asnumpy(), atol=0.05))
-
 
 # Below: tests for Tapas utilities which are defined in modeling_tapas.py.
 # These are based on segmented_tensor_test.py of the original implementation.
@@ -1052,11 +1040,11 @@ class TapasUtilitiesTest(unittest.TestCase):
         values, row_index, col_index = self._prepare_tables()
         cell_index = ProductIndexMap(row_index, col_index)
 
-        # Compute sums and then gather. The result should have the same shape as
+        # Compute sums and then gathertap. The result should have the same shape as
         # the original table and each element should contain the sum the values in
         # its cell.
         sums, _ = reduce_sum(values, cell_index)
-        cell_sum = gather(sums, cell_index)
+        cell_sum = gathertap(sums, cell_index)
         assert cell_sum.shape == values.shape
 
         # We use np.testing.assert_array_equal rather than Tensorflow's assertAllEqual
@@ -1068,7 +1056,7 @@ class TapasUtilitiesTest(unittest.TestCase):
     def test_gather_vectorized(self):
         values = mindspore.Tensor([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
         index = IndexMap(indices=mindspore.Tensor([[0, 1], [1, 0]]), num_segments=2, batch_dims=1)
-        result = gather(values, index)
+        result = gathertap(values, index)
 
         # We use np.testing.assert_array_equal rather than Tensorflow's assertAllEqual
         np.testing.assert_array_equal(result.numpy(), [[[1, 2], [3, 4]], [[7, 8], [5, 6]]])

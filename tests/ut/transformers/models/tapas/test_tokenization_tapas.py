@@ -21,10 +21,17 @@ from typing import List
 
 import numpy as np
 import pandas as pd
-from mindspore import ops
 
-from mindnlp.transformers.tokenization_utils import AddedToken
-from mindnlp.utils import  is_mindspore_available
+from mindnlp.transformers.tokenization_utils_base import AddedToken
+#from mindnlp.transformers.models.tapas.modeling_tapas import (
+#    VOCAB_FILES_NAMES,
+#    BasicTokenizer,
+##    TapasTokenizer,
+ #   WordpieceTokenizer,
+#    _is_control,
+#    _is_punctuation,
+#    _is_whitespace,
+#)
 from mindnlp.transformers.models.tapas.tokenization_tapas import (
     VOCAB_FILES_NAMES,
     BasicTokenizer,
@@ -35,18 +42,13 @@ from mindnlp.transformers.models.tapas.tokenization_tapas import (
     _is_whitespace,
 )
 from mindnlp.utils.testing_utils import (
-    require_tokenizers,
-    require_mindspore,
-    slow,
+    slow
 )
 
 from ...test_tokenization_common import TokenizerTesterMixin, filter_non_english, merge_model_tokenizer_mappings
 
-
-
-@require_tokenizers
 class TapasTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
-    from_pretrained_id = "google/tapas-large-finetuned-sqa"
+    from_pretrained_id = "google/tapas-base-finetuned-sqa"
     tokenizer_class = TapasTokenizer
     test_rust_tokenizer = False
     space_between_special_tokens = True
@@ -139,6 +141,11 @@ class TapasTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         input_text = "UNwant\u00e9d,running"
         output_text = "unwanted, running"
         return input_text, output_text
+
+
+    @slow
+    def test_tf_encode_plus_sent_to_model(self):
+        pass
 
     def test_rust_and_python_full_tokenizers(self):
         if not self.test_rust_tokenizer:
@@ -301,7 +308,7 @@ class TapasTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
 
     @slow
     def test_sequence_builders(self):
-        tokenizer = self.tokenizer_class.from_pretrained("google/tapas-base-finetuned-wtq",from_pt=True)
+        tokenizer = self.tokenizer_class.from_pretrained("google/tapas-base-finetuned-wtq")
 
         empty_table = self.get_table(tokenizer, length=0)
         table = self.get_table(tokenizer, length=10)
@@ -316,7 +323,7 @@ class TapasTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
     def test_offsets_with_special_characters(self):
         for tokenizer, pretrained_name, kwargs in self.tokenizers_list:
             with self.subTest(f"{tokenizer.__class__.__name__} ({pretrained_name})"):
-                tokenizer_r = self.rust_tokenizer_class.from_pretrained(pretrained_name, from_pt=True, **kwargs)
+                tokenizer_r = self.rust_tokenizer_class.from_pretrained(pretrained_name, **kwargs)
 
                 sentence = f"A, naïve {tokenizer_r.mask_token} AllenNLP sentence."
                 tokens = tokenizer_r.encode_plus(
@@ -434,7 +441,7 @@ class TapasTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 self.assertEqual(tokens[0], tokenizer.eos_token_id)
                 self.assertEqual(tokens[-2], tokenizer.pad_token_id)
 
-    @require_tokenizers
+
     def test_encode_decode_with_spaces(self):
         tokenizers = self.get_tokenizers(do_lower_case=False)
         for tokenizer in tokenizers:
@@ -898,7 +905,7 @@ class TapasTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 before_vocab = tokenizer.get_vocab()
                 tokenizer.save_pretrained(tmpdirname)
 
-                after_tokenizer = tokenizer.__class__.from_pretrained(tmpdirname, from_pt=True)
+                after_tokenizer = tokenizer.__class__.from_pretrained(tmpdirname)
                 after_tokens = after_tokenizer.encode(table, sample_text, add_special_tokens=False)
                 after_vocab = after_tokenizer.get_vocab()
                 self.assertListEqual(before_tokens, after_tokens)
@@ -995,8 +1002,7 @@ class TapasTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 # Do the same test as modeling common.
                 self.assertIn(0, output["token_type_ids"][0])
 
-    @require_mindspore
-    @slow
+
     def test_mindspore_encode_plus_sent_to_model(self):
         import mindspore
 
@@ -1039,9 +1045,8 @@ class TapasTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
 
     @unittest.skip("TAPAS doesn't handle pre-tokenized inputs.")
     def test_pretokenized_inputs(self):
-        pass
+        pass 
 
-    @slow
     def test_tapas_truncation_integration_test(self):
         data = {
             "Actors": ["Brad Pitt", "Leonardo Di Caprio", "George Clooney"],
@@ -1056,7 +1061,7 @@ class TapasTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         ]
         table = pd.DataFrame.from_dict(data)
 
-        tokenizer = TapasTokenizer.from_pretrained("lysandre/tapas-temporary-repo", model_max_length=512, from_pt=True)
+        tokenizer = TapasTokenizer.from_pretrained("lysandre/tapas-temporary-repo", model_max_length=512)
 
         for i in range(12):
             # The table cannot even encode the headers, so raise an error
@@ -1091,7 +1096,7 @@ class TapasTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         table = pd.DataFrame.from_dict(data)
 
         # test max_question_length
-        tokenizer = TapasTokenizer.from_pretrained("lysandre/tapas-temporary-repo", max_question_length=2, from_pt=True)
+        tokenizer = TapasTokenizer.from_pretrained("lysandre/tapas-temporary-repo", max_question_length=2)
 
         encoding = tokenizer(table=table, queries=queries)
 
@@ -1101,7 +1106,7 @@ class TapasTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         self.assertListEqual(encoding.input_ids[:2], expected_results)
 
         # test min_question_length
-        tokenizer = TapasTokenizer.from_pretrained("lysandre/tapas-temporary-repo", min_question_length=30, from_pt=True)
+        tokenizer = TapasTokenizer.from_pretrained("lysandre/tapas-temporary-repo", min_question_length=30)
 
         encoding = tokenizer(table=table, queries=queries)
 
@@ -1109,6 +1114,54 @@ class TapasTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         expected_results = [101, 102]
 
         self.assertListEqual(encoding.input_ids[:2], expected_results)
+
+    # @is_pt_tf_cross_test
+    # def test_batch_encode_plus_tensors(self):
+    #     tokenizers = self.get_tokenizers(do_lower_case=False)
+    #     for tokenizer in tokenizers:
+    #         with self.subTest(f"{tokenizer.__class__.__name__}"):
+    #             sequences = [
+    #                 "Testing batch encode plus",
+    #                 "Testing batch encode plus with different sequence lengths",
+    #                 "Testing batch encode plus with different sequence lengths correctly pads",
+    #             ]
+
+    #             table = self.get_table(tokenizer, length=0)
+
+    #             # A Tensor cannot be build by sequences which are not the same size
+    #             self.assertRaises(ValueError, tokenizer.batch_encode_plus, table, sequences, return_tensors="pt")
+    #             self.assertRaises(ValueError, tokenizer.batch_encode_plus, table, sequences, return_tensors="tf")
+
+    #             if tokenizer.pad_token_id is None:
+    #                 self.assertRaises(
+    #                     ValueError,
+    #                     tokenizer.batch_encode_plus,
+    #                     table,
+    #                     sequences,
+    #                     padding=True,
+    #                     return_tensors="pt",
+    #                 )
+    #                 self.assertRaises(
+    #                     ValueError,
+    #                     tokenizer.batch_encode_plus,
+    #                     table,
+    #                     sequences,
+    #                     padding="longest",
+    #                     return_tensors="tf",
+    #                 )
+    #             else:
+    #                 pytorch_tensor = tokenizer.batch_encode_plus(table, sequences, padding=True, return_tensors="pt")
+    #                 tensorflow_tensor = tokenizer.batch_encode_plus(
+    #                     table, sequences, padding="longest", return_tensors="tf"
+    #                 )
+    #                 encoded_sequences = tokenizer.batch_encode_plus(table, sequences, padding=True)
+
+    #                 for key in encoded_sequences.keys():
+    #                     pytorch_value = pytorch_tensor[key].tolist()
+    #                     tensorflow_value = tensorflow_tensor[key].numpy().tolist()
+    #                     encoded_value = encoded_sequences[key]
+
+    #                     self.assertEqual(pytorch_value, tensorflow_value, encoded_value)
 
     @slow
     def test_tapas_integration_test(self):
@@ -1125,7 +1178,7 @@ class TapasTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         ]
         table = pd.DataFrame.from_dict(data)
 
-        tokenizer = TapasTokenizer.from_pretrained("google/tapas-base-finetuned-wtq", model_max_length=512, from_pt=True)
+        tokenizer = TapasTokenizer.from_pretrained("google/tapas-base-finetuned-wtq", model_max_length=512)
 
         expected_results = {'input_ids':[101,2043,2001,8226,15091,2141,1029,102,5889,2287,2193,1997,5691,3058,1997,4182,8226,15091,5179,6584,2324,2285,3699,14720,4487,6178,9488,3429,5187,2340,2281,3326,2577,18856,7828,3240,5354,6353,1020,2089,3777],'attention_mask':[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],'token_type_ids':[[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[1,1,0,0,0,0,0],[1,2,0,0,0,0,0],[1,3,0,0,0,0,0],[1,3,0,0,0,0,0],[1,3,0,0,0,0,0],[1,4,0,0,0,0,0],[1,4,0,0,0,0,0],[1,4,0,0,0,0,0],[1,1,1,0,0,0,0],[1,1,1,0,0,0,0],[1,2,1,0,2,2,0],[1,3,1,0,3,1,0],[1,4,1,0,2,2,0],[1,4,1,0,2,2,0],[1,4,1,0,2,2,0],[1,1,2,0,0,0,0],[1,1,2,0,0,0,0],[1,1,2,0,0,0,0],[1,1,2,0,0,0,0],[1,2,2,0,1,3,0],[1,3,2,0,1,3,0],[1,4,2,0,3,1,0],[1,4,2,0,3,1,0],[1,4,2,0,3,1,0],[1,1,3,0,0,0,0],[1,1,3,0,0,0,0],[1,1,3,0,0,0,0],[1,1,3,0,0,0,0],[1,2,3,0,3,1,0],[1,3,3,0,2,2,0],[1,4,3,0,1,3,0],[1,4,3,0,1,3,0],[1,4,3,0,1,3,0]]}  # fmt: skip
 
@@ -1160,7 +1213,7 @@ class TapasTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         query = "what were the drivers names?"
         table = pd.DataFrame.from_records(data[1:], columns=data[0])
 
-        tokenizer = TapasTokenizer.from_pretrained("google/tapas-base-finetuned-wtq", model_max_length=512, from_pt=True)
+        tokenizer = TapasTokenizer.from_pretrained("google/tapas-base-finetuned-wtq", model_max_length=512)
         model_inputs = tokenizer(table, query, padding="max_length")
 
         input_ids = model_inputs["input_ids"]
