@@ -171,6 +171,7 @@ from . import (
     time_series_transformer,
     timesformer,
     tinybert,
+    umt5,
     videomae,
     vipllava,
     vision_encoder_decoder,
@@ -347,6 +348,7 @@ from .t5 import *
 from .tapas import *
 from .time_series_transformer import *
 from .timesformer import *
+from .umt5 import *
 from .videomae import *
 from .vipllava import *
 from .vision_encoder_decoder import *
