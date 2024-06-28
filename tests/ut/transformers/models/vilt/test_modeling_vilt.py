@@ -609,4 +609,3 @@ class ViltModelIntegrationTest(unittest.TestCase):
 
     def test_inference_natural_language_visual_reasoning(self):
         pass
-    
