@@ -37,6 +37,7 @@ def load_checkpoint(ckpt_file_name):
     """redefined load_checkpoint method, not mindspore official version."""
     logger.info("Execute the process of loading checkpoint files.")
     if LESS_MS_2_3:
+        # pylint: disable=no-value-for-parameter
         checkpoint_list = _parse_ckpt_proto(ckpt_file_name, None, None)
     else:
         checkpoint_list = _parse_ckpt_proto(ckpt_file_name, None, None, False)
