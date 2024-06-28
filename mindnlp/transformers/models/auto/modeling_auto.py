@@ -140,6 +140,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("t5", "T5Model"),
         ("time_series_transformer", "TimeSeriesTransformerModel"),
         ("timesformer", "TimesformerModel"),
+        ("umt5", "UMT5Model"),
         ("videomae", "VideoMAEModel"),
         ("vision_text_dual_encoder", "VisionTextDualEncoderModel"),
         ("visual_bert", "VisualBertModel"),
