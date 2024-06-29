@@ -171,6 +171,7 @@ from . import (
     time_series_transformer,
     timesformer,
     tinybert,
+    umt5,
     videomae,
     vipllava,
     vision_encoder_decoder,
@@ -367,7 +368,7 @@ from .xlm import *
 from .xlm_roberta import *
 from .xlm_roberta_xl import *
 from .xlnet import *
-
+from .umt5 import *
 __all__ = []
 __all__.extend(albert.__all__)
 __all__.extend(align.__all__)
@@ -542,3 +543,4 @@ __all__.extend(xlm.__all__)
 __all__.extend(xlm_roberta.__all__)
 __all__.extend(xlm_roberta_xl.__all__)
 __all__.extend(xlnet.__all__)
+__all__.extend(umt5.__all__)

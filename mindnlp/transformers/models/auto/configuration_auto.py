@@ -146,6 +146,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("tapas", "TapasConfig"),
         ("time_series_transformer", "TimeSeriesTransformerConfig"),
         ("timesformer", "TimesformerConfig"),
+        ("umt5", "UMT5Config")
         ("videomae", "VideoMAEConfig"),
         ("vit", "ViTConfig"),
         ("vit_hybrid", "ViTHybridConfig"),
