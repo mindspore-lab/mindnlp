@@ -22,6 +22,7 @@ import unittest
 import numpy as np
 
 from mindnlp.transformers import T5Config
+from mindnlp.transformers.models.auto.modeling_auto import MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES
 from mindnlp.utils.testing_utils import (
     require_mindspore,
     slow,
@@ -31,7 +32,7 @@ from mindnlp.utils import cached_property
 
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
-from ...test_modeling_common import ModelTesterMixin, ids_tensor
+from ...test_modeling_common import ModelTesterMixin, _config_zero_init, ids_tensor
 
 
 if is_mindspore_available():
