@@ -171,6 +171,7 @@ from . import (
     time_series_transformer,
     timesformer,
     tinybert,
+    upernet,
     videomae,
     vipllava,
     vision_encoder_decoder,
@@ -347,6 +348,7 @@ from .t5 import *
 from .tapas import *
 from .time_series_transformer import *
 from .timesformer import *
+from .upernet import *
 from .videomae import *
 from .vipllava import *
 from .vision_encoder_decoder import *
@@ -522,6 +524,7 @@ __all__.extend(t5.__all__)
 __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
+__all__.extend(upernet.__all__)
 __all__.extend(videomae.__all__)
 __all__.extend(vipllava.__all__)
 __all__.extend(vision_encoder_decoder.__all__)
