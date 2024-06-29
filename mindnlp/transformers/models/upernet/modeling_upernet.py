@@ -19,7 +19,6 @@ from typing import List, Optional, Tuple, Union
 import mindspore as ms
 from mindspore import nn, ops
 from mindspore.nn import CrossEntropyLoss
-from mindspore.common.initializer import initializer, Normal
 
 from ...modeling_outputs import SemanticSegmenterOutput
 from ...modeling_utils import PreTrainedModel
@@ -110,8 +109,11 @@ class UPerNetConvModule(nn.Cell):
             out_channels=out_channels,
             kernel_size=kernel_size,
             padding=padding,
-            bias=bias,
+            pad_mode='pad',
+            has_bias=bias,
             dilation=dilation,
+            weight_init='ones',
+            bias_init='zeros'
         )
         self.batch_norm = nn.BatchNorm2d(out_channels)
         self.activation = nn.ReLU()
@@ -132,7 +134,7 @@ class UPerNetPyramidPoolingBlock(nn.Cell):
             UPerNetConvModule(in_channels, channels, kernel_size=1),
         ]
         for i, layer in enumerate(self.layers):
-            self.add_module(str(i), layer)
+            self.insert_child_to_cell(str(i), layer)
 
     def construct(self, input: ms.Tensor) -> ms.Tensor:
         hidden_state = input
@@ -166,7 +168,7 @@ class UPerNetPyramidPoolingModule(nn.Cell):
         for i, pool_scale in enumerate(pool_scales):
             block = UPerNetPyramidPoolingBlock(pool_scale=pool_scale, in_channels=in_channels, channels=channels)
             self.blocks.append(block)
-            self.add_module(str(i), block)
+            self.insert_child_to_cell(str(i), block)
 
     def construct(self, x: ms.Tensor) -> List[ms.Tensor]:
         ppm_outs = []
@@ -193,7 +195,8 @@ class UPerNetHead(nn.Cell):
         self.in_channels = in_channels
         self.channels = config.hidden_size
         self.align_corners = False
-        self.classifier = nn.Conv2d(self.channels, config.num_labels, kernel_size=1)
+        self.classifier = nn.Conv2d(self.channels, config.num_labels, kernel_size=1, has_bias=True, weight_init='ones',
+                                    bias_init='zeros')
 
         # PSP Module
         self.psp_modules = UPerNetPyramidPoolingModule(
@@ -228,11 +231,12 @@ class UPerNetHead(nn.Cell):
         self.apply(self._init_weights)
 
     def _init_weights(self, module):
-        if isinstance(module, nn.Conv2d):
-            module.weight.set_data(initializer(Normal(self.config.initializer_range, 0.0),
-                                               shape=module.weight.shape, dtype=module.weight.dtype))
-            if module.bias is not None:
-                module.bias.set_data(initializer('zeros', shape=module.bias.shape, dtype=module.bias.dtype))
+        pass
+        # if isinstance(module, nn.Conv2d):
+        #     module.weight.set_data(initializer(Normal(self.config.initializer_range, 0),
+        #                                        shape=module.weight.shape, dtype=module.weight.dtype))
+        #     if module.bias is not None:
+        #         module.bias.set_data(initializer('zeros', shape=module.bias.shape, dtype=module.bias.dtype))
 
     def psp_forward(self, inputs):
         x = inputs[-1]
@@ -322,17 +326,19 @@ class UPerNetFCNHead(nn.Cell):
                 self.in_channels + self.channels, self.channels, kernel_size=kernel_size, padding=kernel_size // 2
             )
 
-        self.classifier = nn.Conv2d(self.channels, config.num_labels, kernel_size=1)
+        self.classifier = nn.Conv2d(self.channels, config.num_labels, kernel_size=1, has_bias=True, weight_init='ones',
+                                    bias_init='zeros')
 
     def init_weights(self):
         self.apply(self._init_weights)
 
     def _init_weights(self, module):
-        if isinstance(module, nn.Conv2d):
-            module.weight.set_data(initializer(Normal(self.config.initializer_range, 0.0),
-                                               shape=module.weight.shape, dtype=module.weight.dtype))
-            if module.bias is not None:
-                module.bias.set_data(initializer('zeros', shape=module.bias.shape, dtype=module.bias.dtype))
+        pass
+        # if isinstance(module, nn.Conv2d):
+        #     module.weight.set_data(initializer(Normal(self.config.initializer_range, 0.0),
+        #                                        shape=module.weight.shape, dtype=module.weight.dtype))
+        #     if module.bias is not None:
+        #         module.bias.set_data(initializer('zeros', shape=module.bias.shape, dtype=module.bias.dtype))
 
     def construct(self, encoder_hidden_states: ms.Tensor) -> ms.Tensor:
         # just take the relevant feature maps
@@ -395,7 +401,6 @@ class UPerNetForSemanticSegmentation(UPerNetPreTrainedModel):
     def construct(
             self,
             pixel_values: Optional[ms.Tensor] = None,
-            output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
             labels: Optional[ms.Tensor] = None,
             return_dict: Optional[bool] = None,
@@ -405,9 +410,6 @@ class UPerNetForSemanticSegmentation(UPerNetPreTrainedModel):
             pixel_values (`mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`):
                 Pixel values. Padding will be ignored by default should you provide it. Pixel values can be obtained using
                 [`AutoImageProcessor`]. See [`SegformerImageProcessor.__call__`] for details.
-            output_attentions (`bool`, *optional*):
-                Whether or not to return the attentions tensors of all attention layers in case the backbone has them. See
-                `attentions` under returned tensors for more detail.
             output_hidden_states (`bool`, *optional*):
                 Whether or not to return the hidden states of all layers of the backbone. See `hidden_states` under
                 returned tensors for more detail.
@@ -451,10 +453,9 @@ class UPerNetForSemanticSegmentation(UPerNetPreTrainedModel):
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
 
         outputs = self.backbone.forward_with_filtered_kwargs(
-            pixel_values, output_hidden_states=output_hidden_states, output_attentions=output_attentions
+            pixel_values, output_hidden_states=output_hidden_states
         )
         features = outputs.feature_maps
 
