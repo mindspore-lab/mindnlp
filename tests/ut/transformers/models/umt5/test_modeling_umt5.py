@@ -109,8 +109,14 @@ class UMT5ModelTester:
     ):
         if attention_mask is None:
             attention_mask = input_ids.ne(config.pad_token_id)
+        if(attention_mask.type() =="Bool"):
+            attention_mask = ops.cast(attention_mask, mindspore.int64)        
+        
         if decoder_attention_mask is None:
             decoder_attention_mask = decoder_input_ids.ne(config.pad_token_id)
+            
+        if(decoder_attention_mask.type() =="Bool"):
+            decoder_attention_mask = ops.cast(decoder_attention_mask, mindspore.int64)
         if head_mask is None:
             head_mask = ops.ones(config.num_hidden_layers, config.num_attention_heads)
         if decoder_head_mask is None:
@@ -142,10 +148,10 @@ class UMT5ModelTester:
         input_ids = input_ids.clamp(self.pad_token_id + 2)
         input_ids[:, -1] = self.eos_token_id  # Eos Token
         decoder_input_ids = decoder_input_ids.clamp(self.pad_token_id + 1)
-
         config = self.get_config()
         config.encoder_attention_heads = config.num_attention_heads
         input_dict = self.prepare_inputs_dict(config, input_ids, decoder_input_ids)
+        
         return config, input_dict
 
     def prepare_config_and_inputs_for_common(self):
@@ -187,7 +193,6 @@ class UMT5ModelTester:
             pad_token_id=self.pad_token_id,
             decoder_start_token_id=self.decoder_start_token_id,
         )
-
     def create_and_check_model(
         self,
         config,
@@ -198,7 +203,7 @@ class UMT5ModelTester:
         lm_labels,
     ):
         model = UMT5Model(config=config)
-        model.eval()
+        model.set_train(False)
         result = model(
             input_ids=input_ids,
             decoder_input_ids=decoder_input_ids,
@@ -226,7 +231,7 @@ class UMT5ModelTester:
         decoder_attention_mask,
         lm_labels,
     ):
-        model = UMT5Model(config=config).get_decoder().eval()
+        model = UMT5Model(config=config).get_decoder().set_train(False)
         # first forward pass
         outputs = model(input_ids, use_cache=True)
         outputs_use_cache_conf = model(input_ids)
@@ -259,7 +264,7 @@ class UMT5ModelTester:
         config,
         input_dict,
     ):
-        model = UMT5Model(config=config).half()
+        model = UMT5Model(config=config).half().set_train(False)
         output = model(**input_dict)["last_hidden_state"]
         self.parent.assertFalse(ops.isnan(output).any().item())
 
@@ -269,7 +274,7 @@ class UMT5ModelTester:
         input_dict,
     ):
         labels = mindspore.tensor([1] * self.batch_size, dtype=mindspore.int64)
-        model = UMT5ForSequenceClassification(config=config)
+        model = UMT5ForSequenceClassification(config=config).set_train(False)
         outputs = model(**input_dict, labels=labels)
         # self.parent.assertEqual(len(outputs), 4)
         self.parent.assertEqual(outputs["logits"].shape, (self.batch_size, config.num_labels))
@@ -277,10 +282,9 @@ class UMT5ModelTester:
 
 #class UMT5ModelTest(ModelTesterMixin, GenerationTesterMixin, PipelineTesterMixin, unittest.TestCase):
 class UMT5ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
+    print(UMT5Model)
     all_model_classes = (
         (UMT5Model, UMT5ForConditionalGeneration, UMT5ForSequenceClassification, UMT5ForQuestionAnswering)
-        if is_mindspore_available()
-        else ()
     )
     all_generative_model_classes = (UMT5ForConditionalGeneration,) if is_mindspore_available() else ()
     pipeline_model_mapping = (
@@ -303,7 +307,6 @@ class UMT5ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     test_torchscript = False
     # The small UMT5 model needs higher percentages for CPU/MP tests
     model_split_percents = [0.5, 0.8, 0.9]
-
     def setUp(self):
         self.model_tester = UMT5ModelTester(self)
 
@@ -323,10 +326,8 @@ class UMT5ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         for model_class in (UMT5Model, UMT5ForConditionalGeneration, UMT5ForQuestionAnswering):
-            model = model_class(config)
-
+            model = model_class(config).set_train(False)
             inputs = copy.deepcopy(self._prepare_for_class(inputs_dict, model_class))
-
             if not self.is_encoder_decoder:
                 input_ids = inputs["input_ids"]
                 del inputs["input_ids"]
@@ -355,7 +356,7 @@ class UMT5ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         attention_names = ["encoder_attentions", "decoder_attentions", "cross_attentions"]
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         config = config_and_inputs[0]
-        model = UMT5ForConditionalGeneration(config)
+        model = UMT5ForConditionalGeneration(config).set_train(False)
 
         head_masking = {
             "head_mask": ops.zeros((config.num_layers, config.num_heads)),
@@ -483,7 +484,7 @@ class UMT5EncoderOnlyModelTester:
         input_ids,
         attention_mask,
     ):
-        model = UMT5EncoderModel(config=config)
+        model = UMT5EncoderModel(config=config).set_train(False)
         result = model(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -499,7 +500,7 @@ class UMT5EncoderOnlyModelTester:
         input_ids,
         attention_mask,
     ):
-        model = UMT5EncoderModel(config=config).half()
+        model = UMT5EncoderModel(config=config).half().set_train(False)
         output = model(input_ids, attention_mask=attention_mask)["last_hidden_state"]
         self.parent.assertFalse(ops.isnan(output).any().item())
 
@@ -549,8 +550,8 @@ class UMT5EncoderOnlyModelTest(ModelTesterMixin, unittest.TestCase):
         if is_mindspore_available()
         else {}
     )
-    all_parallelizable_model_classes = (UMT5EncoderModel,) if is_mindspore_available() else ()
-
+    #修改一
+    all_parallelizable_model_classes = (UMT5EncoderModel,UMT5ForConditionalGeneration) if is_mindspore_available() else ()
     def setUp(self):
         self.model_tester = UMT5EncoderOnlyModelTester(self)
         self.config_tester = ConfigTester(self, config_class=UMT5Config, d_model=37)

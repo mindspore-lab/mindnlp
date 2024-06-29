@@ -655,7 +655,7 @@ class UMT5Stack(UMT5PreTrainedModel):
             raise ValueError(
                 f"You cannot specify both {err_msg_prefix}input_ids and {err_msg_prefix}inputs_embeds at the same time"
             )
-        elif input_ids is not None:
+        if input_ids is not None:
             input_shape = input_ids.shape
             input_ids = input_ids.view(-1, input_shape[-1])
         elif inputs_embeds is not None:
@@ -679,14 +679,13 @@ class UMT5Stack(UMT5PreTrainedModel):
                 raise ValueError(f"`use_cache` can only be set to `True` if {self} is used as a decoder")
         if attention_mask is None:
             attention_mask = ops.ones((batch_size, mask_seq_length), mindspore.float32)
-        if(attention_mask.type() =="Bool"):
-            attention_mask = ops.cast(attention_mask, mindspore.int64)
+        #if(attention_mask.type() =="Bool"):
+        #    attention_mask = ops.cast(attention_mask, mindspore.int64)
         if self.is_decoder and encoder_attention_mask is None and encoder_hidden_states is not None:
             encoder_seq_length = encoder_hidden_states.shape[1]
             encoder_attention_mask = ops.ones(
                 batch_size, encoder_seq_length, dtype=mindspore.int64
             )
-
         # initialize past_key_values with `None` if past does not exist
         if past_key_values is None:
             past_key_values = [None] * len(self.block)
@@ -709,7 +708,7 @@ class UMT5Stack(UMT5PreTrainedModel):
                 logger.warning_once(
                     "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
                 )
-                use_cache = False
+                use_cache = True
 
         # Prepare head mask if needed
         head_mask = self.get_head_mask(head_mask, self.config.num_layers)
@@ -717,14 +716,11 @@ class UMT5Stack(UMT5PreTrainedModel):
         present_key_value_states = () if use_cache else None
         all_hidden_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
-        all_cross_attentions = () if output_attentions and self.is_decoder else None
-
+        all_cross_attentions = () if (output_attentions and self.is_decoder) else None
         hidden_states = self.dropout(inputs_embeds)
-
         for i, (layer_module, past_key_value) in enumerate(zip(self.block, past_key_values)):
             layer_head_mask = head_mask[i]
             cross_attn_layer_head_mask = cross_attn_head_mask[i]
-
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
@@ -791,174 +787,12 @@ class UMT5Stack(UMT5PreTrainedModel):
             cross_attentions=all_cross_attentions,
         )
 
-
-UMT5_START_DOCSTRING = r"""
-
-    The UMT5 model was proposed in [Exploring the Limits of Transfer Learning with a Unified Text-to-Text
-    Transformer](https://arxiv.org/abs/1910.10683) by Colin Raffel, Noam Shazeer, Adam Roberts, Katherine Lee, Sharan
-    Narang, Michael Matena, Yanqi Zhou, Wei Li, Peter J. Liu. It's an encoder decoder transformer pre-trained in a
-    text-to-text denoising generative setting.
-
-    This model inherits from [`PreTrainedModel`]. Check the superclass documentation for the generic methods the
-    library implements for all its model (such as downloading or saving, resizing the input embeddings, pruning heads
-    etc.)
-
-    Parameters:
-        config ([`UMT5Config`]): Model configuration class with all the parameters of the model.
-            Initializing with a config file does not load the weights associated with the model, only the
-            configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-"""
-
-UMT5_INPUTS_DOCSTRING = r"""
-    Args:
-        input_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
-            Indices of input sequence tokens in the vocabulary. UMT5 is a model with relative position embeddings so
-            you should be able to pad the inputs on both the right and the left.
-
-            Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
-            [`PreTrainedTokenizer.__call__`] for detail.
-
-            [What are input IDs?](../glossary#input-ids)
-
-            To know more on how to prepare `input_ids` for pretraining take a look a [UMT5 Training](./umt5#training).
-        attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-
-            [What are attention masks?](../glossary#attention-mask)
-        decoder_input_ids (`mindspore.Tensor` of shape `(batch_size, target_sequence_length)`, *optional*):
-            Indices of decoder input sequence tokens in the vocabulary.
-
-            Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
-            [`PreTrainedTokenizer.__call__`] for details.
-
-            [What are decoder input IDs?](../glossary#decoder-input-ids)
-
-            UMT5 uses the `pad_token_id` as the starting token for `decoder_input_ids` generation. If `past_key_values`
-            is used, optionally only the last `decoder_input_ids` have to be input (see `past_key_values`).
-
-            To know more on how to prepare `decoder_input_ids` for pretraining take a look at [UMT5
-            Training](./umt5#training).
-        head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
-            Mask to nullify selected heads of the self-attention modules in the encoder. Mask values selected in `[0,
-            1]`:
-
-            - 1 indicates the head is **not masked**,
-            - 0 indicates the head is **masked**.
-
-        decoder_head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
-            Mask to nullify selected heads of the self-attention modules in the decoder. Mask values selected in `[0,
-            1]`:
-
-            - 1 indicates the head is **not masked**,
-            - 0 indicates the head is **masked**.
-
-        cross_attn_head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
-                Mask to nullify selected heads of the cross-attention modules in the decoder. Mask values selected in
-                `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
-
-        encoder_outputs (`tuple(tuple(mindspore.Tensor)`, *optional*):
-            Tuple consists of (`last_hidden_state`, `optional`: *hidden_states*, `optional`: *attentions*)
-            `last_hidden_state` of shape `(batch_size, sequence_length, hidden_size)` is a sequence of hidden states at
-            the output of the last layer of the encoder. Used in the cross-attention of the decoder.
-        past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
-            Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
-
-            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-        inputs_embeds (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
-            Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation. This
-            is useful if you want more control over how to convert `input_ids` indices into associated vectors than the
-            model's internal embedding lookup matrix.
-        decoder_inputs_embeds (`mindspore.Tensor` of shape `(batch_size, target_sequence_length, hidden_size)`, *optional*):
-            Optionally, instead of passing `decoder_input_ids` you can choose to directly pass an embedded
-            representation. If `past_key_values` is used, optionally only the last `decoder_inputs_embeds` have to be
-            input (see `past_key_values`). This is useful if you want more control over how to convert
-            `decoder_input_ids` indices into associated vectors than the model's internal embedding lookup matrix.
-
-            If `decoder_input_ids` and `decoder_inputs_embeds` are both unset, `decoder_inputs_embeds` takes the value
-            of `inputs_embeds`.
-
-        use_cache (`bool`, *optional*):
-            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-            `past_key_values`).
-
-        output_attentions (`bool`, *optional*):
-            Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-            tensors for more detail.
-        output_hidden_states (`bool`, *optional*):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-            more detail.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-"""
-
-UMT5_ENCODER_INPUTS_DOCSTRING = r"""
-    Args:
-        input_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
-            Indices of input sequence tokens in the vocabulary. UMT5 is a model with relative position embeddings so
-            you should be able to pad the inputs on both the right and the left.
-
-            Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
-            [`PreTrainedTokenizer.__call__`] for detail.
-
-            To know more on how to prepare `input_ids` for pretraining take a look a [UMT5 Training](./umt5#training).
-        attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-
-            [What are attention masks?](../glossary#attention-mask)
-        head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
-            Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
-
-            - 1 indicates the head is **not masked**,
-            - 0 indicates the head is **masked**.
-
-        inputs_embeds (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
-            Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation. This
-            is useful if you want more control over how to convert `input_ids` indices into associated vectors than the
-            model's internal embedding lookup matrix.
-        output_attentions (`bool`, *optional*):
-            Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-            tensors for more detail.
-        output_hidden_states (`bool`, *optional*):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-            more detail.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-"""
-
 class UMT5Model(UMT5PreTrainedModel):
-    r"""
-    Examples:
-
-    ```python
-    >>> from transformers import UMT5Model, AutoTokenizer
-
-    >>> model = UMT5Model.from_pretrained("google/umt5-small")
-    >>> tokenizer = AutoTokenizer.from_pretrained("google/umt5-small")
-    >>> noisy_text = "UN Offizier sagt, dass weiter <extra_id_0> werden muss in Syrien."
-    >>> label = "<extra_id_0> verhandelt"
-    >>> inputs = tokenizer(inputs, return_tensors="pt")
-    >>> labels = tokenizer(label=label, return_tensors="pt")
-
-    >>> outputs = model(input_ids=inputs["input_ids"], decoder_input_ids=labels["input_ids"])
-    >>> hidden_states = outputs.last_hidden_state
-    ```"""
 
     model_type = "umt5"
-    config_class = UMT5Config
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
-    def __init__(self, config):
+    def __init__(self, config: UMT5Config):
         super().__init__(config)
         self.shared = nn.Embedding(config.vocab_size, config.d_model)
 
@@ -973,10 +807,8 @@ class UMT5Model(UMT5PreTrainedModel):
         decoder_config.is_encoder_decoder = False
         decoder_config.num_layers = config.num_decoder_layers
         self.decoder = UMT5Stack(decoder_config, self.shared)
-
         # Initialize weights and apply final processing
         self.post_init()
-
     # Copied from transformers.models.t5.modeling_t5.T5Model.get_input_embeddings
     def get_input_embeddings(self):
         return self.shared
@@ -984,9 +816,8 @@ class UMT5Model(UMT5PreTrainedModel):
     # Copied from transformers.models.t5.modeling_t5.T5Model.set_input_embeddings
     def set_input_embeddings(self, new_embeddings):
         self.shared = new_embeddings
-        self.encoder.set_input_embeddings(new_embeddings)
-        self.decoder.set_input_embeddings(new_embeddings)
-
+        #self.encoder.set_input_embeddings(new_embeddings)
+        #self.decoder.set_input_embeddings(new_embeddings)
     # Copied from transformers.models.t5.modeling_t5.T5Model._tie_weights
     def _tie_weights(self):
         if self.config.tie_word_embeddings:
@@ -1027,7 +858,7 @@ class UMT5Model(UMT5PreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[Tuple[mindspore.Tensor], Seq2SeqModelOutput]:
+    ):
         r"""
         Returns:
 
@@ -1049,7 +880,8 @@ class UMT5Model(UMT5PreTrainedModel):
 
         >>> # forward pass
         >>> outputs = model(input_ids=input_ids, decoder_input_ids=decoder_input_ids)
-        >>> last_hidden_states = outputs.last_hidden_state
+        >>> 
+        s = outputs.last_hidden_state
         ```"""
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -1089,10 +921,8 @@ class UMT5Model(UMT5PreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-
         if not return_dict:
             return decoder_outputs + encoder_outputs
-
         return Seq2SeqModelOutput(
             last_hidden_state=decoder_outputs.last_hidden_state,
             past_key_values=decoder_outputs.past_key_values,
@@ -1125,7 +955,7 @@ class UMT5ForConditionalGeneration(UMT5PreTrainedModel):
     model_type = "umt5"
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight", "lm_head.weight"]
 
-    def __init__(self, config):
+    def __init__(self, config: UMT5Config):
         super().__init__(config)
         self.model_dim = config.d_model
 
@@ -1229,7 +1059,8 @@ class UMT5ForConditionalGeneration(UMT5PreTrainedModel):
         ```"""
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-
+        if labels is not None:
+            use_cache = False
         # Encode if needed (training, first prediction pass)
         if encoder_outputs is None:
             # Convert encoder inputs in embeddings if needed
@@ -1534,7 +1365,6 @@ class UMT5ForSequenceClassification(UMT5PreTrainedModel):
         if len(ops.unique_consecutive(eos_mask.sum(1))) > 1:
             raise ValueError("All examples must have the same number of <eos> tokens.")
         batch_size, _, hidden_size = sequence_output.shape
-        #mt5错了
         sentence_representation = sequence_output[eos_mask].view(batch_size, -1, hidden_size)[:, -1, :]
         logits = self.classification_head(sentence_representation)
 
@@ -1560,7 +1390,6 @@ class UMT5ForSequenceClassification(UMT5PreTrainedModel):
         if not return_dict:
             output = (logits,) + outputs[1:]
             return ((loss,) + output) if loss is not None else output
-
         return Seq2SeqSequenceClassifierOutput(
             loss=loss,
             logits=logits,
@@ -1778,7 +1607,6 @@ class UMT5ForQuestionAnswering(UMT5PreTrainedModel):
         )
 
         sequence_output = decoder_outputs[0]
-
         logits = self.qa_outputs(sequence_output)
         start_logits, end_logits = logits.split(1, axis=-1)
         start_logits = start_logits.squeeze(-1)
@@ -1799,7 +1627,6 @@ class UMT5ForQuestionAnswering(UMT5PreTrainedModel):
             start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
             end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
-
         if not return_dict:
             output = (start_logits, end_logits) + decoder_outputs[1:] + encoder_outputs
             return ((total_loss,) + output) if total_loss is not None else output
