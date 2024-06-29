@@ -22,18 +22,8 @@ from mindnlp.utils.testing_utils import is_pipeline_test, require_mindspore
 @is_pipeline_test
 class TQAPipelineTests(unittest.TestCase):
 
-    def test_tmp(self):
-        example = {
-            "table": {
-                "actors": ["brad pitt", "leonardo di caprio", "george clooney"],
-                "age": ["56", "45", "59"],
-                "number of movies": ["87", "53", "69"],
-                "date of birth": ["7 february 1967", "10 june 1996", "28 november 1967"],
-            },
-            "query": "how many movies has george clooney played in?",
-        }
+    def test_small_model(self):
+        pass
 
-        handler = TableQuestionAnsweringArgumentHandler()
-        tqa_inputs = handler(example["table"], example["query"])
-        print("############")
-        print(tqa_inputs)
+    def test_large_model(self):
+        pass

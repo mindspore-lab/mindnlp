@@ -28,6 +28,7 @@ from mindnlp.utils import (
     logging,
 )
 from mindnlp.utils.peft_utils import find_adapter_config_file
+from .table_question_answering import TableQuestionAnsweringPipeline
 from ..configuration_utils import PretrainedConfig
 from ..feature_extraction_utils import PreTrainedFeatureExtractor
 from ..models.auto.configuration_auto import AutoConfig
@@ -67,7 +68,7 @@ from ..models.auto.modeling_auto import (
     AutoModelForQuestionAnswering,
     AutoModelForSeq2SeqLM,
     AutoModelForSequenceClassification,
-    AutoModelForSpeechSeq2Seq,
+    AutoModelForSpeechSeq2Seq, AutoModelForTableQuestionAnswering,
     # AutoModelForTableQuestionAnswering,
     # AutoModelForTextToSpectrogram,
     # AutoModelForTextToWaveform,
@@ -138,6 +139,16 @@ SUPPORTED_TASKS = {
         "default": {
             "model": {
                 "ms": ("distilbert/distilbert-base-cased-distilled-squad", "626af31"),
+            },
+        },
+        "type": "text",
+    },
+    "table-question-answering": {
+        "impl": TableQuestionAnsweringPipeline,
+        "ms": (AutoModelForTableQuestionAnswering,),
+        "default": {
+            "model": {
+                "ms": ("google/tapas-base-finetuned-wtq", "69ceee2"),
             },
         },
         "type": "text",

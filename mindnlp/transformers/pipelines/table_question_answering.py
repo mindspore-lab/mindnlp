@@ -17,8 +17,8 @@ import collections
 import types
 from typing import Dict
 
-from .base import ArgumentHandler, Dataset
-from .. import Pipeline
+from .base import ArgumentHandler, Dataset, Pipeline
+
 from ...utils import (
     is_mindspore_available,
     is_tokenizers_available,
@@ -264,8 +264,14 @@ class TableQuestionAnsweringPipeline(Pipeline):
         model_outputs = {"model_inputs": model_inputs, "table": table, "outputs": outputs}
         return model_outputs
 
-    def postprocess(self, model_outputs: ModelOutput, **postprocess_parameters: Dict):
-        pass
+    def postprocess(self, model_outputs, **postprocess_parameters):
+        inputs = model_outputs["model_inputs"]
+        table = model_outputs["table"]
+        outputs = model_outputs["outputs"]
+
+        answers = [{"answer": answer}
+                   for answer in self.tokenizer.batch_decode(outputs, skip_special_tokens=True)]
+        return answers if len(answers) > 1 else answers[0]
 
     def batch_inference(self, **inputs):
         return self.model(**inputs)
