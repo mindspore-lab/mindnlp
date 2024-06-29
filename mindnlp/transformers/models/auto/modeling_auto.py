@@ -143,6 +143,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("tapas", "TapasModel"),
         ("time_series_transformer", "TimeSeriesTransformerModel"),
         ("timesformer", "TimesformerModel"),
+        ("univnet", "UnivNetModel"),
         ("videomae", "VideoMAEModel"),
         ("vision_text_dual_encoder", "VisionTextDualEncoderModel"),
         ("visual_bert", "VisualBertModel"),
