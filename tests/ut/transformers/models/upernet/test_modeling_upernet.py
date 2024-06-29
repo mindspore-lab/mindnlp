@@ -299,7 +299,7 @@ class UPerNetModelIntegrationTest(unittest.TestCase):
         expected_slice = mindspore.Tensor(
             [[-7.5958, -7.5958, -7.4302], [-7.5958, -7.5958, -7.4302], [-7.4797, -7.4797, -7.3068]]
         )
-        self.assertTrue(np.allclose(outputs.logits[0, 0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=5e-2))
+        self.assertTrue(np.allclose(outputs.logits[0, 0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
 
     def test_inference_convnext_backbone(self):
         processor = AutoImageProcessor.from_pretrained("openmmlab/UPerNet-convnext-tiny")
@@ -317,4 +317,4 @@ class UPerNetModelIntegrationTest(unittest.TestCase):
             [[-8.8110, -8.8110, -8.6521], [-8.8110, -8.8110, -8.6521], [-8.7746, -8.7746, -8.6130]]
         )
         self.assertTrue(np.allclose(
-            outputs.logits[0, 0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-2))
+            outputs.logits[0, 0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
