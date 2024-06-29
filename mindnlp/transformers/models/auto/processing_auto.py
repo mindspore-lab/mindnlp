@@ -69,6 +69,7 @@ PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("markuplm", "MarkupLMProcessor"),
         ("mctct", "MCTCTProcessor"),
         ("mgp-str", "MgpstrProcessor"),
+        ("nougat", "NougatProcessor"),
         ("oneformer", "OneFormerProcessor"),
         ("owlv2", "Owlv2Processor"),
         ("owlvit", "OwlViTProcessor"),
@@ -105,13 +106,13 @@ PROCESSOR_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, PROCESSOR_MAPPING_NAM
 def processor_class_from_name(class_name: str):
     """
     This function retrieves a processor class based on the provided class name.
-    
+
     Args:
         class_name (str): The name of the processor class to retrieve.
-    
+
     Returns:
         None: If the processor class is not found.
-    
+
     Raises:
         AttributeError: If an attribute error occurs while trying to retrieve the class.
         ImportError: If an import error occurs while importing the module.
@@ -120,7 +121,9 @@ def processor_class_from_name(class_name: str):
         if class_name in processors:
             module_name = model_type_to_module_name(module_name)
 
-            module = importlib.import_module(f".{module_name}", "mindnlp.transformers.models")
+            module = importlib.import_module(
+                f".{module_name}", "mindnlp.transformers.models"
+            )
             try:
                 return getattr(module, class_name)
             except AttributeError:
@@ -146,22 +149,23 @@ class AutoProcessor:
 
     This class cannot be instantiated directly using `__init__()` (throws an error).
     """
+
     def __init__(self):
         """
-        Class: AutoProcessor
-        
-        __init__(self)
-            Initializes a new instance of the AutoProcessor class.
-        
-        Args:
-            self (object): The instance of the AutoProcessor class.
-        
-        Returns:
-            None. This method does not return a value.
-        
-        Raises:
-            EnvironmentError: This method raises an EnvironmentError with the message 'AutoProcessor is designed to be instantiated using the `AutoProcessor.from_pretrained(pretrained_model_name_or_path)`
-method.'
+                Class: AutoProcessor
+
+                __init__(self)
+                    Initializes a new instance of the AutoProcessor class.
+
+                Args:
+                    self (object): The instance of the AutoProcessor class.
+
+                Returns:
+                    None. This method does not return a value.
+
+                Raises:
+                    EnvironmentError: This method raises an EnvironmentError with the message 'AutoProcessor is designed to be instantiated using the `AutoProcessor.from_pretrained(pretrained_model_name_or_path)`
+        method.'
         """
         raise EnvironmentError(
             "AutoProcessor is designed to be instantiated "
@@ -258,7 +262,9 @@ method.'
         # First, let's see if we have a processor or preprocessor config.
         # Filter the kwargs for `get_file_from_repo`.
         get_file_from_repo_kwargs = {
-            key: kwargs[key] for key in inspect.signature(get_file_from_repo).parameters.keys() if key in kwargs
+            key: kwargs[key]
+            for key in inspect.signature(get_file_from_repo).parameters.keys()
+            if key in kwargs
         }
 
         # Let's start by checking whether the processor class is saved in a processor config
@@ -266,16 +272,22 @@ method.'
             pretrained_model_name_or_path, PROCESSOR_NAME, **get_file_from_repo_kwargs
         )
         if processor_config_file is not None:
-            config_dict, _ = ProcessorMixin.get_processor_dict(pretrained_model_name_or_path, **kwargs)
+            config_dict, _ = ProcessorMixin.get_processor_dict(
+                pretrained_model_name_or_path, **kwargs
+            )
             processor_class = config_dict.get("processor_class", None)
 
         if processor_class is None:
             # If not found, let's check whether the processor class is saved in an image processor config
             preprocessor_config_file = get_file_from_repo(
-                pretrained_model_name_or_path, FEATURE_EXTRACTOR_NAME, **get_file_from_repo_kwargs
+                pretrained_model_name_or_path,
+                FEATURE_EXTRACTOR_NAME,
+                **get_file_from_repo_kwargs,
             )
             if preprocessor_config_file is not None:
-                config_dict, _ = ImageProcessingMixin.get_image_processor_dict(pretrained_model_name_or_path, **kwargs)
+                config_dict, _ = ImageProcessingMixin.get_image_processor_dict(
+                    pretrained_model_name_or_path, **kwargs
+                )
                 processor_class = config_dict.get("processor_class", None)
 
             # If not found, let's check whether the processor class is saved in a feature extractor config
@@ -288,7 +300,9 @@ method.'
         if processor_class is None:
             # Next, let's check whether the processor class is saved in a tokenizer
             tokenizer_config_file = get_file_from_repo(
-                pretrained_model_name_or_path, TOKENIZER_CONFIG_FILE, **get_file_from_repo_kwargs
+                pretrained_model_name_or_path,
+                TOKENIZER_CONFIG_FILE,
+                **get_file_from_repo_kwargs,
             )
             if tokenizer_config_file is not None:
                 with open(tokenizer_config_file, encoding="utf-8") as reader:
@@ -300,7 +314,9 @@ method.'
             # Otherwise, load config, if it can be loaded.
             if not isinstance(config, PretrainedConfig):
                 config = AutoConfig.from_pretrained(
-                    pretrained_model_name_or_path, trust_remote_code=trust_remote_code, **kwargs
+                    pretrained_model_name_or_path,
+                    trust_remote_code=trust_remote_code,
+                    **kwargs,
                 )
 
             # And check if the config contains the processor class.
@@ -311,29 +327,39 @@ method.'
 
         if processor_class is not None:
             return processor_class.from_pretrained(
-                pretrained_model_name_or_path, trust_remote_code=trust_remote_code, **kwargs
+                pretrained_model_name_or_path,
+                trust_remote_code=trust_remote_code,
+                **kwargs,
             )
         # Last try: we use the PROCESSOR_MAPPING.
         if type(config) in PROCESSOR_MAPPING:
-            return PROCESSOR_MAPPING[type(config)].from_pretrained(pretrained_model_name_or_path, **kwargs)
+            return PROCESSOR_MAPPING[type(config)].from_pretrained(
+                pretrained_model_name_or_path, **kwargs
+            )
 
         # At this stage, there doesn't seem to be a `Processor` class available for this model, so let's try a
         # tokenizer.
         try:
             return AutoTokenizer.from_pretrained(
-                pretrained_model_name_or_path, trust_remote_code=trust_remote_code, **kwargs
+                pretrained_model_name_or_path,
+                trust_remote_code=trust_remote_code,
+                **kwargs,
             )
         except Exception:
             try:
                 return AutoImageProcessor.from_pretrained(
-                    pretrained_model_name_or_path, trust_remote_code=trust_remote_code, **kwargs
+                    pretrained_model_name_or_path,
+                    trust_remote_code=trust_remote_code,
+                    **kwargs,
                 )
             except Exception:
                 pass
 
             try:
                 return AutoFeatureExtractor.from_pretrained(
-                    pretrained_model_name_or_path, trust_remote_code=trust_remote_code, **kwargs
+                    pretrained_model_name_or_path,
+                    trust_remote_code=trust_remote_code,
+                    **kwargs,
                 )
             except Exception:
                 pass
