@@ -337,7 +337,7 @@ class UnivNetFeatureExtractionTest(SequenceFeatureExtractionTestMixin, unittest.
 
         return [x["array"] for x in speech_samples], [x["sampling_rate"] for x in speech_samples]
 
-    # @slow
+    @slow
     @require_mindspore
     def test_integration(self):
         # fmt: off

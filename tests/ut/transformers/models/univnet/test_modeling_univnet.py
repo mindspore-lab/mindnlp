@@ -201,7 +201,7 @@ class UnivNetModelTest(ModelTesterMixin, unittest.TestCase):
             self.assertTrue(outputs.shape[0] == 1, msg="Unbatched input should create batched output with bsz = 1")
 
 
-# @slow
+@slow
 class UnivNetModelIntegrationTests(unittest.TestCase):
     def tearDown(self):
         super().tearDown()
@@ -261,8 +261,6 @@ class UnivNetModelIntegrationTests(unittest.TestCase):
         input_speech = self.get_inputs(num_samples=3)
 
         waveform = model(**input_speech)[0]
-        waveform = waveform.cpu()
-
         waveform_mean = ops.mean(waveform)
         waveform_stddev = ops.std(waveform)
         waveform_slice = waveform[-1, -9:].flatten()
@@ -293,7 +291,7 @@ class UnivNetModelIntegrationTests(unittest.TestCase):
         EXPECTED_MEAN = ms.tensor(-0.22895093)
         EXPECTED_STDDEV = ms.tensor(0.33986747)
         EXPECTED_SLICE = ms.tensor([-0.3276, -0.5504, -0.3484, 0.3574, -0.0373, -0.1826, -0.4880, -0.6431, -0.5162])
-
+        print("111",waveform_slice.asnumpy())
         self.assertTrue(np.allclose(waveform_mean.asnumpy(), EXPECTED_MEAN.asnumpy(), atol=1e-4, rtol=1e-5))
         self.assertTrue(np.allclose(waveform_stddev.asnumpy(), EXPECTED_STDDEV.asnumpy(), atol=1e-4, rtol=1e-5))
         self.assertTrue(np.allclose(waveform_slice.asnumpy(), EXPECTED_SLICE.asnumpy(), atol=1e-3, rtol=1e-5))
@@ -304,7 +302,7 @@ class UnivNetModelIntegrationTests(unittest.TestCase):
         model.set_train(False)
         audio, sr = self._load_datasamples(1, sampling_rate=feature_extractor.sampling_rate)
 
-        input_features = feature_extractor(audio, sampling_rate=sr[0], return_tensors="pt").input_features
+        input_features = feature_extractor(audio, sampling_rate=sr[0], return_tensors="ms").input_features
         # input_features = input_features
 
         input_speech = self.get_inputs(num_samples=1, noise_length=input_features.shape[1])

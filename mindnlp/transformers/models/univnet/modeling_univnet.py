@@ -506,7 +506,7 @@ class UnivNetModel(PreTrainedModel):
         input_features: ms.Tensor,
         noise_sequence: Optional[ms.Tensor] = None,
         padding_mask: Optional[ms.Tensor] = None,
-        generator: Optional[any] = None,
+        generator: Optional[int] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[ms.Tensor], UnivNetModelOutput]:
         r"""
