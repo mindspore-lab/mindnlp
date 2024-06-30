@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""InstructBLIP model"""
 from . import configuration_instructblip, modeling_instructblip, processing_instructblip
 from .configuration_instructblip import *
 from .modeling_instructblip import *
