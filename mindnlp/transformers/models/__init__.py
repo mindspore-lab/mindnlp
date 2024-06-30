@@ -140,6 +140,7 @@ from . import (
     phi3,
     poolformer,
     pop2piano,
+    prophetnet,
     qdqbert,
     qwen2,
     qwen2_moe,
@@ -316,6 +317,7 @@ from .phi import *
 from .phi3 import *
 from .poolformer import *
 from .pop2piano import *
+from .prophetnet import *
 from .qdqbert import *
 from .qwen2 import *
 from .qwen2_moe import *
@@ -491,6 +493,7 @@ __all__.extend(phi.__all__)
 __all__.extend(phi3.__all__)
 __all__.extend(poolformer.__all__)
 __all__.extend(pop2piano.__all__)
+__all__.extend(prophetnet.__all__)
 __all__.extend(qdqbert.__all__)
 __all__.extend(qwen2.__all__)
 __all__.extend(qwen2_moe.__all__)
