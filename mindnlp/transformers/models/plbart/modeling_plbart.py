@@ -1207,7 +1207,7 @@ class PLBartModel(PLBartPreTrainedModel):
 
 class PLBartForConditionalGeneration(PLBartPreTrainedModel):
     base_model_prefix = "model"
-    _keys_to_ignore_on_load_missing = ["final_logits_bias"]
+    # _keys_to_ignore_on_load_missing = ["final_logits_bias"]
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight", "lm_head.weight"]
 
     def __init__(self, config: PLBartConfig):
