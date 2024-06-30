@@ -283,16 +283,41 @@ class Data2VecVisionModelTest(ModelTesterMixin, unittest.TestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_for_image_classification(*config_and_inputs)
 
-    @slow
+  #  @slow
     def test_model_from_pretrained(self):
         model_name = "facebook/data2vec-vision-base-ft1k"
         model = Data2VecVisionModel.from_pretrained(model_name)
         self.assertIsNotNone(model)
 
+import pathlib
+import os
+import inspect
+def get_tests_dir(append_path=None):
+    """
+    Args:
+        append_path: optional path to append to the tests dir path
+
+    Return:
+        The full path to the `tests` dir, so that the tests can be invoked from anywhere. Optionally `append_path` is
+        joined after the `tests` dir the former is provided.
+
+    """
+    # this function caller's __file__
+    caller__file__ = inspect.stack()[1][1]
+    tests_dir = os.path.abspath(os.path.dirname(caller__file__))
+
+    while not tests_dir.endswith("tests"):
+        tests_dir = os.path.dirname(tests_dir)
+
+    if append_path:
+        return os.path.join(tests_dir, append_path)
+    return tests_dir
+
 
 # We will verify our results on an image of cute cats
 def prepare_img():
-    image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
+    fixtures_path = pathlib.Path(get_tests_dir()) / 'fixtures/tests_samples/COCO'
+    image = Image.open(fixtures_path / "000000039769.png")
     return image
 
 
@@ -310,7 +335,7 @@ class Data2VecVisionModelIntegrationTest(unittest.TestCase):
 
         image_processor = self.default_image_processor
         image = prepare_img()
-        inputs = image_processor(images=image, return_tensors="pt")
+        inputs = image_processor(images=image, return_tensors="ms")
 
         # forward pass
         outputs = model(**inputs)
@@ -332,9 +357,10 @@ class Data2VecVisionModelIntegrationTest(unittest.TestCase):
         model_name = "facebook/data2vec-vision-base-ft1k"
         model = Data2VecVisionModel.from_pretrained(model_name, **{"use_absolute_position_embeddings": True})
 
-        image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
+        fixtures_path = pathlib.Path(get_tests_dir()) / 'fixtures/tests_samples/COCO'
+        image = Image.open(fixtures_path / "000000039769.png")
         processor = BeitImageProcessor.from_pretrained("facebook/data2vec-vision-base-ft1k")
-        inputs = processor(images=image, return_tensors="pt", size={"height": 480, "width": 480})
+        inputs = processor(images=image, return_tensors="ms", size={"height": 480, "width": 480})
         pixel_values = inputs.pixel_values
 
         # with interpolate_pos_encoding being False an exception should be raised with higher resolution
