@@ -39,7 +39,8 @@ class ReturnType(enum.Enum):
 
 
 class Chat:
-    """This class is intended to just be used internally in this pipeline and not exposed to users. We convert chats
+    """
+    This class is intended to just be used internally in this pipeline and not exposed to users. We convert chats
     to this format because the rest of the pipeline code tends to assume that lists of messages are
     actually a batch of samples rather than messages in the same conversation."""
     def __init__(self, messages: List[Dict[str, str]]):
@@ -48,10 +49,11 @@ class Chat:
         
         Args:
             self: Represents the instance of the class.
-            messages (List[Dict[str, str]]): A list of dictionaries representing chat messages. Each dictionary must contain 'role' and 'content' keys.
+            messages (List[Dict[str, str]]): A list of dictionaries representing chat messages.
+                Each dictionary must contain 'role' and 'content' keys.
             
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             ValueError: Raised if any dictionary in the messages list does not contain both 'role' and 'content' keys.
@@ -143,7 +145,7 @@ class TextGenerationPipeline(Pipeline):
             max_length (int): The maximum length of the generated text.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the provided 'handle_long_generation' is not a valid value.
@@ -240,9 +242,10 @@ class TextGenerationPipeline(Pipeline):
                 Additional keyword arguments to pass along to the generate method of the model (see the generate method
                 corresponding to your framework [here](./model#generative-models)).
 
-        Return:
-            A list or a list of list of `dict`: Returns one of the following dictionaries (cannot return a combination
-            of both `generated_text` and `generated_token_ids`):
+        Returns:
+            A list or a list of list of `dict`:
+                Returns one of the following dictionaries (cannot return a combination of both `generated_text` and
+                `generated_token_ids`):
 
                 - **generated_text** (`str`, present when `return_text=True`) -- The generated text.
                 - **generated_token_ids** (`torch.Tensor` or `tf.Tensor`, present when `return_tensors=True`) -- The token
@@ -284,7 +287,8 @@ class TextGenerationPipeline(Pipeline):
             **generate_kwargs: Additional keyword arguments to be passed to the text generation process.
 
         Returns:
-            dict: A dictionary containing the preprocessed inputs for text generation. The dictionary includes the following keys:
+            dict: A dictionary containing the preprocessed inputs for text generation.
+                The dictionary includes the following keys:
 
                 - 'input_ids' (torch.Tensor): The tokenized input text.
                 - 'attention_mask' (torch.Tensor, optional): The attention mask for the input text, if padding is enabled.
@@ -340,20 +344,24 @@ class TextGenerationPipeline(Pipeline):
 
     def _forward(self, model_inputs, **generate_kwargs):
         """
-        This method, '_forward', is part of the 'TextGenerationPipeline' class and is responsible for generating text based on the provided model inputs and generation parameters.
+        This method, '_forward', is part of the 'TextGenerationPipeline' class and is responsible for
+        generating text based on the provided model inputs and generation parameters.
 
         Args:
             self (object): The instance of the TextGenerationPipeline class.
-            model_inputs (dict): A dictionary containing the model inputs required for text generation.
+            model_inputs (dict):
+                A dictionary containing the model inputs required for text generation.
 
                 - input_ids (Tensor): The input token IDs for the model.
                 - attention_mask (Tensor, optional): The attention mask for the model inputs. Defaults to None.
                 - prompt_text (str): The prompt text to influence the text generation.
 
-            **generate_kwargs (dict): Additional keyword arguments for text generation, such as 'max_length', 'min_length', 'prefix_length', etc.
+            **generate_kwargs (dict): Additional keyword arguments for text generation, such as 'max_length',
+            'min_length', 'prefix_length', etc.
 
         Returns:
-            dict: A dictionary containing the generated text sequence, the input token IDs, and the prompt text.
+            dict:
+                A dictionary containing the generated text sequence, the input token IDs, and the prompt text.
 
                 - generated_sequence (Tensor): The generated text sequence.
                 - input_ids (Tensor): The input token IDs used for generation.
@@ -405,14 +413,16 @@ class TextGenerationPipeline(Pipeline):
 
         Args:
             self: The instance of the TextGenerationPipeline class.
-            model_outputs (dict): A dictionary containing model outputs including 'generated_sequence', 'input_ids', and 'prompt_text'.
+            model_outputs (dict): A dictionary containing model outputs including 'generated_sequence', 'input_ids',
+                and 'prompt_text'.
             return_type (ReturnType): An enum specifying the type of return value desired.
                 Can be one of the following: ReturnType.TENSORS, ReturnType.NEW_TEXT, or ReturnType.FULL_TEXT.
-            clean_up_tokenization_spaces (bool): A flag indicating whether to clean up tokenization spaces in the generated text.
+            clean_up_tokenization_spaces (bool): A flag indicating whether to clean up tokenization spaces in
+                the generated text.
 
         Returns:
             list: A list of dictionaries containing the post-processed output based on the specified return_type.
-            Each dictionary in the list may have the following keys based on the return_type:
+                Each dictionary in the list may have the following keys based on the return_type:
 
                 - 'generated_token_ids': List of token ids if return_type is ReturnType.TENSORS.
                 - 'generated_text': The generated text if return_type is ReturnType.NEW_TEXT or ReturnType.FULL_TEXT.

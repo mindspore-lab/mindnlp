@@ -56,24 +56,29 @@ class LayoutLMConfig(PretrainedConfig):
             hidden_size (int, optional): The size of the hidden layers. Defaults to 768.
             num_hidden_layers (int, optional): The number of hidden layers. Defaults to 12.
             num_attention_heads (int, optional): The number of attention heads. Defaults to 12.
-            intermediate_size (int, optional): The size of the intermediate layer in the transformer encoder. Defaults to 3072.
+            intermediate_size (int, optional): The size of the intermediate layer in the transformer encoder. 
+                Defaults to 3072.
             hidden_act (str, optional): The activation function for the hidden layers. Defaults to 'gelu'.
             hidden_dropout_prob (float, optional): The dropout probability for the hidden layers. Defaults to 0.1.
-            attention_probs_dropout_prob (float, optional): The dropout probability for the attention probabilities. Defaults to 0.1.
-            max_position_embeddings (int, optional): The maximum sequence length that this model might ever be used with. Defaults to 512.
+            attention_probs_dropout_prob (float, optional): The dropout probability for the attention probabilities. 
+                Defaults to 0.1.
+            max_position_embeddings (int, optional): The maximum sequence length that this model might ever be used with. 
+                Defaults to 512.
             type_vocab_size (int, optional): The size of the token type vocabulary. Defaults to 2.
-            initializer_range (float, optional): The standard deviation of the truncated_normal_initializer for initializing all weight matrices. Defaults to 0.02.
+            initializer_range (float, optional): The standard deviation of the truncated_normal_initializer for 
+                initializing all weight matrices. Defaults to 0.02.
             layer_norm_eps (float, optional): The epsilon value to use in LayerNorm layers. Defaults to 1e-12.
             pad_token_id (int, optional): The id of the padding token. Defaults to 0.
             position_embedding_type (str, optional): The type of position embedding. Defaults to 'absolute'.
             use_cache (bool, optional): Whether to use cache for the model. Defaults to True.
-            max_2d_position_embeddings (int, optional): The maximum 2D sequence length that this model might ever be used with. Defaults to 1024.
+            max_2d_position_embeddings (int, optional): The maximum 2D sequence length that this model 
+                might ever be used with. Defaults to 1024.
         
         Returns:
-            None. This method does not return a value.
+            None.
         
         Raises:
-            N/A
+            None.
         """
         super().__init__(pad_token_id=pad_token_id, **kwargs)
         self.vocab_size = vocab_size

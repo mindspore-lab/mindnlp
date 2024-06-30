@@ -166,7 +166,7 @@ class EncodecConfig(PretrainedConfig):
             use_conv_shortcut (bool): Flag indicating whether to use convolution shortcut. Default is True.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If norm_type is not 'weight_norm' or 'time_group_norm'.

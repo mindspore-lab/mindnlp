@@ -64,7 +64,7 @@ class BioGptLearnedPositionalEmbedding(nn.Embedding):
             embedding_dim (int): The dimension of the embeddings.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None
@@ -114,7 +114,7 @@ class BioGptAttention(nn.Cell):
             config (Optional[BioGptConfig], optional): The configuration object (default: None).
         
         Returns:
-            None: This method does not return anything.
+            None.
         
         Raises:
             ValueError: If embed_dim is not divisible by num_heads.
@@ -152,10 +152,10 @@ class BioGptAttention(nn.Cell):
             bsz (int): The batch size of the tensor.
         
         Returns:
-            None. The method reshapes the input tensor and returns None.
+            None: The method reshapes the input tensor and returns None.
         
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
@@ -318,7 +318,7 @@ class BioGptDecoderLayer(nn.Cell):
                 - config.activation_dropout (float): Dropout probability for activation functions.
 
         Returns:
-            None: This method initializes the BioGptDecoderLayer object with the provided configuration.
+            None.
 
         Raises:
             ValueError: If config.hidden_size is not an integer.
@@ -465,7 +465,7 @@ class BioGptModel(BioGptPreTrainedModel):
                 - The config parameter is required and should not be None.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -499,10 +499,10 @@ class BioGptModel(BioGptPreTrainedModel):
             self (BioGptModel): The current instance of the BioGptModel class.
 
         Returns:
-            None: This method returns the input embeddings associated with the BioGptModel instance.
+            embed_tokens: This method returns the input embeddings associated with the BioGptModel instance.
 
         Raises:
-            None
+            None.
         """
         return self.embed_tokens
 
@@ -719,7 +719,7 @@ class BioGptForCausalLM(BioGptPreTrainedModel):
             config: An object containing configuration settings for the model.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the config parameter is not provided or is not of the expected type.
@@ -744,7 +744,7 @@ class BioGptForCausalLM(BioGptPreTrainedModel):
             None: This method returns the output projection of the model as a value of type 'None'.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.output_projection
 
@@ -759,7 +759,7 @@ class BioGptForCausalLM(BioGptPreTrainedModel):
                 This parameter should be an object representing the new embeddings to be used.
 
         Returns:
-            None: This method does not return any value explicitly.
+            None.
 
         Raises:
             None.
@@ -888,7 +888,7 @@ class BioGptForCausalLM(BioGptPreTrainedModel):
             None: This method does not return any value, as it modifies the 'past_key_values' in place.
 
         Raises:
-            None: This method does not raise any specific exceptions.
+            None.
         """
         reordered_past = ()
         for layer_past in past_key_values:
@@ -1037,7 +1037,7 @@ class BioGptForSequenceClassification(BioGptPreTrainedModel):
                 It specifies the configuration details such as the number of labels and hidden size.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the config parameter is not of type BioGptConfig.
@@ -1163,7 +1163,7 @@ class BioGptForSequenceClassification(BioGptPreTrainedModel):
             value (Tensor): The input embeddings to be set for the model. It should be a 2D tensor.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None

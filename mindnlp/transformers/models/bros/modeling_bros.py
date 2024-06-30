@@ -197,10 +197,10 @@ class BrosPositionalEmbedding2D(nn.Cell):
                 - Restrictions: Must contain the 'dim_bbox' attribute.
 
         Returns:
-            None: The method initializes the BrosPositionalEmbedding2D instance.
+            None.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         super(BrosPositionalEmbedding2D, self).__init__()
 
@@ -263,7 +263,7 @@ class BrosBboxEmbeddings(nn.Cell):
                 It is required for setting up the positional embeddings and projections within the BrosBboxEmbeddings instance.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -314,7 +314,7 @@ class BrosTextEmbeddings(nn.Cell):
                     type_vocab_size, pad_token_id, layer_norm_eps, hidden_dropout_prob, position_embedding_type.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             AttributeError: If the config object does not contain the required attributes for setting up the embeddings.
@@ -430,7 +430,7 @@ class BrosSelfAttention(nn.Cell):
                 If not provided, the hidden size should be a multiple of the number of attention heads.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the hidden_size is not a multiple of the number of attention heads and the config does not have the 'embedding_size' attribute.
@@ -470,7 +470,7 @@ class BrosSelfAttention(nn.Cell):
             x (mindspore.Tensor): The input tensor to be processed. It should have shape (batch_size, seq_length, hidden_size).
 
         Returns:
-            None. The method modifies the input tensor in-place.
+            None: The method modifies the input tensor in-place.
 
         Raises:
             None.
@@ -664,7 +664,7 @@ class BrosSelfOutput(nn.Cell):
                 - hidden_dropout_prob (float): The dropout probability for the hidden layer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the config parameter is not provided or is not of the expected type.
@@ -881,7 +881,7 @@ class BrosIntermediate(nn.Cell):
                 Can be either a string representing a predefined activation function or a custom activation function.
 
         Returns:
-            None: This method initializes the BrosIntermediate object with the specified configuration parameters.
+            None.
 
         Raises:
             TypeError: If the config object does not have the required attributes.
@@ -976,7 +976,7 @@ class BrosOutput(nn.Cell):
                 - Restrictions: None
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -1210,7 +1210,7 @@ class BrosEncoder(nn.Cell):
                 - num_hidden_layers (int): Number of hidden layers in the encoder.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             AttributeError: If the 'config' parameter is missing the 'num_hidden_layers' key.
@@ -1255,21 +1255,20 @@ class BrosEncoder(nn.Cell):
             Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]: The output of the BrosEncoder.
                 If return_dict is True, a dictionary with the following keys will be returned:
 
-                - last_hidden_state (mindspore.Tensor):
-                    The last layer hidden state of the BrosEncoder.
-                    Shape: (batch_size, sequence_length, hidden_size).
-                - past_key_values (Tuple[Tuple[mindspore.Tensor]]):
-                    The past key-value tensors for next time steps.
-                    Shape: (num_layers, 2, batch_size, num_attention_heads, sequence_length, hidden_size).
+                - last_hidden_state (mindspore.Tensor): The last layer hidden state of the BrosEncoder.
+                Shape: (batch_size, sequence_length, hidden_size).
+                - past_key_values (Tuple[Tuple[mindspore.Tensor]]): The past key-value tensors for next time steps.
+                Shape: (num_layers, 2, batch_size, num_attention_heads, sequence_length, hidden_size).
                 - hidden_states (Tuple[mindspore.Tensor]):
-                    All the hidden states of the BrosEncoder if output_hidden_states is True.
-                    Shape: (num_layers, batch_size, sequence_length, hidden_size).
+                All the hidden states of the BrosEncoder if output_hidden_states is True.
+                Shape: (num_layers, batch_size, sequence_length, hidden_size).
                 - attentions (Tuple[mindspore.Tensor]):
-                    All the attention tensors of the BrosEncoder if output_attentions is True.
-                    Shape: (num_layers, batch_size, num_attention_heads, sequence_length, sequence_length).
+                All the attention tensors of the BrosEncoder if output_attentions is True.
+                Shape: (num_layers, batch_size, num_attention_heads, sequence_length, sequence_length).
                 - cross_attentions (Tuple[mindspore.Tensor]):
-                    All the cross-attention tensors of the BrosEncoder if output_attentions and add_cross_attention are True.
-                    Shape: (num_layers, batch_size, num_attention_heads, sequence_length, encoder_sequence_length).
+                All the cross-attention tensors of the BrosEncoder if output_attentions and add_cross_attention are True.
+                Shape: (num_layers, batch_size, num_attention_heads, sequence_length, encoder_sequence_length).
+
             If return_dict is False, a tuple of the above values will be returned.
 
         Raises:
@@ -1456,7 +1455,7 @@ class BrosRelationExtractor(nn.Cell):
                 - classifier_dropout_prob (float): The dropout probability for the classifier.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If n_relations, hidden_size, or classifier_dropout_prob are not valid or if any of the parameters are missing.
@@ -1584,7 +1583,7 @@ class BrosModel(BrosPreTrainedModel):
             add_pooling_layer (bool): A flag indicating whether to include a pooling layer in the model.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -1627,7 +1626,7 @@ class BrosModel(BrosPreTrainedModel):
                 It should be of the appropriate type and format compatible with the word_embeddings attribute of the embeddings object.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -1660,6 +1659,7 @@ class BrosModel(BrosPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPoolingAndCrossAttentions]:
         r"""
+
         Returns:
             Union[Tuple[mindspore.Tensor], BaseModelOutputWithPoolingAndCrossAttentions]
 
@@ -1854,6 +1854,7 @@ class BrosForTokenClassification(BrosPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], TokenClassifierOutput]:
         r"""
+
         Returns:
             `Union[Tuple[mindspore.Tensor], TokenClassifierOutput]`
 
@@ -1918,12 +1919,15 @@ class BrosForTokenClassification(BrosPreTrainedModel):
 class BrosSpadeEEForTokenClassification(BrosPreTrainedModel):
 
     """
-    This class represents a BrosSpadeEEForTokenClassification model for token classification tasks. It is a subclass of BrosPreTrainedModel.
+    This class represents a BrosSpadeEEForTokenClassification model for token classification tasks.
+    It is a subclass of BrosPreTrainedModel.
 
-    The BrosSpadeEEForTokenClassification model consists of a BrosModel backbone and two token classifiers: initial_token_classifier and subsequent_token_classifier. The initial_token_classifier is used to
+    The BrosSpadeEEForTokenClassification model consists of a BrosModel backbone and two token classifiers:
+    initial_token_classifier and subsequent_token_classifier. The initial_token_classifier is used to
     classify the initial tokens in the input sequence, while the subsequent_token_classifier is used to classify the subsequent tokens.
 
-    The class provides a 'construct' method that takes various input tensors such as input_ids, bbox, attention_mask, token_type_ids, etc. It returns the predicted initial token logits and subsequent token
+    The class provides a 'construct' method that takes various input tensors such as input_ids, bbox, attention_mask,
+    token_type_ids, etc. It returns the predicted initial token logits and subsequent token
     logits. Optionally, it can also return hidden states and attentions if specified.
 
     Example:
@@ -1959,7 +1963,7 @@ class BrosSpadeEEForTokenClassification(BrosPreTrainedModel):
                 - Restrictions: Must contain the following attributes: 'num_labels', 'n_relations', 'hidden_size', 'classifier_dropout', 'hidden_dropout_prob'.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             AttributeError: If the 'config' object does not contain the required attributes.
@@ -2007,6 +2011,7 @@ class BrosSpadeEEForTokenClassification(BrosPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], BrosSpadeOutput]:
         r"""
+
         Returns:
             Union[Tuple[mindspore.Tensor], BrosSpadeOutput]
 
@@ -2116,10 +2121,13 @@ class BrosSpadeELForTokenClassification(BrosPreTrainedModel):
     Returns:
         Conditional returns:
 
-        - If return_dict is False:
-            - A tuple containing the logits and other model outputs.
-        - If return_dict is True:
-            - An instance of the TokenClassifierOutput class containing the loss, logits, hidden states, and attentions.
+            - If return_dict is False:
+
+                - A tuple containing the logits and other model outputs.
+
+            - If return_dict is True:
+
+                - An instance of the TokenClassifierOutput class containing the loss, logits, hidden states, and attentions.
 
     Example:
         ```python
@@ -2153,7 +2161,7 @@ class BrosSpadeELForTokenClassification(BrosPreTrainedModel):
                 - hidden_size (int): The hidden size of the model.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.

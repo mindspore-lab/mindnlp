@@ -136,7 +136,7 @@ class BarkSubModelConfig(PretrainedConfig):
             use_cache (bool): Indicates whether cache is used. Default is True.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -312,10 +312,10 @@ class BarkFineConfig(BarkSubModelConfig):
             n_codes_given (int): The number of given codes. Defaults to 1.
 
         Returns:
-            None: This method does not return anything.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.n_codes_total = n_codes_total
         self.n_codes_given = n_codes_given
@@ -397,7 +397,7 @@ class BarkConfig(PretrainedConfig):
             initializer_range (float): Range for weight initialization. Defaults to 0.02.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None

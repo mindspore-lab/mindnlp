@@ -63,8 +63,10 @@ def contrastive_loss(logits: mindspore.Tensor) -> mindspore.Tensor:
     Args:
         logits (mindspore.Tensor): The input logits for the contrastive loss function.
             It is a tensor containing the predicted values from the model.
+
     Returns:
         mindspore.Tensor: A tensor representing the contrastive loss value calculated based on the input logits.
+
     Raises:
         This function does not raise any exceptions.
     """
@@ -134,7 +136,7 @@ class BlipForConditionalGenerationModelOutput(ModelOutput):
             self: An instance of the 'BlipForConditionalGenerationModelOutput' class.
         
         Returns:
-            None. The method does not return any value.
+            None.
         
         Raises:
             FutureWarning: This method raises a 'FutureWarning' if the 'decoder_logits' attribute is used.
@@ -351,7 +353,9 @@ class BlipVisionEmbeddings(nn.Cell):
             pixel_values (mindspore.Tensor): The input tensor containing pixel values. It should have a shape of (batch_size, channels, height, width).
 
         Returns:
-            mindspore.Tensor: The constructed embeddings tensor. It has a shape of (batch_size, num_patches + 1, embedding_dim), where num_patches is the number of patches obtained from the input tensor and
+            mindspore.Tensor: The constructed embeddings tensor.
+                It has a shape of (batch_size, num_patches + 1, embedding_dim), where num_patches is the number of
+                patches obtained from the input tensor and
                 embedding_dim is the dimension of the embeddings.
 
         Raises:
@@ -464,7 +468,7 @@ class BlipAttention(nn.Cell):
                 - config.attention_dropout (float): The dropout rate for attention weights.
 
         Returns:
-            None: This method initializes the BlipAttention instance with the provided configuration parameters.
+            None.
 
         Raises:
             ValueError: If embed_dim is not divisible by num_heads.
@@ -500,7 +504,7 @@ class BlipAttention(nn.Cell):
             None: This method returns None as the reshaped tensor is returned directly without assignment.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
@@ -581,7 +585,7 @@ class BlipMLP(nn.Cell):
                 - intermediate_size (int): The size of the intermediate layer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -651,7 +655,8 @@ class BlipEncoderLayer(nn.Cell):
         layer_norm2 (nn.LayerNorm): Layer normalization module for the second layer normalization.
 
     Returns:
-        Tuple[mindspore.Tensor]: Tuple containing the final hidden states of the layer. If output_attentions is True, the tuple also includes the attention weights.
+        Tuple[mindspore.Tensor]: Tuple containing the final hidden states of the layer.
+            If output_attentions is True, the tuple also includes the attention weights.
 
     Note:
         - The attention_mask should have the shape `(batch, 1, tgt_len, src_len)` with padding elements indicated
@@ -669,7 +674,7 @@ class BlipEncoderLayer(nn.Cell):
                 - layer_norm_eps (float): The epsilon value for layer normalization.
 
         Returns:
-            None. This method initializes the BlipEncoderLayer instance with the provided configuration.
+            None.
 
         Raises:
             TypeError: If the config parameter is not of type BlipConfig.
@@ -771,10 +776,10 @@ class BlipEncoder(nn.Cell):
                 The config parameter must be an instance of the BlipConfig class.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         super().__init__()
         self.config = config
@@ -881,7 +886,7 @@ class BlipVisionModel(BlipPreTrainedModel):
             config (BlipVisionConfig): The configuration object that holds all the necessary parameters for the model.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -949,10 +954,10 @@ class BlipVisionModel(BlipPreTrainedModel):
             self (BlipVisionModel): An instance of the BlipVisionModel class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.embeddings
 
@@ -1271,7 +1276,7 @@ class BlipForConditionalGeneration(BlipPreTrainedModel):
                 It is expected that the config parameter is of type BlipConfig.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the config parameter is not of type BlipConfig.
@@ -1457,20 +1462,14 @@ class BlipForQuestionAnswering(BlipPreTrainedModel):
 
     The BlipForQuestionAnswering class provides the following methods:
 
-    >    1. __init__(self, config: BlipConfig)
-                Initializes the BlipForQuestionAnswering instance with the given configuration.
-    >    2. get_input_embeddings(self) -> nn.Cell
-                Returns the input embeddings of the vision model.
-    >    3. construct(self, input_ids: mindspore.Tensor, pixel_values: mindspore.Tensor,
-            decoder_input_ids: Optional[mindspore.Tensor] = None,
-            decoder_attention_mask: Optional[mindspore.Tensor] = None,
-            attention_mask: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None, labels: Optional[mindspore.Tensor] = None,
-            return_dict: Optional[bool] = None) -> Union[Tuple, BlipTextVisionModelOutput]
-                Constructs the model and performs the forward pass. Returns the model outputs.
-    >    4. generate(self, input_ids: mindspore.Tensor, pixel_values: mindspore.Tensor,
-            attention_mask: Optional[mindspore.Tensor] = None, **generate_kwargs) -> mindspore.Tensor
-                Generates text outputs based on the given input IDs and pixel values.
+    1. __init__:
+    Initializes the BlipForQuestionAnswering instance with the given configuration.
+    2. get_input_embeddings:
+    Returns the input embeddings of the vision model.
+    3. construct:
+    Constructs the model and performs the forward pass. Returns the model outputs.
+    4. generate:
+    Generates text outputs based on the given input IDs and pixel values.
 
     Please refer to the code examples in the docstring for more information on how to use the BlipForQuestionAnswering
     class for training and inference.
@@ -1491,7 +1490,7 @@ class BlipForQuestionAnswering(BlipPreTrainedModel):
             config (BlipConfig): An instance of BlipConfig containing the configuration for the model.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None

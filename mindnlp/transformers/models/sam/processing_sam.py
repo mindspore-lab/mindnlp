@@ -52,10 +52,10 @@ class SamProcessor(ProcessorMixin):
             image_processor: An image processor object used for image processing operations.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         super().__init__(image_processor)
         self.current_processor = self.image_processor
@@ -133,7 +133,8 @@ class SamProcessor(ProcessorMixin):
                 A string indicating the type of return tensors. Allowed values are: 'ms' for MindSpore tensors.
         
         Returns:
-            None: This method does not return a value. The input encoding_image_processor is updated with the processed input data.
+            None: This method does not return a value. The input encoding_image_processor is updated with
+                the processed input data.
         
         Raises:
             ValueError: If the length of original_sizes does not match the length of input_points or input_boxes.
@@ -302,7 +303,7 @@ class SamProcessor(ProcessorMixin):
             self: The instance of the SamProcessor class.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             Any exceptions raised by the image_processor.post_process_masks method may be propagated from this method.

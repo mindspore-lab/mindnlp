@@ -96,13 +96,14 @@ class XLMConfig(PretrainedConfig):
         is_encoder(`bool`, *optional*, defaults to `True`):
             Whether or not the initialized model should be a transformer encoder or decoder as seen in Vaswani et al.
         summary_type (`string`, *optional*, defaults to "first"):
-            > Argument used when doing sequence summary. Used in the sequence classification and multiple choice models.
-            > Has to be one of the following options:
-            >   - `"last"`: Take the last token hidden state (like XLNet).
-            >   - `"first"`: Take the first token hidden state (like BERT).
-            >   - `"mean"`: Take the mean of all tokens hidden states.
-            >   - `"cls_index"`: Supply a Tensor of classification token position (like GPT/GPT-2).
-            >   - `"attn"`: Not implemented now, use multi-head attention.
+            Argument used when doing sequence summary. Used in the sequence classification and multiple choice models.
+            Has to be one of the following options:
+
+            - `"last"`: Take the last token hidden state (like XLNet).
+            - `"first"`: Take the first token hidden state (like BERT).
+            - `"mean"`: Take the mean of all tokens hidden states.
+            - `"cls_index"`: Supply a Tensor of classification token position (like GPT/GPT-2).
+            - `"attn"`: Not implemented now, use multi-head attention.
         summary_use_proj (`bool`, *optional*, defaults to `True`):
             Argument used when doing sequence summary. Used in the sequence classification and multiple choice models.
             Whether or not to add a projection after the vector extraction.
@@ -127,13 +128,13 @@ class XLMConfig(PretrainedConfig):
     Example:
         ```python
         >>> from transformers import XLMConfig, XLMModel
-
+        ...
         >>> # Initializing a XLM configuration
         >>> configuration = XLMConfig()
-
+        ...
         >>> # Initializing a model (with random weights) from the configuration
         >>> model = XLMModel(configuration)
-
+        ...
         >>> # Accessing the model configuration
         >>> configuration = model.config
         ```

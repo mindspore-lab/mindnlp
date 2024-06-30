@@ -100,7 +100,8 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
         
         Raises:
             ValueError: If the provided 'decoder' parameter is not an instance of BeamSearchDecoderCTC.
-            ValueError: If there are missing tokens in the decoder's alphabet that are present in the tokenizer's vocabulary.
+            ValueError: If there are missing tokens in the decoder's alphabet that are present in the tokenizer's
+                vocabulary.
         """
         from pyctcdecode import BeamSearchDecoderCTC
 
@@ -130,12 +131,12 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
             save_directory (str): The directory path where the processor and language model will be saved. 
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            - OSError: If the save_directory cannot be accessed or does not exist.
-            - ValueError: If the save_directory is not a valid directory path.
-            - TypeError: If the save_directory parameter is not a string.
+            OSError: If the save_directory cannot be accessed or does not exist.
+            ValueError: If the save_directory is not a valid directory path.
+            TypeError: If the save_directory parameter is not a string.
         """
         super().save_pretrained(save_directory)
         self.decoder.save_to_dir(save_directory)
@@ -159,12 +160,13 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
         Args:
             pretrained_model_name_or_path (`str` or `os.PathLike`):
                 This can be either:
-                >   - a string, the *model id* of a pretrained feature_extractor hosted inside a model repo on
-                    hf-mirror.com.
-                >   - a path to a *directory* containing a feature extractor file saved using the
-                    [`~SequenceFeatureExtractor.save_pretrained`] method, e.g., `./my_model_directory/`.
-                >   - a path or url to a saved feature extractor JSON *file*, e.g.,
-                    `./my_model_directory/preprocessor_config.json`.
+
+                - a string, the *model id* of a pretrained feature_extractor hosted inside a model repo on
+                hf-mirror.com.
+                - a path to a *directory* containing a feature extractor file saved using the
+                [`~SequenceFeatureExtractor.save_pretrained`] method, e.g., `./my_model_directory/`.
+                - a path or url to a saved feature extractor JSON *file*, e.g.,
+                `./my_model_directory/preprocessor_config.json`.
             **kwargs
                 Additional keyword arguments passed along to both [`SequenceFeatureExtractor`] and
                 [`PreTrainedTokenizer`]
@@ -220,10 +222,10 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
             value (float): The value to be assigned to the specified attribute.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         setattr(decoder.model_container[decoder._model_key], attribute, value)
 
@@ -236,29 +238,34 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
             self: The Wav2Vec2ProcessorWithLM instance.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         return self.decoder.model_container[self.decoder._model_key]
 
     @staticmethod
     def get_missing_alphabet_tokens(decoder, tokenizer):
         """
-        This method 'get_missing_alphabet_tokens' is defined in the class 'Wav2Vec2ProcessorWithLM' and is responsible for identifying missing alphabet tokens by comparing the tokenizer's vocabulary with the
-        decoder's alphabet labels.
+        This method 'get_missing_alphabet_tokens' is defined in the class 'Wav2Vec2ProcessorWithLM' and is responsible
+        for identifying missing alphabet tokens by comparing the tokenizer's vocabulary with the decoder's alphabet
+        labels.
 
         Args:
-            decoder (object): The decoder object used for decoding tokens. It should be of type 'Decoder' and is required as an input parameter for the method.
-            tokenizer (object): The tokenizer object used for tokenizing input data. It should be of type 'Tokenizer' and is required as an input parameter for the method.
+            decoder (object): The decoder object used for decoding tokens. It should be of type 'Decoder' and is
+                required as an input parameter for the method.
+            tokenizer (object): The tokenizer object used for tokenizing input data. It should be of type 'Tokenizer'
+                and is required as an input parameter for the method.
 
         Returns:
-            set: This method returns a set of missing tokens from the tokenizer's vocabulary that are not present in the decoder's alphabet labels. If no missing tokens are found, it returns an empty set.
+            set: This method returns a set of missing tokens from the tokenizer's vocabulary that are not present in
+                the decoder's alphabet labels. If no missing tokens are found, it returns an empty set.
 
         Raises:
-            No specific exceptions are documented to be raised by this method. However, potential exceptions may include AttributeError if the attributes accessed from the decoder or tokenizer objects do not
-            exist, or TypeError if the input parameters are not of the expected types.
+            No specific exceptions are documented to be raised by this method. However, potential exceptions may
+            include AttributeError if the attributes accessed from the decoder or tokenizer objects do not exist,
+            or TypeError if the input parameters are not of the expected types.
         """
         from pyctcdecode.alphabet import BLANK_TOKEN_PTN, UNK_TOKEN, UNK_TOKEN_PTN
 
@@ -597,27 +604,27 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
             >>> from datasets import load_dataset
             >>> import datasets
             >>> import torch
-
+            ...
             >>> # import model, feature extractor, tokenizer
             >>> model = AutoModelForCTC.from_pretrained("patrickvonplaten/wav2vec2-base-100h-with-lm")
             >>> processor = AutoProcessor.from_pretrained("patrickvonplaten/wav2vec2-base-100h-with-lm")
-
+            ...
             >>> # load first sample of English common_voice
             >>> dataset = load_dataset("mozilla-foundation/common_voice_11_0", "en", split="train", streaming=True)
             >>> dataset = dataset.cast_column("audio", datasets.Audio(sampling_rate=16_000))
             >>> dataset_iter = iter(dataset)
             >>> sample = next(dataset_iter)
-
+            ...
             >>> # forward sample through model to get greedily predicted transcription ids
             >>> input_values = processor(sample["audio"]["array"], return_tensors="pt").input_values
             >>> with torch.no_grad():
             ...     logits = model(input_values).logits[0].cpu().numpy()
-
+            ...
             >>> # retrieve word stamps (analogous commands for `output_char_offsets`)
             >>> outputs = processor.decode(logits, output_word_offsets=True)
             >>> # compute `time_offset` in seconds as product of downsampling ratio and sampling_rate
             >>> time_offset = model.config.inputs_to_logits_ratio / processor.feature_extractor.sampling_rate
-
+            ...
             >>> word_offsets = [
             ...     {
             ...         "word": d["word"],

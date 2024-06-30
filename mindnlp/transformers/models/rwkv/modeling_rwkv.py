@@ -87,15 +87,15 @@ class RwkvLinearAttention(nn.Cell):
         Args:
             self (RwkvLinearAttention): The instance of the RwkvLinearAttention class.
             config (object): The configuration object containing the context length parameter.
-                              It is used to set the maximum sequence length and load CUDA kernels.
-                              Must have the attribute 'context_length' specifying the context length.
+                It is used to set the maximum sequence length and load CUDA kernels.
+                Must have the attribute 'context_length' specifying the context length.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            - KeyError: If the 'config' object does not have the 'context_length' attribute.
-            - RuntimeError: If there is an issue loading the CUDA kernels.
+            KeyError: If the 'config' object does not have the 'context_length' attribute.
+            RuntimeError: If there is an issue loading the CUDA kernels.
         """
         super().__init__()
         self.max_seq_length = config.context_length
@@ -123,12 +123,14 @@ class RwkvLinearAttention(nn.Cell):
         
         Returns:
             Tuple[Tensor, Tensor]: A tuple containing the output tensor of the attention mechanism 
-            and the state tensor if return_state is True. The output tensor represents the result of the attention mechanism. 
+            and the state tensor if return_state is True. The output tensor represents the result of
+            the attention mechanism.
             The state tensor represents the updated state of the attention mechanism if return_state is True.
         
         Raises:
             ValueError: If the sequence length is greater than the maximum sequence length allowed by the model.
-            ValueError: If the product of batch size and hidden size is not a round multiple of the minimum of the hidden size and 32.
+            ValueError: If the product of batch size and hidden size is not a round multiple of the minimum of the
+                hidden size and 32.
         """
         batch_size, seq_len, hidden_size = key.shape
         if seq_len > self.max_seq_length:
@@ -293,8 +295,9 @@ class RwkvSelfAttention(nn.Cell):
         """
         Construct method in the RwkvSelfAttention class.
         
-        This method constructs the self-attention mechanism for the Rwkv model. It takes in the hidden input, the state, and a flag indicating whether to use cache or not. It returns the output of the
-        attention mechanism and the updated state.
+        This method constructs the self-attention mechanism for the Rwkv model. It takes in the hidden input,
+        the state, and a flag indicating whether to use cache or not. It returns the output of the attention mechanism
+        and the updated state.
 
         Args:
             self: The RwkvSelfAttention object.
@@ -335,17 +338,21 @@ class RwkvFeedForward(nn.Cell):
 
         Args:
             self: The instance of the RwkvFeedForward class.
-            config: The configuration for the feedforward layer, containing the hidden size and intermediate size parameters.
-                    Type: object
-                    Purpose: Specifies the configuration settings for the feedforward layer.
-                    Restrictions: None
-            layer_id: The ID of the layer.
-                    Type: int
-                    Purpose: Specifies the ID of the layer.
-                    Restrictions: Defaults to 0 if not provided.
+            config:
+                The configuration for the feedforward layer, containing the hidden size and intermediate size parameters.
+
+                - Type: object
+                - Purpose: Specifies the configuration settings for the feedforward layer.
+                - Restrictions: None
+            layer_id:
+                The ID of the layer.
+
+                - ype: int
+                - Purpose: Specifies the ID of the layer.
+                - Restrictions: Defaults to 0 if not provided.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None
@@ -368,17 +375,21 @@ class RwkvFeedForward(nn.Cell):
 
     def construct(self, hidden, state=None):
         """
-        This method 'construct' is defined in the class 'RwkvFeedForward' and is responsible for constructing the value and state based on the input parameters.
+        This method 'construct' is defined in the class 'RwkvFeedForward' and is responsible for constructing the value
+        and state based on the input parameters.
 
         Args:
             self: The instance of the RwkvFeedForward class.
-            hidden (array): The input array representing the hidden state. It is used to calculate the key, value, and receptance. The array should have the shape (batch_size, sequence_length, feature_dim).
-            state (array, optional): The optional input array representing the state. It is used for calculating the shifted value. If provided, it should have the same shape as 'hidden' (batch_size,
-                sequence_length, feature_dim). Default is None.
+            hidden (array): The input array representing the hidden state. It is used to calculate the key, value,
+                and receptance. The array should have the shape (batch_size, sequence_length, feature_dim).
+            state (array, optional): The optional input array representing the state. It is used for calculating
+                the shifted value. If provided, it should have the same shape as 'hidden' (batch_size, sequence_length,
+                feature_dim). Default is None.
 
         Returns:
-            tuple: A tuple containing the calculated receptance and the updated state. The receptance is a weighted value based on the key and shifted values. The updated state represents the modified state
-                based on the input hidden array.
+            tuple: A tuple containing the calculated receptance and the updated state.
+                The receptance is a weighted value based on the key and shifted values.
+                The updated state represents the modified state based on the input hidden array.
 
         Raises:
             ValueError: If the shape of the 'hidden' array is not compatible for the calculations required in the method.
@@ -412,16 +423,20 @@ class RwkvBlock(nn.Cell):
 
         Args:
             self: The instance of the RwkvBlock class.
-            config: An object containing configuration settings for the block.
-                    Type: object
-                    Purpose: Specifies the configuration settings for the block.
-            layer_id: An integer representing the layer id.
-                    Type: int
-                    Purpose: Identifies the layer to which the block belongs.
-                    Restrictions: Must be a non-negative integer.
+            config:
+                An object containing configuration settings for the block.
+
+                - Type: object
+                - Purpose: Specifies the configuration settings for the block.
+            layer_id:
+                An integer representing the layer id.
+
+                - Type: int
+                - Purpose: Identifies the layer to which the block belongs.
+                - Restrictions: Must be a non-negative integer.
 
         Returns:
-            None. This method does not return a value.
+            None.
 
         Raises:
             ValueError: If layer_id is a negative integer.
@@ -451,8 +466,8 @@ class RwkvBlock(nn.Cell):
             output_attentions (bool): Flag indicating whether to output attentions.
 
         Returns:
-            Tuple: A tuple containing the processed hidden tensor and the updated state tensor. If output_attentions is True,
-            the tuple also includes the attention tensor; otherwise, it includes None.
+            Tuple: A tuple containing the processed hidden tensor and the updated state tensor.
+                If output_attentions is True, the tuple also includes the attention tensor; otherwise, it includes None.
 
         Raises:
             None.
@@ -549,12 +564,14 @@ class RwkvOutput(ModelOutput):
         state (list of five `mindspore.Tensor` of shape `(batch_size, hidden_size, num_hidden_layers)`):
             The state of the model at the last time step. Can be used in a forward method with the next `input_ids` to
             avoid providing the old `input_ids`.
-        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed
+            or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings, if the model has an embedding layer, +
             one for the output of each layer) of shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the model at the output of each layer plus the optional initial embedding outputs.
-        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed
+            or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
@@ -580,12 +597,14 @@ class RwkvCausalLMOutput(ModelOutput):
         state (list of five `mindspore.Tensor` of shape `(batch_size, hidden_size, num_hidden_layers)`):
             The state of the model at the last time step. Can be used in a forward method with the next `input_ids` to
             avoid providing the old `input_ids`.
-        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed
+            or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings, if the model has an embedding layer, +
             one for the output of each layer) of shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the model at the output of each layer plus the optional initial embedding outputs.
-        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed
+            or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
@@ -607,7 +626,9 @@ class RwkvModel(RwkvPreTrainedModel):
 
         Args:
             self: The instance of the class.
-            config: An object containing the configuration parameters for the model.
+            config:
+                An object containing the configuration parameters for the model.
+
                 - Type: Any valid object
                 - Purpose: Specifies the model configuration.
                 - Restrictions: None
@@ -637,7 +658,7 @@ class RwkvModel(RwkvPreTrainedModel):
             self: The instance of the RwkvModel class.
 
         Returns:
-            None: This method returns the input embeddings associated with the RwkvModel instance.
+            embeddings: This method returns the input embeddings associated with the RwkvModel instance.
 
         Raises:
             None.
@@ -655,10 +676,10 @@ class RwkvModel(RwkvPreTrainedModel):
                 The input embeddings are used as the initial embeddings for the model.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         self.embeddings = new_embeddings
 
@@ -684,7 +705,8 @@ class RwkvModel(RwkvPreTrainedModel):
         Args:
             self: The instance of the RwkvModel class.
             input_ids (Optional[mindspore.Tensor]): The input tensor containing token indices. Default is None.
-            attention_mask (Optional[mindspore.Tensor]): The attention mask tensor to mask out specific tokens. Default is None.
+            attention_mask (Optional[mindspore.Tensor]): The attention mask tensor to mask out specific tokens.
+                Default is None.
             inputs_embeds (Optional[mindspore.Tensor]): The input embeddings tensor. Default is None.
             state (Optional[List[mindspore.Tensor]]): The list of state tensors for caching. Default is None.
             use_cache (Optional[bool]): Flag indicating whether to use caching. Default is None.
@@ -693,10 +715,12 @@ class RwkvModel(RwkvPreTrainedModel):
             return_dict (Optional[bool]): Flag indicating whether to return a dictionary. Default is None.
 
         Returns:
-            Union[Tuple, RwkvOutput]: The output of the method, which can be a tuple of hidden states, states, hidden states history, and attentions, or an instance of RwkvOutput.
+            Union[Tuple, RwkvOutput]: The output of the method, which can be a tuple of hidden states, states,
+                hidden states history, and attentions, or an instance of RwkvOutput.
 
         Raises:
-            ValueError: If both input_ids and inputs_embeds are specified at the same time, or if neither input_ids nor inputs_embeds are specified.
+            ValueError: If both input_ids and inputs_embeds are specified at the same time, or if neither input_ids
+                nor inputs_embeds are specified.
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -768,7 +792,7 @@ class RwkvModel(RwkvPreTrainedModel):
             self (RwkvModel): The instance of the RwkvModel class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None

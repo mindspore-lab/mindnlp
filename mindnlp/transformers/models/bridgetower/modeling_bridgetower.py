@@ -165,7 +165,7 @@ class BridgeTowerResidualAttention(nn.Cell):
                 - Restrictions: Must be a valid configuration object.
 
         Returns:
-            None: This method initializes various layers and attributes of the BridgeTowerResidualAttention class.
+            None.
 
         Raises:
             None.
@@ -198,7 +198,7 @@ class BridgeTowerResidualAttention(nn.Cell):
                 It should be of type mindspore.Tensor and can be None.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the input parameters are not of the expected types.
@@ -282,7 +282,7 @@ class BridgeTowerTransformer(nn.Cell):
                 - stop_gradient (bool): A flag indicating whether to stop gradient computation.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the config parameter is not of the expected type.
@@ -372,7 +372,7 @@ class BridgeTowerVisionEmbeddings(nn.Cell):
                 - config.num_channels (int): The number of input channels.
 
         Returns:
-            None: This method initializes the attributes of the BridgeTowerVisionEmbeddings instance.
+            None.
 
         Raises:
             None.
@@ -497,7 +497,7 @@ class BridgeTowerVisionTransformer(nn.Cell):
                 - Restrictions: Must be a valid dictionary.
 
         Returns:
-            None: This method does not return any value explicitly.
+            None.
 
         Raises:
             ValueError: If the provided 'config' parameter is invalid or missing required fields.
@@ -575,10 +575,11 @@ class BridgeTowerVisionTransformer(nn.Cell):
 
         This method takes in the pixel values of input images and performs the following steps to construct the
         pre-processed hidden states:
-        >   1. Passes the pixel values through the 'embeddings' layer to obtain the initial hidden states.
-        >   2. Applies layer normalization ('ln_pre') to the hidden states.
-        >   3. Permutes the dimensions of the hidden states to match the expected shape.
-        >   4. Returns the pre-processed hidden states.
+
+        1. Passes the pixel values through the 'embeddings' layer to obtain the initial hidden states.
+        2. Applies layer normalization ('ln_pre') to the hidden states.
+        3. Permutes the dimensions of the hidden states to match the expected shape.
+        4. Returns the pre-processed hidden states.
         Note that the input images are expected to be in the format (batch_size, sequence_length, num_channels, image_height, image_width).
         The returned tensor represents the pre-processed hidden states and has the shape (sequence_length, batch_size, hidden_size).
         """
@@ -598,7 +599,7 @@ class BridgeTowerVisionTransformer(nn.Cell):
                 It is expected to have the shape (sequence_length, batch_size, hidden_size).
 
         Returns:
-            None. The method modifies the visual output in place.
+            None: The method modifies the visual output in place.
 
         Raises:
             None.
@@ -676,7 +677,7 @@ class BridgeTowerLinkTower(nn.Cell):
             attention_mask (Tensor): The attention mask.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             NotImplementedError: If the link_tower_type specified is not implemented.
@@ -722,7 +723,7 @@ class BridgeTowerSelfOutput(nn.Cell):
                 - Restrictions: Must contain the necessary parameters for configuring the BridgeTowerSelfOutput.
 
         Returns:
-            None: This method does not return any value explicitly.
+            None.
 
         Raises:
             ValueError: If the configuration object 'config' is not provided or is invalid.
@@ -797,10 +798,10 @@ class BridgeTowerIntermediate(nn.Cell):
                 - Purpose: Stores the configuration settings required for initialization.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
@@ -861,7 +862,7 @@ class BridgeTowerOutput(nn.Cell):
             config (object): An object containing configuration parameters.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the config parameters are invalid or missing.
@@ -942,7 +943,7 @@ class BridgeTowerPooler(nn.Cell):
                 - Restrictions: Must be a valid config object.
 
         Returns:
-            None： This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1030,7 +1031,7 @@ class BridgeTowerSelfAttention(nn.Cell):
             position_embedding_type (str, optional): The type of position embedding to use. Defaults to 'absolute'.
 
         Returns:
-            None: This method initializes the BridgeTowerSelfAttention instance.
+            None.
 
         Raises:
             ValueError: If the hidden size is not a multiple of the number of attention heads.
@@ -1288,7 +1289,7 @@ class BridgeTowerAttention(nn.Cell):
             If the list is empty, no pruning will be performed.
 
         Returns:
-            None. The method does not return any value explicitly,
+            None: The method does not return any value explicitly,
                 as it operates by modifying attributes within the BridgeTowerAttention instance.
 
         Raises:
@@ -1408,7 +1409,7 @@ class BridgeTowerBertCrossLayer(nn.Cell):
                 - add_cross_attention: A boolean indicating whether to add cross attention.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1497,10 +1498,10 @@ class BridgeTowerBertCrossLayer(nn.Cell):
             attention_output: The attention output tensor to be processed. (Type: Tensor)
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         intermediate_output = self.intermediate(attention_output)
         layer_output = self.output(intermediate_output, attention_output)
@@ -1547,8 +1548,7 @@ class BridgeTowerTextLayer(nn.Cell):
                 - output (object): An instance of BridgeTowerOutput class.
 
         Returns:
-            None:
-                This method initializes the BridgeTowerTextLayer class attributes based on the provided config.
+            None.
 
         Raises:
             ValueError: Raised if add_cross_attention is True but the model is not a decoder.
@@ -1760,7 +1760,7 @@ class BridgeTowerTextEncoder(nn.Cell):
                 Must be a positive integer.
 
         Returns:
-            None: This method initializes the BridgeTowerTextEncoder instance with the provided configuration.
+            None.
 
         Raises:
             TypeError: If the config parameter is not a dictionary.
@@ -1906,7 +1906,7 @@ class BridgeTowerTextEmbeddings(nn.Cell):
                 - position_embedding_type (str, optional): The type of position embedding, defaults to 'absolute'.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the configuration parameters are not valid or if the padding index is out of range.
@@ -1948,7 +1948,7 @@ class BridgeTowerTextEmbeddings(nn.Cell):
             past_key_values_length (int): The length of past key values. Default is 0.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If input_ids and inputs_embeds are both None, or if the input tensor shapes are invalid.
@@ -2104,7 +2104,7 @@ class BridgeTowerVisionModel(BridgeTowerPreTrainedModel):
             config: A configuration object containing settings for the model.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the config parameter is not of the expected type.
@@ -2130,7 +2130,7 @@ class BridgeTowerVisionModel(BridgeTowerPreTrainedModel):
                 It simply retrieves and provides information about the data type of the patch embedding weights.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.visual.embeddings.patch_embedding.weight.dtype
 
@@ -2146,10 +2146,10 @@ class BridgeTowerVisionModel(BridgeTowerPreTrainedModel):
                 If not provided, the method will process the image without considering any specific mask.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.visual(image.type(self.dtype), image_mask)
 
@@ -2180,7 +2180,7 @@ class BridgeTowerTextModel(BridgeTowerPreTrainedModel):
             add_pooling_layer (bool): Specifies whether to add a pooling layer. Defaults to True.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -2204,10 +2204,10 @@ class BridgeTowerTextModel(BridgeTowerPreTrainedModel):
             self (BridgeTowerTextModel): The instance of the BridgeTowerTextModel class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.embeddings.word_embeddings
 
@@ -2220,10 +2220,10 @@ class BridgeTowerTextModel(BridgeTowerPreTrainedModel):
             value (object): The input embeddings to be set for the model. It can be of any type.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         self.embeddings.word_embeddings = value
 
@@ -2424,7 +2424,7 @@ class BridgeTowerModel(BridgeTowerPreTrainedModel):
                 - Restrictions: Must be a valid configuration object.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -2492,7 +2492,7 @@ class BridgeTowerModel(BridgeTowerPreTrainedModel):
             self: An instance of the BridgeTowerModel class.
 
         Returns:
-            None. This method does not return a value.
+            None.
 
         Raises:
             None.
@@ -2516,7 +2516,7 @@ class BridgeTowerModel(BridgeTowerPreTrainedModel):
             value: The input embeddings to be set for the BridgeTowerModel. It should be of type Tensor or None.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -2550,8 +2550,9 @@ class BridgeTowerModel(BridgeTowerPreTrainedModel):
                 `cross_modal_image_hidden_states` of each brdige layer.
             labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
                 Labels are currently not supported.
-            Returns:
-                Union[Tuple[mindspore.Tensor], BridgeTowerModelOutput]:
+
+        Returns:
+            Union[Tuple[mindspore.Tensor], BridgeTowerModelOutput]:
 
         Example:
             ```python
@@ -2759,7 +2760,7 @@ class BridgeTowerModel(BridgeTowerPreTrainedModel):
                 This method returns None, as the class features are directly computed and concatenated without any additional processing.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         cls_features_text = self.cross_modal_text_pooler(text_features)
         cls_features_image = self.cross_modal_image_pooler(image_features)
@@ -2797,10 +2798,10 @@ class BridgeTowerPredictionHeadTransform(nn.Cell):
                 - Restrictions: None
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -2863,7 +2864,7 @@ class BridgeTowerMLMHead(nn.Cell):
             weight: (optional) The weight parameter for the decoder. Default value is None.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the config parameter is not provided or is not of the expected type.
@@ -2886,10 +2887,10 @@ class BridgeTowerMLMHead(nn.Cell):
             x (object): The input data for which the MLM score is to be calculated.
 
         Returns:
-            None: This method returns None.
+            None.
 
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         mlm_score = self.transform(x)
         mlm_score = self.decoder(mlm_score) + self.bias
@@ -2921,7 +2922,7 @@ class BridgeTowerITMHead(nn.Cell):
                 Should be a positive integer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -2938,7 +2939,7 @@ class BridgeTowerITMHead(nn.Cell):
             x (object): The input data for constructing the ITM score.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -2977,7 +2978,7 @@ class BridgeTowerForMaskedLM(BridgeTowerPreTrainedModel):
             config (object): The configuration object containing settings and parameters for the BridgeTowerForMaskedLM instance.
 
         Returns:
-            None. This method does not return a value.
+            None.
 
         Raises:
             None.
@@ -3014,10 +3015,10 @@ class BridgeTowerForMaskedLM(BridgeTowerPreTrainedModel):
             new_embeddings (Tensor): The new embeddings to be set as the output embeddings. It should be a tensor of shape (vocab_size, hidden_size).
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
 
         This method sets the output embeddings for the BridgeTowerForMaskedLM model by updating the decoder attribute
         of the mlm_score object. The new_embeddings parameter should be a tensor representing the new embeddings to be
@@ -3292,10 +3293,10 @@ class BridgeTowerContrastiveHead(nn.Cell):
                 It should have a shape of (batch_size, features).
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         x = self.fc(x)
         return x

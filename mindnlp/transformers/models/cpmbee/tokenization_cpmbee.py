@@ -174,7 +174,7 @@ class _DictTree(TypedDict):
 
 
 class CpmBeeTokenizer(PreTrainedTokenizer):
-    """
+    r"""
     Construct a CPMBee tokenizer.
 
     Args:
@@ -341,10 +341,10 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
             self (CpmBeeTokenizer): An instance of the CpmBeeTokenizer class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.encoder[self.line_token]
 
@@ -354,12 +354,16 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
         Returns the size of the vocabulary used by the CpmBeeTokenizer instance.
 
         Args:
-            self: The CpmBeeTokenizer instance.
+            self:
+                The CpmBeeTokenizer instance.
+
                 - This parameter is of type 'CpmBeeTokenizer'.
                 - It represents the instance of the CpmBeeTokenizer class on which the method is called.
 
         Returns:
-            An integer representing the size of the vocabulary.
+            int:
+                An integer representing the size of the vocabulary.
+
                 - The returned value represents the total number of unique tokens in the vocabulary.
 
         Raises:
@@ -537,10 +541,10 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
             token (Any): The token to be checked in the encoder.
 
         Returns:
-            None: There is no specific return value for this method.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return token in self.encoder
 
@@ -1124,7 +1128,7 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
             max_length (int, optional): The maximum length of the input data. Defaults to 2048.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None.

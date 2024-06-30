@@ -65,13 +65,13 @@ class ResNetConfig(BackboneConfigMixin, PretrainedConfig):
     Example:
         ```python
         >>> from transformers import ResNetConfig, ResNetModel
-
+        ...
         >>> # Initializing a ResNet resnet-50 style configuration
         >>> configuration = ResNetConfig()
-
+        ...
         >>> # Initializing a model (with random weights) from the resnet-50 style configuration
         >>> model = ResNetModel(configuration)
-
+        ...
         >>> # Accessing the model configuration
         >>> configuration = model.config
         ```
@@ -110,7 +110,7 @@ class ResNetConfig(BackboneConfigMixin, PretrainedConfig):
             out_indices (None or dict): Dictionary mapping stage names to output indices. Default is None.
         
         Returns:
-            None. This method initializes the ResNetConfig object with the provided parameters.
+            None.
         
         Raises:
             ValueError: If the provided layer_type is not one of the supported layer types.

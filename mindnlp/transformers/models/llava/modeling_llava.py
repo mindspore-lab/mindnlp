@@ -48,18 +48,21 @@ class LlavaCausalLMOutputWithPast(ModelOutput):
             Language modeling loss (for next-token prediction).
         logits (`mindspore.Tensor` of shape `(batch_size, sequence_length, config.vocab_size)`):
             Prediction scores of the language modeling head (scores for each vocabulary token before SoftMax).
-        past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+        past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed
+            or when `config.use_cache=True`):
             Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of shape
             `(batch_size, num_heads, sequence_length, embed_size_per_head)`)
 
             Contains pre-computed hidden-states (key and values in the self-attention blocks) that can be used (see
             `past_key_values` input) to speed up sequential decoding.
-        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed
+            or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings, if the model has an embedding layer, +
             one for the output of each layer) of shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the model at the output of each layer plus the optional initial embedding outputs.
-        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed
+            or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
@@ -82,17 +85,22 @@ class LlavaCausalLMOutputWithPast(ModelOutput):
 class LlavaMultiModalProjector(nn.Cell):
 
     """
-    LlavaMultiModalProjector is a class representing a multi-modal projector for processing image and text data simultaneously. 
-    It facilitates the transformation of image features through linear layers with activation functions to map them to text features.
+    LlavaMultiModalProjector is a class representing a multi-modal projector for processing image and text data
+    simultaneously. It facilitates the transformation of image features through linear layers with activation functions
+    to map them to text features.
     
-    This class inherits from nn.Cell and contains methods for initialization and constructing the projection of image features to text features. 
+    This class inherits from nn.Cell and contains methods for initialization and constructing the projection of image
+    features to text features.
     The initialization method initializes the linear layers and activation function based on the provided configuration. 
-    The construct method applies the linear transformations and activation functions to the input image features to generate the final hidden states for text representation.
+    The construct method applies the linear transformations and activation functions to the input image features to
+    generate the final hidden states for text representation.
     
-    Usage example:
+    Example:
+        ```python
         >>> config = LlavaConfig(vision_config=..., text_config=..., projector_hidden_act=...)
         >>> projector = LlavaMultiModalProjector(config)
         >>> hidden_states = projector.construct(image_features)
+        ```
     """
     def __init__(self, config: LlavaConfig):
         """
@@ -100,16 +108,18 @@ class LlavaMultiModalProjector(nn.Cell):
         
         Args:
             self: The object instance.
-            config (LlavaConfig): The configuration object containing the settings for the projector.
-                >   - config.vision_config.hidden_size (int): The size of the hidden layer for the visual input.
-                >   - config.text_config.hidden_size (int): The size of the hidden layer for the text input.
-                >   - config.projector_hidden_act (str): The activation function for the hidden layer.
+            config (LlavaConfig):
+                The configuration object containing the settings for the projector.
+
+                - config.vision_config.hidden_size (int): The size of the hidden layer for the visual input.
+                - config.text_config.hidden_size (int): The size of the hidden layer for the text input.
+                - config.projector_hidden_act (str): The activation function for the hidden layer.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         super().__init__()
 
@@ -126,7 +136,8 @@ class LlavaMultiModalProjector(nn.Cell):
             image_features (tensor): The input tensor containing image features.
 
         Returns:
-            tensor: The hidden states tensor obtained after processing the image features through linear and activation layers.
+            tensor:
+                The hidden states tensor obtained after processing the image features through linear and activation layers.
 
         Raises:
             None.
@@ -140,18 +151,22 @@ class LlavaMultiModalProjector(nn.Cell):
 class LlavaPreTrainedModel(PreTrainedModel):
 
     """
-    The `LlavaPreTrainedModel` class is a subclass of the `PreTrainedModel` class in the Hugging Face library. It represents a pre-trained model for natural language processing tasks.
+    The `LlavaPreTrainedModel` class is a subclass of the `PreTrainedModel` class in the Hugging Face library.
+    It represents a pre-trained model for natural language processing tasks.
 
-    This class provides functionality for initializing the weights of the model's cells. The `_init_weights` method is used to set the initial weights of the model's cells based on the specified configuration.
+    This class provides functionality for initializing the weights of the model's cells.
+    The `_init_weights` method is used to set the initial weights of the model's cells based on the specified configuration.
     The method supports different types of cells, including `Dense`, `Conv2d`, and `Embedding`.
 
-    If the cell has a `class_embedding` attribute, the method initializes it using a normal distribution with a standard deviation specified by the `initializer_range` attribute of the configuration.
+    If the cell has a `class_embedding` attribute, the method initializes it using a normal distribution with
+    a standard deviation specified by the `initializer_range` attribute of the configuration.
 
-    For `Dense` and `Conv2d` cells, the method initializes the `weight` attribute using a normal distribution with the same standard deviation as above. If the cell has a `bias` attribute, it is initialized
-    with zeros.
+    For `Dense` and `Conv2d` cells, the method initializes the `weight` attribute using a normal distribution
+    with the same standard deviation as above. If the cell has a `bias` attribute, it is initialized with zeros.
 
-    For `Embedding` cells, the method initializes the `weight` attribute using a normal distribution with the same standard deviation as above. If the cell has a `padding_idx` attribute, the corresponding
-    element in the weight matrix is set to zero.
+    For `Embedding` cells, the method initializes the `weight` attribute using a normal distribution with the same
+    standard deviation as above. If the cell has a `padding_idx` attribute, the corresponding element in the
+    weight matrix is set to zero.
 
     Note:
         The `LlavaPreTrainedModel` class assumes that the `PreTrainedModel` class is available in the code environment.
@@ -171,26 +186,28 @@ class LlavaPreTrainedModel(PreTrainedModel):
             cell: The cell whose weights need to be initialized.
 
         Returns:
-            None. This method modifies the weights of the given cell in-place.
+            None: This method modifies the weights of the given cell in-place.
 
         Raises:
             None.
 
         This method initializes the weights of the provided cell based on the configuration settings of the LlavaPreTrainedModel.
-        If the configuration has an 'initializer_range' attribute, the standard deviation is set to that value. Otherwise, it falls back to the 'initializer_range' value in the 'text_config' attribute of the
-        configuration.
+        If the configuration has an 'initializer_range' attribute, the standard deviation is set to that value. Otherwise,
+        it falls back to the 'initializer_range' value in the 'text_config' attribute of the configuration.
 
-        If the cell has a 'class_embedding' attribute, it is initialized using a normal distribution with the calculated standard deviation.
+        If the cell has a 'class_embedding' attribute, it is initialized using a normal distribution with the
+        calculated standard deviation.
 
-        If the cell is an instance of nn.Dense or nn.Conv2d, both the weight and bias are initialized using a normal distribution with the calculated standard deviation. If the cell has no bias, it remains
-        unchanged.
+        If the cell is an instance of nn.Dense or nn.Conv2d, both the weight and bias are initialized using a normal
+        distribution with the calculated standard deviation. If the cell has no bias, it remains unchanged.
 
-        If the cell is an instance of nn.Embedding, the weight tensor is initialized using a normal distribution with the calculated standard deviation. If a 'padding_idx' is specified, the corresponding
-        weight value is set to 0.
+        If the cell is an instance of nn.Embedding, the weight tensor is initialized using a normal distribution with
+        the calculated standard deviation. If a 'padding_idx' is specified, the corresponding weight value is set to 0.
 
         Note:
             - The weight initialization is done in-place and modifies the original cell.
-            - The 'initializer_range' attribute must be present either in the configuration or the 'text_config' attribute of the configuration.
+            - The 'initializer_range' attribute must be present either in the configuration or the 'text_config'
+            attribute of the configuration.
             - The 'padding_idx' attribute is optional for nn.Embedding cells.
             - The method does not return any value.
         """
@@ -223,7 +240,8 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
     """
     LlavaForConditionalGeneration
 
-    This class is a language model for conditional generation based on the Llava architecture. It extends the LlavaPreTrainedModel class.
+    This class is a language model for conditional generation based on the Llava architecture.
+    It extends the LlavaPreTrainedModel class.
 
     Attributes:
         vision_tower (AutoModel): The vision tower model for extracting image features.
@@ -232,19 +250,19 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
         language_model (AutoModelForCausalLM): The language model for generating text.
         pad_token_id (int): The ID of the padding token in the vocabulary. Defaults to -1 if not provided.
 
-    Example usage:
+    Example:
         ```python
-        from PIL import Image
-        import requests
-        from transformers import LlavaForConditionalGeneration
-
-        model = LlavaForConditionalGeneration(config)
-
-        input_ids = [1, 2, 3]
-        pixel_values = [0.1, 0.2, 0.3]
-        attention_mask = [1, 1, 1]
-
-        output = model.construct(input_ids=input_ids, pixel_values=pixel_values, attention_mask=attention_mask)
+        >>> from PIL import Image
+        >>> import requests
+        >>> from transformers import LlavaForConditionalGeneration
+        ...
+        >>> model = LlavaForConditionalGeneration(config)
+        ...
+        >>> input_ids = [1, 2, 3]
+        >>> pixel_values = [0.1, 0.2, 0.3]
+        >>> attention_mask = [1, 1, 1]
+        ... 
+        >>> output = model.construct(input_ids=input_ids, pixel_values=pixel_values, attention_mask=attention_mask)
         ```
     """
     def __init__(self, config: LlavaConfig):
@@ -254,14 +272,14 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
         Args:
             self: The instance of the class.
             config (LlavaConfig): An object of type LlavaConfig containing the configuration settings for the model.
-                It specifies the configuration parameters for the vision tower, multi-modal projector, vocab size, language model,
-                pad token id, and other model settings.
+                It specifies the configuration parameters for the vision tower, multi-modal projector, vocab size, 
+                language model, pad token id, and other model settings.
 
         Returns:
-            None. The method does not return any value.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         super().__init__(config)
         self.vision_tower = AutoModel.from_config(config.vision_config)
@@ -280,10 +298,10 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
             self (LlavaForConditionalGeneration): An instance of the LlavaForConditionalGeneration class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.language_model.get_input_embeddings()
 
@@ -296,7 +314,7 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
             value (Any): The input embeddings to be set for the language model.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -311,10 +329,12 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
             self: An instance of the LlavaForConditionalGeneration class.
 
         Returns:
-            None: This method returns None, as it simply delegates the call to the language model's get_output_embeddings method.
+            None: This method returns None, it simply delegates the call to the language model's
+                get_output_embeddings method.
 
         Raises:
-            This method does not explicitly raise any exceptions. However, if the language_model.get_output_embeddings() method raises any exceptions, they will propagate up to the caller.
+            None: However, if the language_model.get_output_embeddings() method raises any exceptions,
+                they will propagate up to the caller.
         """
         return self.language_model.get_output_embeddings()
 
@@ -324,15 +344,16 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
 
         Args:
             self (LlavaForConditionalGeneration): An instance of the LlavaForConditionalGeneration class.
-            new_embeddings (Tensor): The new output embeddings to be set for the model. It should have the same shape as the
-                                     original output embeddings.
+            new_embeddings (Tensor): The new output embeddings to be set for the model.
+                It should have the same shape as the original output embeddings.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the provided new_embeddings parameter is not of type Tensor.
-            ValueError: If the shape of the new_embeddings parameter does not match the shape of the original output embeddings.
+            ValueError: If the shape of the new_embeddings parameter does not match the
+                shape of the original output embeddings.
         """
         self.language_model.set_output_embeddings(new_embeddings)
 
@@ -342,14 +363,15 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
 
         Args:
             self (LlavaForConditionalGeneration): The instance of the LlavaForConditionalGeneration class.
-            decoder: The decoder object to be set for the language model. It should be compatible with the language model's requirements.
+            decoder: The decoder object to be set for the language model.
+                It should be compatible with the language model's requirements.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            - TypeError: If the provided decoder is not of the correct type.
-            - ValueError: If the decoder object is invalid or incompatible with the language model.
+            TypeError: If the provided decoder is not of the correct type.
+            ValueError: If the decoder object is invalid or incompatible with the language model.
         """
         self.language_model.set_decoder(decoder)
 
@@ -361,7 +383,7 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
             self: An instance of the LlavaForConditionalGeneration class.
 
         Returns:
-            None. This method retrieves the decoder from the language model used by the LlavaForConditionalGeneration model.
+            The decoder from the language model used by the LlavaForConditionalGeneration model.
 
         Raises:
             None.
@@ -376,10 +398,10 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
             self (LlavaForConditionalGeneration): An instance of the LlavaForConditionalGeneration class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.language_model.tie_weights()
 
@@ -415,8 +437,10 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
 
         Args:
             self (LlavaForConditionalGeneration): The instance of the LlavaForConditionalGeneration class.
-            image_features (Tensor): A tensor of shape (num_images, num_image_patches, embed_dim) representing the image features.
-            inputs_embeds (Tensor): A tensor of shape (batch_size, sequence_length, embed_dim) representing the input embeddings.
+            image_features (Tensor): A tensor of shape (num_images, num_image_patches, embed_dim)
+                representing the image features.
+            inputs_embeds (Tensor): A tensor of shape (batch_size, sequence_length, embed_dim)
+                representing the input embeddings.
             input_ids (Tensor): A tensor of shape (batch_size, sequence_length) representing the input token IDs.
             attention_mask (Tensor): A tensor of shape (batch_size, sequence_length) representing the attention mask.
             labels (Tensor): A tensor of shape (batch_size, sequence_length) representing the labels.
@@ -425,7 +449,8 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
             None
 
         Raises:
-            ValueError: If the number of image tokens provided in the input does not match the number of images given to the model.
+            ValueError: If the number of image tokens provided in the input does not match the number of
+                images given to the model.
         """
         num_images, num_image_patches, embed_dim = image_features.shape
         batch_size, sequence_length = input_ids.shape
@@ -525,16 +550,16 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
             >>> from PIL import Image
             >>> import requests
             >>> from transformers import AutoProcessor, LlavaForConditionalGeneration
-
+            ...
             >>> model = LlavaForConditionalGeneration.from_pretrained("llava-hf/llava-1.5-7b-hf")
             >>> processor = AutoProcessor.from_pretrained("llava-hf/llava-1.5-7b-hf")
-
+            ...
             >>> prompt = "USER: <image>\nWhat's the content of the image? ASSISTANT:"
             >>> url = "https://www.ilankelman.org/stopsigns/australia.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
-
+            ...
             >>> inputs = processor(text=prompt, images=image, return_tensors="pt")
-
+            ...
             >>> # Generate
             >>> generate_ids = model.generate(**inputs, max_new_tokens=15)
             >>> processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
@@ -661,7 +686,8 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
         Args:
             self (LlavaForConditionalGeneration): The instance of the LlavaForConditionalGeneration class.
             input_ids (Tensor): The input tensor containing the tokenized input sequence.
-            past_key_values (Cache or tuple of Tensor, optional): The cache of past key values or tuple of tensors containing past key values.
+            past_key_values (Cache or tuple of Tensor, optional):
+                The cache of past key values or tuple of tensors containing past key values.
             inputs_embeds (Tensor, optional): The input embeddings tensor.
             pixel_values (Tensor, optional): The tensor containing the pixel values.
             attention_mask (Tensor, optional): The attention mask tensor.
@@ -731,10 +757,10 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
             self: LlavaForConditionalGeneration instance. Represents the current instance of the class.
             
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         return self.language_model._reorder_cache(*args, **kwargs)
 

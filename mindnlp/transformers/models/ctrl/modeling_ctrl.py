@@ -316,6 +316,7 @@ class CTRLModel(CTRLPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPast]:
         r"""
+
         Returns:
             `Union[Tuple[mindspore.Tensor], BaseModelOutputWithPast]`
 

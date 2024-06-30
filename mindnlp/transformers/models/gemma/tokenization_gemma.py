@@ -56,14 +56,16 @@ class GemmaTokenizer(PreTrainedTokenizer):
             Will be passed to the `SentencePieceProcessor.__init__()` method. The [Python wrapper for
             SentencePiece](https://github.com/google/sentencepiece/tree/master/python) can be used, among other things,
             to set:
-            >   - `enable_sampling`: Enable subword regularization.
-            >   - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
-            >       - `nbest_size = {0,1}`: No sampling is performed.
-            >       - `nbest_size > 1`: samples from the nbest_size results.
-            >       - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
-                        using forward-filtering-and-backward-sampling algorithm.
-            >   - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
-                    BPE-dropout.
+
+            - `enable_sampling`: Enable subword regularization.
+            - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
+
+                - `nbest_size = {0,1}`: No sampling is performed.
+                - `nbest_size > 1`: samples from the nbest_size results.
+                - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
+                using forward-filtering-and-backward-sampling algorithm.
+                - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
+                BPE-dropout.
 
         add_bos_token (`bool`, *optional*, defaults to `True`):
             Whether or not to add an `bos_token` at the start of sequences.
@@ -105,7 +107,8 @@ class GemmaTokenizer(PreTrainedTokenizer):
             bos_token (str): The beginning of sequence token. Default is '<bos>'.
             eos_token (str): The end of sequence token. Default is '<eos>'.
             pad_token (str): The padding token. Default is '<pad>'.
-            sp_model_kwargs (Optional[Dict[str, Any]]): Optional keyword arguments for SentencePiece model configuration. Default is None.
+            sp_model_kwargs (Optional[Dict[str, Any]]): Optional keyword arguments for SentencePiece model configuration.
+                Default is None.
             add_bos_token (bool): Whether to add the beginning of sequence token. Default is True.
             add_eos_token (bool): Whether to add the end of sequence token. Default is False.
             clean_up_tokenization_spaces (bool): Whether to clean up tokenization spaces. Default is False.
@@ -113,13 +116,13 @@ class GemmaTokenizer(PreTrainedTokenizer):
             spaces_between_special_tokens (bool): Whether to add spaces between special tokens. Default is False.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            - ValueError: If the provided vocab_file is invalid or does not exist.
-            - OSError: If an I/O or OS error occurs while loading the vocab_file.
-            - TypeError: If the provided sp_model_kwargs is not a dictionary.
-            - RuntimeError: If an error occurs during the initialization process.
+            ValueError: If the provided vocab_file is invalid or does not exist.
+            OSError: If an I/O or OS error occurs while loading the vocab_file.
+            TypeError: If the provided sp_model_kwargs is not a dictionary.
+            RuntimeError: If an error occurs during the initialization process.
         """
         self.sp_model_kwargs = {} if sp_model_kwargs is None else sp_model_kwargs
         bos_token = AddedToken(bos_token, normalized=False, special=True) if isinstance(bos_token, str) else bos_token
@@ -158,10 +161,10 @@ class GemmaTokenizer(PreTrainedTokenizer):
             self (GemmaTokenizer): The current instance of the GemmaTokenizer class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         state = self.__dict__.copy()
         state["sp_model"] = None
@@ -171,20 +174,26 @@ class GemmaTokenizer(PreTrainedTokenizer):
     # Copied from transformers.models.llama.tokenization_llama.LlamaTokenizer.__setstate__
     def __setstate__(self, d):
         """
-        This method '__setstate__' in the class 'GemmaTokenizer' is used to set the internal state of the tokenizer object based on the provided dictionary 'd'.
+        This method '__setstate__' in the class 'GemmaTokenizer' is used to set the internal state of the tokenizer
+        object based on the provided dictionary 'd'.
 
         Args:
-            self (GemmaTokenizer): The instance of the GemmaTokenizer class on which this method is called. It represents the tokenizer object itself.
-            d (dict): A dictionary containing the state information to be set on the tokenizer object. This dictionary should include the necessary information for reconstructing the object's state.
+            self (GemmaTokenizer): The instance of the GemmaTokenizer class on which this method is called.
+                It represents the tokenizer object itself.
+            d (dict): A dictionary containing the state information to be set on the tokenizer object.
+                This dictionary should include the necessary information for reconstructing the object's state.
 
         Returns:
-            None: This method does not return any value explicitly. It updates the state of the GemmaTokenizer object in-place.
+            None: This method does not return any value explicitly.
+                It updates the state of the GemmaTokenizer object in-place.
 
         Raises:
-            No specific exceptions are explicitly raised by this method. However, potential exceptions could be raised during the execution of the code within the method, such as:
-                >   - TypeError: If the provided 'd' parameter is not a valid dictionary.
-                >   - ValueError: If the 'sp_model_kwargs' or 'sp_model_proto' keys are missing in the 'd' dictionary.
-                >   - Other exceptions related to the initialization or loading of the SentencePieceProcessor object may occur.
+            None:
+                However, potential exceptions could be raised during the execution of the code within the method, such as:
+
+                - TypeError: If the provided 'd' parameter is not a valid dictionary.
+                - ValueError: If the 'sp_model_kwargs' or 'sp_model_proto' keys are missing in the 'd' dictionary.
+                - Other exceptions related to the initialization or loading of the SentencePieceProcessor object may occur.
         """
         self.__dict__ = d
         self.sp_model = spm.SentencePieceProcessor(**self.sp_model_kwargs)
@@ -234,7 +243,8 @@ class GemmaTokenizer(PreTrainedTokenizer):
             self (GemmaTokenizer): An instance of the GemmaTokenizer class.
             token_ids (List[int]): A list of token IDs to be decoded.
             skip_special_tokens (bool, optional): Whether to skip special tokens during decoding. Defaults to False.
-            spaces_between_special_tokens (bool, optional): Whether to include spaces between special tokens in the decoded string. Defaults to False.
+            spaces_between_special_tokens (bool, optional):
+                Whether to include spaces between special tokens in the decoded string. Defaults to False.
             **kwargs: Additional keyword arguments.
 
         Returns:
@@ -334,7 +344,8 @@ class GemmaTokenizer(PreTrainedTokenizer):
             token_ids_1: (optional) list of integers. The token IDs for the second sequence.
         
         Returns:
-            list of integers. The concatenated token IDs with special tokens added at the beginning and end of each sequence.
+            list of integers:
+                The concatenated token IDs with special tokens added at the beginning and end of each sequence.
         
         Raises:
             None.

@@ -423,10 +423,12 @@ class XCLIPVisionEncoderLayer(nn.Cell):
                 `(batch, 1, tgt_len, src_len)` where padding elements are indicated by very large negative values.
                 `(config.encoder_attention_heads,)`.
             causal_attention_mask (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                >- Causal mask for the text model. Mask values selected in `[0, 1]`:
-                >   - 1 for tokens that are **not masked**,
-                >   - 0 for tokens that are **masked**.
-                >- [What are attention masks?](../glossary#attention-mask)
+                Causal mask for the text model. Mask values selected in `[0, 1]`:
+
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+
+                [What are attention masks?](../glossary#attention-mask)
             output_attentions (`bool`, *optional*):
                 Whether or not to return the attentions tensors of all attention layers. See `attentions` under
                 returned tensors for more detail.
@@ -582,15 +584,19 @@ class XCLIPEncoder(nn.Cell):
                 This is useful if you want more control over how to convert `input_ids` indices into associated vectors
                 than the model's internal embedding lookup matrix.
             attention_mask (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                >- Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-                >   - 1 for tokens that are **not masked**,
-                >   - 0 for tokens that are **masked**.
-                >- [What are attention masks?](../glossary#attention-mask)
+                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+
+                [What are attention masks?](../glossary#attention-mask)
             causal_attention_mask (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                >- Causal mask for the text model. Mask values selected in `[0, 1]`:
-                >   - 1 for tokens that are **not masked**,
-                >   - 0 for tokens that are **masked**.
-                >- [What are attention masks?](../glossary#attention-mask)
+                Causal mask for the text model. Mask values selected in `[0, 1]`:
+
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+
+                [What are attention masks?](../glossary#attention-mask)
             output_attentions (`bool`, *optional*):
                 Whether or not to return the attentions tensors of all attention layers. See `attentions` under
                 returned tensors for more detail.
@@ -664,8 +670,9 @@ class XCLIPTextTransformer(nn.Cell):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
-        Returns:
 
+        Returns:
+            `Union[Tuple, BaseModelOutputWithPooling]`
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -746,18 +753,19 @@ class XCLIPTextModel(XCLIPPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
+
         Returns:
             `Union[Tuple, BaseModelOutputWithPooling]`
 
-        Examples:
+        Example:
             ```python
             >>> from transformers import AutoTokenizer, XCLIPTextModel
-
+            ...
             >>> model = XCLIPTextModel.from_pretrained("microsoft/xclip-base-patch32")
             >>> tokenizer = AutoTokenizer.from_pretrained("microsoft/xclip-base-patch32")
-
+            ...
             >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
-
+            ...
             >>> outputs = model(**inputs)
             >>> last_hidden_state = outputs.last_hidden_state
             >>> pooled_output = outputs.pooler_output  # pooled (EOS token) states
@@ -805,15 +813,19 @@ class XCLIPVisionEncoder(nn.Cell):
                 This is useful if you want more control over how to convert `input_ids` indices into associated vectors
                 than the model's internal embedding lookup matrix.
             attention_mask (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                >- Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-                >   - 1 for tokens that are **not masked**,
-                >   - 0 for tokens that are **masked**.
-                >- [What are attention masks?](../glossary#attention-mask)
+                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+
+                [What are attention masks?](../glossary#attention-mask)
             causal_attention_mask (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                >- Causal mask for the text model. Mask values selected in `[0, 1]`:
-                >   - 1 for tokens that are **not masked**,
-                >   - 0 for tokens that are **masked**.
-                >- [What are attention masks?](../glossary#attention-mask)
+                Causal mask for the text model. Mask values selected in `[0, 1]`:
+
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+
+                [What are attention masks?](../glossary#attention-mask)
             output_attentions (`bool`, *optional*):
                 Whether or not to return the attentions tensors of all attention layers. See `attentions` under
                 returned tensors for more detail.
@@ -891,6 +903,7 @@ class XCLIPVisionTransformer(nn.Cell):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
+
         Returns:
             `Union[Tuple, BaseModelOutputWithPooling]`
         """
@@ -949,18 +962,18 @@ class XCLIPVisionModel(XCLIPPreTrainedModel):
         Returns:
             `Union[Tuple, BaseModelOutputWithPooling]`
 
-        Examples:
+        Example:
             ```python
             >>> import av
             >>> import torch
             >>> import numpy as np
-
+            ...
             >>> from transformers import AutoProcessor, XCLIPVisionModel
             >>> from huggingface_hub import hf_hub_download
-
+            ...
             >>> np.random.seed(0)
-
-
+            ...
+            ...
             >>> def read_video_pyav(container, indices):
             ...     '''
             ...     Decode the video with PyAV decoder.
@@ -980,8 +993,8 @@ class XCLIPVisionModel(XCLIPPreTrainedModel):
             ...         if i >= start_index and i in indices:
             ...             frames.append(frame)
             ...     return np.stack([x.to_ndarray(format="rgb24") for x in frames])
-
-
+            ...
+            ...
             >>> def sample_frame_indices(clip_len, frame_sample_rate, seg_len):
             ...     '''
             ...     Sample a given number of frame indices from the video.
@@ -998,26 +1011,26 @@ class XCLIPVisionModel(XCLIPPreTrainedModel):
             ...     indices = np.linspace(start_idx, end_idx, num=clip_len)
             ...     indices = np.clip(indices, start_idx, end_idx - 1).astype(np.int64)
             ...     return indices
-
-
+            ...
+            ...
             >>> # video clip consists of 300 frames (10 seconds at 30 FPS)
             >>> file_path = hf_hub_download(
             ...     repo_id="nielsr/video-demo", filename="eating_spaghetti.mp4", repo_type="dataset"
             ... )
             >>> container = av.open(file_path)
-
+            ...
             >>> # sample 16 frames
             >>> indices = sample_frame_indices(clip_len=8, frame_sample_rate=1, seg_len=container.streams.video[0].frames)
             >>> video = read_video_pyav(container, indices)
-
+            ...
             >>> processor = AutoProcessor.from_pretrained("microsoft/xclip-base-patch32")
             >>> model = XCLIPVisionModel.from_pretrained("microsoft/xclip-base-patch32")
-
+            ...
             >>> pixel_values = processor(videos=list(video), return_tensors="pt").pixel_values
-
+            ...
             >>> batch_size, num_frames, num_channels, height, width = pixel_values.shape
             >>> pixel_values = pixel_values.reshape(-1, num_channels, height, width)
-
+            ...
             >>> outputs = model(pixel_values)
             >>> last_hidden_state = outputs.last_hidden_state
             ```
@@ -1236,17 +1249,18 @@ class XCLIPModel(XCLIPPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> ms.Tensor:
         r"""
+
         Returns:
             text_features (`ms.Tensor` of shape `(batch_size, output_dim`): The text embeddings obtained by
             applying the projection layer to the pooled output of [`XCLIPTextModel`].
 
-        Examples:
+        Example:
             ```python
             >>> from transformers import AutoTokenizer, AutoModel
-
+            ...
             >>> tokenizer = AutoTokenizer.from_pretrained("microsoft/xclip-base-patch32")
             >>> model = AutoModel.from_pretrained("microsoft/xclip-base-patch32")
-
+            ...
             >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
             >>> text_features = model.get_text_features(**inputs)
             ```
@@ -1280,23 +1294,24 @@ class XCLIPModel(XCLIPPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> ms.Tensor:
         r"""
+
         Returns:
             video_features (`ms.Tensor` of shape `(batch_size, output_dim`): The video embeddings obtained by
                 applying the projection layer to the pooled output of [`XCLIPVisionModel`] and
                 [`XCLIPMultiframeIntegrationTransformer`].
 
-        Examples:
+        Example:
             ```python
             >>> import av
             >>> import torch
             >>> import numpy as np
-
+            ...
             >>> from transformers import AutoProcessor, AutoModel
             >>> from huggingface_hub import hf_hub_download
-
+            ...
             >>> np.random.seed(0)
-
-
+            ...
+            ...
             >>> def read_video_pyav(container, indices):
             ...     '''
             ...     Decode the video with PyAV decoder.
@@ -1316,8 +1331,8 @@ class XCLIPModel(XCLIPPreTrainedModel):
             ...         if i >= start_index and i in indices:
             ...             frames.append(frame)
             ...     return np.stack([x.to_ndarray(format="rgb24") for x in frames])
-
-
+            ...
+            ...
             >>> def sample_frame_indices(clip_len, frame_sample_rate, seg_len):
             ...     '''
             ...     Sample a given number of frame indices from the video.
@@ -1334,23 +1349,23 @@ class XCLIPModel(XCLIPPreTrainedModel):
             ...     indices = np.linspace(start_idx, end_idx, num=clip_len)
             ...     indices = np.clip(indices, start_idx, end_idx - 1).astype(np.int64)
             ...     return indices
-
-
+            ...
+            ...
             >>> # video clip consists of 300 frames (10 seconds at 30 FPS)
             >>> file_path = hf_hub_download(
             ...     repo_id="nielsr/video-demo", filename="eating_spaghetti.mp4", repo_type="dataset"
             ... )
             >>> container = av.open(file_path)
-
+            ...
             >>> # sample 8 frames
             >>> indices = sample_frame_indices(clip_len=8, frame_sample_rate=1, seg_len=container.streams.video[0].frames)
             >>> video = read_video_pyav(container, indices)
-
+            ...
             >>> processor = AutoProcessor.from_pretrained("microsoft/xclip-base-patch32")
             >>> model = AutoModel.from_pretrained("microsoft/xclip-base-patch32")
-
+            ...
             >>> inputs = processor(videos=list(video), return_tensors="pt")
-
+            ...
             >>> video_features = model.get_video_features(**inputs)
             ```
         """
@@ -1398,21 +1413,22 @@ class XCLIPModel(XCLIPPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, XCLIPOutput]:
         r"""
+
         Returns:
             `Union[Tuple, XCLIPOutput]`
 
-        Examples:
+        Example:
             ```python
             >>> import av
             >>> import torch
             >>> import numpy as np
-
+            ...
             >>> from transformers import AutoProcessor, AutoModel
             >>> from huggingface_hub import hf_hub_download
-
+            ...
             >>> np.random.seed(0)
-
-
+            ...
+            ...
             >>> def read_video_pyav(container, indices):
             ...     '''
             ...     Decode the video with PyAV decoder.
@@ -1432,8 +1448,8 @@ class XCLIPModel(XCLIPPreTrainedModel):
             ...         if i >= start_index and i in indices:
             ...             frames.append(frame)
             ...     return np.stack([x.to_ndarray(format="rgb24") for x in frames])
-
-
+            ...
+            ...
             >>> def sample_frame_indices(clip_len, frame_sample_rate, seg_len):
             ...     '''
             ...     Sample a given number of frame indices from the video.
@@ -1450,32 +1466,32 @@ class XCLIPModel(XCLIPPreTrainedModel):
             ...     indices = np.linspace(start_idx, end_idx, num=clip_len)
             ...     indices = np.clip(indices, start_idx, end_idx - 1).astype(np.int64)
             ...     return indices
-
-
+            ...
+            ...
             >>> # video clip consists of 300 frames (10 seconds at 30 FPS)
             >>> file_path = hf_hub_download(
             ...     repo_id="nielsr/video-demo", filename="eating_spaghetti.mp4", repo_type="dataset"
             ... )
             >>> container = av.open(file_path)
-
+            ...
             >>> # sample 8 frames
             >>> indices = sample_frame_indices(clip_len=8, frame_sample_rate=1, seg_len=container.streams.video[0].frames)
             >>> video = read_video_pyav(container, indices)
-
+            ...
             >>> processor = AutoProcessor.from_pretrained("microsoft/xclip-base-patch32")
             >>> model = AutoModel.from_pretrained("microsoft/xclip-base-patch32")
-
+            ...
             >>> inputs = processor(
             ...     text=["playing sports", "eating spaghetti", "go shopping"],
             ...     videos=list(video),
             ...     return_tensors="pt",
             ...     padding=True,
             ... )
-
+            ...
             >>> # forward pass
             >>> with torch.no_grad():
             ...     outputs = model(**inputs)
-
+            ...
             >>> logits_per_video = outputs.logits_per_video  # this is the video-text similarity score
             >>> probs = logits_per_video.softmax(dim=1)  # we can take the softmax to get the label probabilities
             >>> print(probs)

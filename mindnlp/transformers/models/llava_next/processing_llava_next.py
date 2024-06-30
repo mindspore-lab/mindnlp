@@ -53,7 +53,7 @@ class LlavaNextProcessor(ProcessorMixin):
             tokenizer (optional): A tokenizer object. Defaults to None.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -87,30 +87,34 @@ class LlavaNextProcessor(ProcessorMixin):
             padding (`bool`, `str` or [`~utils.PaddingStrategy`], *optional*, defaults to `False`):
                 Select a strategy to pad the returned sequences (according to the model's padding side and padding
                 index) among:
-                >   - `True` or `'longest'`: Pad to the longest sequence in the batch (or no padding if only a single
-                    sequence if provided).
-                >   - `'max_length'`: Pad to a maximum length specified with the argument `max_length` or to the maximum
-                    acceptable input length for the model if that argument is not provided.
-                >   - `False` or `'do_not_pad'` (default): No padding (i.e., can output a batch with sequences of different
-                    lengths).
+
+                - `True` or `'longest'`: Pad to the longest sequence in the batch (or no padding if only a single
+                sequence if provided).
+                - `'max_length'`: Pad to a maximum length specified with the argument `max_length` or to the maximum
+                acceptable input length for the model if that argument is not provided.
+                - `False` or `'do_not_pad'` (default): No padding (i.e., can output a batch with sequences of different
+                lengths).
             max_length (`int`, *optional*):
                 Maximum length of the returned list and optionally padding length (see above).
             truncation (`bool`, *optional*):
                 Activates truncation to cut input sequences longer than `max_length` to `max_length`.
             return_tensors (`str` or [`~utils.TensorType`], *optional*):
                 If set, will return tensors of a particular framework. Acceptable values are:
-                >   - `'tf'`: Return TensorFlow `tf.constant` objects.
-                >   - `'pt'`: Return PyTorch `torch.Tensor` objects.
-                >   - `'np'`: Return NumPy `np.ndarray` objects.
-                >   - `'jax'`: Return JAX `jnp.ndarray` objects.
+
+                - `'tf'`: Return TensorFlow `tf.constant` objects.
+                - `'pt'`: Return PyTorch `torch.Tensor` objects.
+                - `'np'`: Return NumPy `np.ndarray` objects.
+                - `'jax'`: Return JAX `jnp.ndarray` objects.
 
         Returns:
-            [`BatchFeature`]: A [`BatchFeature`] with the following fields:
-            >   - **input_ids** -- List of token ids to be fed to a model. Returned when `text` is not `None`.
-            >   - **attention_mask** -- List of indices specifying which tokens should be attended to by the model (when
-              `return_attention_mask=True` or if *"attention_mask"* is in `self.model_input_names` and if `text` is not
-              `None`).
-            >   - **pixel_values** -- Pixel values to be fed to a model. Returned when `images` is not `None`.
+            [`BatchFeature`]:
+                A [`BatchFeature`] with the following fields:
+
+                - **input_ids** -- List of token ids to be fed to a model. Returned when `text` is not `None`.
+                - **attention_mask** -- List of indices specifying which tokens should be attended to by the model (when
+                `return_attention_mask=True` or if *"attention_mask"* is in `self.model_input_names` and if `text` is not
+                `None`).
+                - **pixel_values** -- Pixel values to be fed to a model. Returned when `images` is not `None`.
         """
         if images is not None:
             image_inputs = self.image_processor(
@@ -154,7 +158,8 @@ class LlavaNextProcessor(ProcessorMixin):
         Raises:
             None.
 
-        This method retrieves the model input names from the tokenizer and image processor of the LlavaNextProcessor. It concatenates the tokenizer input names and image processor input names, and removes any
+        This method retrieves the model input names from the tokenizer and image processor of the LlavaNextProcessor.
+        It concatenates the tokenizer input names and image processor input names, and removes any
         duplicate entries using a dictionary conversion. The resulting list of model input names is returned.
         """
         tokenizer_input_names = self.tokenizer.model_input_names

@@ -56,7 +56,7 @@ def build_chat_input(model, tokenizer, messages: List[dict], max_new_tokens: int
         max_new_tokens (int, optional): The maximum number of new tokens that can be added to the input. Defaults to 0.
     
     Returns:
-        None: This function does not return any value.
+        None.
     
     Raises:
         AssertionError: If the 'role' in the messages is not correctly specified.
@@ -166,7 +166,7 @@ class TextIterStreamer:
             skip_special_tokens (bool): A flag indicating whether to skip special tokens during tokenization.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -196,8 +196,7 @@ class TextIterStreamer:
                 The input value to be added to the tokens. It should be an array-like object containing the tokens to be added.
 
         Returns:
-            None:
-                This method does not return any value.
+            None.
 
         Raises:
             None
@@ -219,7 +218,7 @@ class TextIterStreamer:
             self (TextIterStreamer): An instance of the TextIterStreamer class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -242,7 +241,8 @@ class TextIterStreamer:
 
         Returns:
             None:
-                This method does not return any value explicitly. Instead, it returns the instance of the TextIterStreamer class itself.
+                This method does not return any value explicitly.
+                Instead, it returns the instance of the TextIterStreamer class itself.
 
         Raises:
             This method does not raise any exceptions explicitly.
@@ -258,7 +258,7 @@ class TextIterStreamer:
                 It represents the current object on which the method is being called.
 
         Returns:
-            None: This method does not return any value explicitly.
+            None.
 
         Raises:
             StopIteration: If the value retrieved from the text_queue is None,
@@ -384,7 +384,7 @@ class RMSNorm(nn.Cell):
                 The input hidden states to be normalized. Should be a tensor of shape (batch_size, hidden_size).
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the hidden_states tensor is not of the correct shape.
@@ -417,7 +417,7 @@ class RotaryEmbedding(nn.Cell):
             base (int, optional): The base value used in the calculation. Defaults to 10000.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the input parameters are not within the expected range or format.
@@ -533,10 +533,10 @@ class MLP(nn.Cell):
                 Specifies the activation function to be used in the hidden layer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         super().__init__()
         self.gate_proj = nn.Dense(hidden_size, intermediate_size, has_bias=False)
@@ -556,7 +556,7 @@ class MLP(nn.Cell):
             None: The method modifies the internal state of the MLP object.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
 
@@ -760,7 +760,7 @@ class BaiChuanAttention(nn.Cell):
                 This is used for positional embeddings.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the hidden_size is not divisible by the num_attention_heads.
@@ -796,7 +796,7 @@ class BaiChuanAttention(nn.Cell):
             bsz (int): The batch size of the tensor.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1027,7 +1027,7 @@ class BaiChuanLayer(nn.Cell):
                 It specifies the hidden size, intermediate size, hidden activation function, and epsilon for RMS normalization.
 
         Returns:
-            None: This method initializes the attributes of the BaiChuanLayer instance but does not return any value.
+            None.
 
         Raises:
             None.
@@ -1156,7 +1156,7 @@ class BaiChuan7bModel(BaiChuanPreTrainedModel):
                 - Restrictions: Must be an instance of BaiChuanConfig.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -1180,7 +1180,7 @@ class BaiChuan7bModel(BaiChuanPreTrainedModel):
             self: The instance of BaiChuan7bModel.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1199,10 +1199,10 @@ class BaiChuan7bModel(BaiChuanPreTrainedModel):
             new_embeddings (Any): The new embeddings to be set. This can be of any type.
 
         Returns:
-            None: This method does not return anything.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.embed_tokens = new_embeddings
 
@@ -1419,7 +1419,7 @@ class BaiChuan13bModel(BaiChuanPreTrainedModel):
                 num_attention_heads, hidden_size, num_hidden_layers, rms_norm_eps, and model_max_length.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1466,7 +1466,7 @@ class BaiChuan13bModel(BaiChuanPreTrainedModel):
                 - Restrictions: None
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -1484,7 +1484,7 @@ class BaiChuan13bModel(BaiChuanPreTrainedModel):
             seq_length_with_past (int): The length of the sequence with past information.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the 'seq_length_with_past' parameter is not an integer.
@@ -1643,7 +1643,7 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
             size (str, optional): The size of the model. Defaults to None. Must be either '7b' or '13b'.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             ValueError:
@@ -1675,7 +1675,7 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
             None: This method returns the input embeddings from the model to be used in the BaiChuanForCausalLM class.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.model.embed_tokens
 
@@ -1688,7 +1688,7 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
             new_embeddings (torch.Tensor): The new input embeddings to be set for the model. Should be of shape (vocab_size, embedding_dim).
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the new_embeddings parameter is not of type torch.Tensor.
@@ -1704,7 +1704,7 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
             self: An instance of the BaiChuanForCausalLM class.
 
         Returns:
-            None: The method returns the lm_head attribute which contains the output embeddings.
+            lm_head: The method returns the lm_head attribute which contains the output embeddings.
 
         Raises:
             None.
@@ -1721,7 +1721,7 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
                 This can be of any type.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1928,7 +1928,8 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
         Args:
             self: The instance of the BaiChuanForCausalLM class.
             tokenizer: An object of the tokenizer class used for tokenizing the input messages.
-            messages: A list of dictionaries representing the chat messages. Each dictionary contains the following keys:
+            messages: A list of dictionaries representing the chat messages.
+                Each dictionary contains the following keys:
 
                 - 'role': The role of the message sender (e.g., 'system', 'user', 'assistant').
                 - 'content': The content of the message.

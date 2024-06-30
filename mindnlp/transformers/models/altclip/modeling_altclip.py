@@ -122,8 +122,9 @@ class AltCLIPOutput(ModelOutput):
         
         Returns:
             Tuple[Any]: A tuple representation of the AltCLIPOutput object. 
-                The tuple contains the values of all attributes in the object, except for 'text_model_output' and 'vision_model_output'. If any of
-                these attributes are present, their values will be recursively converted to tuples as well.
+                The tuple contains the values of all attributes in the object, except for 'text_model_output' and
+                'vision_model_output'. If any of these attributes are present, their values will be recursively
+                converted to tuples as well.
 
         Raises:
             None.
@@ -158,7 +159,7 @@ class AltRobertaEmbeddings(nn.Cell):
                 - pad_token_id (int): The ID of the padding token.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             AttributeError: If the config object does not have the required attributes.
@@ -307,7 +308,7 @@ class AltRobertaSelfAttention(nn.Cell):
             position_embedding_type (str, optional): The type of position embedding to be used. Defaults to None.
 
         Returns:
-            None: This method initializes the instance with the specified configuration and position embedding type.
+            None.
 
         Raises:
             ValueError: If the hidden size in the config is not a multiple of the number of attention heads.
@@ -349,7 +350,7 @@ class AltRobertaSelfAttention(nn.Cell):
             mindspore.Tensor: Returns a new tensor after performing the swapaxes operation.
 
         Raises:
-            No specific exceptions are documented to be raised by this method.
+            None.
         """
         new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
         x = x.view(new_x_shape)
@@ -516,10 +517,11 @@ class AltRobertaSelfOutput(nn.Cell):
 
         Args:
             self: The instance of the AltRobertaSelfOutput class.
-            config: An object containing configuration parameters for the self output layer, including the hidden size and dropout probability. It is of type Config.
+            config: An object containing configuration parameters for the self output layer, including the hidden size
+                and dropout probability. It is of type Config.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the configuration parameters are invalid or missing.
@@ -554,7 +556,8 @@ class AltRobertaSelfOutput(nn.Cell):
 # Copied from transformers.models.roberta.modeling_roberta.RobertaAttention with Roberta->AltRoberta
 class AltRobertaAttention(nn.Cell):
     '''
-    The AltRobertaAttention class represents the attention mechanism used in the AltRoberta model. This class inherits from nn.Cell and includes methods for initializing the attention mechanism, pruning
+    The AltRobertaAttention class represents the attention mechanism used in the AltRoberta model.
+    This class inherits from nn.Cell and includes methods for initializing the attention mechanism, pruning
     attention heads, and constructing the attention output.
 
     Attributes:
@@ -581,7 +584,7 @@ class AltRobertaAttention(nn.Cell):
             position_embedding_type (str, optional): The type of position embedding to be used. Default is None.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -762,7 +765,7 @@ class AltRobertaOutput(nn.Cell):
             config: A configuration object containing the parameters for the model.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -830,7 +833,7 @@ class AltRobertaLayer(nn.Cell):
                 - Restrictions: None
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError:
@@ -1139,7 +1142,7 @@ class AltRobertaPooler(nn.Cell):
                 - Restrictions: Must be a valid configuration object.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -1227,7 +1230,7 @@ class AltCLIPAttention(nn.Cell):
             None: This method does not return any value, as it directly reshapes the input tensor.
 
         Raises:
-            No specific exceptions are documented to be raised by this method.
+            None.
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
@@ -1341,7 +1344,7 @@ class AltCLIPMLP(nn.Cell):
                 - Restrictions: Must be a valid configuration object.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1394,7 +1397,7 @@ class AltCLIPEncoderLayer(nn.Cell):
         construct(hidden_states, attention_mask, causal_attention_mask, output_attentions=False):
             Applies the AltCLIPEncoderLayer operations to the input hidden states.
 
-            - Args:
+            Args:
 
                 - hidden_states (mindspore.Tensor): The input hidden states of shape (batch, seq_len, embed_dim).
                 - attention_mask (mindspore.Tensor): The attention mask of size (batch, 1, tgt_len, src_len),
@@ -1404,17 +1407,19 @@ class AltCLIPEncoderLayer(nn.Cell):
                 - output_attentions (bool, optional): Whether or not to return the attentions tensors of all attention layers. Defaults to False.
 
             Returns:
-                Tuple[mindspore.Tensor]: A tuple containing the output hidden states. If output_attentions is True, the tuple also contains the attention weights tensor.
+                Tuple[mindspore.Tensor]: A tuple containing the output hidden states.
+                    If output_attentions is True, the tuple also contains the attention weights tensor.
 
     Note:
         The construct method performs the following operations in order:
-        >   1. Applies layer normalization to the input hidden states.
-        >   2. Performs the self-attention operation using the self_attn instance.
-        >   3. Adds the residual connection from step 1 to the output of step 2.
-        >   4. Applies layer normalization to the output of step 3.
-        >   5. Applies the feed-forward neural network operation using the mlp instance.
-        >   6. Adds the residual connection from step 3 to the output of step 5.
-        >   7. Returns the output hidden states.
+
+        1. Applies layer normalization to the input hidden states.
+        2. Performs the self-attention operation using the self_attn instance.
+        3. Adds the residual connection from step 1 to the output of step 2.
+        4. Applies layer normalization to the output of step 3.
+        5. Applies the feed-forward neural network operation using the mlp instance.
+        6. Adds the residual connection from step 3 to the output of step 5.
+        7. Returns the output hidden states.
 
         If output_attentions is True, the attention weights tensor is also returned.
 
@@ -1429,7 +1434,7 @@ class AltCLIPEncoderLayer(nn.Cell):
                 It specifies the hidden size and layer normalization epsilon for the encoder layer.
 
         Returns:
-            None. The method does not return any value.
+            None.
 
         Raises:
             None
@@ -1504,7 +1509,7 @@ class AltCLIPEncoder(nn.Cell):
                 It should be an instance of the AltCLIPConfig class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -1636,7 +1641,7 @@ class AltCLIPVisionEmbeddings(nn.Cell):
                 It must be of type AltCLIPVisionConfig.
 
         Returns:
-            None: This method initializes the attributes of the AltCLIPVisionEmbeddings class and does not return any value.
+            None.
 
         Raises:
             None.
@@ -1786,7 +1791,7 @@ class AltCLIPVisionTransformer(nn.Cell):
                 This parameter is required to initialize the transformer and should be an instance of AltCLIPVisionConfig.
 
         Returns:
-            None: This method returns nothing.
+            None.
 
         Raises:
             None.
@@ -1878,7 +1883,7 @@ class AltCLIPVisionModel(AltCLIPPreTrainedModel):
                 An instance of AltCLIPVisionConfig representing the configuration parameters for the vision model.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -2010,7 +2015,7 @@ class AltRobertaModel(AltCLIPPreTrainedModel):
             value (object): The input embeddings value to be set. It can be of any valid type.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -2160,9 +2165,11 @@ class AltRobertaModel(AltCLIPPreTrainedModel):
 class AltCLIPTextModel(AltCLIPPreTrainedModel):
 
     """
-    Represents an alternative implementation of the CLIP (Contrastive Language-Image Pretraining) model specifically tailored for text. This class extends the AltCLIPPreTrainedModel class and includes methods
-    for initializing the model, getting and setting input embeddings, resizing token embeddings, and constructing the model for inference. The 'construct' method takes various input tensors and optional parameters
-    and returns the model's output, including the last hidden state and the pooled CLS states. Additionally, usage examples are provided for reference.
+    Represents an alternative implementation of the CLIP (Contrastive Language-Image Pretraining) model specifically
+    tailored for text. This class extends the AltCLIPPreTrainedModel class and includes methods for initializing the
+    model, getting and setting input embeddings, resizing token embeddings, and constructing the model for inference.
+    The 'construct' method takes various input tensors and optional parameters and returns the model's output,
+    including the last hidden state and the pooled CLS states. Additionally, usage examples are provided for reference.
 
     Example:
         ```python
@@ -2192,7 +2199,7 @@ class AltCLIPTextModel(AltCLIPPreTrainedModel):
                 - Restrictions: Must be a valid configuration dictionary.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the provided config parameter is not of type dict.
@@ -2376,7 +2383,7 @@ class AltCLIPModel(AltCLIPPreTrainedModel):
             config (AltCLIPConfig): The configuration object containing the settings for the AltCLIPModel.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the 'config.vision_config' is not an instance of AltCLIPVisionConfig.
@@ -2423,6 +2430,7 @@ class AltCLIPModel(AltCLIPPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> mindspore.Tensor:
         r"""
+
         Returns:
             text_features (`mindspore.Tensor` of shape `(batch_size, output_dim`): The text embeddings obtained by
             applying the projection layer to the pooled output of [`AltCLIPTextModel`].
@@ -2466,6 +2474,7 @@ class AltCLIPModel(AltCLIPPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> mindspore.Tensor:
         r"""
+
         Returns:
             image_features (`mindspore.Tensor` of shape `(batch_size, output_dim`): The image embeddings obtained by
             applying the projection layer to the pooled output of [`AltCLIPVisionModel`].
@@ -2516,6 +2525,7 @@ class AltCLIPModel(AltCLIPPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, AltCLIPOutput]:
         r"""
+
         Returns:
             `Union[Tuple, AltCLIPOutput]`
 

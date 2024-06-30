@@ -393,17 +393,18 @@ class CanineAttention(nn.Cell):
     """
     Additional arguments related to local attention:
 
-        - **local** (`bool`, *optional*, defaults to `False`) -- Whether to apply local attention.
-        - **always_attend_to_first_position** (`bool`, *optional*, defaults to `False`) -- Should all blocks be able to
-          attend
-        to the `to_tensor`'s first position (e.g. a [CLS] position)? - **first_position_attends_to_all** (`bool`,
-        *optional*, defaults to `False`) -- Should the *from_tensor*'s first position be able to attend to all
-        positions within the *from_tensor*? - **attend_from_chunk_width** (`int`, *optional*, defaults to 128) -- The
-        width of each block-wise chunk in `from_tensor`. - **attend_from_chunk_stride** (`int`, *optional*, defaults to
-        128) -- The number of elements to skip when moving to the next block in `from_tensor`. -
-        **attend_to_chunk_width** (`int`, *optional*, defaults to 128) -- The width of each block-wise chunk in
-        *to_tensor*. - **attend_to_chunk_stride** (`int`, *optional*, defaults to 128) -- The number of elements to
-        skip when moving to the next block in `to_tensor`.
+    - **local** (`bool`, *optional*, defaults to `False`): Whether to apply local attention.
+    - **always_attend_to_first_position** (`bool`, *optional*, defaults to `False`): Should all blocks be able to
+    attend to the `to_tensor`'s first position (e.g. a [CLS] position)?
+    - **first_position_attends_to_all** (`bool`, *optional*, defaults to `False`):
+    Should the *from_tensor*'s first position be able to attend to all positions within the *from_tensor*?
+    - **attend_from_chunk_width** (`int`, *optional*, defaults to 128): The width of each block-wise chunk in `from_tensor`.
+    - **attend_from_chunk_stride** (`int`, *optional*, defaults to 128): The number of elements to skip when moving
+    to the next block in `from_tensor`.
+    - **attend_to_chunk_width** (`int`, *optional*, defaults to 128): The width of each block-wise chunk in
+    *to_tensor*.
+    - **attend_to_chunk_stride** (`int`, *optional*, defaults to 128): The number of elements to
+    skip when moving to the next block in `to_tensor`.
     """
 
     def __init__(

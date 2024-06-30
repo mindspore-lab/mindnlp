@@ -48,10 +48,10 @@ class AlignProcessor(ProcessorMixin):
             tokenizer (object): An object of the tokenizer class that handles text tokenization.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         super().__init__(image_processor, tokenizer)
 

@@ -58,17 +58,20 @@ class InvalidScoreLogitsProcessor(LogitsProcessor):
         
         Args:
             self: An instance of the 'InvalidScoreLogitsProcessor' class.
-            input_ids (mindspore.Tensor): A tensor representing the input IDs.
+            input_ids (mindspore.Tensor):
+                A tensor representing the input IDs.
 
                 - Shape: Arbitrary.
                 - Data Type: mindspore.Tensor.
-            scores (mindspore.Tensor): A tensor representing the scores.
+            scores (mindspore.Tensor):
+                A tensor representing the scores.
 
                 - Shape: Arbitrary.
                 - Data Type: mindspore.Tensor.
 
         Returns:
-            mindspore.Tensor: A tensor containing the processed scores.
+            mindspore.Tensor:
+                A tensor containing the processed scores.
 
                 - Shape: Same as the 'scores' tensor.
                 - Data Type: mindspore.Tensor.
@@ -94,7 +97,8 @@ class PrefixEncoder(nn.Cell):
 
         Args:
             self (PrefixEncoder): The instance of the PrefixEncoder class.
-            config: A configuration object containing parameters for the PrefixEncoder.
+            config:
+                A configuration object containing parameters for the PrefixEncoder.
 
                 - Type: Custom configuration object.
                 - Purpose: To configure the PrefixEncoder with specific settings.
@@ -106,11 +110,11 @@ class PrefixEncoder(nn.Cell):
                     - num_layers: An integer indicating the number of layers in the model.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            - AttributeError: If the config object does not have the required attributes.
-            - TypeError: If the data types of the config attributes are incorrect.
+            AttributeError: If the config object does not have the required attributes.
+            TypeError: If the data types of the config attributes are incorrect.
         """
         super().__init__()
         self.prefix_projection = config.prefix_projection
@@ -174,7 +178,8 @@ class RotaryEmbedding(nn.Cell):
     """
     This class represents a rotary embedding layer that can be used in neural network models. It inherits from the nn.Cell class.
 
-    The RotaryEmbedding layer is designed to provide rotational positional encoding for input sequences. It utilizes sinusoidal functions to generate embeddings that capture the relative positions of elements
+    The RotaryEmbedding layer is designed to provide rotational positional encoding for input sequences.
+    It utilizes sinusoidal functions to generate embeddings that capture the relative positions of elements
     in a sequence.
 
     Initialization:
@@ -186,11 +191,12 @@ class RotaryEmbedding(nn.Cell):
     Methods:
         construct(x, seq_dim=1, seq_len=None):
             Constructs the positional embeddings for the input sequence 'x'.
-            - Args:
 
-                - x (Tensor): The input sequence tensor.
-                - seq_dim (int, optional): The sequence dimension index in the input tensor. Default is 1.
-                - seq_len (int, optional): The length of the sequence. If not provided, it will be inferred from the input tensor.
+            Args:
+
+            - x (Tensor): The input sequence tensor.
+            - seq_dim (int, optional): The sequence dimension index in the input tensor. Default is 1.
+            - seq_len (int, optional): The length of the sequence. If not provided, it will be inferred from the input tensor.
 
         _apply(fn):
             Applies the provided function 'fn' to the cached cosine and sine embeddings.
@@ -219,7 +225,7 @@ class RotaryEmbedding(nn.Cell):
             learnable (bool, optional): Indicates whether the inv_freq is learnable. Default is False.
 
         Returns:
-            None. This method initializes the RotaryEmbedding class.
+            None.
 
         Raises:
             ValueError: If the dimension (dim) is not an integer or if the precision is not a valid mindspore dtype.
@@ -250,10 +256,10 @@ class RotaryEmbedding(nn.Cell):
             seq_len (int, optional): The length of the sequence. If not provided, it is inferred from the shape of the input tensor.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         if seq_len is None:
             seq_len = x.shape[seq_dim]
@@ -289,7 +295,7 @@ class RotaryEmbedding(nn.Cell):
             None.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         if self.cos_cached is not None:
             self.cos_cached = fn(self.cos_cached)
@@ -463,7 +469,7 @@ def default_init(cls, *args, **kwargs):
         cls (class): The class to be initialized with the provided arguments and keyword arguments.
 
     Returns:
-        None: This function does not return any value.
+        None.
 
     Raises:
         None
@@ -511,7 +517,7 @@ class SelfAttention(nn.Cell):
             position_encoding_2d (bool): Whether to use 2D position encoding.
 
         Returns:
-            None: This method initializes the SelfAttention object.
+            None.
 
         Raises:
             None.
@@ -775,7 +781,7 @@ class GLU(nn.Cell):
             params_dtype (mindspore.dtype, optional): The data type of the parameters. Defaults to mindspore.float32.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -866,7 +872,7 @@ class GLMBlock(nn.Cell):
             position_encoding_2d (bool): Flag indicating whether to use 2D position encoding.
 
         Returns:
-            None. This method initializes the GLMBlock object with the specified parameters.
+            None.
 
         Raises:
             None
@@ -988,7 +994,7 @@ class ChatGLMPreTrainedModel(PreTrainedModel):
             None.
 
         Raises:
-            No specific exceptions are documented to be raised by this method.
+            None.
         """
         batch_size, seq_length = input_ids.shape
         context_lengths = [seq.tolist().index(self.config.bos_token_id) for seq in input_ids]
@@ -1062,7 +1068,8 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
 
         Args:
             self: The instance of the ChatGLMModel class.
-            config (ChatGLMConfig): An object containing configuration parameters for the model.
+            config (ChatGLMConfig):
+                An object containing configuration parameters for the model.
 
                 - max_sequence_length (int): The maximum length of input sequences.
                 - hidden_size (int): The size of the hidden layer.
@@ -1076,7 +1083,7 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
                 - prefix_projection (bool): Flag indicating whether to project the prefix or not.
 
         Returns:
-            None. The method initializes the attributes and layers of the ChatGLMModel object.
+            None.
 
         Raises:
             ValueError: If any of the configuration parameters are invalid or missing.
@@ -1172,7 +1179,7 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
         Args:
             self (ChatGLMModel): The instance of the ChatGLMModel class.
             new_embeddings (mindspore.Tensor): The new embeddings to be set as input embeddings for the model.
-            It should be a mindspore Tensor object.
+                It should be a mindspore Tensor object.
 
         Returns:
             None.
@@ -1387,7 +1394,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             config (ChatGLMConfig): An instance of ChatGLMConfig containing configuration parameters for the model.
 
         Returns:
-            None: This method initializes various attributes of the ChatGLMForConditionalGeneration class.
+            None.
 
         Raises:
             TypeError: If the config parameter is not of type ChatGLMConfig.

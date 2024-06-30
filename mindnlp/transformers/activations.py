@@ -64,7 +64,7 @@ class ClippedGELUActivation(nn.Cell):
                 The value of 'max' should be greater than 'min'.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If 'min' is greater than 'max', a ValueError is raised with a detailed error message.
@@ -88,8 +88,9 @@ class ClippedGELUActivation(nn.Cell):
                 The input tensor to the activation function.
         
         Returns:
-            Tensor
-                The tensor resulting from applying the ClippedGELUActivation function to the input tensor, with values clipped to the range [min, max].
+            Tensor:
+                The tensor resulting from applying the ClippedGELUActivation function to the input tensor,
+                with values clipped to the range [min, max].
         
         Raises:
             None
@@ -112,10 +113,10 @@ class AccurateGELUActivation(nn.Cell):
             self: The instance of the class itself.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            No exceptions are raised by this method.
+            None.
         """
         super().__init__()
         self.precomputed_constant = math.sqrt(2 / math.pi)
@@ -190,7 +191,7 @@ class LinearActivation(nn.Cell):
             Tensor: The processed tensor as per the implementation.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return input
 
@@ -204,7 +205,8 @@ class LaplaceActivation(nn.Cell):
     """
     def construct(self, input, mu=0.707107, sigma=0.282095):
         r"""
-        This method 'construct' in the class 'LaplaceActivation' performs a Laplace activation function transformation on the input data.
+        This method 'construct' in the class 'LaplaceActivation' performs a Laplace activation function transformation
+        on the input data.
         
         Args:
             self (object): The instance of the class.
@@ -213,7 +215,7 @@ class LaplaceActivation(nn.Cell):
             sigma (float, optional): The standard deviation value used for normalization. Default is 0.282095.
         
         Returns:
-            None: The method modifies the input data in place.
+            None.
         
         Raises:
             ValueError: If the input data is not a valid tensor.
@@ -240,7 +242,7 @@ class ReLUSquaredActivation(nn.Cell):
             None: This method returns None as it updates the internal state of the object.
         
         Raises:
-            None: This method does not explicitly raise any exceptions.
+            None.
         """
         relu_applied = ops.relu(input)
         squared = ops.square(relu_applied)
@@ -260,10 +262,10 @@ class ClassInstantier(OrderedDict):
             key: The key used to retrieve the item from the object.
         
         Returns:
-            None: This method does not have a specific return value.
+            None.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         content = super().__getitem__(key)
         cls, kwargs = content if isinstance(content, tuple) else (content, {})

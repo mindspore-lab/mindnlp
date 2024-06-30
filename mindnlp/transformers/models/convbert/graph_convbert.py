@@ -54,10 +54,10 @@ class MSConvBertEmbeddings(nn.Cell):
                 - Restrictions: Must be properly configured with required parameters.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.word_embeddings = nn.Embedding(
@@ -175,7 +175,7 @@ class SeparableConv1D(nn.Cell):
             kernel_size (int): The size of the convolutional kernel.
 
         Returns:
-            None. This method initializes the separable 1D convolutional layer.
+            None.
 
         Raises:
             ValueError: If input_filters or output_filters is not a positive integer.
@@ -254,7 +254,7 @@ class MSConvBertSelfAttention(nn.Cell):
                 If not provided, the hidden_size should be divisible by num_attention_heads.
 
         Returns:
-            None: This method initializes the MSConvBertSelfAttention instance with the provided configuration.
+            None.
 
         Raises:
             ValueError:
@@ -567,7 +567,7 @@ class MSConvBertIntermediate(nn.Cell):
                 - Restrictions: Must contain 'hidden_size' and 'intermediate_size' attributes.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             KeyError: If the 'hidden_act' attribute in the config object does not match any key in ACT2FN dictionary.
@@ -614,7 +614,7 @@ class MSConvBertOutput(nn.Cell):
                 - hidden_dropout_prob (float): The dropout probability for the hidden layer.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the config parameter is not provided or is not of the expected type.
@@ -670,10 +670,10 @@ class MSConvBertLayer(nn.Cell):
                 This parameter is used to configure the behavior of the layer.
 
         Returns:
-            None. This method initializes the MSConvBertLayer instance.
+            None.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         super().__init__()
         self.seq_len_dim = 1
@@ -726,10 +726,10 @@ class MSConvBertEncoder(nn.Cell):
                 It contains various parameters and settings for the encoder.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.config = config
@@ -782,7 +782,7 @@ class MSConvBertModel(ConvBertPreTrainedModel):
                 Expected keys may include settings related to embeddings, encoder, and other model specifics.
 
         Returns:
-            None. This method does not return any value explicitly.
+            None.
 
         Raises:
             TypeError: If the provided 'config' parameter is not a dictionary.
@@ -802,10 +802,10 @@ class MSConvBertModel(ConvBertPreTrainedModel):
             self (MSConvBertModel): The instance of the MSConvBertModel class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
 
         """
         return self.embeddings.word_embeddings
@@ -819,7 +819,7 @@ class MSConvBertModel(ConvBertPreTrainedModel):
             new_embeddings (torch.Tensor): The new word embeddings to be set for the model.
 
         Returns:
-            None. The method modifies the self.embeddings.word_embeddings attribute directly.
+            None: The method modifies the self.embeddings.word_embeddings attribute directly.
 
         Raises:
             None.
@@ -906,7 +906,7 @@ class MSConvBertForQuestionAnswering(ConvBertPreTrainedModel):
                 It must include the number of labels (num_labels) for the model.
                 
         Returns:
-            None: This method initializes the MSConvBertForQuestionAnswering instance.
+            None.
         
         Raises:
             None.

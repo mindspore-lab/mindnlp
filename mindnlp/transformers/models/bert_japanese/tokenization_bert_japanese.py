@@ -134,7 +134,7 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
             jumanpp_kwargs (dict): Additional keyword arguments for the Jumanpp word tokenizer. Defaults to None.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If the specified vocabulary or SentencePiece model file cannot be found, or if an invalid tokenizer type is specified.
@@ -229,7 +229,7 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
                 rather it directly accesses and returns the lower case value of the input.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.lower_case
 
@@ -250,7 +250,7 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
                 attribute is removed from the state dictionary before returning it.
 
         Raises:
-            This method does not raise any exceptions under normal circumstances.
+            None.
         """
         state = dict(self.__dict__)
         if self.word_tokenizer_type in ["mecab", "sudachi", "jumanpp"]:
@@ -264,7 +264,7 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
             state (dict): The state dictionary containing the attributes to be restored.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -360,11 +360,11 @@ class BertJapaneseTokenizer(PreTrainedTokenizer):
         Returns:
             a dictionary representing the vocabulary:
 
-            - If the subword_tokenizer_type is 'sentencepiece', the vocabulary is constructed by mapping token IDs
-            to their corresponding tokens for the range of 0 to vocab_size.
-            Any added tokens are then added to this vocabulary.
-            - If the subword_tokenizer_type is not 'sentencepiece', the vocabulary is a combination of
-            the existing vocabulary and the added_tokens_encoder.
+                - If the subword_tokenizer_type is 'sentencepiece', the vocabulary is constructed by mapping token IDs
+                to their corresponding tokens for the range of 0 to vocab_size.
+                Any added tokens are then added to this vocabulary.
+                - If the subword_tokenizer_type is not 'sentencepiece', the vocabulary is a combination of
+                the existing vocabulary and the added_tokens_encoder.
 
         Raises:
             No specific exceptions are documented to be raised by this method.
@@ -882,7 +882,7 @@ class BasicTokenizer:
             do_split_on_punc (bool): A flag indicating whether to split on punctuation. Default is True.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None
@@ -1032,7 +1032,7 @@ class WordpieceTokenizer:
                 The maximum number of characters allowed per word for tokenization. Defaults to 100.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If max_input_chars_per_word is less than or equal to 0.
@@ -1117,7 +1117,7 @@ class SentencepieceTokenizer:
                 Additional keyword arguments to be passed to the SentencePieceProcessor. Default is None.
         
         Returns:
-            None: This method initializes the SentencepieceTokenizer instance.
+            None.
         
         Raises:
             ValueError: If the vocab file is invalid or missing.
@@ -1146,7 +1146,7 @@ class SentencepieceTokenizer:
             None: This method modifies the input text in-place.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         if self.remove_space:
             outputs = " ".join(inputs.strip().split())

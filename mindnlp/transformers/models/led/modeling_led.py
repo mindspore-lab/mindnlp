@@ -158,9 +158,10 @@ class LEDEncoderSelfAttention(nn.Cell):
         *attention_window* happens in [`LEDEncoderModel.forward`] to avoid redoing the padding on each layer.
 
         The *attention_mask* is changed in [`LEDEncoderModel.forward`] from 0, 1, 2 to:
-            >- -10000: no attention
-            >- 0: local attention
-            >- +10000: global attention
+
+        - -10000: no attention
+        - 0: local attention
+        - +10000: global attention
         """
         hidden_states = hidden_states.swapaxes(0, 1)
 
@@ -1157,12 +1158,14 @@ class LEDEncoderBaseModelOutput(ModelOutput):
     Args:
         last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
             Sequence of hidden-states at the output of the last layer of the model.
-        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True`
+            is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the model at the output of each layer plus the initial embedding outputs.
-        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed
+            or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x +
             attention_window + 1)`, where `x` is the number of tokens with global attention mask.
 
@@ -1177,7 +1180,8 @@ class LEDEncoderBaseModelOutput(ModelOutput):
             index is set to 0; the value should be accessed from the first `x` attention weights. If a token has global
             attention, the attention weights to all other tokens in `attentions` is set to 0, the values should be
             accessed from `global_attentions`.
-        global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed
+            or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x)`,
             where `x` is the number of tokens with global attention mask.
 
@@ -1204,24 +1208,28 @@ class LEDSeq2SeqModelOutput(ModelOutput):
 
             If `past_key_values` is used only the last hidden-state of the sequences of shape `(batch_size, 1,
             hidden_size)` is output.
-        past_key_values (`List[mindspore.Tensor]`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+        past_key_values (`List[mindspore.Tensor]`, *optional*, returned when `use_cache=True` is passed
+            or when `config.use_cache=True`):
             List of `mindspore.Tensor` of length `config.n_layers`, with each tensor of shape `(2, batch_size,
             num_heads, sequence_length, embed_size_per_head)`).
 
             Contains pre-computed hidden-states (key and values in the attention blocks) of the decoder that can be
             used (see `past_key_values` input) to speed up sequential decoding.
-        decoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        decoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True`
+            is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the decoder at the output of each layer plus the initial embedding outputs.
-        decoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        decoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
             Attentions weights of the decoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
-        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
@@ -1229,18 +1237,21 @@ class LEDSeq2SeqModelOutput(ModelOutput):
             weighted average in the cross-attention heads.
         encoder_last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
             Sequence of hidden-states at the output of the last layer of the encoder of the model.
-        encoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        encoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True`
+            is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the encoder at the output of each layer plus the initial embedding outputs.
-        encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
             Attentions weights of the encoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
-        encoder_global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        encoder_global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x)`,
             where `x` is the number of tokens with global attention mask.
 
@@ -1270,24 +1281,28 @@ class LEDSeq2SeqLMOutput(ModelOutput):
             Language modeling loss.
         logits (`mindspore.Tensor` of shape `(batch_size, sequence_length, config.vocab_size)`):
             Prediction scores of the language modeling head (scores for each vocabulary token before SoftMax).
-        past_key_values (`List[mindspore.Tensor]`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+        past_key_values (`List[mindspore.Tensor]`, *optional*, returned when `use_cache=True`
+            is passed or when `config.use_cache=True`):
             List of `mindspore.Tensor` of length `config.n_layers`, with each tensor of shape `(2, batch_size,
             num_heads, sequence_length, embed_size_per_head)`).
 
             Contains pre-computed hidden-states (key and values in the attention blocks) of the decoder that can be
             used (see `past_key_values` input) to speed up sequential decoding.
-        decoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        decoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True`
+            is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the decoder at the output of each layer plus the initial embedding outputs.
-        decoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        decoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
             Attentions weights of the decoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
-        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
@@ -1295,18 +1310,21 @@ class LEDSeq2SeqLMOutput(ModelOutput):
             weighted average in the cross-attention heads.
         encoder_last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
             Sequence of hidden-states at the output of the last layer of the encoder of the model.
-        encoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        encoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True`
+            is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the encoder at the output of each layer plus the initial embedding outputs.
-        encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
             Attentions weights of the encoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
-        encoder_global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        encoder_global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x)`,
             where `x` is the number of tokens with global attention mask.
 
@@ -1337,24 +1355,28 @@ class LEDSeq2SeqSequenceClassifierOutput(ModelOutput):
             Classification (or regression if config.num_labels==1) loss.
         logits (`mindspore.Tensor` of shape `(batch_size, config.num_labels)`):
             Classification (or regression if config.num_labels==1) scores (before SoftMax).
-        past_key_values (`List[mindspore.Tensor]`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+        past_key_values (`List[mindspore.Tensor]`, *optional*, returned when `use_cache=True`
+            is passed or when `config.use_cache=True`):
             List of `mindspore.Tensor` of length `config.n_layers`, with each tensor of shape `(2, batch_size,
             num_heads, sequence_length, embed_size_per_head)`).
 
             Contains pre-computed hidden-states (key and values in the attention blocks) of the decoder that can be
             used (see `past_key_values` input) to speed up sequential decoding.
-        decoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        decoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True`
+            is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the decoder at the output of each layer plus the initial embedding outputs.
-        decoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        decoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
             Attentions weights of the decoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
-        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
@@ -1362,18 +1384,21 @@ class LEDSeq2SeqSequenceClassifierOutput(ModelOutput):
             weighted average in the cross-attention heads.
         encoder_last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
             Sequence of hidden-states at the output of the last layer of the encoder of the model.
-        encoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        encoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True`
+            is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the encoder at the output of each layer plus the initial embedding outputs.
-        encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
             Attentions weights of the encoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
-        encoder_global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        encoder_global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x)`,
             where `x` is the number of tokens with global attention mask.
 
@@ -1406,24 +1431,28 @@ class LEDSeq2SeqQuestionAnsweringModelOutput(ModelOutput):
             Span-start scores (before SoftMax).
         end_logits (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
             Span-end scores (before SoftMax).
-        past_key_values (`List[mindspore.Tensor]`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+        past_key_values (`List[mindspore.Tensor]`, *optional*, returned when `use_cache=True`
+            is passed or when `config.use_cache=True`):
             List of `mindspore.Tensor` of length `config.n_layers`, with each tensor of shape `(2, batch_size,
             num_heads, sequence_length, embed_size_per_head)`).
 
             Contains pre-computed hidden-states (key and values in the attention blocks) of the decoder that can be
             used (see `past_key_values` input) to speed up sequential decoding.
-        decoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        decoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True`
+            is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the decoder at the output of each layer plus the initial embedding outputs.
-        decoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        decoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
             Attentions weights of the decoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
-        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
@@ -1431,18 +1460,21 @@ class LEDSeq2SeqQuestionAnsweringModelOutput(ModelOutput):
             weighted average in the cross-attention heads.
         encoder_last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
             Sequence of hidden-states at the output of the last layer of the encoder of the model.
-        encoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        encoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True`
+            is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the encoder at the output of each layer plus the initial embedding outputs.
-        encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
             Attentions weights of the encoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
-        encoder_global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        encoder_global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True`
+            is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x)`,
             where `x` is the number of tokens with global attention mask.
 
@@ -1479,14 +1511,14 @@ LED_START_DOCSTRING = r"""
 """
 
 LED_GENERATION_EXAMPLE = r"""
-    Summarization example:
+    Example:
         ```python
         >>> import torch
         >>> from transformers import AutoTokenizer, LEDForConditionalGeneration
-    
+        ... 
         >>> model = LEDForConditionalGeneration.from_pretrained("allenai/led-large-16384-arxiv")
         >>> tokenizer = AutoTokenizer.from_pretrained("allenai/led-large-16384-arxiv")
-    
+        ... 
         >>> ARTICLE_TO_SUMMARIZE = '''Transformers (Vaswani et al., 2017) have achieved state-of-the-art
         ...     results in a wide range of natural language tasks including generative language modeling
         ...     (Dai et al., 2019; Radford et al., 2019) and discriminative ... language understanding (Devlin et al., 2019).
@@ -1504,11 +1536,11 @@ LED_GENERATION_EXAMPLE = r"""
         ...     contextual representations of the entire context using multiple layers of attention, reducing the need for
         ...     task-specific architectures.'''
         >>> inputs = tokenizer.encode(ARTICLE_TO_SUMMARIZE, return_tensors="ms")
-    
+        ... 
         >>> # Global attention on the first token (cf. Beltagy et al. 2020)
         >>> global_attention_mask = torch.zeros_like(inputs)
         >>> global_attention_mask[:, 0] = 1
-    
+        ... 
         >>> # Generate Summary
         >>> summary_ids = model.generate(inputs, global_attention_mask=global_attention_mask, num_beams=3, max_length=32)
         >>> print(tokenizer.decode(summary_ids[0], skip_special_tokens=True, clean_up_tokenization_spaces=True))
@@ -1526,9 +1558,10 @@ LED_INPUTS_DOCSTRING = r"""
 
             [What are input IDs?](../glossary#input-ids)
         attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            >- Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-            >   - 1 for tokens that are **not masked**,
-            >   - 0 for tokens that are **masked**.
+            Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+            
+            - 1 for tokens that are **not masked**,
+            - 0 for tokens that are **masked**.
 
             [What are attention masks?](../glossary#attention-mask)
         decoder_input_ids (`mindspore.Tensor` of shape `(batch_size, target_sequence_length)`, *optional*):
@@ -1549,28 +1582,30 @@ LED_INPUTS_DOCSTRING = r"""
             to your needs. See diagram 1 in [the paper](https://arxiv.org/abs/1910.13461) for more information on the
             default strategy.
         global_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            >-  Mask to decide the attention given on each token, local attention or global attention for the encoder.
-                Tokens with global attention attends to all other tokens, and all other tokens attend to them. This is
-                important for task-specific finetuning because it makes the model more flexible at representing the task.
-                For example, for classification, the <s> token should be given global attention. For QA, all question
-                tokens should also have global attention. Please refer to the [Longformer
-                paper](https://arxiv.org/abs/2004.05150) for more details. Mask values selected in `[0, 1]`:
-            >   - 0 for local attention (a sliding window attention),
-            >   - 1 for global attention (tokens that attend to all other tokens, and all other tokens attend to them).
+            Mask to decide the attention given on each token, local attention or global attention for the encoder.
+            Tokens with global attention attends to all other tokens, and all other tokens attend to them. This is
+            important for task-specific finetuning because it makes the model more flexible at representing the task.
+            For example, for classification, the <s> token should be given global attention. For QA, all question
+            tokens should also have global attention. Please refer to the [Longformer
+            paper](https://arxiv.org/abs/2004.05150) for more details. Mask values selected in `[0, 1]`:
+            
+            - 0 for local attention (a sliding window attention),
+            - 1 for global attention (tokens that attend to all other tokens, and all other tokens attend to them).
         head_mask (`mindspore.Tensor` of shape `(encoder_layers, encoder_attention_heads)`, *optional*):
-            >- Mask to nullify selected heads of the attention modules in the encoder. Mask values selected in `[0, 1]`:
-            >   - 1 indicates the head is **not masked**,
-            >   - 0 indicates the head is **masked**.
-
+            Mask to nullify selected heads of the attention modules in the encoder. Mask values selected in `[0, 1]`:
+            
+            - 1 indicates the head is **not masked**,
+            - 0 indicates the head is **masked**.
         decoder_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-            >- Mask to nullify selected heads of the attention modules in the decoder. Mask values selected in `[0, 1]`:
-            >   - 1 indicates the head is **not masked**,
-            >   - 0 indicates the head is **masked**.
+            Mask to nullify selected heads of the attention modules in the decoder. Mask values selected in `[0, 1]`:
+            
+            - 1 indicates the head is **not masked**,
+            - 0 indicates the head is **masked**.
         cross_attn_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-            >- Mask to nullify selected heads of the cross-attention modules in the decoder. Mask values selected in `[0, 1]`:
-            >   - 1 indicates the head is **not masked**,
-            >   - 0 indicates the head is **masked**.
-
+            Mask to nullify selected heads of the cross-attention modules in the decoder. Mask values selected in `[0, 1]`:
+            
+            - 1 indicates the head is **not masked**,
+            - 0 indicates the head is **masked**.
         encoder_outputs (`tuple(tuple(mindspore.Tensor)`, *optional*):
             Tuple consists of (`last_hidden_state`, *optional*: `hidden_states`, *optional*: `attentions`)
             `last_hidden_state` of shape `(batch_size, sequence_length, hidden_size)`, *optional*) is a sequence of
@@ -1734,23 +1769,27 @@ class LEDEncoder(LEDPreTrainedModel):
 
                 [What are input IDs?](../glossary#input-ids)
             attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                >- Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-                >   - 1 for tokens that are **not masked**,
-                >   - 0 for tokens that are **masked**.
-                >- [What are attention masks?](../glossary#attention-mask)
+                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+
+                [What are attention masks?](../glossary#attention-mask)
             global_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                >- Mask to decide the attention given on each token, local attention or global attention for the encoder.
-                    Tokens with global attention attends to all other tokens, and all other tokens attend to them. This is
-                    important for task-specific finetuning because it makes the model more flexible at representing the
-                    task. For example, for classification, the <s> token should be given global attention. For QA, all
-                    question tokens should also have global attention. Please refer to the [Longformer
-                    paper](https://arxiv.org/abs/2004.05150) for more details. Mask values selected in `[0, 1]`:
-                >   - 0 for local attention (a sliding window attention),
-                >   - 1 for global attention (tokens that attend to all other tokens, and all other tokens attend to them).
+                Mask to decide the attention given on each token, local attention or global attention for the encoder.
+                Tokens with global attention attends to all other tokens, and all other tokens attend to them. This is
+                important for task-specific finetuning because it makes the model more flexible at representing the
+                task. For example, for classification, the `<s>` token should be given global attention. For QA, all
+                question tokens should also have global attention. Please refer to the [Longformer
+                paper](https://arxiv.org/abs/2004.05150) for more details. Mask values selected in `[0, 1]`:
+
+                - 0 for local attention (a sliding window attention),
+                - 1 for global attention (tokens that attend to all other tokens, and all other tokens attend to them).
             head_mask (`mindspore.Tensor` of shape `(encoder_layers, encoder_attention_heads)`, *optional*):
-                >- Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
-                >   - 1 indicates the head is **not masked**,
-                >   - 0 indicates the head is **masked**.
+                Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
+
+                - 1 indicates the head is **not masked**,
+                - 0 indicates the head is **masked**.
             inputs_embeds (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
                 Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation.
                 This is useful if you want more control over how to convert `input_ids` indices into associated vectors
@@ -1953,40 +1992,47 @@ class LEDDecoder(LEDPreTrainedModel):
 
                 [What are input IDs?](../glossary#input-ids)
             attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                >- Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-                >   - 1 for tokens that are **not masked**,
-                >   - 0 for tokens that are **masked**.
+                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
             global_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                >- Mask to decide the attention given on each token, local attention or global attention. Tokens with
-                    global attention attends to all other tokens, and all other tokens attend to them. This is important
-                    for task-specific finetuning because it makes the model more flexible at representing the task. For
-                    example, for classification, the <s> token should be given global attention. For QA, all question
-                    tokens should also have global attention. Please refer to the [Longformer
-                    paper](https://arxiv.org/abs/2004.05150) for more details. Mask values selected in `[0, 1]`:
-                >   - 0 for local attention (a sliding window attention),
-                >   - 1 for global attention (tokens that attend to all other tokens, and all other tokens attend to them).
+                Mask to decide the attention given on each token, local attention or global attention. Tokens with
+                global attention attends to all other tokens, and all other tokens attend to them. This is important
+                for task-specific finetuning because it makes the model more flexible at representing the task. For
+                example, for classification, the <s> token should be given global attention. For QA, all question
+                tokens should also have global attention. Please refer to the [Longformer
+                paper](https://arxiv.org/abs/2004.05150) for more details. Mask values selected in `[0, 1]`:
+
+                - 0 for local attention (a sliding window attention),
+                - 1 for global attention (tokens that attend to all other tokens, and all other tokens attend to them).
             encoder_hidden_states (`mindspore.Tensor` of shape `(batch_size, encoder_sequence_length, hidden_size)`, *optional*):
                 Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention
                 of the decoder.
             encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, encoder_sequence_length)`, *optional*):
-                >- Mask to avoid performing cross-attention on padding tokens indices of encoder input_ids. Mask values
-                    selected in `[0, 1]`:
-                >   - 1 for tokens that are **not masked**,
-                >   - 0 for tokens that are **masked**.
-                >- [What are attention masks?](../glossary#attention-mask)
+                Mask to avoid performing cross-attention on padding tokens indices of encoder input_ids. Mask values
+                selected in `[0, 1]`:
+
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+
+                [What are attention masks?](../glossary#attention-mask)
             head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-                >- Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
-                >   - 1 indicates the head is **not masked**,
-                >   - 0 indicates the head is **masked**.
+                Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
+
+                - 1 indicates the head is **not masked**,
+                - 0 indicates the head is **masked**.
 
             cross_attn_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-                >- Mask to nullify selected heads of the cross-attention modules. Mask values selected in `[0, 1]`:
-                >   - 1 indicates the head is **not masked**,
-                >   - 0 indicates the head is **masked**.
+                Mask to nullify selected heads of the cross-attention modules. Mask values selected in `[0, 1]`:
 
-            past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+                - 1 indicates the head is **not masked**,
+                - 0 indicates the head is **masked**.
+
+            past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True`
+                is passed or when `config.use_cache=True`):
                 Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
                 shape `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of
                 shape `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`.
@@ -2337,16 +2383,16 @@ class LEDForConditionalGeneration(LEDPreTrainedModel):
         Returns:
             `Union[Tuple[mindspore.Tensor], LEDSeq2SeqLMOutput]`
 
-        Conditional generation example:
+        Example:
             ```python
             >>> from transformers import AutoTokenizer, LEDForConditionalGeneration
-
+            ...
             >>> tokenizer = AutoTokenizer.from_pretrained("allenai/led-base-16384")
             >>> TXT = "My friends are <mask> but they eat too many carbs."
-
+            ...
             >>> model = LEDForConditionalGeneration.from_pretrained("allenai/led-base-16384")
             >>> input_ids = tokenizer([TXT], return_tensors="ms")["input_ids"]
-
+            ...
             >>> prediction = model.generate(input_ids)[0]
             >>> print(tokenizer.decode(prediction, skip_special_tokens=True))
             ```

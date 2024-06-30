@@ -61,7 +61,8 @@ class ChannelDimension(ExplicitEnum):
     """
     Represents a channel dimension for data analysis and visualization.
     
-    This class inherits from ExplicitEnum and provides a set of predefined channel dimensions. It allows for easy management and manipulation of channel dimensions within a data processing or visualization
+    This class inherits from ExplicitEnum and provides a set of predefined channel dimensions.
+    It allows for easy management and manipulation of channel dimensions within a data processing or visualization
     context.
 
     Attributes:
@@ -80,8 +81,9 @@ class AnnotationFormat(ExplicitEnum):
     """
     Represents an annotation format for storing and manipulating data.
 
-    This class is a subclass of ExplicitEnum, which allows for the creation of enumerated types with explicit values. The AnnotationFormat class provides a way to define and manage different annotation formats
-    used in data processing and analysis.
+    This class is a subclass of ExplicitEnum, which allows for the creation of enumerated types with explicit values.
+    The AnnotationFormat class provides a way to define and manage different annotation formats used in data processing
+    and analysis.
 
     Attributes:
         name (str): The name of the annotation format.
@@ -132,7 +134,8 @@ class AnnotionFormat(ExplicitEnum):
         ```
 
     Note:
-        It is recommended to use AnnotionFormat for defining annotation formats to ensure consistent usage and management within the application.
+        It is recommended to use AnnotionFormat for defining annotation formats to ensure consistent usage and
+        management within the application.
     """
     COCO_DETECTION = AnnotationFormat.COCO_DETECTION.value
     COCO_PANOPTIC = AnnotationFormat.COCO_PANOPTIC.value
@@ -149,7 +152,7 @@ def is_pil_image(img):
         img (PIL.Image.Image): The input image to be checked.
 
     Returns:
-        None: This function does not return any value.
+        None.
 
     Raises:
         None
@@ -162,13 +165,14 @@ def is_valid_image(img):
     Checks if the provided image is valid.
 
     Args:
-        img (object): The image to be checked for validity. It can be an instance of PIL.Image.Image, np.ndarray, or a MindSpore tensor.
+        img (object): The image to be checked for validity. It can be an instance of PIL.Image.Image, np.ndarray,
+            or a MindSpore tensor.
 
     Returns:
-        None: This function does not return any value.
+        None.
 
     Raises:
-        None: This function does not raise any exceptions.
+        None.
     """
     return (
         (is_vision_available() and isinstance(img, PIL.Image.Image))
@@ -184,7 +188,7 @@ def valid_images(imgs):
         imgs (list or tuple): A list of image objects to be validated.
 
     Returns:
-        None: This function does not return any value.
+        None.
 
     Raises:
         TypeError: If the input parameter is not a list or tuple.
@@ -381,6 +385,7 @@ def is_valid_annotation_coco_detection(annotation: Dict[str, Union[List, Tuple]]
             - 'annotations': A list or tuple of annotations associated with the image.
     Returns:
         bool: Returns True if the annotation is valid for COCO detection, False otherwise.
+
     Raises:
         None
     """
@@ -405,7 +410,8 @@ def is_valid_annotation_coco_panoptic(annotation: Dict[str, Union[List, Tuple]])
     Args:
         annotation (Dict[str, Union[List, Tuple]]):
             A dictionary representing a COCO Panoptic annotation containing the keys 'image_id', 'segments_info', and 'file_name'.
-            The value associated with the key 'segments_info' must be a list or tuple, and if it is not empty, the first element must be a dictionary.
+            The value associated with the key 'segments_info' must be a list or tuple, and if it is not empty,
+            the first element must be a dictionary.
     
     Returns:
         bool: True if the annotation is valid, otherwise False.
@@ -440,14 +446,15 @@ def valid_coco_detection_annotations(annotations: Iterable[Dict[str, Union[List,
     
     Returns:
         bool: True if all the annotations are valid according to the COCO detection annotation format,
-        False otherwise.
+            False otherwise.
     
     Raises:
         None.
     
     Note:
         The function uses the 'is_valid_annotation_coco_detection' function to check the validity of each annotation.
-        This function should be implemented separately and should return True or False based on the validity of an individual annotation.
+        This function should be implemented separately and should return True or False based on the validity of an
+        individual annotation.
     """
     return all(is_valid_annotation_coco_detection(ann) for ann in annotations)
 
@@ -566,11 +573,11 @@ class ImageFeatureExtractionMixin:
         Args:
             self: The instance of the class.
             image: The input image to be checked for supported format.
-                It can be either a PIL image object of type 'PIL.Image.Image', a numpy array of type 'np.ndarray', or a mindspore tensor.
-                If the input image is not of any of these types, a ValueError will be raised.
+                It can be either a PIL image object of type 'PIL.Image.Image', a numpy array of type 'np.ndarray',
+                or a mindspore tensor. If the input image is not of any of these types, a ValueError will be raised.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: Raised when the input image is not of type 'PIL.Image.Image', 'np.ndarray', or 'mindspore.Tensor'.
@@ -809,7 +816,7 @@ class ImageFeatureExtractionMixin:
 
         Returns:
             new_image: A center cropped `PIL.Image.Image` or `np.ndarray` or `mindspore.Tensor` of shape: (n_channels,
-            height, width).
+                height, width).
         """
         self._ensure_format_supported(image)
 
@@ -877,8 +884,8 @@ class ImageFeatureExtractionMixin:
 
         Args:
             image (`PIL.Image.Image` or `np.ndarray` or `mindspore.Tensor`):
-                The image whose color channels to flip. If `np.ndarray` or `mindspore.Tensor`, the channel dimension should
-                be first.
+                The image whose color channels to flip. If `np.ndarray` or `mindspore.Tensor`, the channel dimension
+                should be first.
         """
         self._ensure_format_supported(image)
 
@@ -945,7 +952,7 @@ def validate_annotations(
         annotations (List[Dict]): The annotations to be validated.
     
     Returns:
-        None: This function does not return any value.
+        None.
     
     Raises:
         ValueError: If the annotation format is not supported or if the annotations are invalid for the specified format.
@@ -987,7 +994,7 @@ def validate_kwargs(valid_processor_keys: List[str], captured_kwargs: List[str])
         captured_kwargs (List[str]): A list of captured keyword arguments to be validated.
     
     Returns:
-        None: This function does not return anything.
+        None.
     
     Raises:
         None

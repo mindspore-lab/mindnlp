@@ -132,12 +132,12 @@ class BarkSelfAttention(nn.Cell):
         Args:
             self: The instance of the class.
             config: An object containing configuration settings for the self-attention mechanism.
-                    This parameter is required and must be of a specific format.
+                This parameter is required and must be of a specific format.
             is_causal: A boolean flag indicating whether the self-attention mechanism should be causal.
-                       Defaults to False if not provided.
+               Defaults to False if not provided.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the `embed_dim` is not divisible by `num_heads`, an exception is raised with a specific message.
@@ -318,7 +318,7 @@ class BarkLayerNorm(nn.Cell):
             bias (bool): A flag to determine whether to include bias in the layer normalization. Defaults to True.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -338,7 +338,7 @@ class BarkLayerNorm(nn.Cell):
             inputs (Any): The input data to be normalized.
 
         Returns:
-            None. The method modifies the inputs in-place.
+            None: The method modifies the inputs in-place.
 
         Raises:
             TypeError: If the inputs are not compatible with the normalization process.
@@ -385,7 +385,7 @@ class BarkMLP(nn.Cell):
                 - Restrictions: None
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the configuration parameters are not provided in the expected format.
@@ -457,7 +457,7 @@ class BarkBlock(nn.Cell):
             is_causal: A boolean indicating whether the attention is causal or not.
 
         Returns:
-            None: This method initializes the instance with the specified configuration and causal attention setting.
+            None.
 
         Raises:
             None
@@ -657,10 +657,10 @@ class BarkCausalModel(BarkPreTrainedModel):
             new_embeddings (any): The new input embeddings to be set for the model. It can be of any type.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are documented for this method.
+            None.
         """
         self.input_embeds_layer = new_embeddings
 
@@ -974,6 +974,7 @@ class BarkSemanticModel(BarkCausalModel):
                 - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
+
         Returns:
             mindspore.Tensor: Output semantic tokens.
         """
@@ -1108,8 +1109,10 @@ class BarkCoarseModel(BarkCausalModel):
                 Codebook channel size, i.e. the size of the output vocabulary per codebook channel.
             history_prompt (`Optional[Dict[str,mindspore.Tensor]]`):
                 Optional `Bark` speaker prompt.
+
         Returns:
             `tuple(mindspore.Tensor)`:
+
                 - **x_semantic_history** (`mindspore.Tensor` -- Processed semantic speaker prompt.
                 - **x_coarse_history** (`mindspore.Tensor`) -- Processed coarse speaker prompt.
         """
@@ -1191,8 +1194,8 @@ class BarkCoarseModel(BarkCausalModel):
                 - mindspore.Tensor: Output coarse acoustics tokens.
                 If `return_output_lengths=True`:
 
-                - `Tuple(mindspore.Tensor, mindspore.Tensor): The output coarse acoustics tokens, and the length of each sample
-                of the batch.
+                - `Tuple(mindspore.Tensor, mindspore.Tensor): The output coarse acoustics tokens, and the
+                length of each sample of the batch.
         """
         if semantic_generation_config is None:
             raise ValueError("`semantic_generation_config` has to be provided")
@@ -1370,7 +1373,7 @@ class BarkFineModel(BarkPreTrainedModel):
                 - n_codes_given (int): The number of codes given.
 
         Returns:
-            None: This method initializes the BarkFineModel object with the provided configuration.
+            None.
 
         Raises:
             None.
@@ -1415,7 +1418,7 @@ class BarkFineModel(BarkPreTrainedModel):
             None: This method returns the input embeddings layers for the BarkFineModel.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         # one embedding layers for each codebook
         return self.input_embeds_layers
@@ -1429,29 +1432,26 @@ class BarkFineModel(BarkPreTrainedModel):
             new_embeddings (object): The new embeddings to set for the input_embeds_layers attribute.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         # one embedding layers for each codebook
         self.input_embeds_layers = new_embeddings
 
     def get_output_embeddings(self):
         """
-        Method:
-            get_output_embeddings
-
         This method is defined in the class 'BarkFineModel' and is used to retrieve the output embeddings of the model.
 
         Args:
             self: An instance of the 'BarkFineModel' class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         # one lm_head for each codebook
         return self.lm_heads
@@ -1465,10 +1465,10 @@ class BarkFineModel(BarkPreTrainedModel):
             new_output_embeddings (object): New output embeddings to be set for the model.
 
         Returns:
-            None: This method does not return anything.
+            None.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         # one lm_head for each codebook
         self.lm_heads = new_output_embeddings
@@ -1532,7 +1532,7 @@ class BarkFineModel(BarkPreTrainedModel):
                 details about this, or help on choosing the correct value for resizing, refer to this guide:
                 https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html#requirements-tc
 
-        Return:
+        Returns:
             `nn.Embedding`: Pointer to the input tokens Embeddings Module of the model.
         """
         model_embeds = self._resize_token_embeddings(new_num_tokens, pad_to_multiple_of)
@@ -1897,10 +1897,10 @@ class BarkModel(BarkPreTrainedModel):
             config (dict): A dictionary containing configuration settings for the BarkModel.
 
         Returns:
-            None. This method initializes various models and configurations within the BarkModel instance.
+            None.
 
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         super().__init__(config)
 
@@ -1955,6 +1955,7 @@ class BarkModel(BarkPreTrainedModel):
                 This means you can, for example, specify a generation strategy for all sub-models except one.
             return_output_lengths (`bool`, *optional*):
                 Whether or not to return the waveform lengths. Useful when batching.
+
         Returns:
             mindspore.Tensor:
                 By default:

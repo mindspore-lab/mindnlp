@@ -98,10 +98,10 @@ class CvtDropPath(nn.Cell):
                 Must be a float value between 0 and 1, inclusive.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         super().__init__()
         self.drop_prob = drop_prob
@@ -159,7 +159,7 @@ class CvtEmbeddings(nn.Cell):
             dropout_rate (float): The dropout rate to be applied to the convolutional embeddings.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -219,7 +219,7 @@ class CvtConvEmbeddings(nn.Cell):
                 in the height and width dimensions.
 
         Returns:
-            None: The method initializes the CvtConvEmbeddings class and does not return any value.
+            None.
 
         Raises:
             None.
@@ -287,7 +287,7 @@ class CvtSelfAttentionConvProjection(nn.Cell):
             stride (int or Tuple[int, int]): The stride of the convolution.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -314,10 +314,10 @@ class CvtSelfAttentionConvProjection(nn.Cell):
             hidden_state (any): The input hidden state.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         hidden_state = self.convolution(hidden_state)
         hidden_state = self.normalization(hidden_state)
@@ -379,10 +379,10 @@ class CvtSelfAttentionProjection(nn.Cell):
         projection_method (str): The method used for projection, default is 'dw_bn' (depthwise batch normalization).
 
     Methods:
-        __init__(self, embed_dim, kernel_size, padding, stride, projection_method='dw_bn'):
+        __init__:
             Initializes the projection layer with the specified parameters.
 
-        construct(self, hidden_state):
+        construct:
             Applies the convolutional projection followed by the linear projection to the input hidden state.
             Returns the projected hidden state.
 
@@ -402,7 +402,7 @@ class CvtSelfAttentionProjection(nn.Cell):
             projection_method (string, optional): The method used for projection. Defaults to 'dw_bn'.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -500,7 +500,7 @@ class CvtSelfAttention(nn.Cell):
             with_cls_token (bool, optional): Indicates whether the class token is included. Defaults to True.
 
         Returns:
-            None: This method initializes the CvtSelfAttention class and does not return any value.
+            None.
 
         Raises:
             ValueError: If embed_dim is not a positive integer.
@@ -551,6 +551,7 @@ class CvtSelfAttention(nn.Cell):
                 - batch_size (int): The number of sequences in the batch.
                 - hidden_size (int): The dimensionality of the hidden state.
                 - _ (int): Placeholder dimension for compatibility with the transformer architecture.
+
                 This tensor represents the input hidden state that needs to be rearranged for multi-head attention computation.
 
         Returns:
@@ -654,10 +655,10 @@ class CvtSelfOutput(nn.Cell):
                 This tensor represents additional input to the construct method and can be of any shape.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         hidden_state = self.dense(hidden_state)
         hidden_state = self.dropout(hidden_state)
@@ -732,7 +733,7 @@ class CvtAttention(nn.Cell):
             with_cls_token (bool): Flag indicating whether to include a classification token.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If num_heads is not a positive integer.
@@ -774,7 +775,7 @@ class CvtAttention(nn.Cell):
                 If the list is empty, no pruning is performed.
 
         Returns:
-            None: This method does not return any value explicitly.
+            None.
 
         Raises:
             ValueError: If the length of the 'heads' list is invalid or if any of the provided indices are out of range.
@@ -809,7 +810,7 @@ class CvtAttention(nn.Cell):
             width (int): The width of the attention output.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -868,7 +869,7 @@ class CvtIntermediate(nn.Cell):
             hidden_state: The hidden state to be processed. It should be a tensor or array-like object.
 
         Returns:
-            None. This method modifies the hidden state in-place.
+            None: This method modifies the hidden state in-place.
 
         Raises:
             None.
@@ -906,14 +907,14 @@ class CvtOutput(nn.Cell):
         construct(self, hidden_state, input_tensor):
             Constructs the conversion output module by applying operations to the input tensors.
 
-                Args:
+            Args:
 
-                - hidden_state (Tensor): The hidden state tensor.
-                - input_tensor (Tensor): The input tensor.
+            - hidden_state (Tensor): The hidden state tensor.
+            - input_tensor (Tensor): The input tensor.
 
-                Returns:
+            Returns:
 
-                - Tensor: The final hidden state tensor obtained after applying the conversion operations.
+            - Tensor: The final hidden state tensor obtained after applying the conversion operations.
     """
     def __init__(self, embed_dim, mlp_ratio, drop_rate):
         """
@@ -926,7 +927,7 @@ class CvtOutput(nn.Cell):
             drop_rate (float): The dropout rate applied to the output.
 
         Returns:
-            None: This method initializes the CvtOutput class and does not return any value.
+            None.
 
         Raises:
             None.
@@ -949,10 +950,10 @@ class CvtOutput(nn.Cell):
                 It should have the same shape as the hidden state tensor.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         hidden_state = self.dense(hidden_state)
         hidden_state = self.dropout(hidden_state)
@@ -1002,7 +1003,7 @@ class CvtLayer(nn.Cell):
             with_cls_token (bool): Whether to include a classification token.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1040,7 +1041,7 @@ class CvtLayer(nn.Cell):
             width (int): The width of the input tensor.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the hidden_state is not a valid tensor.
@@ -1104,7 +1105,7 @@ class CvtStage(nn.Cell):
             stage (int): The stage of the CvtStage.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the config.cls_token[self.stage] does not exist or is not a valid value.
@@ -1160,7 +1161,9 @@ class CvtStage(nn.Cell):
             hidden_state: The hidden state input for constructing the hidden state. It should be a tensor.
 
         Returns:
-            tuple: A tuple containing the constructed hidden state and cls_token.
+            tuple:
+                A tuple containing the constructed hidden state and cls_token.
+
                 The hidden state is a tensor with dimensions (batch_size, num_channels, height, width), representing
                 the constructed hidden state. The cls_token is a tensor with dimensions (batch_size, 1, num_channels),
                 representing the cls_token if it exists, otherwise it is None.
@@ -1333,7 +1336,7 @@ class CvtModel(CvtPreTrainedModel):
             add_pooling_layer (bool, optional): A flag indicating whether to add a pooling layer. Default is True.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the provided config is invalid or missing required parameters.
@@ -1421,14 +1424,15 @@ class CvtForImageClassification(CvtPreTrainedModel):
 
     Methods:
         __init__(self, config): Initializes the CvtForImageClassification model with the provided configuration.
-        construct(self, pixel_values, labels, output_hidden_states, return_dict): Constructs the model
-            and computes loss for image classification.
+        construct(self, pixel_values, labels, output_hidden_states, return_dict):
+            Constructs the model and computes loss for image classification.
 
-    Construct Method Parameters:
-        pixel_values (Optional[mindspore.Tensor]): Tensor containing pixel values of images
-        labels (Optional[mindspore.Tensor]): Tensor containing labels for computing classification/regression loss
-        output_hidden_states (Optional[bool]): Flag to indicate whether to output hidden states
-        return_dict (Optional[bool]): Flag to indicate whether to return output as a dictionary
+            Parameters:
+
+            - pixel_values (Optional[mindspore.Tensor]): Tensor containing pixel values of images
+            - labels (Optional[mindspore.Tensor]): Tensor containing labels for computing classification/regression loss
+            - output_hidden_states (Optional[bool]): Flag to indicate whether to output hidden states
+            - return_dict (Optional[bool]): Flag to indicate whether to return output as a dictionary
 
     Returns:
         Union[Tuple, ImageClassifierOutputWithNoAttention]: Tuple containing loss and output if return_dict is False.

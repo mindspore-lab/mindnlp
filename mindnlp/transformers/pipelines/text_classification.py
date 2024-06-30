@@ -39,10 +39,13 @@ def sigmoid(_outputs):
 def softmax(_outputs):
     """
     This function calculates the softmax values of the input array _outputs.
+
     Args:
         _outputs (numpy.ndarray): The input array containing the logits.
+
     Returns:
         numpy.ndarray: The softmax values of the input array.
+
     Raises:
         None
     """
@@ -110,10 +113,10 @@ class TextClassificationPipeline(Pipeline):
             self: The instance of the class.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         super().__init__(**kwargs)
 
@@ -130,7 +133,8 @@ class TextClassificationPipeline(Pipeline):
             top_k (int or None, optional): The number of top predictions to return. Defaults to ''.
 
         Returns:
-            tuple: A tuple containing three dictionaries: preprocess_params, an empty dictionary, and postprocess_params.
+            tuple:
+                A tuple containing three dictionaries: preprocess_params, an empty dictionary, and postprocess_params.
 
                 - preprocess_params (dict): The parameters for tokenization and preprocessing.
                 - postprocess_params (dict): The parameters for post-processing.
@@ -193,7 +197,7 @@ class TextClassificationPipeline(Pipeline):
                 - `"softmax"`: Applies the softmax function on the output.
                 - `"none"`: Does not apply any function on the output.
 
-        Return:
+        Returns:
             A list or a list of list of `dict`:
                 Each result comes as list of dictionaries with the following keys:
 
@@ -219,13 +223,16 @@ class TextClassificationPipeline(Pipeline):
             self: An instance of the TextClassificationPipeline class.
             inputs: The input data to be preprocessed. It can be one of the following:
 
-                - A dictionary containing the text and text_pair keys, representing the main text and its paired text for classification.
-                - A list containing a single sublist with two elements, representing the main text and its paired text for classification.
+                - A dictionary containing the text and text_pair keys, representing the main text and its paired text
+                for classification.
+                - A list containing a single sublist with two elements, representing the main text and its paired text
+                for classification.
                 - A list containing only the main text for classification.
 
         Returns:
             A dictionary containing preprocessed inputs in the form of {"input_ids": tensor, "attention_mask": tensor}.
-                The tensors represent the encoded input sequences and attention masks, respectively. The keys in the dictionary are as follows:
+                The tensors represent the encoded input sequences and attention masks, respectively.
+                The keys in the dictionary are as follows:
 
                 - "input_ids": A tensor containing the encoded input sequences.
                 - "attention_mask": A tensor indicating which tokens should be attended to.
@@ -257,7 +264,7 @@ class TextClassificationPipeline(Pipeline):
             model_inputs (dict): The input parameters for the model_forward method.
 
         Returns:
-            None: This method does not explicitly return a value.
+            None.
 
         Raises:
             TypeError: If the model_forward method does not accept the 'use_cache' parameter.
@@ -275,7 +282,8 @@ class TextClassificationPipeline(Pipeline):
 
         Args:
             self (object): The instance of the TextClassificationPipeline class.
-            model_outputs (dict): The dictionary containing model outputs with the following keys:
+            model_outputs (dict):
+                The dictionary containing model outputs with the following keys:
 
                 - 'logits': A tensor representing the model logits.
             function_to_apply (ClassificationFunction): The function to apply to the model outputs.
@@ -288,11 +296,13 @@ class TextClassificationPipeline(Pipeline):
             _legacy (bool): A flag indicating whether to use legacy behavior. Default is True.
 
         Returns:
-            dict or None: If top_k is 1 and _legacy is True, returns a dictionary with keys:
+            dict or None:
+                If top_k is 1 and _legacy is True, returns a dictionary with keys:
 
                 - 'label': The predicted label.
                 - 'score': The confidence score of the prediction.
-            If top_k is not 1 or _legacy is False, returns a list of dictionaries with keys:
+
+                If top_k is not 1 or _legacy is False, returns a list of dictionaries with keys:
 
                 - 'label': The predicted label.
                 - 'score': The confidence score of the prediction.

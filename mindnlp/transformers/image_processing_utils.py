@@ -366,7 +366,7 @@ class ImageProcessingMixin:
 
         Returns:
             [`~image_processing_utils.ImageProcessingMixin`]: The image processor object instantiated from those
-            parameters.
+                parameters.
         """
         image_processor_dict = image_processor_dict.copy()
         return_unused_kwargs = kwargs.pop("return_unused_kwargs", False)
@@ -420,7 +420,7 @@ class ImageProcessingMixin:
 
         Returns:
             A image processor of type [`~image_processing_utils.ImageProcessingMixin`]: The image_processor object
-            instantiated from that JSON file.
+                instantiated from that JSON file.
         """
         with open(json_file, "r", encoding="utf-8") as reader:
             text = reader.read()
@@ -473,7 +473,7 @@ class ImageProcessingMixin:
             None: This method does not return any value explicitly, as it returns a string representation of the object.
 
         Raises:
-            No specific exceptions are documented to be raised by this method.
+            None.
         """
         return f"{self.__class__.__name__} {self.to_json_string()}"
 
@@ -720,13 +720,17 @@ def convert_to_size_dict(
             it creates a size dictionary with the shortest edge set to the given size.
             Optionally, the longest edge can be specified using the `max_size` parameter.
             - If a tuple or list is provided and `height_width_order` is True,
-            it creates a size dictionary with the first element representing the height and the second element representing the width.
+            it creates a size dictionary with the first element representing the height and the second element
+            representing the width.
             - If a tuple or list is provided and `height_width_order` is False,
-            it creates a size dictionary with the first element representing the width and the second element representing the height.
+            it creates a size dictionary with the first element representing the width and the second element
+            representing the height.
             - If `size` is None and `max_size` is not None,
-            it creates a size dictionary with the longest edge set to the `max_size`. Note that `default_to_square` must be False in this case.
+            it creates a size dictionary with the longest edge set to the `max_size`. Note that `default_to_square`
+            must be False in this case.
 
-        max_size (int, optional): The maximum size for the longest edge. Defaults to None.
+        max_size (int, optional):
+            The maximum size for the longest edge. Defaults to None.
 
             - This parameter is only used when `size` is an integer and `default_to_square` is False.
 
@@ -735,14 +739,17 @@ def convert_to_size_dict(
             Defaults to True.
 
             - If True, the size dictionary will have both height and width values set to the provided size.
-            - If False, the size dictionary will have the shortest edge set to the provided size. Optionally, the longest edge can be specified using the `max_size` parameter.
+            - If False, the size dictionary will have the shortest edge set to the provided size. Optionally, the longest
+            edge can be specified using the `max_size` parameter.
 
         height_width_order (bool):
             A flag indicating whether the height and width order should follow the order of elements in the `size` tuple/list.
             Defaults to True.
 
-            - If True, the first element of the `size` tuple/list will be considered as the height and the second element as the width.
-            - If False, the first element of the `size` tuple/list will be considered as the width and the second element as the height.
+            - If True, the first element of the `size` tuple/list will be considered as the height and the second element
+            as the width.
+            - If False, the first element of the `size` tuple/list will be considered as the width and the second element
+            as the height.
 
     Returns:
         dict or None: A dictionary representation of the converted size input.

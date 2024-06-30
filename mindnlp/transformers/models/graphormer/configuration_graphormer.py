@@ -116,19 +116,19 @@ class GraphormerConfig(PretrainedConfig):
         traceable (`bool`, *optional*, defaults to `False`):
             Changes return value of the encoder's inner_state to stacked tensors.
 
-        Example:
-            ```python
-            >>> from transformers import GraphormerForGraphClassification, GraphormerConfig
-
-            >>> # Initializing a Graphormer graphormer-base-pcqm4mv2 style configuration
-            >>> configuration = GraphormerConfig()
-
-            >>> # Initializing a model from the graphormer-base-pcqm4mv1 style configuration
-            >>> model = GraphormerForGraphClassification(configuration)
-
-            >>> # Accessing the model configuration
-            >>> configuration = model.config
-            ```
+    Example:
+        ```python
+        >>> from transformers import GraphormerForGraphClassification, GraphormerConfig
+        ...
+        >>> # Initializing a Graphormer graphormer-base-pcqm4mv2 style configuration
+        >>> configuration = GraphormerConfig()
+        ...
+        >>> # Initializing a model from the graphormer-base-pcqm4mv1 style configuration
+        >>> model = GraphormerForGraphClassification(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
     """
     model_type = "graphormer"
     keys_to_ignore_at_inference = ["past_key_values"]

@@ -201,7 +201,7 @@ class BeitConfig(BackboneConfigMixin, PretrainedConfig):
             reshape_hidden_states (bool, optional): Whether to reshape the hidden states. Defaults to True.
         
         Returns:
-            None: The method initializes an instance of the BeitConfig class.
+            None.
         
         Raises:
             FutureWarning:

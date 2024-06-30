@@ -696,10 +696,10 @@ class _LazyConfigMapping(OrderedDict):
                This parameter is required and must be of type dict.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self._mapping = mapping
         self._extra_content = {}
@@ -717,8 +717,8 @@ class _LazyConfigMapping(OrderedDict):
 
         Returns:
             None:
-                If the key is present in the _extra_content, the associated value is returned. 
-                If the key is not in _extra_content but is in _mapping, the value associated with the key is returned after
+                - If the key is present in the _extra_content, the associated value is returned.
+                - If the key is not in _extra_content but is in _mapping, the value associated with the key is returned after
                 performing necessary module imports and attribute retrieval.
 
         Raises:
@@ -805,10 +805,10 @@ class _LazyConfigMapping(OrderedDict):
             self (object): The instance of the '_LazyConfigMapping' class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return iter(list(self._mapping.keys()) + list(self._extra_content.keys()))
 
@@ -821,10 +821,10 @@ class _LazyConfigMapping(OrderedDict):
             item: The item to be checked for containment within the object. It can be of any type.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return item in self._mapping or item in self._extra_content
 
@@ -859,7 +859,7 @@ class _LazyLoadAllMappings(OrderedDict):
             mapping: A dictionary containing the mapping data to be used by the instance.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -876,7 +876,7 @@ class _LazyLoadAllMappings(OrderedDict):
             self: _LazyLoadAllMappings - The instance of the _LazyLoadAllMappings class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             FutureWarning: If ALL_PRETRAINED_CONFIG_ARCHIVE_MAP is deprecated and will be removed in v5 of Transformers.
@@ -909,7 +909,8 @@ class _LazyLoadAllMappings(OrderedDict):
             key: The key for which the associated value needs to be retrieved. Type: Any hashable object.
 
         Returns:
-            None: This method returns the value associated with the specified key. If the key is not found, a KeyError is raised.
+            `_data[key]`: This method returns the value associated with the specified key.
+                If the key is not found, a KeyError is raised.
 
         Raises:
             KeyError: If the specified key is not found in the _LazyLoadAllMappings instance.
@@ -925,10 +926,10 @@ class _LazyLoadAllMappings(OrderedDict):
             self (obj): An instance of the _LazyLoadAllMappings class.
 
         Returns:
-            None: This method does not return anything.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self._initialize()
         return self._data.keys()
@@ -1007,7 +1008,7 @@ class _LazyLoadAllMappings(OrderedDict):
             None: This method returns None if the specified item is found within the data structure, otherwise it returns False.
 
         Raises:
-            None: This method does not explicitly raise any exceptions.
+            None.
         """
         self._initialize()
         return item in self._data
@@ -1106,7 +1107,7 @@ def replace_list_option_in_docstrings(config_to_class=None, use_model_types=True
         use_model_types (optional): A boolean indicating whether model types should be used. Defaults to True.
 
     Returns:
-        None: This function does not return any value.
+        None.
 
     Raises:
         ValueError: If the input function's docstring does not contain an empty 'List options' section as a placeholder.
@@ -1148,13 +1149,14 @@ class AutoConfig:
         Initialize AutoConfig.
 
         Args:
-            self: The instance of the AutoConfig class. It is automatically passed when the method is called.
+            self: The instance of the AutoConfig class.
+                It is automatically passed when the method is called.
 
                 - Purpose: Represents the instance of the AutoConfig class.
                 - Restrictions: None.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             EnvironmentError:

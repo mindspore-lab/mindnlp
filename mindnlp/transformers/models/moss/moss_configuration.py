@@ -87,9 +87,9 @@ class MossConfig(PretrainedConfig):
             None
 
         Raises:
-            - ValueError: If an invalid parameter value is provided.
-            - TypeError: If the input types are incorrect.
-            - RuntimeError: If an unexpected error occurs during initialization.
+            ValueError: If an invalid parameter value is provided.
+            TypeError: If the input types are incorrect.
+            RuntimeError: If an unexpected error occurs during initialization.
         """
         self.vocab_size = vocab_size
         self.n_ctx = n_ctx

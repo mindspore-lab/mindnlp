@@ -146,12 +146,12 @@ class MPNetTokenizerFast(PreTrainedTokenizerFast):
             strip_accents (str, optional): The type of accents to strip. Defaults to None.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            - ValueError: If the provided vocab_file or tokenizer_file is invalid or inaccessible.
-            - TypeError: If the provided parameters are of incorrect type.
-            - OSError: If there is an issue with file access or manipulation.
+            ValueError: If the provided vocab_file or tokenizer_file is invalid or inaccessible.
+            TypeError: If the provided parameters are of incorrect type.
+            OSError: If there is an issue with file access or manipulation.
         """
         bos_token = AddedToken(bos_token, lstrip=False, rstrip=False) if isinstance(bos_token, str) else bos_token
         eos_token = AddedToken(eos_token, lstrip=False, rstrip=False) if isinstance(eos_token, str) else eos_token
@@ -228,7 +228,7 @@ class MPNetTokenizerFast(PreTrainedTokenizerFast):
             token_ids_1 (list, optional): The list of token IDs representing additional input tokens. Defaults to None.
         
         Returns:
-            None. Returns the modified list of token IDs with special tokens added based on the input parameters.
+            list: Returns the modified list of token IDs with special tokens added based on the input parameters.
         
         Raises:
             None.

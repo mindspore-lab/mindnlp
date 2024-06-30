@@ -183,7 +183,7 @@ class BioGptTokenizer(PreTrainedTokenizer):
             None: The method returns a vocabulary dictionary that contains tokens and their respective encodings.
         
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         return dict(self.encoder, **self.added_tokens_encoder)
 
@@ -236,7 +236,7 @@ class BioGptTokenizer(PreTrainedTokenizer):
             lang (str): The language of the tokens. Must be a supported language.
 
         Returns:
-            None. The method modifies the cache_moses_detokenizer attribute of the BioGptTokenizer instance.
+            None: The method modifies the cache_moses_detokenizer attribute of the BioGptTokenizer instance.
 
         Raises:
             KeyError: If the specified language is not supported.
@@ -498,7 +498,7 @@ class BioGptTokenizer(PreTrainedTokenizer):
             None: This method does not explicitly return a value, but modifies the state of the object.
         
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         state = self.__dict__.copy()
         state["sm"] = None
@@ -513,7 +513,7 @@ class BioGptTokenizer(PreTrainedTokenizer):
             d (dict): The dictionary containing the state information to be set. 
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             ImportError: If the sacremoses module is not installed, an ImportError is raised. 

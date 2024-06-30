@@ -173,8 +173,8 @@ class LayoutLMTokenizerFast(PreTrainedTokenizerFast):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A LayoutLM sequence has the following format:
 
-        >   - single sequence: `[CLS] X [SEP]`
-        >   - pair of sequences: `[CLS] A [SEP] B [SEP]`
+        - single sequence: `[CLS] X [SEP]`
+        - pair of sequences: `[CLS] A [SEP] B [SEP]`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -196,8 +196,8 @@ class LayoutLMTokenizerFast(PreTrainedTokenizerFast):
             self, token_ids_0: List[int], token_ids_1: Optional[List[int]] = None
     ) -> List[int]:
         """
-        Create a mask from the two sequences passed to be used in a sequence-pair classification task. A LayoutLM sequence
-        pair mask has the following format:
+        Create a mask from the two sequences passed to be used in a sequence-pair classification task.
+        A LayoutLM sequence pair mask has the following format:
         ```
         0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1
         | first sequence    | second sequence |
@@ -237,15 +237,17 @@ class LayoutLMTokenizerFast(PreTrainedTokenizerFast):
             None.
 
         This method saves the vocabulary files of the LayoutLMTokenizerFast model to the specified directory.
-        The saved vocabulary files can be later loaded using the 'from_pretrained' method of the LayoutLMTokenizerFast class.
+        The saved vocabulary files can be later loaded using the 'from_pretrained' method of
+        the LayoutLMTokenizerFast class.
         The save_directory parameter specifies the directory where the vocabulary files will be saved.
-        The filename_prefix parameter is an optional string that can be used to add a prefix to the saved vocabulary filenames.
+        The filename_prefix parameter is an optional string that can be used to add a prefix to
+        the saved vocabulary filenames.
         If no prefix is provided, the saved vocabulary files will have default filenames.
 
-        Example usage:
+        Example:
             ```python
-            tokenizer = LayoutLMTokenizerFast.from_pretrained('layoutlm-base-uncased')
-            tokenizer.save_vocabulary('/path/to/save_directory', filename_prefix='my_vocab')
+            >>> tokenizer = LayoutLMTokenizerFast.from_pretrained('layoutlm-base-uncased')
+            >>> tokenizer.save_vocabulary('/path/to/save_directory', filename_prefix='my_vocab')
             ```
         """
         files = self._tokenizer.model.save(save_directory, name=filename_prefix)

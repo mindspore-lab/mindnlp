@@ -166,7 +166,7 @@ class XLNetTokenizerFast(PreTrainedTokenizerFast):
             **kwargs: Additional keyword arguments.
 
         Returns:
-            None: The method initializes the XLNetTokenizerFast instance.
+            None.
 
         Raises:
             ValueError: If invalid input is provided for the parameters.
@@ -212,8 +212,10 @@ class XLNetTokenizerFast(PreTrainedTokenizerFast):
         Raises:
             None.
 
-        The 'can_save_slow_tokenizer' method checks if the slow tokenizer can be saved by verifying the existence of the vocabulary file. It returns a boolean value indicating whether the slow tokenizer can be
-        saved or not. If the 'vocab_file' attribute is not set or if the file does not exist, the method returns False. Otherwise, it returns True.
+        The 'can_save_slow_tokenizer' method checks if the slow tokenizer can be saved by verifying the existence of
+        the vocabulary file. It returns a boolean value indicating whether the slow tokenizer can be saved or not.
+        If the 'vocab_file' attribute is not set or if the file does not exist, the method returns False. Otherwise,
+        it returns True.
 
         Note that this method does not raise any exceptions.
         """
@@ -226,8 +228,8 @@ class XLNetTokenizerFast(PreTrainedTokenizerFast):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. An XLNet sequence has the following format:
 
-        >   - single sequence: `X <sep> <cls>`
-        >   - pair of sequences: `A <sep> B <sep> <cls>`
+        - single sequence: `X <sep> <cls>`
+        - pair of sequences: `A <sep> B <sep> <cls>`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -286,7 +288,8 @@ class XLNetTokenizerFast(PreTrainedTokenizerFast):
             Tuple[str]: A tuple containing the path to the saved vocabulary file.
         
         Raises:
-            ValueError: If the fast tokenizer does not have the necessary information to save the vocabulary for a slow tokenizer.
+            ValueError: If the fast tokenizer does not have the necessary information to save the vocabulary for
+                a slow tokenizer.
             OSError: If the save_directory does not exist or is not a valid directory.
             IOError: If an error occurs while copying the vocabulary file to the specified directory.
         """

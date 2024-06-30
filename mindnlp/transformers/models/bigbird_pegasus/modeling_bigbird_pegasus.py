@@ -348,7 +348,7 @@ class BigBirdPegasusBlockSparseAttention(nn.Cell):
             seed (int, optional): Random seed for reproducibility.
 
         Returns:
-            None: This method initializes the attributes of the BigBirdPegasusBlockSparseAttention object.
+            None.
 
         Raises:
             ValueError: If the hidden size is not a multiple of the number of attention heads.
@@ -1385,7 +1385,7 @@ class BigBirdPegasusEncoderAttention(nn.Cell):
             seed: An optional integer value representing the random seed for reproducibility.
 
         Returns:
-            None: This method initializes attributes of the class instance but does not return any value.
+            None.
 
         Raises:
             ValueError: If the attention_type specified in the config is not 'original_full' or 'block_sparse'.
@@ -1416,7 +1416,7 @@ class BigBirdPegasusEncoderAttention(nn.Cell):
             value (str): The attention type to be set. It must be either 'original_full' or 'block_sparse'.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the provided attention type 'value' is not 'original_full' or 'block_sparse'.
@@ -1534,7 +1534,7 @@ class BigBirdPegasusDecoderAttention(nn.Cell):
             config (Optional[BigBirdPegasusConfig], optional): The configuration for the BigBirdPegasus model. Defaults to None.
 
         Returns:
-            None. This method initializes the attributes of the class instance.
+            None.
 
         Raises:
             ValueError: If embed_dim is not divisible by num_heads.
@@ -1578,7 +1578,7 @@ class BigBirdPegasusDecoderAttention(nn.Cell):
                 the required dimensions for decoder attention.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
@@ -1740,7 +1740,7 @@ class BigBirdPegasusEncoderLayer(nn.Cell):
             seed (int, optional): An integer representing the seed for random number generation. Default is None.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1827,7 +1827,7 @@ class BigBirdPegasusEncoderLayer(nn.Cell):
             value (str): The attention type to be set. It can only have the values 'original_full' or 'block_sparse'.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the provided attention type is not 'original_full' or 'block_sparse'.
@@ -1877,7 +1877,7 @@ class BigBirdPegasusDecoderLayer(nn.Cell):
             config (BigBirdPegasusConfig): The configuration object that holds various settings for the decoder layer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -2049,7 +2049,7 @@ class BigBirdPegasusClassificationHead(nn.Cell):
             pooler_dropout (float): The dropout probability for the pooler layer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the input_dim, inner_dim, num_classes, or pooler_dropout is not of the expected type.
@@ -2066,7 +2066,8 @@ class BigBirdPegasusClassificationHead(nn.Cell):
 
         Args:
             self: The instance of the BigBirdPegasusClassificationHead class.
-            hidden_states (mindspore.Tensor): The hidden states input tensor. It represents the input data for the classification head.
+            hidden_states (mindspore.Tensor): The hidden states input tensor.
+                It represents the input data for the classification head.
 
         Returns:
             mindspore.Tensor: A tensor representing the output of the classification head.
@@ -2229,8 +2230,9 @@ class BigBirdPegasusEncoder(BigBirdPegasusPreTrainedModel):
             attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
                 
-                   - 1 for tokens that are **not masked**,
-                   - 0 for tokens that are **masked**.
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+
                 [What are attention masks?](../glossary#attention-mask)
             inputs_embeds (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
                 Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation.
@@ -2398,7 +2400,7 @@ class BigBirdPegasusEncoder(BigBirdPegasusPreTrainedModel):
             value (str): The attention type to be set. It can only be set to either 'original_full' or 'block_sparse'.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the provided attention type is not 'original_full' or 'block_sparse'.
@@ -2552,10 +2554,10 @@ class BigBirdPegasusDecoder(BigBirdPegasusPreTrainedModel):
             self: An instance of the BigBirdPegasusDecoder class.
 
         Returns:
-            None: This method returns the input embeddings for the decoder.
+            embed_tokens: This method returns the input embeddings for the decoder.
 
         Raises:
-            None
+            None.
         """
         return self.embed_tokens
 
@@ -2567,7 +2569,7 @@ class BigBirdPegasusDecoder(BigBirdPegasusPreTrainedModel):
             value: The input embeddings to be set for the decoder. It should be a compatible data type.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -2600,8 +2602,9 @@ class BigBirdPegasusDecoder(BigBirdPegasusPreTrainedModel):
             attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
 
-                   - 1 for tokens that are **not masked**,
-                   - 0 for tokens that are **masked**.
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+
                 [What are attention masks?](../glossary#attention-mask)
             encoder_hidden_states (`mindspore.Tensor` of shape `(batch_size, encoder_sequence_length, hidden_size)`, *optional*):
                 Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention
@@ -2610,20 +2613,21 @@ class BigBirdPegasusDecoder(BigBirdPegasusPreTrainedModel):
                 Mask to avoid performing cross-attention on padding tokens indices of encoder input_ids. Mask values
                 selected in `[0, 1]`:
 
-                   - 1 for tokens that are **not masked**,
-                   - 0 for tokens that are **masked**.
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+
                 [What are attention masks?](../glossary#attention-mask)
             head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
                 Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
 
-                   - 1 indicates the head is **not masked**,
-                   - 0 indicates the head is **masked**.
+                - 1 indicates the head is **not masked**,
+                - 0 indicates the head is **masked**.
             cross_attn_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
                 Mask to nullify selected heads of the cross-attention modules in decoder to avoid performing
                 cross-attention on hidden heads. Mask values selected in `[0, 1]`:
 
-                   - 1 indicates the head is **not masked**,
-                   - 0 indicates the head is **masked**.
+                - 1 indicates the head is **not masked**,
+                - 0 indicates the head is **masked**.
             past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed
                 or when `config.use_cache=True`):
                 Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
@@ -2820,7 +2824,9 @@ class BigBirdPegasusModel(BigBirdPegasusPreTrainedModel):
 
         Args:
             self: The current instance of the class.
-            config (BigBirdPegasusConfig): The configuration object containing various settings for the model.
+            config (BigBirdPegasusConfig):
+                The configuration object containing various settings for the model.
+
                 - `pad_token_id` (int): The index of the padding token in the vocabulary.
                 - `vocab_size` (int): The size of the vocabulary.
                 - `d_model` (int): The dimensionality of the model's hidden states.
@@ -2850,7 +2856,7 @@ class BigBirdPegasusModel(BigBirdPegasusPreTrainedModel):
             self: An instance of the BigBirdPegasusModel class.
 
         Returns:
-            None: This method returns None.
+            None.
 
         Raises:
             None
@@ -2866,7 +2872,7 @@ class BigBirdPegasusModel(BigBirdPegasusPreTrainedModel):
             value (object): The input embeddings to be set for the model.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -2883,7 +2889,7 @@ class BigBirdPegasusModel(BigBirdPegasusPreTrainedModel):
             self (BigBirdPegasusModel): An instance of the BigBirdPegasusModel class.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -2920,7 +2926,7 @@ class BigBirdPegasusModel(BigBirdPegasusPreTrainedModel):
             self: An instance of the BigBirdPegasusModel class.
 
         Returns:
-            None. This method returns the decoder of the BigBirdPegasusModel.
+            decoder: This method returns the decoder of the BigBirdPegasusModel.
                 The decoder is responsible for decoding the input and generating the output.
 
         Raises:
@@ -3094,7 +3100,7 @@ class BigBirdPegasusForConditionalGeneration(BigBirdPegasusPreTrainedModel):
             config (BigBirdPegasusConfig): An instance of BigBirdPegasusConfig containing the configuration parameters for the model.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -3118,7 +3124,7 @@ class BigBirdPegasusForConditionalGeneration(BigBirdPegasusPreTrainedModel):
             None: The method returns None as the encoder component.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.model.get_encoder()
 
@@ -3130,10 +3136,10 @@ class BigBirdPegasusForConditionalGeneration(BigBirdPegasusPreTrainedModel):
             self (BigBirdPegasusForConditionalGeneration): The instance of the BigBirdPegasusForConditionalGeneration class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.model.get_decoder()
 
@@ -3200,10 +3206,10 @@ class BigBirdPegasusForConditionalGeneration(BigBirdPegasusPreTrainedModel):
                 The instance of the BigBirdPegasusForConditionalGeneration class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         return self.lm_head
 
@@ -3216,7 +3222,7 @@ class BigBirdPegasusForConditionalGeneration(BigBirdPegasusPreTrainedModel):
             new_embeddings (torch.nn.Embedding): The new output embeddings to be set for the model.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -3250,6 +3256,7 @@ class BigBirdPegasusForConditionalGeneration(BigBirdPegasusPreTrainedModel):
                 (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
+            `Union[Tuple, Seq2SeqLMOutput]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -3376,10 +3383,10 @@ class BigBirdPegasusForConditionalGeneration(BigBirdPegasusPreTrainedModel):
             labels (mindspore.Tensor): The labels tensor representing the ground truth sequence.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return shift_tokens_right(labels, self.config.pad_token_id, self.config.decoder_start_token_id)
 
@@ -3585,7 +3592,7 @@ class BigBirdPegasusForQuestionAnswering(BigBirdPegasusPreTrainedModel):
                 - Restrictions: Must be a valid configuration object.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -3713,12 +3720,12 @@ class BigBirdPegasusDecoderWrapper(BigBirdPegasusPreTrainedModel):
                 Must include the necessary settings for initializing the BigBirdPegasusDecoder.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised within this method. However, if the configuration parameters are invalid
-            or if there are issues during the initialization of the BigBirdPegasusDecoder, exceptions related to those
-            actions may be raised during the execution of this method.
+            None: However, if the configuration parameters are invalid or if there are issues during the
+                initialization of the BigBirdPegasusDecoder, exceptions related to those
+                actions may be raised during the execution of this method.
         """
         super().__init__(config)
         self.decoder = BigBirdPegasusDecoder(config)
@@ -3733,11 +3740,11 @@ class BigBirdPegasusDecoderWrapper(BigBirdPegasusPreTrainedModel):
 
         Returns:
             None: This method does not return any value explicitly. It delegates the construction
-            to the decoder specified in self.decoder.
+                to the decoder specified in self.decoder.
 
         Raises:
-            No specific exceptions are raised within this method.
-            However, exceptions may be raised by the decoder method called within this construct method.
+            None:
+                However, exceptions may be raised by the decoder method called within this construct method.
         """
         return self.decoder(*args, **kwargs)
 
@@ -3777,7 +3784,7 @@ class BigBirdPegasusForCausalLM(BigBirdPegasusPreTrainedModel):
                 The 'is_decoder' and 'is_encoder_decoder' attributes will be modified within this method.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             AttributeError: If the 'config' parameter is missing required attributes.
@@ -3823,7 +3830,7 @@ class BigBirdPegasusForCausalLM(BigBirdPegasusPreTrainedModel):
             value: The input embeddings to be set for the model. This should be of type torch.Tensor.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -3849,10 +3856,10 @@ class BigBirdPegasusForCausalLM(BigBirdPegasusPreTrainedModel):
                 This parameter refers to the current instance of the model.
 
         Returns:
-            None. The method returns the 'lm_head' attribute of the model, which represents the output embeddings.
+            lm_head: The method returns the 'lm_head' attribute of the model, which represents the output embeddings.
 
         Raises:
-            No specific exceptions are expected to be raised by this method.
+            None.
         """
         return self.lm_head
 
@@ -3868,7 +3875,7 @@ class BigBirdPegasusForCausalLM(BigBirdPegasusPreTrainedModel):
                 This method updates the lm_head attribute of the BigBirdPegasusForCausalLM instance with the new embeddings.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         self.lm_head = new_embeddings
 
@@ -3881,10 +3888,10 @@ class BigBirdPegasusForCausalLM(BigBirdPegasusPreTrainedModel):
             decoder: The decoder object to be set for the model. It should be of the appropriate type.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: No exceptions are raised by this method.
+            None.
         """
         self.model.decoder = decoder
 
@@ -3936,6 +3943,7 @@ class BigBirdPegasusForCausalLM(BigBirdPegasusPreTrainedModel):
 
                 - 1 for tokens that are **not masked**,
                 - 0 for tokens that are **masked**.
+
                 [What are attention masks?](../glossary#attention-mask)
             encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
                 Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention

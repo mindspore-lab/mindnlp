@@ -104,10 +104,11 @@ class HammingDiversityLogitsProcessor(LogitsProcessor):
             self: The instance of the class.
             diversity_penalty (float): The penalty factor for diversity. It should be a positive floating-point number.
             num_beams (int): The number of beams to use in the beam search. It should be an integer greater than 1.
-            num_beam_groups (int): The number of beam groups. It should be an integer greater than 1 and less than or equal to num_beams.
+            num_beam_groups (int): The number of beam groups. It should be an integer greater than 1 and less than or
+                equal to num_beams.
         
         Returns:
-            None
+            None.
         
         Raises:
             ValueError: If diversity_penalty is not a float or is not strictly larger than 0.
@@ -194,7 +195,7 @@ class EncoderRepetitionPenaltyLogitsProcessor(LogitsProcessor):
             encoder_input_ids (mindspore.Tensor): The input tensor of the encoder.
 
         Returns:
-            None
+            None.
 
         Raises:
             ValueError: If `penalty` is not a strictly positive float.
@@ -211,7 +212,8 @@ class EncoderRepetitionPenaltyLogitsProcessor(LogitsProcessor):
         This method calculates and applies repetition penalty to the logits based on the input scores.
 
         Args:
-            self (EncoderRepetitionPenaltyLogitsProcessor): The instance of the EncoderRepetitionPenaltyLogitsProcessor class.
+            self (EncoderRepetitionPenaltyLogitsProcessor): The instance of the EncoderRepetitionPenaltyLogitsProcessor
+                class.
             input_ids (mindspore.Tensor): The input tensor containing the token ids.
             scores (mindspore.Tensor): The input tensor containing the original scores.
 
@@ -249,7 +251,7 @@ class RepetitionPenaltyLogitsProcessor(LogitsProcessor):
             penalty (float): The penalty value to be applied to logits. It should be a strictly positive float.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the penalty is not a float or if it is less than or equal to 0, a ValueError is raised.
@@ -297,7 +299,7 @@ def _get_ngrams(ngram_size: int, prev_input_ids: mindspore.Tensor, num_hypos: in
         num_hypos (int): The number of hypothesis.
 
     Returns:
-        None: This function does not return any value.
+        None.
 
     Raises:
         None
@@ -364,13 +366,15 @@ class NoRepeatNGramLogitsProcessor(LogitsProcessor):
 
         Args:
             self: The instance of the class.
-            ngram_size (int): The size of the n-gram to be used for processing the logits. It should be a strictly positive integer.
+            ngram_size (int): The size of the n-gram to be used for processing the logits.
+                It should be a strictly positive integer.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            ValueError: If the ngram_size is not an integer or is less than or equal to 0, a ValueError is raised with a descriptive error message.
+            ValueError: If the ngram_size is not an integer or is less than or equal to 0, a ValueError is raised
+                with a descriptive error message.
         """
         if not isinstance(ngram_size, int) or ngram_size <= 0:
             raise ValueError(f"`ngram_size` has to be a strictly positive integer, but is {ngram_size}")
@@ -422,10 +426,11 @@ class EncoderNoRepeatNGramLogitsProcessor(LogitsProcessor):
 
         Args:
             encoder_ngram_size (int): The size of the n-grams for encoding. Must be a strictly positive integer.
-            encoder_input_ids (mindspore.Tensor): The input tensor for the encoder. If it has shape (N,), it will be unsqueezed to shape (1, N).
+            encoder_input_ids (mindspore.Tensor): The input tensor for the encoder. If it has shape (N,),
+                it will be unsqueezed to shape (1, N).
 
         Returns:
-            None. This method initializes the EncoderNoRepeatNGramLogitsProcessor.
+            None.
 
         Raises:
             ValueError: If `encoder_ngram_size` is not a strictly positive integer.
@@ -494,17 +499,19 @@ class NoBadWordsLogitsProcessor(LogitsProcessor):
 
         Args:
             self: The instance of the class.
-            bad_words_ids (List[List[int]]): A list of lists containing the IDs of bad words. Each inner list represents a sequence of bad word IDs.
-                The outer list contains multiple sequences of bad word IDs. The parameter is expected to be a non-empty list of lists of positive integers.
-            eos_token_id (Union[int, List[int]]): An integer or a list of integers representing the end-of-sequence token ID(s). If a single integer is provided, it is converted to a list with a single
-                element. If this parameter is None, it is automatically assigned an empty list. It is expected to be a positive integer or a list of positive integers.
+            bad_words_ids (List[List[int]]): A list of lists containing the IDs of bad words. Each inner list represents
+                a sequence of bad word IDs. The outer list contains multiple sequences of bad word IDs. The parameter
+                is expected to be a non-empty list of lists of positive integers.
+            eos_token_id (Union[int, List[int]]): An integer or a list of integers representing the end-of-sequence
+                token ID(s). If a single integer is provided, it is converted to a list with a single element.
+                If this parameter is None, it is automatically assigned an empty list. It is expected to be a positive
+                integer or a list of positive integers.
 
         Returns:
-            None: The method performs initialization and does not return any value.
+            None.
 
         Raises:
             ValueError:
-
                 - If `bad_words_ids` is not a non-empty list.
                 - If `bad_words_ids` is not a list of lists.
                 - If any list in `bad_words_ids` is not a list of positive integers.
@@ -547,21 +554,25 @@ class NoBadWordsLogitsProcessor(LogitsProcessor):
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method is a part of the 'NoBadWordsLogitsProcessor' class and is called '__call__'. It processes the input tensors and applies the 'No Bad Words' logic to the scores.
+        This method is a part of the 'NoBadWordsLogitsProcessor' class and is called '__call__'.
+        It processes the input tensors and applies the 'No Bad Words' logic to the scores.
 
         Args:
             self: An instance of the 'NoBadWordsLogitsProcessor' class.
-            input_ids (mindspore.Tensor): A tensor containing the input IDs.
+            input_ids (mindspore.Tensor):
+                A tensor containing the input IDs.
 
                 - Type: mindspore.Tensor
                 - Purpose: Holds the input IDs for processing.
-            scores (mindspore.Tensor): A tensor containing the scores.
+            scores (mindspore.Tensor):
+                A tensor containing the scores.
 
                 - Type: mindspore.Tensor
                 - Purpose: Represents the scores to be processed.
 
         Returns:
-            mindspore.Tensor: A tensor containing the processed scores.
+            mindspore.Tensor:
+                A tensor containing the processed scores.
 
                 - Type: mindspore.Tensor
                 - Purpose: Represents the scores after applying the 'No Bad Words' logic.
@@ -586,7 +597,8 @@ class NoBadWordsLogitsProcessor(LogitsProcessor):
             scores (mindspore.Tensor): A tensor containing scores used to calculate the static bad word mask.
 
         Returns:
-            mindspore.Tensor: A boolean tensor representing the static bad word mask. The mask is created by setting the value to 1 at specific indices defined by 'bad_words_id_length_1' in the 'scores' tensor.
+            mindspore.Tensor: A boolean tensor representing the static bad word mask. The mask is created by setting
+                the value to 1 at specific indices defined by 'bad_words_id_length_1' in the 'scores' tensor.
 
         Raises:
             None
@@ -641,7 +653,8 @@ class NoBadWordsLogitsProcessor(LogitsProcessor):
             banned tokens.
 
         Note:
-            - The bad word sequences are specified in the 'bad_words_id_length_greater_than_1' attribute of the NoBadWordsLogitsProcessor class.
+            - The bad word sequences are specified in the 'bad_words_id_length_greater_than_1' attribute of the
+            NoBadWordsLogitsProcessor class.
 
         Example:
             ```python
@@ -732,7 +745,7 @@ class MinLengthLogitsProcessor(LogitsProcessor):
                 If an integer is provided, it will be converted to a list. It must be a list of positive integers.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If `min_length` is not a positive integer.
@@ -796,7 +809,7 @@ class MinNewTokensLengthLogitsProcessor(LogitsProcessor):
             eos_token_id (int): The ID of the end-of-sequence token.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If prompt_length_to_skip, min_new_tokens, or eos_token_id is not a positive integer.
@@ -861,7 +874,7 @@ class PrefixConstrainedLogitsProcessor(LogitsProcessor):
             num_beams (int): The number of beams to use during processing.
 
         Returns:
-            None: This method initializes the PrefixConstrainedLogitsProcessor object.
+            None.
 
         Raises:
             TypeError: If prefix_allowed_tokens_fn is not a callable object or if num_beams is not an integer.
@@ -878,7 +891,8 @@ class PrefixConstrainedLogitsProcessor(LogitsProcessor):
 
         Args:
             self: The instance of the class.
-            input_ids (mindspore.Tensor): The input tensor containing token IDs. It is used to identify the batch and beam ID.
+            input_ids (mindspore.Tensor): The input tensor containing token IDs.
+                It is used to identify the batch and beam ID.
             scores (mindspore.Tensor): The input tensor containing scores for each token.
 
         Returns:
@@ -913,7 +927,7 @@ class ForcedBOSTokenLogitsProcessor(LogitsProcessor):
                 This ID is used to identify the BOS token in the input sequence.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -969,7 +983,7 @@ class ForcedEOSTokenLogitsProcessor(LogitsProcessor):
                 If a single integer is provided, it will be converted to a list.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1012,7 +1026,8 @@ class InfNanRemoveLogitsProcessor(LogitsProcessor):
     """
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method '__call__' in the class 'InfNanRemoveLogitsProcessor' processes input scores by replacing infinite and NaN values.
+        This method '__call__' in the class 'InfNanRemoveLogitsProcessor' processes input scores by replacing
+        infinite and NaN values.
 
         Args:
             self: An instance of the InfNanRemoveLogitsProcessor class.
@@ -1058,7 +1073,8 @@ class ExponentialDecayLengthPenalty(LogitsProcessor):
 
         Args:
             self: The instance of the class.
-            exponential_decay_length_penalty (Tuple): A tuple containing two elements:
+            exponential_decay_length_penalty (Tuple):
+                A tuple containing two elements:
 
                 - The start point for the exponential decay length penalty regulation.
                 - The factor for the exponential decay length penalty regulation.
@@ -1066,7 +1082,7 @@ class ExponentialDecayLengthPenalty(LogitsProcessor):
             input_ids_seq_length (int): The length of the input sequence.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the 'exponential_decay_length_penalty' parameter is not a tuple.
@@ -1107,8 +1123,10 @@ class ExponentialDecayLengthPenalty(LogitsProcessor):
 
 
 class SuppressTokensLogitsProcessor(LogitsProcessor):
-    r"""This processor can be used to suppress a list of tokens. The processor will set their log probs to `-inf` so that they
-    are not sampled."""
+    r"""
+    This processor can be used to suppress a list of tokens. The processor will set their log probs to `-inf`
+    so that they are not sampled.
+    """
     def __init__(self, suppress_tokens):
         """
         Initializes an instance of the SuppressTokensLogitsProcessor class.
@@ -1118,7 +1136,7 @@ class SuppressTokensLogitsProcessor(LogitsProcessor):
             suppress_tokens (iterable): A list of tokens to be suppressed.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the suppress_tokens parameter is not an iterable.
@@ -1137,7 +1155,7 @@ class SuppressTokensLogitsProcessor(LogitsProcessor):
             scores (Tensor): A tensor containing the scores for each token.
 
         Returns:
-            None. The method modifies the 'scores' array in-place.
+            None: The method modifies the 'scores' array in-place.
 
         Raises:
             None.
@@ -1162,10 +1180,10 @@ class SuppressTokensAtBeginLogitsProcessor(LogitsProcessor):
             begin_index (int): The index indicating the beginning of the logits.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.begin_suppress_tokens = list(begin_suppress_tokens)
         self.begin_index = begin_index
@@ -1184,7 +1202,7 @@ class SuppressTokensAtBeginLogitsProcessor(LogitsProcessor):
             None: This method directly modifies the 'scores' array in place.
 
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         if input_ids.shape[1] == self.begin_index:
             scores[:, self.begin_suppress_tokens] = -float("inf")
@@ -1202,10 +1220,11 @@ class ForceTokensLogitsProcessor(LogitsProcessor):
 
         Args:
             self: The instance of the class.
-            force_token_map (List[List[int]]): A list of lists containing integer values representing the force token map.
+            force_token_map (List[List[int]]):
+                A list of lists containing integer values representing the force token map.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1244,9 +1263,6 @@ class LogitNormalization(LogitsProcessor, LogitsWarper):
     """
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
         """
-        Class: LogitNormalization
-
-        __call__ method:
 
         Description:
             This class provides a method for logit normalization.
@@ -1286,7 +1302,7 @@ class TemperatureLogitsWarper(LogitsWarper):
                 Must be a strictly positive float.
 
         Returns:
-            None: This method initializes the temperature attribute of the TemperatureLogitsWarper object.
+            None.
 
         Raises:
             ValueError: If the provided temperature is not a float or is not strictly greater than 0.
@@ -1317,16 +1333,16 @@ class TemperatureLogitsWarper(LogitsWarper):
 
 class TopPLogitsWarper(LogitsWarper):
     """
-        [`LogitsWarper`] that performs top-p, i.e. restricting to top tokens summing to prob_cut_off <= prob_cut_off.
+    [`LogitsWarper`] that performs top-p, i.e. restricting to top tokens summing to prob_cut_off <= prob_cut_off.
 
-        Args:
-            top_p (`float`):
-                If set to < 1, only the smallest set of most probable tokens with probabilities that add up to `top_p` or
-                higher are kept for generation.
-            filter_value (`float`, *optional*, defaults to `-float("Inf")`):
-                All filtered values will be set to this float value.
-            min_tokens_to_keep (`int`, *optional*, defaults to 1):
-                Minimum number of tokens that cannot be filtered.
+    Args:
+        top_p (`float`):
+            If set to < 1, only the smallest set of most probable tokens with probabilities that add up to `top_p` or
+            higher are kept for generation.
+        filter_value (`float`, *optional*, defaults to `-float("Inf")`):
+            All filtered values will be set to this float value.
+        min_tokens_to_keep (`int`, *optional*, defaults to 1):
+            Minimum number of tokens that cannot be filtered.
     """
     def __init__(self, top_p: float, filter_value: float = -float("Inf"), min_tokens_to_keep: int = 1):
         """
@@ -1340,7 +1356,7 @@ class TopPLogitsWarper(LogitsWarper):
                 Must be a positive integer greater than or equal to 1.
 
         Returns:
-            None. This method initializes the instance attributes top_p, filter_value, and min_tokens_to_keep.
+            None.
 
         Raises:
             ValueError:
@@ -1359,7 +1375,8 @@ class TopPLogitsWarper(LogitsWarper):
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method '__call__' in the class 'TopPLogitsWarper' applies the Top-p sampling strategy to filter out low probability tokens from the input scores tensor.
+        This method '__call__' in the class 'TopPLogitsWarper' applies the Top-p sampling strategy to filter out
+        low probability tokens from the input scores tensor.
 
         Args:
             self: An instance of the TopPLogitsWarper class.
@@ -1413,7 +1430,7 @@ class TopKLogitsWarper(LogitsWarper):
             min_tokens_to_keep (int, optional): The minimum number of tokens to keep. Defaults to 1.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If top_k is not a positive integer.
@@ -1426,7 +1443,8 @@ class TopKLogitsWarper(LogitsWarper):
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method, named '__call__', is defined within the 'TopKLogitsWarper' class and is used to process input_ids and scores to obtain a mindspore.Tensor result.
+        This method, named '__call__', is defined within the 'TopKLogitsWarper' class and is used to process
+        input_ids and scores to obtain a mindspore.Tensor result.
 
         Args:
             self: The instance of the 'TopKLogitsWarper' class.
@@ -1474,7 +1492,7 @@ class TypicalLogitsWarper(LogitsWarper):
                 Should be a positive integer greater than or equal to 1. Defaults to 1.
 
         Returns:
-            None: This method only initializes the instance attributes.
+            None.
 
         Raises:
             ValueError:
@@ -1493,9 +1511,8 @@ class TypicalLogitsWarper(LogitsWarper):
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
         """
-        __call__
-
-        This method applies a warping function to the input scores to filter out low-confidence tokens based on their probability distribution.
+        This method applies a warping function to the input scores to filter out low-confidence tokens based on
+        their probability distribution.
 
         Args:
             self (TypicalLogitsWarper): The instance of the TypicalLogitsWarper class.
@@ -1582,7 +1599,7 @@ class EpsilonLogitsWarper(LogitsWarper):
                 It should be a strictly positive integer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If epsilon is not within the range (0, 1) or if min_tokens_to_keep is less than 1.
@@ -1801,7 +1818,7 @@ class SequenceBiasLogitsProcessor(LogitsProcessor):
                 representing the bias for each position.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1888,7 +1905,7 @@ class AlternatingCodebooksLogitsProcessor(LogitsProcessor):
             codebook_size (int): The size of the codebook.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If `input_start_len` is not an integer or if it is a negative value.
@@ -1903,21 +1920,25 @@ class AlternatingCodebooksLogitsProcessor(LogitsProcessor):
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
         """
-        The '__call__' method in the 'AlternatingCodebooksLogitsProcessor' class processes the input tensors to manipulate the scores based on alternating codebooks.
+        The '__call__' method in the 'AlternatingCodebooksLogitsProcessor' class processes the input tensors to
+        manipulate the scores based on alternating codebooks.
 
         Args:
             self: An instance of the 'AlternatingCodebooksLogitsProcessor' class.
-            input_ids (mindspore.Tensor): A tensor containing the input IDs.
+            input_ids (mindspore.Tensor):
+                A tensor containing the input IDs.
 
                 - Shape: (batch_size, sequence_length).
                 - The sequence length represents the length of the input IDs.
-            scores (mindspore.Tensor): A tensor containing the scores.
+            scores (mindspore.Tensor):
+                A tensor containing the scores.
 
                 - Shape: (batch_size, vocabulary_size).
                 - The vocabulary size represents the total number of elements in the vocabulary.
 
         Returns:
-            mindspore.Tensor: A tensor representing the modified scores.
+            mindspore.Tensor:
+                A tensor representing the modified scores.
 
                 - Shape: (batch_size, vocabulary_size).
 
@@ -2001,12 +2022,12 @@ class UnbatchedClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
             model: The model used for processing.
             unconditional_ids (Optional[mindspore.Tensor], optional): The input tensor for unconditional context.
                 Default is None.
-            unconditional_attention_mask (Optional[mindspore.Tensor], optional): The attention mask for unconditional context.
-                Default is None.
+            unconditional_attention_mask (Optional[mindspore.Tensor], optional): The attention mask for unconditional
+                context. Default is None.
             use_cache (Optional[bool], optional): Flag to indicate whether to use caching. Default is True.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -2060,7 +2081,8 @@ class UnbatchedClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
 
     def __call__(self, input_ids, scores):
         """
-        This method processes input_ids and scores to compute guidance logits in the UnbatchedClassifierFreeGuidanceLogitsProcessor class.
+        This method processes input_ids and scores to compute guidance logits in the
+        UnbatchedClassifierFreeGuidanceLogitsProcessor class.
 
         Args:
             self (object): Instance of the UnbatchedClassifierFreeGuidanceLogitsProcessor class.
@@ -2068,7 +2090,7 @@ class UnbatchedClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
             scores (tensor): Tensor of scores to be processed.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -2124,7 +2146,6 @@ class WhisperTimeStampLogitsProcessor(LogitsProcessor):
         >>> print("Transcription:", transcription)
         Transcription: <|startoftranscript|><|0.00|> He has grave doubts whether Sir Frederick Layton's work is really Greek after all,
         and can<|6.44|><|6.44|> discover in it but little of rocky Ithaca.<|9.44|><|endoftext|>
-
         >>> #No timestamps & change EOS:
         >>> #This allows the user to select a specific token to terminate the sequence on, in this case it's the word "can"(460)
         >>> model.generation_config.eos_token_id = 460
@@ -2150,7 +2171,7 @@ class WhisperTimeStampLogitsProcessor(LogitsProcessor):
                 - max_initial_timestamp_index (int): The maximum initial timestamp index.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the forced_decoder_ids attribute is empty or not provided in the generate_config object.
@@ -2168,7 +2189,8 @@ class WhisperTimeStampLogitsProcessor(LogitsProcessor):
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method '__call__' in the class 'WhisperTimeStampLogitsProcessor' processes input_ids and scores to manipulate timestamps in the logits.
+        This method '__call__' in the class 'WhisperTimeStampLogitsProcessor' processes input_ids and scores to
+        manipulate timestamps in the logits.
 
         Args:
             self: Instance of the 'WhisperTimeStampLogitsProcessor' class.
@@ -2248,7 +2270,7 @@ class BarkEosPrioritizerLogitsProcessor(LogitsProcessor):
                 If not None, it should be greater than 0. Otherwise, a ValueError will be raised.
 
         Returns:
-            None: This method initializes the eos_token_id and min_eos_p attributes of the class instance.
+            None.
 
         Raises:
             ValueError: Raised if min_eos_p is not a positive float or if it is None.
@@ -2262,7 +2284,8 @@ class BarkEosPrioritizerLogitsProcessor(LogitsProcessor):
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method processes input logits for early stopping based on a minimum probability threshold for the end-of-sequence token.
+        This method processes input logits for early stopping based on a minimum probability threshold for the
+        end-of-sequence token.
 
         Args:
             self (BarkEosPrioritizerLogitsProcessor): An instance of the BarkEosPrioritizerLogitsProcessor class.
@@ -2336,7 +2359,7 @@ class ClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
             guidance_scale (int): The scale of guidance for the classifier-free guidance processor. Must be greater than 1.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the guidance_scale is not greater than 1, a ValueError is raised indicating the requirement

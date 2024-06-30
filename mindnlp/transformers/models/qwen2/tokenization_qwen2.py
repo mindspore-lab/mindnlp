@@ -91,13 +91,14 @@ class Qwen2Tokenizer(PreTrainedTokenizer):
 
     Same with GPT2Tokenizer, this tokenizer has been trained to treat spaces like parts of the tokens so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
+
+    Example:
         ```python
         >>> from transformers import Qwen2Tokenizer
-
+        ...
         >>> tokenizer = Qwen2Tokenizer.from_pretrained("Qwen/Qwen-tokenizer")
         >>> tokenizer("Hello world")["input_ids"]
         [9707, 1879]
-
         >>> tokenizer(" Hello world")["input_ids"]
         [21927, 1879]
         ```
@@ -164,12 +165,13 @@ class Qwen2Tokenizer(PreTrainedTokenizer):
             bos_token (str or None, optional): The beginning-of-sequence token. Defaults to None.
             eos_token (str, optional): The end-of-sequence token. Defaults to 'endoftext'.
             pad_token (str, optional): The padding token. Defaults to 'endoftext'.
-            clean_up_tokenization_spaces (bool, optional): Specifies whether to clean up tokenization spaces. Defaults to False.
+            clean_up_tokenization_spaces (bool, optional): Specifies whether to clean up tokenization spaces.
+                Defaults to False.
             split_special_tokens (bool, optional): Specifies whether to split special tokens. Defaults to False.
             **kwargs: Additional keyword arguments.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             FileNotFoundError: If the vocab_file or merges_file does not exist.
@@ -238,7 +240,8 @@ class Qwen2Tokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self) -> int:
-        """Get the size of the vocabulary.
+        """
+        Get the size of the vocabulary.
 
         This method returns the number of unique tokens in the tokenizer's encoder.
 
@@ -262,13 +265,15 @@ class Qwen2Tokenizer(PreTrainedTokenizer):
             self (Qwen2Tokenizer): The instance of the Qwen2Tokenizer class.
 
         Returns:
-            dict: A dictionary representing the vocabulary of the tokenizer. The keys are the tokens, and the values are their corresponding indices in the vocabulary.
+            dict: A dictionary representing the vocabulary of the tokenizer.
+                The keys are the tokens, and the values are their corresponding indices in the vocabulary.
 
         Raises:
             None.
 
         Note:
-            The vocabulary is obtained by merging the `encoder` and `added_tokens_encoder` dictionaries of the tokenizer instance.
+            The vocabulary is obtained by merging the `encoder` and `added_tokens_encoder` dictionaries of the
+            tokenizer instance.
         """
         return dict(self.encoder, **self.added_tokens_encoder)
 
@@ -310,7 +315,7 @@ class Qwen2Tokenizer(PreTrainedTokenizer):
             >>> encoded_token = tokenizer.bpe('hello')
             >>> print(encoded_token)
             >>> # Output: 'he ll o'
-
+            ...
             >>> encoded_token = tokenizer.bpe('world')
             >>> print(encoded_token)
             >>> # Output: 'wo r ld'
@@ -399,8 +404,10 @@ class Qwen2Tokenizer(PreTrainedTokenizer):
             self: An instance of the Qwen2Tokenizer class.
             token_ids (List[int]): A list of token IDs to be decoded.
             skip_special_tokens (bool, optional): Whether to skip special tokens during decoding. Defaults to False.
-            clean_up_tokenization_spaces (bool, optional): Whether to remove leading and trailing whitespaces around tokens. Defaults to False.
-            spaces_between_special_tokens (bool, optional): Whether to add spaces between special tokens. Defaults to False.
+            clean_up_tokenization_spaces (bool, optional): Whether to remove leading and trailing whitespaces
+                around tokens. Defaults to False.
+            spaces_between_special_tokens (bool, optional): Whether to add spaces between special tokens.
+                Defaults to False.
             **kwargs: Additional keyword arguments to be passed to the superclass method.
 
         Returns:
@@ -410,10 +417,13 @@ class Qwen2Tokenizer(PreTrainedTokenizer):
             None.
 
         Note:
-            - Special tokens are typically used to mark the beginning and end of a sequence, or to represent special tokens such as padding or unknown tokens.
+            - Special tokens are typically used to mark the beginning and end of a sequence, or to represent special
+            tokens such as padding or unknown tokens.
             - If skip_special_tokens is set to True, the special tokens will be excluded from the decoded string.
-            - If clean_up_tokenization_spaces is set to True, any leading or trailing whitespaces around tokens will be removed.
-            - If spaces_between_special_tokens is set to True, spaces will be added between special tokens in the decoded string.
+            - If clean_up_tokenization_spaces is set to True, any leading or trailing whitespaces around tokens
+            will be removed.
+            - If spaces_between_special_tokens is set to True, spaces will be added between special tokens
+            in the decoded string.
         """
         # `spaces_between_special_tokens` defaults to True for _decode in slow tokenizers
         # and cannot be configured elsewhere, but it should default to False for Qwen2Tokenizer
@@ -439,10 +449,10 @@ class Qwen2Tokenizer(PreTrainedTokenizer):
             Tuple[str]: A tuple containing the file paths of the saved vocabulary and merge files.
 
         Raises:
-            - FileNotFoundError: If the specified save_directory does not exist.
-            - IOError: If there are any issues with writing the vocabulary or merge files.
-            - ValueError: If the save_directory is not a valid directory path.
-            - Exception: Any other unexpected errors that may occur during the process.
+            FileNotFoundError: If the specified save_directory does not exist.
+            IOError: If there are any issues with writing the vocabulary or merge files.
+            ValueError: If the save_directory is not a valid directory path.
+            Exception: Any other unexpected errors that may occur during the process.
         """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
@@ -481,16 +491,20 @@ class Qwen2Tokenizer(PreTrainedTokenizer):
             text (str): The text to be prepared for tokenization.
 
         Returns:
-            None. The method modifies the text in-place.
+            None: The method modifies the text in-place.
 
         Raises:
             None.
 
-        This method takes in an instance of the Qwen2Tokenizer class and a string of text. It prepares the text for tokenization by normalizing it using the 'NFC' (Normalization Form C) Unicode normalization.
-        The normalization ensures that the text is in a standardized form, reducing any potential ambiguities or variations in the text. The method then returns the modified text along with any additional keyword
+        This method takes in an instance of the Qwen2Tokenizer class and a string of text.
+        It prepares the text for tokenization by normalizing it using the 'NFC' (Normalization Form C) Unicode
+        normalization.
+        The normalization ensures that the text is in a standardized form, reducing any potential ambiguities or
+        variations in the text. The method then returns the modified text along with any additional keyword
         arguments passed to the method.
         
-        Note that this method modifies the text in-place, meaning that the original text variable will be updated with the normalized version. No values are returned explicitly by this method.
+        Note that this method modifies the text in-place, meaning that the original text variable will be
+        updated with the normalized version. No values are returned explicitly by this method.
         """
         text = unicodedata.normalize("NFC", text)
         return (text, kwargs)

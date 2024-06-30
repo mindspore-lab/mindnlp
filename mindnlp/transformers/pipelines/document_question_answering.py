@@ -53,7 +53,8 @@ def normalize_box(box, width, height):
         height (int): The height of the image or area to which the bounding box coordinates are relative.
 
     Returns:
-        list: A normalized bounding box coordinates in the format [x_min_norm, y_min_norm, x_max_norm, y_max_norm]. The values are scaled by 1000 and rounded to integers.
+        list: A normalized bounding box coordinates in the format [x_min_norm, y_min_norm, x_max_norm, y_max_norm].
+            The values are scaled by 1000 and rounded to integers.
 
     Raises:
         None
@@ -287,7 +288,8 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
             **kwargs,
     ):
         """
-        This method '_sanitize_parameters' is a part of the 'DocumentQuestionAnsweringPipeline' class and is used to sanitize and validate the input parameters for the document question answering pipeline.
+        This method '_sanitize_parameters' is a part of the 'DocumentQuestionAnsweringPipeline' class and is used to
+        sanitize and validate the input parameters for the document question answering pipeline.
 
         Args:
             self: The instance of the class.
@@ -399,8 +401,10 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
                 The maximum time in seconds to wait for fetching images from the web. If None, no timeout is set and
                 the call may block forever.
 
-        Return:
-            A `dict` or a list of `dict` with the following keys:
+        Returns:
+            A `dict` or a list of `dict`:
+                with the following keys:
+                
                 - **score** (`float`) -- The probability associated to the answer.
                 - **start** (`int`) -- The start word index of the answer (in the OCR'd version of the input or provided
                   `word_boxes`).
@@ -586,7 +590,8 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
 
     def _forward(self, model_inputs):
         """
-        This method '_forward' in the class 'DocumentQuestionAnsweringPipeline' processes the model inputs and generates the model outputs.
+        This method '_forward' in the class 'DocumentQuestionAnsweringPipeline' processes the model inputs and 
+        generates the model outputs.
 
         Args:
             self: An instance of the 'DocumentQuestionAnsweringPipeline' class.
@@ -632,7 +637,8 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
 
     def postprocess(self, model_outputs, top_k=1, **kwargs):
         """
-        This method 'postprocess' is defined in the class 'DocumentQuestionAnsweringPipeline' and is used to process the model outputs and return the top-k answers.
+        This method 'postprocess' is defined in the class 'DocumentQuestionAnsweringPipeline' and is used to 
+        process the model outputs and return the top-k answers.
         
         Args:
             self: The instance of the 'DocumentQuestionAnsweringPipeline' class.
@@ -663,12 +669,14 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
             model_outputs (dict): A dictionary containing the model outputs with the key 'sequences'.
             
         Returns:
-            dict: A dictionary containing the processed answer under the key 'answer'. 
-            If the answer is found in the processed sequence, it is extracted and stored in the 'answer' key. 
-            If no answer is found, the 'answer' key remains None.
+            dict:
+                A dictionary containing the processed answer under the key 'answer'.
+
+                - If the answer is found in the processed sequence, it is extracted and stored in the 'answer' key.
+                - If no answer is found, the 'answer' key remains None.
         
         Raises:
-            N/A
+            None.
         """
         sequence = self.tokenizer.batch_decode(model_outputs["sequences"])[0]
 
@@ -701,11 +709,12 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
             max_answer_len: (int) The maximum length of the answer. Default is 15.
         
         Returns:
-            list of dictionaries:
-                The post-processed answers containing the score, answer text, start position, and end position for each answer.
+            `List[dict]`:
+                The post-processed answers containing the score, answer text, start position, and end position
+                for each answer.
         
         Raises:
-            No specific exceptions are documented to be raised by this method.
+            None.
         """
         min_null_score = 1000000  # large and positive
         answers = []

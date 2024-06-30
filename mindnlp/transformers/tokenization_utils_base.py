@@ -158,7 +158,7 @@ class BatchEncoding(UserDict):
             n_sequences (Optional[int]): The number of sequences in the data. Default is None.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the encoding is not of type EncodingFast.
@@ -227,10 +227,11 @@ class BatchEncoding(UserDict):
             item (str): The name of the attribute being accessed.
 
         Returns:
-            None: This method does not return any value directly.
+            None.
 
         Raises:
-            AttributeError: If the specified attribute 'item' does not exist in the data dictionary, an AttributeError is raised.
+            AttributeError: If the specified attribute 'item' does not exist in the data dictionary,
+                an AttributeError is raised.
 
         """
         try:
@@ -240,7 +241,8 @@ class BatchEncoding(UserDict):
 
     def __getstate__(self):
         r"""
-        This method, '__getstate__', is defined within the 'BatchEncoding' class and is intended to handle the serialization of the class instance.
+        This method, '__getstate__', is defined within the 'BatchEncoding' class and is intended to handle the
+        serialization of the class instance.
 
         Args:
             self (BatchEncoding): The instance of the BatchEncoding class for which the state needs to be retrieved.
@@ -250,7 +252,7 @@ class BatchEncoding(UserDict):
             None: This method returns None, as it is intended to provide the state of the instance for serialization purposes.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return {"data": self.data, "encodings": self._encodings}
 
@@ -262,13 +264,14 @@ class BatchEncoding(UserDict):
 
         Args:
             self (BatchEncoding): The BatchEncoding object itself.
-            state (dict): A dictionary containing the state information to be restored. It should have the following keys:
+            state (dict):
+                A dictionary containing the state information to be restored. It should have the following keys:
 
                 - 'data': The data to be restored into the 'data' attribute of the BatchEncoding object.
                 - 'encodings': The encodings to be restored into the '_encodings' attribute of the BatchEncoding object.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -293,7 +296,7 @@ class BatchEncoding(UserDict):
             self (BatchEncoding): The instance of the BatchEncoding class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -313,7 +316,7 @@ class BatchEncoding(UserDict):
                 The method returns a view of all values present in the data dictionary of the BatchEncoding object.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.data.values()
 
@@ -328,7 +331,7 @@ class BatchEncoding(UserDict):
             None: This method returns None as it simply returns a view of the key-value pairs in the BatchEncoding object.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.data.items()
 
@@ -537,10 +540,10 @@ class BatchEncoding(UserDict):
                 or 1) the provided word index belongs to.
 
         Returns:
-            ([`~tokenization_utils_base.TokenSpan`], *optional*): Span of tokens in the encoded sequence. Returns
-            `None` if no tokens correspond to the word. This can happen especially when the token is a special token
-            that has been used to format the tokenization. For example when we add a class token at the very beginning
-            of the tokenization.
+            ([`~tokenization_utils_base.TokenSpan`], *optional*):
+                Span of tokens in the encoded sequence. Returns `None` if no tokens correspond to the word.
+                This can happen especially when the token is a special token that has been used to format the
+                tokenization. For example when we add a class token at the very beginning of the tokenization.
         """
         if not self._encodings:
             raise ValueError("word_to_tokens() is not available when using Python based tokenizers")
@@ -580,8 +583,9 @@ class BatchEncoding(UserDict):
                 the sequence.
 
         Returns:
-            [`~tokenization_utils_base.CharSpan`]: Span of characters in the original string, or None, if the token
-            (e.g. <s>, </s>) doesn't correspond to any chars in the origin string.
+            [`~tokenization_utils_base.CharSpan`]:
+                Span of characters in the original string, or None, if the token
+                (e.g. <s>, </s>) doesn't correspond to any chars in the origin string.
         """
         if not self._encodings:
             raise ValueError("token_to_chars() is not available when using Python based tokenizers")
@@ -623,7 +627,8 @@ class BatchEncoding(UserDict):
 
 
         Returns:
-            `int`: Index of the token.
+            `int`:
+                Index of the token.
         """
         if not self._encodings:
             raise ValueError("char_to_token() is not available when using Python based tokenizers")
@@ -838,7 +843,7 @@ class SpecialTokensMixin:
             verbose (bool, optional): Whether to enable verbose mode. Defaults to False.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the value of a special token is not of type str or AddedToken.
@@ -1175,7 +1180,7 @@ class SpecialTokensMixin:
                 If the value is None, it is accepted as a valid input.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: Raised if the value provided is not a string or an instance of AddedToken and is not None.
@@ -1196,7 +1201,7 @@ class SpecialTokensMixin:
                 If the value is not a string or an instance of AddedToken and is not None, a ValueError is raised.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the value is not a string or an instance of AddedToken and is not None, a ValueError is raised.
@@ -1218,7 +1223,7 @@ class SpecialTokensMixin:
                 If a non-string value is provided and it is not None, a ValueError is raised.
 
         Returns:
-            None: This method does not return any value explicitly.
+            None.
 
         Raises:
             ValueError: Raised when the provided value is not a string or an AddedToken object and it is not None.
@@ -1237,7 +1242,7 @@ class SpecialTokensMixin:
             value (str or AddedToken or None): The value to be set as the PAD token. It should be a string or an instance of AddedToken, or None.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the provided value is not a string or an instance of AddedToken and it is not None.
@@ -1278,10 +1283,11 @@ class SpecialTokensMixin:
                 It can be a string, an instance of the AddedToken class, or None.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            ValueError: If the value provided is not a string or an instance of the AddedToken class and is not None, a ValueError is raised.
+            ValueError: If the value provided is not a string or an instance of the AddedToken class and is not None,
+                a ValueError is raised.
         """
         if not isinstance(value, (str, AddedToken)) and value is not None:
             raise ValueError("Cannot set a non-string value as the MASK token")
@@ -1297,10 +1303,10 @@ class SpecialTokensMixin:
             value (Any): The additional special tokens to be set. It can be of any type.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self._additional_special_tokens = value if value is not None else None
 
@@ -1398,10 +1404,10 @@ class SpecialTokensMixin:
             value (int): The BOS token ID to be set. If None, the BOS token ID will be set to None.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self._bos_token = self.convert_ids_to_tokens(value) if value is not None else None
 
@@ -1415,7 +1421,7 @@ class SpecialTokensMixin:
             value (int or None): The value to set as the EOS token ID. If not None, it should be an integer representing the token ID.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the value provided is not an integer or None.
@@ -1434,7 +1440,7 @@ class SpecialTokensMixin:
                 It must be an integer or None. If set to None, the unknown token ID will be set to None.
 
         Returns:
-            None: This method does not return any value explicitly.
+            None.
 
         Raises:
             None.
@@ -1451,7 +1457,7 @@ class SpecialTokensMixin:
             value (int): An integer representing the token ID to be set as the sep_token_id. It can be None.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -1468,10 +1474,10 @@ class SpecialTokensMixin:
             value (int): The new pad token ID to be set. If value is not None, the pad token ID will be updated accordingly.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         self._pad_token = self.convert_ids_to_tokens(value) if value is not None else None
 
@@ -1485,10 +1491,10 @@ class SpecialTokensMixin:
             value (int): The token ID to be assigned to the `cls_token_id` attribute.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self._cls_token = self.convert_ids_to_tokens(value) if value is not None else None
 
@@ -1502,7 +1508,7 @@ class SpecialTokensMixin:
             value: The value to be set as the mask token ID. It can be an integer or None.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1526,7 +1532,7 @@ class SpecialTokensMixin:
                 The values should be valid token IDs that exist in the tokenizer's vocabulary.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1632,7 +1638,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
             self: The instance of the class.
 
         Returns:
-            None: This method initializes various attributes of the PreTrainedTokenizerBase class.
+            None.
 
         Raises:
             ValueError: If the provided padding_side or truncation_side is not one of ['right', 'left'].
@@ -1739,9 +1745,9 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
             ValueError: If the specified value does not match the automatically set up length.
 
         Notes:
-            This method is now deprecated and the value is automatically set up based on the model's maximum length and the number of special tokens added.
-            If the value is equal to the model's maximum length minus the number of special tokens added, a deprecation warning is issued.
-            Otherwise, a ValueError is raised.
+            This method is now deprecated and the value is automatically set up based on the model's maximum length and
+            the number of special tokens added. If the value is equal to the model's maximum length minus the number
+            of special tokens added, a deprecation warning is issued. Otherwise, a ValueError is raised.
         """
         # For backward compatibility, allow to try to setup 'max_len_sentences_pair'.
         if value == self.model_max_length - self.num_special_tokens_to_add(pair=True) and self.verbose:
@@ -2236,12 +2242,14 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
             **kwargs: Additional keyword arguments for initializing the tokenizer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            OSError: If unable to load vocabulary from file. Please check that the provided vocabulary is accessible and not corrupted.
+            OSError: If unable to load vocabulary from file. Please check that the provided vocabulary is accessible
+                and not corrupted.
             ValueError: If there is a mismatch in the added tokens decoder format.
-            Warning: If special tokens have been added in the vocabulary, it advises to make sure the associated word embeddings are fine-tuned or trained.
+            Warning: If special tokens have been added in the vocabulary, it advises to make sure the associated
+                word embeddings are fine-tuned or trained.
             """
         # We instantiate fast tokenizers based on a slow tokenizer if we don't have access to the tokenizer.json
         # file or if `from_slow` is set to True.
@@ -2463,7 +2471,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
             init_max_model_length (int): The initial maximum model length.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the input parameters are not of the correct type.
@@ -4067,7 +4075,8 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
             NotImplementedError: If the method is not implemented.
 
         Note:
-            The method decodes the token IDs into a string using the tokenizer's decoding logic. Special tokens and tokenization spaces can be skipped or cleaned up if specified.
+            The method decodes the token IDs into a string using the tokenizer's decoding logic. Special tokens and
+            tokenization spaces can be skipped or cleaned up if specified.
         """
         raise NotImplementedError
 
@@ -4258,7 +4267,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
             **kwargs:
                 Additional keyword arguments passed along to `self.__call__`.
 
-        Return:
+        Returns:
             [`BatchEncoding`]: A [`BatchEncoding`] with the following fields:
 
             - **input_ids** -- List of token ids to be fed to the encoder.

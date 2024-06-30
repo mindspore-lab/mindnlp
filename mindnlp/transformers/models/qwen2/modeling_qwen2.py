@@ -51,16 +51,21 @@ QWEN2_PRETRAINED_MODEL_ARCHIVE_LIST = [
 # Copied from transformers.models.llama.modeling_llama._get_unpad_data
 def _get_unpad_data(attention_mask):
     """
+
     Args:
         attention_mask (Tensor): A tensor representing the attention mask for the input sequences.
             Its purpose is to indicate which tokens in the input sequences should be attended to and which should be ignored.
             It should be a 2D tensor with a shape of (batch_size, sequence_length) and contain binary values (0 or 1).
     
     Returns:
-        Tuple of Tensors: The function returns a tuple containing the following:
-            >   - indices (Tensor): A 1D tensor containing the indices of the non-zero elements in the flattened attention_mask tensor.
-            >   - cu_seqlens (Tensor): A 1D tensor representing the cumulative sum of the sequence lengths in the batch, padded with a zero at the beginning.
-            >   - max_seqlen_in_batch (int): The maximum sequence length in the batch.
+        Tuple of Tensors:
+            The function returns a tuple containing the following:
+
+            - indices (Tensor): A 1D tensor containing the indices of the non-zero elements in the flattened
+            attention_mask tensor.
+            - cu_seqlens (Tensor): A 1D tensor representing the cumulative sum of the sequence lengths in the batch,
+            padded with a zero at the beginning.
+            - max_seqlen_in_batch (int): The maximum sequence length in the batch.
 
     Raises:
         None
@@ -80,13 +85,16 @@ def _get_unpad_data(attention_mask):
 class Qwen2RMSNorm(nn.Cell):
 
     """
-    Qwen2RMSNorm is a custom normalization layer that inherits from nn.Cell. It is equivalent to T5LayerNorm and is designed to normalize the input hidden states.
+    Qwen2RMSNorm is a custom normalization layer that inherits from nn.Cell. It is equivalent to T5LayerNorm and is
+    designed to normalize the input hidden states.
 
-    This class initializes with the specified hidden_size and an optional epsilon value for variance smoothing. The normalization process involves scaling the hidden states based on the calculated variance and
-    the provided weight parameter.
+    This class initializes with the specified hidden_size and an optional epsilon value for variance smoothing.
+    The normalization process involves scaling the hidden states based on the calculated variance and the provided
+    weight parameter.
 
-    The construct method takes hidden_states as input and performs the normalization operation, ensuring that the output matches the input data type. The normalized hidden_states are then multiplied by the
-    weight parameter to produce the final output.
+    The construct method takes hidden_states as input and performs the normalization operation, ensuring that the
+    output matches the input data type. The normalized hidden_states are then multiplied by the weight parameter to
+    produce the final output.
 
     Note:
         This docstring is based on the provided information and does not include actual code or signatures.
@@ -109,7 +117,7 @@ class Qwen2RMSNorm(nn.Cell):
                 Should be a tensor of any shape with dtype compatible with float32.
 
         Returns:
-            None. The method modifies the hidden_states tensor in-place.
+            None: The method modifies the hidden_states tensor in-place.
 
         Raises:
             ValueError: If hidden_states is not a valid tensor.
@@ -126,7 +134,8 @@ class Qwen2RMSNorm(nn.Cell):
 class Qwen2RotaryEmbedding(nn.Cell):
 
     """
-    Represents a Qwen2RotaryEmbedding module that inherits from nn.Cell. This module implements the Qwen2Rotary embedding as described in the code.
+    Represents a Qwen2RotaryEmbedding module that inherits from nn.Cell. This module implements the Qwen2Rotary
+    embedding as described in the code.
 
     Attributes:
         dim (int): The dimension of the embedding.
@@ -134,11 +143,12 @@ class Qwen2RotaryEmbedding(nn.Cell):
         base (int): The base value used in the embedding calculation.
 
     Methods:
-        _set_cos_sin_cache(self, seq_len, dtype): Sets the cosine and sine cache for the given sequence length and data type.
-        construct(self, x, seq_len=None): Constructs the Qwen2Rotary embedding for the input with optional sequence length.
+        _set_cos_sin_cache: Sets the cosine and sine cache for the given sequence length and data type.
+        construct(: Constructs the Qwen2Rotary embedding for the input with optional sequence length.
 
     Note:
-        The Qwen2RotaryEmbedding module provides functionality for Qwen2Rotary embedding calculation, including setting cosine and sine cache and constructing the embedding.
+        The Qwen2RotaryEmbedding module provides functionality for Qwen2Rotary embedding calculation, including setting
+        cosine and sine cache and constructing the embedding.
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
         """
@@ -147,17 +157,20 @@ class Qwen2RotaryEmbedding(nn.Cell):
         Args:
             self: The object itself.
             dim (int): The dimensionality of the embedding vectors.
-            max_position_embeddings (int, optional): The maximum number of position embeddings to generate. Defaults to 2048.
+            max_position_embeddings (int, optional): The maximum number of position embeddings to generate.
+                Defaults to 2048.
             base (int, optional): The base value used in the calculation of inverse frequency. Defaults to 10000.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
 
-        This method initializes the Qwen2RotaryEmbedding object with the specified dimensionality, maximum position embeddings, and base value. It calculates the inverse frequency based on the dimensionality
-        and stores it in the 'inv_freq' attribute. Additionally, it sets the cosine and sine cache based on the maximum position embeddings.
+        This method initializes the Qwen2RotaryEmbedding object with the specified dimensionality,
+        maximum position embeddings, and base value. It calculates the inverse frequency based on the dimensionality
+        and stores it in the 'inv_freq' attribute. Additionally, it sets the cosine and sine cache based on the
+        maximum position embeddings.
         """
         super().__init__()
 
@@ -182,7 +195,7 @@ class Qwen2RotaryEmbedding(nn.Cell):
             dtype (dtype): The desired data type for the cache.
 
         Returns:
-            None. This method updates the 'cos_cached' and 'sin_cached' attributes of the Qwen2RotaryEmbedding instance.
+            None: This method updates the 'cos_cached' and 'sin_cached' attributes of the Qwen2RotaryEmbedding instance.
 
         Raises:
             None.
@@ -206,7 +219,7 @@ class Qwen2RotaryEmbedding(nn.Cell):
             seq_len: An optional integer representing the length of the sequence. Defaults to None.
 
         Returns:
-            None. This method modifies the internal state of the Qwen2RotaryEmbedding instance.
+            None: This method modifies the internal state of the Qwen2RotaryEmbedding instance.
 
         Raises:
             ValueError: If 'seq_len' is not a positive integer.
@@ -233,7 +246,8 @@ def rotate_half(x):
 
 # Copied from transformers.models.mistral.modeling_mistral.apply_rotary_pos_emb
 def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
-    """Applies Rotary Position Embedding to the query and key tensors.
+    """
+    Applies Rotary Position Embedding to the query and key tensors.
 
     Args:
         q (`mindspore.Tensor`): The query tensor.
@@ -250,6 +264,7 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
             k have the shape [batch_size, heads, seq_len, head_dim], then setting unsqueeze_dim=1 makes
             cos[position_ids] and sin[position_ids] broadcastable to the shapes of q and k. Similarly, if q and k have
             the shape [batch_size, seq_len, heads, head_dim], then set unsqueeze_dim=2.
+
     Returns:
         `tuple(mindspore.Tensor)` comprising of the query and key tensors rotated using the Rotary Position Embedding.
     """
@@ -264,8 +279,9 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
 class Qwen2MLP(nn.Cell):
 
     """
-    Qwen2MLP is a Python class that represents a multi-layer perceptron (MLP) with specific configurations for gate, up, and down projections.
-    This class inherits from nn.Cell and is designed to be used in neural network models for deep learning applications.
+    Qwen2MLP is a Python class that represents a multi-layer perceptron (MLP) with specific configurations for gate, up,
+    and down projections. This class inherits from nn.Cell and is designed to be used in neural network models for
+    deep learning applications.
 
     Attributes:
         config: A configuration object containing settings for the hidden size and intermediate size of the MLP.
@@ -277,10 +293,12 @@ class Qwen2MLP(nn.Cell):
         act_fn: An activation function determined by the configuration settings.
 
     Methods:
-        construct: A method that takes input data x and performs the forward pass through the MLP using the defined projections and activation function.
+        construct: A method that takes input data x and performs the forward pass through the MLP using the
+            defined projections and activation function.
 
     Note:
-        The Qwen2MLP class is intended to be used as part of a larger neural network model and provides a configurable multi-layer perceptron with specific projection and activation settings.
+        The Qwen2MLP class is intended to be used as part of a larger neural network model and provides a configurable
+        multi-layer perceptron with specific projection and activation settings.
     """
     def __init__(self, config):
         """
@@ -288,10 +306,12 @@ class Qwen2MLP(nn.Cell):
 
         Args:
             self: The instance of the class.
-            config: An object containing configuration parameters for the MLP. It should have the following attributes:
-                >   - hidden_size: An integer specifying the size of the hidden layer.
-                >   - intermediate_size: An integer specifying the size of the intermediate layer.
-                >   - hidden_act: A string specifying the activation function to be used in the hidden layer.
+            config: An object containing configuration parameters for the MLP.
+                It should have the following attributes:
+
+                - hidden_size: An integer specifying the size of the hidden layer.
+                - intermediate_size: An integer specifying the size of the intermediate layer.
+                - hidden_act: A string specifying the activation function to be used in the hidden layer.
 
         Returns:
             None
@@ -322,9 +342,11 @@ class Qwen2MLP(nn.Cell):
         Raises:
             None.
 
-        This method constructs a new object by performing a series of operations on the input data 'x'. It first applies the 'gate_proj' function to 'x' and then applies the 'act_fn' function to the result.
-        The output of 'act_fn' is multiplied element-wise with the result of applying the 'down_proj' function to 'x'. Finally, the result is multiplied with the output of applying the 'up_proj' function to 'x'. The
-        constructed object is returned as None.
+        This method constructs a new object by performing a series of operations on the input data 'x'.
+        It first applies the 'gate_proj' function to 'x' and then applies the 'act_fn' function to the result.
+        The output of 'act_fn' is multiplied element-wise with the result of applying the 'down_proj' function to 'x'.
+        Finally, the result is multiplied with the output of applying the 'up_proj' function to 'x'.
+        The constructed object is returned as None.
         """
         return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
 
@@ -353,12 +375,14 @@ class Qwen2Attention(nn.Cell):
 
         Args:
             self: The instance of the class.
-            config (Qwen2Config): An instance of the Qwen2Config class containing configuration parameters for the attention mechanism.
-            layer_idx (Optional[int]): The index of the layer. Defaults to None. If None, a warning is logged as it may lead to errors during forward call if caching is used. It is recommended to provide a
+            config (Qwen2Config): An instance of the Qwen2Config class containing configuration parameters for
+                the attention mechanism.
+            layer_idx (Optional[int]): The index of the layer. Defaults to None. If None, a warning is logged
+                as it may lead to errors during forward call if caching is used. It is recommended to provide a
                 valid layer index when creating the class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the `hidden_size` is not divisible by `num_heads`.
@@ -414,20 +438,29 @@ class Qwen2Attention(nn.Cell):
         Args:
             self: The instance of the class.
             hidden_states (mindspore.Tensor): The input tensor of shape (batch_size, sequence_length, hidden_size).
-            attention_mask (Optional[mindspore.Tensor]): An optional tensor of shape (batch_size, 1, sequence_length, key_value_sequence_length) containing indices to be masked.
-            position_ids (Optional[mindspore.Tensor]): An optional tensor of shape (batch_size, sequence_length) containing the position indices of each token in the input sequence.
-            past_key_value (Optional[Cache]): An optional object representing the cached key and value tensors from previous time steps.
+            attention_mask (Optional[mindspore.Tensor]): An optional tensor of shape
+                (batch_size, 1, sequence_length, key_value_sequence_length) containing indices to be masked.
+            position_ids (Optional[mindspore.Tensor]): An optional tensor of shape (batch_size, sequence_length)
+                containing the position indices of each token in the input sequence.
+            past_key_value (Optional[Cache]): An optional object representing the cached key and value tensors
+                from previous time steps.
             output_attentions (bool): A flag indicating whether to return the attention weights.
 
         Returns:
-            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing:
-                >   - attn_output (mindspore.Tensor): The output tensor of shape (batch_size, sequence_length, hidden_size).
-                >   - attn_weights (Optional[mindspore.Tensor]): The attention weights tensor of shape (batch_size, num_heads, sequence_length, key_value_sequence_length), if output_attentions is True, else None.
-                >   - past_key_value (Optional[Tuple[mindspore.Tensor]]): The updated key and value tensors, if past_key_value is not None and caching is enabled, else None.
+            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
+                A tuple containing:
+
+                - attn_output (mindspore.Tensor): The output tensor of shape (batch_size, sequence_length, hidden_size).
+                - attn_weights (Optional[mindspore.Tensor]): The attention weights tensor of shape
+                (batch_size, num_heads, sequence_length, key_value_sequence_length),
+                if output_attentions is True, else None.
+                - past_key_value (Optional[Tuple[mindspore.Tensor]]): The updated key and value tensors,
+                if past_key_value is not None and caching is enabled, else None.
 
         Raises:
-            ValueError: If the cache structure has changed and the layer index is not provided, if the shape of attention weights or attention mask is incorrect, or if the shape of the output tensor is not as
-                expected.
+            ValueError: If the cache structure has changed and the layer index is not provided,
+                if the shape of attention weights or attention mask is incorrect, or if the shape of the
+                output tensor is not as expected.
         '''
         bsz, q_len, _ = hidden_states.shape
 
@@ -505,7 +538,8 @@ QWEN2_ATTENTION_CLASSES = {
 class Qwen2DecoderLayer(nn.Cell):
 
     """
-    Qwen2DecoderLayer is a class representing a single layer of the Qwen2 decoder. It inherits from nn.Cell and contains methods for initializing the layer and constructing the layer's operations.
+    Qwen2DecoderLayer is a class representing a single layer of the Qwen2 decoder. It inherits from nn.Cell and
+    contains methods for initializing the layer and constructing the layer's operations.
 
     Attributes:
         hidden_size (int): The size of the hidden state.
@@ -517,17 +551,21 @@ class Qwen2DecoderLayer(nn.Cell):
     Methods:
         __init__: Initializes the Qwen2DecoderLayer with the given configuration and layer index.
         construct:
-            Applies the layer operations to the input hidden_states and returns the resulting output tensor along with optional additional tensors, such as attention weights and present key value.
+            Applies the layer operations to the input hidden_states and returns the resulting output tensor along with
+            optional additional tensors, such as attention weights and present key value.
 
     Args:
         hidden_states (mindspore.Tensor): Input to the layer of shape (batch, seq_len, embed_dim).
-        attention_mask (mindspore.Tensor, optional): Attention mask of size (batch, sequence_length) where padding elements are indicated by 0.
+        attention_mask (mindspore.Tensor, optional): Attention mask of size (batch, sequence_length)
+            where padding elements are indicated by 0.
         output_attentions (bool, optional): Whether or not to return the attentions tensors of all attention layers.
-        use_cache (bool, optional): If set to True, past_key_values key value states are returned and can be used to speed up decoding.
+        use_cache (bool, optional): If set to True, past_key_values key value states are returned and can be used to
+            speed up decoding.
         past_key_value (Tuple(mindspore.Tensor), optional): Cached past key and value projection states.
 
     Returns:
-        Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: The output tensor and optional additional tensors based on the input arguments.
+        Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: The output tensor and optional
+            additional tensors based on the input arguments.
     """
     def __init__(self, config: Qwen2Config, layer_idx: int):
         """
@@ -539,7 +577,7 @@ class Qwen2DecoderLayer(nn.Cell):
             layer_idx (int): An integer representing the index of the layer.
 
         Returns:
-            None. This method initializes the Qwen2DecoderLayer object with the provided settings.
+            None.
 
         Raises:
             None.
@@ -610,34 +648,48 @@ class Qwen2DecoderLayer(nn.Cell):
 class Qwen2PreTrainedModel(PreTrainedModel):
 
     """
-    This class represents a Qwen2PreTrainedModel, which is a subclass of PreTrainedModel. It provides methods for initializing the weights of the model's cells.
+    This class represents a Qwen2PreTrainedModel, which is a subclass of PreTrainedModel.
+    It provides methods for initializing the weights of the model's cells.
 
     Methods:
-        _init_weights(self, cell):
+        _init_weights:
             Initializes the weights of a given cell.
-                >   - Parameters:
-                >       - cell: The cell to initialize the weights for.
-                >   - Returns: None
+
+            Parameters:
+
+            - cell: The cell to initialize the weights for.
+
+            Returns:
+                None
 
     Details:
-        The _init_weights method initializes the weights of the specified cell. It first checks the type of the cell. If it is of type nn.Dense, it sets the weight data using the initializer function. The
-        initializer function takes the following parameters:
-        >   - Normal(self.config.initializer_range): A normal distribution initializer with the specified range.
-        >   - cell.weight.shape: The shape of the weight tensor.
-        >   - cell.weight.dtype: The data type of the weight tensor.
+        The _init_weights method initializes the weights of the specified cell. It first checks the type of the cell.
+        If it is of type nn.Dense, it sets the weight data using the initializer function.
+        The initializer function takes the following parameters:
+
+        - Normal(self.config.initializer_range): A normal distribution initializer with the specified range.
+        - cell.weight.shape: The shape of the weight tensor.
+        - cell.weight.dtype: The data type of the weight tensor.
+
         If the cell has a bias, it also sets the bias data using the initializer function with the following parameters:
-        >   - 'zeros': A zero initializer.
-        >   - cell.bias.shape: The shape of the bias tensor.
-        >   - cell.bias.dtype: The data type of the bias tensor.
-        If the cell is of type nn.Embedding, it generates random weights using the numpy random.normal function. The parameters for the random.normal function are:
-        >   - 0.0: The mean of the normal distribution.
-        >   - self.config.initializer_range: The standard deviation of the normal distribution.
-        >   - cell.weight.shape: The shape of the weight tensor.
+
+        - 'zeros': A zero initializer.
+        - cell.bias.shape: The shape of the bias tensor.
+        - cell.bias.dtype: The data type of the bias tensor.
+
+        If the cell is of type nn.Embedding, it generates random weights using the numpy random.normal function.
+        The parameters for the random.normal function are:
+
+        - 0.0: The mean of the normal distribution.
+        - self.config.initializer_range: The standard deviation of the normal distribution.
+        - cell.weight.shape: The shape of the weight tensor.
+
         If the cell has a padding_idx, it sets the value at that index to 0.
 
         Finally, the initialized weights are set to the cell using the Tensor function with the following parameters:
-        >   - weight: The initialized weight tensor.
-        >   - cell.weight.dtype: The data type of the weight tensor.
+
+        - weight: The initialized weight tensor.
+        - cell.weight.dtype: The data type of the weight tensor.
     """
     config_class = Qwen2Config
     base_model_prefix = "model"
@@ -677,18 +729,20 @@ class Qwen2Model(Qwen2PreTrainedModel):
         Args:
             self (Qwen2Model): The instance of the Qwen2Model class.
             config (Qwen2Config):
-                >   - An instance of Qwen2Config containing configuration parameters for the model.
-                        It specifies the model configuration including the vocabulary size, hidden size, number of hidden layers, padding token id,
-                        and RMS normalization epsilon.
-                        The config object should have the following attributes:
-                >       - pad_token_id (int): The token id for padding.
-                >       - vocab_size (int): The size of the vocabulary.
-                >       - hidden_size (int): The size of the hidden layers.
-                >       - num_hidden_layers (int): The number of hidden layers in the model.
-                >       - rms_norm_eps (float): Epsilon value for RMS normalization.
+                An instance of Qwen2Config containing configuration parameters for the model.
+                It specifies the model configuration including the vocabulary size, hidden size, number of
+                hidden layers, padding token id, and RMS normalization epsilon.
+
+                The config object should have the following attributes:
+
+                - pad_token_id (int): The token id for padding.
+                - vocab_size (int): The size of the vocabulary.
+                - hidden_size (int): The size of the hidden layers.
+                - num_hidden_layers (int): The number of hidden layers in the model.
+                - rms_norm_eps (float): Epsilon value for RMS normalization.
 
         Returns:
-            None. This method initializes the Qwen2Model instance with the provided configuration parameters.
+            None.
 
         Raises:
             None.
@@ -717,11 +771,11 @@ class Qwen2Model(Qwen2PreTrainedModel):
                 It is used to access the embed tokens for input embeddings.
 
         Returns:
-            None
+            None:
                 This method returns None as it simply provides access to the input embeddings.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.embed_tokens
 
@@ -734,12 +788,13 @@ class Qwen2Model(Qwen2PreTrainedModel):
             value: The input embeddings to be set for the model. This should be of type torch.Tensor.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
 
-        This method sets the input embeddings for the Qwen2Model by assigning the provided 'value' to the 'embed_tokens' attribute of the model instance.
+        This method sets the input embeddings for the Qwen2Model by assigning the provided 'value' to the
+        'embed_tokens' attribute of the model instance.
         """
         self.embed_tokens = value
 
@@ -761,9 +816,11 @@ class Qwen2Model(Qwen2PreTrainedModel):
         Args:
             self (Qwen2Model): The instance of the Qwen2Model class.
             input_ids (mindspore.Tensor, optional): The input tensor containing token IDs. Default is None.
-            attention_mask (mindspore.Tensor, optional): An optional tensor specifying the attention mask. Default is None.
+            attention_mask (mindspore.Tensor, optional): An optional tensor specifying the attention mask.
+                Default is None.
             position_ids (mindspore.Tensor, optional): An optional tensor specifying the position IDs. Default is None.
-            past_key_values (List[mindspore.Tensor], optional): An optional list of tensors for past key values. Default is None.
+            past_key_values (List[mindspore.Tensor], optional): An optional list of tensors for past key values.
+                Default is None.
             inputs_embeds (mindspore.Tensor, optional): An optional tensor containing input embeddings. Default is None.
             use_cache (bool, optional): A flag indicating whether to use caching. Default is None.
             output_attentions (bool, optional): A flag indicating whether to output attentions. Default is None.
@@ -771,11 +828,12 @@ class Qwen2Model(Qwen2PreTrainedModel):
             return_dict (bool, optional): A flag indicating whether to return a dictionary. Default is None.
 
         Returns:
-            Union[Tuple, BaseModelOutputWithPast]: Returns a tuple or BaseModelOutputWithPast object containing model outputs.
+            Union[Tuple, BaseModelOutputWithPast]:
+                Returns a tuple or BaseModelOutputWithPast object containing model outputs.
 
         Raises:
-            - ValueError: Raised if both input_ids and inputs_embeds are specified, or if neither is specified.
-            - Warning: Raised if `use_cache=True` is incompatible with gradient checkpointing.
+            ValueError: Raised if both input_ids and inputs_embeds are specified, or if neither is specified.
+            Warning: Raised if `use_cache=True` is incompatible with gradient checkpointing.
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -881,61 +939,66 @@ class Qwen2Model(Qwen2PreTrainedModel):
 class Qwen2ForCausalLM(Qwen2PreTrainedModel):
 
     """
-    This class represents a Qwen2 model for causal language modeling (LM). It is a subclass of Qwen2PreTrainedModel. The Qwen2ForCausalLM class provides methods for initializing the model, setting and getting
-    input and output embeddings, setting and getting the decoder, constructing the model, and preparing inputs for generation.
+    This class represents a Qwen2 model for causal language modeling (LM). It is a subclass of Qwen2PreTrainedModel.
+    The Qwen2ForCausalLM class provides methods for initializing the model, setting and getting input and output
+    embeddings, setting and getting the decoder, constructing the model, and preparing inputs for generation.
 
-    To initialize an instance of the Qwen2ForCausalLM class, a configuration object should be passed as a parameter to the constructor. The model's architecture and settings are defined by this configuration.
+    To initialize an instance of the Qwen2ForCausalLM class, a configuration object should be passed as a parameter
+    to the constructor. The model's architecture and settings are defined by this configuration.
 
     The Qwen2ForCausalLM class has the following methods:
-        >   - `__init__(self, config)`: Initializes the Qwen2ForCausalLM instance with the given configuration.
-        >   - `get_input_embeddings(self)`: Returns the input embeddings of the model.
-        >   - `set_input_embeddings(self, value)`: Sets the input embeddings of the model to the given value.
-        >   - `get_output_embeddings(self)`: Returns the output embeddings of the model.
-        >   - `set_output_embeddings(self, new_embeddings)`: Sets the output embeddings of the model to the given new_embeddings.
-        >   - `set_decoder(self, decoder)`: Sets the decoder of the model to the given decoder.
-        >   - `get_decoder(self)`: Returns the decoder of the model.
-        >   - `construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict)`: Constructs the model using the
-                provided input arguments. This method returns a tuple of outputs, including the logits and optionally the loss, past key values, hidden states, and attentions.
-        >   - `prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, **kwargs)`: Prepares the inputs for generation. This method takes input_ids, past_key_values,
-                attention_mask, inputs_embeds, and additional keyword arguments as input and returns a dictionary of model inputs.
-        >   - `_reorder_cache(past_key_values, beam_idx)`: Reorders the past key values according to the given beam indices. This method is static and is used internally in the class.
+
+    - `__init__`: Initializes the Qwen2ForCausalLM instance with the given configuration.
+    - `get_input_embeddings`: Returns the input embeddings of the model.
+    - `set_input_embeddings`: Sets the input embeddings of the model to the given value.
+    - `get_output_embeddings`: Returns the output embeddings of the model.
+    - `set_output_embeddings`: Sets the output embeddings of the model to the given new_embeddings.
+    - `set_decoder`: Sets the decoder of the model to the given decoder.
+    - `get_decoder`: Returns the decoder of the model.
+    - `construct`: Constructs the model using the provided input arguments.
+    This method returns a tuple of outputs, including the logits and optionally the loss, past key values,
+    hidden states, and attentions.
+    - `prepare_inputs_for_generation`: Prepares the inputs for generation. This method takes input_ids, past_key_values,
+    attention_mask, inputs_embeds, and additional keyword arguments as input and returns a dictionary of model inputs.
+    - `_reorder_cache(past_key_values, beam_idx)`: Reorders the past key values according to the given beam indices.
+    This method is static and is used internally in the class.
 
     Example:
         ```python
         >>> from transformers import Qwen2ForCausalLM, Qwen2Config
-
+        ...
         >>> # Create a configuration object
         >>> config = Qwen2Config(vocab_size=100, hidden_size=512)
-
+        ...
         >>> # Initialize a Qwen2ForCausalLM instance
         >>> model = Qwen2ForCausalLM(config)
-
+        ...
         >>> # Set the input embeddings
         >>> embeddings = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
         >>> model.set_input_embeddings(embeddings)
-
+        ...
         >>> # Get the output embeddings
         >>> output_embeddings = model.get_output_embeddings()
-
+        ...
         >>> # Set the decoder
         >>> decoder = Qwen2Model(config)
         >>> model.set_decoder(decoder)
-
+        ...
         >>> # Get the decoder
         >>> decoder = model.get_decoder()
-
+        ...
         >>> # Construct the model
         >>> input_ids = [1, 2, 3]
         >>> attention_mask = [1, 1, 1]
         >>> outputs = model.construct(input_ids=input_ids, attention_mask=attention_mask)
-
+        ...
         >>> # Prepare inputs for generation
         >>> input_ids = [4, 5, 6]
         >>> past_key_values = [tensor1, tensor2]
         >>> attention_mask = [1, 1, 1]
         >>> inputs_embeds = [embedding1, embedding2]
         >>> model_inputs = model.prepare_inputs_for_generation(input_ids, past_key_values, attention_mask, inputs_embeds)
-
+        ... 
         >>> # Reorder cache
         >>> past_key_values = [tensor1, tensor2]
         >>> beam_idx = [0, 1, 2]
@@ -973,13 +1036,14 @@ class Qwen2ForCausalLM(Qwen2PreTrainedModel):
 
         Args:
             self (Qwen2ForCausalLM): The object instance of the Qwen2ForCausalLM class.
-                This parameter represents the instance of the Qwen2ForCausalLM class, which contains the model for which input embeddings are to be retrieved.
+                This parameter represents the instance of the Qwen2ForCausalLM class, which contains the model 
+                for which input embeddings are to be retrieved.
 
         Returns:
             None: This method returns None, as it directly accesses and returns the input embeddings from the model.
 
         Raises:
-            N/A
+            None.
         """
         return self.model.embed_tokens
 
@@ -989,13 +1053,15 @@ class Qwen2ForCausalLM(Qwen2PreTrainedModel):
 
         Args:
             self (Qwen2ForCausalLM): The instance of Qwen2ForCausalLM.
-            value (object): The input embeddings to be set for the model. It can be an instance of a custom embedding class or any other object with the required attributes and methods.
+            value (object): The input embeddings to be set for the model.
+                It can be an instance of a custom embedding class or any other object with
+                the required attributes and methods.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.model.embed_tokens = value
 
@@ -1024,14 +1090,15 @@ class Qwen2ForCausalLM(Qwen2PreTrainedModel):
 
         Args:
             self (Qwen2ForCausalLM): The instance of the Qwen2ForCausalLM class.
-            new_embeddings: The new embeddings to be set for the output layer. This can be a tensor or any other object that
-                            can be assigned to the 'lm_head' attribute of the Qwen2ForCausalLM instance.
+            new_embeddings: The new embeddings to be set for the output layer.
+                This can be a tensor or any other object that can be assigned to the 'lm_head' attribute of the
+                Qwen2ForCausalLM instance.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         self.lm_head = new_embeddings
 
@@ -1041,22 +1108,24 @@ class Qwen2ForCausalLM(Qwen2PreTrainedModel):
 
         Args:
             self (Qwen2ForCausalLM): An instance of the Qwen2ForCausalLM class.
-            decoder: The decoder object to be set as the model for Qwen2ForCausalLM. The decoder should implement the necessary methods and functionality required by Qwen2ForCausalLM.
+            decoder: The decoder object to be set as the model for Qwen2ForCausalLM.
+                The decoder should implement the necessary methods and functionality required by Qwen2ForCausalLM.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
 
         Note:
-            The decoder object should be compatible with the Qwen2ForCausalLM class and fulfill the requirements necessary for generating predictions or processing inputs.
+            The decoder object should be compatible with the Qwen2ForCausalLM class and fulfill the requirements
+            necessary for generating predictions or processing inputs.
 
-        Example Usage:
+        Example:
             ```python
-            qwen2 = Qwen2ForCausalLM()
-            decoder = Decoder()
-            qwen2.set_decoder(decoder)
+            >>> qwen2 = Qwen2ForCausalLM()
+            >>> decoder = Decoder()
+            >>> qwen2.set_decoder(decoder)
             ```
         """
         self.model = decoder
@@ -1070,11 +1139,11 @@ class Qwen2ForCausalLM(Qwen2PreTrainedModel):
                 This parameter is required for accessing the decoder model.
 
         Returns:
-            None.
-            The method returns the decoder model associated with the Qwen2ForCausalLM class.
+            model:
+                The method returns the decoder model associated with the Qwen2ForCausalLM class.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.model
 
@@ -1104,13 +1173,13 @@ class Qwen2ForCausalLM(Qwen2PreTrainedModel):
         Example:
             ```python
             >>> from transformers import AutoTokenizer, Qwen2ForCausalLM
-
+            ...
             >>> model = Qwen2ForCausalLM.from_pretrained(PATH_TO_CONVERTED_WEIGHTS)
             >>> tokenizer = AutoTokenizer.from_pretrained(PATH_TO_CONVERTED_TOKENIZER)
-
+            ...
             >>> prompt = "Hey, are you conscious? Can you talk to me?"
             >>> inputs = tokenizer(prompt, return_tensors="pt")
-
+            ...
             >>> # Generate
             >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
             >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
@@ -1182,13 +1251,16 @@ class Qwen2ForCausalLM(Qwen2PreTrainedModel):
             **kwargs: Additional keyword arguments.
 
         Returns:
-            dict: A dictionary containing the model inputs for generation.
-                >   - If inputs_embeds is not None and past_key_values is None, the dictionary contains {'inputs_embeds': inputs_embeds}.
-                >   - Otherwise, the dictionary contains {'input_ids': input_ids}.
-                >   - The dictionary also includes 'position_ids', 'past_key_values', 'use_cache', and 'attention_mask'.
+            dict:
+                A dictionary containing the model inputs for generation:
+
+                - If inputs_embeds is not None and past_key_values is None, the dictionary contains
+                {'inputs_embeds': inputs_embeds}.
+                - Otherwise, the dictionary contains {'input_ids': input_ids}.
+                - The dictionary also includes 'position_ids', 'past_key_values', 'use_cache', and 'attention_mask'.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         # Omit tokens covered by past_key_values
         if past_key_values is not None:
@@ -1250,15 +1322,17 @@ class Qwen2ForCausalLM(Qwen2PreTrainedModel):
         Method to reorder the cache based on the beam index.
 
         Args:
-            past_key_values (tuple): A tuple containing the past key values for each layer. Each element in the tuple should be a tensor representing the past state for a layer.
+            past_key_values (tuple): A tuple containing the past key values for each layer. Each element in the tuple
+                should be a tensor representing the past state for a layer.
             beam_idx (torch.Tensor): A tensor containing the beam indices used for reordering the past states.
 
         Returns:
-            None. This method modifies the input past_key_values in place and does not return any explicit value.
+            None: This method modifies the input past_key_values in place and does not return any explicit value.
 
         Raises:
-            - ValueError: If the past_key_values or beam_idx are not in the expected format or shape.
-            - IndexError: If the beam indices provided in beam_idx are out of bounds or not applicable to the past_key_values.
+            ValueError: If the past_key_values or beam_idx are not in the expected format or shape.
+            IndexError: If the beam indices provided in beam_idx are out of bounds or not applicable to the
+                past_key_values.
         """
         reordered_past = ()
         for layer_past in past_key_values:
@@ -1271,7 +1345,8 @@ class Qwen2ForCausalLM(Qwen2PreTrainedModel):
 class Qwen2ForSequenceClassification(Qwen2PreTrainedModel):
 
     """
-    Qwen2ForSequenceClassification is a class representing a sequence classification model that inherits from Qwen2PreTrainedModel. It includes methods for initializing the model with a configuration, getting
+    Qwen2ForSequenceClassification is a class representing a sequence classification model that inherits from
+    Qwen2PreTrainedModel. It includes methods for initializing the model with a configuration, getting
     and setting input embeddings, and constructing the model for sequence classification.
 
     Attributes:
@@ -1285,12 +1360,17 @@ class Qwen2ForSequenceClassification(Qwen2PreTrainedModel):
             model with the specified inputs and returns the sequence classifier output with past values.
 
     Args:
-        input_ids (Tensor, optional): The input tensor of shape `(batch_size, sequence_length)` representing the input sequence.
-        attention_mask (Tensor, optional): The attention mask tensor of shape `(batch_size, sequence_length)` indicating which tokens should be attended to.
-        position_ids (Tensor, optional): The position IDs tensor of shape `(batch_size, sequence_length)` representing the position of each token in the input sequence.
+        input_ids (Tensor, optional): The input tensor of shape `(batch_size, sequence_length)`
+            representing the input sequence.
+        attention_mask (Tensor, optional): The attention mask tensor of shape `(batch_size, sequence_length)`
+            indicating which tokens should be attended to.
+        position_ids (Tensor, optional): The position IDs tensor of shape `(batch_size, sequence_length)`
+            representing the position of each token in the input sequence.
         past_key_values (List[Tensor], optional): The list of past key values tensors for handling incremental decoding.
-        inputs_embeds (Tensor, optional): The input embeddings tensor of shape `(batch_size, sequence_length, hidden_size)` representing the embedded input sequence.
-        labels (Tensor, optional): The tensor of shape `(batch_size,)` representing the labels for computing the sequence classification/regression loss.
+        inputs_embeds (Tensor, optional): The input embeddings tensor of shape
+            `(batch_size, sequence_length, hidden_size)` representing the embedded input sequence.
+        labels (Tensor, optional): The tensor of shape `(batch_size,)` representing the labels for computing
+            the sequence classification/regression loss.
         use_cache (bool, optional): Indicates whether to use the cache for handling incremental decoding.
         output_attentions (bool, optional): Indicates whether to output attentions.
         output_hidden_states (bool, optional): Indicates whether to output hidden states.
@@ -1303,7 +1383,8 @@ class Qwen2ForSequenceClassification(Qwen2PreTrainedModel):
         ValueError: If batch sizes > 1 and no padding token is defined.
 
     Note:
-        This docstring is generated based on the provided code and is intended to provide a comprehensive understanding of the Qwen2ForSequenceClassification class and its methods. Additional details and
+        This docstring is generated based on the provided code and is intended to provide a comprehensive understanding
+        of the Qwen2ForSequenceClassification class and its methods. Additional details and
         specific usage instructions may be available in the official documentation or source code.
     """
     def __init__(self, config):
@@ -1336,7 +1417,7 @@ class Qwen2ForSequenceClassification(Qwen2PreTrainedModel):
             self: An instance of the Qwen2ForSequenceClassification class.
 
         Returns:
-            None. The method returns the input embeddings from the model.
+            embed_tokens: The method returns the input embeddings from the model.
 
         Raises:
             This method does not raise any exceptions.
@@ -1349,13 +1430,14 @@ class Qwen2ForSequenceClassification(Qwen2PreTrainedModel):
 
         Args:
             self (Qwen2ForSequenceClassification): The instance of the Qwen2ForSequenceClassification class.
-            value (object): The input embeddings to be set for the model. Should be of type torch.Tensor or any compatible object.
+            value (object): The input embeddings to be set for the model.
+                Should be of type torch.Tensor or any compatible object.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         self.model.embed_tokens = value
 

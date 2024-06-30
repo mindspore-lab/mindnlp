@@ -238,9 +238,8 @@ class CellUtilMixin:
                 Whether or not the attentions scores are computed by chunks or not.
 
         Returns:
-            `mindspore.Tensor` with shape `[num_hidden_layers x batch x
-            num_heads x seq_length x seq_length]` or list with
-            `[None]` for each layer.
+            `mindspore.Tensor` with shape `[num_hidden_layers x batch x num_heads x seq_length x seq_length]`
+                or list with `[None]` for each layer.
         """
         if head_mask is not None:
             head_mask = self._convert_head_mask_to_5d(head_mask, num_hidden_layers)
@@ -291,7 +290,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
 
     def __init__(self, config):
         """
-        __init__
         
         Initializes a new instance of the PreTrainedModel class.
         
@@ -300,7 +298,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
             config: A dictionary containing the configuration parameters for the model.
         
         Returns:
-            None: This method initializes the instance and does not return any value.
+            None.
         
         Raises:
             ValueError: If the config parameter is invalid or missing required fields.
@@ -324,10 +322,10 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
                 This parameter is used to access the attributes and methods of the class instance.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            This method does not raise any specific exceptions.
+            None.
         """
         if "MS" in str(self.__class__.__name__) and \
             'MS_DEV_FORCE_ACL' in os.environ:
@@ -618,7 +616,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
                 vectors at the end. Reducing the size will remove vectors from the end. If not provided or `None`, just
                 returns a pointer to the input tokens `torch.nn.Embedding` module of the model without doing anything.
 
-        Return:
+        Returns:
             `torch.nn.Embedding`: Pointer to the input tokens Embeddings Module of the model.
         """
         model_embeds = self._resize_token_embeddings(new_num_tokens, pad_to_multiple_of)
@@ -643,7 +641,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
                 Defaults to None.
         
         Returns:
-            None. The method modifies the input and output embeddings of the model in-place.
+            None: The method modifies the input and output embeddings of the model in-place.
         
         Raises:
             None.
@@ -694,7 +692,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
                 Reducing the size will remove vectors from the end
                 If not provided or None: return the provided token Embedding Module.
 
-        Return: ``mindspore.nn.Embeddings``
+        Returns: ``mindspore.nn.Embeddings``
             Pointer to the resized Embedding Module or the old Embedding Module if new_num_tokens is None
         """
         if pad_to_multiple_of is not None:
@@ -751,9 +749,9 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
                 to `False`): Whether `old_lm_head` is transposed or not. If True `old_lm_head.size()` is `lm_head_dim,
                 vocab_size` else `vocab_size, lm_head_dim`.
 
-        Return:
+        Returns:
             `nn.Dense`: Pointer to the resized Linear Module or the old Linear Module if `new_num_tokens` is
-            `None`
+                `None`
         """
         if new_num_tokens is None:
             return old_lm_head
@@ -811,7 +809,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
             has_new_lm_head_bias (bool): Whether the new language model head has a bias tensor.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -1602,10 +1600,10 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
             self: The instance of the PreTrainedModel class.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
 
 def get_parameter_dtype(parameter: Union[nn.Cell, GenerationMixin, "ModuleUtilsMixin"]):
@@ -1761,10 +1759,10 @@ class PoolerStartLogits(nn.Cell):
                 It specifies the pretrained configuration to be used for setting up the pooler's start logits.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            - ValueError: If the config parameter is not provided or is of an incorrect type.
+            ValueError: If the config parameter is not provided or is of an incorrect type.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, 1)
@@ -1809,10 +1807,11 @@ class PoolerEndLogits(nn.Cell):
 
         Args:
             self: The instance of the class.
-            config (PretrainedConfig): An instance of the PretrainedConfig class containing the configuration settings for the model.
+            config (PretrainedConfig): An instance of the PretrainedConfig class containing the configuration settings
+                for the model.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the input parameters are not of the expected types.
@@ -1897,7 +1896,7 @@ class PoolerAnswerClass(nn.Cell):
                 Restrictions: Must be a valid configuration object.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -2124,7 +2123,7 @@ class SequenceSummary(nn.Cell):
             config: The configuration object containing various parameters for sequence summarization.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             NotImplementedError: If the 'summary_type' attribute in the config is set to 'attn'.
@@ -2183,14 +2182,15 @@ class SequenceSummary(nn.Cell):
             TypeError: If the input arguments are of incorrect types.
 
         The method performs the following steps to construct the summary:
-            >1. If the summary type is 'last', it selects the last hidden state from each input sequence.
-            >2. If the summary type is 'first', it selects the first hidden state from each input sequence.
-            >3. If the summary type is 'mean', it calculates the mean of all hidden states in each input sequence.
-            >4. If the summary type is 'cls_index', it uses the CLS token indices to select the corresponding hidden states.
-               If cls_index is not provided, the last token in each sequence is used as the CLS token index.
-            >5. If the summary type is not one of the available options, it returns the original hidden states.
-            >6. The resulting hidden states are then passed through a series of dropout, summary, and activation layers.
-            >7. Finally, the output tensor is returned.
+
+        1. If the summary type is 'last', it selects the last hidden state from each input sequence.
+        2. If the summary type is 'first', it selects the first hidden state from each input sequence.
+        3. If the summary type is 'mean', it calculates the mean of all hidden states in each input sequence.
+        4. If the summary type is 'cls_index', it uses the CLS token indices to select the corresponding hidden states.
+           If cls_index is not provided, the last token in each sequence is used as the CLS token index.
+        5. If the summary type is not one of the available options, it returns the original hidden states.
+        6. The resulting hidden states are then passed through a series of dropout, summary, and activation layers.
+        7. Finally, the output tensor is returned.
 
         Note:
             - The summary type can be one of the following: 'last', 'first', 'mean', or 'cls_index'.

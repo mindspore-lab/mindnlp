@@ -122,7 +122,7 @@ class BertEmbeddings(nn.Cell):
                 - position_embedding_type (str, optional): The type of positional embedding, defaults to 'absolute'.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             AttributeError: If the config object does not have the required attributes.
@@ -162,7 +162,7 @@ class BertEmbeddings(nn.Cell):
             past_key_values_length (int): The length of past key values. Default is 0.
 
         Returns:
-            None: This method returns None.
+            None.
 
         Raises:
             TypeError: If the input_ids, token_type_ids, position_ids, or inputs_embeds are not of type mindspore.Tensor.
@@ -216,7 +216,7 @@ class BertSelfAttention(nn.Cell):
             position_embedding_type (str, optional): The type of position embedding to be used. Defaults to None.
 
         Returns:
-            None: The method performs instance initialization and does not return any value.
+            None.
 
         Raises:
             ValueError: If the hidden size specified in the config is not a multiple of the number of attention heads.
@@ -401,7 +401,7 @@ class BertSelfOutput(nn.Cell):
                 - Restrictions: Must be a valid configuration object.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the config parameter is not of the expected type.
@@ -443,7 +443,7 @@ class BertSelfOutput(nn.Cell):
             None: This method does not return any value but directly modifies the hidden states.
 
         Raises:
-            None specified.
+            None.
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
@@ -662,7 +662,8 @@ class BertLayer(nn.Cell):
 
         Args:
             self (BertLayer): The instance of the BertLayer class.
-            config (object): A configuration object containing various settings for the BertLayer.
+            config (object):
+                A configuration object containing various settings for the BertLayer.
 
                 - chunk_size_feed_forward (int): The chunk size used for feed-forward operations.
                 - is_decoder (bool): Indicates whether the model is designed as a decoder.
@@ -670,7 +671,7 @@ class BertLayer(nn.Cell):
                 - position_embedding_type (str): The type of position embedding to be used if cross attention is added.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError:
@@ -811,7 +812,7 @@ class BertEncoder(nn.Cell):
                     - Example: config = BertConfig(num_hidden_layers=12, ...)
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -927,7 +928,7 @@ class BertPooler(nn.Cell):
                 - Restrictions: Must be a valid configuration object.
 
         Returns:
-            None: The method initializes the BertPooler class and does not return any value.
+            None.
 
         Raises:
             None.
@@ -1019,10 +1020,10 @@ class BertLMPredictionHead(nn.Cell):
                 The config parameter is used to configure the prediction head's behavior and settings.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         super().__init__()
         self.transform = BertPredictionHeadTransform(config)
@@ -1088,7 +1089,7 @@ class BertOnlyMLMHead(nn.Cell):
             config: The configuration parameters for the BertLMPredictionHead.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -1138,10 +1139,10 @@ class BertOnlyNSPHead(nn.Cell):
         Args:
             self (BertOnlyNSPHead): The instance of the BertOnlyNSPHead class.
             config: The configuration object containing parameters for the NSP head.
-                    Expected to be an instance of a class that includes a 'hidden_size' attribute.
+                Expected to be an instance of a class that includes a 'hidden_size' attribute.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the config parameter is not provided or is not of the expected type.
@@ -1164,7 +1165,7 @@ class BertOnlyNSPHead(nn.Cell):
                 as the constructed sequence relationship score is directly assigned to the seq_relationship_score variable.
 
         Raises:
-            None: This method does not explicitly raise any exceptions.
+            None.
         """
         seq_relationship_score = self.seq_relationship(pooled_output)
         return seq_relationship_score
@@ -1183,7 +1184,7 @@ class BertPreTrainingHeads(nn.Cell):
             config: A configuration object containing settings for the BertPreTrainingHeads instance.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the provided config parameter is not of the expected type.
@@ -1205,7 +1206,8 @@ class BertPreTrainingHeads(nn.Cell):
                 It represents the contextualized representation of the entire input sequence.
 
         Returns:
-            tuple: A tuple containing two elements:
+            tuple:
+                A tuple containing two elements:
 
                 - prediction_scores (Tensor): The prediction scores tensor of shape (batch_size, sequence_length, vocab_size).
                 It represents the scores for predicting the masked tokens in the input sequence.
@@ -1260,7 +1262,7 @@ class BertModel(BertPreTrainedModel):
                 Defaults to True.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1282,10 +1284,10 @@ class BertModel(BertPreTrainedModel):
             self (BertModel): The instance of the BertModel class.
 
         Returns:
-            None: This method does not return a value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.embeddings.word_embeddings
 
@@ -1299,10 +1301,10 @@ class BertModel(BertPreTrainedModel):
                 It can be of any valid object type.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         self.embeddings.word_embeddings = new_embeddings
 
@@ -1350,7 +1352,7 @@ class BertModel(BertPreTrainedModel):
             return_dict (Optional[bool]): Flag indicating whether to return a dictionary.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If both input_ids and inputs_embeds are specified simultaneously.
@@ -1468,7 +1470,7 @@ class BertForPretraining(BertPreTrainedModel):
             config: A dictionary containing the configuration settings for the model.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the provided config parameter is not a dictionary.
@@ -1494,7 +1496,7 @@ class BertForPretraining(BertPreTrainedModel):
             None: This method returns the output embeddings through the self.cls.predictions.decoder attribute.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.cls.predictions.decoder
 
@@ -1558,7 +1560,7 @@ class BertForPretraining(BertPreTrainedModel):
             return_dict (Optional[bool]): Whether to return outputs as a dict. Default is None.
 
         Returns:
-            None: The method does not return any value.
+            None.
 
         Raises:
             None
@@ -1619,7 +1621,7 @@ class BertLMHeadModel(BertPreTrainedModel):
                     - Default is False.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -1643,10 +1645,10 @@ class BertLMHeadModel(BertPreTrainedModel):
             self (BertLMHeadModel): An instance of the BertLMHeadModel class.
 
         Returns:
-            None: This method does not return a value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
 
         This method retrieves the output embeddings of the BertLMHeadModel.
         The output embeddings are obtained by predicting the decoder of the model's predictions.
@@ -1667,7 +1669,7 @@ class BertLMHeadModel(BertPreTrainedModel):
                 Should be a tensor compatible with the existing model architecture.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1726,7 +1728,7 @@ class BertLMHeadModel(BertPreTrainedModel):
                 Flag indicating whether to return the output as a dictionary.
 
         Returns:
-            None: This method returns no value.
+            None.
 
         Raises:
             None
@@ -1915,7 +1917,7 @@ class BertForMaskedLM(BertPreTrainedModel):
             self (BertForMaskedLM): The instance of the BertForMaskedLM class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -1931,7 +1933,7 @@ class BertForMaskedLM(BertPreTrainedModel):
             new_embeddings (Any): The new embeddings to set for the output layer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -2085,10 +2087,10 @@ class BertForNextSentencePrediction(BertPreTrainedModel):
             return_dict (Optional[bool]): Whether to return a dictionary instead of a tuple as the output.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -2136,7 +2138,7 @@ class BertForSequenceClassification(BertPreTrainedModel):
                 It specifies the model architecture and parameters.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the provided configuration object is invalid or missing required parameters.
@@ -2259,7 +2261,7 @@ class BertForMultipleChoice(BertPreTrainedModel):
             config: An instance of the configuration class that holds various hyperparameters and settings for the model.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the provided config is not of the expected type.
@@ -2361,7 +2363,7 @@ class BertForTokenClassification(BertPreTrainedModel):
                 - Restrictions: Must be a valid configuration object.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -2443,9 +2445,9 @@ class BertForQuestionAnswering(BertPreTrainedModel):
             config (BertConfig):
                 The configuration for the Bert model. It contains various hyperparameters and settings.
 
-               - Type: BertConfig
-               - Purpose: Specifies the configuration for the Bert model.
-               - Restrictions: None
+                - Type: BertConfig
+                - Purpose: Specifies the configuration for the Bert model.
+                - Restrictions: None
 
         Returns:
             None
@@ -2503,10 +2505,10 @@ class BertForQuestionAnswering(BertPreTrainedModel):
             return_dict (Optional[bool]): Whether to return a dictionary as the output instead of a tuple.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -2594,12 +2596,11 @@ class BertForPreTraining(BertPreTrainedModel):
                 This parameter refers to the current instance of the BertForPreTraining class.
 
         Returns:
-            None
+            None:
                 This method returns None, as it retrieves the output embeddings for further processing.
 
         Raises:
-            None
-                This method does not raise any exceptions.
+            None.
         """
         return self.cls.predictions.decoder
 
@@ -2612,7 +2613,7 @@ class BertForPreTraining(BertPreTrainedModel):
             new_embeddings (Any): The new embeddings to be set for the model's output.
 
         Returns:
-            None. This method modifies the model's output embeddings in-place.
+            None: This method modifies the model's output embeddings in-place.
 
         Raises:
             None.
@@ -3187,7 +3188,7 @@ class BertDualOutput(nn.Cell):
                 - hidden_dropout_prob (float): The dropout probability for the hidden layer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the config parameter is not provided or is not of the expected type.
@@ -3268,11 +3269,11 @@ class BertDualLayer(nn.Cell):
             config (object):
                 The configuration object that contains the settings for the BertDualLayer.
 
-                    - chunk_size_feed_forward (int): The chunk size for feed-forward attention.
-                    - is_decoder (bool): Indicates whether the model is a decoder.
-                    - add_cross_attention (bool): Indicates whether cross attention is added.
-                        Raises a ValueError if cross attention is added and the model is not a decoder.
-                    - position_embedding_type (str): The type of position embedding for cross attention.
+                - chunk_size_feed_forward (int): The chunk size for feed-forward attention.
+                - is_decoder (bool): Indicates whether the model is a decoder.
+                - add_cross_attention (bool): Indicates whether cross attention is added.
+                    Raises a ValueError if cross attention is added and the model is not a decoder.
+                - position_embedding_type (str): The type of position embedding for cross attention.
 
         Returns:
             None
@@ -3317,7 +3318,7 @@ class BertDualLayer(nn.Cell):
             output_attentions (Optional[bool]): Flag indicating whether to output attention weights.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: Raised if `encoder_hidden_states` are provided but cross-attention layers are not instantiated in the BertDualLayer instance.
@@ -3420,7 +3421,7 @@ class BertDualEncoder(nn.Cell):
                 - Restrictions: Must be a valid dictionary object.
 
         Returns:
-            None: This method initializes the BertDualEncoder class with the provided configuration.
+            None.
 
         Raises:
             None.
@@ -3460,7 +3461,7 @@ class BertDualEncoder(nn.Cell):
             return_dict (Optional[bool]): Flag indicating whether to return a dictionary.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -3563,7 +3564,7 @@ class BertDualModel(BertPreTrainedModel):
             self: The instance of the BertDualModel class.
 
         Returns:
-            None. The method does not return any value.
+            None.
 
         Raises:
             None.
@@ -3590,7 +3591,7 @@ class BertDualModel(BertPreTrainedModel):
             value: The input embeddings to be set for the model. Should be of type WordEmbeddings.
 
         Returns:
-            None. This method updates the input embeddings for the BertDualModel in-place.
+            None: This method updates the input embeddings for the BertDualModel in-place.
 
         Raises:
             TypeError: If the provided 'value' is not of type WordEmbeddings.
@@ -3622,25 +3623,26 @@ class BertDualModel(BertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ):
         r"""
-        encoder_hidden_states  (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
-            Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
-            the model is configured as a decoder.
-        encoder_attention_mask (`torch.FloatTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing attention on the padding token indices of the encoder input.
-            This mask is used in the cross-attention if the model is configured as a decoder.
-            Mask values selected in `[0, 1]`:
+        Args:
+            encoder_hidden_states  (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+                Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
+                the model is configured as a decoder.
+            encoder_attention_mask (`torch.FloatTensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Mask to avoid performing attention on the padding token indices of the encoder input.
+                This mask is used in the cross-attention if the model is configured as a decoder.
+                Mask values selected in `[0, 1]`:
 
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-        past_key_values (`tuple(tuple(torch.FloatTensor))` of length `config.n_layers` with
-            each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
-            Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
-            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-        use_cache (`bool`, *optional*):
-            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-            `past_key_values`).
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+            past_key_values (`tuple(tuple(torch.FloatTensor))` of length `config.n_layers` with
+                each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
+                Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
+                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
+                don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
+                `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+            use_cache (`bool`, *optional*):
+                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
+                `past_key_values`).
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -3771,7 +3773,7 @@ class BertDualForSequenceClassification(BertPreTrainedModel):
                 - Restrictions: Must be a valid instance of the configuration class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the config parameter is not of the expected type.
@@ -3823,7 +3825,7 @@ class BertDualForSequenceClassification(BertPreTrainedModel):
             return_dict (Optional[bool]): Whether to return outputs as a dictionary. Default is None.
         
         Returns:
-            None: The method does not return any value.
+            None.
         
         Raises:
             ValueError: If the provided problem type is not supported or recognized.

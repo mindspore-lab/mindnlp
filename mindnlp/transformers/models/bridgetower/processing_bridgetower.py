@@ -52,10 +52,10 @@ class BridgeTowerProcessor(ProcessorMixin):
             tokenizer (object): An object representing the tokenizer to be used for tokenizing text.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         super().__init__(image_processor, tokenizer)
 

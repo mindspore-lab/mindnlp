@@ -211,7 +211,7 @@ class SeparableConv1D(nn.Cell):
             kernel_size: An integer specifying the size of the kernel.
 
         Returns:
-            None: This method initializes the SeparableConv1D instance.
+            None.
 
         Raises:
             ValueError: If input_filters is not an integer.
@@ -508,7 +508,7 @@ class ConvBertSelfOutput(nn.Cell):
 
         Returns:
             ms.Tensor: The output tensor of shape (batch_size, sequence_length, hidden_size).
-            This tensor represents the constructed output of the ConvBertSelfOutput layer.
+                This tensor represents the constructed output of the ConvBertSelfOutput layer.
 
         Raises:
             None.
@@ -701,7 +701,7 @@ class ConvBertIntermediate(nn.Cell):
                 Must be a string representing a predefined activation function or a custom activation function.
 
         Returns:
-            None. This method initializes the ConvBertIntermediate instance with the specified configuration parameters.
+            None.
 
         Raises:
             ValueError: If the num_groups parameter is not an integer greater than or equal to 1.
@@ -793,7 +793,7 @@ class ConvBertOutput(nn.Cell):
             ms.Tensor: The output tensor representing the constructed hidden states.
 
         Raises:
-            None: This method does not raise any specific exceptions.
+            None.
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
@@ -932,7 +932,7 @@ class ConvBertEncoder(nn.Cell):
                 It should be an instance of a compatible configuration class.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1057,7 +1057,7 @@ class ConvBertPredictionHeadTransform(nn.Cell):
                     - layer_norm_eps: Epsilon value for LayerNorm.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the config parameter is not provided or is of an unexpected type.
@@ -1106,7 +1106,7 @@ class ConvBertModel(ConvBertPreTrainedModel):
                 It is used to configure the model's parameters and behavior.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1132,10 +1132,10 @@ class ConvBertModel(ConvBertPreTrainedModel):
             self (ConvBertModel): The object instance of the ConvBertModel class.
 
         Returns:
-            None. The method returns the word embeddings from the input embeddings.
+            word_embeddings: The method returns the word embeddings from the input embeddings.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.embeddings.word_embeddings
 
@@ -1148,10 +1148,10 @@ class ConvBertModel(ConvBertPreTrainedModel):
             new_embeddings (Tensor): The new embeddings to be set for input.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.embeddings.word_embeddings = new_embeddings
 
@@ -1369,7 +1369,7 @@ class ConvBertForMaskedLM(ConvBertPreTrainedModel):
                 This should be of the same type and shape as the current embeddings.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1499,7 +1499,8 @@ class ConvBertForSequenceClassification(ConvBertPreTrainedModel):
 
         Args:
             self (ConvBertForSequenceClassification): The current instance of the ConvBertForSequenceClassification class.
-            config (ConvBertConfig): The configuration object for ConvBertForSequenceClassification.
+            config (ConvBertConfig):
+                The configuration object for ConvBertForSequenceClassification.
 
                 - num_labels (int): The number of labels for classification.
                 - ... (other configuration parameters)
@@ -1604,7 +1605,7 @@ class ConvBertForMultipleChoice(ConvBertPreTrainedModel):
             config (object): The configuration object containing various parameters for the model initialization.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -1803,14 +1804,16 @@ class ConvBertForQuestionAnswering(ConvBertPreTrainedModel):
 
         Args:
             self (object): The instance of the class.
-            config (object): Configuration object containing the model's settings.
+            config (object):
+                Configuration object containing the model's settings.
+
                 - num_labels (int): The number of labels for the model.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            TypeError: If the configuration object is not provided.
+            None.
         """
         super().__init__(config)
 
@@ -1853,7 +1856,9 @@ class ConvBertForQuestionAnswering(ConvBertPreTrainedModel):
             return_dict (Optional[bool]): Whether to return a dictionary output. Default is None.
 
         Returns:
-            Union[Tuple, QuestionAnsweringModelOutput]: The model output.
+            Union[Tuple, QuestionAnsweringModelOutput]:
+                The model output.
+
                 - If return_dict is False, returns a tuple containing the start logits, end logits, and additional outputs.
                 - If return_dict is True, returns a QuestionAnsweringModelOutput object containing the loss,
                 start logits, end logits, hidden states, and attentions.

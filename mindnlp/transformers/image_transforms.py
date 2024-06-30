@@ -505,8 +505,9 @@ def _center_to_corners_format(bboxes_center: "mindspore.Tensor") -> "mindspore.T
     Converts bounding boxes from center format to corners format.
 
     Args:
-        bboxes_center (mindspore.Tensor): A tensor containing bounding boxes in center format with shape (N, 4) where N is the number of boxes.
-            The four values represent center_x, center_y, width, and height of each bounding box.
+        bboxes_center (mindspore.Tensor): A tensor containing bounding boxes in center format with shape (N, 4)
+            where N is the number of boxes. The four values represent center_x, center_y, width, and height of
+            each bounding box.
 
     Returns:
         mindspore.Tensor: A tensor containing bounding boxes in corners format with shape (N, 4) where N is the number of boxes.
@@ -532,13 +533,14 @@ def _center_to_corners_format_numpy(bboxes_center: np.ndarray) -> np.ndarray:
         bboxes_center (np.ndarray):
             A NumPy array representing bounding boxes in center format.
             The array should have shape (N, 4) where N is the number of bounding boxes.
-            Each row should contain the coordinates of the center (center_x, center_y) and the dimensions (width, height) of a bounding box.
+            Each row should contain the coordinates of the center (center_x, center_y) and the dimensions
+            (width, height) of a bounding box.
 
     Returns:
         np.ndarray:
             A NumPy array representing bounding boxes in corners format.
-            The returned array has the same shape as bboxes_center and contains the coordinates of the corners (top-left and bottom-right)
-            of each bounding box.
+            The returned array has the same shape as bboxes_center and contains the coordinates of the corners
+            (top-left and bottom-right) of each bounding box.
 
     Raises:
         None

@@ -109,16 +109,16 @@ class XLNetTokenizer(PreTrainedTokenizer):
             SentencePiece](https://github.com/google/sentencepiece/tree/master/python) can be used, among other things,
             to set:
 
-            >   - `enable_sampling`: Enable subword regularization.
-            >   - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
+            - `enable_sampling`: Enable subword regularization.
+            - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
 
-            >       - `nbest_size = {0,1}`: No sampling is performed.
-            >       - `nbest_size > 1`: samples from the nbest_size results.
-            >       - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
-                        using forward-filtering-and-backward-sampling algorithm.
+                - `nbest_size = {0,1}`: No sampling is performed.
+                - `nbest_size > 1`: samples from the nbest_size results.
+                - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
+                using forward-filtering-and-backward-sampling algorithm.
 
-            >   - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
-                    BPE-dropout.
+            - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
+            BPE-dropout.
 
     Attributes:
         sp_model (`SentencePieceProcessor`):
@@ -161,7 +161,8 @@ class XLNetTokenizer(PreTrainedTokenizer):
             pad_token (str, optional): Padding token. Defaults to '<pad>'.
             cls_token (str, optional): Classification token. Defaults to '<cls>'.
             mask_token (str, optional): Mask token. Defaults to '<mask>'.
-            additional_special_tokens (list, optional): Additional special tokens to include. Defaults to ['<eop>', '<eod>'].
+            additional_special_tokens (list, optional): Additional special tokens to include.
+                Defaults to ['<eop>', '<eod>'].
             sp_model_kwargs (Dict[str, Any], optional): SentencePiece model keyword arguments. Defaults to None.
             **kwargs: Additional keyword arguments.
 
@@ -216,7 +217,8 @@ class XLNetTokenizer(PreTrainedTokenizer):
         Raises:
             None
 
-        This method calculates and returns the size of the vocabulary used by the XLNetTokenizer. The vocabulary size is determined by the number of unique tokens present in the tokenizer's sp_model.
+        This method calculates and returns the size of the vocabulary used by the XLNetTokenizer.
+        The vocabulary size is determined by the number of unique tokens present in the tokenizer's sp_model.
 
         Note:
             The vocabulary size represents the number of distinct tokens that the tokenizer can recognize and encode.
@@ -239,7 +241,9 @@ class XLNetTokenizer(PreTrainedTokenizer):
             self: The instance of the XLNetTokenizer class.
 
         Returns:
-            dict: A dictionary containing the vocabulary of the XLNetTokenizer. The keys of the dictionary are the tokens, and the values are their corresponding indices.
+            dict:
+                A dictionary containing the vocabulary of the XLNetTokenizer.
+                The keys of the dictionary are the tokens, and the values are their corresponding indices.
 
         Raises:
             None.
@@ -264,11 +268,11 @@ class XLNetTokenizer(PreTrainedTokenizer):
                 Represents the current XLNetTokenizer object.
 
         Returns:
-            None. This method returns a dictionary representing the state of the XLNetTokenizer object.
-            The 'sp_model' key in the dictionary is set to None before returning.
+            dict: This method returns a dictionary representing the state of the XLNetTokenizer object.
+                The 'sp_model' key in the dictionary is set to None before returning.
 
         Raises:
-            No exceptions are raised by this method.
+            None.
         """
         state = self.__dict__.copy()
         state["sp_model"] = None
@@ -276,20 +280,25 @@ class XLNetTokenizer(PreTrainedTokenizer):
 
     def __setstate__(self, d):
         """
-        This method __setstate__ is defined in the class XLNetTokenizer and is used to set the internal state of the object based on the provided dictionary 'd'.
+        This method __setstate__ is defined in the class XLNetTokenizer and is used to set the internal state of the
+        object based on the provided dictionary 'd'.
 
         Args:
             self (XLNetTokenizer): The instance of the XLNetTokenizer class.
-            d (dict): A dictionary containing the state information to be set. The keys and values in the dictionary are used to update the internal state of the XLNetTokenizer object.
+            d (dict): A dictionary containing the state information to be set. The keys and values in the dictionary
+                are used to update the internal state of the XLNetTokenizer object.
 
         Returns:
             None. This method does not return any value.
 
         Raises:
-            No specific exceptions are raised by this method under normal circumstances. However, potential exceptions that could be raised include:
-                >   - AttributeError: If the 'sp_model_kwargs' attribute is not found within the XLNetTokenizer object.
-                >   - TypeError: If the provided 'd' parameter is not a dictionary.
-                >   - Other exceptions related to the SentencePieceProcessor object creation or loading process may be raised from the spm.SentencePieceProcessor constructor or Load method.
+            None:
+                However, potential exceptions that could be raised include:
+
+                - AttributeError: If the 'sp_model_kwargs' attribute is not found within the XLNetTokenizer object.
+                - TypeError: If the provided 'd' parameter is not a dictionary.
+                - Other exceptions related to the SentencePieceProcessor object creation or loading process may be
+                raised from the spm.SentencePieceProcessor constructor or Load method.
         """
         self.__dict__ = d
 
@@ -375,11 +384,15 @@ class XLNetTokenizer(PreTrainedTokenizer):
         Args:
             self: The instance of the XLNetTokenizer class.
             token_ids (List[int]): A list of token IDs to be decoded into a string.
-            skip_special_tokens (bool): A flag indicating whether to skip special tokens during decoding. Defaults to False.
-            clean_up_tokenization_spaces (bool): A flag indicating whether to clean up tokenization spaces in the decoded text. If None, the value is determined by the clean_up_tokenization_spaces attribute of
+            skip_special_tokens (bool): A flag indicating whether to skip special tokens during decoding.
+                Defaults to False.
+            clean_up_tokenization_spaces (bool): A flag indicating whether to clean up tokenization spaces in the
+                decoded text. If None, the value is determined by the clean_up_tokenization_spaces attribute of
                 the XLNetTokenizer instance.
-            spaces_between_special_tokens (bool): A flag indicating whether to include spaces between special tokens in the decoded text. Defaults to True.
-            **kwargs: Additional keyword arguments. 'use_source_tokenizer' is a supported argument to control the use of the source tokenizer during decoding.
+            spaces_between_special_tokens (bool): A flag indicating whether to include spaces between special tokens
+                in the decoded text. Defaults to True.
+            **kwargs: Additional keyword arguments. 'use_source_tokenizer' is a supported argument to control the
+                use of the source tokenizer during decoding.
 
         Returns:
             str: The decoded string representation of the token IDs.
@@ -431,8 +444,8 @@ class XLNetTokenizer(PreTrainedTokenizer):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. An XLNet sequence has the following format:
 
-        >   - single sequence: `X <sep> <cls>`
-        >   - pair of sequences: `A <sep> B <sep> <cls>`
+        - single sequence: `X <sep> <cls>`
+        - pair of sequences: `A <sep> B <sep> <cls>`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -524,12 +537,12 @@ class XLNetTokenizer(PreTrainedTokenizer):
             PermissionError: If the specified save_directory is not accessible for writing.
 
         Note:
-            >   - The saved vocabulary file will be named as per the following format:
-                '<filename_prefix>-vocab.txt' if filename_prefix is provided, otherwise 'vocab.txt'.
-            >   - If the provided save_directory is the same as the current vocabulary file's directory and
-                the vocabulary file already exists, it will be copied to the save_directory.
-            >   - If the current vocabulary file does not exist, a new vocabulary file will be created in the
-                save_directory using the serialized model from the sp_model attribute of the tokenizer.
+            - The saved vocabulary file will be named as per the following format:
+            '<filename_prefix>-vocab.txt' if filename_prefix is provided, otherwise 'vocab.txt'.
+            - If the provided save_directory is the same as the current vocabulary file's directory and
+            the vocabulary file already exists, it will be copied to the save_directory.
+            - If the current vocabulary file does not exist, a new vocabulary file will be created in the
+            save_directory using the serialized model from the sp_model attribute of the tokenizer.
 
         Example:
             ```python

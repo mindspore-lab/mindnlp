@@ -60,7 +60,7 @@ class BlipProcessor(ProcessorMixin):
                 - Restrictions: The 'return_token_type_ids' attribute of the tokenizer should be set to False.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None.

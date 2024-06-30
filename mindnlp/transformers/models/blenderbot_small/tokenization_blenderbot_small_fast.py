@@ -68,7 +68,7 @@ class BlenderbotSmallTokenizerFast(PreTrainedTokenizerFast):
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None: This method initializes a BlenderbotSmallTokenizerFast object.
+            None.
         
         Raises:
             ValueError: If the vocab_file or merges_file is not provided.
@@ -99,7 +99,7 @@ class BlenderbotSmallTokenizerFast(PreTrainedTokenizerFast):
             token_ids_1 (list, optional): The token IDs for the second input sequence. Defaults to None.
         
         Returns:
-            None. The method modifies the input sequences by adding special tokens.
+            None: The method modifies the input sequences by adding special tokens.
         
         Raises:
             None.

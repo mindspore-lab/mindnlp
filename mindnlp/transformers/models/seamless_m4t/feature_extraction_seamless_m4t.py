@@ -69,15 +69,16 @@ class SeamlessM4TFeatureExtractor(SequenceFeatureExtractor):
             self (SeamlessM4TFeatureExtractor): The instance of the class.
             feature_size (int, optional): The size of the extracted feature. Defaults to 80.
             sampling_rate (int, optional): The sampling rate of the audio. Defaults to 16000.
-            num_mel_bins (int, optional): The number of mel bins for mel-frequency cepstral coefficients (MFCC). Defaults to 80.
+            num_mel_bins (int, optional): The number of mel bins for mel-frequency cepstral coefficients (MFCC).
+                Defaults to 80.
             padding_value (float, optional): The value used for padding. Defaults to 0.0.
             stride (int, optional): The stride for feature extraction. Defaults to 2.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.num_mel_bins = num_mel_bins
         self.return_attention_mask = True
@@ -179,12 +180,13 @@ class SeamlessM4TFeatureExtractor(SequenceFeatureExtractor):
             padding (`bool`, `str` or [`~utils.PaddingStrategy`], *optional*, defaults to `True`):
                 Select a strategy to pad the returned sequences (according to the model's padding side and padding
                 index) among:
-                    >   - `True` or `'longest'`: Pad to the longest sequence in the batch (or no padding if only a single
-                        sequence if provided).
-                    >   - `'max_length'`: Pad to a maximum length specified with the argument `max_length` or to the maximum
-                        acceptable input length for the model if that argument is not provided.
-                    >   - `False` or `'do_not_pad'` (default): No padding (i.e., can output a batch with sequences of different
-                        lengths).
+
+                - `True` or `'longest'`: Pad to the longest sequence in the batch (or no padding if only a single
+                sequence if provided).
+                - `'max_length'`: Pad to a maximum length specified with the argument `max_length` or to the maximum
+                acceptable input length for the model if that argument is not provided.
+                - `False` or `'do_not_pad'` (default): No padding (i.e., can output a batch with sequences of different
+                lengths).
             pad_to_multiple_of (`int`, *optional*, defaults to 2):
                 If set will pad the sequence to a multiple of the provided value.
 
@@ -209,9 +211,10 @@ class SeamlessM4TFeatureExtractor(SequenceFeatureExtractor):
 
             return_tensors (`str` or [`~utils.TensorType`], *optional*):
                 If set, will return tensors instead of list of python integers. Acceptable values are:
-                >   - `'tf'`: Return TensorFlow `tf.constant` objects.
-                >   - `'pt'`: Return PyTorch `torch.Tensor` objects.
-                >   - `'np'`: Return Numpy `np.ndarray` objects.
+
+                - `'tf'`: Return TensorFlow `tf.constant` objects.
+                - `'pt'`: Return PyTorch `torch.Tensor` objects.
+                - `'np'`: Return Numpy `np.ndarray` objects.
             sampling_rate (`int`, *optional*):
                 The sampling rate at which the `raw_speech` input was sampled. It is strongly recommended to pass
                 `sampling_rate` at the forward call to prevent silent errors.

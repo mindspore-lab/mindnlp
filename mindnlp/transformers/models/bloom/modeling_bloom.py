@@ -69,6 +69,7 @@ def build_alibi_tensor(attention_mask: mindspore.Tensor, num_heads: int, dtype) 
             number of heads
         dtype (`torch.dtype`, *optional*, default=`torch.bfloat16`):
             dtype of the output tensor
+
     Returns:
         tensor shaped (batch_size * num_heads, 1, max_seq_len)
     """
@@ -242,10 +243,10 @@ class BloomAttention(nn.Cell):
             output_attentions (bool): Flag indicating whether to output attention scores. Default is False.
 
         Returns:
-            None: This method does not return a value.
+            None.
 
         Raises:
-            None specified.
+            None.
         """
         fused_qkv = self.query_key_value(hidden_states)  # [batch_size, seq_length, 3 x hidden_size]
 
@@ -370,7 +371,7 @@ class BloomMLP(nn.Cell):
                 - `hidden_dropout` (float): The dropout rate for the hidden layer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -449,11 +450,11 @@ class BloomBlock(nn.Cell):
                 - n_head (int): The number of attention heads.
                 - layer_norm_epsilon (float): The epsilon value for LayerNorm.
                 - apply_residual_connection_post_layernorm (bool):
-                    Flag indicating whether to apply residual connection post LayerNorm.
+                Flag indicating whether to apply residual connection post LayerNorm.
                 - hidden_dropout (float): The dropout rate for the hidden layers.
 
         Returns:
-            None: This method initializes the BloomBlock object with the specified configuration.
+            None.
 
         Raises:
             None.
@@ -670,8 +671,7 @@ class BloomModel(BloomPreTrainedModel):
                 - layer_norm_epsilon (float): The epsilon value for layer normalization.
 
         Returns:
-            None:
-                This method initializes the BloomModel instance with the provided configuration settings.
+            None.
 
         Raises:
             None.
@@ -740,7 +740,7 @@ class BloomModel(BloomPreTrainedModel):
                 It should be a tensor representing the word embeddings.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -796,6 +796,7 @@ class BloomModel(BloomPreTrainedModel):
         Returns:
             Union[Tuple[mindspore.Tensor, ...], BaseModelOutputWithPastAndCrossAttentions]:
                 A tuple of the following tensors depending on the value of 'return_dict':
+
                 - hidden_states (mindspore.Tensor): Output tensor of shape (batch_size, seq_length, hidden_size)
                 containing the output features of the last layer.
                 - presents (Tuple[mindspore.Tensor, ...]): Tuple of length 'n_layer' containing tuples of two tensors of
@@ -953,7 +954,7 @@ class BloomForCausalLM(BloomPreTrainedModel):
             config (BloomConfig): The configuration object containing the model's hyperparameters and settings.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -973,10 +974,10 @@ class BloomForCausalLM(BloomPreTrainedModel):
             self (BloomForCausalLM): The instance of the BloomForCausalLM class.
 
         Returns:
-            None: The method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.lm_head
 
@@ -989,7 +990,7 @@ class BloomForCausalLM(BloomPreTrainedModel):
             new_embeddings (mindspore.Tensor): The new embeddings to be set for the model's lm_head.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1350,7 +1351,7 @@ class BloomForTokenClassification(BloomPreTrainedModel):
                 This parameter is required.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the config parameter is not an instance of BloomConfig.
@@ -1468,7 +1469,7 @@ class BloomForQuestionAnswering(BloomPreTrainedModel):
             config: A dictionary containing the configuration parameters for the model.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None.

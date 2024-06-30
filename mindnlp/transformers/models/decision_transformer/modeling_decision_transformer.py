@@ -681,7 +681,7 @@ class DecisionTransformerModel(DecisionTransformerPreTrainedModel):
         Returns:
             `Union[Tuple[mindspore.Tensor], DecisionTransformerOutput]`
 
-        Examples:
+        Example:
             ```python
             >>> from transformers import DecisionTransformerModel
             >>> import torch

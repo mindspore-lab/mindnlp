@@ -494,10 +494,10 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
             is_split_into_words (bool): A flag indicating whether the input text is already split into words. Default is False.
         
         Returns:
-            None. The method modifies the input text in place.
+            None: The method modifies the input text in place.
         
         Raises:
-            No specific exceptions are documented to be raised by this method.
+            None.
         """
         add_prefix_space = kwargs.pop("add_prefix_space", self.add_prefix_space)
         if (is_split_into_words or add_prefix_space) and (len(text) > 0 and not text[0].isspace()):

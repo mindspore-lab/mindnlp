@@ -40,19 +40,19 @@ class ChatGLM3ForConditionalGeneration(ChatGLM2ForConditionalGeneration):
     """ChatGLM3ForConditionalGeneration"""
     def process_response(self, output, history):
         """
-            Process the response by splitting it into metadata and content, updating the history, and replacing placeholders.
-        
-            Args:
-                self (ChatGLM3ForConditionalGeneration): An instance of the ChatGLM3ForConditionalGeneration class.
-                output (str): The response string received from the model.
-                history (list): The list of previous conversation history.
-        
-            Returns:
-                None
-        
-            Raises:
-                None
-            """
+        Process the response by splitting it into metadata and content, updating the history, and replacing placeholders.
+
+        Args:
+            self (ChatGLM3ForConditionalGeneration): An instance of the ChatGLM3ForConditionalGeneration class.
+            output (str): The response string received from the model.
+            history (list): The list of previous conversation history.
+
+        Returns:
+            None
+
+        Raises:
+            None
+        """
         content = ""
         history = copy.deepcopy(history)
         for response in output.split("<|assistant|>"):
@@ -96,10 +96,11 @@ class ChatGLM3ForConditionalGeneration(ChatGLM2ForConditionalGeneration):
             **kwargs: Additional keyword arguments to be passed to the generation process.
 
         Returns:
-            None: This method does not return any value explicitly. It generates a response and updates the conversation history.
+            None: This method does not return any value explicitly.
+                It generates a response and updates the conversation history.
 
         Raises:
-            No specific exceptions are documented to be raised by this method.
+            None.
         """
         if history is None:
             history = []
@@ -144,7 +145,7 @@ class ChatGLM3ForConditionalGeneration(ChatGLM2ForConditionalGeneration):
                 but yields the generated chat response along with the updated history if return_past_key_values is True.
 
         Raises:
-            None: This method does not explicitly raise any exceptions.
+            None.
         """
         if history is None:
             history = []
@@ -194,30 +195,30 @@ class ChatGLM3ForConditionalGeneration(ChatGLM2ForConditionalGeneration):
             **kwargs,
     ):
         """
-            Generate sequences of tokens based on the provided input_ids using the ChatGLM3 model for conditional generation.
-        
-            Args:
-                self (ChatGLM3ForConditionalGeneration): The instance of the ChatGLM3ForConditionalGeneration class.
-                input_ids (mindspore.Tensor): The input sequence of tokens.
-                generation_config (Optional[GenerationConfig]):
-                    The configuration for the generation process. Defaults to None.
-                logits_processor (Optional[LogitsProcessorList]):
-                    The list of logits processors for modifying the logits. Defaults to None.
-                stopping_criteria (Optional[StoppingCriteriaList]):
-                    The list of stopping criteria for terminating the generation. Defaults to None.
-                prefix_allowed_tokens_fn (Optional[Callable[[int, mindspore.Tensor], List[int]]]):
-                    The function to determine which tokens are allowed as prefixes during generation. Defaults to None.
-                return_past_key_values (bool): Whether to return the past key values during generation. Defaults to False.
-                **kwargs: Additional keyword arguments.
-        
-            Returns:
-                None.
-        
-            Raises:
-                UserWarning: If the `max_length` parameter is used to control the generation length, a warning is raised because this behavior is deprecated.
-                UserWarning: If both `max_new_tokens` and `max_length` parameters are set, a warning is raised to indicate that `max_new_tokens` takes precedence.
-                UserWarning: If the input length exceeds the `max_length` parameter, a warning is raised to consider increasing `max_new_tokens`.
-            """
+        Generate sequences of tokens based on the provided input_ids using the ChatGLM3 model for conditional generation.
+
+        Args:
+            self (ChatGLM3ForConditionalGeneration): The instance of the ChatGLM3ForConditionalGeneration class.
+            input_ids (mindspore.Tensor): The input sequence of tokens.
+            generation_config (Optional[GenerationConfig]):
+                The configuration for the generation process. Defaults to None.
+            logits_processor (Optional[LogitsProcessorList]):
+                The list of logits processors for modifying the logits. Defaults to None.
+            stopping_criteria (Optional[StoppingCriteriaList]):
+                The list of stopping criteria for terminating the generation. Defaults to None.
+            prefix_allowed_tokens_fn (Optional[Callable[[int, mindspore.Tensor], List[int]]]):
+                The function to determine which tokens are allowed as prefixes during generation. Defaults to None.
+            return_past_key_values (bool): Whether to return the past key values during generation. Defaults to False.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            None.
+
+        Raises:
+            UserWarning: If the `max_length` parameter is used to control the generation length, a warning is raised because this behavior is deprecated.
+            UserWarning: If both `max_new_tokens` and `max_length` parameters are set, a warning is raised to indicate that `max_new_tokens` takes precedence.
+            UserWarning: If the input length exceeds the `max_length` parameter, a warning is raised to consider increasing `max_new_tokens`.
+        """
         _, input_ids_seq_length = input_ids.shape[0], input_ids.shape[-1]
 
         if generation_config is None:

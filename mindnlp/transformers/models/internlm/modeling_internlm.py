@@ -100,7 +100,7 @@ class InternLMRMSNorm(nn.Cell):
             hidden_states (Tensor): Tensor holding the hidden states. Should be of type mindspore.Tensor.
             
         Returns:
-            None. This method modifies the input hidden states in-place.
+            None: This method modifies the input hidden states in-place.
         
         Raises:
             ValueError: If the input hidden_states are not of type mindspore.Tensor.
@@ -130,7 +130,7 @@ class InternLMRotaryEmbedding(nn.Cell):
             base (int, optional): The base value for calculations. Defaults to 10000.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -153,15 +153,20 @@ class InternLMRotaryEmbedding(nn.Cell):
         
         Args:
             self (InternLMRotaryEmbedding): The instance of the InternLMRotaryEmbedding class.
-            x: The input tensor for which the rotary embeddings are to be constructed.
-               Type: tensor
-               Purpose: This parameter represents the input tensor for which the rotary embeddings are to be constructed.
-            seq_len (int, optional): The length of the input sequence.
-               Type: int
-               Purpose: This parameter represents the length of the input sequence for which the rotary embeddings are to be constructed. If not provided, it defaults to None.
+            x:
+                The input tensor for which the rotary embeddings are to be constructed.
+
+                - Type: tensor
+                - Purpose: This parameter represents the input tensor for which the rotary embeddings are to be constructed.
+            seq_len (int, optional):
+                The length of the input sequence.
+
+                - Type: int
+                - Purpose: This parameter represents the length of the input sequence for which the rotary embeddings
+                    are to be constructed. If not provided, it defaults to None.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If seq_len is greater than the maximum sequence length cached.
@@ -186,34 +191,38 @@ class InternLMRotaryEmbedding(nn.Cell):
 class InternLMDynamicNTKScalingRotaryEmbedding(InternLMRotaryEmbedding):
 
     """
-    The `InternLMDynamicNTKScalingRotaryEmbedding` class is a Python class that represents a dynamic version of the Neural Tangent Kernel (NTK) Scaling Rotary Embedding used in the context of an InternLM model.
+    The `InternLMDynamicNTKScalingRotaryEmbedding` class is a Python class that represents a dynamic version of the
+    Neural Tangent Kernel (NTK) Scaling Rotary Embedding used in the context of an InternLM model.
     
-    This class inherits from the `InternLMRotaryEmbedding` class and provides additional functionality for dynamically adjusting the NTK scaling factor based on the sequence length. It calculates and caches
-    the cosine and sine values necessary for the rotary embeddings.
+    This class inherits from the `InternLMRotaryEmbedding` class and provides additional functionality for dynamically
+    adjusting the NTK scaling factor based on the sequence length. It calculates and caches the cosine and sine values
+    necessary for the rotary embeddings.
 
     Attributes:
         scaling_factor (float): The scaling factor used for adjusting the NTK scaling based on sequence length.
 
     Methods:
-        __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
-            Initializes the `InternLMDynamicNTKScalingRotaryEmbedding` object with the specified dimensions, maximum position embeddings, base, and scaling factor. Calls the superclass initializer.
+        __init__:
+            Initializes the `InternLMDynamicNTKScalingRotaryEmbedding` object with the specified dimensions,
+            maximum position embeddings, base, and scaling factor. Calls the superclass initializer.
 
-        _set_cos_sin_cache(self, seq_len, dtype):
-            Sets the cosine and sine cache based on the provided sequence length and data type. Calculates the NTK scaling factor, inverse frequencies, and caches the cosine and sine values.
+        _set_cos_sin_cache:
+            Sets the cosine and sine cache based on the provided sequence length and data type. Calculates the NTK
+            scaling factor, inverse frequencies, and caches the cosine and sine values.
 
     Note:
         This class assumes the existence of the `InternLMRotaryEmbedding` superclass.
 
-    Example usage:
+    Example:
         ```python
-        # Create an instance of InternLMDynamicNTKScalingRotaryEmbedding
-        embedding = InternLMDynamicNTKScalingRotaryEmbedding(dim=512, max_position_embeddings=1024, base=20000, scaling_factor=0.8)
-
-        # Access the scaling factor attribute
-        scaling_factor = embedding.scaling_factor
-
-        # Call the _set_cos_sin_cache method
-        embedding._set_cos_sin_cache(seq_len=512, dtype=torch.float32)
+        >>> # Create an instance of InternLMDynamicNTKScalingRotaryEmbedding
+        >>> embedding = InternLMDynamicNTKScalingRotaryEmbedding(dim=512, max_position_embeddings=1024, base=20000, scaling_factor=0.8)
+        ...
+        >>> # Access the scaling factor attribute
+        >>> scaling_factor = embedding.scaling_factor
+        ...
+        >>> # Call the _set_cos_sin_cache method
+        >>> embedding._set_cos_sin_cache(seq_len=512, dtype=torch.float32)
         ```
     """
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
@@ -228,10 +237,10 @@ class InternLMDynamicNTKScalingRotaryEmbedding(InternLMRotaryEmbedding):
             scaling_factor (float, optional): The scaling factor applied to the embeddings. Defaults to 1.0.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.scaling_factor = scaling_factor
         super().__init__(dim, max_position_embeddings, base)
@@ -245,14 +254,15 @@ class InternLMDynamicNTKScalingRotaryEmbedding(InternLMRotaryEmbedding):
         Args:
             self: The instance of the class.
             seq_len (int): The length of the input sequence. Must be greater than 0.
-            dtype: The data type for the calculations. Should be a valid data type compatible with the operations performed.
+            dtype: The data type for the calculations.
+                Should be a valid data type compatible with the operations performed.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            - ValueError: If the input sequence length 'seq_len' is not a positive integer.
-            - TypeError: If the provided data type 'dtype' is not valid or compatible with the operations.
+            ValueError: If the input sequence length 'seq_len' is not a positive integer.
+            TypeError: If the provided data type 'dtype' is not valid or compatible with the operations.
         """
         self.max_seq_len_cached = seq_len
 
@@ -307,14 +317,15 @@ class InternLMMLP(nn.Cell):
             self: The instance of the class.
             hidden_size (int): The size of the hidden layer in the neural network.
             intermediate_size (int): The size of the intermediate layer in the neural network.
-            hidden_act (str): The activation function for the hidden layer. It should be one of the supported activation functions.
+            hidden_act (str): The activation function for the hidden layer.
+                It should be one of the supported activation functions.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            - TypeError: If the input parameters are not of the expected types.
-            - ValueError: If the hidden_act parameter does not correspond to a supported activation function.
+            TypeError: If the input parameters are not of the expected types.
+            ValueError: If the hidden_act parameter does not correspond to a supported activation function.
         """
         super().__init__()
         self.gate_proj = nn.Dense(hidden_size, intermediate_size, has_bias=False)
@@ -331,10 +342,10 @@ class InternLMMLP(nn.Cell):
             x: The input data for the model (type: unspecified).
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
 
@@ -357,23 +368,26 @@ class InternLMAttention(nn.Cell):
         This method initializes the InternLMAttention class by setting the instance variables and initializing the projection layers.
 
         The `config` parameter is an instance of the InternLMConfig class, which contains the following attributes:
-        >   - `hidden_size` (int): The size of the hidden state.
-        >   - `num_attention_heads` (int): The number of attention heads.
-        >   - `max_position_embeddings` (int): The maximum number of position embeddings.
-        >   - `bias` (bool): Whether to include bias in the projection layers.
+
+        - `hidden_size` (int): The size of the hidden state.
+        - `num_attention_heads` (int): The number of attention heads.
+        - `max_position_embeddings` (int): The maximum number of position embeddings.
+        - `bias` (bool): Whether to include bias in the projection layers.
 
         The method sets the following instance variables:
-        >   - `config` (InternLMConfig): The configuration instance.
-        >   - `hidden_size` (int): The size of the hidden state.
-        >   - `num_heads` (int): The number of attention heads.
-        >   - `head_dim` (int): The dimension of each attention head.
-        >   - `max_position_embeddings` (int): The maximum number of position embeddings.
+
+        - `config` (InternLMConfig): The configuration instance.
+        - `hidden_size` (int): The size of the hidden state.
+        - `num_heads` (int): The number of attention heads.
+        - `head_dim` (int): The dimension of each attention head.
+        - `max_position_embeddings` (int): The maximum number of position embeddings.
 
         The method also initializes the following projection layers:
-        >   - `q_proj` (Dense): The projection layer for the query.
-        >   - `k_proj` (Dense): The projection layer for the key.
-        >   - `v_proj` (Dense): The projection layer for the value.
-        >   - `o_proj` (Dense): The projection layer for the output.
+
+        - `q_proj` (Dense): The projection layer for the query.
+        - `k_proj` (Dense): The projection layer for the key.
+        - `v_proj` (Dense): The projection layer for the value.
+        - `o_proj` (Dense): The projection layer for the output.
 
         If the product of `head_dim` and `num_heads` is not equal to `hidden_size`, a ValueError is raised.
         """
@@ -404,7 +418,7 @@ class InternLMAttention(nn.Cell):
             self: The instance of the InternLMAttention class.
 
         Returns:
-            None. However, it initializes and assigns the rotary embedding to the instance variable 'rotary_emb'.
+            None: However, it initializes and assigns the rotary embedding to the instance variable 'rotary_emb'.
 
         Raises:
             ValueError: If the rotary embedding's type specified in the configuration is not one of ('origin', 'dynamic').
@@ -437,7 +451,7 @@ class InternLMAttention(nn.Cell):
             bsz (int): The batch size.
 
         Returns:
-            None. The method modifies the input tensor in-place.
+            None: The method modifies the input tensor in-place.
 
         Raises:
             None.
@@ -459,18 +473,25 @@ class InternLMAttention(nn.Cell):
 
         Args:
             self: The object instance.
-            hidden_states (mindspore.Tensor): The input hidden states. Its shape is (batch_size, sequence_length, hidden_size).
-            attention_mask (Optional[mindspore.Tensor]): The attention mask tensor. It has the same shape as `hidden_states`. Default is None.
-            position_ids (Optional[mindspore.Tensor]): The position ids tensor. It has the same shape as `hidden_states`. Default is None.
+            hidden_states (mindspore.Tensor): The input hidden states.
+                Its shape is (batch_size, sequence_length, hidden_size).
+            attention_mask (Optional[mindspore.Tensor]): The attention mask tensor.
+                It has the same shape as `hidden_states`. Default is None.
+            position_ids (Optional[mindspore.Tensor]): The position ids tensor.
+                It has the same shape as `hidden_states`. Default is None.
             past_key_value (Optional[Tuple[mindspore.Tensor]]): The past key-value tuple. Default is None.
             output_attentions (bool): Whether to output attention weights. Default is False.
             use_cache (bool): Whether to use cache. Default is False.
 
         Returns:
-            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing the attention output, attention weights, and the updated past key-value tuple.
-                >   - attn_output (mindspore.Tensor): The output tensor of shape (batch_size, sequence_length, hidden_size).
-                >   - attn_weights (Optional[mindspore.Tensor]): The attention weights tensor of shape (batch_size, num_heads, sequence_length, sequence_length). If `output_attentions` is False, it is set to None.
-                >   - past_key_value (Optional[Tuple[mindspore.Tensor]]): The updated past key-value tuple. If `use_cache` is False, it is set to None.
+            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
+                A tuple containing the attention output, attention weights, and the updated past key-value tuple.
+
+                - attn_output (mindspore.Tensor): The output tensor of shape (batch_size, sequence_length, hidden_size).
+                - attn_weights (Optional[mindspore.Tensor]): The attention weights tensor of shape
+                (batch_size, num_heads, sequence_length, sequence_length). If `output_attentions` is False, it is set to None.
+                - past_key_value (Optional[Tuple[mindspore.Tensor]]): The updated past key-value tuple.
+                If `use_cache` is False, it is set to None.
 
         Raises:
             ValueError: If the shape of attention weights is not (batch_size, num_heads, sequence_length, sequence_length).
@@ -537,17 +558,19 @@ class InternLMDecoderLayer(nn.Cell):
 
         Args:
             self (InternLMDecoderLayer): The instance of the class.
-            config (InternLMConfig): The configuration object containing various settings for the decoder layer.
-                >   - hidden_size (int): The size of the hidden states.
-                >   - intermediate_size (int): The size of the intermediate layer in the MLP.
-                >   - hidden_act (str): The activation function to be used in the MLP.
-                >   - rms_norm_eps (float): The epsilon value used in the RMS normalization.
+            config (InternLMConfig):
+                The configuration object containing various settings for the decoder layer.
+
+                - hidden_size (int): The size of the hidden states.
+                - intermediate_size (int): The size of the intermediate layer in the MLP.
+                - hidden_act (str): The activation function to be used in the MLP.
+                - rms_norm_eps (float): The epsilon value used in the RMS normalization.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.hidden_size = config.hidden_size
@@ -620,15 +643,16 @@ class InternLMDecoderLayer(nn.Cell):
 class InternLMPreTrainedModel(PreTrainedModel):
 
     """
-    The 'InternLMPreTrainedModel' class represents a pre-trained language model for internal use. It inherits from the 'PreTrainedModel' class and includes methods for initializing weights and setting gradient
+    The 'InternLMPreTrainedModel' class represents a pre-trained language model for internal use.
+    It inherits from the 'PreTrainedModel' class and includes methods for initializing weights and setting gradient
     checkpointing.
 
     Attributes:
         config: The configuration for the pre-trained model.
 
     Methods:
-        _init_weights(self, cell): Initializes the weights for the specified cell using the specified initializer range.
-        _set_gradient_checkpointing(self, module, value=False): Sets the gradient checkpointing for the specified module to the specified value.
+        _init_weights: Initializes the weights for the specified cell using the specified initializer range.
+        _set_gradient_checkpointing: Sets the gradient checkpointing for the specified module to the specified value.
 
     """
     config_class = InternLMConfig
@@ -647,7 +671,7 @@ class InternLMPreTrainedModel(PreTrainedModel):
             cell (nn.Module): The cell for which the weights need to be initialized.
 
         Returns:
-            None. This method modifies the weights of the given cell in-place.
+            None: This method modifies the weights of the given cell in-place.
 
         Raises:
             None.
@@ -655,11 +679,15 @@ class InternLMPreTrainedModel(PreTrainedModel):
         This method initializes the weights of the given cell based on the configuration specified in `self.config`.
         It supports two types of cells: `nn.Dense` and `nn.Embedding`.
 
-        For `nn.Dense` cells, the weights are initialized using a normal distribution with mean 0 and standard deviation `self.config.initializer_range`. The weights are set using the `set_data` method of the
-        `weight` attribute of the cell. If the cell has a bias attribute (`cell.bias`), it is initialized with zeros using the `set_data` method as well.
+        For `nn.Dense` cells, the weights are initialized using a normal distribution with mean 0 and standard deviation
+        `self.config.initializer_range`.
+        The weights are set using the `set_data` method of the `weight` attribute of the cell.
+        If the cell has a bias attribute (`cell.bias`), it is initialized with zeros using the `set_data` method as well.
 
-        For `nn.Embedding` cells, the weights are initialized using a normal distribution with mean 0 and standard deviation `self.config.initializer_range`. The weights are randomly sampled using the
-        `np.random.normal` function and set using the `set_data` method of the `weight` attribute of the cell. If the cell has a `padding_idx` attribute (`cell.padding_idx`), the weight at that index is set to 0.
+        For `nn.Embedding` cells, the weights are initialized using a normal distribution with mean 0 and
+        standard deviation `self.config.initializer_range`. The weights are randomly sampled using the `np.random.normal`
+        function and set using the `set_data` method of the `weight` attribute of the cell.
+        If the cell has a `padding_idx` attribute (`cell.padding_idx`), the weight at that index is set to 0.
 
         Note:
             This method modifies the weights of the cell in-place and does not return any value.
@@ -684,11 +712,11 @@ class InternLMPreTrainedModel(PreTrainedModel):
         Args:
             self (InternLMPreTrainedModel): The instance of the InternLMPreTrainedModel class.
             module: The module for which the gradient checkpointing attribute needs to be set.
-                     Should be an instance of the InternLMModel class.
+                Should be an instance of the InternLMModel class.
             value (bool): The value to set for the gradient checkpointing attribute. Default is False.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -705,6 +733,7 @@ class InternLMPreTrainedModel(PreTrainedModel):
 class InternLMModel(InternLMPreTrainedModel):
     """
     Transformer decoder consisting of *config.num_hidden_layers* layers. Each layer is a [`DecoderLayer`]
+
     Args:
         config: InternLMConfig
     """
@@ -714,15 +743,16 @@ class InternLMModel(InternLMPreTrainedModel):
         """
         Args:
             self (object): The instance of the InternLMModel class.
-            config (InternLMConfig): An instance of the InternLMConfig class containing the configuration for the language model.
+            config (InternLMConfig):
+                An instance of the InternLMConfig class containing the configuration for the language model.
                 It specifies the model's parameters such as vocabulary size, hidden size, number of hidden layers, etc.
                 The config parameter is required and must be an instance of the InternLMConfig class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         super().__init__(config)
         self.padding_idx = config.pad_token_id
@@ -746,10 +776,10 @@ class InternLMModel(InternLMPreTrainedModel):
             self (InternLMModel): The instance of the InternLMModel class.
 
         Returns:
-            None: This method returns the input embeddings from the InternLMModel.
+            embed_tokens: This method returns the input embeddings from the InternLMModel.
 
         Raises:
-            None
+            None.
         """
         return self.embed_tokens
 
@@ -759,10 +789,11 @@ class InternLMModel(InternLMPreTrainedModel):
 
         Args:
             self (object): The instance of the InternLMModel class.
-            value (object): The input embeddings value to be set for the model. It should be an object of appropriate type.
+            value (object): The input embeddings value to be set for the model.
+                It should be an object of appropriate type.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -776,13 +807,15 @@ class InternLMModel(InternLMPreTrainedModel):
 
         Args:
             self (object): The instance of the InternLMModel.
-            attention_mask (torch.Tensor): The attention mask to be prepared. It should have the same shape as input_shape.
+            attention_mask (torch.Tensor): The attention mask to be prepared.
+                It should have the same shape as input_shape.
             input_shape (tuple): The shape of the input tensor.
             inputs_embeds (torch.Tensor): The input embeddings tensor.
             past_key_values_length (int): The length of past key values.
 
         Returns:
-            combined_attention_mask (torch.Tensor): The combined attention mask prepared for the decoder. Returns None if the input_shape[-1] is less than or equal to 1.
+            combined_attention_mask (torch.Tensor): The combined attention mask prepared for the decoder.
+                Returns None if the input_shape[-1] is less than or equal to 1.
 
         Raises:
             ValueError: If input_shape[-1] is less than or equal to 0.
@@ -944,7 +977,8 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
     """
     A class representing an InternLM model for causal language modeling.
 
-    This class extends the InternLMPreTrainedModel class and provides additional functionality specific to causal language modeling tasks. It includes methods for initializing the model, setting and getting
+    This class extends the InternLMPreTrainedModel class and provides additional functionality specific to
+    causal language modeling tasks. It includes methods for initializing the model, setting and getting
     input and output embeddings, setting the decoder, constructing the model, and preparing inputs for generation.
 
     Attributes:
@@ -952,38 +986,38 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
         lm_head (nn.Dense): The linear layer for mapping hidden states to the vocabulary space.
 
     Methods:
-        __init__(self, config, size=None): Initializes the InternLMForCausalLM instance.
-        get_input_embeddings(self): Returns the input embeddings of the model.
-        set_input_embeddings(self, value): Sets the input embeddings of the model.
-        get_output_embeddings(self): Returns the output embeddings of the model.
-        set_output_embeddings(self, new_embeddings): Sets the output embeddings of the model.
-        set_decoder(self, decoder): Sets the decoder for the model.
-        get_decoder(self): Returns the decoder of the model.
-        construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the model and computes the
-            masked language modeling loss.
-        prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, **kwargs): Prepares inputs for generation by modifying the input_ids, attention_mask, and position_ids.
+        __init__: Initializes the InternLMForCausalLM instance.
+        get_input_embeddings: Returns the input embeddings of the model.
+        set_input_embeddings: Sets the input embeddings of the model.
+        get_output_embeddings: Returns the output embeddings of the model.
+        set_output_embeddings: Sets the output embeddings of the model.
+        set_decoder: Sets the decoder for the model.
+        get_decoder: Returns the decoder of the model.
+        construct: Constructs the model and computes the masked language modeling loss.
+        prepare_inputs_for_generation: Prepares inputs for generation by modifying the input_ids, attention_mask,
+            and position_ids.
 
-    Example usage:
+    Example:
         ```python
-        from transformers import AutoTokenizer, InternLMForCausalLM
-
-        model = InternLMForCausalLM(config)
-        tokenizer = AutoTokenizer.from_pretrained(model)
-
-        # Access model attributes
-        input_embeddings = model.get_input_embeddings()
-        output_embeddings = model.get_output_embeddings()
-
-        # Modify model attributes
-        model.set_input_embeddings(new_input_embeddings)
-        model.set_output_embeddings(new_output_embeddings)
-
-        # Set decoder
-        model.set_decoder(decoder_model)
-
-        # Generate text
-        model.construct(input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict)
-        generated_text = model.prepare_inputs_for_generation(input_ids, past_key_values, attention_mask, inputs_embeds, **kwargs)
+        >>> from transformers import AutoTokenizer, InternLMForCausalLM
+        ...
+        >>> model = InternLMForCausalLM(config)
+        >>> tokenizer = AutoTokenizer.from_pretrained(model)
+        ...
+        >>> # Access model attributes
+        >>> input_embeddings = model.get_input_embeddings()
+        >>> output_embeddings = model.get_output_embeddings()
+        ...
+        >>> # Modify model attributes
+        >>> model.set_input_embeddings(new_input_embeddings)
+        >>> model.set_output_embeddings(new_output_embeddings)
+        ...
+        >>> # Set decoder
+        >>> model.set_decoder(decoder_model)
+        ...
+        >>> # Generate text
+        >>> model.construct(input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict)
+        >>> generated_text = model.prepare_inputs_for_generation(input_ids, past_key_values, attention_mask, inputs_embeds, **kwargs)
         ```
     """
     _auto_class = "AutoModelForCausalLM"
@@ -993,18 +1027,22 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
 
         Args:
             self: The instance of the class.
-            config: The configuration for the language model.
-                Type: object
-                Purpose: Specifies the configuration parameters for the language model.
-            size: The size of the language model input. (Optional)
-                Type: int
-                Purpose: Specifies the size of the language model input. If not provided, defaults to None.
+            config:
+                The configuration for the language model.
+
+                - Type: object
+                - Purpose: Specifies the configuration parameters for the language model.
+            size:
+                The size of the language model input. (Optional)
+
+                - Type: int
+                - Purpose: Specifies the size of the language model input. If not provided, defaults to None.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         super().__init__(config)
         self.model = InternLMModel(config)
@@ -1022,18 +1060,21 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
             self: An instance of the InternLMForCausalLM class.
 
         Returns:
-            None. The method does not return any value.
+            None.
 
         Raises:
             None.
 
-        This method is used to obtain the input embeddings from the model. The input embeddings are representations of the input tokens that the model uses to process the text. The embeddings capture the
-        semantic meaning and contextual information of the tokens, which is crucial for the model's performance.
+        This method is used to obtain the input embeddings from the model.
+        The input embeddings are representations of the input tokens that the model uses to process the text.
+        The embeddings capture the semantic meaning and contextual information of the tokens, which is crucial for
+        the model's performance.
 
         Note:
-            The 'embed_tokens' attribute of the 'self.model' object contains the input embeddings. This attribute should be accessed to retrieve the embeddings.
+            The 'embed_tokens' attribute of the 'self.model' object contains the input embeddings.
+            This attribute should be accessed to retrieve the embeddings.
 
-        Example usage:
+        Example:
             ```python
             >>> model = InternLMForCausalLM()
             >>> embeddings = model.get_input_embeddings()
@@ -1050,10 +1091,10 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
             value (object): The input embeddings to be set for the model.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         '''
         self.model.embed_tokens = value
 
@@ -1065,13 +1106,14 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
             self: The instance of the InternLMForCausalLM class.
 
         Returns:
-            None. This method returns the output embeddings of the model, represented by the 'lm_head' attribute.
+            The output embeddings of the model, represented by the 'lm_head' attribute.
 
         Raises:
             None.
 
         Note:
-            The output embeddings are typically used to map the model's hidden state to a specific output vocabulary. These embeddings can be used for downstream tasks such as text generation or classification.
+            The output embeddings are typically used to map the model's hidden state to a specific output vocabulary.
+            These embeddings can be used for downstream tasks such as text generation or classification.
         """
         return self.lm_head
 
@@ -1084,10 +1126,10 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
             new_embeddings (Tensor): The new embeddings to be set for the output layer.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            - TypeError: If the new_embeddings parameter is not of type Tensor.
+            TypeError: If the new_embeddings parameter is not of type Tensor.
         """
         self.lm_head = new_embeddings
 
@@ -1100,7 +1142,7 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
             decoder: The decoder object to be set for the InternLMForCausalLM instance.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1116,11 +1158,11 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
                 This parameter is required to access the model within the class.
 
         Returns:
-            None.
+            None:
                 The method returns the decoder object associated with the InternLMForCausalLM instance.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.model
 
@@ -1143,6 +1185,7 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
                 Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
                 config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
                 (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
+
         Returns:
             Union[Tuple, CausalLMOutputWithPast]
 
@@ -1220,13 +1263,15 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
             inputs_embeds (Optional[torch.Tensor]): The tensor of embedded inputs. Default is None.
 
         Returns:
-            model_inputs (dict): A dictionary containing the prepared model inputs for generation. It can have the following keys:
-                >   - 'inputs_embeds' (torch.Tensor): The tensor of embedded inputs, if provided.
-                >   - 'input_ids' (torch.Tensor): The tensor of tokenized input sequence.
-                >   - 'position_ids' (torch.Tensor): The tensor of position IDs.
-                >   - 'past_key_values' (torch.Tensor): The tensor of past key values for generation.
-                >   - 'use_cache' (bool): A flag indicating whether to use cache or not.
-                >   - 'attention_mask' (torch.Tensor): The attention mask tensor.
+            model_inputs (dict): A dictionary containing the prepared model inputs for generation.
+                It can have the following keys:
+
+                - 'inputs_embeds' (torch.Tensor): The tensor of embedded inputs, if provided.
+                - 'input_ids' (torch.Tensor): The tensor of tokenized input sequence.
+                - 'position_ids' (torch.Tensor): The tensor of position IDs.
+                - 'past_key_values' (torch.Tensor): The tensor of past key values for generation.
+                - 'use_cache' (bool): A flag indicating whether to use cache or not.
+                - 'attention_mask' (torch.Tensor): The attention mask tensor.
 
         Raises:
             None.
@@ -1264,11 +1309,12 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
         Reorders the cache of past key values based on the provided beam index.
 
         Args:
-            past_key_values (tuple): A tuple containing the past key values for each layer. Each past key value is expected to be a tensor.
+            past_key_values (tuple): A tuple containing the past key values for each layer.
+                Each past key value is expected to be a tensor.
             beam_idx (tensor): A tensor representing the beam index.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -1282,27 +1328,36 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
 class InternLMForSequenceClassification(InternLMPreTrainedModel):
 
     """
-    This class represents an InternLM model for sequence classification tasks. It is a subclass of the InternLMPreTrainedModel class.
+    This class represents an InternLM model for sequence classification tasks.
+    It is a subclass of the InternLMPreTrainedModel class.
 
-    The InternLMForSequenceClassification class is initialized with a configuration object, which includes the number of labels for the classification task. The model architecture consists of an InternLMModel
-    and a score layer.
+    The InternLMForSequenceClassification class is initialized with a configuration object, which includes the number
+    of labels for the classification task. The model architecture consists of an InternLMModel and a score layer.
 
-    The class provides methods for getting and setting the input embeddings of the model. The get_input_embeddings method returns the embedded tokens of the model, while the set_input_embeddings method allows
-    for setting new input embeddings.
+    The class provides methods for getting and setting the input embeddings of the model.
+    The get_input_embeddings method returns the embedded tokens of the model, while the set_input_embeddings method
+    allows for setting new input embeddings.
 
-    The construct method is responsible for processing input data and generating classification outputs. It takes several optional parameters, including input_ids, attention_mask, position_ids,
-    past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, and return_dict. The method returns either a tuple or a SequenceClassifierOutputWithPast object, depending on the
-    value of the return_dict parameter.
+    The construct method is responsible for processing input data and generating classification outputs.
+    It takes several optional parameters, including input_ids, attention_mask, position_ids, past_key_values,
+    inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, and return_dict.
+    The method returns either a tuple or a SequenceClassifierOutputWithPast object, depending on the value of the
+    return_dict parameter.
 
-    If labels are provided, the method computes the sequence classification loss based on the configured problem type. The problem type can be 'regression', 'single_label_classification', or
-    'multi_label_classification', depending on the number of labels and the data type of the labels. The loss is computed using various loss functions, such as mean squared error (MSE) loss, cross-entropy loss, or
+    If labels are provided, the method computes the sequence classification loss based on the configured problem type.
+    The problem type can be 'regression', 'single_label_classification', or 'multi_label_classification',
+    depending on the number of labels and the data type of the labels.
+    The loss is computed using various loss functions, such as mean squared error (MSE) loss, cross-entropy loss, or
     binary cross-entropy with logits loss.
 
-    If the return_dict parameter is False, the method returns a tuple containing the pooled logits and other transformer outputs. If the loss is not None, it is included in the tuple. If the return_dict
-    parameter is True, the method returns a SequenceClassifierOutputWithPast object, which includes the loss, pooled logits, past key values, hidden states, and attentions.
+    If the return_dict parameter is False, the method returns a tuple containing the pooled logits and
+    other transformer outputs. If the loss is not None, it is included in the tuple. If the return_dict parameter is
+    True, the method returns a SequenceClassifierOutputWithPast object, which includes the loss, pooled logits,
+    past key values, hidden states, and attentions.
 
     Note:
-        The class assumes that the batch size is 1 or that a padding token ID is defined. If the batch size is greater than 1 and no padding token ID is defined, a ValueError is raised.
+        The class assumes that the batch size is 1 or that a padding token ID is defined.
+        If the batch size is greater than 1 and no padding token ID is defined, a ValueError is raised.
 
     """
     _keys_to_ignore_on_load_missing = [r"lm_head.weight"]
@@ -1315,10 +1370,11 @@ class InternLMForSequenceClassification(InternLMPreTrainedModel):
             self: The object itself.
             config: An instance of the `InternLMConfig` class containing the configuration parameters for the model.
                 It includes the following attributes:
-                    >   - num_labels (int): The number of labels for classification.
-                        This value determines the size of the output layer.
-                    >   - hidden_size (int): The size of the hidden layers in the model.
-                        This value is used in the `nn.Dense` layer.
+
+                - num_labels (int): The number of labels for classification.
+                This value determines the size of the output layer.
+                - hidden_size (int): The size of the hidden layers in the model.
+                This value is used in the `nn.Dense` layer.
 
         Returns:
             None.
@@ -1342,29 +1398,33 @@ class InternLMForSequenceClassification(InternLMPreTrainedModel):
             self: An instance of the InternLMForSequenceClassification class.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
 
-        This method retrieves the input embeddings from the model's embed_tokens attribute. The input embeddings are used as the input to the model for sequence classification tasks. The method does not modify
-        the input embeddings or perform any additional processing. The retrieved input embeddings can be used for further analysis or visualization, if needed.
+        This method retrieves the input embeddings from the model's embed_tokens attribute.
+        The input embeddings are used as the input to the model for sequence classification tasks.
+        The method does not modify the input embeddings or perform any additional processing.
+        The retrieved input embeddings can be used for further analysis or visualization, if needed.
         """
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
         """
-        This method is a part of the 'InternLMForSequenceClassification' class and is used to set the input embeddings for the model.
+        This method is a part of the 'InternLMForSequenceClassification' class and is used to set the
+        input embeddings for the model.
 
         Args:
             self (object): The instance of the class.
-            value (object): The input embeddings value to be set for the model. It can be of any valid type that represents the input embeddings.
+            value (object): The input embeddings value to be set for the model.
+                It can be of any valid type that represents the input embeddings.
 
         Returns:
             None: This method does not return any value explicitly, but it sets the input embeddings for the model.
 
         Raises:
-            None: This method does not explicitly raise any exceptions.
+            None.
         """
         self.model.embed_tokens = value
 

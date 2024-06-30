@@ -30,6 +30,7 @@ PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
 class GPTBigCodeTokenizer(PreTrainedTokenizer):
     """
         Tokenizer used for GPT2 text process.
+
         Args:
             vocab (Vocab): Vocabulary used to look up words.
             return_token (bool): Whether to return token. If True: return tokens. False: return ids. Default: True.
@@ -59,7 +60,7 @@ class GPTBigCodeTokenizer(PreTrainedTokenizer):
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If the tokenizer_file is not of type string.

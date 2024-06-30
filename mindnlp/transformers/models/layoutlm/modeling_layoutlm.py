@@ -56,11 +56,12 @@ class LayoutLMEmbeddings(nn.Cell):
         """
         Args:
             self (LayoutLMEmbeddings): The instance of the LayoutLMEmbeddings class.
-            config (object): An object containing configuration parameters, including vocab_size, hidden_size, max_position_embeddings, 
+            config (object): An object containing configuration parameters,
+                including vocab_size, hidden_size, max_position_embeddings,
                 max_2d_position_embeddings, type_vocab_size, pad_token_id, layer_norm_eps, and hidden_dropout_prob. 
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None
@@ -163,22 +164,25 @@ class LayoutLMSelfAttention(nn.Cell):
         
         Args:
             self: The instance of LayoutLMSelfAttention.
-            config: An object containing the configuration parameters for the self-attention layer. Expected attributes:
-                >   - hidden_size (int): The size of the hidden layer.
-                >   - num_attention_heads (int): The number of attention heads.
-                >   - embedding_size (int, optional): The size of the embedding layer.
-                >   - attention_probs_dropout_prob (float): The dropout probability for attention probabilities.
-                >   - position_embedding_type (str, optional): The type of position embedding to use ('absolute' by default).
-                >   - max_position_embeddings (int): The maximum number of position embeddings.
-                >   - is_decoder (bool): Indicates if the self-attention layer is part of a decoder.
+            config: An object containing the configuration parameters for the self-attention layer.
+                Expected attributes:
+
+                - hidden_size (int): The size of the hidden layer.
+                - num_attention_heads (int): The number of attention heads.
+                - embedding_size (int, optional): The size of the embedding layer.
+                - attention_probs_dropout_prob (float): The dropout probability for attention probabilities.
+                - position_embedding_type (str, optional): The type of position embedding to use ('absolute' by default).
+                - max_position_embeddings (int): The maximum number of position embeddings.
+                - is_decoder (bool): Indicates if the self-attention layer is part of a decoder.
             position_embedding_type (str, optional): The type of position embedding to use (default is None).
                 Accepted values: 'absolute', 'relative_key', 'relative_key_query'.
 
         Returns:
-            None. The method initializes the LayoutLMSelfAttention instance with the provided configuration.
+            None.
 
         Raises:
-            ValueError: If the hidden size is not a multiple of the number of attention heads and no embedding size is provided.
+            ValueError:
+                If the hidden size is not a multiple of the number of attention heads and no embedding size is provided.
         """
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -214,16 +218,21 @@ class LayoutLMSelfAttention(nn.Cell):
             x (mindspore.Tensor): The input tensor of shape `(batch_size, sequence_length, hidden_size)`.
 
         Returns:
-            mindspore.Tensor: The transposed tensor of shape `(batch_size, num_attention_heads, sequence_length, attention_head_size)`.
+            mindspore.Tensor:
+                The transposed tensor of shape `(batch_size, num_attention_heads, sequence_length, attention_head_size)`.
 
         Raises:
             None
 
-        This method transposes the input tensor `x` to prepare it for calculating self-attention scores in the LayoutLMSelfAttention model. The transposition is performed by reshaping the tensor to include the
-        number of attention heads and the size of each attention head. The resulting tensor is then permuted to match the desired shape `(batch_size, num_attention_heads, sequence_length, attention_head_size)`.
+        This method transposes the input tensor `x` to prepare it for calculating self-attention scores in the
+        LayoutLMSelfAttention model. The transposition is performed by reshaping the tensor to include the number of
+        attention heads and the size of each attention head. The resulting tensor is then permuted to match the desired
+        shape `(batch_size, num_attention_heads, sequence_length, attention_head_size)`.
 
-        Note that this method assumes that the input tensor `x` has a rank of at least 3, where the last dimension represents the hidden size. The number of attention heads and the size of each attention head
-        are obtained from the attributes `num_attention_heads` and `attention_head_size` of the LayoutLMSelfAttention instance, respectively.
+        Note that this method assumes that the input tensor `x` has a rank of at least 3, where the last dimension
+        represents the hidden size. The number of attention heads and the size of each attention head are obtained
+        from the attributes `num_attention_heads` and `attention_head_size` of the LayoutLMSelfAttention instance,
+        respectively.
         """
         new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
         x = x.view(new_x_shape)
@@ -245,20 +254,27 @@ class LayoutLMSelfAttention(nn.Cell):
         Args:
             self: The instance of the LayoutLMSelfAttention class.
             hidden_states (mindspore.Tensor): The input hidden states tensor.
-            attention_mask (Optional[mindspore.Tensor], optional): Mask tensor to prevent attention to certain positions. Defaults to None.
-            head_mask (Optional[mindspore.Tensor], optional): Mask tensor to control the heads involved in the attention computation. Defaults to None.
-            encoder_hidden_states (Optional[mindspore.Tensor], optional): Hidden states of the encoder in case of cross-attention. Defaults to None.
-            encoder_attention_mask (Optional[mindspore.Tensor], optional): Mask tensor for encoder attention. Defaults to None.
-            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]], optional): Cached key and value tensors from previous attention calculations. Defaults to None.
-            output_attentions (Optional[bool], optional): Flag to indicate whether to output attentions. Defaults to False.
+            attention_mask (Optional[mindspore.Tensor], optional): Mask tensor to prevent attention to certain
+                positions. Defaults to None.
+            head_mask (Optional[mindspore.Tensor], optional): Mask tensor to control the heads involved in the
+                attention computation. Defaults to None.
+            encoder_hidden_states (Optional[mindspore.Tensor], optional): Hidden states of the encoder in case of
+                cross-attention. Defaults to None.
+            encoder_attention_mask (Optional[mindspore.Tensor], optional): Mask tensor for encoder attention.
+                Defaults to None.
+            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]], optional): Cached key and value tensors from
+                previous attention calculations. Defaults to None.
+            output_attentions (Optional[bool], optional): Flag to indicate whether to output attentions.
+                Defaults to False.
 
         Returns:
-            Tuple[mindspore.Tensor]: A tuple containing the context layer tensor and optionally attention probabilities tensor.
+            Tuple[mindspore.Tensor]: A tuple containing the context layer tensor and optionally attention
+                probabilities tensor.
 
         Raises:
-            - ValueError: If the input tensor shapes are incompatible for matrix multiplication.
-            - RuntimeError: If there are runtime issues during tensor operations.
-            - TypeError: If the input types are not as expected.
+            ValueError: If the input tensor shapes are incompatible for matrix multiplication.
+            RuntimeError: If there are runtime issues during tensor operations.
+            TypeError: If the input types are not as expected.
         """
         mixed_query_layer = self.query(hidden_states)
 
@@ -358,17 +374,19 @@ class LayoutLMSelfOutput(nn.Cell):
 
         Args:
             self (object): The instance of the class itself.
-            config (object): An object containing configuration parameters for the layout model.
+            config (object):
+                An object containing configuration parameters for the layout model.
+
                 - Type: Custom class
                 - Purpose: To provide configuration settings for the layout model.
                 - Restrictions: Must be compatible with the defined configuration structure.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            - TypeError: If the provided 'config' parameter is not of the expected type.
-            - ValueError: If the configuration provided is missing essential parameters.
+            TypeError: If the provided 'config' parameter is not of the expected type.
+            ValueError: If the configuration provided is missing essential parameters.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -407,21 +425,25 @@ class LayoutLMAttention(nn.Cell):
 
         Args:
             self: The instance of the class (automatically passed).
-            config: An object containing the configuration settings.
+            config:
+                An object containing the configuration settings.
+
                 - Type: object
                 - Purpose: Provides the configuration settings for the LayoutLMAttention class.
                 - Restrictions: None
 
-            position_embedding_type: The type of position embedding to use.
+            position_embedding_type:
+                The type of position embedding to use.
+
                 - Type: Any
                 - Purpose: Specifies the type of position embedding to be used in the LayoutLMAttention class.
                 - Restrictions: None
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.self = LayoutLMSelfAttention(config, position_embedding_type=position_embedding_type)
@@ -437,20 +459,25 @@ class LayoutLMAttention(nn.Cell):
             heads (list): A list of integers representing the attention heads to be pruned.
 
         Returns:
-            None. The method modifies the LayoutLMAttention instance in-place.
+            None: The method modifies the LayoutLMAttention instance in-place.
 
         Raises:
             None.
 
         This method prunes the specified attention heads from the LayoutLMAttention instance.
         First, it checks if the 'heads' list is empty. If so, the method returns without making any changes.
-        Otherwise, it calls the 'find_pruneable_heads_and_indices' function to identify the attention heads and their corresponding indices that can be pruned based on the given 'heads' list, the number of
-            attention heads, attention head size, and already pruned heads stored in the instance.
-        Next, it prunes the 'self.query', 'self.key', 'self.value', and 'self.output.dense' linear layers by calling the 'prune_linear_layer' function with the identified indices.
-        After each linear layer is pruned, the number of attention heads is updated by subtracting the length of the 'heads' list from the current number of attention heads.
-        The total size of all attention heads, 'self.all_head_size', is then recalculated as the product of the attention head size and the updated number of attention heads.
+        Otherwise, it calls the 'find_pruneable_heads_and_indices' function to identify the attention heads and
+        their corresponding indices that can be pruned based on the given 'heads' list, the number of attention heads,
+        attention head size, and already pruned heads stored in the instance.
+        Next, it prunes the 'self.query', 'self.key', 'self.value', and 'self.output.dense' linear layers by calling
+        the 'prune_linear_layer' function with the identified indices.
+        After each linear layer is pruned, the number of attention heads is updated by subtracting the length of the
+        'heads' list from the current number of attention heads.
+        The total size of all attention heads, 'self.all_head_size', is then recalculated as the product of the
+        attention head size and the updated number of attention heads.
         Finally, the 'pruned_heads' set is updated by adding the attention heads specified in the 'heads' list.
-        The method does not return any value but modifies the LayoutLMAttention instance by pruning the specified attention heads.
+        The method does not return any value but modifies the LayoutLMAttention instance by pruning the specified
+        attention heads.
         """
         if len(heads) == 0:
             return
@@ -487,9 +514,12 @@ class LayoutLMAttention(nn.Cell):
             hidden_states (mindspore.Tensor): The input hidden states for the attention mechanism.
             attention_mask (Optional[mindspore.Tensor]): An optional mask for the attention mechanism. Default is None.
             head_mask (Optional[mindspore.Tensor]): An optional mask for the attention heads. Default is None.
-            encoder_hidden_states (Optional[mindspore.Tensor]): An optional input for encoder hidden states. Default is None.
-            encoder_attention_mask (Optional[mindspore.Tensor]): An optional mask for encoder attention. Default is None.
-            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): An optional input for past key value. Default is None.
+            encoder_hidden_states (Optional[mindspore.Tensor]): An optional input for encoder hidden states.
+                Default is None.
+            encoder_attention_mask (Optional[mindspore.Tensor]): An optional mask for encoder attention.
+                Default is None.
+            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): An optional input for past key value.
+                Default is None.
             output_attentions (Optional[bool]): A flag to indicate whether to output attentions. Default is False.
 
         Returns:
@@ -524,7 +554,7 @@ class LayoutLMIntermediate(nn.Cell):
                 This parameter is required and has no default value.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -566,17 +596,19 @@ class LayoutLMOutput(nn.Cell):
             config (object): An object containing configuration parameters for the LayoutLMOutput.
                 This parameter is required to configure the dense layer, layer normalization, and dropout.
                 It should be an instance of a class that contains the following attributes:
-                    >   - intermediate_size (int): The size of the intermediate layer.
-                    >   - hidden_size (int): The size of the hidden layer.
-                    >   - layer_norm_eps (float): The epsilon value for layer normalization.
-                    >   - hidden_dropout_prob (float): The dropout probability for the hidden layer.
+
+                - intermediate_size (int): The size of the intermediate layer.
+                - hidden_size (int): The size of the hidden layer.
+                - layer_norm_eps (float): The epsilon value for layer normalization.
+                - hidden_dropout_prob (float): The dropout probability for the hidden layer.
 
         Returns:
-            None. This method initializes the dense, LayerNorm, and dropout attributes of the LayoutLMOutput instance.
+            None.
 
         Raises:
-            - TypeError: If the config parameter is not provided or is not an instance of the expected class.
-            - ValueError: If the attributes intermediate_size, hidden_size, layer_norm_eps, or hidden_dropout_prob are missing from the config object.
+            TypeError: If the config parameter is not provided or is not an instance of the expected class.
+            ValueError: If the attributes intermediate_size, hidden_size, layer_norm_eps, or hidden_dropout_prob
+                are missing from the config object.
         """
         super().__init__()
         self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
@@ -615,7 +647,7 @@ class LayoutLMLayer(nn.Cell):
             config: A configuration object containing parameters for the LayoutLMLayer.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the cross attention is added and the model is not used as a decoder, a ValueError is raised.
@@ -648,21 +680,31 @@ class LayoutLMLayer(nn.Cell):
 
         Args:
             self: The object instance.
-            hidden_states (mindspore.Tensor): The input hidden states tensor of shape (batch_size, seq_length, hidden_size).
-            attention_mask (Optional[mindspore.Tensor]): The attention mask tensor of shape (batch_size, seq_length) or (batch_size, seq_length, seq_length). Defaults to None.
-            head_mask (Optional[mindspore.Tensor]): The head mask tensor of shape (num_heads,) or (num_layers, num_heads), where num_heads and num_layers are derived from the configuration. Defaults to None.
-            encoder_hidden_states (Optional[mindspore.Tensor]): The encoder hidden states tensor of shape (batch_size, seq_length, hidden_size). Defaults to None.
-            encoder_attention_mask (Optional[mindspore.Tensor]): The encoder attention mask tensor of shape (batch_size, seq_length) or (batch_size, seq_length, seq_length). Defaults to None.
-            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): The past key-value tensor of shape (2, batch_size, num_heads, past_seq_length, head_dim), where past_seq_length is the length of past
+            hidden_states (mindspore.Tensor): The input hidden states tensor of shape
+                (batch_size, seq_length, hidden_size).
+            attention_mask (Optional[mindspore.Tensor]): The attention mask tensor of shape
+                (batch_size, seq_length) or (batch_size, seq_length, seq_length). Defaults to None.
+            head_mask (Optional[mindspore.Tensor]): The head mask tensor of shape (num_heads,) or
+                (num_layers, num_heads), where num_heads and num_layers are derived from the configuration.
+                Defaults to None.
+            encoder_hidden_states (Optional[mindspore.Tensor]): The encoder hidden states tensor of shape
+                (batch_size, seq_length, hidden_size). Defaults to None.
+            encoder_attention_mask (Optional[mindspore.Tensor]): The encoder attention mask tensor of shape
+                (batch_size, seq_length) or (batch_size, seq_length, seq_length). Defaults to None.
+            past_key_value (Optional[Tuple[Tuple[mindspore.Tensor]]]): The past key-value tensor of shape
+                (2, batch_size, num_heads, past_seq_length, head_dim), where past_seq_length is the length of past
                 sequence. Defaults to None.
             output_attentions (Optional[bool]): Whether to output attentions. Defaults to False.
 
         Returns:
-            Tuple[mindspore.Tensor]: A tuple containing the output tensor(s) of the layer. The first element is the layer output tensor of shape (batch_size, seq_length, hidden_size). If the layer is a
-                decoder, the tuple also includes the present key-value tensor(s) of shape (2, batch_size, num_heads, seq_length, head_dim).
+            Tuple[mindspore.Tensor]: A tuple containing the output tensor(s) of the layer.
+                The first element is the layer output tensor of shape (batch_size, seq_length, hidden_size).
+                If the layer is a decoder, the tuple also includes the present key-value tensor(s) of shape
+                (2, batch_size, num_heads, seq_length, head_dim).
 
         Raises:
-            ValueError: If `encoder_hidden_states` are passed and the cross-attention layers are not instantiated by setting `config.add_cross_attention=True`.
+            ValueError: If `encoder_hidden_states` are passed and the cross-attention layers are not instantiated
+                by setting `config.add_cross_attention=True`.
 
         """
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
@@ -741,7 +783,7 @@ class LayoutLMLayer(nn.Cell):
             layer_output (Tensor): The output tensor after applying the feed-forward operation.
 
         Raises:
-            - N/A
+            None.
         """
         intermediate_output = self.intermediate(attention_output)
         layer_output = self.output(intermediate_output, attention_output)
@@ -758,10 +800,10 @@ class LayoutLMEncoder(nn.Cell):
             config (object): The configuration object containing the necessary parameters for the LayoutLMEncoder.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.config = config
@@ -789,7 +831,8 @@ class LayoutLMEncoder(nn.Cell):
             hidden_states (mindspore.Tensor): The input hidden states for encoding.
             attention_mask (Optional[mindspore.Tensor]): Mask to avoid attending to certain positions.
             head_mask (Optional[mindspore.Tensor]): Mask to specify which heads to disable in the attention computation.
-            encoder_hidden_states (Optional[mindspore.Tensor]): Hidden states of the encoder to be used in cross-attention layers.
+            encoder_hidden_states (Optional[mindspore.Tensor]): Hidden states of the encoder to be used in
+                cross-attention layers.
             encoder_attention_mask (Optional[mindspore.Tensor]): Mask for encoder attention mechanism.
             past_key_values (Optional[Tuple[Tuple[mindspore.Tensor]]]): Cached key/values for previous decoding steps.
             use_cache (Optional[bool]): Flag to indicate whether to use caching for decoding.
@@ -798,11 +841,12 @@ class LayoutLMEncoder(nn.Cell):
             return_dict (Optional[bool]): Flag to indicate returning the output as a dictionary.
 
         Returns:
-            Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]: The output of the encoder, which is either a tuple of hidden states or a complex object containing past key values and
-            attentions.
+            Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]: The output of the encoder,
+                which is either a tuple of hidden states or a complex object containing past key values and attentions.
 
         Raises:
-            - Warning: If `use_cache=True` is incompatible with gradient checkpointing, it will issue a warning and set `use_cache=False`.
+            Warning: If `use_cache=True` is incompatible with gradient checkpointing,
+                it will issue a warning and set `use_cache=False`.
         """
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
@@ -873,13 +917,14 @@ class LayoutLMPooler(nn.Cell):
 
         Args:
             self: The instance of LayoutLMPooler.
-            config: The configuration object containing parameters for the LayoutLMPooler initialization. It should be an instance of the Config class.
+            config: The configuration object containing parameters for the LayoutLMPooler initialization.
+                It should be an instance of the Config class.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            This method does not raise any specific exceptions.
+            None.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -887,19 +932,22 @@ class LayoutLMPooler(nn.Cell):
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method 'construct' in the class 'LayoutLMPooler' constructs a pooled output tensor based on the hidden states provided.
+        This method 'construct' in the class 'LayoutLMPooler' constructs a pooled output tensor based on
+        the hidden states provided.
 
         Args:
             self (LayoutLMPooler): The instance of the LayoutLMPooler class.
-            hidden_states (mindspore.Tensor): The input tensor containing hidden states. It should have the shape (batch_size, sequence_length, hidden_size).
+            hidden_states (mindspore.Tensor): The input tensor containing hidden states.
+                It should have the shape (batch_size, sequence_length, hidden_size).
                 This tensor holds the hidden states generated by the model for each token in the input sequence.
 
         Returns:
-            mindspore.Tensor: A tensor representing the pooled output. It is the result of applying dense and activation layers on the first token's hidden state.
+            mindspore.Tensor: A tensor representing the pooled output. It is the result of applying dense and
+                activation layers on the first token's hidden state.
                 The shape of the returned tensor is (batch_size, hidden_size).
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
@@ -917,18 +965,20 @@ class LayoutLMPredictionHeadTransform(nn.Cell):
 
         Args:
             self: The instance of the class.
-            config: An object containing configuration parameters for the head transformation.
-                >   - Type: Custom configuration class
-                >   - Purpose: Specifies the configuration settings for the head transformation.
-                >   - Restrictions: Must be a valid configuration object.
+            config:
+                An object containing configuration parameters for the head transformation.
+
+                - Type: Custom configuration class
+                - Purpose: Specifies the configuration settings for the head transformation.
+                - Restrictions: Must be a valid configuration object.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            - KeyError: If the specified 'hidden_act' in the configuration is not found in the ACT2FN dictionary.
-            - AttributeError: If the configuration object does not contain the required attributes.
-            - ValueError: If there are issues with the provided configuration parameters.
+            KeyError: If the specified 'hidden_act' in the configuration is not found in the ACT2FN dictionary.
+            AttributeError: If the configuration object does not contain the required attributes.
+            ValueError: If there are issues with the provided configuration parameters.
         """
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -940,18 +990,21 @@ class LayoutLMPredictionHeadTransform(nn.Cell):
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method 'construct' in the class 'LayoutLMPredictionHeadTransform' performs transformations on the input hidden states tensor.
+        This method 'construct' in the class 'LayoutLMPredictionHeadTransform'
+        performs transformations on the input hidden states tensor.
 
         Args:
             self: An instance of the class 'LayoutLMPredictionHeadTransform'.
-            hidden_states (mindspore.Tensor): The input tensor representing the hidden states. It is expected to be a tensor of shape (batch_size, sequence_length, hidden_size).
+            hidden_states (mindspore.Tensor): The input tensor representing the hidden states.
+                It is expected to be a tensor of shape (batch_size, sequence_length, hidden_size).
 
         Returns:
-            mindspore.Tensor: A tensor containing the transformed hidden states after passing through dense layers, activation function, and layer normalization. The shape of the output tensor is the same as
-            the input hidden_states.
+            mindspore.Tensor: A tensor containing the transformed hidden states after passing through dense layers,
+                activation function, and layer normalization. The shape of the output tensor is the same as
+                the input hidden_states.
 
         Raises:
-            This method does not explicitly raise any exceptions.
+            None.
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.transform_act_fn(hidden_states)
@@ -971,10 +1024,10 @@ class LayoutLMLMPredictionHead(nn.Cell):
                 It is expected to be an instance of a class that holds information such as hidden size and vocabulary size.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         super().__init__()
         self.transform = LayoutLMPredictionHeadTransform(config)
@@ -997,7 +1050,7 @@ class LayoutLMLMPredictionHead(nn.Cell):
             hidden_states (torch.Tensor): The input hidden states to be processed by the prediction head.
 
         Returns:
-            None: This method does not return any value explicitly.
+            None.
 
         Raises:
             None
@@ -1018,10 +1071,10 @@ class LayoutLMOnlyMLMHead(nn.Cell):
             config: The configuration parameters for the LayoutLMOnlyMLMHead.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         super().__init__()
         self.predictions = LayoutLMLMPredictionHead(config)
@@ -1034,10 +1087,12 @@ class LayoutLMOnlyMLMHead(nn.Cell):
 
         Args:
             self: An instance of the LayoutLMOnlyMLMHead class.
-            sequence_output (mindspore.Tensor): The output tensor from the sequence modeling layer. It is the input to the prediction layer.
+            sequence_output (mindspore.Tensor): The output tensor from the sequence modeling layer.
+                It is the input to the prediction layer.
 
         Returns:
-            mindspore.Tensor: The prediction scores tensor generated by the prediction layer. It represents the predicted scores for each token in the input sequence.
+            mindspore.Tensor: The prediction scores tensor generated by the prediction layer.
+                It represents the predicted scores for each token in the input sequence.
 
         Raises:
             None.
@@ -1085,13 +1140,14 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
         Args:
             self: The instance of the LayoutLMModel class.
             config: A dictionary containing the configuration settings for the LayoutLMModel.
-                The config should include parameters for initializing the LayoutLMModel, such as hidden size, number of layers, etc.
+                The config should include parameters for initializing the LayoutLMModel,
+                such as hidden size, number of layers, etc.
 
         Returns:
-            None. This method does not return any value explicitly.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         super(LayoutLMModel, self).__init__(config)
         self.config = config
@@ -1111,10 +1167,10 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
             self (LayoutLMModel): The LayoutLMModel instance.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.embeddings.word_embeddings
 
@@ -1124,7 +1180,8 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
 
         Args:
             self (LayoutLMModel): The LayoutLMModel instance.
-            value: The input embeddings to be set. It should be of type torch.Tensor and have the same shape as the word_embeddings.
+            value: The input embeddings to be set.
+                It should be of type torch.Tensor and have the same shape as the word_embeddings.
 
         Returns:
             None
@@ -1158,6 +1215,7 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPoolingAndCrossAttentions]:
         r"""
+
         Returns:
             Union[Tuple, BaseModelOutputWithPoolingAndCrossAttentions]
 
@@ -1165,30 +1223,30 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
             ```python
             >>> from transformers import AutoTokenizer, LayoutLMModel
             >>> import torch
-
+            ...
             >>> tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutlm-base-uncased")
             >>> model = LayoutLMModel.from_pretrained("microsoft/layoutlm-base-uncased")
-
+            ...
             >>> words = ["Hello", "world"]
             >>> normalized_word_boxes = [637, 773, 693, 782], [698, 773, 733, 782]
-
+            ...
             >>> token_boxes = []
             >>> for word, box in zip(words, normalized_word_boxes):
             ...     word_tokens = tokenizer.tokenize(word)
             ...     token_boxes.extend([box] * len(word_tokens))
             >>> # add bounding boxes of cls + sep tokens
             >>> token_boxes = [[0, 0, 0, 0]] + token_boxes + [[1000, 1000, 1000, 1000]]
-
+            ...
             >>> encoding = tokenizer(" ".join(words), return_tensors="pt")
             >>> input_ids = encoding["input_ids"]
             >>> attention_mask = encoding["attention_mask"]
             >>> token_type_ids = encoding["token_type_ids"]
             >>> bbox = torch.tensor([token_boxes])
-
+            ...
             >>> outputs = model(
             ...     input_ids=input_ids, bbox=bbox, attention_mask=attention_mask, token_type_ids=token_type_ids
             ... )
-
+            ...
             >>> last_hidden_states = outputs.last_hidden_state
             ```
         """
@@ -1275,7 +1333,7 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
             config: The configuration object that contains the model configuration settings.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1297,7 +1355,7 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
                 It represents the model for Masked Language Modeling.
 
         Returns:
-            None. This method returns the word embeddings from the LayoutLM model's embeddings.
+            word_embeddings: The word embeddings from the LayoutLM model's embeddings.
 
         Raises:
             None.
@@ -1312,10 +1370,10 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
             self (LayoutLMForMaskedLM): The LayoutLMForMaskedLM object.
 
         Returns:
-            None: The method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         '''
         return self.cls.predictions.decoder
 
@@ -1328,7 +1386,7 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
             new_embeddings (Any): The new embeddings to set for the model's output layer.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1352,10 +1410,11 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, MaskedLMOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
-            config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
-            loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
+                config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
+                loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
 
         Returns:
             Union[Tuple, MaskedLMOutput]
@@ -1364,28 +1423,28 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
             ```python
             >>> from transformers import AutoTokenizer, LayoutLMForMaskedLM
             >>> import torch
-
+            ...
             >>> tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutlm-base-uncased")
             >>> model = LayoutLMForMaskedLM.from_pretrained("microsoft/layoutlm-base-uncased")
-
+            ...
             >>> words = ["Hello", "[MASK]"]
             >>> normalized_word_boxes = [637, 773, 693, 782], [698, 773, 733, 782]
-
+            ...
             >>> token_boxes = []
             >>> for word, box in zip(words, normalized_word_boxes):
             ...     word_tokens = tokenizer.tokenize(word)
             ...     token_boxes.extend([box] * len(word_tokens))
             >>> # add bounding boxes of cls + sep tokens
             >>> token_boxes = [[0, 0, 0, 0]] + token_boxes + [[1000, 1000, 1000, 1000]]
-
+            ...
             >>> encoding = tokenizer(" ".join(words), return_tensors="pt")
             >>> input_ids = encoding["input_ids"]
             >>> attention_mask = encoding["attention_mask"]
             >>> token_type_ids = encoding["token_type_ids"]
             >>> bbox = torch.tensor([token_boxes])
-
+            ...
             >>> labels = tokenizer("Hello world", return_tensors="pt")["input_ids"]
-
+            ...
             >>> outputs = model(
             ...     input_ids=input_ids,
             ...     bbox=bbox,
@@ -1393,7 +1452,7 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
             ...     token_type_ids=token_type_ids,
             ...     labels=labels,
             ... )
-
+            ...
             >>> loss = outputs.loss
             ```
         """
@@ -1449,12 +1508,12 @@ class LayoutLMForSequenceClassification(LayoutLMPreTrainedModel):
             config: An instance of the configuration class containing the model configuration parameters.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            - TypeError: If the config parameter is not of the expected type.
-            - ValueError: If the num_labels attribute is not present in the config parameter.
-            - RuntimeError: If an error occurs during the initialization process.
+            TypeError: If the config parameter is not of the expected type.
+            ValueError: If the num_labels attribute is not present in the config parameter.
+            RuntimeError: If an error occurs during the initialization process.
         """
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -1474,12 +1533,11 @@ class LayoutLMForSequenceClassification(LayoutLMPreTrainedModel):
                 This parameter refers to the current instance of the LayoutLMForSequenceClassification class.
 
         Returns:
-            None
-            This method does not return any value. It simply retrieves and returns the input embeddings from the LayoutLM model for sequence classification.
+            None:
+                The input embeddings from the LayoutLM model for sequence classification.
 
         Raises:
-            None
-            No exceptions are raised within this method.
+            None.
         """
         return self.layoutlm.embeddings.word_embeddings
 
@@ -1511,27 +1569,27 @@ class LayoutLMForSequenceClassification(LayoutLMPreTrainedModel):
             ```python
             >>> from transformers import AutoTokenizer, LayoutLMForSequenceClassification
             >>> import torch
-
+            ...
             >>> tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutlm-base-uncased")
             >>> model = LayoutLMForSequenceClassification.from_pretrained("microsoft/layoutlm-base-uncased")
-
+            ...
             >>> words = ["Hello", "world"]
             >>> normalized_word_boxes = [637, 773, 693, 782], [698, 773, 733, 782]
-
+            ...
             >>> token_boxes = []
             >>> for word, box in zip(words, normalized_word_boxes):
             ...     word_tokens = tokenizer.tokenize(word)
             ...     token_boxes.extend([box] * len(word_tokens))
             >>> # add bounding boxes of cls + sep tokens
             >>> token_boxes = [[0, 0, 0, 0]] + token_boxes + [[1000, 1000, 1000, 1000]]
-
+            ...
             >>> encoding = tokenizer(" ".join(words), return_tensors="pt")
             >>> input_ids = encoding["input_ids"]
             >>> attention_mask = encoding["attention_mask"]
             >>> token_type_ids = encoding["token_type_ids"]
             >>> bbox = torch.tensor([token_boxes])
             >>> sequence_label = torch.tensor([1])
-
+            ...
             >>> outputs = model(
             ...     input_ids=input_ids,
             ...     bbox=bbox,
@@ -1539,7 +1597,7 @@ class LayoutLMForSequenceClassification(LayoutLMPreTrainedModel):
             ...     token_type_ids=token_type_ids,
             ...     labels=sequence_label,
             ... )
-
+            ...
             >>> loss = outputs.loss
             >>> logits = outputs.logits
             ```
@@ -1603,10 +1661,12 @@ class LayoutLMForTokenClassification(LayoutLMPreTrainedModel):
 
         Args:
             self: The instance of the LayoutLMForTokenClassification class.
-            config: An object of the LayoutLMConfig class containing the configuration parameters for the LayoutLM model.
-                >   - Type: LayoutLMConfig
-                >   - Purpose: Specifies the configuration parameters for the LayoutLM model.
-                >   - Restrictions: None
+            config:
+                An object of the LayoutLMConfig class containing the configuration parameters for the LayoutLM model.
+
+                - Type: LayoutLMConfig
+                - Purpose: Specifies the configuration parameters for the LayoutLM model.
+                - Restrictions: None
 
         Returns:
             None
@@ -1631,10 +1691,10 @@ class LayoutLMForTokenClassification(LayoutLMPreTrainedModel):
             self: The instance of the LayoutLMForTokenClassification class.
 
         Returns:
-            None. This method returns the word embeddings from the LayoutLM model for token classification.
+            word_embeddings: The word embeddings from the LayoutLM model for token classification.
 
         Raises:
-            N/A
+            None.
         """
         return self.layoutlm.embeddings.word_embeddings
 
@@ -1653,8 +1713,9 @@ class LayoutLMForTokenClassification(LayoutLMPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, TokenClassifierOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
 
         Returns:
             Union[Tuple, TokenClassifierOutput]
@@ -1663,27 +1724,27 @@ class LayoutLMForTokenClassification(LayoutLMPreTrainedModel):
             ```python
             >>> from transformers import AutoTokenizer, LayoutLMForTokenClassification
             >>> import torch
-
+            ...
             >>> tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutlm-base-uncased")
             >>> model = LayoutLMForTokenClassification.from_pretrained("microsoft/layoutlm-base-uncased")
-
+            ...
             >>> words = ["Hello", "world"]
             >>> normalized_word_boxes = [637, 773, 693, 782], [698, 773, 733, 782]
-
+            ...
             >>> token_boxes = []
             >>> for word, box in zip(words, normalized_word_boxes):
             ...     word_tokens = tokenizer.tokenize(word)
             ...     token_boxes.extend([box] * len(word_tokens))
             >>> # add bounding boxes of cls + sep tokens
             >>> token_boxes = [[0, 0, 0, 0]] + token_boxes + [[1000, 1000, 1000, 1000]]
-
+            ...
             >>> encoding = tokenizer(" ".join(words), return_tensors="pt")
             >>> input_ids = encoding["input_ids"]
             >>> attention_mask = encoding["attention_mask"]
             >>> token_type_ids = encoding["token_type_ids"]
             >>> bbox = torch.tensor([token_boxes])
             >>> token_labels = torch.tensor([1, 1, 0, 0]).unsqueeze(0)  # batch size of 1
-
+            ...
             >>> outputs = model(
             ...     input_ids=input_ids,
             ...     bbox=bbox,
@@ -1691,7 +1752,7 @@ class LayoutLMForTokenClassification(LayoutLMPreTrainedModel):
             ...     token_type_ids=token_type_ids,
             ...     labels=token_labels,
             ... )
-
+            ...
             >>> loss = outputs.loss
             >>> logits = outputs.logits
             ```
@@ -1745,7 +1806,7 @@ class LayoutLMForQuestionAnswering(LayoutLMPreTrainedModel):
                 Defaults to True.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1765,14 +1826,17 @@ class LayoutLMForQuestionAnswering(LayoutLMPreTrainedModel):
 
         Args:
             self: An instance of the LayoutLMForQuestionAnswering class.
-                  It represents the current instance of the model and is used to access the embeddings.
+                It represents the current instance of the model and is used to access the embeddings.
 
         Returns:
-            None. This method returns the word embeddings from the LayoutLM model for input sequences.
-            The embeddings are used for processing the input data during question answering tasks.
+            word_embeddings:
+                The word embeddings:
+
+                from the LayoutLM model for input sequences.
+                The embeddings are used for processing the input data during question answering tasks.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.layoutlm.embeddings.word_embeddings
 
@@ -1792,14 +1856,15 @@ class LayoutLMForQuestionAnswering(LayoutLMPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, QuestionAnsweringModelOutput]:
         r"""
-        start_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
+        Args:
+            start_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the start of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
+            end_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the end of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
 
         Returns:
             Union[Tuple, QuestionAnsweringModelOutput]
@@ -1812,16 +1877,16 @@ class LayoutLMForQuestionAnswering(LayoutLMPreTrainedModel):
             >>> from transformers import AutoTokenizer, LayoutLMForQuestionAnswering
             >>> from datasets import load_dataset
             >>> import torch
-
+            ...
             >>> tokenizer = AutoTokenizer.from_pretrained("impira/layoutlm-document-qa", add_prefix_space=True)
             >>> model = LayoutLMForQuestionAnswering.from_pretrained("impira/layoutlm-document-qa", revision="1e3ebac")
-
+            ...
             >>> dataset = load_dataset("nielsr/funsd", split="train")
             >>> example = dataset[0]
             >>> question = "what's his name?"
             >>> words = example["words"]
             >>> boxes = example["bboxes"]
-
+            ...
             >>> encoding = tokenizer(
             ...     question.split(), words, is_split_into_words=True, return_token_type_ids=True, return_tensors="pt"
             ... )
@@ -1834,7 +1899,7 @@ class LayoutLMForQuestionAnswering(LayoutLMPreTrainedModel):
             ...     else:
             ...         bbox.append([0] * 4)
             >>> encoding["bbox"] = torch.tensor([bbox])
-
+            ...
             >>> word_ids = encoding.word_ids(0)
             >>> outputs = model(**encoding)
             >>> loss = outputs.loss

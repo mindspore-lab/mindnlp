@@ -108,8 +108,8 @@ def _fast_find_longest_common_sequence(sequence_left, sequence_right):
     
     Returns:
         tuple: A tuple containing the index of the starting element of the longest common sequence in 'sequence_left',
-               the index of the starting element of the longest common sequence in 'sequence_right',
-               and the length of the longest common sequence.
+            the index of the starting element of the longest common sequence in 'sequence_right',
+            and the length of the longest common sequence.
     
     Raises:
         None.
@@ -263,13 +263,15 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
         Args:
             self: The instance of the class.
             model (PreTrainedModel): The pre-trained model used for speech recognition.
-            feature_extractor (Union[SequenceFeatureExtractor, str]): The feature extractor used for processing input data. It can be an instance of SequenceFeatureExtractor class or a string.
+            feature_extractor (Union[SequenceFeatureExtractor, str]): The feature extractor used for processing
+                input data. It can be an instance of SequenceFeatureExtractor class or a string.
             tokenizer (Optional[PreTrainedTokenizer]): The tokenizer used for tokenizing input data.
-            decoder (Optional[Union[BeamSearchDecoderCTC, str]]): The decoder used for decoding the model predictions. It can be an instance of BeamSearchDecoderCTC class or a string.
+            decoder (Optional[Union[BeamSearchDecoderCTC, str]]): The decoder used for decoding the model predictions.
+                It can be an instance of BeamSearchDecoderCTC class or a string.
             ms_dtype (Optional[str]): The data type used for processing input data.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -302,7 +304,6 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
 
         Args:
             inputs (`np.ndarray` or `bytes` or `str` or `dict`):
-
                 - `str` that is either the filename of a local audio file, or a public URL address to download the
                 audio file. The file will be read at the correct sampling rate to get the waveform using
                 *ffmpeg*. This requires *ffmpeg* to be installed on the system.
@@ -315,7 +316,6 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
                 treat the first `left` samples and last `right` samples to be ignored in decoding (but used at
                 inference to provide more context to the model). Only use `stride` with CTC models.
             return_timestamps (*optional*, `str` or `bool`):
-
                 - Only available for pure CTC models (Wav2Vec2, HuBERT, etc) and the Whisper model. Not available for
                 other sequence-to-sequence models.
                 - For CTC models, timestamps can take one of two formats:
@@ -347,15 +347,14 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
 
         Returns:
             `Dict`:
+                A dictionary with the following keys:
 
-                - A dictionary with the following keys:
-
-                    - **text** (`str`): The recognized text.
-                    - **chunks** (*optional(, `List[Dict]`)
-                    When using `return_timestamps`, the `chunks` will become a list containing all the various text
-                    chunks identified by the model, *e.g.* `[{"text": "hi ", "timestamp": (0.5, 0.9)}, {"text":
-                    "there", "timestamp": (1.0, 1.5)}]`. The original full text can roughly be recovered by doing
-                    `"".join(chunk["text"] for chunk in output["chunks"])`.
+                - **text** (`str`): The recognized text.
+                - **chunks** (*optional(, `List[Dict]`)
+                When using `return_timestamps`, the `chunks` will become a list containing all the various text
+                chunks identified by the model, *e.g.* `[{"text": "hi ", "timestamp": (0.5, 0.9)}, {"text":
+                "there", "timestamp": (1.0, 1.5)}]`. The original full text can roughly be recovered by doing
+                `"".join(chunk["text"] for chunk in output["chunks"])`.
         """
         return super().__call__(inputs, **kwargs)
 
@@ -469,10 +468,11 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
                 Defaults to 0.
             stride_length_s (float or list):
                 The length of stride for chunking the audio data, in seconds.
-                If a single value is provided, it is applied to both the left and right strides.
-                If a list is provided, the first value represents the left stride and the second value represents
+
+                - If a single value is provided, it is applied to both the left and right strides.
+                - If a list is provided, the first value represents the left stride and the second value represents
                 the right stride.
-                If not provided, it defaults to chunk_length_s / 6.
+                - If not provided, it defaults to chunk_length_s / 6.
 
         Returns:
             None: This method yields processed chunks of the input audio data and does not return a single value.
@@ -589,7 +589,8 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
             return_timestamps (bool, optional): Indicates whether to return token timestamps. Defaults to False.
 
         Returns:
-            dict: A dictionary containing the output of the forward pass. The structure of the dictionary depends on the ASR model type.
+            dict: A dictionary containing the output of the forward pass.
+                The structure of the dictionary depends on the ASR model type.
 
         Raises:
             ValueError:

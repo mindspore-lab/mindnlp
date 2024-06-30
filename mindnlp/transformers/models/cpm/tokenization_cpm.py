@@ -214,7 +214,7 @@ class CpmTokenizer(PreTrainedTokenizer):
                 Returns the state of the object with 'sp_model' set to None.
         
         Raises:
-            No exceptions are raised by this method.
+            None.
         """
         state = self.__dict__.copy()
         state["sp_model"] = None

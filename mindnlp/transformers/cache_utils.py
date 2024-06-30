@@ -86,13 +86,14 @@ class DynamicCache(Cache):
             self: The instance of the 'DynamicCache' class.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
         
         Description:
-            This method initializes the 'DynamicCache' instance by setting up the key and value caches, as well as initializing the number of seen tokens.
+            This method initializes the 'DynamicCache' instance by setting up the key and value caches, as well as
+            initializing the number of seen tokens.
 
             - The 'key_cache' is a list of mindspore.Tensor objects that stores the keys.
             - The 'value_cache' is a list of mindspore.Tensor objects that stores the corresponding values.
@@ -239,11 +240,12 @@ class SinkCache(Cache):
         The `__init__` method is used to initialize a new instance of the `SinkCache` class.
         It takes three parameters: `self`, `window_length`, and `num_sink_tokens`.
 
-            - `self` (SinkCache): The `self` parameter refers to the instance of the `SinkCache` class that is being initialized.
-            - `window_length` (int): The `window_length` parameter specifies the length of the window used for caching.
-            This value determines the size of the cache and affects the number of tokens that can be stored.
-            - `num_sink_tokens` (int): The `num_sink_tokens` parameter represents the number of sink tokens.
-            Sink tokens are special tokens used in the caching mechanism.
+        - `self` (SinkCache): The `self` parameter refers to the instance of the `SinkCache` class that is being 
+        initialized.
+        - `window_length` (int): The `window_length` parameter specifies the length of the window used for caching.
+        This value determines the size of the cache and affects the number of tokens that can be stored.
+        - `num_sink_tokens` (int): The `num_sink_tokens` parameter represents the number of sink tokens.
+        Sink tokens are special tokens used in the caching mechanism.
 
         The method does not return any value (`None`).
 
@@ -265,7 +267,7 @@ class SinkCache(Cache):
             x (tensor): The input tensor to be rotated. It should have at least one dimension.
 
         Returns:
-            None. The method modifies the input tensor in place.
+            None: The method modifies the input tensor in place.
 
         Raises:
             ValueError: If the input tensor 'x' does not have at least one dimension.
@@ -319,7 +321,7 @@ class SinkCache(Cache):
                 The rerotation cosine and sine values are calculated based on the input key_states, cos, and sin tensors.
 
         Raises:
-            N/A
+            None.
         """
         if key_states.shape[-2] not in self.cos_sin_cache:
             # Upcast to float32 temporarily for better accuracy
@@ -465,7 +467,7 @@ class StaticCache(Cache):
             dtype (optional): The data type of the cache. Defaults to mindspore.float32.
 
         Returns:
-            None: This method initializes the StaticCache object with the provided parameters.
+            None.
 
         Raises:
             TypeError: If the provided config is not of type PretrainedConfig.
@@ -512,7 +514,8 @@ class StaticCache(Cache):
                 to know how much of the cache it should overwrite.
 
         Return:
-            A tuple containing the updated key and value states.
+            tuple:
+                A tuple containing the updated key and value states.
         """
         new_cache_positions = cache_kwargs.get("cache_position")
         k_out = self.key_cache

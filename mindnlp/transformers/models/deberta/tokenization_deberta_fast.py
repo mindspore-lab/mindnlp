@@ -74,6 +74,8 @@ class DebertaTokenizerFast(PreTrainedTokenizerFast):
 
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
+
+    Example:
         ```python
         >>> from transformers import DebertaTokenizerFast
         ...
@@ -151,7 +153,8 @@ class DebertaTokenizerFast(PreTrainedTokenizerFast):
         add_prefix_space=False,
         **kwargs,
     ):
-        """Initialize a DebertaTokenizerFast object.
+        """
+        Initialize a DebertaTokenizerFast object.
 
         Args:
             self (DebertaTokenizerFast): An instance of the DebertaTokenizerFast class.
@@ -169,10 +172,10 @@ class DebertaTokenizerFast(PreTrainedTokenizerFast):
             add_prefix_space (bool, optional): Whether to add a space before each token. Defaults to False.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         super().__init__(
             vocab_file,

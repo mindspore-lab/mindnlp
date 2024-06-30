@@ -37,11 +37,13 @@ class ReturnType(enum.Enum):
         ERROR: Represents an error occurred during the function execution.
     
     Example:
-        >- To access the SUCCESS return type:
-        >   - ReturnType.SUCCESS
+        To access the SUCCESS return type:
 
-        >- To check if a return type is of type FAILURE:
-        >   - ReturnType.FAILURE == ReturnType.FAILURE
+        - ReturnType.SUCCESS
+
+        To check if a return type is of type FAILURE:
+
+        - ReturnType.FAILURE == ReturnType.FAILURE
     """
     TENSORS = 0
     TEXT = 1
@@ -93,10 +95,10 @@ class Text2TextGenerationPipeline(Pipeline):
             self: An instance of the Text2TextGenerationPipeline class.
 
         Returns:
-            None. This method doesn't return any value explicitly.
+            None.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         super().__init__(*args, **kwargs)
 
@@ -111,14 +113,17 @@ class Text2TextGenerationPipeline(Pipeline):
             **generate_kwargs,
     ):
         """
-        This method '_sanitize_parameters' in the 'Text2TextGenerationPipeline' class sanitizes and prepares input parameters for text generation.
+        This method '_sanitize_parameters' in the 'Text2TextGenerationPipeline' class sanitizes and prepares input
+        parameters for text generation.
 
         Args:
             self: The instance of the class.
             return_tensors (bool): Whether to return the generated text as tensors. Default is None.
             return_text (bool): Whether to return the generated text as plain text. Default is None.
-            return_type (ReturnType): The type of output to return. Can be either ReturnType.TENSORS or ReturnType.TEXT. Default is None.
-            clean_up_tokenization_spaces (bool): Whether to clean up tokenization spaces in the generated text. Default is None.
+            return_type (ReturnType): The type of output to return. Can be either ReturnType.TENSORS or ReturnType.TEXT.
+                Default is None.
+            clean_up_tokenization_spaces (bool): Whether to clean up tokenization spaces in the generated text.
+                Default is None.
             truncation (bool): Whether to truncate the generated text. Default is None.
             stop_sequence (str): The sequence of tokens that indicates the end of generation.
 
@@ -128,7 +133,8 @@ class Text2TextGenerationPipeline(Pipeline):
             postprocess_params (dict): A dictionary containing postprocessing parameters.
 
         Raises:
-            Warning: When attempting to stop generation on a multiple token sequence, as this feature is not supported in transformers.
+            Warning: When attempting to stop generation on a multiple token sequence, as this feature is not
+                supported in transformers.
         """
         preprocess_params = {}
         if truncation is not None:
@@ -183,11 +189,12 @@ class Text2TextGenerationPipeline(Pipeline):
             self: An instance of the Text2TextGenerationPipeline class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError:
-                Raised if the tokenizer's pad_token_id is not set when batch input is used or if the input data format is incorrect.
+                Raised if the tokenizer's pad_token_id is not set when batch input is used or if the input data
+                format is incorrect.
         """
         prefix = self.model.config.prefix if self.model.config.prefix is not None else ""
         if isinstance(args[0], list):
@@ -230,12 +237,13 @@ class Text2TextGenerationPipeline(Pipeline):
                 Additional keyword arguments to pass along to the generate method of the model (see the generate method
                 corresponding to your framework [here](./model#generative-models)).
 
-        Return:
-            A list or a list of list of `dict`: Each result comes as a dictionary with the following keys:
+        Returns:
+            A list or a list of list of `dict`:
+                Each result comes as a dictionary with the following keys:
 
-            - **generated_text** (`str`, present when `return_text=True`) -- The generated text.
-            - **generated_token_ids** (`torch.Tensor` or `tf.Tensor`, present when `return_tensors=True`) -- The token
-              ids of the generated text.
+                - **generated_text** (`str`, present when `return_text=True`) -- The generated text.
+                - **generated_token_ids** (`torch.Tensor` or `tf.Tensor`, present when `return_tensors=True`) -- The token
+                  ids of the generated text.
         """
         result = super().__call__(*args, **kwargs)
         if (
@@ -253,11 +261,12 @@ class Text2TextGenerationPipeline(Pipeline):
         Args:
             self (Text2TextGenerationPipeline): The instance of the Text2TextGenerationPipeline class.
             inputs (Union[str, List[str]]): The input text or list of input texts to be preprocessed.
-            truncation (TruncationStrategy, optional): The strategy to use for truncating the input text if it exceeds the maximum length. Defaults to TruncationStrategy.DO_NOT_TRUNCATE.
+            truncation (TruncationStrategy, optional): The strategy to use for truncating the input text
+                if it exceeds the maximum length. Defaults to TruncationStrategy.DO_NOT_TRUNCATE.
             **kwargs: Additional keyword arguments to be passed to the _parse_and_tokenize method.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the inputs parameter is not a string or a list of strings.
@@ -273,7 +282,8 @@ class Text2TextGenerationPipeline(Pipeline):
 
         Args:
             self: An instance of the Text2TextGenerationPipeline class.
-            model_inputs (dict): A dictionary containing the model's input data.
+            model_inputs (dict):
+                A dictionary containing the model's input data.
 
                 - input_ids (Tensor): A tensor representing the input sequence.
                   Shape: (batch_size, sequence_length)
@@ -340,7 +350,8 @@ class SummarizationPipeline(Text2TextGenerationPipeline):
     `"summarization"`.
 
     The models that this pipeline can use are models that have been fine-tuned on a summarization task, which is
-    currently, '*bart-large-cnn*', '*google-t5/t5-small*', '*google-t5/t5-base*', '*google-t5/t5-large*', '*google-t5/t5-3b*', '*google-t5/t5-11b*'. See the up-to-date
+    currently, '*bart-large-cnn*', '*google-t5/t5-small*', '*google-t5/t5-base*', '*google-t5/t5-large*',
+    '*google-t5/t5-3b*', '*google-t5/t5-11b*'. See the up-to-date
     list of available models on [hf-mirror.com/models](https://hf-mirror.com/models?filter=summarization). For a list
     of available parameters, see the [following
     documentation](https://hf-mirror.com/docs/transformers/en/main_classes/text_generation#transformers.generation.GenerationMixin.generate)
@@ -376,8 +387,9 @@ class SummarizationPipeline(Text2TextGenerationPipeline):
                 Additional keyword arguments to pass along to the generate method of the model (see the generate method
                 corresponding to your framework [here](./model#generative-models)).
 
-        Return:
-            A list or a list of list of `dict`: Each result comes as a dictionary with the following keys:
+        Returns:
+            A list or a list of list of `dict`:
+                Each result comes as a dictionary with the following keys:
 
                 - **summary_text** (`str`, present when `return_text=True`) -- The summary of the corresponding input.
                 - **summary_token_ids** (`torch.Tensor` or `tf.Tensor`, present when `return_tensors=True`) -- The token
@@ -434,10 +446,10 @@ class TranslationPipeline(Text2TextGenerationPipeline):
             max_length (int): Maximum acceptable length for the input.
 
         Returns:
-            None: This method does not return any value explicitly.
+            None.
 
         Raises:
-            No explicit exceptions are raised within this method. However, it may trigger a warning message if the input_length exceeds 90% of the max_length.
+            None: However, it may trigger a warning message if the input_length exceeds 90% of the max_length.
         """
         if input_length > 0.9 * max_length:
             logger.warning(
@@ -452,36 +464,27 @@ class TranslationPipeline(Text2TextGenerationPipeline):
 
         Args:
             self: The instance of the TranslationPipeline class.
-
                 - Type: TranslationPipeline
                 - Purpose: Represents the instance of the TranslationPipeline class.
-
             *args: Variable length argument list.
-
                 - Type: tuple
                 - Purpose: Represents the input arguments for the preprocessing.
-
             truncation: Specifies the truncation strategy for the input sequences.
-
                 - Type: TruncationStrategy (Enum)
                 - Purpose: Determines the truncation strategy for the input sequences.
                 - Restrictions: Should be one of the TruncationStrategy enum values.
-
             src_lang: Specifies the source language for translation.
-
                 - Type: str
                 - Purpose: Represents the source language for translation.
-
             tgt_lang: Specifies the target language for translation.
-
                 - Type: str
                 - Purpose: Represents the target language for translation.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         if getattr(self.tokenizer, "_build_translation_inputs", None):
             return self.tokenizer._build_translation_inputs(
@@ -558,8 +561,9 @@ class TranslationPipeline(Text2TextGenerationPipeline):
                 Additional keyword arguments to pass along to the generate method of the model (see the generate method
                 corresponding to your framework [here](./model#generative-models)).
 
-        Return:
-            A list or a list of list of `dict`: Each result comes as a dictionary with the following keys:
+        Returns:
+            A list or a list of list of `dict`:
+                Each result comes as a dictionary with the following keys:
 
                 - **translation_text** (`str`, present when `return_text=True`) -- The translation.
                 - **translation_token_ids** (`torch.Tensor` or `tf.Tensor`, present when `return_tensors=True`) -- The

@@ -193,7 +193,7 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
             **kwargs: Additional keyword arguments.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -294,9 +294,9 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
             BatchEncoding: A dictionary-like object containing the encoded inputs.
 
         Raises:
-            - ValueError: Raised if the parameter 'is_split_into_words' is set to True but 'add_prefix_space' is False.
-            In such cases, it indicates that the tokenizer needs to be instantiated with
-            'add_prefix_space=True' to work with pretokenized inputs.
+            ValueError: Raised if the parameter 'is_split_into_words' is set to True but 'add_prefix_space' is False.
+                In such cases, it indicates that the tokenizer needs to be instantiated with
+                'add_prefix_space=True' to work with pretokenized inputs.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
 
@@ -325,7 +325,7 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
 
         Raises:
             ValueError: If is_split_into_words is True and add_prefix_space is False, a ValueError is raised indicating that
-            the BartTokenizerFast instance needs to be instantiated with add_prefix_space=True to use it with pretokenized inputs.
+                the BartTokenizerFast instance needs to be instantiated with add_prefix_space=True to use it with pretokenized inputs.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
 
@@ -350,7 +350,7 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
             Tuple[str]: A tuple containing the filenames of the saved vocabulary files.
 
         Raises:
-            - Any exceptions raised by the underlying tokenizer model.save method.
+            None: Any exceptions raised by the underlying tokenizer model.save method.
         '''
         files = self._tokenizer.model.save(save_directory, name=filename_prefix)
         return tuple(files)
@@ -368,7 +368,7 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
             None: The method modifies the input token lists in place.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         output = [self.bos_token_id] + token_ids_0 + [self.eos_token_id]
         if token_ids_1 is None:

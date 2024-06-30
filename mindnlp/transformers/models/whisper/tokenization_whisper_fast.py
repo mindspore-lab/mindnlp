@@ -169,12 +169,12 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
             None
 
         Raises:
-            - TypeError: If any of the parameters are of incorrect type.
-            - FileNotFoundError: If any of the specified files cannot be found.
-            - JSONDecodeError: If there is an issue with decoding JSON data.
-            - AttributeError: If there is an attribute error while setting tokenizer pre-tokenizer.
-            - ValueError: If there is an issue with the provided values.
-            - RegexError: If there is an issue with the regular expression compilation.
+            TypeError: If any of the parameters are of incorrect type.
+            FileNotFoundError: If any of the specified files cannot be found.
+            JSONDecodeError: If there is an issue with decoding JSON data.
+            AttributeError: If there is an attribute error while setting tokenizer pre-tokenizer.
+            ValueError: If there is an issue with the provided values.
+            RegexError: If there is an issue with the regular expression compilation.
         """
         bos_token = (
             AddedToken(bos_token, lstrip=False, rstrip=False, normalized=False, special=True)
@@ -236,8 +236,9 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
             BatchEncoding: An object of type BatchEncoding containing the encoded inputs.
 
         Raises:
-            AssertionError: If add_prefix_space is False and is_split_into_words is True, it raises an assertion error with the message indicating that the class needs to be instantiated with
-            add_prefix_space=True to use it with pretokenized inputs.
+            AssertionError: If add_prefix_space is False and is_split_into_words is True,
+                it raises an assertion error with the message indicating that the class needs to be instantiated with
+                add_prefix_space=True to use it with pretokenized inputs.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
         assert self.add_prefix_space or not is_split_into_words, (
@@ -259,8 +260,9 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
             BatchEncoding: A batch encoding object containing the encoded input sequence.
 
         Raises:
-            AssertionError: If the 'add_prefix_space' attribute is not set to True and the input is split into words. This indicates that the WhisperTokenizerFast instance needs to be instantiated with
-            add_prefix_space=True for use with pretokenized inputs.
+            AssertionError: If the 'add_prefix_space' attribute is not set to True and the input is split into words.
+                This indicates that the WhisperTokenizerFast instance needs to be instantiated with
+                add_prefix_space=True for use with pretokenized inputs.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
 
@@ -398,7 +400,7 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
             None: This method modifies the 'token_ids' string in-place by removing any timestamp IDs.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return re.sub(self.timestamp_pat, "", token_ids)
 
@@ -448,6 +450,7 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
                 destroy information in the decoded text, hence it should be used with caution.
             kwargs (additional keyword arguments, *optional*):
                 Will be passed to the underlying model specific decode method.
+
         Returns:
             `str`: The decoded sentence.
         """
@@ -522,14 +525,16 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
             text (str): The input text to be normalized.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            DeprecationWarning: If the method is called, a DeprecationWarning will be raised to notify that the private method `_normalize` is deprecated and will be removed in v5 of Transformers. Users are
-            encouraged to use the `normalize` method to normalize the input string.
+            DeprecationWarning: If the method is called, a DeprecationWarning will be raised to notify that the
+                private method `_normalize` is deprecated and will be removed in v5 of Transformers. Users are
+                encouraged to use the `normalize` method to normalize the input string.
 
         Note:
-            The `_normalize` method is a private method intended for internal use only. Its functionality will be replaced by the `normalize` method in future versions of Transformers.
+            The `_normalize` method is a private method intended for internal use only. Its functionality will be
+            replaced by the `normalize` method in future versions of Transformers.
 
         Example:
             ```python
@@ -550,19 +555,21 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
     # Copied from transformers.models.whisper.tokenization_whisper.WhisperTokenizer._basic_normalize
     def _basic_normalize(self, text, remove_diacritics=False):
         """
-        This method '_basic_normalize' in the class 'WhisperTokenizerFast' is deprecated and will be removed in v5 of Transformers. It is recommended to use the 'basic_normalize' method for string
-        normalization.
+        This method '_basic_normalize' in the class 'WhisperTokenizerFast' is deprecated and will be removed in v5 of
+        Transformers. It is recommended to use the 'basic_normalize' method for string normalization.
 
         Args:
             self: Instance of the WhisperTokenizerFast class.
             text (str): Input text to be normalized.
-            remove_diacritics (bool): Flag indicating whether diacritics should be removed during normalization. Defaults to False.
+            remove_diacritics (bool): Flag indicating whether diacritics should be removed during normalization.
+                Defaults to False.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            DeprecationWarning: If the method '_basic_normalize' is called, a DeprecationWarning is raised indicating that the method is deprecated and will be removed in v5 of Transformers.
+            DeprecationWarning: If the method '_basic_normalize' is called, a DeprecationWarning is raised indicating
+                that the method is deprecated and will be removed in v5 of Transformers.
         """
         warnings.warn(
             "The private method `_basic_normalize` is deprecated and will be removed in v5 of Transformers."
@@ -663,18 +670,26 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
     # Copied from transformers.models.whisper.tokenization_whisper.WhisperTokenizer.prefix_tokens
     def prefix_tokens(self) -> List[int]:
         """
-        This method, prefix_tokens, is a member of the class WhisperTokenizerFast and is responsible for generating a list of token IDs that represent the prefix of a transcription or translation sequence. It
-        takes the following parameter:
+        This method, prefix_tokens, is a member of the class WhisperTokenizerFast and is responsible for generating a
+        list of token IDs that represent the prefix of a transcription or translation sequence. It takes the following
+        parameter:
 
         Args:
-        - self: The instance of the WhisperTokenizerFast class. It is used to access the attributes and methods of the class within the prefix_tokens method.
+            self:
+                The instance of the WhisperTokenizerFast class. It is used to access the attributes and methods of the
+                class within the prefix_tokens method.
 
         Returns:
-        - List[int]: Returns a list of integer token IDs representing the prefix of a transcription or translation sequence.
+            List[int]:
+                Returns a list of integer token IDs representing the prefix of a transcription or translation
+                sequence.
 
         Raises:
-        - ValueError: This exception is raised if the language provided is not supported or if the task provided is not recognized. The exception message provides details about the unsupported language or task
-        and the valid options for language and task, respectively.
+            ValueError:
+                This exception is raised if the language provided is not supported or if the task provided is not
+                recognized.
+                The exception message provides details about the unsupported language or task and the valid options
+                for language and task, respectively.
         """
         bos_token_id = self.convert_tokens_to_ids("<|startoftranscript|>")
         translate_token_id = self.convert_tokens_to_ids("<|translate|>")
@@ -769,7 +784,8 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
             self (WhisperTokenizerFast): The instance of the WhisperTokenizerFast class.
             task (str, optional): The task associated with the decoder prompt IDs. Default is None.
             language (str, optional): The language for which the decoder prompt IDs are retrieved. Default is None.
-            no_timestamps (bool, optional): A flag indicating whether timestamps should be predicted or not. Default is True.
+            no_timestamps (bool, optional): A flag indicating whether timestamps should be predicted or not.
+                Default is True.
         
         Returns:
             list: A list of tuples containing the rank and corresponding token of forced decoder IDs.
@@ -788,7 +804,8 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
 
     def _decode_asr(self, model_outputs, *, return_timestamps, return_language, time_precision):
         """
-        This method is used to decode ASR (Automatic Speech Recognition) outputs. It takes model outputs as input and decodes them based on specified parameters.
+        This method is used to decode ASR (Automatic Speech Recognition) outputs. It takes model outputs as input and
+        decodes them based on specified parameters.
         
         Args:
             self (WhisperTokenizerFast): The instance of the WhisperTokenizerFast class.

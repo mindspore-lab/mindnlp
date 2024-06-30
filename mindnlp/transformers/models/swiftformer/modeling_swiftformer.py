@@ -407,7 +407,8 @@ class SwiftFormerEncoder(nn.Cell):
 
 
 class SwiftFormerPreTrainedModel(PreTrainedModel):
-    """default_image_processor
+    """
+    default_image_processor
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """

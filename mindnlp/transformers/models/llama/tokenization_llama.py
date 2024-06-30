@@ -81,14 +81,17 @@ class LlamaTokenizer(PreTrainedTokenizer):
             Will be passed to the `SentencePieceProcessor.__init__()` method. The [Python wrapper for
             SentencePiece](https://github.com/google/sentencepiece/tree/master/python) can be used, among other things,
             to set:
-            >   - `enable_sampling`: Enable subword regularization.
-            >   - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
-            >       - `nbest_size = {0,1}`: No sampling is performed.
-            >       - `nbest_size > 1`: samples from the nbest_size results.
-            >       - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
-                        using forward-filtering-and-backward-sampling algorithm.
-            >   - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
-                    BPE-dropout.
+
+            - `enable_sampling`: Enable subword regularization.
+            - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
+
+                - `nbest_size = {0,1}`: No sampling is performed.
+                - `nbest_size > 1`: samples from the nbest_size results.
+                - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
+                using forward-filtering-and-backward-sampling algorithm.
+
+            - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
+            BPE-dropout.
 
         add_bos_token (`bool`, *optional*, defaults to `True`):
             Whether or not to add an `bos_token` at the start of sequences.
@@ -103,12 +106,13 @@ class LlamaTokenizer(PreTrainedTokenizer):
             Whether or not to add spaces between special tokens.
         legacy (`bool`, *optional*):
             Whether or not the `legacy` behavior of the tokenizer should be used. Legacy is before the merge of #24622
-            and #25224 which includes fixes to properly handle tokens that appear after special tokens. A simple
-            example:
+            and #25224 which includes fixes to properly handle tokens that appear after special tokens.
+
+            A simple example:
                 - `legacy=True`:
                 ```python
                 >>> from transformers import T5Tokenizer
-
+                ...
                 >>> tokenizer = T5Tokenizer.from_pretrained("t5-base", legacy=True)
                 >>> tokenizer.encode("Hello <extra_id_0>.")
                 [8774, 32099, 3, 5, 1]
@@ -116,7 +120,7 @@ class LlamaTokenizer(PreTrainedTokenizer):
                 - `legacy=False`:
                 ```python
                 >>> from transformers import T5Tokenizer
-
+                ...
                 >>> tokenizer = T5Tokenizer.from_pretrained("t5-base", legacy=False)
                 >>> tokenizer.encode("Hello <extra_id_0>.")  # the extra space `[3]` is no longer here
                 [8774, 32099, 5, 1]
@@ -164,14 +168,16 @@ class LlamaTokenizer(PreTrainedTokenizer):
             legacy (bool, optional): Whether to use the legacy behavior. Defaults to None.
 
         Returns:
-            None. This method does not return anything.
+            None.
 
         Raises:
             None.
 
         Note:
-            You are using the default legacy behavior of the LlamaTokenizer. This means that the previous behavior will be used, and nothing changes. If you want to use the new behavior, set `legacy=False`.
-            Only set this if you understand the implications and have thoroughly read the reason for this change as explained in https://github.com/huggingface/transformers/pull/24565.
+            You are using the default legacy behavior of the LlamaTokenizer. This means that the previous behavior
+            will be used, and nothing changes. If you want to use the new behavior, set `legacy=False`.
+            Only set this if you understand the implications and have thoroughly read the reason for this change
+            as explained in https://github.com/huggingface/transformers/pull/24565.
         """
         self.sp_model_kwargs = {} if sp_model_kwargs is None else sp_model_kwargs
         bos_token = AddedToken(bos_token, normalized=False, special=True) if isinstance(bos_token, str) else bos_token
@@ -220,19 +226,21 @@ class LlamaTokenizer(PreTrainedTokenizer):
             self: An instance of the LlamaTokenizer class.
 
         Returns:
-            None. The method returns the length of the unknown token as an integer value.
+            int: The method returns the length of the unknown token as an integer value.
 
         Raises:
             None.
 
-        This method calculates and returns the length of the unknown token in the LlamaTokenizer. The unknown token is represented as a string and is encoded using the sp_model.encode() method. The length of
-        the encoded unknown token is then determined using the len() function and returned as an integer value. The method does not modify any internal state or variables of the LlamaTokenizer class.
+        This method calculates and returns the length of the unknown token in the LlamaTokenizer.
+        The unknown token is represented as a string and is encoded using the sp_model.encode() method.
+        The length of the encoded unknown token is then determined using the len() function and returned as
+        an integer value. The method does not modify any internal state or variables of the LlamaTokenizer class.
 
-        Example usage:
+        Example:
             ```python
-            tokenizer = LlamaTokenizer()
-            unk_token_length = tokenizer.unk_token_length()
-            print(unk_token_length)  # Output: 5
+            >>> tokenizer = LlamaTokenizer()
+            >>> unk_token_length = tokenizer.unk_token_length()
+            >>> print(unk_token_length)  # Output: 5
             ```
         """
         return len(self.sp_model.encode(str(self.unk_token)))
@@ -247,10 +255,10 @@ class LlamaTokenizer(PreTrainedTokenizer):
             from_slow (bool): A flag indicating whether to load the tokenizer from a slow source. Defaults to False.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         tokenizer = spm.SentencePieceProcessor(**self.sp_model_kwargs)
         if self.legacy or from_slow:  # no dependency on protobuf
@@ -278,7 +286,8 @@ class LlamaTokenizer(PreTrainedTokenizer):
 
         Returns:
             None: This method does not explicitly return a value, but it updates the state of the tokenizer object.
-                The state dictionary contains a copy of the instance's attributes with modifications as needed for serialization.
+                The state dictionary contains a copy of the instance's attributes with modifications as needed for
+                serialization.
 
         Raises:
             None
@@ -290,19 +299,22 @@ class LlamaTokenizer(PreTrainedTokenizer):
 
     def __setstate__(self, d):
         """
-        This method '__setstate__' in the class 'LlamaTokenizer' is responsible for restoring the state of the object from a dictionary representation.
+        This method '__setstate__' in the class 'LlamaTokenizer' is responsible for restoring the state of the object
+        from a dictionary representation.
 
         Args:
             self (object): The instance of the class.
-            d (dict): A dictionary containing the state information to be restored. It should include the necessary data to reconstruct the object's state.
+            d (dict): A dictionary containing the state information to be restored.
+                It should include the necessary data to reconstruct the object's state.
 
         Returns:
-            None. The method does not explicitly return any value, as it operates by directly updating the object's state.
+            None: The method does not explicitly return any value,
+                as it operates by directly updating the object's state.
 
         Raises:
-            - TypeError: If the provided 'd' parameter is not a dictionary.
-            - AttributeError: If the necessary attributes are not present in the dictionary 'd'.
-            - ValueError: If there are issues with loading or reconstructing the 'sp_model' using the provided data.
+            TypeError: If the provided 'd' parameter is not a dictionary.
+            AttributeError: If the necessary attributes are not present in the dictionary 'd'.
+            ValueError: If there are issues with loading or reconstructing the 'sp_model' using the provided data.
         """
         self.__dict__ = d
         self.sp_model = spm.SentencePieceProcessor(**self.sp_model_kwargs)
@@ -420,13 +432,14 @@ class LlamaTokenizer(PreTrainedTokenizer):
         Args:
             self: The instance of the LlamaTokenizer class.
             token_ids_0: A list of token IDs representing the first sequence.
-            token_ids_1 (optional): A list of token IDs representing the second sequence. Defaults to None if not provided.
+            token_ids_1 (optional): A list of token IDs representing the second sequence.
+                Defaults to None if not provided.
 
         Returns:
             A list of token IDs with special tokens added at the beginning and end of the sequences.
 
         Raises:
-            - None
+            None
         '''
         bos_token_id = [self.bos_token_id] if self.add_bos_token else []
         eos_token_id = [self.eos_token_id] if self.add_eos_token else []

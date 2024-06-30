@@ -67,10 +67,10 @@ class AffineTransformed(TransformedDistribution):
             value (Any): The value to be assigned to the attribute.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         object.__setattr__(self, name, value)
 
@@ -154,7 +154,7 @@ class LambdaLayer(nn.Cell):
             function (function): The function that will be stored in the LambdaLayer instance.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None
@@ -169,19 +169,17 @@ class LambdaLayer(nn.Cell):
         Args:
             self (LambdaLayer): The current instance of the LambdaLayer class.
             x: The input parameter for the lambda function.
-
                 - Type: Any
                 - Purpose: Represents the input value for the lambda function.
             *args: Variable length argument list.
-
                 - Type: Any
                 - Purpose: Additional arguments that can be passed to the lambda function.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.function(x, *args)
 
@@ -203,10 +201,10 @@ class DistributionOutput:
             dim (int, optional): The dimension of the output. Defaults to 1.
 
         Returns:
-            None: This method does not return anything.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.dim = dim
         self.args_dim = {k: dim * self.args_dim[k] for k in self.args_dim}
@@ -216,28 +214,33 @@ class DistributionOutput:
         Method: _base_distribution
 
         This method is a helper method for the DistributionOutput class.
-        It creates an instance of the distribution class specified by the class variable 'distribution_class' using the provided 'distr_args'
-        and returns it.
+        It creates an instance of the distribution class specified by the class variable 'distribution_class' using
+        the provided 'distr_args' and returns it.
 
         Args:
-            self: A reference to the current instance of the DistributionOutput class.
+            self:
+                A reference to the current instance of the DistributionOutput class.
 
                 - Type: DistributionOutput
                 - Purpose: Allows access to the class's variables and methods.
-                - Restrictions: N/A
-            distr_args: A list of arguments to be passed to the distribution class constructor.
+                - Restrictions: None.
+            distr_args:
+                A list of arguments to be passed to the distribution class constructor.
 
                 - Type: list
                 - Purpose: Specifies the arguments required to instantiate the distribution class.
                 - Restrictions: The number and types of arguments must be compatible with the distribution class constructor.
 
         Returns:
-            None: This method does not return any value.
+            None:
+                This method does not return any value.
+
                 - Type: None
-                - Purpose: The method is used for its side effects, specifically, creating an instance of the distribution class.
+                - Purpose: The method is used for its side effects, specifically, creating an instance of the
+                distribution class.
         
         Raises:
-            - N/A: This method does not raise any exceptions.
+            None.
         """
         #if self.dim == 1:
         return self.distribution_class(*distr_args)
@@ -329,7 +332,7 @@ class StudentTOutput(DistributionOutput):
                 It should be a 1D tensor.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ValueError: If the input tensors are not in the expected format.

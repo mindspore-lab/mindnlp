@@ -35,18 +35,20 @@ class MSRobertaEmbeddings(nn.Cell):
         
         Args:
             self (object): The instance of the MSRobertaEmbeddings class.
-            config (object): An object containing configuration parameters for the embeddings. It should include the following attributes:
-                >   - vocab_size (int): The size of the vocabulary.
-                >   - hidden_size (int): The size of the hidden layers.
-                >   - max_position_embeddings (int): The maximum allowed position for embeddings.
-                >   - type_vocab_size (int): The size of the token type vocabulary.
-                >   - layer_norm_eps (float): The epsilon value for layer normalization.
-                >   - hidden_dropout_prob (float): The dropout probability for hidden layers.
-                >   - position_embedding_type (str, optional): The type of position embedding. Defaults to 'absolute'.
-                >   - pad_token_id (int): The token id for padding.
+            config (object): An object containing configuration parameters for the embeddings.
+                It should include the following attributes:
+
+                - vocab_size (int): The size of the vocabulary.
+                - hidden_size (int): The size of the hidden layers.
+                - max_position_embeddings (int): The maximum allowed position for embeddings.
+                - type_vocab_size (int): The size of the token type vocabulary.
+                - layer_norm_eps (float): The epsilon value for layer normalization.
+                - hidden_dropout_prob (float): The dropout probability for hidden layers.
+                - position_embedding_type (str, optional): The type of position embedding. Defaults to 'absolute'.
+                - pad_token_id (int): The token id for padding.
 
         Returns:
-            None. This method initializes the embeddings for the MSRoberta model and doesn't return any value.
+            None.
 
         Raises:
             AttributeError: If the 'config' object does not contain the required attributes.
@@ -169,7 +171,8 @@ class MSRobertaModel(BertModel):
         Args:
             self: The object itself.
             config (RobertaConfig): An instance of the RobertaConfig class containing the model configuration settings.
-            add_pooling_layer (bool, optional): Specifies whether to add a pooling layer on top of the model output. Defaults to True.
+            add_pooling_layer (bool, optional): Specifies whether to add a pooling layer on top of the model output.
+                Defaults to True.
 
         Returns:
             None
@@ -190,12 +193,13 @@ class MSRobertaLMHead(nn.Cell):
             self (MSRobertaLMHead): The instance of the MSRobertaLMHead class.
             config (Config): An object containing the configuration parameters for the model.
                 It includes the following attributes:
-                >   - hidden_size (int): The size of the hidden layers.
-                >   - vocab_size (int): The size of the vocabulary.
-                >   - layer_norm_eps (float): The epsilon value for layer normalization.
+
+                - hidden_size (int): The size of the hidden layers.
+                - vocab_size (int): The size of the vocabulary.
+                - layer_norm_eps (float): The epsilon value for layer normalization.
 
         Returns:
-            None. This method initializes the MSRobertaLMHead instance with the provided configuration.
+            None.
 
         Raises:
             ValueError: If the config parameter is not of type Config.
@@ -219,10 +223,10 @@ class MSRobertaLMHead(nn.Cell):
             features: The input features to be processed. This should be a tensor of shape (batch_size, feature_size).
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         x = self.dense(features)
         x = self.gelu(x)
@@ -239,13 +243,15 @@ class MSRobertaClassificationHead(nn.Cell):
 
         Args:
             self: The instance of the class.
-            config: An object of the configuration class containing the necessary parameters for initialization. It must have the following attributes:
-                    >   - hidden_size (int): The size of the hidden state.
-                    >   - hidden_dropout_prob (float): The dropout probability for the hidden state.
-                    >   - num_labels (int): The number of output labels.
+            config: An object of the configuration class containing the necessary parameters for initialization.
+                It must have the following attributes:
+
+                - hidden_size (int): The size of the hidden state.
+                - hidden_dropout_prob (float): The dropout probability for the hidden state.
+                - num_labels (int): The number of output labels.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -261,7 +267,8 @@ class MSRobertaClassificationHead(nn.Cell):
 
         Args:
             self (MSRobertaClassificationHead): The instance of the MSRobertaClassificationHead class.
-            features (Tensor): The input features for classification, expected to be a 3D tensor of shape (batch_size, sequence_length, feature_dim).
+            features (Tensor): The input features for classification, expected to be a 3D tensor of shape
+                (batch_size, sequence_length, feature_dim).
 
         Returns:
             Tensor: The output tensor after applying the classification head operations.
@@ -285,7 +292,8 @@ class MSRobertaForMaskedLM(MSRobertaPreTrainedModel):
 
         Args:
             self: The instance of the class.
-            config: An object containing the configuration parameters for the model. It should be an instance of the MSRobertaConfig class or a subclass of it.
+            config: An object containing the configuration parameters for the model.
+                It should be an instance of the MSRobertaConfig class or a subclass of it.
 
         Returns:
             None.
@@ -308,11 +316,12 @@ class MSRobertaForMaskedLM(MSRobertaPreTrainedModel):
                 This parameter is used to access the decoder layer of the model.
 
         Returns:
-            None.
-                The method does not return any specific value but provides access to the output embeddings of the decoder layer.
+            None:
+                The method does not return any specific value but provides access to the output embeddings of
+                the decoder layer.
 
         Raises:
-            None.
+            None:
                 This method does not raise any exceptions.
         """
         return self.lm_head.decoder
@@ -328,10 +337,10 @@ class MSRobertaForMaskedLM(MSRobertaPreTrainedModel):
                 This should be an object representing the new embeddings to replace the current ones.
 
         Returns:
-            None. This method does not return any value explicitly.
+            None.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         self.lm_head.decoder = new_embeddings
 
@@ -343,11 +352,16 @@ class MSRobertaForMaskedLM(MSRobertaPreTrainedModel):
         Args:
             self (MSRobertaForMaskedLM): The instance of the MSRobertaForMaskedLM class.
             input_ids (Tensor): The input tensor representing the tokenized input sequence.
-            attention_mask (Tensor, optional): An optional tensor representing the attention mask. It specifies which tokens should be attended to and which should be ignored. Defaults to None.
-            token_type_ids (Tensor, optional): An optional tensor representing the type of each token. Defaults to None.
-            position_ids (Tensor, optional): An optional tensor representing the position of each token. Defaults to None.
-            head_mask (Tensor, optional): An optional tensor representing the mask for the attention heads. Defaults to None.
-            masked_lm_labels (Tensor, optional): An optional tensor representing the masked language model labels. Defaults to None.
+            attention_mask (Tensor, optional): An optional tensor representing the attention mask.
+                It specifies which tokens should be attended to and which should be ignored. Defaults to None.
+            token_type_ids (Tensor, optional): An optional tensor representing the type of each token.
+                Defaults to None.
+            position_ids (Tensor, optional): An optional tensor representing the position of each token.
+                Defaults to None.
+            head_mask (Tensor, optional): An optional tensor representing the mask for the attention heads.
+                Defaults to None.
+            masked_lm_labels (Tensor, optional): An optional tensor representing the masked language model labels.
+                Defaults to None.
 
         Returns:
             Tuple: A tuple containing the MLM prediction scores, and other outputs from the model.
@@ -387,10 +401,10 @@ class MSRobertaForSequenceClassification(MSRobertaPreTrainedModel):
                 This parameter is required for initializing the model and must be of type 'object'.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         super().__init__(config, *args, **kwargs)
         self.num_labels = config.num_labels
@@ -417,12 +431,14 @@ class MSRobertaForSequenceClassification(MSRobertaPreTrainedModel):
                 Shape: (batch_size,) or (batch_size, num_labels). Defaults to None.
 
         Returns:
-            tuple: A tuple containing the output logits and additional outputs.
-                >   - logits (torch.Tensor): The output logits for sequence classification.
-                  Shape: (batch_size, num_labels) or (batch_size,) if num_labels equals 1.
-                >   - sequence_output (torch.Tensor): The output tensor from the MSRoberta model.
-                  Shape: (batch_size, sequence_length, hidden_size).
-                >   - additional outputs (tuple): Any additional outputs from the MSRoberta model.
+            tuple:
+                A tuple containing the output logits and additional outputs.
+
+                - logits (torch.Tensor): The output logits for sequence classification.
+                Shape: (batch_size, num_labels) or (batch_size,) if num_labels equals 1.
+                - sequence_output (torch.Tensor): The output tensor from the MSRoberta model.
+                Shape: (batch_size, sequence_length, hidden_size).
+                - additional outputs (tuple): Any additional outputs from the MSRoberta model.
 
         Raises:
             ValueError: If the input_ids tensor shape is not (batch_size, sequence_length).
@@ -479,16 +495,23 @@ class MSRobertaForMultipleChoice(MSRobertaPreTrainedModel):
 
         Args:
             self (MSRobertaForMultipleChoice): The instance of the MSRobertaForMultipleChoice class.
-            input_ids (torch.Tensor): The input tensor of shape (batch_size, num_choices, sequence_length) containing the input IDs.
-            token_type_ids (torch.Tensor, optional): The tensor of shape (batch_size, num_choices, sequence_length) containing the token type IDs. Default: None.
-            attention_mask (torch.Tensor, optional): The tensor of shape (batch_size, num_choices, sequence_length) containing the attention mask. Default: None.
-            labels (torch.Tensor, optional): The tensor of shape (batch_size,) containing the labels for the multiple choice questions. Default: None.
-            position_ids (torch.Tensor, optional): The tensor of shape (batch_size, num_choices, sequence_length) containing the position IDs. Default: None.
-            head_mask (torch.Tensor, optional): The tensor of shape (num_hidden_layers, num_attention_heads) containing the head mask. Default: None.
+            input_ids (torch.Tensor): The input tensor of shape (batch_size, num_choices, sequence_length)
+                containing the input IDs.
+            token_type_ids (torch.Tensor, optional): The tensor of shape (batch_size, num_choices, sequence_length)
+                containing the token type IDs. Default: None.
+            attention_mask (torch.Tensor, optional): The tensor of shape (batch_size, num_choices, sequence_length)
+                containing the attention mask. Default: None.
+            labels (torch.Tensor, optional): The tensor of shape (batch_size,) containing the labels for the multiple
+                choice questions. Default: None.
+            position_ids (torch.Tensor, optional): The tensor of shape (batch_size, num_choices, sequence_length)
+                containing the position IDs. Default: None.
+            head_mask (torch.Tensor, optional): The tensor of shape (num_hidden_layers, num_attention_heads)
+                containing the head mask. Default: None.
 
         Returns:
-            tuple: A tuple of output tensors. The first element is reshaped_logits of shape (batch_size, num_choices), representing the logits for each choice. The remaining elements are the same as the
-                outputs of the Roberta model.
+            tuple: A tuple of output tensors. The first element is reshaped_logits of shape (batch_size, num_choices),
+                representing the logits for each choice. The remaining elements are the same as the outputs of the
+                Roberta model.
         
         Raises:
             TypeError: If the input_ids is not a torch.Tensor.

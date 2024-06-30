@@ -138,14 +138,14 @@ def _in_projection_packed(
 
     Shape:
         Inputs:
-        >- q: :math:`(..., E)` where E is the embedding dimension
-        >- k: :math:`(..., E)` where E is the embedding dimension
-        >- v: :math:`(..., E)` where E is the embedding dimension
-        >- w: :math:`(E * 3, E)` where E is the embedding dimension
-        >- b: :math:`E * 3` where E is the embedding dimension
+            - q: :math:`(..., E)` where E is the embedding dimension
+            - k: :math:`(..., E)` where E is the embedding dimension
+            - v: :math:`(..., E)` where E is the embedding dimension
+            - w: :math:`(E * 3, E)` where E is the embedding dimension
+            - b: :math:`E * 3` where E is the embedding dimension
 
         Output:
-        >- in output list :math:`[q', k', v']`, each output tensor will have the
+            - in output list :math:`[q', k', v']`, each output tensor will have the
             same shape as the corresponding input tensor.
     """
     E = q.size(-1)
@@ -192,15 +192,15 @@ def _compute_mask_indices(
 
     Args:
         shape: The shape for which to compute masks. This should be of a tuple of size 2 where
-               the first element is the batch size and the second element is the length of the axis to span.
+            the first element is the batch size and the second element is the length of the axis to span.
         mask_prob:  The percentage of the whole axis (between 0 and 1) which will be masked. The number of
-                    independently generated mask spans of length `mask_length` is computed by
-                    `mask_prob*shape[1]/mask_length`. Note that due to overlaps, `mask_prob` is an upper bound and the
-                    actual percentage will be smaller.
+            independently generated mask spans of length `mask_length` is computed by
+            `mask_prob*shape[1]/mask_length`. Note that due to overlaps, `mask_prob` is an upper bound and the
+            actual percentage will be smaller.
         mask_length: size of the mask
         min_masks: minimum number of masked spans
         attention_mask: A (right-padded) attention mask which independently shortens the feature axis of
-                        each batch dimension.
+            each batch dimension.
     """
     batch_size, sequence_length = shape
 
@@ -1489,10 +1489,12 @@ WAVLM_INPUTS_DOCSTRING = r"""
             soundfile`). To prepare the array into `input_values`, the [`AutoProcessor`] should be used for padding and
             conversion into a tensor of type `mindspore.Tensor`. See [`Wav2Vec2Processor.__call__`] for details.
         attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            >- Mask to avoid performing convolution and attention on padding token indices. Mask values selected in `[0, 1]`:
-            >   - 1 for tokens that are **not masked**,
-            >   - 0 for tokens that are **masked**.
-            >- [What are attention masks?](../glossary#attention-mask)
+            Mask to avoid performing convolution and attention on padding token indices. Mask values selected in `[0, 1]`:
+            
+            - 1 for tokens that are **not masked**,
+            - 0 for tokens that are **masked**.
+            
+            [What are attention masks?](../glossary#attention-mask)
 
             <Tip warning={true}>
 

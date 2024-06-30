@@ -97,11 +97,11 @@ class LongT5Tokenizer(PreTrainedTokenizer):
             legacy (bool, optional): Flag to indicate whether to use legacy behavior.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            - ValueError: If both extra_ids and additional_special_tokens are provided, and they are not consistent.
-            - Exception: If an unexpected error occurs during the execution of the method.
+            ValueError: If both extra_ids and additional_special_tokens are provided, and they are not consistent.
+            Exception: If an unexpected error occurs during the execution of the method.
         """
         pad_token = AddedToken(pad_token, special=True) if isinstance(pad_token, str) else pad_token
         unk_token = AddedToken(unk_token, special=True) if isinstance(unk_token, str) else unk_token
@@ -175,7 +175,7 @@ class LongT5Tokenizer(PreTrainedTokenizer):
             None: This method does not return any value directly. It loads the tokenizer object for further processing.
 
         Raises:
-            N/A
+            None.
         """
         tokenizer = spm.SentencePieceProcessor(**self.sp_model_kwargs)
         if self.legacy or from_slow:  # no dependency on protobuf
@@ -196,7 +196,8 @@ class LongT5Tokenizer(PreTrainedTokenizer):
     @staticmethod
     def _eventually_correct_t5_max_length(pretrained_model_name_or_path, max_model_length, init_max_model_length):
         """
-        This method '_eventually_correct_t5_max_length' is defined in the 'LongT5Tokenizer' class and is used to handle the correction of the maximum model length for T5 tokenizer.
+        This method '_eventually_correct_t5_max_length' is defined in the 'LongT5Tokenizer' class and is used to
+        handle the correction of the maximum model length for T5 tokenizer.
 
         Args:
             pretrained_model_name_or_path (str): The name or path of the pretrained model.
@@ -210,9 +211,11 @@ class LongT5Tokenizer(PreTrainedTokenizer):
             None: This method does not return any value; it modifies the 'max_model_length' parameter in-place.
 
         Raises:
-            FutureWarning: This method may raise a FutureWarning if the tokenizer was incorrectly instantiated with a model max length that needs correction. The warning provides guidance on how to avoid the
-                warning and properly handle the model max length.
-            Warning: This method may raise a generic Warning if the 'init_max_model_length' is not None and does not match the 'max_model_length', indicating a potential issue with the maximum model length.
+            FutureWarning: This method may raise a FutureWarning if the tokenizer was incorrectly instantiated with a
+                model max length that needs correction. The warning provides guidance on how to avoid the warning and
+                properly handle the model max length.
+            Warning: This method may raise a generic Warning if the 'init_max_model_length' is not None and does not
+                match the 'max_model_length', indicating a potential issue with the maximum model length.
 
         """
         if pretrained_model_name_or_path in LongT5Tokenizer.max_model_input_sizes:
@@ -260,13 +263,15 @@ class LongT5Tokenizer(PreTrainedTokenizer):
             self (LongT5Tokenizer): An instance of the LongT5Tokenizer class.
 
         Returns:
-            dict: The vocabulary dictionary containing token-to-index mappings. The keys are tokens (str) and the values are their respective indices (int).
+            dict: The vocabulary dictionary containing token-to-index mappings.
+                The keys are tokens (str) and the values are their respective indices (int).
 
         Raises:
             None.
 
         Note:
-            The method combines the default vocabulary dictionary generated from the `vocab_size` parameter and any additional tokens that have been added using the `add_tokens` method. The additional tokens
+            The method combines the default vocabulary dictionary generated from the `vocab_size` parameter and
+            any additional tokens that have been added using the `add_tokens` method. The additional tokens
             are included in the vocabulary dictionary with their respective indices.
 
         Example:
@@ -276,7 +281,8 @@ class LongT5Tokenizer(PreTrainedTokenizer):
             >>> vocab
             {'<pad>': 0, '<unk>': 1, '<s>': 2, '</s>': 3, '<extra_id_0>': 4, '<extra_id_1>': 5, ...}
             ```
-            In this example, the vocabulary dictionary contains the default tokens as well as any additional tokens that have been added to the tokenizer.
+            In this example, the vocabulary dictionary contains the default tokens as well as any additional tokens
+            that have been added to the tokenizer.
         """
         vocab = {self.convert_ids_to_tokens(i): i for i in range(self.vocab_size)}
         vocab.update(self.added_tokens_encoder)
@@ -318,7 +324,7 @@ class LongT5Tokenizer(PreTrainedTokenizer):
                 self: An instance of the LongT5Tokenizer class.
 
             Returns:
-                None. This method returns a list of sentinel tokens found in the additional special tokens of the tokenizer.
+                list: a list of sentinel tokens found in the additional special tokens of the tokenizer.
 
             Raises:
                 None.
@@ -346,8 +352,9 @@ class LongT5Tokenizer(PreTrainedTokenizer):
         Raises:
             None
 
-        This method retrieves the sentinel tokens from the input sequence using the 'get_sentinel_tokens' method and converts each token into its corresponding token ID using the 'convert_tokens_to_ids'
-        method. The resulting token IDs are then returned as a list.
+        This method retrieves the sentinel tokens from the input sequence using the 'get_sentinel_tokens' method
+        and converts each token into its corresponding token ID using the 'convert_tokens_to_ids' method.
+        The resulting token IDs are then returned as a list.
 
         Note:
             - The 'get_sentinel_tokens' method should be implemented in the 'LongT5Tokenizer' class.
@@ -394,8 +401,8 @@ class LongT5Tokenizer(PreTrainedTokenizer):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A sequence has the following format:
 
-        >   - single sequence: `X </s>`
-        >   - pair of sequences: `A </s> B </s>`
+        - single sequence: `X </s>`
+        - pair of sequences: `A </s> B </s>`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -416,7 +423,8 @@ class LongT5Tokenizer(PreTrainedTokenizer):
         """
         __getstate__
 
-        Method in the class 'LongT5Tokenizer' that returns a picklable representation of the object's state, excluding the 'sp_model' attribute.
+        Method in the class 'LongT5Tokenizer' that returns a picklable representation of the object's state,
+        excluding the 'sp_model' attribute.
 
         Args:
             self: An instance of the 'LongT5Tokenizer' class.
@@ -425,7 +433,7 @@ class LongT5Tokenizer(PreTrainedTokenizer):
             None: The method does not explicitly return a value, but it modifies and returns the object's state.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         state = self.__dict__.copy()
         state["sp_model"] = None
@@ -437,14 +445,17 @@ class LongT5Tokenizer(PreTrainedTokenizer):
 
         Args:
             self (object): The instance of the LongT5Tokenizer class.
-            d (dict): A dictionary containing the state information to be set on the tokenizer object. It should include attributes that represent the state of the tokenizer.
+            d (dict): A dictionary containing the state information to be set on the tokenizer object.
+                It should include attributes that represent the state of the tokenizer.
 
         Returns:
-            None: This method does not return any value explicitly.
+            None.
 
         Raises:
-            No specific exceptions are raised by this method under normal operation. However, potential exceptions could be raised during the execution of the method if there are issues related to setting the
-            state attributes or loading the vocab file using SentencePieceProcessor. It is recommended to handle exceptions related to attribute assignment or file loading gracefully in the surrounding code.
+            None: However, potential exceptions could be raised during the execution of the method if there are issues
+            related to setting the state attributes or loading the vocab file using SentencePieceProcessor.
+            It is recommended to handle exceptions related to attribute assignment or file loading gracefully
+            in the surrounding code.
         """
         self.__dict__ = d
 
@@ -476,16 +487,19 @@ class LongT5Tokenizer(PreTrainedTokenizer):
         This method returns the length of the encoded unknown token in the LongT5Tokenizer.
         
         Args:
-            self (object): An instance of the LongT5Tokenizer class.
-                Purpose: This parameter refers to the instance of the LongT5Tokenizer class, allowing access to its attributes and methods.
-                Restrictions: This parameter is mandatory for the method to operate correctly.
+            self (object):
+                An instance of the LongT5Tokenizer class.
+
+                - Purpose: This parameter refers to the instance of the LongT5Tokenizer class,
+                allowing access to its attributes and methods.
+                - Restrictions: This parameter is mandatory for the method to operate correctly.
         
         Returns:
             int: The length of the encoded unknown token.
                 Purpose: This method returns the length of the encoded unknown token.
                 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return len(self.sp_model.encode(str(self.unk_token)))
 

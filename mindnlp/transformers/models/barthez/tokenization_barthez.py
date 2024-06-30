@@ -154,7 +154,7 @@ class BarthezTokenizer(PreTrainedTokenizer):
             sp_model_kwargs (Optional[Dict[str, Any]], optional): Optional sentence piece model arguments. Defaults to None.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the vocab_file is not a valid string.
@@ -269,7 +269,7 @@ class BarthezTokenizer(PreTrainedTokenizer):
             int: The size of the vocabulary used by the BarthezTokenizer instance.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return len(self.sp_model)
 
@@ -351,7 +351,7 @@ class BarthezTokenizer(PreTrainedTokenizer):
                 indicating that it does not return any specific data but modifies the state of the object.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         state = self.__dict__.copy()
         state["sp_model"] = None
@@ -366,7 +366,7 @@ class BarthezTokenizer(PreTrainedTokenizer):
             d (dict): The dictionary containing the attributes to restore the state of the object.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.

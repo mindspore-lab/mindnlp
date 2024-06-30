@@ -96,14 +96,15 @@ class MBartTokenizer(PreTrainedTokenizer):
             mask_token (str, optional): The mask token. Defaults to '<mask>'.
             src_lang (str, optional): The source language. Defaults to None.
             tgt_lang (str, optional): The target language. Defaults to None.
-            sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional SentencePiece model arguments. Defaults to None.
+            sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional SentencePiece model arguments.
+                Defaults to None.
             additional_special_tokens (list, optional): Additional special tokens. Defaults to None.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            N/A
+            None.
         """
         # Mask token behave like a normal word, i.e. include the space before it
         mask_token = (
@@ -175,10 +176,10 @@ class MBartTokenizer(PreTrainedTokenizer):
             self: The instance of the MBartTokenizer class.
         
         Returns:
-            None: This method returns None.
+            None.
         
         Raises:
-            No specific exceptions are documented to be raised by this method.
+            None.
         """
         state = self.__dict__.copy()
         state["sp_model"] = None
@@ -194,10 +195,10 @@ class MBartTokenizer(PreTrainedTokenizer):
             _d (dict): The dictionary containing the state of the object.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.__dict__ = _d
 
@@ -239,7 +240,7 @@ class MBartTokenizer(PreTrainedTokenizer):
             new_src_lang (str): The new source language to be set. It should be a string representing the language code.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -287,8 +288,8 @@ class MBartTokenizer(PreTrainedTokenizer):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. An MBART sequence has the following format, where `X` represents the sequence:
 
-        >   - `input_ids` (for encoder) `X [eos, src_lang_code]`
-        >   - `decoder_input_ids`: (for decoder) `X [eos, tgt_lang_code]`
+        - `input_ids` (for encoder) `X [eos, src_lang_code]`
+        - `decoder_input_ids`: (for decoder) `X [eos, tgt_lang_code]`
 
         BOS is never used. Pairs of sequences are not the expected use case, but they will be handled without a
         separator.
@@ -322,7 +323,6 @@ class MBartTokenizer(PreTrainedTokenizer):
 
         Returns:
             `List[int]`: List of zeros.
-
         """
         sep = [self.sep_token_id]
         cls = [self.cls_token_id]
@@ -351,13 +351,15 @@ class MBartTokenizer(PreTrainedTokenizer):
             self (MBartTokenizer): The instance of the MBartTokenizer class.
 
         Returns:
-            dict: A dictionary containing the vocabulary of the tokenizer. The keys are the tokens in the vocabulary, and the values are their corresponding token IDs.
+            dict: A dictionary containing the vocabulary of the tokenizer. The keys are the tokens in the vocabulary,
+                and the values are their corresponding token IDs.
 
         Raises:
             None
 
         Note:
-            The vocabulary includes both the tokens from the original MBart model and any additional tokens that have been added using the `add_tokens` method.
+            The vocabulary includes both the tokens from the original MBart model and any additional tokens that
+            have been added using the `add_tokens` method.
 
         Example:
             ```python
@@ -385,8 +387,9 @@ class MBartTokenizer(PreTrainedTokenizer):
         Raises:
             None.
 
-        This method takes in a text and tokenizes it into a list of strings using the mBART tokenizer. The tokenizer uses the sp_model
-        to encode the text into a string representation. The encoded text is then returned as a list of strings.
+        This method takes in a text and tokenizes it into a list of strings using the mBART tokenizer.
+        The tokenizer uses the sp_model to encode the text into a string representation.
+        The encoded text is then returned as a list of strings.
         """
         return self.sp_model.encode(text, out_type=str)
 
@@ -483,10 +486,10 @@ class MBartTokenizer(PreTrainedTokenizer):
             self (MBartTokenizer): An instance of the MBartTokenizer class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.set_src_lang_special_tokens(self.src_lang)
 
@@ -498,14 +501,14 @@ class MBartTokenizer(PreTrainedTokenizer):
             self (MBartTokenizer): An instance of the MBartTokenizer class.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
 
         Description:
-            This method is used to switch the tokenizer to the target mode. It sets the target language special tokens using the
-            `set_tgt_lang_special_tokens` method with the target language specified during initialization.
+            This method is used to switch the tokenizer to the target mode. It sets the target language special tokens
+            using the `set_tgt_lang_special_tokens` method with the target language specified during initialization.
 
         The `self` parameter is the instance of the MBartTokenizer class that the method is called on.
 

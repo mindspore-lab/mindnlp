@@ -389,16 +389,18 @@ GPTJ_INPUTS_DOCSTRING = r"""
 
             [What are input IDs?](../glossary#input-ids)
         attention_mask (`mindspore.Tensor` of shape `({0})`, *optional*):
-            >- Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-            >   - 1 for tokens that are **not masked**,
-            >   - 0 for tokens that are **masked**.
+            Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+            
+            - 1 for tokens that are **not masked**,
+            - 0 for tokens that are **masked**.
 
             [What are attention masks?](../glossary#attention-mask)
         token_type_ids (`mindspore.Tensor` of shape `({0})`, *optional*):
-            >- Segment token indices to indicate first and second portions of the inputs. Indices are selected in `[0,
+            Segment token indices to indicate first and second portions of the inputs. Indices are selected in `[0,
                 1]`:
-            >   - 0 corresponds to a *sentence A* token,
-            >   - 1 corresponds to a *sentence B* token.
+                
+            - 0 corresponds to a *sentence A* token,
+            - 1 corresponds to a *sentence B* token.
 
             [What are token type IDs?](../glossary#token-type-ids)
         position_ids (`mindspore.Tensor` of shape `({0})`, *optional*):
@@ -407,9 +409,10 @@ GPTJ_INPUTS_DOCSTRING = r"""
 
             [What are position IDs?](../glossary#position-ids)
         head_mask (`mindspore.Tensor` of shape `(num_attention_heads,)` or `(n_layer, num_attention_heads)`, *optional*):
-            >- Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
-            >   - 1 indicates the head is **not masked**,
-            >   - 0 indicates the head is **masked**.
+            Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
+            
+            - 1 indicates the head is **not masked**,
+            - 0 indicates the head is **masked**.
 
         inputs_embeds (`mindspore.Tensor` of shape `({0}, hidden_dim)`, *optional*):
             Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation. This
@@ -436,7 +439,8 @@ PARALLELIZE_DOCSTRING = r"""
             automatically mapped to the first device (for esoteric reasons). That means that the first device should
             have fewer attention modules mapped to it than other devices. For reference, the GPT-J models have the
             following number of attention modules:
-                >- gpt-j-6B: 28
+            
+                - gpt-j-6B: 28
 
     Example:
         ```python

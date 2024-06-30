@@ -75,16 +75,16 @@ class SqueezeBertConfig(PretrainedConfig):
         output_groups (`int`, *optional*, defaults to 4):
             The number of groups in the third feed forward network layer.
 
-    Examples:
+    Example:
         ```python
         >>> from mindnlp.transformers import SqueezeBertConfig, SqueezeBertModel
-
+        ...
         >>> # Initializing a SqueezeBERT configuration
         >>> configuration = SqueezeBertConfig()
-
+        ...
         >>> # Initializing a model (with random weights) from the configuration above
         >>> model = SqueezeBertModel(configuration)
-
+        ...
         >>> # Accessing the model configuration
         >>> configuration = model.config
         ```

@@ -118,7 +118,7 @@ class BeitDropPath(nn.Cell):
                 If not provided, the default value is None.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None
@@ -179,7 +179,7 @@ class BeitEmbeddings(nn.Cell):
                 This parameter is required for initializing the embeddings.
             
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -256,15 +256,17 @@ class BeitPatchEmbeddings(nn.Cell):
                 
                     - If int, it represents the height and width of the square image. 
                     - If tuple, it represents the height and width of the rectangular image.
+
                 - patch_size (int or tuple): The size of the patch to be extracted from the input image.
                 
                     - If int, it represents the height and width of the square patch. 
                     - If tuple, it represents the height and width of the rectangular patch.
+
                 - num_channels (int): The number of input channels in the image.
                 - hidden_size (int): The desired size of the hidden dimension for the patch embeddings.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the image_size or patch_size parameters are not of type int or tuple.
@@ -374,7 +376,7 @@ class BeitSelfAttention(nn.Cell):
                 Defaults to None if not provided.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the hidden size is not a multiple of the number of attention heads 
@@ -508,13 +510,14 @@ class BeitSelfOutput(nn.Cell):
 
         Args:
             self (BeitSelfOutput): The instance of the BeitSelfOutput class.
-            config (BeitConfig): An instance of BeitConfig containing the configuration parameters for the self output layer.
+            config (BeitConfig):
+                An instance of BeitConfig containing the configuration parameters for the self output layer.
             
                 - hidden_size (int): The size of the hidden layer.
                 - hidden_dropout_prob (float): The dropout probability for the hidden layer.
 
         Returns:
-            None： This method does not return any value explicitly.
+            None.
 
         Raises:
             None.
@@ -538,7 +541,7 @@ class BeitSelfOutput(nn.Cell):
             mindspore.Tensor: Returns a tensor representing the constructed hidden states.
 
         Raises:
-            None: This method does not explicitly raise any exceptions.
+            None.
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
@@ -578,7 +581,7 @@ class BeitAttention(nn.Cell):
             window_size (Optional[tuple]): The size of the attention window. Defaults to None.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -597,10 +600,10 @@ class BeitAttention(nn.Cell):
             heads (List[int]): A list of attention heads to be pruned.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         if len(heads) == 0:
             return
@@ -641,7 +644,7 @@ class BeitAttention(nn.Cell):
 
         Returns:
             Union[Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor]]:
-            The output of the attention mechanism, which is a tuple containing attention output and other optional outputs.
+                The output of the attention mechanism, which is a tuple containing attention output and other optional outputs.
 
         Raises:
             ValueError: If the input hidden_states tensor is not valid.
@@ -768,7 +771,7 @@ class BeitOutput(nn.Cell):
                 containing parameters such as intermediate_size and hidden_size.
 
         Returns:
-            None： This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -810,7 +813,7 @@ class BeitLayer(nn.Cell):
             drop_path_rate (float): The rate at which to apply drop path regularization. Default is 0.0.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the config parameter is not of type BeitConfig.
@@ -852,6 +855,7 @@ class BeitLayer(nn.Cell):
 
         Returns:
             Union[Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, mindspore.Tensor]]:
+
                 - A tuple containing the layer output tensor.
                 - If output_attentions is True, a tuple containing the layer output tensor and attention tensors.
 
@@ -1015,7 +1019,7 @@ class BeitEncoder(nn.Cell):
             window_size (Optional[tuple]): A tuple representing the window size, defaults to None.
 
         Returns:
-            None: This method does not return a value.
+            None.
 
         Raises:
             None
@@ -1168,7 +1172,7 @@ class BeitModel(BeitPreTrainedModel):
                 Defaults to True.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1201,10 +1205,10 @@ class BeitModel(BeitPreTrainedModel):
             self: An instance of the 'BeitModel' class.
 
         Returns:
-            None: This method returns None.
+            None.
 
         Raises:
-            This method does not raise any specific exceptions.
+            None.
         """
         return self.embeddings.patch_embeddings
 
@@ -1287,22 +1291,24 @@ class BeitPooler(nn.Cell):
         __init__:
             Initializes the BeitPooler module.
 
-            - Args:
+            Args:
                 
-                - config (BeitConfig): The configuration object for the Beit model.
-            - Returns:
+            - config (BeitConfig): The configuration object for the Beit model.
+
+            Returns:
             
-                - None
+            - None
 
         construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
             Constructs and applies the pooling operation on the hidden states.
 
-            - Args:
+            Args:
             
-                - hidden_states (mindspore.Tensor): The input hidden states tensor.
-            - Returns:
+            - hidden_states (mindspore.Tensor): The input hidden states tensor.
+
+            Returns:
             
-                - mindspore.Tensor: The pooled output tensor.
+            - mindspore.Tensor: The pooled output tensor.
     """
     def __init__(self, config: BeitConfig) -> None:
         """
@@ -1318,7 +1324,7 @@ class BeitPooler(nn.Cell):
                 - layer_norm_eps (float): The epsilon value for layer normalization.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1645,7 +1651,7 @@ class BeitConvModule(nn.Cell):
                 Defaults to 1, indicating no dilation.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1720,10 +1726,10 @@ class BeitPyramidPoolingBlock(nn.Cell):
             channels (int): The number of output channels.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.layers = [
@@ -1777,10 +1783,10 @@ class BeitPyramidPoolingModule(nn.Cell):
             align_corners (bool): A boolean indicating whether to align corners during pooling.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         super().__init__()
         self.pool_scales = pool_scales
@@ -1836,7 +1842,7 @@ class BeitUperHead(nn.Cell):
                 It is used to initialize various attributes of the UperHead.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -1979,10 +1985,10 @@ class BeitFCNHead(nn.Cell):
             dilation (Union[int, Tuple[int, int]]): Dilation factor for the convolution operation.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         super().__init__()
         self.in_channels = config.hidden_size
@@ -2072,7 +2078,7 @@ class BeitForSemanticSegmentation(BeitPreTrainedModel):
                 Must be an instance of BeitConfig.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: Raised if the length of config.out_indices is not 4, indicating an incorrect specification.
@@ -2353,7 +2359,7 @@ class BeitBackbone(BeitPreTrainedModel, BackboneMixin):
             self (BeitBackbone): An instance of the BeitBackbone class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.

@@ -124,7 +124,8 @@ class BlenderbotConfig(PretrainedConfig):
         forced_eos_token_id=2,
         **kwargs,
     ):
-        """Initialize a BlenderbotConfig instance.
+        """
+        Initialize a BlenderbotConfig instance.
         
         Args:
             vocab_size (int, optional): The size of the vocabulary. Defaults to 8008.
@@ -154,7 +155,7 @@ class BlenderbotConfig(PretrainedConfig):
             forced_eos_token_id (int, optional): The token id for the forced end of sequence. Defaults to 2.
             
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None

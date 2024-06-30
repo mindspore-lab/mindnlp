@@ -165,7 +165,7 @@ class CpmTokenizerFast(PreTrainedTokenizerFast):
 
         Returns:
             bool: Returns a boolean value indicating whether the slow tokenizer can be saved.
-              Returns True if the vocabulary file exists, otherwise False.
+                Returns True if the vocabulary file exists, otherwise False.
 
         Raises:
             This method does not raise any exceptions.

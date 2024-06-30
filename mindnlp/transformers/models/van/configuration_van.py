@@ -62,7 +62,7 @@ class VanConfig(PretrainedConfig):
     Example:
         ```python
         >>> from transformers import VanModel, VanConfig
-
+        ...
         >>> # Initializing a VAN van-base style configuration
         >>> configuration = VanConfig()
         >>> # Initializing a model from the van-base style configuration
@@ -110,7 +110,7 @@ class VanConfig(PretrainedConfig):
             dropout_rate (float): The dropout rate (default is 0.0).
         
         Returns:
-            None. The method initializes the instance variables of the class.
+            None.
         
         Raises:
             None.

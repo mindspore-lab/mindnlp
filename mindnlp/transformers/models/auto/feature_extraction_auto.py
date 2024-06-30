@@ -129,11 +129,12 @@ def feature_extractor_class_from_name(class_name: str):
 
     Note:
         This function searches for the feature extractor class in the following places:
-        >   1. In the mapping of feature extractor names to their corresponding module names.
+
+        1. In the mapping of feature extractor names to their corresponding module names.
            If a match is found, the class is imported from the respective module.
-        >   2. In the additional content of the feature extractor mapping.
+        2. In the additional content of the feature extractor mapping.
            If a match is found based on the class name, the corresponding extractor is returned.
-        >   3. In the main 'mindnlp.transformers' module.
+        3. In the main 'mindnlp.transformers' module.
            If the class name exists as an attribute in the main module, it is returned.
     """
     for module_name, extractors in FEATURE_EXTRACTOR_MAPPING_NAMES.items():
@@ -272,7 +273,7 @@ class AutoFeatureExtractor:
             self: An instance of the AutoFeatureExtractor class.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             EnvironmentError: This exception is raised with the message 'AutoFeatureExtractor is designed to be

@@ -203,7 +203,7 @@ class BartphoTokenizer(PreTrainedTokenizer):
             None: This method returns None after setting the 'sp_model' attribute to None and serializing the 'sp_model_proto' attribute.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         state = self.__dict__.copy()
         state["sp_model"] = None
@@ -223,10 +223,10 @@ class BartphoTokenizer(PreTrainedTokenizer):
                 It contains the data necessary to reconstruct the object's state.
 
         Returns:
-            None: This method does not return any value explicitly.
+            None.
 
         Raises:
-            No specific exceptions are documented to be raised by this method:
+            None:
                 However, potential exceptions that could arise during the execution of this method may include, 
                 but are not limited to, those related to the initialization of the 'SentencePieceProcessor' instance or 
                 its 'LoadFromSerializedProto' method.
@@ -385,20 +385,20 @@ class BartphoTokenizer(PreTrainedTokenizer):
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
         """
-            Saves the vocabulary files to the specified directory.
-        
-            Args:
-                self (BartphoTokenizer): An instance of the BartphoTokenizer class.
-                save_directory (str): The directory where the vocabulary files will be saved.
-                filename_prefix (Optional[str], optional): The prefix to be added to the filenames (default: None).
-        
-            Returns:
-                Tuple[str]: A tuple containing the paths of the saved vocabulary files.
-        
-            Raises:
-                FileNotFoundError: If the save_directory does not exist.
-                IsADirectoryError: If the specified save_directory is not a directory.
-            """
+        Saves the vocabulary files to the specified directory.
+
+        Args:
+            self (BartphoTokenizer): An instance of the BartphoTokenizer class.
+            save_directory (str): The directory where the vocabulary files will be saved.
+            filename_prefix (Optional[str], optional): The prefix to be added to the filenames (default: None).
+
+        Returns:
+            Tuple[str]: A tuple containing the paths of the saved vocabulary files.
+
+        Raises:
+            FileNotFoundError: If the save_directory does not exist.
+            IsADirectoryError: If the specified save_directory is not a directory.
+        """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return

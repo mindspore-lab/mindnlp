@@ -479,8 +479,9 @@ class ViTModel(ViTPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
-        bool_masked_pos (`mindspore.Tensor` of shape `(batch_size, num_patches)`, *optional*):
-            Boolean masked positions. Indicates which patches are masked (1) and which aren't (0).
+        Args:
+            bool_masked_pos (`mindspore.Tensor` of shape `(batch_size, num_patches)`, *optional*):
+                Boolean masked positions. Indicates which patches are masked (1) and which aren't (0).
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -577,8 +578,9 @@ class ViTForMaskedImageModeling(ViTPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[tuple, MaskedImageModelingOutput]:
         r"""
-        bool_masked_pos (`mindspore.Tensor` of shape `(batch_size, num_patches)`):
-            Boolean masked positions. Indicates which patches are masked (1) and which aren't (0).
+        Args:
+            bool_masked_pos (`mindspore.Tensor` of shape `(batch_size, num_patches)`):
+                Boolean masked positions. Indicates which patches are masked (1) and which aren't (0).
 
         Returns:
             Union[tuple, MaskedImageModelingOutput]
@@ -589,18 +591,18 @@ class ViTForMaskedImageModeling(ViTPreTrainedModel):
             >>> import mindspore
             >>> from PIL import Image
             >>> import requests
-
+            ...
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
-
+            ...
             >>> image_processor = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
             >>> model = ViTForMaskedImageModeling.from_pretrained("google/vit-base-patch16-224-in21k")
-
+            ...
             >>> num_patches = (model.config.image_size // model.config.patch_size) ** 2
             >>> pixel_values = image_processor(images=image, return_tensors="pt").pixel_values
             >>> # create random boolean mask of shape (batch_size, num_patches)
             >>> bool_masked_pos = ops.randint(low=0, high=2, size=(1, num_patches)).bool()
-
+            ...
             >>> outputs = model(pixel_values, bool_masked_pos=bool_masked_pos)
             >>> loss, reconstructed_pixel_values = outputs.loss, outputs.reconstruction
             >>> list(reconstructed_pixel_values.shape)

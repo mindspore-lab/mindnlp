@@ -99,34 +99,38 @@ class T5Tokenizer(PreTrainedTokenizer):
             Will be passed to the `SentencePieceProcessor.__init__()` method. The [Python wrapper for
             SentencePiece](https://github.com/google/sentencepiece/tree/master/python) can be used, among other things,
             to set:
-            >   - `enable_sampling`: Enable subword regularization.
-            >   - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
-                >   - `nbest_size = {0,1}`: No sampling is performed.
-                >   - `nbest_size > 1`: samples from the nbest_size results.
-                >   - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
-                    using forward-filtering-and-backward-sampling algorithm.
-            >   - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
-                BPE-dropout.
+
+            - `enable_sampling`: Enable subword regularization.
+            - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
+
+                - `nbest_size = {0,1}`: No sampling is performed.
+                - `nbest_size > 1`: samples from the nbest_size results.
+                - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
+                using forward-filtering-and-backward-sampling algorithm.
+            - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
+            BPE-dropout.
         legacy (`bool`, *optional*):
             Whether or not the `legacy` behaviour of the tokenizer should be used. Legacy is before the merge of #24622
             and #25224 which includes fixes to properly handle tokens that appear after special tokens. A simple
             example:
-                - `legacy=True`:
-                ```python
-                >>> from transformers import T5Tokenizer
 
-                >>> tokenizer = T5Tokenizer.from_pretrained("t5-base", legacy=True)
-                >>> tokenizer.encode("Hello <extra_id_0>.")
-                [8774, 32099, 3, 5, 1]
-                ```
-                - `legacy=False`:
-                ```python
-                >>> from transformers import T5Tokenizer
+            - `legacy=True`:
+            ```python
+            >>> from transformers import T5Tokenizer
+            ...
+            >>> tokenizer = T5Tokenizer.from_pretrained("t5-base", legacy=True)
+            >>> tokenizer.encode("Hello <extra_id_0>.")
+            [8774, 32099, 3, 5, 1]
+            ```
 
-                >>> tokenizer = T5Tokenizer.from_pretrained("t5-base", legacy=False)
-                >>> tokenizer.encode("Hello <extra_id_0>.")  # the extra space `[3]` is no longer here
-                [8774, 32099, 5, 1]
-                ```
+            - `legacy=False`:
+            ```python
+            >>> from transformers import T5Tokenizer
+            ...
+            >>> tokenizer = T5Tokenizer.from_pretrained("t5-base", legacy=False)
+            >>> tokenizer.encode("Hello <extra_id_0>.")  # the extra space `[3]` is no longer here
+            [8774, 32099, 5, 1]
+            ```
             Checkout the [pull request](https://github.com/huggingface/transformers/pull/24565) for more details.
 
     Attributes:
@@ -160,16 +164,20 @@ class T5Tokenizer(PreTrainedTokenizer):
             unk_token (str, optional): The unknown token. Defaults to '<unk>'.
             pad_token (str, optional): The padding token. Defaults to '<pad>'.
             extra_ids (int): The number of extra tokens to be added to the vocabulary.
-            additional_special_tokens (List[str], optional): Additional special tokens to be added to the vocabulary. Defaults to None.
-            sp_model_kwargs (Dict[str, Any], optional): Additional keyword arguments for the SentencePieceProcessor. Defaults to None.
+            additional_special_tokens (List[str], optional): Additional special tokens to be added to the vocabulary.
+                Defaults to None.
+            sp_model_kwargs (Dict[str, Any], optional): Additional keyword arguments for the SentencePieceProcessor.
+                Defaults to None.
             legacy (bool, optional): Flag to indicate whether to use the default legacy behavior. Defaults to None.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            ValueError: If both extra_ids and additional_special_tokens are provided and additional_special_tokens do not include the extra_ids tokens.
-            Warning: If using the default legacy behavior, a warning is issued to notify the user about the behavior and provide guidance on changing it.
+            ValueError: If both extra_ids and additional_special_tokens are provided and additional_special_tokens
+                do not include the extra_ids tokens.
+            Warning: If using the default legacy behavior, a warning is issued to notify the user about the behavior
+                and provide guidance on changing it.
         """
         pad_token = AddedToken(pad_token, special=True) if isinstance(pad_token, str) else pad_token
         unk_token = AddedToken(unk_token, special=True) if isinstance(unk_token, str) else unk_token
@@ -237,10 +245,12 @@ class T5Tokenizer(PreTrainedTokenizer):
 
         Args:
             self (T5Tokenizer): The instance of the T5Tokenizer class.
-            from_slow (bool): A flag indicating whether to use the slow SentencePiece model. Defaults to False. If set to True, the method will load the tokenizer from the slow model.
+            from_slow (bool): A flag indicating whether to use the slow SentencePiece model. Defaults to False.
+                If set to True, the method will load the tokenizer from the slow model.
 
         Returns:
-            None: This method does not return any value, rather it modifies the internal state of the T5Tokenizer instance by loading the SentencePieceProcessor.
+            None: This method does not return any value, rather it modifies the internal state of the T5Tokenizer
+                instance by loading the SentencePieceProcessor.
 
         Raises:
             IOError: If there is an issue with reading the vocab_file or if the file is not found.
@@ -275,12 +285,14 @@ class T5Tokenizer(PreTrainedTokenizer):
             init_max_model_length (int): The initial maximum model length.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            FutureWarning: If the tokenizer was incorrectly instantiated with a model max length that will be corrected in Transformers v5. This warning is to ensure backward compatibility when
-            padding/encoding with `truncation` set to True. It is recommended not to rely on automatic truncation to the deprecated max length. To encode/pad to sequences longer than the deprecated max length, either
-            instantiate the tokenizer with `model_max_length` or pass `max_length` when encoding/padding.
+            FutureWarning: If the tokenizer was incorrectly instantiated with a model max length that will be
+                corrected in Transformers v5. This warning is to ensure backward compatibility when  padding/encoding
+                with `truncation` set to True. It is recommended not to rely on automatic truncation to the deprecated
+                max length. To encode/pad to sequences longer than the deprecated max length, either instantiate the
+                tokenizer with `model_max_length` or pass `max_length` when encoding/padding.
         """
         if pretrained_model_name_or_path in T5Tokenizer.max_model_input_sizes:
             deprecated_max_model_length = T5Tokenizer.max_model_input_sizes[pretrained_model_name_or_path]
@@ -312,10 +324,10 @@ class T5Tokenizer(PreTrainedTokenizer):
                 This parameter is required to access the tokenizer's properties and methods.
 
         Returns:
-            None. The method returns the vocabulary size of the T5Tokenizer instance as an integer value.
+            int: The method returns the vocabulary size of the T5Tokenizer instance as an integer value.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.sp_model.get_piece_size()
 
@@ -371,19 +383,18 @@ class T5Tokenizer(PreTrainedTokenizer):
         This method, get_sentinel_tokens, belongs to the class T5Tokenizer and retrieves sentinel tokens from the additional_special_tokens list.
 
         Args:
-            self: An instance of the T5Tokenizer class.
-                >   - Type: T5Tokenizer object.
-                >   - Purpose: Represents the current instance of the T5Tokenizer class.
-                >   - Restrictions: None.
+            self:
+                An instance of the T5Tokenizer class.
+
+                - Type: T5Tokenizer object.
+                - Purpose: Represents the current instance of the T5Tokenizer class.
+                - Restrictions: None.
 
         Returns:
-            None:
-                >   - Type: None
-                >   - Purpose: There is no return value; this method modifies the internal state of the object.
+            None: this method modifies the internal state of the object.
 
         Raises:
-            None:
-                - This method does not raise any exceptions explicitly.
+            None.
         """
         return list(
             set(filter(lambda x: bool(re.search(r"<extra_id_\d+>", x)) is not None, self.additional_special_tokens))
@@ -400,11 +411,11 @@ class T5Tokenizer(PreTrainedTokenizer):
 
         Returns:
             None:
-            The method does not return a value but directly returns the list of token IDs for sentinel tokens.
+                The method does not return a value but directly returns the list of token IDs for sentinel tokens.
 
         Raises:
             None:
-            This method does not raise any exceptions.
+                This method does not raise any exceptions.
         """
         return [self.convert_tokens_to_ids(token) for token in self.get_sentinel_tokens()]
 
@@ -447,8 +458,8 @@ class T5Tokenizer(PreTrainedTokenizer):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A sequence has the following format:
 
-        >   - single sequence: `X </s>`
-        >   - pair of sequences: `A </s> B </s>`
+        - single sequence: `X </s>`
+        - pair of sequences: `A </s> B </s>`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -494,11 +505,9 @@ class T5Tokenizer(PreTrainedTokenizer):
         
         Returns:
             None.
-            This method does not return any value explicitly.
         
         Raises:
-            N/A
-            This method does not raise any exceptions explicitly.
+            None.
         """
         self.__dict__ = d
 
@@ -534,11 +543,11 @@ class T5Tokenizer(PreTrainedTokenizer):
                 The instance of the T5Tokenizer class.
         
         Returns:
-            int
+            int:
                 The length of the encoded form of the unknown token.
         
         Raises:
-            N/A
+            None.
         """
         return len(self.sp_model.encode(str(self.unk_token)))
 

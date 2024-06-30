@@ -128,7 +128,7 @@ class BigBirdTokenizer(PreTrainedTokenizer):
             **kwargs: Additional keyword arguments.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -200,10 +200,10 @@ class BigBirdTokenizer(PreTrainedTokenizer):
                 This parameter is required to access the tokenizer's properties.
 
         Returns:
-            None. The method returns the vocabulary size as an integer value.
+            None: The method returns the vocabulary size as an integer value.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.sp_model.get_piece_size()
 
@@ -234,10 +234,10 @@ class BigBirdTokenizer(PreTrainedTokenizer):
             self (BigBirdTokenizer): The instance of the 'BigBirdTokenizer' class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         state = self.__dict__.copy()
         state["sp_model"] = None
@@ -472,8 +472,10 @@ class BigBirdTokenizer(PreTrainedTokenizer):
     ) -> List[int]:
         """
         Create a mask from the two sequences passed to be used in a sequence-pair classification task. A BERT sequence
-        pair mask has the following format: :: 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 | first sequence | second
-        sequence | If `token_ids_1` is `None`, this method only returns the first portion of the mask (0s).
+        pair mask has the following format:
+        ```0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 | first sequence | second sequence |```
+
+        If `token_ids_1` is `None`, this method only returns the first portion of the mask (0s).
 
         Args:
             token_ids_0 (`List[int]`):

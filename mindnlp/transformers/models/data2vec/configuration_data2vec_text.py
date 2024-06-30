@@ -75,7 +75,7 @@ class Data2VecTextConfig(PretrainedConfig):
         classifier_dropout (`float`, *optional*):
             The dropout ratio for the classification head.
 
-    Examples:
+    Example:
         ```python
         >>> from mindnlp.transformers import Data2VecTextConfig, Data2VecTextModel
         ...

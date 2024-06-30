@@ -156,7 +156,7 @@ class ErnieConfig(PretrainedConfig):
             classifier_dropout (float, optional): The dropout probability for the classifier. Defaults to None.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.

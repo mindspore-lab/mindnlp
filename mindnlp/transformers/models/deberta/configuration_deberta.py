@@ -149,10 +149,10 @@ class DebertaConfig(PretrainedConfig):
             pooler_hidden_act (str, optional): The activation function for the pooler layer. Default is 'gelu'.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None specified.
+            None.
         """
         super().__init__(**kwargs)
 

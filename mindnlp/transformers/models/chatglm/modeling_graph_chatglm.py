@@ -71,7 +71,8 @@ class PrefixEncoder(nn.Cell):
         
         Args:
             self: The instance of the class.
-            config: An object containing configuration parameters. It should have the following attributes:
+            config: An object containing configuration parameters.
+                It should have the following attributes:
 
                 - prefix_projection (bool): A flag indicating whether to use prefix projection.
                 - pre_seq_len (int): The length of the input sequence.
@@ -476,7 +477,7 @@ class GEGLU(nn.Cell):
             x (Tensor): The input tensor to be processed. It should have a dimension greater than or equal to 1.
 
         Returns:
-            None. The method modifies the instance's internal state.
+            None: The method modifies the instance's internal state.
 
         Raises:
             ValueError: If the input tensor `x` has a dimension less than 1.
@@ -756,24 +757,27 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
     `encoder_hidden_states` is then expected as an input to the forward pass.
     """
     def __init__(self, config: ChatGLMConfig):
-        """Initializes an instance of the MSChatGLMModel class with the provided configuration.
+        """
+        Initializes an instance of the MSChatGLMModel class with the provided configuration.
 
         Args:
             self: The instance of the MSChatGLMModel class.
-            config (ChatGLMConfig): The configuration for the model.
-                max_sequence_length (int): The maximum sequence length for the input.
-                hidden_size (int): The size of the hidden layer.
-                num_attention_heads (int): The number of attention heads.
-                vocab_size (int): The size of the vocabulary.
-                num_layers (int): The number of layers for the model.
-                layernorm_epsilon (float): The epsilon value for the layer normalization.
-                inner_hidden_size (int): The size of the inner hidden layer.
-                position_encoding_2d (bool): Whether to use 2D position encoding.
-                pre_seq_len (int): The length of the prefix sequence.
-                prefix_projection (bool): Whether to use prefix projection.
-                use_cache (bool): Whether to use cache.
-                output_hidden_states (bool): Whether to output hidden states.
-                output_attentions (bool): Whether to output attentions.
+            config (ChatGLMConfig):
+                The configuration for the model.
+
+                - max_sequence_length (int): The maximum sequence length for the input.
+                - hidden_size (int): The size of the hidden layer.
+                - num_attention_heads (int): The number of attention heads.
+                - vocab_size (int): The size of the vocabulary.
+                - num_layers (int): The number of layers for the model.
+                - layernorm_epsilon (float): The epsilon value for the layer normalization.
+                - inner_hidden_size (int): The size of the inner hidden layer.
+                - position_encoding_2d (bool): Whether to use 2D position encoding.
+                - pre_seq_len (int): The length of the prefix sequence.
+                - prefix_projection (bool): Whether to use prefix projection.
+                - use_cache (bool): Whether to use cache.
+                - output_hidden_states (bool): Whether to output hidden states.
+                - output_attentions (bool): Whether to output attentions.
 
         Returns:
             None
@@ -844,10 +848,10 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
             self (MSChatGLMModel): An instance of the MSChatGLMModel class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.word_embeddings
 
@@ -1019,7 +1023,8 @@ class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
 
         Args:
             self: The instance of the MSChatGLMForConditionalGeneration class.
-            config (ChatGLMConfig): An object of type ChatGLMConfig containing configuration parameters for the model.
+            config (ChatGLMConfig):
+                An object of type ChatGLMConfig containing configuration parameters for the model.
 
                 - max_sequence_length (int): The maximum length of input sequences.
                 - position_encoding_2d (bool): Flag indicating whether to use 2D position encoding.
@@ -1076,10 +1081,10 @@ class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
                 It can be of any valid type.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         self.lm_head = new_embeddings
 
@@ -1158,7 +1163,8 @@ class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
             **kwargs: Additional keyword arguments.
 
         Returns:
-            dict: A dictionary containing the prepared inputs for generation including 'input_ids', 'past_key_values', 'position_ids', and 'attention_mask'.
+            dict: A dictionary containing the prepared inputs for generation including 'input_ids', 'past_key_values',
+                'position_ids', and 'attention_mask'.
 
         Raises:
             TypeError: If the input arguments are not of the expected types.
@@ -1256,7 +1262,9 @@ class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
             **kwargs: Additional keyword arguments.
 
         Returns:
-            dict: A dictionary containing the following keys:
+            dict:
+                A dictionary containing the following keys:
+
                 - 'loss' (None): The loss value. Always None.
                 - 'logits' (mindspore.Tensor): The output logits tensor of shape (batch_size, sequence_length, vocab_size).
                 - 'past_key_values' (Tuple[mindspore.Tensor]): The tuple of tensors containing the key-value pairs from the current attention pass.

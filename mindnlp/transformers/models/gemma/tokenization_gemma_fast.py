@@ -42,7 +42,7 @@ class GemmaTokenizerFast(PreTrainedTokenizerFast):
     Example:
         ```python
         >>> from transformers import GemmaTokenizerFast
-
+        ...
         >>> tokenizer = GemmaTokenizerFast.from_pretrained("hf-internal-testing/dummy-gemma")
         >>> tokenizer.encode("Hello this is a test")
         [2, 4521, 736, 603, 476, 2121]
@@ -52,7 +52,6 @@ class GemmaTokenizerFast(PreTrainedTokenizerFast):
     call `tokenizer.update_post_processor()` to make sure that the post-processing is correctly done (otherwise the
     values of the first token and final token of an encoded sequence will not be correct). For more details, checkout
     [post-processors] (https://hf-mirror.com/docs/tokenizers/api/post-processors) documentation.
-
 
     This tokenizer inherits from [`PreTrainedTokenizerFast`] which contains most of the main methods. Users should
     refer to this superclass for more information regarding those methods.
@@ -115,7 +114,7 @@ class GemmaTokenizerFast(PreTrainedTokenizerFast):
             add_eos_token (bool, optional): Whether to add the end of sentence token. Default is False.
 
         Returns:
-            None. This method initializes the GemmaTokenizerFast object.
+            None.
 
         Raises:
             None.
@@ -146,7 +145,9 @@ class GemmaTokenizerFast(PreTrainedTokenizerFast):
             self: An instance of the GemmaTokenizerFast class.
 
         Returns:
-            A boolean value indicating whether the slow tokenizer can be saved. Returns True if the vocab_file exists, otherwise False.
+            bool:
+                A boolean value indicating whether the slow tokenizer can be saved.
+                Returns True if the vocab_file exists, otherwise False.
 
         Raises:
             None.
@@ -189,13 +190,16 @@ class GemmaTokenizerFast(PreTrainedTokenizerFast):
             self: An instance of the GemmaTokenizerFast class.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
 
-        This method adds an EOS token to the GemmaTokenizerFast object. The EOS token is used to mark the end of a sentence or text sequence. It is commonly used in natural language processing tasks such as
-        language modeling and text generation. By adding an EOS token, the GemmaTokenizerFast object can handle text sequences more effectively, allowing for better analysis and processing.
+        This method adds an EOS token to the GemmaTokenizerFast object.
+        The EOS token is used to mark the end of a sentence or text sequence.
+        It is commonly used in natural language processing tasks such as language modeling and text generation.
+        By adding an EOS token, the GemmaTokenizerFast object can handle text sequences more effectively,
+        allowing for better analysis and processing.
         """
         return self._add_eos_token
 
@@ -208,10 +212,10 @@ class GemmaTokenizerFast(PreTrainedTokenizerFast):
             self (GemmaTokenizerFast): The instance of GemmaTokenizerFast class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self._add_bos_token
 
@@ -225,10 +229,10 @@ class GemmaTokenizerFast(PreTrainedTokenizerFast):
                 It determines whether to add an end-of-sequence token to the tokenized output.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         self._add_eos_token = value
         self.update_post_processor()
@@ -243,13 +247,14 @@ class GemmaTokenizerFast(PreTrainedTokenizerFast):
 
         Args:
             self: (GemmaTokenizerFast) The instance of GemmaTokenizerFast.
-            value: (bool) A boolean value indicating whether to add the BOS token. True enables adding the BOS token, while False disables it.
+            value: (bool) A boolean value indicating whether to add the BOS token.
+                True enables adding the BOS token, while False disables it.
 
         Returns:
-        None: This method does not return any value.
+            None.
 
         Raises:
-        - N/A
+            None.
         """
         self._add_bos_token = value
         self.update_post_processor()
@@ -268,7 +273,9 @@ class GemmaTokenizerFast(PreTrainedTokenizerFast):
             Tuple[str]: A tuple containing the path to the saved vocabulary file.
 
         Raises:
-            ValueError: If the fast tokenizer does not have the necessary information to save the vocabulary for a slow tokenizer.
+            ValueError:
+                If the fast tokenizer does not have the necessary information to save the vocabulary for a slow
+                tokenizer.
             OSError: If the save_directory provided is not a valid directory path.
             IOError: If an error occurs during the file copying process.
         """
@@ -328,7 +335,6 @@ class GemmaTokenizerFast(PreTrainedTokenizerFast):
             >>> token_ids_1 = [404, 505]
             >>> inputs = tokenizer.build_inputs_with_special_tokens(token_ids_0, token_ids_1)
             >>> print(inputs)
-
             Output:
             [101, 202, 303, 102, 404, 505, 102]
             ```

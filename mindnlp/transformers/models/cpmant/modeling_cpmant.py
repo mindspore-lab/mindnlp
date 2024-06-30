@@ -60,7 +60,7 @@ class CpmAntLayerNorm(nn.Cell):
                 - hidden_size: An integer specifying the size of the hidden layer.
                 
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -129,7 +129,9 @@ class CpmAntAttention(nn.Cell):
 
         Args:
             self: The instance of the class.
-            config (CpmAntConfig): An instance of CpmAntConfig containing configuration parameters.
+            config (CpmAntConfig):
+                An instance of CpmAntConfig containing configuration parameters.
+
                 - hidden_size (int): The dimension size of the model.
                 - num_attention_heads (int): The number of attention heads.
                 - dim_head (int): The dimension of each attention head.
@@ -257,10 +259,13 @@ class CpmAntSelfAttentionBlock(nn.Cell):
 
     Methods:
         __init__: Initializes the CpmAntSelfAttentionBlock instance.
+
             Args:
-                - config (CpmAntConfig): The configuration object for the CpmAnt model.
+
+            - config (CpmAntConfig): The configuration object for the CpmAnt model.
 
         construct: Applies the self-attention block to the given hidden states.
+
             Args:
 
             - hidden_states (mindspore.Tensor): The input tensor of shape `(batch, len_seq, dim_model)` representing the hidden states.
@@ -283,7 +288,7 @@ class CpmAntSelfAttentionBlock(nn.Cell):
             config (CpmAntConfig): The configuration object containing settings for the self-attention block.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -366,7 +371,7 @@ class CpmAntDenseGatedACT(nn.Cell):
                 - `dim_ff` (int): The dimension of the feed-forward layer.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -429,7 +434,7 @@ class CpmAntFeedForward(nn.Cell):
                 It should be an instance of CpmAntConfig class.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -481,8 +486,8 @@ class CpmAntFFNBlock(nn.Cell):
 
             Args:
 
-                - hidden_states (mindspore.Tensor): The input hidden states before the feed-forward layer.
-                It has a shape of `(batch, len_seq, dim_model)`.
+            - hidden_states (mindspore.Tensor): The input hidden states before the feed-forward layer.
+            It has a shape of `(batch, len_seq, dim_model)`.
 
             Returns:
 
@@ -510,7 +515,7 @@ class CpmAntFFNBlock(nn.Cell):
                 The configuration object for the CpmAntFFNBlock. It contains the parameters and settings for the block.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -867,7 +872,7 @@ class CpmAntSegmentPositionEmbedding(nn.Cell):
                 - num_segments (int): The number of segment types.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1148,10 +1153,10 @@ class CpmAntModel(CpmAntPreTrainedModel):
                 This parameter is mandatory and must be an instance of CpmAntConfig.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         super().__init__(config)
         self.encoder = CpmAntEncoder(config)
@@ -1197,7 +1202,7 @@ class CpmAntModel(CpmAntPreTrainedModel):
                 - Restrictions: None
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1550,10 +1555,10 @@ class CpmAntForCausalLM(CpmAntPreTrainedModel):
                 This parameter should be a valid embeddings object that can be assigned to the input_embedding attribute of the CpmAntForCausalLM instance.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are documented to be raised by this method.
+            None.
         """
         self.cpmant.input_embedding = embeddings
 
@@ -1565,10 +1570,10 @@ class CpmAntForCausalLM(CpmAntPreTrainedModel):
             self: An instance of the CpmAntForCausalLM class.
 
         Returns:
-            None: The method returns the output embeddings of the language model head.
+            lm_head: The method returns the output embeddings of the language model head.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.lm_head
 

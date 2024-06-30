@@ -160,7 +160,7 @@ class DistilBertTokenizerFast(PreTrainedTokenizerFast):
             **kwargs: Additional keyword arguments.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             JSONDecodeError: If there is an issue decoding the normalizer state from JSON.

@@ -125,7 +125,7 @@ class WeightStandardizedConv2d(nn.Conv2d):
             eps (float, optional): Small value to avoid division by zero. Default is 1e-06.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If any of the input parameters are of incorrect type.
@@ -162,7 +162,7 @@ class WeightStandardizedConv2d(nn.Conv2d):
             None: This method does not return any value directly, but modifies the hidden state tensor in place.
 
         Raises:
-            None: This method does not raise any specific exceptions.
+            None.
         """
         if self.pad is not None:
             hidden_state = self.pad(hidden_state)
@@ -217,10 +217,10 @@ class BitGroupNormActivation(nn.GroupNorm):
                 It can be any valid input that can be processed by the _cal_output and activation methods.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         hidden_state = self._cal_output(hidden_state)
         hidden_state = self.activation(hidden_state)
@@ -344,7 +344,7 @@ class BitMaxPool2d(nn.Cell):
                 Defaults to True.
 
         Returns:
-            None: This method does not return anything.
+            None.
 
         Raises:
             None.
@@ -509,7 +509,7 @@ class BitDropPath(nn.Cell):
             drop_prob (Optional[float]): The probability of dropping a bit. If not provided, the default value is None.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -626,7 +626,7 @@ class BitPreActivationBottleneckLayer(nn.Cell):
             is_first_layer (bool): Flag indicating if the layer is the first in the network.
 
         Returns:
-            None: This method initializes the attributes and does not return any value.
+            None.
 
         Raises:
             None.
@@ -671,7 +671,7 @@ class BitPreActivationBottleneckLayer(nn.Cell):
             hidden_states (tensor): A tensor representing the hidden states.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             ValueError: If the downsample operation encounters an issue.
@@ -725,7 +725,7 @@ class BitBottleneckLayer(nn.Cell):
             is_first_layer (bool): Indicates if this is the first layer of the network.
 
         Returns:
-            None: The method initializes the BitBottleneckLayer object.
+            None.
 
         Raises:
             None.
@@ -823,25 +823,26 @@ class BitDownsampleConv(nn.Cell):
         __init__(self, config, in_channels, out_channels, stride=1, preact=True):
             Initializes a BitDownsampleConv instance with the specified parameters.
 
-            - Args:
+            Args:
 
-                - config (Config): The configuration object containing various settings.
+            - config (Config): The configuration object containing various settings.
 
-                    - in_channels (int): The number of input channels.
-                    - out_channels (int): The number of output channels.
-                    - stride (int, optional): The stride value for the convolution operation. Defaults to 1.
-                    - preact (bool, optional): If True, nn.Identity is used for normalization,
-                    otherwise BitGroupNormActivation is used. Defaults to True.
+                - in_channels (int): The number of input channels.
+                - out_channels (int): The number of output channels.
+                - stride (int, optional): The stride value for the convolution operation. Defaults to 1.
+                - preact (bool, optional): If True, nn.Identity is used for normalization,
+                otherwise BitGroupNormActivation is used. Defaults to True.
 
         construct(self, x):
             Applies down-sampling to the input tensor x by performing weight-standardized convolution followed by normalization.
 
-            - Args:
+            Args:
 
-                - x (Tensor): The input tensor to be down-sampled.
-            - Returns:
+            - x (Tensor): The input tensor to be down-sampled.
 
-                - Tensor: The down-sampled output tensor.
+            Returns:
+
+            - Tensor: The down-sampled output tensor.
     """
     def __init__(
         self,
@@ -863,7 +864,7 @@ class BitDownsampleConv(nn.Cell):
             preact (bool): Indicates whether to apply preactivation. Default is True.
 
         Returns:
-            None: This method initializes the BitDownsampleConv instance.
+            None.
 
         Raises:
             None.
@@ -887,10 +888,10 @@ class BitDownsampleConv(nn.Cell):
             x (any): The input data to be processed. It can be of any type.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         return self.norm(self.conv(x))
 
@@ -923,7 +924,7 @@ class BitStage(nn.Cell):
             layer_dropout (float, None): The dropout rate for the layer. If None, no dropout is applied.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             NotImplementedError: If the layer type specified in the config is not supported.
@@ -1038,10 +1039,10 @@ class BitEncoder(nn.Cell):
                 - drop_path_rate (float): The drop path rate for the BitStages.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.stages = nn.CellList([])
@@ -1093,10 +1094,10 @@ class BitEncoder(nn.Cell):
             config (object): The configuration object containing width factor and output stride values.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         out_channels = make_div(current_hidden_size * config.width_factor)
         stride = 1 if stage_idx == 0 else 2
@@ -1166,7 +1167,7 @@ class BitPreTrainedModel(PreTrainedModel):
                 It represents the cell for which the weights are initialized.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the 'cell' parameter is not an instance of nn.Conv2d, nn.BatchNorm2d, or nn.GroupNorm.
@@ -1293,24 +1294,19 @@ class BitForImageClassification(BitPreTrainedModel):
         classifier (nn.SequentialCell): Neural network layers for classification.
 
     Methods:
-        __init__(self, config):
+        __init__:
             Initializes the BitForImageClassification instance with the given configuration.
 
-        construct(self, pixel_values, labels, output_hidden_states, return_dict) -> ImageClassifierOutputWithNoAttention:
+        construct:
             Constructs the image classifier model with optional inputs and returns the output with or without attention.
 
-                - pixel_values (Optional[mindspore.Tensor]): Tensor representing pixel values of images.
-                - labels (Optional[mindspore.Tensor]): Tensor representing labels for classification/regression.
-                - output_hidden_states (Optional[bool]): Flag to output hidden states.
-                - return_dict (Optional[bool]): Flag to return output as a dictionary.
+            Parameters:
 
-            - Parameters:
-
-                - pixel_values (mindspore.Tensor): Tensor of shape `(batch_size, channels, height, width)` representing input images.
-                - labels (mindspore.Tensor): Tensor of shape `(batch_size,)` representing labels for classification/regression.
-                    Indices should be in `[0, ..., config.num_labels - 1]`. For classification, a classification loss is computed (Cross-Entropy).
-                - output_hidden_states (bool): Flag to indicate whether to output hidden states.
-                - return_dict (bool): Flag to specify the format of the returned output.
+            - pixel_values (mindspore.Tensor): Tensor of shape `(batch_size, channels, height, width)` representing input images.
+            - labels (mindspore.Tensor): Tensor of shape `(batch_size,)` representing labels for classification/regression.
+                Indices should be in `[0, ..., config.num_labels - 1]`. For classification, a classification loss is computed (Cross-Entropy).
+            - output_hidden_states (bool): Flag to indicate whether to output hidden states.
+            - return_dict (bool): Flag to specify the format of the returned output.
 
         Returns:
             ImageClassifierOutputWithNoAttention: Output containing loss, logits, and hidden states if specified.
@@ -1429,8 +1425,8 @@ class BitBackbone(BitPreTrainedModel, BackboneMixin):
                 A configuration object containing the settings for the BitBackbone model.
                 It should be an instance of the Config class and contain the following attributes:
 
-                    - embedding_size (int): The size of the input embedding.
-                    - hidden_sizes (list): A list of integers representing the sizes of hidden layers.
+                - embedding_size (int): The size of the input embedding.
+                - hidden_sizes (list): A list of integers representing the sizes of hidden layers.
         Returns:
             None
 

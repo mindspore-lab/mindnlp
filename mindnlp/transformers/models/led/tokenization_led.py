@@ -76,7 +76,7 @@ def get_pairs(word):
 
 
 class LEDTokenizer(PreTrainedTokenizer):
-    """
+    r"""
     Constructs a LED tokenizer, which is smilar to the ROBERTa tokenizer, using byte-level Byte-Pair-Encoding.
 
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
@@ -85,14 +85,13 @@ class LEDTokenizer(PreTrainedTokenizer):
     Example:
         ```python
         >>> from transformers import LEDTokenizer
-
+        ...
         >>> tokenizer = LEDTokenizer.from_pretrained("allenai/led-base-16384")
         >>> tokenizer("Hello world")["input_ids"]
         [0, 31414, 232, 2]
-
         >>> tokenizer(" Hello world")["input_ids"]
         [0, 20920, 232, 2]
-    ```
+        ```
 
     You can get around that behavior by passing `add_prefix_space=True` when instantiating this tokenizer or when you
     call it on some text, but since the model was not pretrained this way, it might yield a decrease in performance.
@@ -329,8 +328,9 @@ class LEDTokenizer(PreTrainedTokenizer):
         """
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A LED sequence has the following format:
-        >- single sequence: `<s> X </s>`
-        >- pair of sequences: `<s> A </s></s> B </s>`
+
+        - single sequence: `<s> X </s>`
+        - pair of sequences: `<s> A </s></s> B </s>`
 
         Args:
             token_ids_0 (`List[int]`):

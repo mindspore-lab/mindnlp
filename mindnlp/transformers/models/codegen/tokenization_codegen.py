@@ -251,7 +251,7 @@ class CodeGenTokenizer(PreTrainedTokenizer):
 
         Returns:
             dict: A dictionary containing the vocabulary of the CodeGenTokenizer. The keys are tokens
-            from the encoder and added_tokens_encoder, and the values are their corresponding indices.
+                from the encoder and added_tokens_encoder, and the values are their corresponding indices.
 
         Raises:
             None.
@@ -446,7 +446,7 @@ class CodeGenTokenizer(PreTrainedTokenizer):
         truncate_before_pattern: Optional[List[str]] = None,
         **kwargs,
     ) -> str:
-        """
+        r"""
         Converts a sequence of ids in a string, using the tokenizer and vocabulary with options to remove special
         tokens and clean up tokenization spaces.
         Similar to doing `self.convert_tokens_to_string(self.convert_ids_to_tokens(token_ids))`.
@@ -494,7 +494,7 @@ class CodeGenTokenizer(PreTrainedTokenizer):
             None.
 
         Raises:
-            No specific exceptions are raised within this method.
+            None.
         """
         def find_re(string, pattern, start_pos):
             m = pattern.search(string, start_pos)

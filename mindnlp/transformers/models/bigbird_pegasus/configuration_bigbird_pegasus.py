@@ -175,7 +175,7 @@ class BigBirdPegasusConfig(PretrainedConfig):
             use_bias (bool, optional): Whether to use bias. Defaults to False.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None.

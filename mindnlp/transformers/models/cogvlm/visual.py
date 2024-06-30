@@ -16,7 +16,8 @@ class PatchEmbedding(nn.Cell):
         
         Args:
             self (PatchEmbedding): The PatchEmbedding instance itself.
-            config (object): An object containing configuration settings for the PatchEmbedding.
+            config (object):
+                An object containing configuration settings for the PatchEmbedding.
 
                 - in_channels (int): Number of input channels.
                 - hidden_size (int): Size of the hidden layer.
@@ -24,7 +25,7 @@ class PatchEmbedding(nn.Cell):
                 - num_positions (int): Number of positions for position embedding.
         
         Returns:
-            None: This method initializes the PatchEmbedding object with the specified configurations.
+            None.
         
         Raises:
             ValueError: If the configuration provided is invalid or missing required parameters.
@@ -74,15 +75,16 @@ class Attention(nn.Cell):
             config (object): An object containing configuration parameters for the attention mechanism.
                 It must have the following attributes:
 
-                    - num_heads (int): The number of attention heads to use.
-                    - hidden_size (int): The size of the hidden layers in the attention mechanism.
+                - num_heads (int): The number of attention heads to use.
+                - hidden_size (int): The size of the hidden layers in the attention mechanism.
+
                 The config object should adhere to the following restrictions:
 
-                    - num_heads: Must be a positive integer.
-                    - hidden_size: Must be a positive integer.
+                - num_heads: Must be a positive integer.
+                - hidden_size: Must be a positive integer.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             TypeError: If the config parameter is not an object or does not have the expected attributes.
@@ -155,12 +157,13 @@ class MLP(nn.Cell):
             self (MLP): The instance of the MLP class.
             config (object): An object containing configuration parameters for the MLP model.
                 This object should have attributes like 'hidden_act', 'hidden_size', 'intermediate_size'.
-                The 'hidden_act' attribute determines the activation function to be used.
-                The 'hidden_size' attribute specifies the size of the hidden layer.
-                The 'intermediate_size' attribute specifies the size of the intermediate layer.
+
+                - The 'hidden_act' attribute determines the activation function to be used.
+                - The 'hidden_size' attribute specifies the size of the hidden layer.
+                - The 'intermediate_size' attribute specifies the size of the intermediate layer.
                 
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -211,7 +214,7 @@ class TransformerLayer(nn.Cell):
                 - layer_norm_eps (float): The epsilon value for layer normalization.
         
         Returns:
-            None: This method initializes the TransformerLayer object with the specified configuration settings.
+            None.
         
         Raises:
             AttributeError: If the required attributes are missing in the config object.
@@ -232,7 +235,7 @@ class TransformerLayer(nn.Cell):
             hidden_states (tensor): The input hidden states to the layer. 
         
         Returns:
-            None. This method modifies the hidden_states in-place.
+            None: This method modifies the hidden_states in-place.
         
         Raises:
             None.
@@ -294,7 +297,7 @@ class Transformer(nn.Cell):
             None.
         
         Raises:
-            No specific exceptions are documented to be raised by this method.
+            None.
         """
         super().__init__()
         self.layers = nn.CellList([TransformerLayer(config) for _ in range(config.num_hidden_layers)])
@@ -431,10 +434,10 @@ class EVA2CLIPModel(nn.Cell):
             config: A configuration object containing parameters for the model's vision components and hidden size.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         vision_config = Namespace(**config.vision_config)

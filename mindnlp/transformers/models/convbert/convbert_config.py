@@ -89,7 +89,7 @@ class ConvBertConfig(PretrainedConfig):
             classifier_dropout (float, optional): The dropout probability for the classifier layer. Defaults to None.
         
         Returns:
-            None. This method initializes the instance of the ConvBertConfig class.
+            None.
         
         Raises:
             None.

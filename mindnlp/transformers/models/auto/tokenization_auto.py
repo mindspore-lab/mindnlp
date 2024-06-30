@@ -648,7 +648,7 @@ class AutoTokenizer:
             self: The instance of the AutoTokenizer class.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             EnvironmentError: If the AutoTokenizer is instantiated directly using the __init__ method,
@@ -676,14 +676,14 @@ class AutoTokenizer:
             pretrained_model_name_or_path (`str` or `os.PathLike`):
                 Can be either:
 
-                    - A string, the *model id* of a predefined tokenizer hosted inside a model repo on hf-mirror.com.
-                    Valid model ids can be located at the root-level, like `bert-base-uncased`, or namespaced under a
-                    user or organization name, like `dbmdz/bert-base-german-cased`.
-                    - A path to a *directory* containing vocabulary files required by the tokenizer, for instance saved
-                    using the [`~PreTrainedTokenizer.save_pretrained`] method, e.g., `./my_model_directory/`.
-                    - A path or url to a single saved vocabulary file if and only if the tokenizer only requires a
-                    single vocabulary file (like Bert or XLNet), e.g.: `./my_model_directory/vocab.txt`. (Not
-                    applicable to all derived classes)
+                - A string, the *model id* of a predefined tokenizer hosted inside a model repo on hf-mirror.com.
+                Valid model ids can be located at the root-level, like `bert-base-uncased`, or namespaced under a
+                user or organization name, like `dbmdz/bert-base-german-cased`.
+                - A path to a *directory* containing vocabulary files required by the tokenizer, for instance saved
+                using the [`~PreTrainedTokenizer.save_pretrained`] method, e.g., `./my_model_directory/`.
+                - A path or url to a single saved vocabulary file if and only if the tokenizer only requires a
+                single vocabulary file (like Bert or XLNet), e.g.: `./my_model_directory/vocab.txt`. (Not
+                applicable to all derived classes)
             inputs (additional positional arguments, *optional*):
                 Will be passed along to the Tokenizer `__init__()` method.
             config ([`PretrainedConfig`], *optional*)

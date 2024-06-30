@@ -84,7 +84,8 @@ class CogVLMConfig(PretrainedConfig):
             use_cache=True,
             **kwargs,
     ):
-        """Initialize CogVLMConfig.
+        """
+        Initialize CogVLMConfig.
         
         Args:
             self: The instance of the class.
@@ -105,7 +106,7 @@ class CogVLMConfig(PretrainedConfig):
             use_cache (bool, optional): Whether to use caching. Defaults to True.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             TypeError: If vocab_size, hidden_size, intermediate_size, num_hidden_layers, num_attention_heads,

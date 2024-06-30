@@ -298,7 +298,7 @@ class BlipVisionConfig(PretrainedConfig):
             initializer_range (float, optional): The range for parameter initialization. Defaults to 1e-10.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -333,7 +333,7 @@ class BlipVisionConfig(PretrainedConfig):
                 the pretrained model. The method returns this configuration for further use.
 
         Raises:
-            No specific exceptions:
+            None:
                 No specific exceptions are documented to be raised by this method based on the provided code snippet.
                 However, potential exceptions might include:
 
@@ -435,7 +435,7 @@ class BlipConfig(PretrainedConfig):
             label_smoothing (float, optional): The amount of label smoothing. Defaults to 0.0.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None.

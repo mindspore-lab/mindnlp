@@ -72,13 +72,13 @@ class SwiftFormerConfig(PretrainedConfig):
     Example:
         ```python
         >>> from transformers import SwiftFormerConfig, SwiftFormerModel
-
+        ...
         >>> # Initializing a SwiftFormer swiftformer-base-patch16-224 style configuration
         >>> configuration = SwiftFormerConfig()
-
+        ...
         >>> # Initializing a model (with random weights) from the swiftformer-base-patch16-224 style configuration
         >>> model = SwiftFormerModel(configuration)
-
+        ...
         >>> # Accessing the model configuration
         >>> configuration = model.config
         ```

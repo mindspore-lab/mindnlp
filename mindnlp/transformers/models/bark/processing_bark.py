@@ -65,7 +65,7 @@ class BarkProcessor(ProcessorMixin):
                 Defaults to None.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -241,7 +241,7 @@ class BarkProcessor(ProcessorMixin):
                 - 'fine_prompt' (numpy.ndarray): A 2D ndarray representing the fine prompt.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             ValueError:

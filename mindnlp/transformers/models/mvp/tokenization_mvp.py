@@ -1,4 +1,4 @@
-"""coding=utf-8
+# coding=utf-8
 # Copyright 2022 The Facebook AI Research Team Authors and The HuggingFace Inc. team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
 
 import json
 import os
@@ -82,11 +81,10 @@ class MvpTokenizer(PreTrainedTokenizer):
     Example:
         ```python
         >>> from transformers import MvpTokenizer
-
+        ...
         >>> tokenizer = MvpTokenizer.from_pretrained("RUCAIBox/mvp")
         >>> tokenizer("Hello world")["input_ids"]
         [0, 31414, 232, 2]
-
         >>> tokenizer(" Hello world")["input_ids"]
         [0, 20920, 232, 2]
         ```
@@ -317,8 +315,9 @@ class MvpTokenizer(PreTrainedTokenizer):
         """
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A MVP sequence has the following format:
-        >- single sequence: `<s> X </s>`
-        >- pair of sequences: `<s> A </s></s> B </s>`
+
+        - single sequence: `<s> X </s>`
+        - pair of sequences: `<s> A </s></s> B </s>`
 
         Args:
             token_ids_0 (`List[int]`):

@@ -85,8 +85,10 @@ class MobileBertTokenizer(PreTrainedTokenizer):
 
         Args:
             self: The instance of the class.
-            vocab (msVocab, Vocab, str): The vocabulary used for tokenization. If vocab is an instance of msVocab, vocab_dict is obtained from vocab.vocab(). If vocab is an instance of Vocab, vocab_dict is
-                obtained directly from vocab.vocab. If vocab is a path to a file, the file is loaded as the vocabulary. Default is None.
+            vocab (msVocab, Vocab, str): The vocabulary used for tokenization. If vocab is an instance of msVocab,
+                vocab_dict is obtained from vocab.vocab(). If vocab is an instance of Vocab, vocab_dict is
+                obtained directly from vocab.vocab. If vocab is a path to a file, the file is loaded as the vocabulary.
+                Default is None.
             tokenizer_file (str): Path to the tokenizer file. Default is None.
             do_lower_case (bool): Whether to convert tokens to lowercase. Default is True.
             unk_token (str): The token representing unknown words. Default is '[UNK]'.
@@ -97,11 +99,13 @@ class MobileBertTokenizer(PreTrainedTokenizer):
             tokenize_chinese_chars (bool): Whether to tokenize Chinese characters. Default is True.
             strip_accents (None): Not used in this implementation.
             **kwargs: Additional keyword arguments.
+
         Returns:
-            None. The method initializes the MobileBertTokenizer object.
+            None.
 
         Raises:
-            - ValueError: If the vocab parameter is not of type msVocab or Vocab, or if it is a string that does not represent a file.
+            ValueError: If the vocab parameter is not of type msVocab or Vocab, or if it is a string that
+                does not represent a file.
         """
         super().__init__(
             tokenizer_file=tokenizer_file,
@@ -173,11 +177,12 @@ class MobileBertTokenizer(PreTrainedTokenizer):
                 This token should be a valid string representing a token in the tokenizer's vocabulary.
         
         Returns:
-            None. This method does not return a value directly but instead passes the token to the tokenizer to retrieve its ID.
+            None: This method does not return a value directly but instead passes the token to the tokenizer to
+                retrieve its ID.
         
         Raises:
-            - TypeError: If the token is not a string.
-            - ValueError: If the token provided is not found in the tokenizer's vocabulary.
+            TypeError: If the token is not a string.
+            ValueError: If the token provided is not found in the tokenizer's vocabulary.
         """
         return self._tokenizer.token_to_id(token)
 

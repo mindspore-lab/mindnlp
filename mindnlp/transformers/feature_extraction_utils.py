@@ -76,7 +76,7 @@ class BatchFeature(UserDict):
                 It can be None, a string, or an instance of the TensorType class.
         
         Returns:
-            None: This method returns nothing.
+            None.
         
         Raises:
             None.
@@ -113,7 +113,8 @@ class BatchFeature(UserDict):
                 If the attribute 'item' does not exist in the data dictionary of the BatchFeature instance.
         
         Raises:
-            AttributeError: Raised when the specified 'item' attribute does not exist in the data dictionary of the BatchFeature instance.
+            AttributeError: Raised when the specified 'item' attribute does not exist in the data dictionary of the
+                BatchFeature instance.
         """
         try:
             return self.data[item]
@@ -122,19 +123,21 @@ class BatchFeature(UserDict):
 
     def __getstate__(self):
         """
-        Method: __getstate__
         
         Description:
-            This method is used to retrieve the state of an instance of the 'BatchFeature' class. It returns a dictionary containing the 'data' attribute of the instance.
+            This method is used to retrieve the state of an instance of the 'BatchFeature' class. It returns a
+            dictionary containing the 'data' attribute of the instance.
 
         Args:
-            self: Represents the instance of the 'BatchFeature' class. It is automatically passed as the first argument when the method is called.
+            self: Represents the instance of the 'BatchFeature' class. It is automatically passed as the first
+                argument when the method is called.
 
         Returns:
-            None: This method does not explicitly return a value. However, it implicitly returns a dictionary containing the 'data' attribute of the instance.
+            None: This method does not explicitly return a value.
+                However, it implicitly returns a dictionary containing the 'data' attribute of the instance.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
 
         """
         return {"data": self.data}
@@ -148,7 +151,7 @@ class BatchFeature(UserDict):
             state (dict): A dictionary containing the state information to be set. It should include the 'data' key.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -175,7 +178,7 @@ class BatchFeature(UserDict):
             None: This method does not return any value, as it directly operates on the instance's data.
 
         Raises:
-            No specific exceptions are documented to be raised by this method.
+            None.
         '''
         return self.data.keys()
 
@@ -188,10 +191,10 @@ class BatchFeature(UserDict):
             self (BatchFeature): The current instance of the BatchFeature class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.data.values()
 
@@ -221,10 +224,12 @@ class BatchFeature(UserDict):
 
         Args:
             self: An instance of the class BatchFeature.
-            tensor_type: An optional parameter indicating the type of tensor to be used for conversion. It can be a string or an instance of the enum TensorType. If not provided, the default value is None.
+            tensor_type: An optional parameter indicating the type of tensor to be used for conversion.
+                It can be a string or an instance of the enum TensorType. If not provided, the default value is None.
 
         Returns:
-            A tuple containing two functions:
+            tuple:
+                A tuple containing two functions:
 
                 - is_tensor: A function that checks whether a given value is a tensor.
                 - as_tensor: A function that converts a given value to a tensor based on the specified tensor_type.
@@ -712,10 +717,11 @@ class FeatureExtractionMixin():
         
         Returns:
             None:
-                This method does not return any value explicitly; it generates a formatted string representation of the object.
+                This method does not return any value explicitly;
+                it generates a formatted string representation of the object.
         
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return f"{self.__class__.__name__} {self.to_json_string()}"
 

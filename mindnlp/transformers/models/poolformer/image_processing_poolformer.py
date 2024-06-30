@@ -56,19 +56,21 @@ class PoolFormerImageProcessor(BaseImageProcessor):
             Whether to resize the image's (height, width) dimensions to the specified `size`. Can be overridden by
             `do_resize` in the `preprocess` method.
         size (`Dict[str, int]` *optional*, defaults to `{"shortest_edge": 224}`):
-            >- Size of the image after resizing. Can be overridden by `size` in the `preprocess` method. If crop_pct is
-                unset:
-            >   - size is `{"height": h, "width": w}`: the image is resized to `(h, w)`.
-            >   - size is `{"shortest_edge": s}`: the shortest edge of the image is resized to s whilst maintaining the
-                aspect ratio.
+            Size of the image after resizing. Can be overridden by `size` in the `preprocess` method. If crop_pct is
+            unset:
 
-            >- If crop_pct is set:
-            >   - size is `{"height": h, "width": w}`: the image is resized to `(int(floor(h/crop_pct)),
-                  int(floor(w/crop_pct)))`
-            >   - size is `{"height": c, "width": c}`: the shortest edge of the image is resized to `int(floor(c/crop_pct)`
-                  whilst maintaining the aspect ratio.
-            >   - size is `{"shortest_edge": c}`: the shortest edge of the image is resized to `int(floor(c/crop_pct)`
-                  whilst maintaining the aspect ratio.
+            - size is `{"height": h, "width": w}`: the image is resized to `(h, w)`.
+            - size is `{"shortest_edge": s}`: the shortest edge of the image is resized to s whilst maintaining the
+            aspect ratio.
+
+            If crop_pct is set:
+
+            - size is `{"height": h, "width": w}`: the image is resized to `(int(floor(h/crop_pct)),
+            int(floor(w/crop_pct)))`
+            - size is `{"height": c, "width": c}`: the shortest edge of the image is resized to `int(floor(c/crop_pct)`
+            whilst maintaining the aspect ratio.
+            - size is `{"shortest_edge": c}`: the shortest edge of the image is resized to `int(floor(c/crop_pct)`
+            whilst maintaining the aspect ratio.
         crop_pct (`float`, *optional*, defaults to 0.9):
             Percentage of the image to crop from the center. Can be overridden by `crop_pct` in the `preprocess`
             method.
@@ -164,18 +166,20 @@ class PoolFormerImageProcessor(BaseImageProcessor):
         """
         Resize an image.
 
-        If crop_pct is unset:
-            >- size is `{"height": h, "width": w}`: the image is resized to `(h, w)`.
-            >- size is `{"shortest_edge": s}`: the shortest edge of the image is resized to s whilst maintaining the
-                aspect ratio.
+        - If crop_pct is unset:
 
-        if crop_pct is set:
-            >- size is `{"height": h, "width": w}`: the image is resized to `(int(floor(h/crop_pct)),
-              int(floor(w/crop_pct)))`
-            >- size is `{"height": c, "width": c}`: the shortest edge of the image is resized to `int(floor(c/crop_pct)`
-              whilst maintaining the aspect ratio.
-            >- size is `{"shortest_edge": c}`: the shortest edge of the image is resized to `int(floor(c/crop_pct)`
-              whilst maintaining the aspect ratio.
+            - size is `{"height": h, "width": w}`: the image is resized to `(h, w)`.
+            - size is `{"shortest_edge": s}`: the shortest edge of the image is resized to s whilst maintaining the
+            aspect ratio.
+
+        - if crop_pct is set:
+
+            - size is `{"height": h, "width": w}`: the image is resized to `(int(floor(h/crop_pct)),
+            int(floor(w/crop_pct)))`
+            - size is `{"height": c, "width": c}`: the shortest edge of the image is resized to `int(floor(c/crop_pct)`
+            whilst maintaining the aspect ratio.
+            - size is `{"shortest_edge": c}`: the shortest edge of the image is resized to `int(floor(c/crop_pct)`
+            whilst maintaining the aspect ratio.
 
         Args:
             image (`np.ndarray`):
@@ -279,22 +283,25 @@ class PoolFormerImageProcessor(BaseImageProcessor):
             image_std (`float` or `List[float]`, *optional*, defaults to `self.image_std`):
                 Image standard deviation.
             return_tensors (`str` or `TensorType`, *optional*):
-                >- The type of tensors to return. Can be one of:
-                >   - Unset: Return a list of `np.ndarray`.
-                >   - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
-                >   - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `torch.Tensor`.
-                >   - `TensorType.NUMPY` or `'np'`: Return a batch of type `np.ndarray`.
-                >   - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
+                The type of tensors to return. Can be one of:
+
+                - Unset: Return a list of `np.ndarray`.
+                - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
+                - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `torch.Tensor`.
+                - `TensorType.NUMPY` or `'np'`: Return a batch of type `np.ndarray`.
+                - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
             data_format (`ChannelDimension` or `str`, *optional*, defaults to `ChannelDimension.FIRST`):
-                >- The channel dimension format for the output image. Can be one of:
-                >   - `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                >   - `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+                The channel dimension format for the output image. Can be one of:
+
+                - `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
+                - `ChannelDimension.LAST`: image in (height, width, num_channels) format.
             input_data_format (`ChannelDimension` or `str`, *optional*):
-                >- The channel dimension format for the input image. If unset, the channel dimension format is inferred
-                    from the input image. Can be one of:
-                >   - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                >   - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
-                >   - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
+                The channel dimension format for the input image. If unset, the channel dimension format is inferred
+                from the input image. Can be one of:
+
+                - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
+                - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+                - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
         """
         do_resize = do_resize if do_resize is not None else self.do_resize
         crop_pct = crop_pct if crop_pct is not None else self.crop_pct

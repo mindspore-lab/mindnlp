@@ -80,7 +80,7 @@ class VanDropPath(nn.Cell):
                 If set to None, no paths will be dropped. Should be a float value between 0 and 1, inclusive.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None
@@ -103,7 +103,8 @@ class VanDropPath(nn.Cell):
             None.
         
         Note:
-            The drop_path operation randomly sets a fraction of the hidden states to zero during training. This helps in regularizing the model and preventing overfitting. The drop probability is controlled by
+            The drop_path operation randomly sets a fraction of the hidden states to zero during training.
+            This helps in regularizing the model and preventing overfitting. The drop probability is controlled by
             the 'drop_prob' attribute of the VanDropPath class.
 
         Example:
@@ -130,8 +131,9 @@ class VanDropPath(nn.Cell):
         Raises:
             None.
 
-        This method returns a formatted string representation of the drop probability of the VanDropPath instance. The drop probability is obtained from the `drop_prob` attribute of the instance. The returned
-        string is of the form 'p={}', where '{}' is replaced by the actual drop probability value.
+        This method returns a formatted string representation of the drop probability of the VanDropPath instance.
+        The drop probability is obtained from the `drop_prob` attribute of the instance. The returned string is of the
+        form 'p={}', where '{}' is replaced by the actual drop probability value.
 
         Example:
             If the `drop_prob` attribute of the instance is 0.3, the method will return the string "p=0.3".
@@ -157,7 +159,7 @@ class VanOverlappingPatchEmbedder(nn.Cell):
             stride (int, optional): Stride value for the convolution operation. Default is 4.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -174,18 +176,20 @@ class VanOverlappingPatchEmbedder(nn.Cell):
 
         Args:
             self (VanOverlappingPatchEmbedder): An instance of the VanOverlappingPatchEmbedder class.
-            input (mindspore.Tensor): The input tensor to be processed. It should have shape (batch_size, channels, height, width).
+            input (mindspore.Tensor): The input tensor to be processed.
+                It should have shape (batch_size, channels, height, width).
 
         Returns:
-            mindspore.Tensor: The hidden state tensor obtained from the input tensor after applying convolution and normalization.
-                It has the same shape as the input tensor.
+            mindspore.Tensor: The hidden state tensor obtained from the input tensor after applying convolution and
+                normalization. It has the same shape as the input tensor.
 
         Raises:
             None.
 
         Note:
             - The 'convolution' method is applied to the input tensor to obtain an intermediate hidden state tensor.
-            - The 'normalization' method is then applied to the intermediate hidden state tensor to obtain the final hidden state tensor.
+            - The 'normalization' method is then applied to the intermediate hidden state tensor to obtain the final
+            hidden state tensor.
         """
         hidden_state = self.convolution(input)
         hidden_state = self.normalization(hidden_state)
@@ -223,7 +227,7 @@ class VanMlpLayer(nn.Cell):
                 This specifies the probability of an element to be zeroed in the dropout layers.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -273,7 +277,7 @@ class VanLargeKernelAttention(nn.Cell):
                 It is used to define the dimensions of the convolutional layers within the attention mechanism.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -315,13 +319,14 @@ class VanLargeKernelAttentionLayer(nn.Cell):
 
         Args:
             self: The instance of the VanLargeKernelAttentionLayer class.
-            hidden_size (int): The size of the hidden state, representing the dimensionality of the input feature space. It must be a positive integer.
+            hidden_size (int): The size of the hidden state, representing the dimensionality of the input feature space.
+                It must be a positive integer.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            N/A
+            None.
         """
         super().__init__()
         self.attention = VanLargeKernelAttention(hidden_size)
@@ -382,14 +387,17 @@ class VanSpatialAttentionLayer(nn.Cell):
 
         Args:
             self: The instance of the VanSpatialAttentionLayer class.
-            hidden_state (mindspore.Tensor): The input hidden state tensor to be processed. It represents the feature map of the input data and should be a tensor of shape [batch_size, channels, height, width].
+            hidden_state (mindspore.Tensor): The input hidden state tensor to be processed.
+                It represents the feature map of the input data and should be a tensor of shape
+                [batch_size, channels, height, width].
 
         Returns:
-            mindspore.Tensor: The processed hidden state tensor after applying the spatial attention mechanism. It has the same shape as the input hidden_state tensor.
+            mindspore.Tensor: The processed hidden state tensor after applying the spatial attention mechanism.
+                It has the same shape as the input hidden_state tensor.
 
         Raises:
-            - ValueError: If the input hidden_state tensor is not a valid mindspore.Tensor.
-            - RuntimeError: If an error occurs during the processing of the spatial attention mechanism.
+            ValueError: If the input hidden_state tensor is not a valid mindspore.Tensor.
+            RuntimeError: If an error occurs during the processing of the spatial attention mechanism.
         """
         residual = hidden_state
         hidden_state = self.pre_projection(hidden_state)
@@ -427,13 +435,15 @@ class VanLayerScaling(nn.Cell):
 
         Args:
             self (VanLayerScaling): The instance of the VanLayerScaling class.
-            hidden_state (mindspore.Tensor): The input tensor representing the hidden state. It is expected to be a tensor of type mindspore.Tensor.
+            hidden_state (mindspore.Tensor): The input tensor representing the hidden state.
+                It is expected to be a tensor of type mindspore.Tensor.
 
         Returns:
-            mindspore.Tensor: Returns a tensor of type mindspore.Tensor which is the result of scaling the input hidden_state tensor.
+            mindspore.Tensor: Returns a tensor of type mindspore.Tensor which is the result of scaling the
+                input hidden_state tensor.
 
         Raises:
-            None: This method does not explicitly raise any exceptions.
+            None.
         """
         # unsqueezing for broadcasting
         hidden_state = self.weight.unsqueeze(-1).unsqueeze(-1) * hidden_state
@@ -545,11 +555,11 @@ class VanStage(nn.Cell):
             drop_path_rate (float, optional): The rate for drop path regularization. Defaults to 0.0.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            - TypeError: If any of the input arguments does not match the expected type.
-            - ValueError: If any of the input arguments does not meet the specified restrictions.
+            TypeError: If any of the input arguments does not match the expected type.
+            ValueError: If any of the input arguments does not meet the specified restrictions.
         """
         super().__init__()
         self.embeddings = VanOverlappingPatchEmbedder(in_channels, hidden_size, patch_size, stride)
@@ -603,16 +613,18 @@ class VanEncoder(nn.Cell):
 
         Args:
             self: The instance of the class.
-            config (VanConfig): An object containing configuration parameters for the VanEncoder. It includes the following attributes:
-                >   - patch_sizes (List[int]): List of patch sizes for each stage.
-                >   - strides (List[int]): List of stride values for each stage.
-                >   - hidden_sizes (List[int]): List of hidden layer sizes for each stage.
-                >   - depths (List[int]): List of depths for each stage.
-                >   - mlp_ratios (List[int]): List of MLP expansion ratios for each stage.
-                >   - drop_path_rate (float): Drop path rate for the encoder.
+            config (VanConfig): An object containing configuration parameters for the VanEncoder.
+                It includes the following attributes:
+
+                - patch_sizes (List[int]): List of patch sizes for each stage.
+                - strides (List[int]): List of stride values for each stage.
+                - hidden_sizes (List[int]): List of hidden layer sizes for each stage.
+                - depths (List[int]): List of depths for each stage.
+                - mlp_ratios (List[int]): List of MLP expansion ratios for each stage.
+                - drop_path_rate (float): Drop path rate for the encoder.
 
         Returns:
-            None. This method initializes the VanEncoder object.
+            None.
 
         Raises:
             AssertionError: If the config parameter is not of type VanConfig.
@@ -664,7 +676,8 @@ class VanEncoder(nn.Cell):
             return_dict (bool, optional): A flag indicating whether to return the output as a dictionary. Defaults to True.
 
         Returns:
-            Union[Tuple, BaseModelOutputWithNoAttention]: The constructed output, which is either a tuple of hidden state and all hidden states or an instance of BaseModelOutputWithNoAttention.
+            Union[Tuple, BaseModelOutputWithNoAttention]: The constructed output, which is either a tuple of hidden
+                state and all hidden states or an instance of BaseModelOutputWithNoAttention.
 
         Raises:
             None
@@ -713,9 +726,11 @@ class VanPreTrainedModel(PreTrainedModel):
 class VanModel(VanPreTrainedModel):
 
     """
-    The VanModel class represents a model for processing pixel values using the VanEncoder and providing various output representations. It inherits from the VanPreTrainedModel class and includes methods for
-    initialization and constructing the model's output. The constructor initializes the model with the provided configuration, while the construct method processes the pixel values and returns the output
-    representation. The class provides flexibility for handling hidden states and returning output in the form of BaseModelOutputWithPoolingAndNoAttention.
+    The VanModel class represents a model for processing pixel values using the VanEncoder and providing various
+    output representations. It inherits from the VanPreTrainedModel class and includes methods for initialization and
+    constructing the model's output. The constructor initializes the model with the provided configuration, while the
+    construct method processes the pixel values and returns the output representation. The class provides flexibility
+    for handling hidden states and returning output in the form of BaseModelOutputWithPoolingAndNoAttention.
     """
     def __init__(self, config):
         """
@@ -725,12 +740,14 @@ class VanModel(VanPreTrainedModel):
             self: The object itself.
             config (object): The configuration object that contains various settings for the model.
                 This object should have the following attributes:
-                    >   - hidden_sizes (list): A list of integers representing the sizes of hidden layers.
-                    >   - layer_norm_eps (float): A small value used for numerical stability in layer normalization.
+
+                - hidden_sizes (list): A list of integers representing the sizes of hidden layers.
+                - layer_norm_eps (float): A small value used for numerical stability in layer normalization.
+
                 The config object is required for the proper initialization of the model.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -754,13 +771,17 @@ class VanModel(VanPreTrainedModel):
 
         Args:
             self (VanModel): The instance of the VanModel class.
-            pixel_values (Optional[mindspore.Tensor]): The input pixel values. If provided, it should be a Tensor.
-            output_hidden_states (Optional[bool]): Whether to output hidden states. If None, the value is taken from self.config.output_hidden_states.
-            return_dict (Optional[bool]): Whether to return the output as a dictionary. If None, the value is taken from self.config.use_return_dict.
+            pixel_values (Optional[mindspore.Tensor]): The input pixel values.
+                If provided, it should be a Tensor.
+            output_hidden_states (Optional[bool]): Whether to output hidden states.
+                If None, the value is taken from self.config.output_hidden_states.
+            return_dict (Optional[bool]): Whether to return the output as a dictionary.
+                If None, the value is taken from self.config.use_return_dict.
 
         Returns:
-            Union[Tuple, BaseModelOutputWithPoolingAndNoAttention]: A tuple containing the last hidden state and the pooled output, along with the encoder hidden states if return_dict is False. Otherwise, it
-            returns a BaseModelOutputWithPoolingAndNoAttention object.
+            Union[Tuple, BaseModelOutputWithPoolingAndNoAttention]: A tuple containing the last hidden state and the
+                pooled output, along with the encoder hidden states if return_dict is False. Otherwise, it
+                returns a BaseModelOutputWithPoolingAndNoAttention object.
 
         Raises:
             None
@@ -792,8 +813,9 @@ class VanModel(VanPreTrainedModel):
 class VanForImageClassification(VanPreTrainedModel):
 
     """
-    VanForImageClassification is a class that represents a model for image classification using a pre-trained VanModel for feature extraction
-    and a classifier for final prediction. It inherits from VanPreTrainedModel and implements methods for model initialization and inference.
+    VanForImageClassification is a class that represents a model for image classification using a pre-trained VanModel
+    for feature extraction and a classifier for final prediction. It inherits from VanPreTrainedModel and implements
+    methods for model initialization and inference.
 
     Attributes:
         van (VanModel): The VanModel instance used for feature extraction.
@@ -805,21 +827,28 @@ class VanForImageClassification(VanPreTrainedModel):
 
         construct:
             Constructs the model for image classification.
-            >   - Args:
-            >       - pixel_values (Optional[mindspore.Tensor]): The input pixel values representing the image.
-            >       - labels (Optional[mindspore.Tensor]): Labels for computing the image classification/regression loss.
-            >       - output_hidden_states (Optional[bool]): Flag to output hidden states.
-            >       - return_dict (Optional[bool]): Flag to determine if the return should be a dictionary.
-            >   - Returns:
-            >       - Union[Tuple, ImageClassifierOutputWithNoAttention]: Tuple of output elements or ImageClassifierOutputWithNoAttention object.
 
-        Example usage:
-            ```python
-            model = VanForImageClassification(config)
-            output = model.construct(pixel_values, labels, output_hidden_states, return_dict)
-            ```
+            Args:
+
+            - pixel_values (Optional[mindspore.Tensor]): The input pixel values representing the image.
+            - labels (Optional[mindspore.Tensor]): Labels for computing the image classification/regression loss.
+            - output_hidden_states (Optional[bool]): Flag to output hidden states.
+            - return_dict (Optional[bool]): Flag to determine if the return should be a dictionary.
+
+            Returns:
+
+            - Union[Tuple, ImageClassifierOutputWithNoAttention]: Tuple of output elements or
+            ImageClassifierOutputWithNoAttention object.
+
+    Example:
+        ```python
+        >>> model = VanForImageClassification(config)
+        >>> output = model.construct(pixel_values, labels, output_hidden_states, return_dict)
+        ```
+
     Note:
-        The construct method computes the loss based on the labels and the model's prediction, and returns the output based on the configured settings.
+        The construct method computes the loss based on the labels and the model's prediction, and returns the output
+        based on the configured settings.
     """
     def __init__(self, config):
         """
@@ -834,10 +863,10 @@ class VanForImageClassification(VanPreTrainedModel):
                 It should be an instance of the configuration class and must be provided.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         super().__init__(config)
         self.van = VanModel(config)

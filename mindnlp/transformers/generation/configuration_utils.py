@@ -110,7 +110,7 @@ class GenerationConfig:
             _commit_hash (str or None, optional): The commit hash. Defaults to None.
 
         Returns:
-            None: This method does not return a value.
+            None.
 
         Raises:
             AttributeError: If an attribute cannot be set for the GenerationConfig object.
@@ -740,7 +740,8 @@ class GenerationConfig:
                 The JSON file should exist and be readable. The file's content must be in UTF-8 encoding.
         
         Returns:
-            None: This method returns None after successfully loading and parsing the JSON data from the file into a dictionary.
+            None: This method returns None after successfully loading and parsing the JSON data from the file
+                into a dictionary.
         
         Raises:
             FileNotFoundError: If the specified JSON file does not exist.

@@ -150,7 +150,7 @@ class AltCLIPTextConfig(PretrainedConfig):
             project_dim (int): The dimension for project. Default is 768.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -268,7 +268,7 @@ class AltCLIPVisionConfig(PretrainedConfig):
             initializer_factor (float, optional): The factor for weight initialization.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -296,10 +296,12 @@ class AltCLIPVisionConfig(PretrainedConfig):
 
         Args:
             cls (object): The class object. It represents the AltCLIPVisionConfig class.
-            pretrained_model_name_or_path (Union[str, os.PathLike]): The name or path of the pretrained model. It can be a string or a valid path.
+            pretrained_model_name_or_path (Union[str, os.PathLike]): The name or path of the pretrained model.
+                It can be a string or a valid path.
 
         Returns:
-            PretrainedConfig: An instance of the 'PretrainedConfig' class representing the configuration of the pretrained model. It contains the configuration details for the pretrained model.
+            PretrainedConfig: An instance of the 'PretrainedConfig' class representing the configuration of the
+                pretrained model. It contains the configuration details for the pretrained model.
 
         Raises:
             None

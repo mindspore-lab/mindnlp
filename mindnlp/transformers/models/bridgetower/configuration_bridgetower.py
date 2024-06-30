@@ -98,7 +98,7 @@ class BridgeTowerVisionConfig(PretrainedConfig):
             **kwargs: Additional keyword arguments for customization.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -254,7 +254,7 @@ class BridgeTowerTextConfig(PretrainedConfig):
             use_cache (bool, optional): Whether to use caching. Defaults to True.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -404,7 +404,7 @@ class BridgeTowerConfig(PretrainedConfig):
             vision_config (dict): The configuration for vision.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the provided input types are invalid.

@@ -114,7 +114,7 @@ class BlipImageProcessor(BaseImageProcessor):
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None.

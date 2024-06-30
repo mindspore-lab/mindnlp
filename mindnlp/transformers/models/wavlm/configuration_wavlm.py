@@ -170,13 +170,13 @@ class WavLMConfig(PretrainedConfig):
     Example:
         ```python
         >>> from transformers import WavLMConfig, WavLMModel
-
+        ...
         >>> # Initializing a WavLM facebook/wavlm-base-960h style configuration
         >>> configuration = WavLMConfig()
-
+        ...
         >>> # Initializing a model (with random weights) from the facebook/wavlm-base-960h style configuration
         >>> model = WavLMModel(configuration)
-
+        ...
         >>> # Accessing the model configuration
         >>> configuration = model.config
         ```

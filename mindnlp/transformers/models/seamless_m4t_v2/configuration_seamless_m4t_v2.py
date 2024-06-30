@@ -232,13 +232,13 @@ class SeamlessM4Tv2Config(PretrainedConfig):
     Example:
         ```python
         >>> from transformers import SeamlessM4Tv2Model, SeamlessM4Tv2Config
-
+        ...
         >>> # Initializing a SeamlessM4Tv2 "" style configuration
         >>> configuration = SeamlessM4Tv2Config()
-
+        ...
         >>> # Initializing a model from the "" style configuration
         >>> model = SeamlessM4Tv2Model(configuration)
-
+        ...
         >>> # Accessing the model configuration
         >>> configuration = model.config
         ```

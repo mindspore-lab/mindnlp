@@ -60,13 +60,13 @@ class GitVisionConfig(PretrainedConfig):
     Example:
         ```python
         >>> from transformers import GitVisionConfig, GitVisionModel
-
+        ...
         >>> # Initializing a GitVisionConfig with microsoft/git-base style configuration
         >>> configuration = GitVisionConfig()
-
+        ...
         >>> # Initializing a GitVisionModel (with random weights) from the microsoft/git-base style configuration
         >>> model = GitVisionModel(configuration)
-
+        ...
         >>> # Accessing the model configuration
         >>> configuration = model.config
         ```
@@ -171,16 +171,16 @@ class GitConfig(PretrainedConfig):
         num_image_with_embedding (`int`, *optional*):
             The number of temporal embeddings to add, in case the model is used for video captioning/VQA.
 
-    Examples:
+    Example:
         ```python
         >>> from transformers import GitConfig, GitModel
-
+        ...
         >>> # Initializing a GIT microsoft/git-base style configuration
         >>> configuration = GitConfig()
-
+        ...
         >>> # Initializing a model (with random weights) from the microsoft/git-base style configuration
         >>> model = GitModel(configuration)
-
+        ...
         >>> # Accessing the model configuration
         >>> configuration = model.config
         ```

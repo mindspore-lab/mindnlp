@@ -171,10 +171,10 @@ class MPNetTokenizer(PreTrainedTokenizer):
             **kwargs: Additional keyword arguments.
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
-            - ValueError: If the vocabulary file specified by 'vocab_file' cannot be found.
+            ValueError: If the vocabulary file specified by 'vocab_file' cannot be found.
         """
         bos_token = AddedToken(bos_token, special=True) if isinstance(bos_token, str) else bos_token
         eos_token = AddedToken(eos_token, special=True) if isinstance(eos_token, str) else eos_token
@@ -229,7 +229,7 @@ class MPNetTokenizer(PreTrainedTokenizer):
             self: An instance of the MPNetTokenizer class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -280,7 +280,7 @@ class MPNetTokenizer(PreTrainedTokenizer):
 
         Returns:
             list: A list of tokens after tokenization. If basic tokenization is enabled, tokens are split based on basic rules.
-            If basic tokenization is disabled, tokens are split using the wordpiece tokenizer.
+                If basic tokenization is disabled, tokens are split using the wordpiece tokenizer.
 
         Raises:
             None.
@@ -317,8 +317,8 @@ class MPNetTokenizer(PreTrainedTokenizer):
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A MPNet sequence has the following format:
 
-        >   - single sequence: `<s> X </s>`
-        >   - pair of sequences: `<s> A </s></s> B </s>`
+        - single sequence: `<s> X </s>`
+        - pair of sequences: `<s> A </s></s> B </s>`
 
         Args:
             token_ids_0 (`List[int]`):
@@ -463,10 +463,10 @@ class BasicTokenizer(object):
             do_split_on_punc (bool): A flag indicating whether to split on punctuation marks. Default is True.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         if never_split is None:
             never_split = []
@@ -612,7 +612,7 @@ class WordpieceTokenizer(object):
             max_input_chars_per_word (int): The maximum number of characters allowed per input word. Defaults to 100.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             ValueError: If max_input_chars_per_word is less than or equal to 0.

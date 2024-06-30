@@ -213,8 +213,9 @@ class SqueezeBertSelfAttention(nn.Cell):
 
     def transpose_for_scores(self, x):
         """
-        >- input: [N, C, W]
-        >- output: [N, C1, W, C2] where C1 is the head index, and C2 is one head's contents
+        Input/Output:
+            - input: [N, C, W]
+            - output: [N, C1, W, C2] where C1 is the head index, and C2 is one head's contents
         """
         new_x_shape = (
             x.shape[0],
@@ -227,8 +228,9 @@ class SqueezeBertSelfAttention(nn.Cell):
 
     def transpose_key_for_scores(self, x):
         """
-        >- input: [N, C, W]
-        >- output: [N, C1, C2, W] where C1 is the head index, and C2 is one head's contents
+        Input/Output:
+            - input: [N, C, W]
+            - output: [N, C1, C2, W] where C1 is the head index, and C2 is one head's contents
         """
         new_x_shape = (
             x.shape[0],
@@ -242,8 +244,9 @@ class SqueezeBertSelfAttention(nn.Cell):
 
     def transpose_output(self, x):
         """
-        >- input: [N, C1, W, C2]
-        >- output: [N, C, W]
+        Input/Output:
+            - input: [N, C1, W, C2]
+            - output: [N, C, W]
         """
         x = x.permute(0, 1, 3, 2)  # [N, C1, C2, W]
         new_x_shape = (x.shape[0], self.all_head_size, x.shape[3])  # [N, C, W]
@@ -289,11 +292,15 @@ class SqueezeBertSelfAttention(nn.Cell):
 class SqueezeBertModule(nn.Cell):
     def __init__(self, config):
         """
-        >- hidden_size = input chans = output chans for Q, K, V (they are all the same ... for now) = output chans for
-          the Cell
-        >- intermediate_size = output chans for intermediate layer
-        >- group = number of group for all layers in the BertModule. (eventually we could change the interface to
-          allow different group for different layers)
+        Args:
+            config:
+                containing:
+
+                - hidden_size = input chans = output chans for Q, K, V (they are all the same ... for now) = output
+                chans for the Cell.
+                - intermediate_size = output chans for intermediate layer
+                - group = number of group for all layers in the BertModule. (eventually we could change the interface to
+                  allow different group for different layers)
         """
         super().__init__()
 

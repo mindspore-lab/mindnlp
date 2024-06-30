@@ -128,7 +128,7 @@ class CpmAntConfig(PretrainedConfig):
             use_cache (bool): Whether to use cache. Defaults to True.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None.

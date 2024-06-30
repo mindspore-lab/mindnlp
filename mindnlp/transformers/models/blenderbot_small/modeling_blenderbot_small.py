@@ -76,7 +76,7 @@ class BlenderbotSmallLearnedPositionalEmbedding(nn.Embedding):
                 Must be a positive integer representing the dimensionality of the embeddings.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             TypeError: If num_embeddings or embedding_dim are not of type int.
@@ -161,7 +161,7 @@ class BlenderbotSmallAttention(nn.Cell):
             None: This method does not return any value directly. It operates by reshaping the input tensor.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
@@ -444,7 +444,7 @@ class BlenderbotSmallDecoderLayer(nn.Cell):
                 - Restrictions: Must be an instance of the BlenderbotSmallConfig class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -846,7 +846,7 @@ class BlenderbotSmallDecoder(BlenderbotSmallPreTrainedModel):
             embed_tokens (Optional[nn.Embedding]): Optional parameter representing embedding tokens. Default is None.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -885,7 +885,7 @@ class BlenderbotSmallDecoder(BlenderbotSmallPreTrainedModel):
             None. This method returns the embed_tokens attribute of the BlenderbotSmallDecoder instance.
 
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         return self.embed_tokens
 
@@ -898,7 +898,7 @@ class BlenderbotSmallDecoder(BlenderbotSmallPreTrainedModel):
             value: The input embeddings to be set. This should be of type torch.Tensor or any other compatible type.
 
         Returns:
-            None: This method does not return anything.
+            None.
 
         Raises:
             None.
@@ -1190,7 +1190,7 @@ class BlenderbotSmallModel(BlenderbotSmallPreTrainedModel):
                 It must be an instance of BlenderbotSmallConfig class.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the config parameter is not of type BlenderbotSmallConfig.
@@ -1218,9 +1218,7 @@ class BlenderbotSmallModel(BlenderbotSmallPreTrainedModel):
                 Restrictions: None.
 
         Returns:
-            None: The method returns None.
-                Type: None.
-                Purpose: Indicates that no specific value is returned from this method.
+            None.
 
         Raises:
             None.
@@ -1236,7 +1234,7 @@ class BlenderbotSmallModel(BlenderbotSmallPreTrainedModel):
             value: The input embeddings to be set. It should be a tensor of shape [vocab_size, embedding_dim].
 
         Returns:
-            None. This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -1254,7 +1252,7 @@ class BlenderbotSmallModel(BlenderbotSmallPreTrainedModel):
 
         Returns:
             NoneType: The method returns the encoder associated with the BlenderbotSmallModel instance.
-            The encoder is used for encoding input data in the model.
+                The encoder is used for encoding input data in the model.
 
         Raises:
             None
@@ -1272,7 +1270,7 @@ class BlenderbotSmallModel(BlenderbotSmallPreTrainedModel):
             None: This method returns the decoder attribute of the BlenderbotSmallModel.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.decoder
 
@@ -1397,7 +1395,7 @@ class BlenderbotSmallForConditionalGeneration(BlenderbotSmallPreTrainedModel):
                 containing the configuration parameters for the model.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None
@@ -1510,7 +1508,7 @@ class BlenderbotSmallForConditionalGeneration(BlenderbotSmallPreTrainedModel):
                 It should be a tensor of shape (vocab_size, hidden_size).
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the new_embeddings parameter is not a torch.Tensor.
@@ -1676,10 +1674,10 @@ class BlenderbotSmallForConditionalGeneration(BlenderbotSmallPreTrainedModel):
             beam_idx (int): The index of the beam for which the cache needs to be reordered.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         reordered_past = ()
         for layer_past in past_key_values:
@@ -1706,7 +1704,7 @@ class BlenderbotSmallDecoderWrapper(BlenderbotSmallPreTrainedModel):
             config: Dictionary containing configuration parameters for the decoder.
 
         Returns:
-            None: The method initializes the instance with the provided configuration.
+            None.
 
         Raises:
             TypeError: If the config parameter is not a dictionary or if it does not contain
@@ -1728,10 +1726,10 @@ class BlenderbotSmallDecoderWrapper(BlenderbotSmallPreTrainedModel):
             **kwargs: Arbitrary keyword arguments.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         return self.decoder(*args, **kwargs)
 
@@ -1761,13 +1759,15 @@ class BlenderbotSmallForCausalLM(BlenderbotSmallPreTrainedModel):
 
         Args:
             self (BlenderbotSmallForCausalLM): The instance of the class itself.
-            config (object): The configuration object containing settings for the model.
+            config (object):
+                The configuration object containing settings for the model.
+
                 - This object is deep copied to ensure immutability.
                 - It must have the 'is_decoder' attribute set to True.
                 - It must have the 'is_encoder_decoder' attribute set to False.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the config parameter is not of the expected type.
@@ -1808,10 +1808,10 @@ class BlenderbotSmallForCausalLM(BlenderbotSmallPreTrainedModel):
             value (torch.Tensor): The input embeddings to be set for the model. It should be a torch.Tensor of appropriate shape and size.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.model.decoder.embed_tokens = value
 
@@ -1823,7 +1823,7 @@ class BlenderbotSmallForCausalLM(BlenderbotSmallPreTrainedModel):
             self: An instance of the BlenderbotSmallForCausalLM class.
 
         Returns:
-            None. The method returns the output embeddings for the model, which are used for downstream tasks or further analysis.
+            lm_head: The method returns the output embeddings for the model, which are used for downstream tasks or further analysis.
 
         Raises:
             None.
@@ -1845,7 +1845,7 @@ class BlenderbotSmallForCausalLM(BlenderbotSmallPreTrainedModel):
                 It should be a tensor representing the new embeddings.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             TypeError: If the new_embeddings is not of type Tensor.
@@ -1861,7 +1861,7 @@ class BlenderbotSmallForCausalLM(BlenderbotSmallPreTrainedModel):
             decoder (object): The decoder object to be set for the model.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             None.
@@ -2079,7 +2079,7 @@ class BlenderbotSmallForCausalLM(BlenderbotSmallPreTrainedModel):
             beam_idx (Tensor): A tensor representing the indices of the beams to use for reordering the past key-values.
         
         Returns:
-            None. This method does not return anything but modifies the past key-values in place.
+            None: This method does not return anything but modifies the past key-values in place.
         
         Raises:
             None.

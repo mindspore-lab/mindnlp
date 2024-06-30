@@ -210,7 +210,7 @@ class CpmAntTokenizer(PreTrainedTokenizer):
             padding_side (str, optional): Side for padding (default is 'left').
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
             MissingBackendError: If required backend 'jieba' is not available.
@@ -256,10 +256,10 @@ class CpmAntTokenizer(PreTrainedTokenizer):
             self (CpmAntTokenizer): The instance of the CpmAntTokenizer class.
 
         Returns:
-            None: This method does not have a specific return value as it is a property method.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.encoder[self.bod_token]
 
@@ -277,20 +277,20 @@ class CpmAntTokenizer(PreTrainedTokenizer):
                 It retrieves the token ID of the end-of-document token from the encoder attribute of the class instance.
 
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.encoder[self.eod_token]
 
     @property
     def newline_id(self):
-        """
+        r"""
         This method, newline_id, in the class CpmAntTokenizer, returns the value associated with the newline character in the encoder.
 
         Args:
             self (CpmAntTokenizer): The instance of the CpmAntTokenizer class.
 
         Returns:
-            None: This method does not return any specific value.
+            None.
 
         Raises:
             KeyError: If the newline character `'\n'` is not found in the encoder dictionary, a KeyError is raised.
@@ -360,10 +360,10 @@ class CpmAntTokenizer(PreTrainedTokenizer):
             token (Any): The token to be checked.
 
         Returns:
-            None: This method does not return any value.
+            None.
 
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return token in self.encoder
 
