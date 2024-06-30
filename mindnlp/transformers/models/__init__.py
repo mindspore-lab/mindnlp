@@ -99,6 +99,7 @@ from . import (
     groupvit,
     hubert,
     imagegpt,
+    instructblip,
     ibert,
     jetmoe,
     layoutlm,
@@ -277,6 +278,7 @@ from .groupvit import *
 from .ibert import *
 from .hubert import *
 from .imagegpt import *
+from .instructblip import *
 from .jetmoe import *
 from .layoutlm import *
 from .layoutlmv2 import *
@@ -451,6 +453,7 @@ __all__.extend(gpt2.__all__)
 __all__.extend(graphormer.__all__)
 __all__.extend(groupvit.__all__)
 __all__.extend(ibert.__all__)
+__all__.extend(instructblip.__all__)
 __all__.extend(hubert.__all__)
 __all__.extend(imagegpt.__all__)
 __all__.extend(jetmoe.__all__)

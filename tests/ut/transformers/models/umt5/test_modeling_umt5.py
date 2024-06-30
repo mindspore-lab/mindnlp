@@ -282,7 +282,6 @@ class UMT5ModelTester:
 
 #class UMT5ModelTest(ModelTesterMixin, GenerationTesterMixin, PipelineTesterMixin, unittest.TestCase):
 class UMT5ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
-    print(UMT5Model)
     all_model_classes = (
         (UMT5Model, UMT5ForConditionalGeneration, UMT5ForSequenceClassification, UMT5ForQuestionAnswering)
     )
