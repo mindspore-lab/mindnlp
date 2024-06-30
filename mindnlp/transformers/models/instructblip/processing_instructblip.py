@@ -168,15 +168,8 @@ class InstructBlipProcessor(ProcessorMixin):
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, **kwargs):
         qformer_tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path, subfolder="qformer_tokenizer")
-        tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path)  # 加载标准tokenizer
-        image_processor = AutoImageProcessor.from_pretrained(pretrained_model_name_or_path)  # 假设这是一个加载image_processor的方法
-        
         args = cls._get_arguments_from_pretrained(pretrained_model_name_or_path, **kwargs)
-        args.append(image_processor)  # 添加image_processor
-        args.append(qformer_tokenizer)  # 添加qformer_tokenizer
-        args.append(tokenizer)  # 添加tokenizer
+        args.append(qformer_tokenizer)
         return cls(*args)
-
-
 
 __all__ = ['InstructBlipProcessor']
