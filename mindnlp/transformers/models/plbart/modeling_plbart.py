@@ -1047,7 +1047,6 @@ class PLBartDecoder(PLBartPreTrainedModel):
                     continue
 
             past_key_value = past_key_values[idx] if past_key_values is not None else None
-                
             layer_outputs = decoder_layer(
                 hidden_states,
                 attention_mask=attention_mask,
@@ -1452,7 +1451,7 @@ class PLBartForSequenceClassification(PLBartPreTrainedModel):
             if self.config.problem_type is None:
                 if self.config.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.config.num_labels > 1 and (labels.dtype == ms.int64 or labels.dtype == ms.int32):
+                elif self.config.num_labels > 1 and labels.dtype in (ms.int64, ms.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"

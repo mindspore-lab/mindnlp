@@ -14,9 +14,6 @@
 # limitations under the License.
 """PLBART model configuration"""
 
-from collections import OrderedDict
-from typing import Mapping
-
 from ...configuration_utils import PretrainedConfig
 
 from ....utils import logging
