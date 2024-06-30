@@ -165,11 +165,11 @@ class InstructBlipProcessor(ProcessorMixin):
         return super().save_pretrained(save_directory, **kwargs)
 
     # overwrite to load the Q-Former tokenizer from a separate folder
-    @classmethod
+    #@classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, **kwargs):
-        qformer_tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path, subfolder="qformer_tokenizer")
+        #qformer_tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path, subfolder="qformer_tokenizer")
         args = cls._get_arguments_from_pretrained(pretrained_model_name_or_path, **kwargs)
-        args.append(qformer_tokenizer)
+        #args.append(qformer_tokenizer)
         return cls(*args)
 
 __all__ = ['InstructBlipProcessor']
