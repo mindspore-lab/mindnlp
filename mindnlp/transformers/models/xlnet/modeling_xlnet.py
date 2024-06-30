@@ -306,9 +306,9 @@ class XLNetRelativeAttention(nn.Cell):
             output_attentions (bool, optional): Whether to output the attention probabilities. Default is False.
 
         Returns:
-            Tuple: A tuple of two tensors (output_h, output_g) representing the output hidden states for h and g
-                respectively.
-            If output_attentions is True, the tuple also contains a tensor attn_prob of shape
+            Tuple:
+                A tuple of two tensors (output_h, output_g) representing the output hidden states for h and g
+                respectively. If output_attentions is True, the tuple also contains a tensor attn_prob of shape
                 (num_heads, batch_size, seq_length, seq_length) representing the attention probabilities.
 
         Raises:
