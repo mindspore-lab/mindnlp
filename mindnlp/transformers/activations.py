@@ -241,6 +241,7 @@ class ReLUSquaredActivation(nn.Cell):
         squared = ops.square(relu_applied)
         return squared
 
+
 class ClassInstantier(OrderedDict):
     r"""
     Class Instantier
